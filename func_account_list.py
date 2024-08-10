@@ -4,6 +4,20 @@ from datetime import datetime
 import get_path_of_data
 
 
+def get_config_status(account):
+    data_path = get_path_of_data.get_wechat_data_path()
+    if not data_path:
+        return "无法获取配置路径"
+
+    config_path = os.path.join(data_path, "All Users", "config", f"{account}.data")
+    if os.path.exists(config_path):
+        mod_time = os.path.getmtime(config_path)
+        dt = datetime.fromtimestamp(mod_time)
+        return dt.strftime("%m-%d %H:%M:%S 的配置")
+    else:
+        return "无配置"
+
+
 class AccountManager:
     def __init__(self, account_data_file):
         self.account_data_file = account_data_file
@@ -36,19 +50,6 @@ class AccountManager:
             self.account_data[account] = {}
         self.account_data[account]["note"] = note
         self.save_account_data()
-
-    def get_config_status(self, account):
-        data_path = get_path_of_data.get_wechat_data_path()
-        if not data_path:
-            return "无法获取配置路径"
-
-        config_path = os.path.join(data_path, "All Users", "config", f"{account}.data")
-        if os.path.exists(config_path):
-            mod_time = os.path.getmtime(config_path)
-            dt = datetime.fromtimestamp(mod_time)
-            return dt.strftime("%m-%d %H:%M:%S 的配置")
-        else:
-            return "无配置"
 
     def get_account_display_name(self, account):
         note = self.account_data.get(account, {}).get("note", "")
