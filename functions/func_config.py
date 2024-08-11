@@ -1,13 +1,14 @@
 import os
 import shutil
-import tkinter as tk
-from tkinter import ttk, messagebox
 import subprocess
-import pyautogui
-import win32gui
-import win32con
 import time
-import get_path_of_data
+from tkinter import messagebox
+
+import pyautogui
+import win32con
+import win32gui
+
+from functions import func_get_path
 
 
 class ConfigCreator:
@@ -28,7 +29,7 @@ class ConfigCreator:
         return result
 
     def run_test(self):
-        multi_wechat_process = subprocess.Popen("multiWechat.exe")
+        multi_wechat_process = subprocess.Popen("../multiWechat.exe")
         if not self.wait_for_window("WTWindow"):
             messagebox.showerror("错误", "未检测到多开器窗口")
             return False
@@ -59,7 +60,7 @@ class ConfigCreator:
         return False
 
     def create_config(self):
-        dtpath = get_path_of_data.get_wechat_data_path()
+        dtpath = func_get_path.get_wechat_data_path()
         if not dtpath:
             messagebox.showerror("错误", "无法获取WeChat数据路径")
             return False

@@ -1,11 +1,12 @@
 import json
 import os
 from datetime import datetime
-import get_path_of_data
+
+import functions.func_get_path as func_get_path
 
 
 def get_config_status(account):
-    data_path = get_path_of_data.get_wechat_data_path()
+    data_path = func_get_path.get_wechat_data_path()
     if not data_path:
         return "无法获取配置路径"
 
@@ -34,7 +35,7 @@ class AccountManager:
             json.dump(self.account_data, f, ensure_ascii=False, indent=4)
 
     def get_account_list(self):
-        data_path = get_path_of_data.get_wechat_data_path()
+        data_path = func_get_path.get_wechat_data_path()
         if not data_path:
             return None, None
 

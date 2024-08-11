@@ -1,18 +1,15 @@
-# main_window.py
+# main_ui.py
 import tkinter as tk
 from tkinter import ttk, messagebox
 
 from astropy.config import get_config_dir
 
-import func_config
-import get_path_of_data
-import get_path_of_wechat
-from func_account_list import AccountManager, get_config_status
-from func_login import manual_login, auto_login
-from ui_helper import UIHelper
+from functions import func_config, func_get_path
+from functions.func_account_list import AccountManager, get_config_status
+from functions.func_login import manual_login, auto_login
 from thread_manager import ThreadManager
-import path_setting_window
-import func_about
+from ui import about_ui, path_setting_ui
+from ui.ui_helper import UIHelper
 
 
 class MainWindow:
@@ -25,7 +22,7 @@ class MainWindow:
         self.logged_in_label = None
         self.master = master
         self.loading_window = loading_window
-        self.account_manager = AccountManager("account_data.json")
+        self.account_manager = AccountManager("../account_data.json")
         self.ui_helper = UIHelper()
         self.thread_manager = ThreadManager(master, self.ui_helper, self.account_manager)
 
@@ -62,7 +59,7 @@ class MainWindow:
 
     def setup_main_window(self):
         self.master.title("微信多开管理器")
-        self.master.iconbitmap('SunnyMultiWxMng.ico')
+        self.master.iconbitmap('./resource/SunnyMultiWxMng.ico')
 
     def create_menu_bar(self):
         self.menu_bar = tk.Menu(self.master)
@@ -118,18 +115,18 @@ class MainWindow:
 
     def open_path_settings(self):
         path_settings_window = tk.Toplevel(self.master)
-        path_setting_window.PathSettingWindow(path_settings_window, self.on_path_setting_close)
+        path_setting_ui.PathSettingWindow(path_settings_window, self.on_path_setting_close)
         self.ui_helper.center_window(path_settings_window)
         path_settings_window.focus_set()
 
     def open_about(self):
         about_window = tk.Toplevel(self.master)
-        func_about.AboutWindow(about_window)
+        about_ui.AboutWindow(about_window)
         self.ui_helper.center_window(about_window)
 
     def check_paths(self):
-        install_path = get_path_of_wechat.get_wechat_path()
-        data_path = get_path_of_data.get_wechat_data_path()
+        install_path = func_get_path.get_wechat_install_path()
+        data_path = func_get_path.get_wechat_data_path()
 
         if not install_path or not data_path:
             self.show_path_error()

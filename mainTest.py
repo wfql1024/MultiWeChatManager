@@ -1,9 +1,9 @@
-import psutil
-import win32gui
-import win32process
-import winreg
 import os
 import subprocess
+import winreg
+
+import psutil
+
 
 def get_wechat_threads():
     for proc in psutil.process_iter(['name', 'pid']):
@@ -57,3 +57,5 @@ if __name__ == "__main__":
 
     wechat_path = get_wechat_path()
     run_wechat(wechat_path)
+
+

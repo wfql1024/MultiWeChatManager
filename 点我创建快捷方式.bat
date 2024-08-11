@@ -1,19 +1,43 @@
 @echo off
+chcp 65001 > nul
 setlocal enabledelayedexpansion
 
 :: 获取当前目录
 set "currentDir=%~dp0"
 
 :: 设置目标文件名
-set "targetFile=微信多开管理器.exe"
+set "targetFile=multiWeChatManager.exe"
 
 :: 检查目标文件是否存在
 if not exist "%currentDir%%targetFile%" (
-    exit /b
+    echo 错误：未找到目标文件 "%targetFile%"
+    goto :error
 )
 
 :: 获取桌面路径
 for /f "tokens=2*" %%a in ('reg query "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders" /v Desktop') do set "desktopPath=%%b"
 
+if not defined desktopPath (
+    echo 错误：无法获取桌面路径
+    goto :error
+)
+
 :: 创建快捷方式
-powershell -WindowStyle Hidden -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%desktopPath%\微信多开管理器.lnk'); $Shortcut.TargetPath = '%currentDir%%targetFile%'; $Shortcut.WorkingDirectory = '%currentDir%'; $Shortcut.Save()"
+powershell -ExecutionPolicy Bypass -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%desktopPath%\微信多开管理器.lnk'); $Shortcut.TargetPath = '%currentDir%%targetFile%'; $Shortcut.WorkingDirectory = '%currentDir%'; $Shortcut.Save(); if ($?) { exit 0 } else { exit 1 }"
+
+if %errorlevel% neq 0 (
+    echo 创建快捷方式失败
+    goto :error
+)
+
+:: 如果成功，直接退出
+exit
+
+:error
+:: 在错误情况下显示窗口并等待用户输入
+echo.
+echo 创建快捷方式过程中遇到错误。
+echo 请将以上错误信息截图或复制给开发者。
+echo.
+echo 按任意键退出...
+pause > nul

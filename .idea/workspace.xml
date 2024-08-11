@@ -5,16 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="I have finished the coding work. Core functions have been implemented.">
-      <change afterPath="$PROJECT_DIR$/loading_window.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/mainTest.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main_window.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/functions/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/functions/func_get_path.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ui/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Main.py" beforeDir="false" afterPath="$PROJECT_DIR$/Main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/func_account_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/func_account_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/func_path_setting.py" beforeDir="false" afterPath="$PROJECT_DIR$/path_setting_window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/SunnyMultiWxMng.ico" beforeDir="false" afterPath="$PROJECT_DIR$/resource/SunnyMultiWxMng.ico" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/func_about.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/about_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/func_account_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_account_list.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/func_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/func_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_login.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/get_path_of_data.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/get_path_of_wechat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/loading_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/loading_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mainTest.py" beforeDir="false" afterPath="$PROJECT_DIR$/mainTest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/path_setting_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/path_setting_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui_helper.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/ui_helper.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -42,6 +50,18 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "wfql1024"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/wfql1024/MultiWechatManager.git",
+    "accountId": "4c07513e-c129-4051-8a5f-761a82bf09eb"
+  }
+}]]></component>
   <component name="HighlightingSettingsPerFile">
     <setting file="file://$PROJECT_DIR$/../../softwareDev/SDKs/Python/Python312/Lib/tkinter/__init__.py" root0="SKIP_INSPECTION" />
   </component>
@@ -63,11 +83,15 @@
     "Python.Main.executor": "Run",
     "Python.func_account_list.executor": "Run",
     "Python.func_config.executor": "Run",
+    "Python.get_path_of_data.executor": "Run",
+    "Python.get_path_of_wechat.executor": "Run",
+    "Python.main.executor": "Run",
     "Python.mainTest.executor": "Run",
+    "Python.main_ui.executor": "Run",
     "Python.thread_manager.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "git-widget-placeholder": "master",
-    "last_opened_file_path": "D:/SpaceDev/softwareDev/JetBrains/Plugins/intellij-rainbow-brackets-2024.1.0-233.zip",
+    "last_opened_file_path": "D:/SpaceDev/MyProj/MultiWeChatManager/functions",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -79,10 +103,14 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\functions" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\dist" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\resource" />
+      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\ui" />
+      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\functions" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager" />
     </key>
   </component>
@@ -105,7 +133,7 @@
       <workItem from="1723311839027" duration="6680000" />
       <workItem from="1723318588490" duration="698000" />
       <workItem from="1723319312960" duration="2232000" />
-      <workItem from="1723321636150" duration="292000" />
+      <workItem from="1723321636150" duration="9377000" />
     </task>
     <task id="LOCAL-00001" summary="I have finished the coding work. Core functions have been implemented.">
       <option name="closed" value="true" />
@@ -115,7 +143,15 @@
       <option name="project" value="LOCAL" />
       <updated>1722224445686</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="I have finished the coding work. Core functions have been implemented.">
+      <option name="closed" value="true" />
+      <created>1723322218589</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1723322218589</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -137,6 +173,11 @@
     <option name="LAST_COMMIT_MESSAGE" value="I have finished the coding work. Core functions have been implemented." />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$Main.coverage" NAME="Main Coverage Results" MODIFIED="1723320448152" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_wechat.coverage" NAME="get_path_of_wechat Coverage Results" MODIFIED="1723333662145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$Main.coverage" NAME="Main Coverage Results" MODIFIED="1723322705031" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$mainTest.coverage" NAME="mainTest Coverage Results" MODIFIED="1723330074467" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$main_ui.coverage" NAME="main_ui Coverage Results" MODIFIED="1723334935655" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_data.coverage" NAME="get_path_of_data Coverage Results" MODIFIED="1723333667569" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$main.coverage" NAME="main Coverage Results" MODIFIED="1723335256589" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

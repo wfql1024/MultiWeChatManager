@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-import get_path_of_data
-import get_path_of_wechat
+from functions import func_get_path
 
 
 class PathSettingWindow:
@@ -81,7 +80,7 @@ class PathSettingWindow:
         return True
 
     def get_install_path(self):
-        path = get_path_of_wechat.get_wechat_path()
+        path = func_get_path.get_wechat_install_path()
         if path:
             self.install_path_var.set(path.replace('\\', '/'))
         else:
@@ -95,13 +94,13 @@ class PathSettingWindow:
             path = path.replace('\\', '/')
             if path.lower().endswith('wechat.exe'):
                 self.install_path_var.set(path)
-                get_path_of_wechat.save_wechat_path_to_ini(path)
+                func_get_path.save_wechat_install_path_to_ini(path)
                 break
             else:
                 messagebox.showerror("错误", "请选择WeChat.exe文件")
 
     def get_data_path(self):
-        path = get_path_of_data.get_wechat_data_path()
+        path = func_get_path.get_wechat_data_path()
         if path:
             self.data_path_var.set(path.replace('\\', '/'))
         else:
@@ -113,9 +112,9 @@ class PathSettingWindow:
             if not path:  # 用户取消选择
                 return
             path = path.replace('\\', '/')
-            if get_path_of_data.is_valid_wechat_data_path(path):
+            if func_get_path.is_valid_wechat_data_path(path):
                 self.data_path_var.set(path)
-                get_path_of_data.save_wechat_data_path_to_ini(path)
+                func_get_path.save_wechat_data_path_to_ini(path)
                 break
             else:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")

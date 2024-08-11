@@ -1,4 +1,5 @@
 import sys
+
 from cx_Freeze import setup, Executable
 
 build_exe_options = {
@@ -21,5 +22,5 @@ setup(
     version="1.1.0",
     description="微信多开管理工具",
     options={"build_exe": build_exe_options},
-    executables=[Executable("Main.py", base=base, icon="SunnyMultiWxMng.ico", target_name="微信多开管理器.exe")]
+    executables=[Executable("main.py", base=base, icon="SunnyMultiWxMng.ico", target_name="微信多开管理器.exe")]
 )

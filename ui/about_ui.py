@@ -1,4 +1,4 @@
-# func_about.py
+# about_ui.py
 import tkinter as tk
 from tkinter import ttk
 

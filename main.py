@@ -1,7 +1,8 @@
-# Main.py
+# main.py
 import tkinter as tk
-from main_window import MainWindow
-from loading_window import LoadingWindow
+
+from ui.loading_ui import LoadingWindow
+from ui.main_ui import MainWindow
 
 
 def main():
