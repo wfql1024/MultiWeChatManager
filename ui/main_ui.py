@@ -22,7 +22,7 @@ class MainWindow:
         self.logged_in_label = None
         self.master = master
         self.loading_window = loading_window
-        self.account_manager = AccountManager("../account_data.json")
+        self.account_manager = AccountManager("./account_data.json")
         self.ui_helper = UIHelper()
         self.thread_manager = ThreadManager(master, self.ui_helper, self.account_manager)
 

@@ -29,7 +29,7 @@ class ConfigCreator:
         return result
 
     def run_test(self):
-        multi_wechat_process = subprocess.Popen("../multiWechat.exe")
+        multi_wechat_process = subprocess.Popen("./multiWechat.exe")
         if not self.wait_for_window("WTWindow"):
             messagebox.showerror("错误", "未检测到多开器窗口")
             return False
