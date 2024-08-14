@@ -28,7 +28,7 @@ class AboutWindow:
         title_label = ttk.Label(frame, text="微信多开管理器", font=("", 16, "bold"))
         title_label.pack(pady=(0, 10))
 
-        version_label = ttk.Label(frame, text="版本号：1.0.79 Beta", font=("", 10))
+        version_label = ttk.Label(frame, text="版本号：1.5.0 Beta", font=("", 10))
         version_label.pack()
 
         author_label = ttk.Label(frame, text="原创作者：吾峰起浪（吾爱破解网 wfql1024）", font=("", 10))

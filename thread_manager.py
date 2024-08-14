@@ -2,9 +2,6 @@ import threading
 from tkinter import messagebox
 
 
-
-
-
 def _handle_auto_login_result(account, auto_login_result, create_account_list, bring_window_to_front):
     if auto_login_result:
         print("自动登录完成")
@@ -23,25 +20,27 @@ def _handle_manual_login_result(manual_login_result, create_account_list, bring_
     bring_window_to_front()
 
 
+def _handle_create_config_result(config_result, create_main_frame):
+    if config_result:
+        print("ThreadManager: 配置创建成功")
+    else:
+        print("ThreadManager: 配置创建失败")
+    create_main_frame()
+
+
 class ThreadManager:
     def __init__(self, master, ui_helper, account_manager):
+        self.login_thread = None
         self.master = master
         self.ui_helper = ui_helper
         self.account_manager = account_manager
 
-    def create_and_test_config(self, account, create_and_test_func, save_callback, refresh_callback):
+    def create_config(self, account, test_and_create_config, create_main_frame):
         def thread_func():
-            result = create_and_test_func(account, save_callback)
-            self.master.after(0, self._handle_config_result, result, refresh_callback)
+            result = test_and_create_config(account)
+            self.master.after(0, _handle_create_config_result, result, create_main_frame)
 
         threading.Thread(target=thread_func).start()
-
-    def _handle_config_result(self, config_result, refresh_callback):
-        if config_result:
-            print("ThreadManager: 配置创建成功")
-        else:
-            print("ThreadManager: 配置创建失败")
-        refresh_callback()
 
     def manual_login_account(self, manual_login_func, create_account_list, bring_window_to_front):
         self.login_thread = threading.Thread(target=self._manual_login_thread, args=(
@@ -62,10 +61,3 @@ class ThreadManager:
         auto_login_result = auto_login_func(account)
         self.master.after(0, _handle_auto_login_result, account, auto_login_result, create_account_list,
                           bring_window_to_front)
-
-
-
-    def _create_and_test_config_thread(self, account, create_and_test_func, save_callback, center_window,
-                                       create_account_list):
-        config_result = create_and_test_func(self, account, save_callback, center_window)
-        self.master.after(0, self._handle_config_result, config_result, create_account_list)

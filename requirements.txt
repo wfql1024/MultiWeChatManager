@@ -3,3 +3,6 @@ cx_Freeze~=7.2.0
 PyAutoGUI~=0.9.54
 astropy~=6.1.2
 psutil~=5.9.6
+requests~=2.32.3
+pillow~=10.4.0
+pywin32~=306

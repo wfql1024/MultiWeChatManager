@@ -1,8 +1,8 @@
-import json
 import os
 from datetime import datetime
 
-import functions.func_get_path as func_get_path
+import functions.func_path as func_get_path
+import utils.json_utils as json_utils
 
 
 def get_config_status(account):
@@ -19,71 +19,37 @@ def get_config_status(account):
         return "无配置"
 
 
+def is_account_logged_in(account_path):
+    # TODO:准备修改
+    msg_folder = os.path.join(account_path, 'Msg')
+    if not os.path.exists(msg_folder):
+        return False
+
+    shm_count = 0
+    wal_count = 0
+
+    for file in os.listdir(msg_folder):
+        if file.endswith('.db-shm'):
+            shm_count += 1
+        elif file.endswith('.db-wal'):
+            wal_count += 1
+
+        if shm_count >= 5 and wal_count >= 5:
+            return True
+
+    return False
+
+
 class AccountManager:
     def __init__(self, account_data_file):
         self.account_data_file = account_data_file
-        self.account_data = self.load_account_data()
-
-    def load_account_data(self):
-        if os.path.exists(self.account_data_file):
-            with open(self.account_data_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return {}
-
-    def save_account_data(self):
-        with open(self.account_data_file, 'w', encoding='utf-8') as f:
-            json.dump(self.account_data, f, ensure_ascii=False, indent=4)
+        self.account_data = json_utils.load_json_data(self)
 
     def get_account_list(self):
         data_path = func_get_path.get_wechat_data_path()
         if not data_path:
             return None, None
 
-        logged_in, not_logged_in = self.get_wechat_accounts(data_path)
-
-        for account in logged_in + not_logged_in:
-            if account not in self.account_data:
-                self.account_data[account] = {"note": ""}
-        return logged_in, not_logged_in
-
-    def update_account_note(self, account, note):
-        if account not in self.account_data:
-            self.account_data[account] = {}
-        self.account_data[account]["note"] = note
-        self.save_account_data()
-
-    def get_account_display_name(self, account):
-        note = self.account_data.get(account, {}).get("note", "")
-        if note:
-            return f"{account} ({note})"
-        return account
-
-    def get_account_note(self, account):
-        return self.account_data.get(account, {}).get("note", "")
-
-    def is_account_logged_in(self, account_path):
-        msg_folder = os.path.join(account_path, 'Msg')
-        print(f"检查 {msg_folder} 中")
-        if not os.path.exists(msg_folder):
-            return False
-
-        shm_count = 0
-        wal_count = 0
-
-        for file in os.listdir(msg_folder):
-            if file.endswith('.db-shm'):
-                shm_count += 1
-                print(f"有 {shm_count} 个 shm")
-            elif file.endswith('.db-wal'):
-                wal_count += 1
-
-            if shm_count >= 5 and wal_count >= 5:
-                print("CheckLogined：已经符合了")
-                return True
-
-        return False
-
-    def get_wechat_accounts(self, data_path):
         logged_in = []
         not_logged_in = []
 
@@ -92,9 +58,28 @@ class AccountManager:
         for folder in os.listdir(data_path):
             folder_path = os.path.join(data_path, folder)
             if os.path.isdir(folder_path) and folder not in excluded_folders:
-                if self.is_account_logged_in(folder_path):
+                if is_account_logged_in(folder_path):
                     logged_in.append(folder)
                 else:
                     not_logged_in.append(folder)
 
+        for account in logged_in + not_logged_in:
+            if account not in self.account_data:
+                self.account_data[account] = {"note": ""}
         return logged_in, not_logged_in
+
+    def update_account_note(self, account, note):
+        # TODO:需要添加属性
+        if account not in self.account_data:
+            self.account_data[account] = {}
+        self.account_data[account]["note"] = note
+        json_utils.save_json_data(self)
+
+    def get_account_display_name(self, account):
+        note = self.get_account_note(account)
+        if note:
+            return f"{account}\n{note}"
+        return f"{account}\n"
+
+    def get_account_note(self, account):
+        return self.account_data.get(account, {}).get("note", "")

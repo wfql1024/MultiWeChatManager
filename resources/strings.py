@@ -1,0 +1,13 @@
+class Strings:
+    WINDOW_TITLE = "设置路径"
+    INSTALL_PATH_LABEL = "微信安装路径："
+    DATA_PATH_LABEL = "数据存储路径："
+    DLL_PATH_LABEL = "WeChatWin.dll路径："
+    GET_BUTTON_TEXT = "获取"
+    CHOOSE_PATH_BUTTON_TEXT = "选择路径"
+    OK_BUTTON_TEXT = "确定"
+    ERROR_DIALOG_TITLE = "错误"
+    INVALID_INSTALL_PATH_ERROR = "请选择WeChat.exe文件"
+    INVALID_DATA_PATH_ERROR = "该路径不是有效的存储路径，可以在微信设置中查看存储路径"
+    INVALID_DLL_PATH_ERROR = "请选择wechatwin.dll文件"
+    PATHS_VALIDATION_ERROR = "请确保所有路径都已正确设置"

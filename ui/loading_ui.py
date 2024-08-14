@@ -25,7 +25,7 @@ class LoadingWindow:
         self.label = ttk.Label(self.window, text="正在载入，请稍等……")
         self.label.pack(pady=20)
 
-        self.progress = ttk.Progressbar(self.window, mode="indeterminate", length=200)
+        self.progress = ttk.Progressbar(self.window, mode="determinate", length=250)
         self.progress.pack(pady=10)
 
         self.window.deiconify()  # 显示窗口

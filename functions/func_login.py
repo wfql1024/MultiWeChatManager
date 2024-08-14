@@ -5,38 +5,19 @@ import subprocess
 import time
 
 import pyautogui
-import win32gui
 
-from functions import func_get_path
-
-
-def wait_for_window(class_name, timeout=30):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        window = win32gui.FindWindow(class_name, None)
-        if window != 0:
-            return True
-        time.sleep(0.5)
-    return False
-
-
-def wait_for_window_close(class_name, timeout=30):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-        window = win32gui.FindWindow(class_name, None)
-        if window == 0:
-            return True
-        time.sleep(0.5)
-    return False
+from functions import func_path
+from functions.func_path import is_valid_wechat_install_path, is_valid_wechat_data_path
+from utils.window_utils import wait_for_window_open, wait_for_window_close
 
 
 def manual_login():
-    wechat_path = func_get_path.get_wechat_install_path_from_ini()
+    wechat_path = func_path.get_wechat_install_path()
     multi_wechat_process = subprocess.Popen("./multiWechat.exe")
-    if wait_for_window("WTWindow", timeout=3):
+    if wait_for_window_open("WTWindow", timeout=3):
         time.sleep(2)
         pyautogui.press('space')
-        if wait_for_window("WeChatLoginWndForPC", timeout=3):
+        if wait_for_window_open("WeChatLoginWndForPC", timeout=3):
             print("打开了登录窗口")
             # 等待登录窗口关闭
             if wait_for_window_close("WeChatLoginWndForPC", timeout=60):
@@ -53,8 +34,8 @@ def manual_login():
 
 def auto_login(account):
     # 获取数据路径
-    data_path = func_get_path.get_wechat_data_path_from_ini()
-    wechat_path = func_get_path.get_wechat_install_path_from_ini()
+    data_path = func_path.get_path_from_ini('path.ini', 'WxMultiple', 'DtPath', is_valid_wechat_data_path)
+    wechat_path = func_path.get_path_from_ini('path.ini', 'WxMultiple', 'WxPath', is_valid_wechat_install_path)
     if not data_path:
         return False
 
@@ -74,10 +55,10 @@ def auto_login(account):
 
     print("复制配置文件成功")
     multi_wechat_process = subprocess.Popen("./multiWechat.exe")
-    if wait_for_window("WTWindow", timeout=3):
+    if wait_for_window_open("WTWindow", timeout=3):
         time.sleep(2)
         pyautogui.press('space')
-        if wait_for_window("WeChatLoginWndForPC", timeout=3):
+        if wait_for_window_open("WeChatLoginWndForPC", timeout=3):
             print("打开了登录窗口")
             time.sleep(2)
             pyautogui.press('space')
