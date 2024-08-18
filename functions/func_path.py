@@ -4,7 +4,7 @@ import winreg
 
 import psutil
 
-from resources import Strings, Constants, Config
+from resources import Config
 
 
 def is_valid_wechat_install_path(path):
@@ -35,9 +35,8 @@ def get_path_from_ini(ini_filename, section, path_key, validation_func=None):
     return None
 
 
-def save_path_to_ini(ini_filename, section, path_key, path_value):
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    ini_path = os.path.join(script_dir, ini_filename).replace('\\', '/')
+def save_path_to_ini(ini_path, section, path_key, path_value):
+    ini_path = ini_path.replace('\\', '/')
     config = configparser.ConfigParser()
 
     if os.path.exists(ini_path):
@@ -72,7 +71,7 @@ def get_wechat_install_path_from_register():
 
 def get_wechat_install_path():
     path_finders = [
-        lambda: get_path_from_ini(Config.INI_FILENAME, Config.INI_SECTION,
+        lambda: get_path_from_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                                   Config.INI_KEY_INSTALL_PATH, is_valid_wechat_install_path),
         lambda: os.path.join(get_wechat_install_path_from_register(), 'WeChat.exe').replace('\\', '/'),
         lambda: os.path.join(os.environ.get('ProgramFiles'), 'Tencent', 'WeChat', 'WeChat.exe').replace('\\', '/'),
@@ -83,7 +82,7 @@ def get_wechat_install_path():
     for finder in path_finders:
         path = finder()
         if path and os.path.exists(path):
-            save_path_to_ini(Config.INI_FILENAME, Config.INI_SECTION,
+            save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                              Config.INI_KEY_INSTALL_PATH, path)
             return path
 
@@ -105,7 +104,7 @@ def get_wechat_data_path_from_register():
 
 def get_wechat_data_path():
     path_finders = [
-        lambda: get_path_from_ini(Config.INI_FILENAME, Config.INI_SECTION,
+        lambda: get_path_from_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                                   Config.INI_KEY_DATA_PATH, is_valid_wechat_data_path),
         get_wechat_data_path_from_register,
         lambda: os.path.join(os.path.expanduser('~'), 'Documents', 'WeChat Files').replace('\\', '/'),
@@ -115,7 +114,7 @@ def get_wechat_data_path():
     for finder in path_finders:
         found_path = finder()
         if found_path and is_valid_wechat_data_path(found_path):
-            save_path_to_ini(Config.INI_FILENAME, Config.INI_SECTION,
+            save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                              Config.INI_KEY_DATA_PATH, found_path)
             return found_path
 
@@ -124,7 +123,7 @@ def get_wechat_data_path():
 
 def get_wechat_latest_version_path():
     path_finders = [
-        lambda: get_path_from_ini(Config.INI_FILENAME, Config.INI_SECTION, 
+        lambda: get_path_from_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                                   Config.INI_KEY_VER_PATH, is_valid_wechat_latest_version_path),
         get_wechat_latest_version_path_by_sort()
     ]
@@ -132,7 +131,7 @@ def get_wechat_latest_version_path():
     for finder in path_finders:
         found_path = finder
         if found_path and is_valid_wechat_latest_version_path(found_path):
-            save_path_to_ini(Config.INI_FILENAME, Config.INI_SECTION, 
+            save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                              Config.INI_KEY_VER_PATH, found_path)
             return found_path
 

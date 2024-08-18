@@ -29,10 +29,10 @@ def _handle_create_config_result(config_result, create_main_frame):
 
 
 class ThreadManager:
-    def __init__(self, master, ui_helper, account_manager):
-        self.login_thread = None
+    def __init__(self, master, account_manager):
+        self.auto_login_thread = None
+        self.manual_login_thread = None
         self.master = master
-        self.ui_helper = ui_helper
         self.account_manager = account_manager
 
     def create_config(self, account, test_and_create_config, create_main_frame):
@@ -42,22 +42,29 @@ class ThreadManager:
 
         threading.Thread(target=thread_func).start()
 
-    def manual_login_account(self, manual_login_func, create_account_list, bring_window_to_front):
-        self.login_thread = threading.Thread(target=self._manual_login_thread, args=(
-            manual_login_func, create_account_list, bring_window_to_front))
-        self.login_thread.start()
+    def manual_login_account(self, manual_login_func, status, create_account_list, bring_window_to_front):
+        self.manual_login_thread = threading.Thread(target=self._manual_login_thread, args=(
+            manual_login_func, status, create_account_list, bring_window_to_front))
+        self.manual_login_thread.start()
 
-    def _manual_login_thread(self, manual_login_func, create_account_list, bring_window_to_front):
-        manual_login_result = manual_login_func()
+    def _manual_login_thread(self, manual_login_func, status, create_account_list, bring_window_to_front):
+        manual_login_result = manual_login_func(status)
         self.master.after(0, _handle_manual_login_result, manual_login_result, create_account_list,
                           bring_window_to_front)
 
     def auto_login_account(self, account, auto_login_func, create_account_list, bring_window_to_front):
-        self.login_thread = threading.Thread(target=self._auto_login_thread, args=(
+        self.auto_login_thread = threading.Thread(target=self._auto_login_thread, args=(
             account, auto_login_func, create_account_list, bring_window_to_front))
-        self.login_thread.start()
+        self.auto_login_thread.start()
 
     def _auto_login_thread(self, account, auto_login_func, create_account_list, bring_window_to_front):
         auto_login_result = auto_login_func(account)
         self.master.after(0, _handle_auto_login_result, account, auto_login_result, create_account_list,
                           bring_window_to_front)
+
+    def get_account_list_thread(self, account_manager, callback):
+        def thread_func():
+            result = account_manager.get_account_list()
+            self.master.after(0, callback, result)
+
+        threading.Thread(target=thread_func).start()

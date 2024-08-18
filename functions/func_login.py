@@ -9,33 +9,45 @@ import pyautogui
 from functions import func_path
 from functions.func_path import is_valid_wechat_install_path, is_valid_wechat_data_path
 from utils.window_utils import wait_for_window_open, wait_for_window_close
+from resources.config import Config
 
 
-def manual_login():
+def manual_login(status):
     wechat_path = func_path.get_wechat_install_path()
-    multi_wechat_process = subprocess.Popen("./multiWechat.exe")
-    if wait_for_window_open("WTWindow", timeout=3):
-        time.sleep(2)
-        pyautogui.press('space')
+    if status == "已开启":
+        subprocess.Popen(wechat_path)
         if wait_for_window_open("WeChatLoginWndForPC", timeout=3):
-            print("打开了登录窗口")
-            # 等待登录窗口关闭
+            print("登录窗口已打开")
             if wait_for_window_close("WeChatLoginWndForPC", timeout=60):
                 print("登录窗口已关闭")
-                multi_wechat_process.terminate()
                 return True
-            else:
-                print("登录超时")
-                multi_wechat_process.terminate()
-                return False
-    multi_wechat_process.terminate()
-    return False
+        else:
+            print("打开失败，请重试！")
+            return False
+    else:
+        multi_wechat_process = subprocess.Popen("./multiWechat.exe")
+        if wait_for_window_open("WTWindow", timeout=3):
+            time.sleep(2)
+            pyautogui.press('space')
+            if wait_for_window_open("WeChatLoginWndForPC", timeout=3):
+                print("打开了登录窗口")
+                # 等待登录窗口关闭
+                if wait_for_window_close("WeChatLoginWndForPC", timeout=60):
+                    print("登录窗口已关闭")
+                    multi_wechat_process.terminate()
+                    return True
+                else:
+                    print("登录超时")
+                    multi_wechat_process.terminate()
+                    return False
+        multi_wechat_process.terminate()
+        return False
 
 
 def auto_login(account):
     # 获取数据路径
-    data_path = func_path.get_path_from_ini('path.ini', 'WxMultiple', 'DtPath', is_valid_wechat_data_path)
-    wechat_path = func_path.get_path_from_ini('path.ini', 'WxMultiple', 'WxPath', is_valid_wechat_install_path)
+    data_path = func_path.get_path_from_ini(Config.PATH_INI_PATH, Config.INI_SECTION, Config.INI_KEY_DATA_PATH, is_valid_wechat_data_path)
+    wechat_path = func_path.get_path_from_ini(Config.PATH_INI_PATH, Config.INI_SECTION, Config.INI_KEY_INSTALL_PATH, is_valid_wechat_install_path)
     if not data_path:
         return False
 

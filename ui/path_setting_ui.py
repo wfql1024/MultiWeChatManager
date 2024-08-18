@@ -111,7 +111,7 @@ class PathSettingWindow:
             path = path.replace('\\', '/')
             if path.lower().endswith('wechatwin.dll'):
                 self.dll_path_var.set(path)
-                func_path.save_path_to_ini(Config.INI_FILENAME, Config.INI_SECTION,
+                func_path.save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                                            Config.INI_KEY_VER_PATH, path)
                 break
             else:
@@ -132,7 +132,7 @@ class PathSettingWindow:
             path = path.replace('\\', '/')
             if func_path.is_valid_wechat_install_path(path):
                 self.install_path_var.set(path)
-                func_path.save_path_to_ini(Config.INI_FILENAME, Config.INI_SECTION,
+                func_path.save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                                            Config.INI_KEY_INSTALL_PATH, path)
                 break
             else:
@@ -153,7 +153,7 @@ class PathSettingWindow:
             path = path.replace('\\', '/')
             if func_path.is_valid_wechat_data_path(path):
                 self.data_path_var.set(path)
-                func_path.save_path_to_ini(Config.INI_FILENAME, Config.INI_SECTION,
+                func_path.save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
                                            Config.INI_KEY_DATA_PATH, path)
                 break
             else:
