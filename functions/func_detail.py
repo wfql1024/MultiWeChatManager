@@ -1,17 +1,21 @@
 import os
 import sqlite3
 
+import requests
+
 from functions import func_path
 from functions.func_decrypt import decrypt_and_copy
 from resources.config import Config
+from utils import json_utils
 
 
-def get_account_detail(pid, account):
+def fetch_account_detail(pid, account, before, after):
+    before()
     print("开始解密...")
     decrypt_and_copy(pid, account)
     print("连接数据库...")
-    usrDir = Config.PROJECT_USER_PATH
-    file_microMsg = usrDir + rf"\edit_{account}_MicroMsg.db"
+    user_directory = Config.PROJECT_USER_PATH
+    db_file = user_directory + rf"/edit_{account}_MicroMsg.db"
 
     data_path = func_path.get_wechat_data_path()
     excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF'}
@@ -19,22 +23,64 @@ def get_account_detail(pid, account):
         folder for folder in os.listdir(data_path)
         if os.path.isdir(os.path.join(data_path, folder))
     ) - excluded_folders
-    for account in folders:
-        conn = sqlite3.connect(file_microMsg)
+    for folder in folders:
+        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+        conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
-        SQL_contact = f"SELECT UserName, Alias, NickName FROM 'Contact' WHERE UserName = '{account}';"
-        SQL_contact_head_img_url = f"SELECT UsrName, bigHeadImgUrl FROM 'ContactHeadImgUrl' WHERE UsrName = '{account}';"
+        sql_contact = f"SELECT UserName, Alias, NickName FROM 'Contact' WHERE UserName = '{folder}';"
+        sql_contact_head_img_url = f"SELECT UsrName, bigHeadImgUrl FROM 'ContactHeadImgUrl' WHERE UsrName = '{folder}';"
         try:
-            cursor.execute(SQL_contact)
-            results = cursor.fetchall()
-            print(results)
-            cursor.execute(SQL_contact_head_img_url)
-            results = cursor.fetchall()
-            print(results)
+            cursor.execute(sql_contact)
+            contact_results = cursor.fetchall()
+            user_name, alias, nickname = contact_results[0]
+            if alias == "":
+                account_data[user_name]["alias"] = user_name
+            else:
+                account_data[user_name]["alias"] = alias
+            account_data[user_name]["nickname"] = nickname
+
+            cursor.execute(sql_contact_head_img_url)
+            avatar_results = cursor.fetchall()
+            usr_name, url = avatar_results[0]
+            account_data[usr_name]["avatar_url"] = url
+            save_path = os.path.join(data_path, "All Users", "config", f"{usr_name}.jpg").replace('\\', '/')
+
+            def download_image(url, save_path):
+                try:
+                    response = requests.get(url.rstrip(r'/0') + r'/132', stream=True)
+                    response.raise_for_status()  # 确保请求成功
+
+                    with open(save_path, 'wb') as file:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            file.write(chunk)
+
+                    print(f"图像已成功保存到 {save_path}")
+                    return True
+                except requests.RequestException as e:
+                    print(f"下载图像时出错: {e}")
+                    return False
+
+            success = None
+
+            if usr_name != account:
+                if not os.path.exists(save_path):
+                    success = download_image(url, save_path)
+            else:
+                success = download_image(url, save_path)
+
+            if success:
+                # 如果需要，这里可以添加额外的处理逻辑
+                pass
+            else:
+                # 处理下载失败的情况
+                print("无法下载图像，可能是不需要下载吧")
         except Exception as e:
-            print("sql excute have some error", e)
+            print("sql executed have some error", e)
+
+        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
         conn.close()
+        after()
 
 
-if __name__=='__main__':
-    get_account_detail(35520, "wxid_t2dchu5zw9y022")
+if __name__ == '__main__':
+    fetch_account_detail(35520, "wxid_t2dchu5zw9y022")

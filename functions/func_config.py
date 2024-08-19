@@ -8,6 +8,7 @@ import pyautogui
 
 from functions import func_path
 from utils.window_utils import wait_for_window_open, close_window
+from resources.config import Config
 
 
 def test_and_create_config(account):
@@ -24,21 +25,13 @@ class ConfigCreator:
                 "确认",
                 "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
         ):
-            multi_wechat_process = subprocess.Popen("./multiWechat.exe")
-            if not wait_for_window_open("WTWindow"):
-                messagebox.showerror("错误", "未检测到多开器窗口")
-                return False
-
-            time.sleep(2)
-            pyautogui.press('space')
-
-            if not wait_for_window_open("WeChatLoginWndForPC"):
+            multi_wechat_process = subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
+            if not wait_for_window_open("WeChatLoginWndForPC", 3):
                 messagebox.showerror("错误", "未检测到微信登录界面")
                 multi_wechat_process.terminate()
                 return False
 
-            time.sleep(3)
-            multi_wechat_process.terminate()
+            time.sleep(2)
 
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
                 return self.create_config()

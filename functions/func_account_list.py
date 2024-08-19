@@ -13,6 +13,30 @@ from utils import process_utils
 from resources.config import Config
 
 
+def wrap_text(text, max_width):
+    """
+    将文本按指定宽度换行，并且对超过这个长度的进行分两行处理，两行长度尽量相等
+    :param text: 要处理的文本
+    :param max_width: 每行最大字符数
+    :return: 处理后的文本
+    """
+    wrapped_text = ""
+
+    # 对每一段进行处理
+    for i in range(0, len(text), max_width):
+        segment = text[i:i + max_width]
+
+        if len(segment) > max_width:
+            # 如果段落的长度超过了一半，则将其均分成两行
+            middle = len(segment) // 2
+            wrapped_text += segment[:middle] + "\n" + segment[middle:] + "\n"
+        else:
+            # 如果长度小于等于max_width // 2，直接添加并换行
+            wrapped_text += segment + "\n"
+
+    return wrapped_text.strip()  # 移除最后的换行符
+
+
 def get_config_status(account):
     data_path = func_get_path.get_wechat_data_path()
     if not data_path:
@@ -21,19 +45,10 @@ def get_config_status(account):
     config_path = os.path.join(data_path, "All Users", "config", f"{account}.data")
     if os.path.exists(config_path):
         mod_time = os.path.getmtime(config_path)
-        dt = datetime.fromtimestamp(mod_time)
-        return dt.strftime("%m-%d %H:%M")
+        date = datetime.fromtimestamp(mod_time)
+        return f"{date.month}-{date.day} {date.hour:02}:{date.minute:02}"
     else:
         return "无配置"
-
-
-def update_account_detail_except_note(account_data, account, avatar_url, alias, nickname):
-    print("正在保存数据", avatar_url, alias, nickname)
-    if account not in account_data:
-        account_data[account] = {}
-    account_data[account]["avatar_url"] = avatar_url
-    account_data[account]["alias"] = alias
-    account_data[account]["nickname"] = nickname
 
 
 class AccountManager:
@@ -114,11 +129,19 @@ class AccountManager:
         json_utils.save_json_data(self.account_data_file, self.account_data)
 
     def get_account_display_name(self, account):
-        note = self.get_account_note(account)
-        nickname = self.get_account_nickname(account)
+        note = self.account_data.get(account, {}).get("note", None)
+        nickname = self.account_data.get(account, {}).get("nickname", None)
+        alias = self.account_data.get(account, {}).get("alias", None)
         if note:
-            return f"{account}\n{note}"
-        return f"{account}\n"
+            display_name = f"{note}"
+        elif nickname:
+            display_name = f"{nickname}"
+        elif alias:
+            display_name = f"{alias}"
+        else:
+            display_name = f"{account}"
+
+        return wrap_text(display_name, 9)
 
     def get_account_note(self, account):
         return self.account_data.get(account, {}).get("note", "")

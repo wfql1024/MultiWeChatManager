@@ -29,14 +29,14 @@ def get_avatar_from_files(account):
     wechat_data_path = get_wechat_data_path()
 
     # 构建头像文件路径
-    avatar_path = os.path.join(wechat_data_path, "All Users", f"{account}.jpg")
+    avatar_path = os.path.join(wechat_data_path, "All Users", "config", f"{account}.jpg")
 
     # 检查是否存在对应account的头像
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
 
     # 如果没有，检查default.jpg
-    default_path = os.path.join(wechat_data_path, "All Users", "default.jpg")
+    default_path = os.path.join(wechat_data_path, "All Users", "config", "default.jpg")
     if os.path.exists(default_path):
         return Image.open(default_path)
 
@@ -213,7 +213,7 @@ class MainWindow:
         self.account_manager = AccountManager(Config.ACC_DATA_JSON_PATH)
         self.thread_manager = ThreadManager(master, self.account_manager)
 
-        self.window_width = 500
+        self.window_width = 420
         self.window_height = 540
 
         self.master.withdraw()  # 初始化时隐藏主窗口
@@ -230,11 +230,43 @@ class MainWindow:
         # 定期检查队列中的消息
         self.update_status()
 
-        self.main_frame = ttk.Frame(master, padding="10")
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
+        # 定义底部Frame，确保优先显示
+        self.bottom_frame = ttk.Frame(master, padding="10")
+        self.bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+        manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", command=self.manual_login_account)
+        manual_login_button.pack(pady=0)
+
+        # 添加canvas滚动条
+        self.canvas = tk.Canvas(master)
+        self.scrollbar = ttk.Scrollbar(master, orient="vertical", command=self.canvas.yview)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
+
+        # 将滚动条连接到Canvas
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        # 创建一个Frame在Canvas中
+        self.main_frame = ttk.Frame(self.canvas)
+
+        # 将main_frame放置到Canvas的窗口中，并禁用Canvas的宽高跟随调整
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
+
+        # 配置Canvas的滚动区域
+        self.canvas.bind('<Configure>', self.on_canvas_configure)
+        self.main_frame.bind('<Configure>', self.on_frame_configure)
 
         self.master.after(840, self.delayed_initialization)
-        self.account_rows = {}  # 用于存储 AccountRow 实例
+        self.logged_in_rows = {}
+        self.not_logged_in_rows = {}  # 用于存储 AccountRow 实例
+
+    def on_canvas_configure(self, event):
+        # 当canvas大小改变时，调整main_frame的宽度
+        width = event.width - 10  # Canvas宽度减去10
+        self.canvas.itemconfig(self.canvas_window, width=width)
+
+    def on_frame_configure(self, event=None):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
 
     def delayed_initialization(self):
         self.check_paths()
@@ -336,7 +368,8 @@ class MainWindow:
             error_label.pack(pady=20)
             return
 
-        self.account_rows.clear()
+        self.logged_in_rows.clear()
+        self.not_logged_in_rows.clear()
 
         self.logged_in_frame = ttk.Frame(self.main_frame)
         self.logged_in_frame.pack(fill=tk.X, pady=2)
@@ -352,8 +385,6 @@ class MainWindow:
         for account in not_logged_in:
             self.add_account_row(self.not_logged_in_frame, account, False)
 
-        manual_login_button = ttk.Button(self.main_frame, text="手动登录", command=self.manual_login_account)
-        manual_login_button.pack(side=tk.BOTTOM, pady=0)
         print(f"加载完成！用时：{time.time() - self.start_time}")
         self.edit_menu.entryconfig("刷新", state="normal")
 
@@ -368,10 +399,16 @@ class MainWindow:
         }
 
         row = AccountRow(parent_frame, account, display_name, is_logged_in, config_status, callbacks)
-        self.account_rows[account] = row
+        if is_logged_in:
+            self.logged_in_rows[account] = row
+        else:
+            self.not_logged_in_rows[account] = row
 
-    def get_selected_accounts(self):
-        return [account for account, row in self.account_rows.items() if row.is_checked()]
+    def get_selected_logged_in_accounts(self):
+        return [account for account, row in self.logged_in_rows.items() if row.is_checked()]
+
+    def get_selected_not_logged_in_accounts(self):
+        return [account for account, row in self.not_logged_in_rows.items() if row.is_checked()]
 
     def start_auto_refresh(self):
         print("自动刷新开始")
@@ -440,7 +477,7 @@ class MainWindow:
                                                  self.bring_window_to_front)
 
     def auto_login_account(self, account):
-        self.thread_manager.auto_login_account(account, auto_login, self.create_main_frame,
+        self.thread_manager.auto_login_account(auto_login, account, self.status, self.create_main_frame,
                                                self.bring_window_to_front)
 
     def bring_window_to_front(self):

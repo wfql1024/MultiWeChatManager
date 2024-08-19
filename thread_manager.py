@@ -52,13 +52,13 @@ class ThreadManager:
         self.master.after(0, _handle_manual_login_result, manual_login_result, create_account_list,
                           bring_window_to_front)
 
-    def auto_login_account(self, account, auto_login_func, create_account_list, bring_window_to_front):
+    def auto_login_account(self, auto_login_func, account, status, create_account_list, bring_window_to_front):
         self.auto_login_thread = threading.Thread(target=self._auto_login_thread, args=(
-            account, auto_login_func, create_account_list, bring_window_to_front))
+            auto_login_func, account, status, create_account_list, bring_window_to_front))
         self.auto_login_thread.start()
 
-    def _auto_login_thread(self, account, auto_login_func, create_account_list, bring_window_to_front):
-        auto_login_result = auto_login_func(account)
+    def _auto_login_thread(self, auto_login_func, account, status, create_account_list, bring_window_to_front):
+        auto_login_result = auto_login_func(account, status)
         self.master.after(0, _handle_auto_login_result, account, auto_login_result, create_account_list,
                           bring_window_to_front)
 

@@ -4,13 +4,14 @@ import os
 import threading
 import time
 import tkinter as tk
+import webbrowser
 from tkinter import ttk, messagebox
 
 import psutil
 from PIL import Image, ImageTk
 
 import thread_manager
-from functions import func_path
+from functions import func_path, func_detail
 from utils import json_utils, process_utils
 from utils.window_utils import Tooltip
 from resources.config import Config
@@ -28,8 +29,8 @@ class DetailWindow:
 
         master.title(f"属性 - {account}")
 
-        window_width = 400
-        window_height = 450
+        window_width = 275
+        window_height = 345
         screen_width = master.winfo_screenwidth()
         screen_height = master.winfo_screenheight()
         x = (screen_width - window_width) // 2
@@ -43,7 +44,7 @@ class DetailWindow:
 
         master.grab_set()
 
-        frame = ttk.Frame(master, padding="30")
+        frame = ttk.Frame(master, padding="12")
         frame.pack(fill=tk.BOTH, expand=True)
 
         # 头像
@@ -89,10 +90,7 @@ class DetailWindow:
         self.fetch_button.pack(side=tk.LEFT, padx=(0, 5))
 
         save_button = ttk.Button(button_frame, text="保存", command=self.save_note)
-        save_button.pack(side=tk.LEFT, padx=(0, 5))
-
-        cancel_button = ttk.Button(button_frame, text="取消", command=master.destroy)
-        cancel_button.pack(side=tk.LEFT)
+        save_button.pack(side=tk.RIGHT, padx=(0, 5))
 
         ttk.Frame(frame).pack(fill=tk.BOTH, expand=True)
 
@@ -102,28 +100,29 @@ class DetailWindow:
 
     def load_data_label(self):
         self.account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-        print("尝试获取")
+        print("尝试获取...")
         data_path = func_path.get_wechat_data_path()
 
         # 构建头像文件路径
-        avatar_path = os.path.join(data_path, "All Users", f"{self.account}.jpg")
+        avatar_path = os.path.join(data_path, "All Users", "config", f"{self.account}.jpg")
         print("加载对应头像...")
 
         # 加载头像
         if os.path.exists(avatar_path):
+            print("对应头像存在...")
             avatar_url = self.account_data.get(self.account, {}).get("avatar_url", None)
             self.load_avatar(avatar_path, avatar_url)
-
-        # 如果没有，检查default.jpg
-        print("没有对应头像，加载默认头像...")
-        default_path = os.path.join(data_path, "All Users", "default.jpg")
-        base64_string = Strings.DEFAULT_AVATAR_BASE64
-        image_data = base64.b64decode(base64_string)
-        with open(default_path, "wb") as f:
-            f.write(image_data)
-        print(f"默认头像已保存到 {default_path}")
-        avatar_url = self.account_data.get(self.account, {}).get("avatar_url", None)
-        self.load_avatar(default_path, avatar_url)
+        else:
+            # 如果没有，检查default.jpg
+            print("没有对应头像，加载默认头像...")
+            default_path = os.path.join(data_path, "All Users", "default.jpg")
+            base64_string = Strings.DEFAULT_AVATAR_BASE64
+            image_data = base64.b64decode(base64_string)
+            with open(default_path, "wb") as f:
+                f.write(image_data)
+            print(f"默认头像已保存到 {default_path}")
+            avatar_url = self.account_data.get(self.account, {}).get("avatar_url", None)
+            self.load_avatar(default_path, avatar_url)
 
 
         # 更新其他标签
@@ -176,7 +175,7 @@ class DetailWindow:
             self.avatar_label.config(text="无头像")
 
     def open_url(self, url):
-        # 这里应该实现打开URL的逻辑
+        webbrowser.open(url)
         print(f"Opening URL: {url}")
 
     def fetch_data(self):
@@ -197,18 +196,9 @@ class DetailWindow:
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
 
-        # 这里应该调用获取数据的方法
-        # avatar_url, alias, nickname = get_account_info(pid, self.account)
-
-        # 使用示例数据
-        avatar_url = "https://example.com/avatar.jpg"
-        alias = "example_alias"
-        nickname = "Example Nickname"
-
-        self.account_manager.update_account_detail_except_note(self.account_data, self.account, avatar_url, alias, nickname)
-
         json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, self.account_data)
 
+        func_detail.fetch_account_detail(pid, self.account, self.disable_fetch_button, self.enable_fetch_button)
         # 刷新显示
         self.load_data_label()
 
