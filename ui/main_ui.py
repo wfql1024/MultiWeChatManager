@@ -25,6 +25,11 @@ from utils.window_utils import center_window, Tooltip
 
 
 def get_avatar_from_files(account):
+    """
+    从本地缓存获取头像
+    :param account: 原始微信号
+    :return: 头像文件 -> ImageFile
+    """
     # 获取WeChat数据路径
     wechat_data_path = get_wechat_data_path()
 
@@ -53,6 +58,10 @@ def get_avatar_from_files(account):
 
 
 class RedirectText:
+    """
+    用以传送打印到窗口状态栏的类
+    """
+
     def __init__(self, text_var, message_queue):
         self.text_var = text_var
         self.message_queue = message_queue
@@ -67,6 +76,12 @@ class RedirectText:
 
 
 def create_round_corner_image(img, radius):
+    """
+    创建圆角的头像
+    :param img:
+    :param radius:
+    :return:
+    """
     circle = Image.new('L', (radius * 2, radius * 2), 0)
     draw = ImageDraw.Draw(circle)
     draw.ellipse((0, 0, radius * 2, radius * 2), fill=255)
@@ -100,6 +115,10 @@ def avatar_on_enter(event):
 
 
 class AccountRow:
+    """
+    为每一个账号创建其行布局的类
+    """
+
     def __init__(self, parent_frame, account, display_name, is_logged_in, config_status, callbacks):
         self.tooltip = None
         self.toggle_avatar_label = None
@@ -157,11 +176,16 @@ class AccountRow:
         print(f"完成账号创建：{account}")
 
     def disable_login_button(self):
+        """禁用登录按钮"""
         self.login_button.state(['disabled'])
         if not self.tooltip:
             self.tooltip = Tooltip(self.login_button, "请先手动登录后配置")
 
     def enable_login_button(self):
+        """
+        启用登录按钮
+        :return: None
+        """
         self.login_button.state(['!disabled'])
         if self.tooltip:
             self.tooltip.widget.unbind("<Enter>")
@@ -169,13 +193,27 @@ class AccountRow:
             self.tooltip = None
 
     def toggle_checkbox(self, event):
+        """
+        切换复选框状态
+        :param event: 点击复选框
+        :return: 阻断继续切换
+        """
         self.checkbox_var.set(not self.checkbox_var.get())
         return "break"
 
     def is_checked(self):
+        """
+        获取复选框状态
+        :return: 复选框状态 -> bool
+        """
         return self.checkbox_var.get()
 
     def create_avatar_label(self, account):
+        """
+        创建头像标签
+        :param account: 原始微信号
+        :return: 头像标签 -> Label
+        """
         try:
             img = get_avatar_from_files(account)
             img = img.resize((44, 44))
@@ -190,6 +228,8 @@ class AccountRow:
 
 
 class MainWindow:
+    """构建主窗口的类"""
+
     def __init__(self, master, loading_window):
         self.wechat_processes = None
         self.status = None
@@ -237,14 +277,15 @@ class MainWindow:
         manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", command=self.manual_login_account)
         manual_login_button.pack(pady=0)
 
-        # 添加canvas滚动条
+        # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
         self.canvas = tk.Canvas(master)
-        self.scrollbar = ttk.Scrollbar(master, orient="vertical", command=self.canvas.yview)
-        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.scrollbar_frame = tk.Frame(master)
+        self.scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)
         self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
 
-        # 将滚动条连接到Canvas
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        # 创建滚动条
+        self.scrollbar = ttk.Scrollbar(self.scrollbar_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
 
         # 创建一个Frame在Canvas中
         self.main_frame = ttk.Frame(self.canvas)
@@ -252,27 +293,25 @@ class MainWindow:
         # 将main_frame放置到Canvas的窗口中，并禁用Canvas的宽高跟随调整
         self.canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
 
+        # 将滚动条连接到Canvas
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
         # 配置Canvas的滚动区域
         self.canvas.bind('<Configure>', self.on_canvas_configure)
-        self.main_frame.bind('<Configure>', self.on_frame_configure)
 
-        self.master.after(840, self.delayed_initialization)
         self.logged_in_rows = {}
         self.not_logged_in_rows = {}  # 用于存储 AccountRow 实例
 
-    def on_canvas_configure(self, event):
-        # 当canvas大小改变时，调整main_frame的宽度
-        width = event.width - 10  # Canvas宽度减去10
-        self.canvas.itemconfig(self.canvas_window, width=width)
-
-    def on_frame_configure(self, event=None):
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self.master.after(200, self.delayed_initialization)
 
     def delayed_initialization(self):
+        """延迟加载，等待路径检查"""
+        time.sleep(0.4)
         self.check_paths()
-        self.master.after(840, self.finalize_initialization)
+        self.master.after(1500, self.finalize_initialization)
 
     def finalize_initialization(self):
+        """路径检查完毕后进入，销毁等待窗口，居中显示主窗口"""
         if hasattr(self, 'loading_window') and self.loading_window:
             self.loading_window.destroy()
             self.loading_window = None
@@ -288,6 +327,49 @@ class MainWindow:
 
         # time.sleep(500)
         # self.ui_helper.center_window(self.master)
+
+    def bind_mouse_wheel(self, widget):
+        """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
+        widget.bind("<MouseWheel>", self.on_mousewheel, add='+')
+        widget.bind("<Button-4>", self.on_mousewheel, add='+')
+        widget.bind("<Button-5>", self.on_mousewheel, add='+')
+
+        for child in widget.winfo_children():
+            self.bind_mouse_wheel(child)
+
+    def unbind_mouse_wheel(self, widget):
+        """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
+        widget.unbind("<MouseWheel>")
+        widget.unbind("<Button-4>")
+        widget.unbind("<Button-5>")
+
+        for child in widget.winfo_children():
+            self.unbind_mouse_wheel(child)
+
+    def on_mousewheel(self, event):
+        """鼠标滚轮触发动作"""
+        # 对于Windows和MacOS
+        if event.delta:
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        # 对于Linux
+        else:
+            if event.num == 5:
+                self.canvas.yview_scroll(1, "units")
+            elif event.num == 4:
+                self.canvas.yview_scroll(-1, "units")
+
+    def on_canvas_configure(self, event):
+        """动态调整canvas中窗口的宽度，并根据父子间高度关系进行滚轮事件绑定与解绑"""
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        width = event.width
+        self.canvas.itemconfig(self.canvas_window, width=width)
+
+        if self.main_frame.winfo_height() > self.canvas.winfo_height():
+            self.bind_mouse_wheel(self.canvas)
+            self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
+        else:
+            self.unbind_mouse_wheel(self.canvas)
+            self.scrollbar.pack_forget()
 
     def setup_main_window(self):
         self.master.title("微信多开管理器")
@@ -320,6 +402,7 @@ class MainWindow:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
 
     def check_paths(self):
+        """路径检查"""
         install_path = func_path.get_wechat_install_path()
         data_path = func_path.get_wechat_data_path()
         last_version_path = func_path.get_wechat_latest_version_path()
@@ -333,6 +416,7 @@ class MainWindow:
             self.start_auto_refresh()
 
     def show_path_error(self):
+        """路径错误提醒"""
         for widget in self.main_frame.winfo_children():
             widget.destroy()
         error_label = ttk.Label(self.main_frame, text="路径设置错误，请进入设置-路径中修改", foreground="red")
@@ -353,7 +437,11 @@ class MainWindow:
         try:
             self.thread_manager.get_account_list_thread(self.account_manager, self._update_account_list)
         finally:
+            # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
+
+        # 直接调用 on_canvas_configure 方法
+        self.canvas.update_idletasks()
 
     def _update_account_list(self, result):
         logged_in, not_logged_in, wechat_processes = result
@@ -372,21 +460,29 @@ class MainWindow:
         self.not_logged_in_rows.clear()
 
         self.logged_in_frame = ttk.Frame(self.main_frame)
-        self.logged_in_frame.pack(fill=tk.X, pady=2)
+        self.logged_in_frame.pack(fill=tk.X, pady=2, padx=(10, 10))
         self.logged_in_label = ttk.Label(self.logged_in_frame, text="已登录账号：", font=("", 10, "bold"))
         self.logged_in_label.pack(fill=tk.X, anchor="w", pady=(10, 5))
         for account in logged_in:
             self.add_account_row(self.logged_in_frame, account, True)
 
         self.not_logged_in_frame = ttk.Frame(self.main_frame)
-        self.not_logged_in_frame.pack(fill=tk.X, pady=2)
+        self.not_logged_in_frame.pack(fill=tk.X, pady=2, padx=(10, 10))
         self.not_logged_in_label = ttk.Label(self.not_logged_in_frame, text="未登录账号：", font=("", 10, "bold"))
         self.not_logged_in_label.pack(fill=tk.X, anchor="w", pady=(20, 5))
         for account in not_logged_in:
             self.add_account_row(self.not_logged_in_frame, account, False)
 
         print(f"加载完成！用时：{time.time() - self.start_time}")
+
+        # 恢复刷新可用性
         self.edit_menu.entryconfig("刷新", state="normal")
+
+        # 加载完成后更新一下界面并且触发事件以此更新绑定
+        self.canvas.update_idletasks()
+        event = tk.Event()
+        event.width = self.canvas.winfo_width()
+        self.on_canvas_configure(event)
 
     def add_account_row(self, parent_frame, account, is_logged_in):
         display_name = self.account_manager.get_account_display_name(account)
@@ -411,6 +507,7 @@ class MainWindow:
         return [account for account, row in self.not_logged_in_rows.items() if row.is_checked()]
 
     def start_auto_refresh(self):
+        """开启自动刷新"""
         print("自动刷新开始")
         self.create_main_frame()
         self.master.after(300000, self.start_auto_refresh)

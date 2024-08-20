@@ -29,9 +29,11 @@ class LoadingWindow:
         self.progress.pack(pady=10)
 
         self.window.deiconify()  # 显示窗口
-        self.progress.start(10)
+        self.progress.start(1)
 
     def destroy(self):
         if self.window.winfo_exists():
+            self.progress['value'] = self.progress['maximum']
+            self.window.update_idletasks()
             self.progress.stop()
             self.window.destroy()
