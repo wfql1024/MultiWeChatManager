@@ -2,7 +2,7 @@ import mmap
 import os
 import time
 
-import psutil  # 用于检测和关闭微信进程
+import psutil
 
 from functions import func_path
 

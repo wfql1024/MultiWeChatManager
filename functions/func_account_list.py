@@ -28,7 +28,7 @@ def wrap_text(text, max_width):
 
         if len(segment) > max_width:
             # 如果段落的长度超过了一半，则将其均分成两行
-            middle = len(segment) // 2
+            middle = (len(segment) + 1) // 2
             wrapped_text += segment[:middle] + "\n" + segment[middle:] + "\n"
         else:
             # 如果长度小于等于max_width // 2，直接添加并换行
@@ -141,7 +141,7 @@ class AccountManager:
         else:
             display_name = f"{account}"
 
-        return wrap_text(display_name, 9)
+        return wrap_text(display_name, 10)
 
     def get_account_note(self, account):
         return self.account_data.get(account, {}).get("note", "")

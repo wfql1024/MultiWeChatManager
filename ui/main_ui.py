@@ -1,4 +1,5 @@
 # main_ui.py
+import base64
 import os
 import queue
 import sys
@@ -47,11 +48,11 @@ def get_avatar_from_files(account):
 
     # 如果default.jpg也不存在，尝试从URL获取
     try:
-        url = Strings.DEFAULT_AVATAR_URL
-        response = requests.get(url)
-        img = Image.open(BytesIO(response.content))
-        img.save(default_path)  # 保存到default.jpg
-        return img
+        base64_string = Strings.DEFAULT_AVATAR_BASE64
+        image_data = base64.b64decode(base64_string)
+        with open(default_path, "wb") as f:
+            f.write(image_data)
+        return Image.open(default_path)
     except Exception():
         print("所有方法都失败，创建空白头像")
         return Image.new('RGB', (44, 44), color='white')
@@ -68,7 +69,7 @@ class RedirectText:
         self.original_stdout = sys.stdout
 
     def write(self, text):
-        self.message_queue.put(text)  # 将文本放入队列
+        self.message_queue.put(" " + text)  # 将文本放入队列
         self.original_stdout.write(text)  # 继续在控制台显示
 
     def flush(self):
@@ -119,74 +120,105 @@ class AccountRow:
     为每一个账号创建其行布局的类
     """
 
-    def __init__(self, parent_frame, account, display_name, is_logged_in, config_status, callbacks):
+    def __init__(self, parent_frame, account, display_name, is_logged_in, config_status, callbacks,
+                 update_top_checkbox_callback):
         self.tooltip = None
         self.toggle_avatar_label = None
         self.size = None
+        self.update_top_checkbox_callback = update_top_checkbox_callback
+        self.is_logged_in = is_logged_in
         style = ttk.Style()
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
+        # 行框架=复选框+头像标签+账号标签+按钮区域+配置标签
         self.row_frame = ttk.Frame(parent_frame)
         self.row_frame.pack(fill=tk.X, pady=2)
 
+        # 复选框
         self.checkbox_var = tk.BooleanVar(value=False)
-        self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
+        if is_logged_in:
+            self.checkbox = tk.Checkbutton(
+                self.row_frame,
+                # command=self.update_logged_in_top_checkbox_callback,
+                variable=self.checkbox_var
+            )
+        else:
+            self.checkbox = tk.Checkbutton(
+                self.row_frame,
+                # command=self.update_not_logged_in_top_checkbox_callback,
+                variable=self.checkbox_var
+            )
         self.checkbox.pack(side=tk.LEFT)
 
+        # 头像标签
         self.avatar_label = self.create_avatar_label(account)
         self.avatar_label.pack(side=tk.LEFT)
-
         self.avatar_label.bind("<Enter>", avatar_on_enter)
         self.avatar_label.bind("<Leave>", avatar_on_leave)
 
+        # 账号标签
         self.account_label = ttk.Label(self.row_frame, text=display_name)
         self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
 
+        # 按钮区域=配置或登录按钮
         self.button_frame = ttk.Frame(self.row_frame)
         self.button_frame.pack(side=tk.RIGHT)
 
+        # 配置标签
         self.config_status_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
         self.config_status_label.pack(side=tk.RIGHT, padx=5, fill=tk.X, expand=True)
 
         if is_logged_in:
+            # 配置按钮
             self.config_button_text = "重新配置" if config_status != "无配置" else "添加配置"
-            self.config_button = ttk.Button(self.button_frame, text=self.config_button_text, style='Custom.TButton',
-                                            width=8,
-                                            command=lambda: callbacks['config'](account))
+            self.config_button = ttk.Button(
+                self.button_frame,
+                text=self.config_button_text,
+                style='Custom.TButton',
+                width=8,
+                command=lambda: callbacks['config'](account)
+            )
             self.config_button.pack(side=tk.RIGHT, padx=0)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
             for child in self.row_frame.winfo_children():
                 child.bind("<Button-1>", self.toggle_checkbox, add="+")
         else:
+            # 登录按钮
             self.login_button = ttk.Button(self.button_frame, text="自动登录", style='Custom.TButton', width=8,
                                            command=lambda: callbacks['login'](account))
             self.login_button.pack(side=tk.RIGHT, padx=0)
 
             if config_status == "无配置":
-                self.disable_login_button()
+                # 无配置禁用按钮且置底
+                self.disable_button_and_add_tip(self.login_button, "请先手动登录后配置")
                 self.checkbox.config(state='disabled')
                 self.row_frame.pack(side=tk.BOTTOM)
             else:
-                self.enable_login_button()
+                # 启用按钮且为行区域添加复选框绑定
+                self.enable_button_and_unbind_tip(self.login_button)
                 self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
                 for child in self.row_frame.winfo_children():
                     child.bind("<Button-1>", self.toggle_checkbox, add="+")
 
+        # 头像绑定详情事件
         self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
         print(f"完成账号创建：{account}")
 
-    def disable_login_button(self):
-        """禁用登录按钮"""
-        self.login_button.state(['disabled'])
-        if not self.tooltip:
-            self.tooltip = Tooltip(self.login_button, "请先手动登录后配置")
-
-    def enable_login_button(self):
+    def disable_button_and_add_tip(self, button, text):
         """
-        启用登录按钮
+        禁用按钮，启用提示
         :return: None
         """
-        self.login_button.state(['!disabled'])
+        button.state(['disabled'])
+        if not self.tooltip:
+            self.tooltip = Tooltip(button, text)
+
+    def enable_button_and_unbind_tip(self, button):
+        """
+        启用按钮，去除提示
+        :return: None
+        """
+        button.state(['!disabled'])
         if self.tooltip:
             self.tooltip.widget.unbind("<Enter>")
             self.tooltip.widget.unbind("<Leave>")
@@ -199,7 +231,12 @@ class AccountRow:
         :return: 阻断继续切换
         """
         self.checkbox_var.set(not self.checkbox_var.get())
+        self.update_top_checkbox_callback(self.is_logged_in)
         return "break"
+
+    def set_checkbox(self, value):
+        """设置当前复选框的状态"""
+        self.checkbox_var.set(value)
 
     def is_checked(self):
         """
@@ -252,6 +289,8 @@ class MainWindow:
         self.loading_window = loading_window
         self.account_manager = AccountManager(Config.ACC_DATA_JSON_PATH)
         self.thread_manager = ThreadManager(master, self.account_manager)
+        style = ttk.Style()
+        style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
         self.window_width = 420
         self.window_height = 540
@@ -270,15 +309,21 @@ class MainWindow:
         # 定期检查队列中的消息
         self.update_status()
 
-        # 定义底部Frame，确保优先显示
+        # 底部框架=创建lnk+手动登录
         self.bottom_frame = ttk.Frame(master, padding="10")
-        self.bottom_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        self.bottom_frame.pack(side=tk.BOTTOM)
 
-        manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", command=self.manual_login_account)
-        manual_login_button.pack(pady=0)
+        manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
+                                         command=self.manual_login_account, style='Custom.TButton')
+        manual_login_button.pack(side=tk.LEFT)
+
+        # 创建lnk
+        self.create_lnk_button = ttk.Button(self.bottom_frame, text="创建lnk", width=8,
+                                            command=None, style='Custom.TButton')
+        self.create_lnk_button.pack(side=tk.RIGHT)
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
-        self.canvas = tk.Canvas(master)
+        self.canvas = tk.Canvas(master, highlightthickness=0)
         self.scrollbar_frame = tk.Frame(master)
         self.scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)
         self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
@@ -300,7 +345,7 @@ class MainWindow:
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
         self.logged_in_rows = {}
-        self.not_logged_in_rows = {}  # 用于存储 AccountRow 实例
+        self.not_logged_in_rows = {}
 
         self.master.after(200, self.delayed_initialization)
 
@@ -370,6 +415,26 @@ class MainWindow:
         else:
             self.unbind_mouse_wheel(self.canvas)
             self.scrollbar.pack_forget()
+
+    def toggle_top_logged_in_checkbox(self, event):
+        """
+        切换复选框状态
+        :param event: 点击复选框
+        :return: 阻断继续切换
+        """
+        self.logged_in_checkbox_var.set(not self.logged_in_checkbox_var.get())
+        self.update_all_logged_in_checkboxes()
+        return "break"
+
+    def toggle_top_not_logged_in_checkbox(self, event):
+        """
+        切换复选框状态
+        :param event: 点击复选框
+        :return: 阻断继续切换
+        """
+        self.not_logged_in_checkbox_var.set(not self.not_logged_in_checkbox_var.get())
+        self.update_all_not_logged_in_checkboxes()
+        return "break"
 
     def setup_main_window(self):
         self.master.title("微信多开管理器")
@@ -459,21 +524,73 @@ class MainWindow:
         self.logged_in_rows.clear()
         self.not_logged_in_rows.clear()
 
+        # 已登录框架=已登录标题+已登录列表
         self.logged_in_frame = ttk.Frame(self.main_frame)
-        self.logged_in_frame.pack(fill=tk.X, pady=2, padx=(10, 10))
-        self.logged_in_label = ttk.Label(self.logged_in_frame, text="已登录账号：", font=("", 10, "bold"))
-        self.logged_in_label.pack(fill=tk.X, anchor="w", pady=(10, 5))
+        self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
+
+        # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
+        self.logged_in_title = ttk.Frame(self.logged_in_frame)
+        self.logged_in_title.pack(side=tk.TOP, fill=tk.X)
+
+        # 已登录复选框
+        self.logged_in_checkbox_var = tk.IntVar(value=0)
+        self.logged_in_checkbox = tk.Checkbutton(self.logged_in_title, variable=self.logged_in_checkbox_var,
+                                                 command=self.update_all_logged_in_checkboxes, tristatevalue=-1)
+        self.logged_in_checkbox.pack(side=tk.LEFT)
+
+        # 已登录标签
+        self.logged_in_label = ttk.Label(self.logged_in_title, text="已登录账号：", font=("", 10, "bold"))
+        self.logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+
+        # 已登录按钮区域=一键退出
+        self.logged_in_bottom_frame = ttk.Frame(self.logged_in_title)
+        self.logged_in_bottom_frame.pack(side=tk.RIGHT)
+
+        # 一键退出
+        self.one_key_quit = ttk.Button(self.logged_in_bottom_frame, text="一键退出", width=8,
+                                       command=self.get_selected_logged_in_accounts, style='Custom.TButton')
+        self.one_key_quit.pack(side=tk.RIGHT, pady=0)
+
+        # 加载已登录列表
         for account in logged_in:
             self.add_account_row(self.logged_in_frame, account, True)
 
+        # 未登录框架=未登录标题+未登录列表
         self.not_logged_in_frame = ttk.Frame(self.main_frame)
-        self.not_logged_in_frame.pack(fill=tk.X, pady=2, padx=(10, 10))
-        self.not_logged_in_label = ttk.Label(self.not_logged_in_frame, text="未登录账号：", font=("", 10, "bold"))
-        self.not_logged_in_label.pack(fill=tk.X, anchor="w", pady=(20, 5))
+        self.not_logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
+
+        # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
+        self.not_logged_in_title = ttk.Frame(self.not_logged_in_frame)
+        self.not_logged_in_title.pack(side=tk.TOP, fill=tk.X)
+
+        # 未登录复选框
+        self.not_logged_in_checkbox_var = tk.IntVar(value=0)
+        self.not_logged_in_checkbox = tk.Checkbutton(self.not_logged_in_title, variable=self.not_logged_in_checkbox_var,
+                                                     command=self.update_all_not_logged_in_checkboxes, tristatevalue=-1)
+        self.not_logged_in_checkbox.pack(side=tk.LEFT)
+
+        # 未登录标签
+        self.not_logged_in_label = ttk.Label(self.not_logged_in_title, text="未登录账号：", font=("", 10, "bold"))
+        self.not_logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+
+        # 未登录按钮区域=一键登录
+        self.not_logged_in_bottom_frame = ttk.Frame(self.not_logged_in_title)
+        self.not_logged_in_bottom_frame.pack(side=tk.RIGHT)
+
+        # 一键登录
+        self.one_key_auto_login = ttk.Button(self.not_logged_in_bottom_frame, text="一键登录", width=8,
+                                             command=self.create_main_frame, style='Custom.TButton')
+        self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
+
+        # 加载未登录列表
         for account in not_logged_in:
             self.add_account_row(self.not_logged_in_frame, account, False)
 
-        print(f"加载完成！用时：{time.time() - self.start_time}")
+        # 更新顶部复选框状态
+        self.update_top_checkbox_state(True)
+        self.update_top_checkbox_state(False)
+
+        print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
         self.edit_menu.entryconfig("刷新", state="normal")
@@ -494,14 +611,74 @@ class MainWindow:
             'login': self.auto_login_account
         }
 
-        row = AccountRow(parent_frame, account, display_name, is_logged_in, config_status, callbacks)
+        # 创建列表实例
+        row = AccountRow(parent_frame, account, display_name, is_logged_in, config_status, callbacks,
+                         self.update_top_checkbox_state)
+
+        # 将已登录、未登录但已配置实例存入字典
         if is_logged_in:
             self.logged_in_rows[account] = row
         else:
-            self.not_logged_in_rows[account] = row
+            if config_status == "无配置":
+                pass
+            else:
+                self.not_logged_in_rows[account] = row
+
+    def update_all_logged_in_checkboxes(self):
+        """根据顶行复选框的状态更新AccountRow实例的复选框状态"""
+        value = self.logged_in_checkbox_var.get()
+        for row in self.logged_in_rows.values():
+            row.set_checkbox(value)
+
+    def update_all_not_logged_in_checkboxes(self):
+        """根据顶行复选框的状态更新AccountRow实例的复选框状态"""
+        value = self.not_logged_in_checkbox_var.get()
+        for row in self.not_logged_in_rows.values():
+            row.set_checkbox(value)
+
+    def update_top_checkbox_state(self, is_logged_in):
+        """根据AccountRow实例的复选框状态更新顶行复选框状态"""
+        title = None
+        checkbox = None
+        checkbox_var = None
+        toggle = None
+
+        if is_logged_in:
+            all_rows = list(self.logged_in_rows.values())
+            checkbox = self.logged_in_checkbox
+            title = self.logged_in_title
+            checkbox_var = self.logged_in_checkbox_var
+            toggle = self.toggle_top_logged_in_checkbox
+        else:
+            all_rows = list(self.not_logged_in_rows.values())
+            checkbox = self.not_logged_in_checkbox
+            title = self.not_logged_in_title
+            checkbox_var = self.not_logged_in_checkbox_var
+            toggle = self.toggle_top_not_logged_in_checkbox
+
+        if len(all_rows) == 0:
+            title.unbind("<Button-1>")
+            for child in title.winfo_children():
+                child.unbind("<Button-1>")
+            checkbox.config(state="disabled")
+        else:
+            title.bind("<Button-1>", toggle, add="+")
+            for child in title.winfo_children():
+                child.bind("<Button-1>", toggle, add="+")
+            checkbox.config(state="normal")
+
+            states = [row.checkbox_var.get() for row in all_rows]
+            if all(states):
+                checkbox_var.set(1)
+            elif any(states):
+                checkbox_var.set(-1)  # 不确定状态
+            else:
+                checkbox_var.set(0)
 
     def get_selected_logged_in_accounts(self):
-        return [account for account, row in self.logged_in_rows.items() if row.is_checked()]
+        accounts = [account for account, row in self.logged_in_rows.items() if row.is_checked()]
+        print(accounts)
+        return accounts
 
     def get_selected_not_logged_in_accounts(self):
         return [account for account, row in self.not_logged_in_rows.items() if row.is_checked()]

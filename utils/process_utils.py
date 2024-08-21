@@ -24,7 +24,7 @@ K32GetModuleFileNameExA.restype = ctypes.wintypes.DWORD
 
 
 def get_process_ids_by_name(process_name):
-    """通过进程名获取所有匹配进程的ID和句柄"""
+    """通过进程名获取所有匹配进程的ID"""
     matching_processes = []
     start_time = time.time()
     processes = psutil.process_iter(['name'])
