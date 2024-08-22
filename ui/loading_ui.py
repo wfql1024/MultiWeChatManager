@@ -29,7 +29,7 @@ class LoadingWindow:
         self.progress.pack(pady=10)
 
         self.window.deiconify()  # 显示窗口
-        self.progress.start(1)
+        self.progress.start(5)
 
     def destroy(self):
         if self.window.winfo_exists():

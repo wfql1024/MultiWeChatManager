@@ -1,8 +1,12 @@
 import ctypes
+import subprocess
 import time
 from ctypes import wintypes
 
 import psutil
+import win32api
+import win32con
+import win32process
 
 kernel32 = ctypes.windll.kernel32
 OpenProcess = kernel32.OpenProcess
@@ -24,14 +28,28 @@ K32GetModuleFileNameExA.restype = ctypes.wintypes.DWORD
 
 
 def get_process_ids_by_name(process_name):
-    """通过进程名获取所有匹配进程的ID"""
     matching_processes = []
-    start_time = time.time()
-    processes = psutil.process_iter(['name'])
-    for proc in processes:
-        if proc.name().lower() == process_name.lower():
-            pid = proc.pid
-            matching_processes.append(pid)
+    try:
+        # 直接执行 tasklist 命令并获取输出
+        origin_output = subprocess.check_output(['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/FO', 'CSV', '/NH'])
+        print(origin_output)
+        try:
+            output = origin_output.decode('utf-8').strip()
+        except UnicodeDecodeError as e:
+            print(f"解码错误：{e}")
+            print(origin_output.decode('GBK').strip())
+            return []  # 或者根据需求返回其他值或执行其他逻辑
+        print(output)
+
+        # 解析输出并获取进程 ID
+        for line in output.split('\n'):
+            process_info = [x.strip('"') for x in line.split(',')]
+            if process_info[0].lower() == process_name.lower():
+                matching_processes.append(int(process_info[1]))
+
+    except subprocess.CalledProcessError:
+        pass
+
     return matching_processes
 
 

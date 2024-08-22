@@ -4,11 +4,11 @@ import time
 
 import psutil
 
-from functions import func_path
+from functions import func_setting
 
 
 def check_dll():
-    dll_path = os.path.join(func_path.get_wechat_latest_version_path(), "WeChatWin.dll")
+    dll_path = os.path.join(func_setting.get_wechat_latest_version_path(), "WeChatWin.dll")
     try:
         # 以只读模式打开文件
         with open(dll_path, 'rb') as f:
@@ -69,7 +69,7 @@ def switch_dll():
             return False
 
     # 获取 DLL 路径
-    dll_path = os.path.join(func_path.get_wechat_latest_version_path(), "WeChatWin.dll")
+    dll_path = os.path.join(func_setting.get_wechat_latest_version_path(), "WeChatWin.dll")
 
     try:
         with open(dll_path, 'r+b') as f:

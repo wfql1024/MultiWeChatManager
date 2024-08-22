@@ -6,3 +6,6 @@ psutil~=5.9.6
 requests~=2.32.3
 pillow~=10.4.0
 pywin32~=306
+Pymem~=1.13.0
+winshell~=0.6
+pywinauto~=0.6.8

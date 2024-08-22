@@ -26,13 +26,14 @@ DEFAULT_PAGESIZE = 4096
 DEFAULT_ITER = 64000
 
 
+# 第一步：找key -> 2. 检验是否成功
 def check_sqlite_pass(db_file, password):
     db_file = Path(db_file)
-    if type(password) == str:  #要是类型是string的，就转bytes
+    if type(password) is str:  # 要是类型是string的，就转bytes
         password = bytes.fromhex(password.replace(' ', ''))
     with open(db_file, 'rb') as (f):
-        salt = f.read(16)  #开头的16字节做salt
-        first_page_data = f.read(DEFAULT_PAGESIZE - 16)  #从开头第16字节开始到DEFAULT_PAGESIZE整个第一页
+        salt = f.read(16)  # 开头的16字节做salt
+        first_page_data = f.read(DEFAULT_PAGESIZE - 16)  # 从开头第16字节开始到DEFAULT_PAGESIZE整个第一页
     if not len(salt) == 16:
         print(f"{db_file} read failed ")
         return False
@@ -71,7 +72,9 @@ def get_logger(log_file):
     logger.addHandler(log_ch)
     return logger
 
-def DecrypTo(db_filePath, pwd):
+
+# 第二步：解密
+def DecrypTo(db_file_path, pwd):
     SQLITE_FILE_HEADER = bytes("SQLite format 3", encoding='ASCII') + bytes(1)  #文件头
     IV_SIZE = 16
     HMAC_SHA1_SIZE = 20
@@ -81,7 +84,7 @@ def DecrypTo(db_filePath, pwd):
     #yourkey
     password = bytes.fromhex(pwd.replace(' ', ''))
 
-    with open(db_filePath, 'rb') as f:
+    with open(db_file_path, 'rb') as f:
         blist = f.read()
     print(len(blist))
 
@@ -106,17 +109,19 @@ def DecrypTo(db_filePath, pwd):
     blist = [blist[i:i + DEFAULT_PAGESIZE] for i in range(DEFAULT_PAGESIZE, len(blist), DEFAULT_PAGESIZE)]
     # print(blist)
 
-    if os.path.exists(db_filePath):
-        if os.path.isdir(db_filePath):
+    if os.path.exists(db_file_path):
+        print(f"当前db文件是：{db_file_path}")
+        if os.path.isdir(db_file_path):
             pass
-        elif os.path.isfile(db_filePath):
-            index = db_filePath.rfind("\\")
-            orgin = db_filePath[index + 1:]
-            db_filePath = db_filePath.replace(orgin, "edit_" + orgin)
+        elif os.path.isfile(db_file_path):
+            index = db_file_path.rfind("\\")
+            origin = db_file_path[index + 1:]
+            new_db_file_path = db_file_path.replace(origin, "edit_" + origin)
+            print(f"现在db文件已经是{new_db_file_path}")
     else:
-        print(db_filePath, "不存在")
+        print(db_file_path, "不存在")
 
-    with open(db_filePath, 'wb') as f:
+    with open(new_db_file_path, 'wb') as f:
         f.write(SQLITE_FILE_HEADER)  #写入文件头
         t = AES.new(key, AES.MODE_CBC, first[-48:-32])
         f.write(t.decrypt(first[:-48]))
@@ -125,6 +130,9 @@ def DecrypTo(db_filePath, pwd):
             t = AES.new(key, AES.MODE_CBC, i[-48:-32])
             f.write(t.decrypt(i[:-48]))
             f.write(i[-48:])
+
+    os.remove(db_file_path)
+
 
 app_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 log_file = os.path.basename(sys.argv[0]).split('.')[0] + '.log'
@@ -151,6 +159,7 @@ MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_W
                             0x08: "PAGE_WRITECOPY"}
 
 
+# 第一步：找key -> 1. 判断可写
 def is_writable_region(pid, address):  #判断给定的内存地址是否是可写内存区域，因为可写内存区域，才能指针指到这里写数据
     process_handle = ctypes.windll.kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
     MBI = MEMORY_BASIC_INFORMATION()
@@ -169,6 +178,7 @@ def is_writable_region(pid, address):  #判断给定的内存地址是否是可�
     return MBI.Protect in MEMORY_WRITE_PROTECTIONS
 
 
+# 第一步：找key
 def get_current_wechat_key(pid, account):  #遍历微信内存，去暴力找key
     phone_types = [b'android\x00', b'iphone\x00']
     try:
@@ -186,9 +196,10 @@ def get_current_wechat_key(pid, account):  #遍历微信内存，去暴力找key
             sys.exit(-1)
         else:
             usrDir = Config.PROJECT_USER_PATH
-            file_microMsg = usrDir + rf"\{account}_MicroMsg.db"
+            file_microMsg = usrDir + rf"\{account}\{account}_MicroMsg.db"
+            if not os.path.exists(os.path.dirname(file_microMsg)):
+                os.makedirs(os.path.dirname(file_microMsg))
             shutil.copyfile(targetdb[0], file_microMsg)
-
         misc_dbs = [f.path for f in p.open_files() if f.path[-7:] == 'Misc.db']
         if len(misc_dbs) < 1:
             mylog.error("没有找到微信当前打开的数据文件，是不是你的微信还没有登录？？")

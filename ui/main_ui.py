@@ -1,27 +1,35 @@
 # main_ui.py
 import base64
+import concurrent
 import os
 import queue
+import shutil
+import subprocess
 import sys
 import time
 import tkinter as tk
+from functools import partial
 from io import BytesIO
 from tkinter import messagebox
 from tkinter import ttk
 
 import psutil
+import pyautogui
 import requests
+import winshell
 from PIL import Image, ImageTk
 from PIL import ImageDraw
 
-from functions import func_config, func_path, func_wechat_dll
+import utils.json_utils
+from functions import func_config, func_setting, func_wechat_dll
 from functions.func_account_list import AccountManager, get_config_status
 from functions.func_login import manual_login, auto_login
-from functions.func_path import get_wechat_data_path
+from functions.func_setting import get_wechat_data_path
 from resources.strings import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
-from ui import about_ui, path_setting_ui, detail_ui
+from ui import about_ui, setting_ui, detail_ui
+from utils import json_utils
 from utils.window_utils import center_window, Tooltip
 
 
@@ -35,14 +43,14 @@ def get_avatar_from_files(account):
     wechat_data_path = get_wechat_data_path()
 
     # 构建头像文件路径
-    avatar_path = os.path.join(wechat_data_path, "All Users", "config", f"{account}.jpg")
+    avatar_path = os.path.join(Config.PROJECT_USER_PATH, f"{account}", f"{account}.jpg")
 
     # 检查是否存在对应account的头像
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
 
     # 如果没有，检查default.jpg
-    default_path = os.path.join(wechat_data_path, "All Users", "config", "default.jpg")
+    default_path = os.path.join(Config.PROJECT_USER_PATH, "default.jpg")
     if os.path.exists(default_path):
         return Image.open(default_path)
 
@@ -122,6 +130,7 @@ class AccountRow:
 
     def __init__(self, parent_frame, account, display_name, is_logged_in, config_status, callbacks,
                  update_top_checkbox_callback):
+        self.start_time = time.time()
         self.tooltip = None
         self.toggle_avatar_label = None
         self.size = None
@@ -153,8 +162,8 @@ class AccountRow:
         # 头像标签
         self.avatar_label = self.create_avatar_label(account)
         self.avatar_label.pack(side=tk.LEFT)
-        self.avatar_label.bind("<Enter>", avatar_on_enter)
-        self.avatar_label.bind("<Leave>", avatar_on_leave)
+        self.avatar_label.bind("<Enter>", lambda event: event.widget.config(cursor="hand2"))
+        self.avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
 
         # 账号标签
         self.account_label = ttk.Label(self.row_frame, text=display_name)
@@ -202,7 +211,7 @@ class AccountRow:
 
         # 头像绑定详情事件
         self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
-        print(f"完成账号创建：{account}")
+        print(f"内部：加载{account}界面用时{time.time() - self.start_time:.4f}秒")
 
     def disable_button_and_add_tip(self, button, text):
         """
@@ -264,10 +273,95 @@ class AccountRow:
         return avatar_label
 
 
+def create_lnk_for_account(account, status):
+    # 获取数据路径
+    data_path = func_setting.get_wechat_data_path()
+    wechat_path = func_setting.get_wechat_install_path()
+    if not data_path:
+        return False
+
+    # 构建源文件和目标文件路径
+    source_file = os.path.join(data_path, "All Users", "config", f"{account}.data")
+    target_file = os.path.join(data_path, "All Users", "config", "config.data")
+    if status == "已开启":
+        process_path_text = f"\"{wechat_path}\""
+    else:
+        process_path_text = f"cscript //B //Nologo \"{Config.MULTI_SUBPROCESS}\""
+
+    bat_content = f"""
+    @echo off
+    REM 复制配置文件
+    copy "{source_file}" "{target_file}"
+    if errorlevel 1 (
+        echo 复制配置文件失败
+        exit /b 1
+    )
+    echo 复制配置文件成功
+
+    REM 根据状态启动微信
+    start "" /B {process_path_text}
+        """
+
+    # 保存为批处理文件
+    bat_file_path = os.path.join(Config.PROJECT_USER_PATH, f'{account}', f'{status} - {account}.bat')
+    with open(bat_file_path, 'w', encoding='utf-8') as bat_file:
+        bat_file.write(bat_content.strip())
+
+    print(f"批处理文件已生成: {bat_file_path}")
+
+    # 获取桌面路径
+    desktop = winshell.desktop()
+
+    # 获取批处理文件名并去除后缀
+    bat_file_name = os.path.splitext(os.path.basename(bat_file_path))[0]
+
+    # 构建快捷方式路径
+    shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
+
+    # 图标文件路径
+    icon_path = os.path.join(Config.PROJECT_USER_PATH, f"{account}", f"{account}.jpg")
+    ico_path = os.path.join(Config.PROJECT_USER_PATH, f"{account}", f"{account}.ico")
+
+    # 将JPG转换为ICO
+    image = Image.open(icon_path)
+    image.save(ico_path, format='ICO')
+
+    # 创建快捷方式
+    with winshell.shortcut(shortcut_path) as shortcut:
+        shortcut.path = bat_file_path
+        shortcut.working_directory = os.path.dirname(bat_file_path)
+        # 修正icon_location的传递方式，传入一个包含路径和索引的元组
+        shortcut.icon_location = (ico_path, 0)
+
+    print(f"桌面快捷方式已生成: {shortcut_path}")
+
+
+def reset():
+    # 显示确认对话框
+    confirm = messagebox.askokcancel(
+        "确认重置",
+        "该操作将会清空该软件的数据，请确认是否需要重置？"
+    )
+    directory_path = Config.PROJECT_USER_PATH
+    if confirm:
+        # 确认后删除目录的所有内容
+        for item in os.listdir(directory_path):
+            item_path = os.path.join(directory_path, item)
+            if os.path.isfile(item_path) or os.path.islink(item_path):
+                os.unlink(item_path)
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+
+        messagebox.showinfo("重置完成", "目录已成功重置。")
+    else:
+        messagebox.showinfo("操作取消", "重置操作已取消。")
+
+
 class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window):
+        self.tooltips = {}
         self.wechat_processes = None
         self.status = None
         self.last_version_path = None
@@ -319,7 +413,7 @@ class MainWindow:
 
         # 创建lnk
         self.create_lnk_button = ttk.Button(self.bottom_frame, text="创建lnk", width=8,
-                                            command=None, style='Custom.TButton')
+                                            command=self.create_lnk, style='Custom.TButton')
         self.create_lnk_button.pack(side=tk.RIGHT)
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
@@ -351,9 +445,8 @@ class MainWindow:
 
     def delayed_initialization(self):
         """延迟加载，等待路径检查"""
-        time.sleep(0.4)
-        self.check_paths()
-        self.master.after(1500, self.finalize_initialization)
+        self.master.after(200, self.finalize_initialization)
+        self.check_and_init()
 
     def finalize_initialization(self):
         """路径检查完毕后进入，销毁等待窗口，居中显示主窗口"""
@@ -365,13 +458,256 @@ class MainWindow:
         screen_width = self.master.winfo_screenwidth()
         screen_height = self.master.winfo_screenheight()
         x = (screen_width - self.window_width) // 2
-        y = int((screen_height - self.window_height) // 2.4)
+        y = int((screen_height - 50 - self.window_height - 60) // 2)
         self.master.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
 
         self.master.deiconify()  # 显示主窗口
 
         # time.sleep(500)
         # self.ui_helper.center_window(self.master)
+
+    def setup_main_window(self):
+        self.master.title("微信多开管理器")
+        self.master.iconbitmap('./resources/SunnyMultiWxMng.ico')
+
+    def bring_window_to_front(self):
+        self.master.after(200, lambda: self.master.lift())
+        self.master.after(300, lambda: self.master.attributes('-topmost', True))
+        self.master.after(400, lambda: self.master.attributes('-topmost', False))
+        self.master.after(500, lambda: self.master.focus_force())
+
+    def create_menu_bar(self):
+        self.menu_bar = tk.Menu(self.master)
+        self.master.config(menu=self.menu_bar)
+
+        self.edit_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
+        self.edit_menu.add_command(label="刷新", command=self.create_main_frame)
+
+        self.status = func_wechat_dll.check_dll()
+
+        self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
+        self.settings_menu.add_command(label=f"全局多开 {self.status}", command=self.toggle_patch_mode)
+        if self.status == "不可用":
+            self.settings_menu.entryconfig(f"全局多开 {self.status}", state="disable")
+        self.settings_menu.add_command(label="应用设置", command=self.open_settings)
+        self.settings_menu.add_command(label="关于", command=self.open_about)
+
+        self.menu_bar.add_command(label="by 吾峰起浪", state="disabled")
+        self.menu_bar.entryconfigure("by 吾峰起浪", foreground="gray")
+
+    def create_status_bar(self):
+        self.status_var = tk.StringVar()
+        self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
+                                   height=1)
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
+    def update_status(self):
+        try:
+            # 从队列中获取消息并更新状态栏
+            message = self.message_queue.get_nowait()
+            if message.strip():  # 如果消息不为空，更新状态栏
+                self.status_var.set(message)
+        except queue.Empty:
+            pass
+        # 每 30 毫秒检查一次队列
+        self.master.after(1, self.update_status)
+
+    def check_and_init(self):
+        """路径检查"""
+        install_path = func_setting.get_wechat_install_path()
+        data_path = func_setting.get_wechat_data_path()
+        last_version_path = func_setting.get_wechat_latest_version_path()
+
+        if not install_path or not data_path or not last_version_path:
+            self.show_setting_error()
+        else:
+            self.install_path = install_path
+            self.data_path = data_path
+            self.last_version_path = last_version_path
+
+            screen_size = func_setting.get_setting_from_ini(
+                Config.SETTING_INI_PATH,
+                Config.INI_SECTION,
+                Config.INI_KEY_SCREEN_SIZE,
+            )
+            login_size = func_setting.get_setting_from_ini(
+                Config.SETTING_INI_PATH,
+                Config.INI_SECTION,
+                Config.INI_KEY_LOGIN_SIZE,
+            )
+
+            if not screen_size or not login_size:
+                # 获取屏幕和登录窗口尺寸
+                screen_width = self.master.winfo_screenwidth()
+                screen_height = self.master.winfo_screenheight()
+                multi_wechat_process = subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
+                time.sleep(3)
+                wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
+                login_width, login_height = wechat_window.size
+
+                # 保存
+                func_setting.save_setting_to_ini(
+                    Config.SETTING_INI_PATH,
+                    Config.INI_SECTION,
+                    Config.INI_KEY_SCREEN_SIZE,
+                    f"{screen_width}*{screen_height}"
+                )
+                func_setting.save_setting_to_ini(
+                    Config.SETTING_INI_PATH,
+                    Config.INI_SECTION,
+                    Config.INI_KEY_LOGIN_SIZE,
+                    f"{login_width}*{login_height}"
+                )
+
+            # 开始创建列表
+            self.create_main_frame()
+
+    def show_setting_error(self):
+        """路径错误提醒"""
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        error_label = ttk.Label(self.main_frame, text="路径设置错误，请进入设置-路径中修改", foreground="red")
+        error_label.pack(pady=20)
+
+    def create_main_frame(self):
+        print("刷新...")
+        self.start_time = time.time()
+        self.edit_menu.entryconfig("刷新", state="disabled")
+        print(f"初始化，已用时：{time.time() - self.start_time:.4f}秒")
+
+        # 使用ThreadManager异步获取账户列表
+        try:
+            self.thread_manager.get_account_list_thread(self.account_manager, self._update_account_list)
+        finally:
+            # 恢复刷新可用性
+            self.edit_menu.entryconfig("刷新", state="normal")
+
+        # 直接调用 on_canvas_configure 方法
+        self.canvas.update_idletasks()
+
+    def _update_account_list(self, result):
+        logged_in, not_logged_in, wechat_processes = result
+        self.wechat_processes = wechat_processes
+
+        # 清除所有子部件
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+
+        if logged_in is None or not_logged_in is None or wechat_processes is None:
+            error_label = ttk.Label(self.main_frame, text="无法获取账户列表，请检查路径设置", foreground="red")
+            error_label.pack(pady=20)
+            return
+
+        self.logged_in_rows.clear()
+        self.not_logged_in_rows.clear()
+
+        # 已登录框架=已登录标题+已登录列表
+        self.logged_in_frame = ttk.Frame(self.main_frame)
+        self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
+
+        # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
+        self.logged_in_title = ttk.Frame(self.logged_in_frame)
+        self.logged_in_title.pack(side=tk.TOP, fill=tk.X)
+
+        # 已登录复选框
+        self.logged_in_checkbox_var = tk.IntVar(value=0)
+        self.logged_in_checkbox = tk.Checkbutton(
+            self.logged_in_title,
+            variable=self.logged_in_checkbox_var,
+            tristatevalue=-1
+        )
+        self.logged_in_checkbox.pack(side=tk.LEFT)
+
+        # 已登录标签
+        self.logged_in_label = ttk.Label(self.logged_in_title, text="已登录账号：", font=("", 10, "bold"))
+        self.logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+
+        # 已登录按钮区域=一键退出
+        self.logged_in_bottom_frame = ttk.Frame(self.logged_in_title)
+        self.logged_in_bottom_frame.pack(side=tk.RIGHT)
+
+        # 一键退出
+        self.one_key_quit = ttk.Button(self.logged_in_bottom_frame, text="一键退出", width=8,
+                                       command=self.quit_selected_accounts, style='Custom.TButton')
+        self.one_key_quit.pack(side=tk.RIGHT, pady=0)
+
+        # 加载已登录列表
+        for account in logged_in:
+            self.add_account_row(self.logged_in_frame, account, True)
+
+        # 未登录框架=未登录标题+未登录列表
+        self.not_logged_in_frame = ttk.Frame(self.main_frame)
+        self.not_logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
+
+        # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
+        self.not_logged_in_title = ttk.Frame(self.not_logged_in_frame)
+        self.not_logged_in_title.pack(side=tk.TOP, fill=tk.X)
+
+        # 未登录复选框
+        self.not_logged_in_checkbox_var = tk.IntVar(value=0)
+        self.not_logged_in_checkbox = tk.Checkbutton(
+            self.not_logged_in_title,
+            variable=self.not_logged_in_checkbox_var,
+            tristatevalue=-1
+        )
+        self.not_logged_in_checkbox.pack(side=tk.LEFT)
+
+        # 未登录标签
+        self.not_logged_in_label = ttk.Label(self.not_logged_in_title, text="未登录账号：", font=("", 10, "bold"))
+        self.not_logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+
+        # 未登录按钮区域=一键登录
+        self.not_logged_in_bottom_frame = ttk.Frame(self.not_logged_in_title)
+        self.not_logged_in_bottom_frame.pack(side=tk.RIGHT)
+
+        # 一键登录
+        self.one_key_auto_login = ttk.Button(self.not_logged_in_bottom_frame, text="一键登录", width=8,
+                                             command=self.login_selected_accounts, style='Custom.TButton')
+        self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
+
+        # 加载未登录列表
+        for account in not_logged_in:
+            self.add_account_row(self.not_logged_in_frame, account, False)
+
+        # 更新顶部复选框状态
+        self.update_top_title(True)
+        self.update_top_title(False)
+
+        print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
+
+        # 恢复刷新可用性
+        self.edit_menu.entryconfig("刷新", state="normal")
+
+        # 加载完成后更新一下界面并且触发事件以此更新绑定
+        self.canvas.update_idletasks()
+        event = tk.Event()
+        event.width = self.canvas.winfo_width()
+        self.on_canvas_configure(event)
+
+    def add_account_row(self, parent_frame, account, is_logged_in):
+        display_name = self.account_manager.get_account_display_name(account)
+        config_status = get_config_status(account)
+
+        callbacks = {
+            'detail': self.open_detail,
+            'config': self.create_config,
+            'login': self.auto_login_account
+        }
+
+        # 创建列表实例
+        row = AccountRow(parent_frame, account, display_name, is_logged_in, config_status, callbacks,
+                         self.update_top_title)
+
+        # 将已登录、未登录但已配置实例存入字典
+        if is_logged_in:
+            self.logged_in_rows[account] = row
+        else:
+            if config_status == "无配置":
+                pass
+            else:
+                self.not_logged_in_rows[account] = row
 
     def bind_mouse_wheel(self, widget):
         """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
@@ -416,278 +752,148 @@ class MainWindow:
             self.unbind_mouse_wheel(self.canvas)
             self.scrollbar.pack_forget()
 
-    def toggle_top_logged_in_checkbox(self, event):
+    def disable_button_and_add_tip(self, button, text):
         """
-        切换复选框状态
+        禁用按钮，启用提示
+        :return: None
+        """
+        button.state(['disabled'])
+        if button not in self.tooltips:
+            self.tooltips[button] = Tooltip(button, text)
+
+    def enable_button_and_unbind_tip(self, button):
+        """
+        启用按钮，去除提示
+        :return: None
+        """
+        button.state(['!disabled'])
+        if button in self.tooltips:
+            self.tooltips[button].widget.unbind("<Enter>")
+            self.tooltips[button].widget.unbind("<Leave>")
+            del self.tooltips[button]
+
+    def toggle_top_checkbox(self, event, is_logged_in):
+        """
+        切换顶部复选框状态，更新子列表
+        :param is_logged_in: 是否登录
         :param event: 点击复选框
         :return: 阻断继续切换
         """
-        self.logged_in_checkbox_var.set(not self.logged_in_checkbox_var.get())
-        self.update_all_logged_in_checkboxes()
-        return "break"
-
-    def toggle_top_not_logged_in_checkbox(self, event):
-        """
-        切换复选框状态
-        :param event: 点击复选框
-        :return: 阻断继续切换
-        """
-        self.not_logged_in_checkbox_var.set(not self.not_logged_in_checkbox_var.get())
-        self.update_all_not_logged_in_checkboxes()
-        return "break"
-
-    def setup_main_window(self):
-        self.master.title("微信多开管理器")
-        self.master.iconbitmap('./resources/SunnyMultiWxMng.ico')
-
-    def create_menu_bar(self):
-        self.menu_bar = tk.Menu(self.master)
-        self.master.config(menu=self.menu_bar)
-
-        self.edit_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
-        self.edit_menu.add_command(label="刷新", command=self.create_main_frame)
-
-        self.status = func_wechat_dll.check_dll()
-
-        self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
-        self.settings_menu.add_command(label=f"全局多开 {self.status}", command=self.toggle_patch_mode)
-        if self.status == "不可用":
-            self.settings_menu.entryconfig(f"全局多开 {self.status}", state="disable")
-        self.settings_menu.add_command(label="路径", command=self.open_path_settings)
-        self.settings_menu.add_command(label="关于", command=self.open_about)
-
-        self.menu_bar.add_command(label="by 吾峰起浪", state="disabled")
-        self.menu_bar.entryconfigure("by 吾峰起浪", foreground="gray")
-
-    def create_status_bar(self):
-        self.status_var = tk.StringVar()
-        self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W)
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-
-    def check_paths(self):
-        """路径检查"""
-        install_path = func_path.get_wechat_install_path()
-        data_path = func_path.get_wechat_data_path()
-        last_version_path = func_path.get_wechat_latest_version_path()
-
-        if not install_path or not data_path or not last_version_path:
-            self.show_path_error()
-        else:
-            self.install_path = install_path
-            self.data_path = data_path
-            self.last_version_path = last_version_path
-            self.start_auto_refresh()
-
-    def show_path_error(self):
-        """路径错误提醒"""
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-        error_label = ttk.Label(self.main_frame, text="路径设置错误，请进入设置-路径中修改", foreground="red")
-        error_label.pack(pady=20)
-
-    def create_main_frame(self):
-        print("刷新...")
-        self.start_time = time.time()
-        self.edit_menu.entryconfig("刷新", state="disabled")
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-
-        # 创建一个临时的加载标签
-        loading_label = ttk.Label(self.main_frame, text="正在加载账户列表...", font=("", 12, "bold"))
-        loading_label.pack(pady=20)
-
-        # 使用ThreadManager异步获取账户列表
-        try:
-            self.thread_manager.get_account_list_thread(self.account_manager, self._update_account_list)
-        finally:
-            # 恢复刷新可用性
-            self.edit_menu.entryconfig("刷新", state="normal")
-
-        # 直接调用 on_canvas_configure 方法
-        self.canvas.update_idletasks()
-
-    def _update_account_list(self, result):
-        logged_in, not_logged_in, wechat_processes = result
-        self.wechat_processes = wechat_processes
-
-        # 清除所有子部件
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-
-        if logged_in is None or not_logged_in is None or wechat_processes is None:
-            error_label = ttk.Label(self.main_frame, text="无法获取账户列表，请检查路径设置", foreground="red")
-            error_label.pack(pady=20)
-            return
-
-        self.logged_in_rows.clear()
-        self.not_logged_in_rows.clear()
-
-        # 已登录框架=已登录标题+已登录列表
-        self.logged_in_frame = ttk.Frame(self.main_frame)
-        self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
-
-        # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
-        self.logged_in_title = ttk.Frame(self.logged_in_frame)
-        self.logged_in_title.pack(side=tk.TOP, fill=tk.X)
-
-        # 已登录复选框
-        self.logged_in_checkbox_var = tk.IntVar(value=0)
-        self.logged_in_checkbox = tk.Checkbutton(self.logged_in_title, variable=self.logged_in_checkbox_var,
-                                                 command=self.update_all_logged_in_checkboxes, tristatevalue=-1)
-        self.logged_in_checkbox.pack(side=tk.LEFT)
-
-        # 已登录标签
-        self.logged_in_label = ttk.Label(self.logged_in_title, text="已登录账号：", font=("", 10, "bold"))
-        self.logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
-
-        # 已登录按钮区域=一键退出
-        self.logged_in_bottom_frame = ttk.Frame(self.logged_in_title)
-        self.logged_in_bottom_frame.pack(side=tk.RIGHT)
-
-        # 一键退出
-        self.one_key_quit = ttk.Button(self.logged_in_bottom_frame, text="一键退出", width=8,
-                                       command=self.get_selected_logged_in_accounts, style='Custom.TButton')
-        self.one_key_quit.pack(side=tk.RIGHT, pady=0)
-
-        # 加载已登录列表
-        for account in logged_in:
-            self.add_account_row(self.logged_in_frame, account, True)
-
-        # 未登录框架=未登录标题+未登录列表
-        self.not_logged_in_frame = ttk.Frame(self.main_frame)
-        self.not_logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
-
-        # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
-        self.not_logged_in_title = ttk.Frame(self.not_logged_in_frame)
-        self.not_logged_in_title.pack(side=tk.TOP, fill=tk.X)
-
-        # 未登录复选框
-        self.not_logged_in_checkbox_var = tk.IntVar(value=0)
-        self.not_logged_in_checkbox = tk.Checkbutton(self.not_logged_in_title, variable=self.not_logged_in_checkbox_var,
-                                                     command=self.update_all_not_logged_in_checkboxes, tristatevalue=-1)
-        self.not_logged_in_checkbox.pack(side=tk.LEFT)
-
-        # 未登录标签
-        self.not_logged_in_label = ttk.Label(self.not_logged_in_title, text="未登录账号：", font=("", 10, "bold"))
-        self.not_logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
-
-        # 未登录按钮区域=一键登录
-        self.not_logged_in_bottom_frame = ttk.Frame(self.not_logged_in_title)
-        self.not_logged_in_bottom_frame.pack(side=tk.RIGHT)
-
-        # 一键登录
-        self.one_key_auto_login = ttk.Button(self.not_logged_in_bottom_frame, text="一键登录", width=8,
-                                             command=self.create_main_frame, style='Custom.TButton')
-        self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
-
-        # 加载未登录列表
-        for account in not_logged_in:
-            self.add_account_row(self.not_logged_in_frame, account, False)
-
-        # 更新顶部复选框状态
-        self.update_top_checkbox_state(True)
-        self.update_top_checkbox_state(False)
-
-        print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
-
-        # 恢复刷新可用性
-        self.edit_menu.entryconfig("刷新", state="normal")
-
-        # 加载完成后更新一下界面并且触发事件以此更新绑定
-        self.canvas.update_idletasks()
-        event = tk.Event()
-        event.width = self.canvas.winfo_width()
-        self.on_canvas_configure(event)
-
-    def add_account_row(self, parent_frame, account, is_logged_in):
-        display_name = self.account_manager.get_account_display_name(account)
-        config_status = get_config_status(account)
-
-        callbacks = {
-            'detail': self.open_detail,
-            'config': self.create_config,
-            'login': self.auto_login_account
-        }
-
-        # 创建列表实例
-        row = AccountRow(parent_frame, account, display_name, is_logged_in, config_status, callbacks,
-                         self.update_top_checkbox_state)
-
-        # 将已登录、未登录但已配置实例存入字典
         if is_logged_in:
-            self.logged_in_rows[account] = row
+            checkbox_var = self.logged_in_checkbox_var
+            rows = self.logged_in_rows
+            button = self.one_key_quit
+            tip = "请选择要退出的账号"
         else:
-            if config_status == "无配置":
-                pass
-            else:
-                self.not_logged_in_rows[account] = row
-
-    def update_all_logged_in_checkboxes(self):
-        """根据顶行复选框的状态更新AccountRow实例的复选框状态"""
-        value = self.logged_in_checkbox_var.get()
-        for row in self.logged_in_rows.values():
+            checkbox_var = self.not_logged_in_checkbox_var
+            rows = self.not_logged_in_rows
+            button = self.one_key_auto_login
+            tip = "请选择要登录的账号"
+        checkbox_var.set(not checkbox_var.get())
+        value = checkbox_var.get()
+        if value:
+            self.enable_button_and_unbind_tip(button)
+        else:
+            self.disable_button_and_add_tip(button, tip)
+        for row in rows.values():
             row.set_checkbox(value)
+        return "break"
 
-    def update_all_not_logged_in_checkboxes(self):
-        """根据顶行复选框的状态更新AccountRow实例的复选框状态"""
-        value = self.not_logged_in_checkbox_var.get()
-        for row in self.not_logged_in_rows.values():
-            row.set_checkbox(value)
-
-    def update_top_checkbox_state(self, is_logged_in):
+    def update_top_title(self, is_logged_in):
         """根据AccountRow实例的复选框状态更新顶行复选框状态"""
-        title = None
-        checkbox = None
-        checkbox_var = None
-        toggle = None
+        # toggle方法
+        toggle = partial(self.toggle_top_checkbox, is_logged_in=is_logged_in)
 
+        # 判断是要更新哪一个顶行
         if is_logged_in:
             all_rows = list(self.logged_in_rows.values())
             checkbox = self.logged_in_checkbox
             title = self.logged_in_title
             checkbox_var = self.logged_in_checkbox_var
-            toggle = self.toggle_top_logged_in_checkbox
+            button = self.one_key_quit
+            tip = "请选择要退出的账号"
         else:
             all_rows = list(self.not_logged_in_rows.values())
             checkbox = self.not_logged_in_checkbox
             title = self.not_logged_in_title
             checkbox_var = self.not_logged_in_checkbox_var
-            toggle = self.toggle_top_not_logged_in_checkbox
+            button = self.one_key_auto_login
+            tip = "请选择要登录的账号"
 
         if len(all_rows) == 0:
+            # 列表为空时解绑复选框相关事件，禁用复选框和按钮
             title.unbind("<Button-1>")
             for child in title.winfo_children():
                 child.unbind("<Button-1>")
             checkbox.config(state="disabled")
+            self.disable_button_and_add_tip(button, tip)
         else:
+            # 列表不为空则绑定和复用
             title.bind("<Button-1>", toggle, add="+")
             for child in title.winfo_children():
                 child.bind("<Button-1>", toggle, add="+")
             checkbox.config(state="normal")
 
+            # 从子列表的状态来更新顶部复选框
             states = [row.checkbox_var.get() for row in all_rows]
             if all(states):
                 checkbox_var.set(1)
+                self.enable_button_and_unbind_tip(button)
             elif any(states):
-                checkbox_var.set(-1)  # 不确定状态
+                checkbox_var.set(-1)
+                self.enable_button_and_unbind_tip(button)
             else:
                 checkbox_var.set(0)
+                self.disable_button_and_add_tip(button, tip)
 
-    def get_selected_logged_in_accounts(self):
-        accounts = [account for account, row in self.logged_in_rows.items() if row.is_checked()]
-        print(accounts)
-        return accounts
-
-    def get_selected_not_logged_in_accounts(self):
-        return [account for account, row in self.not_logged_in_rows.items() if row.is_checked()]
-
-    def start_auto_refresh(self):
-        """开启自动刷新"""
-        print("自动刷新开始")
+    def quit_selected_accounts(self):
+        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+        accounts = [
+            account
+            for account, row in self.logged_in_rows.items()
+            if row.is_checked()
+        ]
+        quited_accounts = []
+        for account in accounts:
+            try:
+                pid = account_data.get(account, {}).get("pid", None)
+                nickname = account_data.get(account, {}).get("nickname", None)
+                process = psutil.Process(pid)
+                if process.name() == "WeChat.exe":
+                    process.terminate()
+                    os.system(f"taskkill /F /PID {pid}")
+                    print(f"结束了{pid}")
+                    quited_accounts.append((nickname, pid))
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
         self.create_main_frame()
-        self.master.after(300000, self.start_auto_refresh)
+
+    def login_selected_accounts(self):
+        accounts = [
+            account
+            for account, row in self.not_logged_in_rows.items()
+            if row.is_checked()
+        ]
+        print(accounts)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(accounts)) as executor:
+            futures = []
+            for account in accounts:
+                # 提交任务到线程池
+                future = executor.submit(auto_login, account, self.status)
+                futures.append(future)
+
+                # 等待5秒再启动下一个线程
+                time.sleep(5)
+
+            # 等待所有任务完成
+            concurrent.futures.wait(futures)
+
+    # def start_auto_refresh(self):
+    #     """开启自动刷新"""
+    #     print("自动刷新开始")
+    #     self.create_main_frame()
+    #     self.master.after(300000, self.start_auto_refresh)
 
     def toggle_patch_mode(self):
         logged_in, _, _ = self.account_manager.get_account_list()
@@ -716,21 +922,16 @@ class MainWindow:
         finally:
             MainWindow.create_menu_bar(self)  # 无论成功与否，最后更新按钮状态
 
-    def open_path_settings(self):
-        path_settings_window = tk.Toplevel(self.master)
-        path_setting_ui.PathSettingWindow(path_settings_window, self.on_path_setting_close)
-        center_window(path_settings_window)
-        path_settings_window.focus_set()
+    def open_settings(self):
+        settings_window = tk.Toplevel(self.master)
+        setting_ui.SettingWindow(settings_window, self.delayed_initialization)
+        center_window(settings_window)
+        settings_window.focus_set()
 
     def open_about(self):
         about_window = tk.Toplevel(self.master)
         about_ui.AboutWindow(about_window)
         center_window(about_window)
-
-    def on_path_setting_close(self):
-        print("路径已更新")
-        self.check_paths()
-        self.master.after(3000, self.finalize_initialization)
 
     def open_detail(self, account):
         detail_window = tk.Toplevel(self.master)
@@ -754,19 +955,19 @@ class MainWindow:
         self.thread_manager.auto_login_account(auto_login, account, self.status, self.create_main_frame,
                                                self.bring_window_to_front)
 
-    def bring_window_to_front(self):
-        self.master.after(200, lambda: self.master.lift())
-        self.master.after(300, lambda: self.master.attributes('-topmost', True))
-        self.master.after(400, lambda: self.master.attributes('-topmost', False))
-        self.master.after(500, lambda: self.master.focus_force())
+    def create_lnk(self):
+        target_path = os.path.join(func_setting.get_wechat_data_path(), 'All Users', 'config')
+        # 初始化一个空列表，用于存储文件名
+        configured_accounts = []
 
-    def update_status(self):
-        try:
-            # 从队列中获取消息并更新状态栏
-            message = self.message_queue.get_nowait()
-            if message.strip():  # 如果消息不为空，更新状态栏
-                self.status_var.set(message)
-        except queue.Empty:
-            pass
-        # 每 30 毫秒检查一次队列
-        self.master.after(1, self.update_status)
+        # 遍历目标目录中的所有文件
+        for file_name in os.listdir(target_path):
+            # 只处理以 .data 结尾的文件
+            if file_name.endswith('.data') and file_name != 'config.data':
+                # 获取不含扩展名的文件名
+                file_name_without_ext = os.path.splitext(file_name)[0]
+                # 添加到列表中
+                configured_accounts.append(file_name_without_ext)
+
+        for account in configured_accounts:
+            create_lnk_for_account(account, self.status)

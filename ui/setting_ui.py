@@ -1,17 +1,22 @@
+import re
+import subprocess
+import time
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-from functions import func_path
+import pyautogui
+
+from functions import func_setting
 from resources import Config
 
 
-class PathSettingWindow:
+class SettingWindow:
     def __init__(self, master, on_close_callback=None):
         self.master = master
         self.on_close_callback = on_close_callback
-        master.title("设置路径")
+        master.title("应用设置")
 
-        window_width = 900
+        window_width = 600
         window_height = 240  # 增加窗口高度以适应新的行
         screen_width = master.winfo_screenwidth()
         screen_height = master.winfo_screenheight()
@@ -69,9 +74,31 @@ class PathSettingWindow:
         self.dll_choose_button = ttk.Button(master, text="选择路径", command=self.choose_wechat_latest_version_path)
         self.dll_choose_button.grid(row=2, column=3, padx=5, pady=5)
 
+        # 新增第四行 - 屏幕大小
+        self.screen_size_label = tk.Label(master, text="屏幕大小：")
+        self.screen_size_label.grid(row=3, column=0, padx=5, pady=5, sticky="w")
+
+        self.screen_size_var = tk.StringVar()
+        self.screen_size_entry = tk.Entry(master, textvariable=self.screen_size_var, state='readonly', width=70)
+        self.screen_size_entry.grid(row=3, column=1, padx=5, pady=5, sticky="we")
+
+        self.screen_size_get_button = ttk.Button(master, text="获取", command=self.auto_get_screen_size)
+        self.screen_size_get_button.grid(row=3, column=2, padx=5, pady=5)
+
+        # 新增第四行 - 登录窗口大小
+        self.login_size_label = tk.Label(master, text="登录窗口大小：")
+        self.login_size_label.grid(row=4, column=0, padx=5, pady=5, sticky="w")
+
+        self.login_size_var = tk.StringVar()
+        self.login_size_entry = tk.Entry(master, textvariable=self.login_size_var, width=70)
+        self.login_size_entry.grid(row=4, column=1, padx=5, pady=5, sticky="we")
+
+        self.login_size_get_button = ttk.Button(master, text="获取", command=self.auto_get_login_size)
+        self.login_size_get_button.grid(row=4, column=2, padx=5, pady=5)
+
         # 添加确定按钮
         self.ok_button = ttk.Button(master, text="确定", command=self.on_ok)
-        self.ok_button.grid(row=3, column=3, padx=5, pady=10, sticky="se")
+        self.ok_button.grid(row=3, column=3, rowspan=2, padx=5, pady=5, sticky="nsew")
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         master.grid_columnconfigure(1, weight=1)
@@ -80,6 +107,15 @@ class PathSettingWindow:
         self.auto_get_wechat_install_path()
         self.auto_get_wechat_data_path()
         self.auto_get_wechat_latest_version_path()
+        self.auto_get_screen_size()
+
+        login_size = func_setting.get_setting_from_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_LOGIN_SIZE,
+        )
+
+        self.login_size_var.set(login_size)
 
     def on_ok(self):
         if self.validate_paths():
@@ -91,13 +127,23 @@ class PathSettingWindow:
         install_path = self.install_path_var.get()
         data_path = self.data_path_var.get()
         dll_path = self.dll_path_var.get()
+
         if "获取失败" in install_path or "获取失败" in data_path or "获取失败" in dll_path:
             messagebox.showerror("错误", "请确保所有路径都已正确设置")
             return False
+        elif not bool(re.match(r'^\d+\*\d+$', self.login_size_var.get())):
+            messagebox.showerror("错误", f"请确保填入的尺寸符合\"整数*整数\"的形式")
+            return False
+        func_setting.save_setting_to_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_LOGIN_SIZE,
+            f"{self.login_size_var.get()}"
+        )
         return True
 
     def auto_get_wechat_latest_version_path(self):
-        path = func_path.get_wechat_latest_version_path()
+        path = func_setting.get_wechat_latest_version_path()
         if path:
             self.dll_path_var.set(path.replace('\\', '/'))
         else:
@@ -111,14 +157,14 @@ class PathSettingWindow:
             path = path.replace('\\', '/')
             if path.lower().endswith('wechatwin.dll'):
                 self.dll_path_var.set(path)
-                func_path.save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
-                                           Config.INI_KEY_VER_PATH, path)
+                func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+                                              Config.INI_KEY_VER_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "请选择包含WeChatWin.dll的文件夹")
 
     def auto_get_wechat_install_path(self):
-        path = func_path.get_wechat_install_path()
+        path = func_setting.get_wechat_install_path()
         if path:
             self.install_path_var.set(path.replace('\\', '/'))
         else:
@@ -130,16 +176,16 @@ class PathSettingWindow:
             if not path:  # 用户取消选择
                 return
             path = path.replace('\\', '/')
-            if func_path.is_valid_wechat_install_path(path):
+            if func_setting.is_valid_wechat_install_path(path):
                 self.install_path_var.set(path)
-                func_path.save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
-                                           Config.INI_KEY_INSTALL_PATH, path)
+                func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+                                              Config.INI_KEY_INSTALL_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "请选择WeChat.exe文件")
 
     def auto_get_wechat_data_path(self):
-        path = func_path.get_wechat_data_path()
+        path = func_setting.get_wechat_data_path()
         if path:
             self.data_path_var.set(path.replace('\\', '/'))
         else:
@@ -151,16 +197,36 @@ class PathSettingWindow:
             if not path:  # 用户取消选择
                 return
             path = path.replace('\\', '/')
-            if func_path.is_valid_wechat_data_path(path):
+            if func_setting.is_valid_wechat_data_path(path):
                 self.data_path_var.set(path)
-                func_path.save_path_to_ini(Config.PATH_INI_PATH, Config.INI_SECTION,
-                                           Config.INI_KEY_DATA_PATH, path)
+                func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+                                              Config.INI_KEY_DATA_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
 
+    def auto_get_screen_size(self):
+        # 获取屏幕和登录窗口尺寸
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+        self.screen_size_var.set(f"{screen_width}*{screen_height}")
+        func_setting.save_setting_to_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_SCREEN_SIZE,
+            f"{screen_width}*{screen_height}"
+        )
+
+    def auto_get_login_size(self):
+        subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
+        time.sleep(3)
+        wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
+        login_width, login_height = wechat_window.size
+        self.login_size_var.set(f"{login_width}*{login_height}")
+        wechat_window.close()
+
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = PathSettingWindow(root)
+    app = SettingWindow(root)
     root.mainloop()

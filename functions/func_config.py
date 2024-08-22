@@ -6,7 +6,7 @@ from tkinter import messagebox
 
 import pyautogui
 
-from functions import func_path
+from functions import func_setting
 from utils.window_utils import wait_for_window_open, close_window
 from resources.config import Config
 

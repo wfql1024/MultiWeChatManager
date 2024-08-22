@@ -11,7 +11,7 @@ import psutil
 from PIL import Image, ImageTk
 
 import thread_manager
-from functions import func_path, func_detail
+from functions import func_setting, func_detail
 from utils import json_utils, process_utils
 from utils.window_utils import Tooltip
 from resources.config import Config
@@ -104,7 +104,7 @@ class DetailWindow:
         data_path = func_path.get_wechat_data_path()
 
         # 构建头像文件路径
-        avatar_path = os.path.join(data_path, "All Users", "config", f"{self.account}.jpg")
+        avatar_path = os.path.join(Config.PROJECT_USER_PATH, f"{self.account}", f"{self.account}.jpg")
         print("加载对应头像...")
 
         # 加载头像
@@ -115,7 +115,7 @@ class DetailWindow:
         else:
             # 如果没有，检查default.jpg
             print("没有对应头像，加载默认头像...")
-            default_path = os.path.join(data_path, "All Users", "default.jpg")
+            default_path = os.path.join(Config.PROJECT_USER_PATH, f"default.jpg")
             base64_string = Strings.DEFAULT_AVATAR_BASE64
             image_data = base64.b64decode(base64_string)
             with open(default_path, "wb") as f:
@@ -163,7 +163,7 @@ class DetailWindow:
             if avatar_url:
                 self.avatar_label.bind("<Enter>", lambda event: self.avatar_label.config(cursor="hand2"))
                 self.avatar_label.bind("<Leave>", lambda event: self.avatar_label.config(cursor=""))
-                self.avatar_label.bind("<Button-1>", lambda event: self.open_url(avatar_url))
+                self.avatar_label.bind("<Button-1>", lambda event: webbrowser.open(avatar_url))
                 self.avatar_status_label.config(text="")
             else:
                 self.avatar_label.bind("<Enter>", lambda event: self.avatar_label.config(cursor=""))
@@ -173,10 +173,6 @@ class DetailWindow:
         except Exception as e:
             print(f"Error loading avatar: {e}")
             self.avatar_label.config(text="无头像")
-
-    def open_url(self, url):
-        webbrowser.open(url)
-        print(f"Opening URL: {url}")
 
     def fetch_data(self):
         self.account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)

@@ -1,4 +1,5 @@
 import os
+import subprocess
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -7,7 +8,7 @@ from queue import Queue
 
 import psutil
 
-import functions.func_path as func_get_path
+import functions.func_setting as func_get_path
 import utils.json_utils as json_utils
 from utils import process_utils
 from resources.config import Config
@@ -61,7 +62,7 @@ class AccountManager:
             try:
                 db_paths = [f.path for f in psutil.Process(process_id).memory_maps() if
                             f.path.replace('\\', '/').startswith(data_path)]
-                print("子进程：获取单个进程所有文件用时：", time.time() - start_time)
+                print(f"┌———获取进程{process_id}所有文件，已用时：{time.time() - start_time:.4f}秒")
                 if db_paths:  # 如果存在匹配的文件路径
                     db_file = db_paths[0]  # 取第一个匹配的文件路径
                     print(db_file)
@@ -71,7 +72,7 @@ class AccountManager:
                         wxid = path_parts[wxid_index]
                         wechat_processes.append((wxid, process_id))
                         logged_in_wxids.add(wxid)
-                        print("子进程：获取单个进程所需数据用时：", time.time() - start_time)
+                        print(f"└———获取进程{process_id}对应账号{wxid}，已用时：{time.time() - start_time:.4f}秒")
                         return logged_in_wxids
                     except ValueError:
                         pass
@@ -80,7 +81,6 @@ class AccountManager:
 
         start_time = time.time()
         data_path = func_get_path.get_wechat_data_path()
-        print(data_path)
         if not data_path:
             return None, None, None
 
@@ -90,9 +90,11 @@ class AccountManager:
         pids = process_utils.get_process_ids_by_name("WeChat.exe")
         print(f"wechat_processes: {wechat_processes}")
         print(f"读取到微信所有进程，用时：{time.time() - start_time:.4f} 秒")
-        if len(pids) != 0:
-            pool = ThreadPoolExecutor(max_workers=len(pids) + 1)
-            pool.map(get_files_by_pid_thread, pids)
+        # if len(pids) != 0:
+        #     pool = ThreadPoolExecutor(max_workers=len(pids) + 1)
+        #     pool.map(get_files_by_pid_thread, pids)
+        for pid in pids:
+            get_files_by_pid_thread(pid)
         print(f"完成判断进程对应账号，用时：{time.time() - start_time:.4f} 秒")
 
         # 获取文件夹并分类
