@@ -4,11 +4,9 @@ import subprocess
 import time
 from tkinter import messagebox
 
-import pyautogui
-
 from functions import func_setting
-from utils.window_utils import wait_for_window_open, close_window
 from resources.config import Config
+from utils.window_utils import wait_for_window_open, close_window
 
 
 def test_and_create_config(account):
@@ -41,7 +39,7 @@ class ConfigCreator:
         return False
 
     def create_config(self):
-        data_path = func_path.get_wechat_data_path()
+        data_path = func_setting.get_wechat_data_path()
         if not data_path:
             messagebox.showerror("错误", "无法获取WeChat数据路径")
             return False

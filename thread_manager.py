@@ -68,3 +68,9 @@ class ThreadManager:
             self.master.after(0, callback, result)
 
         threading.Thread(target=thread_func).start()
+
+    def login_accounts(self, func, accounts, status, callback):
+        def thread_func():
+            func(accounts, status)
+            self.master.after(0, callback)
+        threading.Thread(target=thread_func).start()

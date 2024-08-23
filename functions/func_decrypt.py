@@ -1,9 +1,5 @@
-import os
-
-import utils
-from utils.wechat_decrypt_utils import get_current_wechat_key, myDecry
-from utils import process_utils
 from resources.config import Config
+from utils.wechat_decrypt_utils import get_current_wechat_key, myDecry
 
 
 def decrypt_and_copy(pid, account):
@@ -12,7 +8,7 @@ def decrypt_and_copy(pid, account):
     str_key = get_current_wechat_key(pid, account)
     # mylog.info(str_key)
     str_key_res = ' '.join([str_key[i:i + 2] for i in range(0, len(str_key), 2)])
-    usrDir = Config.PROJECT_USER_PATH
+    usrDir = Config.PROJ_USER_PATH
     file_microMsg = usrDir + rf"\{account}\{account}_MicroMsg.db"
     print("pwd: file", file_microMsg)
     print("str key:", str_key)

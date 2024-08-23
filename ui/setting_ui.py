@@ -7,7 +7,7 @@ from tkinter import ttk, filedialog, messagebox
 import pyautogui
 
 from functions import func_setting
-from resources import Config
+from resources.config import Config
 
 
 class SettingWindow:
@@ -16,7 +16,7 @@ class SettingWindow:
         self.on_close_callback = on_close_callback
         master.title("应用设置")
 
-        window_width = 600
+        window_width = 750
         window_height = 240  # 增加窗口高度以适应新的行
         screen_width = master.winfo_screenwidth()
         screen_height = master.winfo_screenheight()
@@ -220,7 +220,14 @@ class SettingWindow:
     def auto_get_login_size(self):
         subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
         time.sleep(3)
-        wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
+        # 获取所有标题中包含“微信”的窗口
+        windows = pyautogui.getWindowsWithTitle("微信")
+        # 查找标题完全为“微信”的窗口
+        wechat_window = None
+        for window in windows:
+            if window.title == "微信":
+                wechat_window = window
+                break
         login_width, login_height = wechat_window.size
         self.login_size_var.set(f"{login_width}*{login_height}")
         wechat_window.close()

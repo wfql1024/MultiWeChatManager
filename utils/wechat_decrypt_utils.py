@@ -9,7 +9,6 @@ import struct
 import sys
 import time
 from pathlib import Path
-from resources.config import Config
 
 import psutil
 import pymem
@@ -17,6 +16,8 @@ import win32api
 from Crypto.Cipher import AES
 from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
+
+from resources.config import Config
 
 app_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 IV_SIZE = 16
@@ -195,7 +196,7 @@ def get_current_wechat_key(pid, account):  #遍历微信内存，去暴力找key
         if len(targetdb) < 1:
             sys.exit(-1)
         else:
-            usrDir = Config.PROJECT_USER_PATH
+            usrDir = Config.PROJ_USER_PATH
             file_microMsg = usrDir + rf"\{account}\{account}_MicroMsg.db"
             if not os.path.exists(os.path.dirname(file_microMsg)):
                 os.makedirs(os.path.dirname(file_microMsg))

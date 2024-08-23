@@ -4,6 +4,7 @@ import tkinter as tk
 import win32con
 import win32gui
 
+
 class Tooltip:
     def __init__(self, widget, text):
         self.widget = widget

@@ -1,6 +1,5 @@
 # main_ui.py
 import base64
-import concurrent
 import os
 import queue
 import shutil
@@ -9,24 +8,21 @@ import sys
 import time
 import tkinter as tk
 from functools import partial
-from io import BytesIO
 from tkinter import messagebox
 from tkinter import ttk
 
 import psutil
 import pyautogui
-import requests
 import winshell
 from PIL import Image, ImageTk
 from PIL import ImageDraw
 
-import utils.json_utils
-from functions import func_config, func_setting, func_wechat_dll
+from functions import func_config, func_setting, func_wechat_dll, func_login
 from functions.func_account_list import AccountManager, get_config_status
 from functions.func_login import manual_login, auto_login
 from functions.func_setting import get_wechat_data_path
-from resources.strings import Strings
 from resources.config import Config
+from resources.strings import Strings
 from thread_manager import ThreadManager
 from ui import about_ui, setting_ui, detail_ui
 from utils import json_utils
@@ -43,14 +39,14 @@ def get_avatar_from_files(account):
     wechat_data_path = get_wechat_data_path()
 
     # 构建头像文件路径
-    avatar_path = os.path.join(Config.PROJECT_USER_PATH, f"{account}", f"{account}.jpg")
+    avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
 
     # 检查是否存在对应account的头像
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
 
     # 如果没有，检查default.jpg
-    default_path = os.path.join(Config.PROJECT_USER_PATH, "default.jpg")
+    default_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
     if os.path.exists(default_path):
         return Image.open(default_path)
 
@@ -61,8 +57,12 @@ def get_avatar_from_files(account):
         with open(default_path, "wb") as f:
             f.write(image_data)
         return Image.open(default_path)
-    except Exception():
-        print("所有方法都失败，创建空白头像")
+    except FileNotFoundError as e:
+        print("文件路径无效或无法创建文件:", e)
+    except IOError as e:
+        print("图像文件读取失败:", e)
+    except Exception as e:
+        print("所有方法都失败，创建空白头像:", e)
         return Image.new('RGB', (44, 44), color='white')
 
 
@@ -303,7 +303,7 @@ def create_lnk_for_account(account, status):
         """
 
     # 保存为批处理文件
-    bat_file_path = os.path.join(Config.PROJECT_USER_PATH, f'{account}', f'{status} - {account}.bat')
+    bat_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}', f'{status} - {account}.bat')
     with open(bat_file_path, 'w', encoding='utf-8') as bat_file:
         bat_file.write(bat_content.strip())
 
@@ -319,8 +319,8 @@ def create_lnk_for_account(account, status):
     shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
 
     # 图标文件路径
-    icon_path = os.path.join(Config.PROJECT_USER_PATH, f"{account}", f"{account}.jpg")
-    ico_path = os.path.join(Config.PROJECT_USER_PATH, f"{account}", f"{account}.ico")
+    icon_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
+    ico_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.ico")
 
     # 将JPG转换为ICO
     image = Image.open(icon_path)
@@ -333,34 +333,23 @@ def create_lnk_for_account(account, status):
         # 修正icon_location的传递方式，传入一个包含路径和索引的元组
         shortcut.icon_location = (ico_path, 0)
 
-    print(f"桌面快捷方式已生成: {shortcut_path}")
-
-
-def reset():
-    # 显示确认对话框
-    confirm = messagebox.askokcancel(
-        "确认重置",
-        "该操作将会清空该软件的数据，请确认是否需要重置？"
-    )
-    directory_path = Config.PROJECT_USER_PATH
-    if confirm:
-        # 确认后删除目录的所有内容
-        for item in os.listdir(directory_path):
-            item_path = os.path.join(directory_path, item)
-            if os.path.isfile(item_path) or os.path.islink(item_path):
-                os.unlink(item_path)
-            elif os.path.isdir(item_path):
-                shutil.rmtree(item_path)
-
-        messagebox.showinfo("重置完成", "目录已成功重置。")
-    else:
-        messagebox.showinfo("操作取消", "重置操作已取消。")
+    print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
 
 
 class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window):
+        self.logged_in_checkbox = None
+        self.logged_in_checkbox_var = None
+        self.logged_in_bottom_frame = None
+        self.one_key_quit = None
+        self.not_logged_in_title = None
+        self.not_logged_in_checkbox = None
+        self.not_logged_in_checkbox_var = None
+        self.one_key_auto_login = None
+        self.not_logged_in_bottom_frame = None
+        self.logged_in_title = None
         self.tooltips = {}
         self.wechat_processes = None
         self.status = None
@@ -468,7 +457,7 @@ class MainWindow:
 
     def setup_main_window(self):
         self.master.title("微信多开管理器")
-        self.master.iconbitmap('./resources/SunnyMultiWxMng.ico')
+        self.master.iconbitmap(Config.PROJ_ICO_PATH)
 
     def bring_window_to_front(self):
         self.master.after(200, lambda: self.master.lift())
@@ -492,6 +481,7 @@ class MainWindow:
         if self.status == "不可用":
             self.settings_menu.entryconfig(f"全局多开 {self.status}", state="disable")
         self.settings_menu.add_command(label="应用设置", command=self.open_settings)
+        self.settings_menu.add_command(label="重置", command=self.reset)
         self.settings_menu.add_command(label="关于", command=self.open_about)
 
         self.menu_bar.add_command(label="by 吾峰起浪", state="disabled")
@@ -516,6 +506,11 @@ class MainWindow:
 
     def check_and_init(self):
         """路径检查"""
+        # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
+        if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
+            os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
+            print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
+
         install_path = func_setting.get_wechat_install_path()
         data_path = func_setting.get_wechat_data_path()
         last_version_path = func_setting.get_wechat_latest_version_path()
@@ -542,7 +537,8 @@ class MainWindow:
                 # 获取屏幕和登录窗口尺寸
                 screen_width = self.master.winfo_screenwidth()
                 screen_height = self.master.winfo_screenheight()
-                multi_wechat_process = subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
+                subprocess.Popen(Config.MULTI_SUBPROCESS,
+                                 creationflags=subprocess.CREATE_NO_WINDOW)
                 time.sleep(3)
                 wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
                 login_width, login_height = wechat_window.size
@@ -560,6 +556,7 @@ class MainWindow:
                     Config.INI_KEY_LOGIN_SIZE,
                     f"{login_width}*{login_height}"
                 )
+                wechat_window.close()
 
             # 开始创建列表
             self.create_main_frame()
@@ -579,7 +576,7 @@ class MainWindow:
 
         # 使用ThreadManager异步获取账户列表
         try:
-            self.thread_manager.get_account_list_thread(self.account_manager, self._update_account_list)
+            self.thread_manager.get_account_list_thread(self.account_manager, self.create_account_ui)
         finally:
             # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
@@ -587,7 +584,7 @@ class MainWindow:
         # 直接调用 on_canvas_configure 方法
         self.canvas.update_idletasks()
 
-    def _update_account_list(self, result):
+    def create_account_ui(self, result):
         logged_in, not_logged_in, wechat_processes = result
         self.wechat_processes = wechat_processes
 
@@ -875,25 +872,12 @@ class MainWindow:
             for account, row in self.not_logged_in_rows.items()
             if row.is_checked()
         ]
-        print(accounts)
-        with concurrent.futures.ThreadPoolExecutor(max_workers=len(accounts)) as executor:
-            futures = []
-            for account in accounts:
-                # 提交任务到线程池
-                future = executor.submit(auto_login, account, self.status)
-                futures.append(future)
-
-                # 等待5秒再启动下一个线程
-                time.sleep(5)
-
-            # 等待所有任务完成
-            concurrent.futures.wait(futures)
-
-    # def start_auto_refresh(self):
-    #     """开启自动刷新"""
-    #     print("自动刷新开始")
-    #     self.create_main_frame()
-    #     self.master.after(300000, self.start_auto_refresh)
+        self.master.iconify()  # 最小化主窗口
+        try:
+            self.thread_manager.login_accounts(func_login.auto_login_accounts, accounts, self.status, self.create_main_frame)
+        finally:
+            # 恢复刷新可用性
+            self.edit_menu.entryconfig("刷新", state="normal")
 
     def toggle_patch_mode(self):
         logged_in, _, _ = self.account_manager.get_account_list()
@@ -927,6 +911,27 @@ class MainWindow:
         setting_ui.SettingWindow(settings_window, self.delayed_initialization)
         center_window(settings_window)
         settings_window.focus_set()
+
+    def reset(self):
+        # 显示确认对话框
+        confirm = messagebox.askokcancel(
+            "确认重置",
+            "该操作将会清空该软件的数据，请确认是否需要重置？"
+        )
+        directory_path = Config.PROJ_USER_PATH
+        if confirm:
+            # 确认后删除目录的所有内容
+            for item in os.listdir(directory_path):
+                item_path = os.path.join(directory_path, item)
+                if os.path.isfile(item_path) or os.path.islink(item_path):
+                    os.unlink(item_path)
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+
+            messagebox.showinfo("重置完成", "目录已成功重置。")
+            self.delayed_initialization()
+        else:
+            messagebox.showinfo("操作取消", "重置操作已取消。")
 
     def open_about(self):
         about_window = tk.Toplevel(self.master)

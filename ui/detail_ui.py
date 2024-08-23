@@ -1,8 +1,6 @@
 # detail_ui.py
 import base64
 import os
-import threading
-import time
 import tkinter as tk
 import webbrowser
 from tkinter import ttk, messagebox
@@ -10,12 +8,11 @@ from tkinter import ttk, messagebox
 import psutil
 from PIL import Image, ImageTk
 
-import thread_manager
 from functions import func_setting, func_detail
-from utils import json_utils, process_utils
-from utils.window_utils import Tooltip
 from resources.config import Config
 from resources.strings import Strings
+from utils import json_utils
+from utils.window_utils import Tooltip
 
 
 class DetailWindow:
@@ -101,10 +98,10 @@ class DetailWindow:
     def load_data_label(self):
         self.account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
         print("尝试获取...")
-        data_path = func_path.get_wechat_data_path()
+        data_path = func_setting.get_wechat_data_path()
 
         # 构建头像文件路径
-        avatar_path = os.path.join(Config.PROJECT_USER_PATH, f"{self.account}", f"{self.account}.jpg")
+        avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{self.account}", f"{self.account}.jpg")
         print("加载对应头像...")
 
         # 加载头像
@@ -115,7 +112,7 @@ class DetailWindow:
         else:
             # 如果没有，检查default.jpg
             print("没有对应头像，加载默认头像...")
-            default_path = os.path.join(Config.PROJECT_USER_PATH, f"default.jpg")
+            default_path = os.path.join(Config.PROJ_USER_PATH, f"default.jpg")
             base64_string = Strings.DEFAULT_AVATAR_BASE64
             image_data = base64.b64decode(base64_string)
             with open(default_path, "wb") as f:

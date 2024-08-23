@@ -1,17 +1,13 @@
 import os
-import subprocess
-import threading
 import time
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from queue import Queue
 
 import psutil
 
 import functions.func_setting as func_get_path
 import utils.json_utils as json_utils
-from utils import process_utils
 from resources.config import Config
+from utils import process_utils
 
 
 def wrap_text(text, max_width):

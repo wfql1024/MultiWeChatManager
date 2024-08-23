@@ -14,10 +14,10 @@ def fetch_account_detail(pid, account, before, after):
     print("开始解密...")
     decrypt_and_copy(pid, account)
     print("连接数据库...")
-    user_directory = Config.PROJECT_USER_PATH
+    user_directory = Config.PROJ_USER_PATH
     db_file = user_directory + rf"/{account}/edit_{account}_MicroMsg.db"
 
-    data_path = func_path.get_wechat_data_path()
+    data_path = func_setting.get_wechat_data_path()
     excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF'}
     folders = set(
         folder for folder in os.listdir(data_path)
@@ -43,7 +43,7 @@ def fetch_account_detail(pid, account, before, after):
             avatar_results = cursor.fetchall()
             usr_name, url = avatar_results[0]
             account_data[usr_name]["avatar_url"] = url
-            save_path = os.path.join(Config.PROJECT_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
+            save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
             if not os.path.exists(os.path.dirname(save_path)):
                 os.makedirs(os.path.dirname(save_path))
 

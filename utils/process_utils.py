@@ -1,12 +1,8 @@
 import ctypes
 import subprocess
-import time
 from ctypes import wintypes
 
 import psutil
-import win32api
-import win32con
-import win32process
 
 kernel32 = ctypes.windll.kernel32
 OpenProcess = kernel32.OpenProcess

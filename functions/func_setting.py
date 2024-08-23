@@ -47,6 +47,10 @@ def save_setting_to_ini(ini_path, section, key, value):
 
     config[section][key] = value
 
+    if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
+        os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
+        print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
+
     with open(ini_path, 'w') as configfile:
         config.write(configfile)
 
