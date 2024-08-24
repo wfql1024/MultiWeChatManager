@@ -4,26 +4,20 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="获取进程列表性能大优化；添加一键退出功能；初步试验创建登录快捷方式功能和一键登录功能">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="调试打包程序">
+      <change afterPath="$PROJECT_DIR$/app.manifest" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/build.bat" beforeDir="false" afterPath="$PROJECT_DIR$/build.bat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_account_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_account_list.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_decrypt.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_decrypt.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_detail.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_detail.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_login.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_setting.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_setting.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/SunnyMultiWxMng.ico" beforeDir="false" afterPath="$PROJECT_DIR$/external_res/SunnyMultiWxMng.ico" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/WeChatMultiple.exe" beforeDir="false" afterPath="$PROJECT_DIR$/external_res/WeChatMultiple.exe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/multiWechat.exe" beforeDir="false" afterPath="$PROJECT_DIR$/external_res/multiWechat.exe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/thread_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/thread_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/detail_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/detail_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/setup.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/setting_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/setting_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/process_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/process_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/wechat_decrypt_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/wechat_decrypt_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/window_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/window_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -94,6 +88,7 @@
     "Python.func_detail.executor": "Run",
     "Python.func_login.executor": "Run",
     "Python.func_path.executor": "Run",
+    "Python.func_setting.executor": "Run",
     "Python.func_wechat_dll.executor": "Run",
     "Python.get_path_of_data.executor": "Run",
     "Python.get_path_of_wechat.executor": "Run",
@@ -154,7 +149,7 @@
       <option name="ADD_SOURCE_ROOTS" value="false" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
-      <option name="PARAMETERS" value="" />
+      <option name="PARAMETERS" value="--noconsole" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
       <option name="MODULE_MODE" value="false" />
@@ -208,6 +203,11 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Python.MultiWeChatManager" />
+      <item itemvalue="Python.func_decrypt" />
+      <item itemvalue="Python.func_login" />
+    </list>
     <recent_temporary>
       <list>
         <item itemvalue="Python.func_login" />
@@ -251,7 +251,10 @@
       <workItem from="1724267486870" duration="39508000" />
       <workItem from="1724338535321" duration="13109000" />
       <workItem from="1724354696282" duration="1425000" />
-      <workItem from="1724356218049" duration="18075000" />
+      <workItem from="1724356218049" duration="18432000" />
+      <workItem from="1724396548658" duration="774000" />
+      <workItem from="1724397350684" duration="20109000" />
+      <workItem from="1724500401506" duration="12828000" />
     </task>
     <task id="LOCAL-00001" summary="I have finished the coding work. Core functions have been implemented.">
       <option name="closed" value="true" />
@@ -341,13 +344,22 @@
       <option name="project" value="LOCAL" />
       <updated>1724355395001</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="调试打包程序">
+      <option name="closed" value="true" />
+      <created>1724396462058</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1724396462058</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
   <component name="UnknownFeatures">
+    <option featureType="com.intellij.fileTypeFactory" implementationName="*.spec" />
     <option featureType="com.intellij.fileTypeFactory" implementationName="*.bat" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -371,18 +383,20 @@
     <MESSAGE value="修复滚动条相关bug&#10;部分方法添加doc" />
     <MESSAGE value="完善顶部复选框与子复选框的联动；&#10;能够从复选框状态获取到要操作的列表" />
     <MESSAGE value="获取进程列表性能大优化；添加一键退出功能；初步试验创建登录快捷方式功能和一键登录功能" />
-    <option name="LAST_COMMIT_MESSAGE" value="获取进程列表性能大优化；添加一键退出功能；初步试验创建登录快捷方式功能和一键登录功能" />
+    <MESSAGE value="调试打包程序" />
+    <option name="LAST_COMMIT_MESSAGE" value="调试打包程序" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$json_utils.coverage" NAME="json_utils Coverage Results" MODIFIED="1723608418648" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_account_list.coverage" NAME="func_account_list Coverage Results" MODIFIED="1723622250243" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$detail_ui.coverage" NAME="detail_ui Coverage Results" MODIFIED="1723965579899" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1724395100791" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1724513335382" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$get_wechat_mutex_handle.coverage" NAME="get_wechat_mutex_handle Coverage Results" MODIFIED="1723455823886" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_decrypt_utils.coverage" NAME="wechat_decrypt_utils Coverage Results" MODIFIED="1723959593571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_database.coverage" NAME="func_database Coverage Results" MODIFIED="1723960716503" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_wechat.coverage" NAME="get_path_of_wechat Coverage Results" MODIFIED="1723333662145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$func_setting.coverage" NAME="func_setting Coverage Results" MODIFIED="1724511173987" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_path.coverage" NAME="func_path Coverage Results" MODIFIED="1723587474270" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_wechat_dll.coverage" NAME="func_wechat_dll Coverage Results" MODIFIED="1723589930316" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$main_ui.coverage" NAME="main_ui Coverage Results" MODIFIED="1723494407308" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />

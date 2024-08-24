@@ -78,7 +78,8 @@ class RedirectText:
 
     def write(self, text):
         self.message_queue.put(" " + text)  # 将文本放入队列
-        self.original_stdout.write(text)  # 继续在控制台显示
+        if self.original_stdout:
+            self.original_stdout.write(text)  # 继续在控制台显示
 
     def flush(self):
         self.original_stdout.flush()

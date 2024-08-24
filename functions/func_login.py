@@ -7,7 +7,6 @@ import time
 import pyautogui
 
 from functions import func_setting
-from functions.func_setting import is_valid_wechat_install_path, is_valid_wechat_data_path
 from resources.config import Config
 from utils.window_utils import wait_for_window_open, wait_for_window_close
 
@@ -37,19 +36,9 @@ def manual_login(status):
 
 def auto_login(account, status):
     # 获取数据路径
-    data_path = func_setting.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_DATA_PATH,
-        is_valid_wechat_data_path
-    )
-    wechat_path = func_setting.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_INSTALL_PATH,
-        is_valid_wechat_install_path
-    )
-    if not data_path:
+    data_path = func_setting.get_wechat_data_path()
+    wechat_path = func_setting.get_wechat_install_path()
+    if not data_path or not wechat_path:
         return False
 
     # 构建源文件和目标文件路径

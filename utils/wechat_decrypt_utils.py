@@ -110,6 +110,8 @@ def DecrypTo(db_file_path, pwd):
     blist = [blist[i:i + DEFAULT_PAGESIZE] for i in range(DEFAULT_PAGESIZE, len(blist), DEFAULT_PAGESIZE)]
     # print(blist)
 
+    new_db_file_path = None
+
     if os.path.exists(db_file_path):
         print(f"当前db文件是：{db_file_path}")
         if os.path.isdir(db_file_path):

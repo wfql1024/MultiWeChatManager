@@ -155,13 +155,13 @@ class SettingWindow:
             if not path:  # 用户取消选择
                 return
             path = path.replace('\\', '/')
-            if path.lower().endswith('wechatwin.dll'):
+            if func_setting.is_valid_wechat_latest_version_path(path):
                 self.dll_path_var.set(path)
                 func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                              Config.INI_KEY_VER_PATH, path)
+                                                 Config.INI_KEY_VER_PATH, path)
                 break
             else:
-                messagebox.showerror("错误", "请选择包含WeChatWin.dll的文件夹")
+                messagebox.showerror("错误", "请选择包含WeChatWin.dll的版本号最新的文件夹")
 
     def auto_get_wechat_install_path(self):
         path = func_setting.get_wechat_install_path()
@@ -179,7 +179,7 @@ class SettingWindow:
             if func_setting.is_valid_wechat_install_path(path):
                 self.install_path_var.set(path)
                 func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                              Config.INI_KEY_INSTALL_PATH, path)
+                                                 Config.INI_KEY_INSTALL_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "请选择WeChat.exe文件")
@@ -200,7 +200,7 @@ class SettingWindow:
             if func_setting.is_valid_wechat_data_path(path):
                 self.data_path_var.set(path)
                 func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                              Config.INI_KEY_DATA_PATH, path)
+                                                 Config.INI_KEY_DATA_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")

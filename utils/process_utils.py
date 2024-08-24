@@ -1,5 +1,6 @@
 import ctypes
 import subprocess
+import sys
 from ctypes import wintypes
 
 import psutil
@@ -26,9 +27,19 @@ K32GetModuleFileNameExA.restype = ctypes.wintypes.DWORD
 def get_process_ids_by_name(process_name):
     matching_processes = []
     try:
+        # 设置创建不显示窗口的子进程标志
+        startupinfo = None
+        if sys.platform == 'win32':
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
         # 直接执行 tasklist 命令并获取输出
-        origin_output = subprocess.check_output(['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/FO', 'CSV', '/NH'])
+        origin_output = subprocess.check_output(
+            ['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/FO', 'CSV', '/NH'],
+            startupinfo=startupinfo
+        )
         print(origin_output)
+
         try:
             output = origin_output.decode('utf-8').strip()
         except UnicodeDecodeError as e:
