@@ -3,6 +3,7 @@ import os
 import shutil
 import subprocess
 import time
+import tkinter as tk
 
 import pyautogui
 
@@ -21,7 +22,7 @@ def manual_login(status):
     time.sleep(2)
     wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
     (width, height) = wechat_window.size
-    wechat_window.moveTo(100, 100)
+    # wechat_window.moveTo(100, 100)
     print(f"窗口宽度: {width}, 窗口高度: {height}")
     if wait_for_window_open("WeChatLoginWndForPC", timeout=3):
         print("登录窗口已打开")
@@ -98,11 +99,15 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
     #     auto_login(accounts[0], status)
     count = len(accounts)
 
-    screen_width, screen_height = func_setting.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_SCREEN_SIZE
-    ).split('*')
+    # 优先自动获取，若获取不到从配置中获取
+    screen_width = tk.Tk().winfo_screenwidth()
+    screen_height = tk.Tk().winfo_screenheight()
+    if not screen_height or not screen_width:
+        screen_width, screen_height = func_setting.get_setting_from_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_SCREEN_SIZE
+        ).split('*')
     screen_width = int(screen_width)
     screen_height = int(screen_height)
     login_width, login_height = func_setting.get_setting_from_ini(
@@ -143,7 +148,7 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
         time.sleep(2.7)
         wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
         pyautogui.press('space')
-        wechat_window.moveTo(positions[j][0], positions[j][1])
+        wechat_window.moveTo(positions[j % max_column][0], positions[j % max_column][1] + (j / max_column) * 150)
 
 
 if __name__ == '__main__':

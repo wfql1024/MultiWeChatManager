@@ -337,6 +337,33 @@ def create_lnk_for_account(account, status):
     print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
 
 
+def get_all_configs():
+    target_path = os.path.join(func_setting.get_wechat_data_path(), 'All Users', 'config')
+    all_configs = []
+    # 遍历目标目录中的所有文件
+    for file_name in os.listdir(target_path):
+        # 只处理以 .data 结尾的文件
+        if file_name.endswith('.data') and file_name != 'config.data':
+            # 获取不含扩展名的文件名
+            file_name_without_ext = os.path.splitext(file_name)[0]
+            # 添加到列表中
+            all_configs.append(file_name_without_ext)
+
+    return all_configs
+
+
+def process_exists(pid):
+    output = None
+    try:
+        output = subprocess.check_output(['tasklist', '/FI', f'PID eq {pid}'])
+        return str(pid) in output.decode()
+    except UnicodeDecodeError as e:
+        print(f"解码错误：{e}")
+        print(output.decode('GBK').strip())
+    except subprocess.CalledProcessError:
+        return False
+
+
 class MainWindow:
     """构建主窗口的类"""
 
@@ -534,30 +561,36 @@ class MainWindow:
                 Config.INI_KEY_LOGIN_SIZE,
             )
 
-            if not screen_size or not login_size:
+            if not screen_size or not login_size or screen_size == "" or login_size == "":
                 # 获取屏幕和登录窗口尺寸
                 screen_width = self.master.winfo_screenwidth()
                 screen_height = self.master.winfo_screenheight()
-                subprocess.Popen(Config.MULTI_SUBPROCESS,
-                                 creationflags=subprocess.CREATE_NO_WINDOW)
-                time.sleep(3)
-                wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
-                login_width, login_height = wechat_window.size
-
-                # 保存
+                # 保存屏幕尺寸
                 func_setting.save_setting_to_ini(
                     Config.SETTING_INI_PATH,
                     Config.INI_SECTION,
                     Config.INI_KEY_SCREEN_SIZE,
                     f"{screen_width}*{screen_height}"
                 )
-                func_setting.save_setting_to_ini(
-                    Config.SETTING_INI_PATH,
-                    Config.INI_SECTION,
-                    Config.INI_KEY_LOGIN_SIZE,
-                    f"{login_width}*{login_height}"
-                )
-                wechat_window.close()
+                subprocess.Popen(Config.MULTI_SUBPROCESS,
+                                 creationflags=subprocess.CREATE_NO_WINDOW)
+                time.sleep(3)
+
+                # 获取微信登录窗口尺寸
+                wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
+                if wechat_window.title == "微信":
+                    login_width, login_height = wechat_window.size
+
+                    # 如果比例适当，保存登录窗口尺寸
+                    if login_width and login_height:
+                        if 0.734 < login_width / login_height < 0.740:
+                            func_setting.save_setting_to_ini(
+                                Config.SETTING_INI_PATH,
+                                Config.INI_SECTION,
+                                Config.INI_KEY_LOGIN_SIZE,
+                                f"{login_width}*{login_height}"
+                            )
+                    wechat_window.close()
 
             # 开始创建列表
             self.create_main_frame()
@@ -584,6 +617,7 @@ class MainWindow:
 
         # 直接调用 on_canvas_configure 方法
         self.canvas.update_idletasks()
+        self.create_menu_bar()
 
     def create_account_ui(self, result):
         logged_in, not_logged_in, wechat_processes = result
@@ -858,8 +892,17 @@ class MainWindow:
                 nickname = account_data.get(account, {}).get("nickname", None)
                 process = psutil.Process(pid)
                 if process.name() == "WeChat.exe":
+                    # 普通关闭进程
                     process.terminate()
-                    os.system(f"taskkill /F /PID {pid}")
+                    if process_exists(pid):
+                        # 静默强制关闭进程
+                        startupinfo = None
+                        if sys.platform == 'win32':
+                            startupinfo = subprocess.STARTUPINFO()
+                            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                        subprocess.check_output(
+                            ['taskkill', '/F', '/PID', f'{pid}'], startupinfo=startupinfo
+                        )
                     print(f"结束了{pid}")
                     quited_accounts.append((nickname, pid))
             except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -875,7 +918,8 @@ class MainWindow:
         ]
         self.master.iconify()  # 最小化主窗口
         try:
-            self.thread_manager.login_accounts(func_login.auto_login_accounts, accounts, self.status, self.create_main_frame)
+            self.thread_manager.login_accounts(func_login.auto_login_accounts, accounts, self.status,
+                                               self.create_main_frame)
         finally:
             # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
@@ -917,10 +961,30 @@ class MainWindow:
         # 显示确认对话框
         confirm = messagebox.askokcancel(
             "确认重置",
-            "该操作将会清空该软件的数据，请确认是否需要重置？"
+            "该操作将会关闭所有微信进程，清空头像、昵称、配置的路径等数据以及恢复到非全局模式，但不影响配置文件，请确认是否需要重置？"
         )
         directory_path = Config.PROJ_USER_PATH
+        last_ver_path = func_setting.get_wechat_latest_version_path()
         if confirm:
+            # 恢复原始的dll
+            func_wechat_dll.switch_dll()
+
+            dll_path = os.path.join(last_ver_path, "WeChatWin.dll")
+            bak_path = os.path.join(last_ver_path, "WeChatWin.dll.bak")
+
+            # 检查 .bak 文件是否存在
+            if os.path.exists(bak_path):
+                # 如果 WeChatWin.dll 存在，删除它
+                if os.path.exists(dll_path):
+                    os.remove(dll_path)
+                    print(f"Deleted: {dll_path}")
+
+                # 将 .bak 文件重命名为 WeChatWin.dll
+                shutil.copyfile(bak_path, dll_path)
+                print(f"Restored: {dll_path} from {bak_path}")
+            else:
+                print(f"No action needed. {bak_path} not found.")
+
             # 确认后删除目录的所有内容
             for item in os.listdir(directory_path):
                 item_path = os.path.join(directory_path, item)
@@ -929,7 +993,8 @@ class MainWindow:
                 elif os.path.isdir(item_path):
                     shutil.rmtree(item_path)
 
-            messagebox.showinfo("重置完成", "目录已成功重置。")
+            messagebox.showinfo("重置完成", "目录已成功重置。将唤起微信以获取尺寸。")
+            self.create_menu_bar()
             self.delayed_initialization()
         else:
             messagebox.showinfo("操作取消", "重置操作已取消。")
@@ -962,18 +1027,10 @@ class MainWindow:
                                                self.bring_window_to_front)
 
     def create_lnk(self):
-        target_path = os.path.join(func_setting.get_wechat_data_path(), 'All Users', 'config')
-        # 初始化一个空列表，用于存储文件名
+
         configured_accounts = []
 
-        # 遍历目标目录中的所有文件
-        for file_name in os.listdir(target_path):
-            # 只处理以 .data 结尾的文件
-            if file_name.endswith('.data') and file_name != 'config.data':
-                # 获取不含扩展名的文件名
-                file_name_without_ext = os.path.splitext(file_name)[0]
-                # 添加到列表中
-                configured_accounts.append(file_name_without_ext)
+        configured_accounts = get_all_configs()
 
         for account in configured_accounts:
             create_lnk_for_account(account, self.status)

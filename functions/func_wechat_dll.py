@@ -1,5 +1,6 @@
 import mmap
 import os
+import shutil
 import time
 
 import psutil
@@ -69,7 +70,9 @@ def switch_dll():
             return False
 
     # 获取 DLL 路径
-    dll_path = os.path.join(func_setting.get_wechat_latest_version_path(), "WeChatWin.dll")
+    last_ver_path = func_setting.get_wechat_latest_version_path()
+    dll_path = os.path.join(last_ver_path, "WeChatWin.dll")
+    bak_path = os.path.join(last_ver_path, "WeChatWin.dll.bak")
 
     try:
         with open(dll_path, 'r+b') as f:
@@ -81,7 +84,7 @@ def switch_dll():
             current_mode = check_dll()
 
             if current_mode == "已开启":
-                print("当前是补丁模式")
+                print("当前是全局模式")
                 pos = mmapped_file.find(patch_pattern)
                 if pos != -1:
                     mmapped_file[pos:pos + len(patch_pattern)] = stable_pattern
@@ -91,6 +94,8 @@ def switch_dll():
                     print("未找到对应的HEX模式")
             elif current_mode == "未开启":
                 print("当前是稳定模式")
+                if not os.path.exists(bak_path):
+                    shutil.copyfile(dll_path, bak_path)
                 pos = mmapped_file.find(stable_pattern)
                 if pos != -1:
                     mmapped_file[pos:pos + len(stable_pattern)] = patch_pattern
