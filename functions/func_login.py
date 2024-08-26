@@ -130,6 +130,8 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
         print("可以一行显示")
         get_wnd_position(count)
 
+    start_time = time.time()
+
     for j in range(count):
         source_file = os.path.join(data_path, "All Users", "config", f"{accounts[j]}.data")
         target_file = os.path.join(data_path, "All Users", "config", "config.data")
@@ -139,16 +141,22 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
         except Exception as e:
             print(f"复制配置文件失败: {e}")
             return False
-        print("复制配置文件成功")
+        print(f"复制配置文件成功，时间：{time.time() - start_time:.4f}秒")
 
         if status == "已开启":
             subprocess.Popen(wechat_path)
         else:
             multi_wechat_process = subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
-        time.sleep(2.7)
+        print(f"执行唤起登录窗口，时间：{time.time() - start_time:.4f}秒")
+        time.sleep(2.5)
         wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
-        pyautogui.press('space')
-        wechat_window.moveTo(positions[j % max_column][0], positions[j % max_column][1] + (j / max_column) * 150)
+        # pyautogui.press('space')
+        # 横坐标算出完美的平均位置
+        new_left = positions[j % max_column][0]
+        # 纵坐标由居中位置稍向上偏移，然后每轮完一行，位置向下移动一个登录窗口宽度的距离
+        new_top = positions[j % max_column][1] + int(j / max_column) * login_width - int(login_width / 2)
+        print(new_left, new_top)
+        wechat_window.moveTo(new_left, new_top)
 
 
 if __name__ == '__main__':
