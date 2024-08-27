@@ -64,3 +64,24 @@ class ConfigCreator:
         except Exception as e:
             messagebox.showerror("错误", f"生成配置文件时发生错误：{str(e)}")
             return False
+
+    def use_config(self):
+        data_path = func_setting.get_wechat_data_path()
+        if not data_path:
+            messagebox.showerror("错误", "无法获取WeChat数据路径")
+            return False
+        # 构建源文件和目标文件路径
+        source_file = os.path.join(data_path, "All Users", "config", f"{self.account}.data")
+        target_file = os.path.join(data_path, "All Users", "config", "config.data")
+
+        # 确保目标目录存在
+        os.makedirs(os.path.dirname(target_file), exist_ok=True)
+
+        # 复制配置文件
+        try:
+            shutil.copy2(source_file, target_file)
+        except Exception as e:
+            print(f"复制配置文件失败: {e}")
+            return False
+
+        return True

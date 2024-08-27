@@ -6,27 +6,102 @@ import time
 import tkinter as tk
 
 import pyautogui
+import win32api
+import win32con
+import win32gui
 
+import utils
 from functions import func_setting
+from functions.func_config import ConfigCreator
 from resources.config import Config
+from utils import window_utils
 from utils.window_utils import wait_for_window_open, wait_for_window_close
 
 
-def manual_login(status):
+def doClick(handle, cx, cy):  # 第四种，可后台
+    """
+    在窗口中的相对位置点击鼠标，可以后台
+    :param handle: 句柄
+    :param cx: 相对横坐标
+    :param cy: 相对纵坐标
+    :return: 无
+    """
+    long_position = win32api.MAKELONG(cx, cy)  # 模拟鼠标指针 传送到指定坐标
+    win32api.SendMessage(handle, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, long_position)  # 模拟鼠标按下
+    win32api.SendMessage(handle, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)  # 模拟鼠标弹起
+
+
+def open_wechat(status):
+    """
+    根据状态以不同方式打开微信
+    :param status: 状态
+    :return: 微信窗口句柄
+    """
+    multi_wechat_process = None
     wechat_path = func_setting.get_wechat_install_path()
+    data_path = func_setting.get_wechat_data_path()
+    if not wechat_path or not data_path:
+        return None
+    sub_exe = func_setting.get_setting_from_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY_SUB_EXE,
+    )
     if status == "已开启":
-        subprocess.Popen(wechat_path, creationflags=subprocess.CREATE_NO_WINDOW)
+        wechat_process = subprocess.Popen(wechat_path, creationflags=subprocess.CREATE_NO_WINDOW)
     else:
-        multi_wechat_process = subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
-    # 等待窗口打开
+        if sub_exe == "WeChatMultiple_Anhkgg.exe":
+            multi_wechat_process = subprocess.Popen(
+                f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
+                creationflags=subprocess.CREATE_NO_WINDOW
+            )
+        elif sub_exe == "WeChatMultiple_lyie15.exe" or sub_exe == "WeChatMultiple_pipihan.exe":
+            multi_wechat_process = subprocess.Popen(
+                f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
+                # creationflags=subprocess.CREATE_NO_WINDOW
+            )
+            sub_exe_hwnd = wait_for_window_open("WTWindow", 3)
+            if sub_exe_hwnd:
+                time.sleep(1.5)
+                pyautogui.press('space')
     time.sleep(2)
-    wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
-    (width, height) = wechat_window.size
-    # wechat_window.moveTo(100, 100)
-    print(f"窗口宽度: {width}, 窗口高度: {height}")
-    if wait_for_window_open("WeChatLoginWndForPC", timeout=3):
-        print("登录窗口已打开")
-        if wait_for_window_close("WeChatLoginWndForPC", timeout=60):
+    wechat_hwnd = wait_for_window_open("WeChatLoginWndForPC", 3)
+    if multi_wechat_process:
+        multi_wechat_process.terminate()
+    if wechat_hwnd:
+        return wechat_hwnd
+    else:
+        return None
+
+
+def manual_login(status):
+    """
+    根据状态进行手动登录过程
+    :param status: 状态
+    :return: 成功与否
+    """
+    utils.window_utils.close_windows_by_class(["WTWindow", "WeChatLoginWndForPC"])
+    wechat_hwnd = open_wechat(status)
+    if wechat_hwnd:
+        print(f"打开了登录窗口{wechat_hwnd}")
+        screen_size = func_setting.get_setting_from_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_SCREEN_SIZE,
+        )
+        if not screen_size or screen_size == "":
+            login_wnd_details = window_utils.get_window_details_from_hwnd(wechat_hwnd)
+            login_wnd = login_wnd_details["window"]
+            login_width = login_wnd_details["width"]
+            login_height = login_wnd_details["height"]
+            if 0.734 < login_width / login_height < 0.740:
+                func_setting.save_setting_to_ini(
+                    Config.SETTING_INI_PATH,
+                    Config.INI_SECTION,
+                    Config.INI_KEY_SCREEN_SIZE,
+                    f"{login_width}*{login_height}"
+                )
+        if wait_for_window_close(wechat_hwnd, timeout=60):
             print("登录窗口已关闭")
             return True
     else:
@@ -36,43 +111,31 @@ def manual_login(status):
 
 
 def auto_login(account, status):
-    # 获取数据路径
-    data_path = func_setting.get_wechat_data_path()
-    wechat_path = func_setting.get_wechat_install_path()
-    if not data_path or not wechat_path:
-        return False
-
-    # 构建源文件和目标文件路径
-    source_file = os.path.join(data_path, "All Users", "config", f"{account}.data")
-    target_file = os.path.join(data_path, "All Users", "config", "config.data")
-
-    # 确保目标目录存在
-    os.makedirs(os.path.dirname(target_file), exist_ok=True)
-
-    # 复制配置文件
-    try:
-        shutil.copy2(source_file, target_file)
-    except Exception as e:
-        print(f"复制配置文件失败: {e}")
-        return False
-
-    print("复制配置文件成功")
-    if status == "已开启":
-        subprocess.Popen(wechat_path)
+    utils.window_utils.close_windows_by_class(["WTWindow", "WeChatLoginWndForPC"])
+    creator = ConfigCreator(account)
+    result = creator.use_config()
+    if result:
+        print("复制配置文件成功")
     else:
-        multi_wechat_process = subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
-    if wait_for_window_open("WeChatLoginWndForPC", timeout=3):
-        print("打开了登录窗口")
-        time.sleep(1)
-        pyautogui.press('space')
-        print("点击了按钮")
-        # 等待登录窗口关闭
-        if wait_for_window_close("WeChatLoginWndForPC", timeout=60):
-            print("登录窗口已关闭")
-            return True
-        else:
-            print("登录超时")
-            return False
+        return False
+    wechat_hwnd = open_wechat(status)
+    if wechat_hwnd:
+        print(f"打开了登录窗口{wechat_hwnd}")
+        wechat_wnd_details = utils.window_utils.get_window_details_from_hwnd(wechat_hwnd)
+        wechat_wnd = wechat_wnd_details["window"]
+        wechat_width = wechat_wnd_details["width"]
+        wechat_height = wechat_wnd_details["height"]
+        end_time = time.time() + 60
+        while True:
+            doClick(wechat_hwnd, int(wechat_width * 0.5), int(wechat_height * 0.75))
+            print("点击了按钮")
+            time.sleep(0.2)
+            if win32gui.IsWindow(wechat_hwnd) == 0:
+                print("登录窗口已关闭")
+                return True
+            elif time.time() > end_time:
+                print("登录超时")
+                return False
     return False
 
 
@@ -148,8 +211,8 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
         else:
             multi_wechat_process = subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
         print(f"执行唤起登录窗口，时间：{time.time() - start_time:.4f}秒")
-        time.sleep(2.5)
-        wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
+        time.sleep(3)
+        wechat_window = pyautogui.getInfo("微信")[0]
         # pyautogui.press('space')
         # 横坐标算出完美的平均位置
         new_left = positions[j % max_column][0]

@@ -2,16 +2,20 @@ import re
 import subprocess
 import time
 import tkinter as tk
+from functools import partial
 from tkinter import ttk, filedialog, messagebox
 
 import pyautogui
 
+from functions.func_login import open_wechat
+from utils import window_utils
 from functions import func_setting
 from resources.config import Config
 
 
 class SettingWindow:
-    def __init__(self, master, on_close_callback=None):
+    def __init__(self, master, status, on_close_callback=None):
+        self.status = status
         self.master = master
         self.on_close_callback = on_close_callback
         master.title("应用设置")
@@ -93,7 +97,7 @@ class SettingWindow:
         self.login_size_entry = tk.Entry(master, textvariable=self.login_size_var, width=70)
         self.login_size_entry.grid(row=4, column=1, padx=5, pady=5, sticky="we")
 
-        self.login_size_get_button = ttk.Button(master, text="获取", command=self.auto_get_login_size)
+        self.login_size_get_button = ttk.Button(master, text="获取", command=partial(self.auto_get_login_size, self.status))
         self.login_size_get_button.grid(row=4, column=2, padx=5, pady=5)
 
         # 添加确定按钮
@@ -217,23 +221,33 @@ class SettingWindow:
             f"{screen_width}*{screen_height}"
         )
 
-    def auto_get_login_size(self):
-        subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
-        time.sleep(3)
-        # 获取所有标题中包含“微信”的窗口
-        windows = pyautogui.getWindowsWithTitle("微信")
-        # 查找标题完全为“微信”的窗口
-        wechat_window = None
-        for window in windows:
-            if window.title == "微信":
-                wechat_window = window
-                break
-        login_width, login_height = wechat_window.size
-        self.login_size_var.set(f"{login_width}*{login_height}")
-        wechat_window.close()
+    def auto_get_login_size(self, status):
+        window_utils.close_windows_by_class(["WTWindow", "WeChatLoginWndForPC"])
+        wechat_hwnd = open_wechat(status)
+        if wechat_hwnd:
+            print(f"打开了登录窗口{wechat_hwnd}")
+            login_wnd_details = window_utils.get_window_details_from_hwnd(wechat_hwnd)
+            login_wnd = login_wnd_details["window"]
+            screen_size = func_setting.get_setting_from_ini(
+                Config.SETTING_INI_PATH,
+                Config.INI_SECTION,
+                Config.INI_KEY_SCREEN_SIZE,
+            )
+            if not screen_size or screen_size == "":
+                login_width = login_wnd_details["width"]
+                login_height = login_wnd_details["height"]
+                if 0.734 < login_width / login_height < 0.740:
+                    func_setting.save_setting_to_ini(
+                        Config.SETTING_INI_PATH,
+                        Config.INI_SECTION,
+                        Config.INI_KEY_SCREEN_SIZE,
+                        f"{login_width}*{login_height}",
+                    )
+                    self.login_size_var.set(f"{login_width}*{login_height}")
+            login_wnd.close()
 
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = SettingWindow(root)
+    app = SettingWindow(root, "已开启")
     root.mainloop()

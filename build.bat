@@ -2,35 +2,45 @@
 
 :: 清空 dist 文件夹（如果存在）
 if exist "dist" rmdir /S /Q "dist"
+rmdir /S /Q "build"
+del /Q "*.spec"
 
 :: 使用 PyInstaller 创建正常版本（无窗口）
 pyinstaller --name="微信多开管理器" --windowed --icon=external_res\SunnyMultiWxMng.ico ^
 --add-data="external_res;external_res" --manifest=app.manifest --exclude-module=PyQt5 --exclude-module=numpy ^
---noconfirm Main.py
+--noconfirm Main.py > build_log_正式版.txt 2>&1
 
 :: 重命名生成的 EXE 文件
-ren "dist\微信多开管理器\微信多开管理器.exe" "微信多开管理器_正式版.exe"
+if exist "dist\微信多开管理器\微信多开管理器.exe" (
+    echo 正式版打包成功
+) else (
+    echo 正式版打包失败，请检查 build_log_正式版.txt
+    goto end
+)
 
 :: 使用 PyInstaller 创建调试版本（有窗口）
 pyinstaller --name="微信多开管理器_调试版" --icon=external_res\SunnyMultiWxMng.ico ^
 --add-data="external_res;external_res" --manifest=app.manifest --exclude-module=PyQt5 --exclude-module=numpy ^
---distpath="dist\微信多开管理器" --workpath="build\调试版" ^
---noconfirm Main.py
+--noconfirm Main.py > build_log_调试版.txt 2>&1
 
-:: 检查 PyInstaller 是否成功
-if exist "dist\微信多开管理器\微信多开管理器_正式版.exe" (
-    if exist "dist\微信多开管理器\微信多开管理器_调试版.exe" (
-        :: 清理中间文件
-        rmdir /S /Q "build"
-        del /Q "微信多开管理器.spec"
-        del /Q "微信多开管理器_调试版.spec"
+if exist "dist\微信多开管理器_调试版\微信多开管理器_调试版.exe" (
+    echo 调试版打包成功！
 
-        echo 打包完成！正式版和调试版都已生成，共用同一个 _internal 文件夹。
-    ) else (
-        echo 调试版打包失败，请检查 pyinstaller 输出的日志。
-    )
+    :: 将 _调试版.exe 移动到正常版的文件夹中
+    move "dist\微信多开管理器_调试版\微信多开管理器_调试版.exe" "dist\微信多开管理器\"
+
+    :: 删除 _调试版 文件夹
+    rmdir /S /Q "dist\微信多开管理器_调试版"
 ) else (
-    echo 正式版打包失败，请检查 pyinstaller 输出的日志。
+    echo 调试版打包失败，请检查 build_log_调试版.txt
+    goto end
 )
 
+:: 清理中间文件
+rmdir /S /Q "build"
+del /Q "*.spec"
+
+echo 打包完成！正式版和调试版都已生成，共用同一个 _internal 文件夹。
+
+:end
 pause

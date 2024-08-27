@@ -1,5 +1,6 @@
 # main_ui.py
 import base64
+import glob
 import os
 import queue
 import shutil
@@ -17,7 +18,7 @@ import winshell
 from PIL import Image, ImageTk
 from PIL import ImageDraw
 
-from functions import func_config, func_setting, func_wechat_dll, func_login
+from functions import func_config, func_setting, func_wechat_dll, func_login, func_file
 from functions.func_account_list import AccountManager, get_config_status
 from functions.func_login import manual_login, auto_login
 from functions.func_setting import get_wechat_data_path
@@ -114,14 +115,6 @@ def create_round_corner_image(img, radius):
 
     img.putalpha(alpha)
     return img
-
-
-def avatar_on_leave(event):
-    event.widget.config(cursor="")  # 恢复默认光标
-
-
-def avatar_on_enter(event):
-    event.widget.config(cursor="hand2")  # 将光标改为手型
 
 
 class AccountRow:
@@ -364,10 +357,73 @@ def process_exists(pid):
         return False
 
 
+def open_user_file():
+    if not os.path.exists(Config.PROJ_USER_PATH):
+        os.makedirs(Config.PROJ_USER_PATH)
+    os.startfile(Config.PROJ_USER_PATH)
+
+
+def clear_user_file():
+    confirm = messagebox.askokcancel(
+        "确认清除",
+        "该操作将会清空头像、昵称、配置的路径等数据，请确认是否需要清除？"
+    )
+    directory_path = Config.PROJ_USER_PATH
+    if confirm:
+        for item in os.listdir(directory_path):
+            item_path = os.path.join(directory_path, item)
+            if os.path.isfile(item_path) or os.path.islink(item_path):
+                os.unlink(item_path)
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+        messagebox.showinfo("重置完成", "目录已成功重置。将唤起微信以获取尺寸。")
+
+
+def open_config_file():
+    data_path = get_wechat_data_path()
+    config_path = os.path.join(data_path, "All Users", "config")
+    os.startfile(config_path)
+
+
+def clear_config_file():
+    data_path = get_wechat_data_path()
+    config_path = os.path.join(data_path, "All Users", "config")
+    # 获取所有 `.data` 文件，除了 `config.data`
+    data_files = glob.glob(os.path.join(config_path, "*.data"))
+    files_to_delete = [file for file in data_files if not file.endswith("config.data")]
+    confirm = messagebox.askokcancel(
+        "确认清除",
+        "该操作将会清空登录配置文件，请确认是否需要清除？"
+    )
+    if confirm:
+        # 删除这些文件
+        for file_path in files_to_delete:
+            try:
+                os.remove(file_path)
+                print(f"已删除: {file_path}")
+            except Exception as e:
+                print(f"无法删除 {file_path}: {e}")
+
+
+def set_sub_executable(file_name, initialization):
+    func_setting.save_setting_to_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY_SUB_EXE,
+        file_name
+    )
+    initialization()
+
+
 class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window):
+        self.sub_executable_menu = None
+        self.config_file_menu = None
+        self.user_file_menu = None
+        self.file_menu = None
+        self.help_menu = None
         self.logged_in_checkbox = None
         self.logged_in_checkbox_var = None
         self.logged_in_bottom_frame = None
@@ -408,7 +464,7 @@ class MainWindow:
 
         self.master.withdraw()  # 初始化时隐藏主窗口
         self.setup_main_window()
-        self.create_menu_bar()
+        # self.create_menu_bar()
         self.create_status_bar()
 
         # 创建消息队列
@@ -497,21 +553,89 @@ class MainWindow:
         self.menu_bar = tk.Menu(self.master)
         self.master.config(menu=self.menu_bar)
 
+        # 文件菜单
+        self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label="文件", menu=self.file_menu)
+        # 创建“用户文件”菜单
+        self.user_file_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
+        self.user_file_menu.add_command(label="打开", command=open_user_file)
+        self.user_file_menu.add_command(label="清除", command=clear_user_file)
+        # 创建“配置文件”菜单
+        self.config_file_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
+        if not self.data_path:
+            self.config_file_menu.add_command(label="未获取", command=open_config_file)
+            self.config_file_menu.entryconfig(f"未获取", state="disable")
+        else:
+            self.config_file_menu.add_command(label="打开", command=open_config_file)
+            self.config_file_menu.add_command(label="清除", command=clear_config_file)
+
+        # 编辑菜单
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
-        self.edit_menu.add_command(label="刷新", command=self.create_main_frame)
+        self.edit_menu.add_command(label="刷新", command=self.create_main_frame_and_menu)
 
+        # 设置菜单
         self.status = func_wechat_dll.check_dll()
-
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
+        self.settings_menu.add_command(label="应用设置", command=self.open_settings)
+        # ————————————————分割线————————————————
+        # 全局多开子菜单
+        self.settings_menu.add_separator()
         self.settings_menu.add_command(label=f"全局多开 {self.status}", command=self.toggle_patch_mode)
         if self.status == "不可用":
             self.settings_menu.entryconfig(f"全局多开 {self.status}", state="disable")
-        self.settings_menu.add_command(label="应用设置", command=self.open_settings)
-        self.settings_menu.add_command(label="重置", command=self.reset)
-        self.settings_menu.add_command(label="关于", command=self.open_about)
+        # 多开子程序子菜单
+        self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
+        # 获取选定子程序
+        chosed_sub_exe = func_setting.get_setting_from_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_SUB_EXE,
+        )
+        # 若没有选择则默认选择
+        if not chosed_sub_exe or chosed_sub_exe == "":
+            func_setting.save_setting_to_ini(
+                Config.SETTING_INI_PATH,
+                Config.INI_SECTION,
+                Config.INI_KEY_SUB_EXE,
+                Config.DEFAULT_SUB_EXE
+            )
+        if self.status == "已开启":
+            self.settings_menu.add_cascade(label=f"子程序 不需要", menu=self.sub_executable_menu)
+            self.settings_menu.entryconfig(f"子程序 不需要", state="disable")
+        else:
+            self.settings_menu.add_cascade(label=f"子程序 选择", menu=self.sub_executable_menu)
+            external_res_path = Config.PROJ_EXTERNAL_RES_PATH
+            # 获取 WeChatMultiple_*.exe 的文件列表
+            exe_files = glob.glob(os.path.join(external_res_path, "WeChatMultiple_*.exe"))
+            print(exe_files)
+            for exe_file in exe_files:
+                # 提取右半部分（* 部分）的内容
+                file_name = os.path.basename(exe_file)
+                right_part = file_name.split('_', 1)[1].rsplit('.exe', 1)[0]  # 提取 `*` 部分
+                # 创建子菜单项
+                if file_name == chosed_sub_exe:
+                    self.sub_executable_menu.add_command(
+                        label=f'√ {right_part}'
+                    )
+                else:
+                    self.sub_executable_menu.add_command(
+                        label=f'   {right_part}',
+                        command=partial(set_sub_executable, file_name, self.delayed_initialization)
+                    )
+        # ————————————————分割线————————————————
+        self.settings_menu.add_separator()
+        self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.delayed_initialization))
 
+        # 帮助菜单
+        self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.menu_bar.add_cascade(label="帮助", menu=self.help_menu)
+        self.help_menu.add_command(label="关于", command=self.open_about)
+
+        # 作者标签
         self.menu_bar.add_command(label="by 吾峰起浪", state="disabled")
         self.menu_bar.entryconfigure("by 吾峰起浪", foreground="gray")
 
@@ -555,13 +679,8 @@ class MainWindow:
                 Config.INI_SECTION,
                 Config.INI_KEY_SCREEN_SIZE,
             )
-            login_size = func_setting.get_setting_from_ini(
-                Config.SETTING_INI_PATH,
-                Config.INI_SECTION,
-                Config.INI_KEY_LOGIN_SIZE,
-            )
 
-            if not screen_size or not login_size or screen_size == "" or login_size == "":
+            if not screen_size or screen_size == "":
                 # 获取屏幕和登录窗口尺寸
                 screen_width = self.master.winfo_screenwidth()
                 screen_height = self.master.winfo_screenheight()
@@ -572,28 +691,9 @@ class MainWindow:
                     Config.INI_KEY_SCREEN_SIZE,
                     f"{screen_width}*{screen_height}"
                 )
-                subprocess.Popen(Config.MULTI_SUBPROCESS,
-                                 creationflags=subprocess.CREATE_NO_WINDOW)
-                time.sleep(3)
-
-                # 获取微信登录窗口尺寸
-                wechat_window = pyautogui.getWindowsWithTitle("微信")[0]
-                if wechat_window.title == "微信":
-                    login_width, login_height = wechat_window.size
-
-                    # 如果比例适当，保存登录窗口尺寸
-                    if login_width and login_height:
-                        if 0.734 < login_width / login_height < 0.740:
-                            func_setting.save_setting_to_ini(
-                                Config.SETTING_INI_PATH,
-                                Config.INI_SECTION,
-                                Config.INI_KEY_LOGIN_SIZE,
-                                f"{login_width}*{login_height}"
-                            )
-                    wechat_window.close()
 
             # 开始创建列表
-            self.create_main_frame()
+            self.create_main_frame_and_menu()
 
     def show_setting_error(self):
         """路径错误提醒"""
@@ -602,8 +702,10 @@ class MainWindow:
         error_label = ttk.Label(self.main_frame, text="路径设置错误，请进入设置-路径中修改", foreground="red")
         error_label.pack(pady=20)
 
-    def create_main_frame(self):
+    def create_main_frame_and_menu(self):
         print("刷新...")
+        # 菜单也刷新
+        self.create_menu_bar()
         self.start_time = time.time()
         self.edit_menu.entryconfig("刷新", state="disabled")
         print(f"初始化，已用时：{time.time() - self.start_time:.4f}秒")
@@ -617,7 +719,6 @@ class MainWindow:
 
         # 直接调用 on_canvas_configure 方法
         self.canvas.update_idletasks()
-        self.create_menu_bar()
 
     def create_account_ui(self, result):
         logged_in, not_logged_in, wechat_processes = result
@@ -908,7 +1009,7 @@ class MainWindow:
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
         json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
-        self.create_main_frame()
+        self.create_main_frame_and_menu()
 
     def login_selected_accounts(self):
         accounts = [
@@ -919,10 +1020,16 @@ class MainWindow:
         self.master.iconify()  # 最小化主窗口
         try:
             self.thread_manager.login_accounts(func_login.auto_login_accounts, accounts, self.status,
-                                               self.create_main_frame)
+                                               self.create_main_frame_and_menu)
         finally:
             # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
+
+    def open_settings(self):
+        settings_window = tk.Toplevel(self.master)
+        setting_ui.SettingWindow(settings_window, self.status, self.delayed_initialization)
+        center_window(settings_window)
+        settings_window.focus_set()
 
     def toggle_patch_mode(self):
         logged_in, _, _ = self.account_manager.get_account_list()
@@ -949,55 +1056,7 @@ class MainWindow:
         except Exception as e:
             messagebox.showerror("错误", f"操作失败: {str(e)}")
         finally:
-            MainWindow.create_menu_bar(self)  # 无论成功与否，最后更新按钮状态
-
-    def open_settings(self):
-        settings_window = tk.Toplevel(self.master)
-        setting_ui.SettingWindow(settings_window, self.delayed_initialization)
-        center_window(settings_window)
-        settings_window.focus_set()
-
-    def reset(self):
-        # 显示确认对话框
-        confirm = messagebox.askokcancel(
-            "确认重置",
-            "该操作将会关闭所有微信进程，清空头像、昵称、配置的路径等数据以及恢复到非全局模式，但不影响配置文件，请确认是否需要重置？"
-        )
-        directory_path = Config.PROJ_USER_PATH
-        last_ver_path = func_setting.get_wechat_latest_version_path()
-        if confirm:
-            # 恢复原始的dll
-            func_wechat_dll.switch_dll()
-
-            dll_path = os.path.join(last_ver_path, "WeChatWin.dll")
-            bak_path = os.path.join(last_ver_path, "WeChatWin.dll.bak")
-
-            # 检查 .bak 文件是否存在
-            if os.path.exists(bak_path):
-                # 如果 WeChatWin.dll 存在，删除它
-                if os.path.exists(dll_path):
-                    os.remove(dll_path)
-                    print(f"Deleted: {dll_path}")
-
-                # 将 .bak 文件重命名为 WeChatWin.dll
-                shutil.copyfile(bak_path, dll_path)
-                print(f"Restored: {dll_path} from {bak_path}")
-            else:
-                print(f"No action needed. {bak_path} not found.")
-
-            # 确认后删除目录的所有内容
-            for item in os.listdir(directory_path):
-                item_path = os.path.join(directory_path, item)
-                if os.path.isfile(item_path) or os.path.islink(item_path):
-                    os.unlink(item_path)
-                elif os.path.isdir(item_path):
-                    shutil.rmtree(item_path)
-
-            messagebox.showinfo("重置完成", "目录已成功重置。将唤起微信以获取尺寸。")
-            self.create_menu_bar()
-            self.delayed_initialization()
-        else:
-            messagebox.showinfo("操作取消", "重置操作已取消。")
+            self.create_main_frame_and_menu()  # 无论成功与否，最后更新按钮状态
 
     def open_about(self):
         about_window = tk.Toplevel(self.master)
@@ -1006,7 +1065,7 @@ class MainWindow:
 
     def open_detail(self, account):
         detail_window = tk.Toplevel(self.master)
-        detail_ui.DetailWindow(detail_window, account, self.account_manager, self.create_main_frame)
+        detail_ui.DetailWindow(detail_window, account, self.account_manager, self.create_main_frame_and_menu)
         center_window(detail_window)
         detail_window.focus_set()
 
@@ -1015,15 +1074,15 @@ class MainWindow:
         self.thread_manager.create_config(
             account,
             func_config.test_and_create_config,
-            self.create_main_frame
+            self.create_main_frame_and_menu
         )
 
     def manual_login_account(self):
-        self.thread_manager.manual_login_account(manual_login, self.status, self.create_main_frame,
+        self.thread_manager.manual_login_account(manual_login, self.status, self.create_main_frame_and_menu,
                                                  self.bring_window_to_front)
 
     def auto_login_account(self, account):
-        self.thread_manager.auto_login_account(auto_login, account, self.status, self.create_main_frame,
+        self.thread_manager.auto_login_account(auto_login, account, self.status, self.create_main_frame_and_menu,
                                                self.bring_window_to_front)
 
     def create_lnk(self):
