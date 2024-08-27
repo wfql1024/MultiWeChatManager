@@ -153,16 +153,30 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
             positions.append((x + i * (login_width + actual_gap_width), y))
         print(positions)
 
+    login_width = 347
+    login_height = 471
+
+    # 检测尺寸设置是否完整
+    login_size = func_setting.get_setting_from_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY_LOGIN_SIZE
+    )
+    if not login_size or login_size == "":
+
+        return False
+    else:
+        login_width, login_height = login_size.split('*')
+    login_width = int(login_width)
+    login_height = int(login_height)
     wechat_path = func_setting.get_wechat_install_path()
     data_path = func_setting.get_wechat_data_path()
     # wechat_window.moveTo(100, 100)
     if len(accounts) == 0:
         return False
-    # if len(accounts) == 1:
-    #     auto_login(accounts[0], status)
     count = len(accounts)
 
-    # 优先自动获取，若获取不到从配置中获取
+    # 优先自动获取尺寸，若获取不到从配置中获取
     screen_width = tk.Tk().winfo_screenwidth()
     screen_height = tk.Tk().winfo_screenheight()
     if not screen_height or not screen_width:
@@ -173,13 +187,8 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
         ).split('*')
     screen_width = int(screen_width)
     screen_height = int(screen_height)
-    login_width, login_height = func_setting.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_LOGIN_SIZE
-    ).split('*')
-    login_width = int(login_width)
-    login_height = int(login_height)
+
+
     # 计算一行最多可以显示多少个
     max_column = int((screen_width - max_gap_width) / (login_width + max_gap_width))
 
