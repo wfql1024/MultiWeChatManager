@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="绿绿绿，我要绿绿绿" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="绿起来" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -251,7 +251,7 @@
       <workItem from="1724686506902" duration="727000" />
       <workItem from="1724716022135" duration="25886000" />
       <workItem from="1724770761411" duration="4961000" />
-      <workItem from="1724775763153" duration="633000" />
+      <workItem from="1724775763153" duration="948000" />
     </task>
     <task id="LOCAL-00001" summary="I have finished the coding work. Core functions have been implemented.">
       <option name="closed" value="true" />
@@ -421,7 +421,23 @@
       <option name="project" value="LOCAL" />
       <updated>1724776381790</updated>
     </task>
-    <option name="localTasksCounter" value="22" />
+    <task id="LOCAL-00022" summary="绿绿绿，我要绿绿绿">
+      <option name="closed" value="true" />
+      <created>1724776578466</created>
+      <option name="number" value="00022" />
+      <option name="presentableId" value="LOCAL-00022" />
+      <option name="project" value="LOCAL" />
+      <updated>1724776578466</updated>
+    </task>
+    <task id="LOCAL-00023" summary="绿起来">
+      <option name="closed" value="true" />
+      <created>1724776707675</created>
+      <option name="number" value="00023" />
+      <option name="presentableId" value="LOCAL-00023" />
+      <option name="project" value="LOCAL" />
+      <updated>1724776707675</updated>
+    </task>
+    <option name="localTasksCounter" value="24" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -462,7 +478,8 @@
     <MESSAGE value="今天不绿誓不罢休" />
     <MESSAGE value="绿绿绿，我要绿" />
     <MESSAGE value="绿绿绿，我要绿绿绿" />
-    <option name="LAST_COMMIT_MESSAGE" value="绿绿绿，我要绿绿绿" />
+    <MESSAGE value="绿起来" />
+    <option name="LAST_COMMIT_MESSAGE" value="绿起来" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
