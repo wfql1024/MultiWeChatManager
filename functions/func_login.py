@@ -164,6 +164,7 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
     )
     if not login_size or login_size == "":
 
+
         return False
     else:
         login_width, login_height = login_size.split('*')
