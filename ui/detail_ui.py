@@ -121,7 +121,6 @@ class DetailWindow:
             avatar_url = self.account_data.get(self.account, {}).get("avatar_url", None)
             self.load_avatar(default_path, avatar_url)
 
-
         # 更新其他标签
         pid = self.account_data.get(self.account, {}).get("pid", None)
         self.pid_label.config(text=f"PID: {pid}")

@@ -1,6 +1,4 @@
-import ctypes
 import os
-import sys
 import time
 from datetime import datetime
 
@@ -87,7 +85,6 @@ class AccountManager:
                     return logged_in_wxids
                 except ValueError:
                     pass
-
 
         start_time = time.time()
         data_path = func_get_path.get_wechat_data_path()

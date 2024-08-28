@@ -1,11 +1,13 @@
 # main_ui.py
 import base64
+import ctypes
 import glob
 import os
 import queue
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import tkinter as tk
 from functools import partial
@@ -13,10 +15,14 @@ from tkinter import messagebox
 from tkinter import ttk
 
 import psutil
-import pyautogui
+import win32api
+import win32con
+import win32gui
+import win32ui
 import winshell
 from PIL import Image, ImageTk
 from PIL import ImageDraw
+from win32com.client import Dispatch
 
 from functions import func_config, func_setting, func_wechat_dll, func_login, func_file
 from functions.func_account_list import AccountManager, get_config_status
@@ -267,6 +273,58 @@ class AccountRow:
         return avatar_label
 
 
+def extract_icon_to_png(exe_path, output_png_path):
+    ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
+    ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
+
+    large, small = win32gui.ExtractIconEx(exe_path, 0)
+    win32gui.DestroyIcon(small[0])
+
+    hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+    hbmp = win32ui.CreateBitmap()
+    hbmp.CreateCompatibleBitmap(hdc, ico_x, ico_y)
+    hdc = hdc.CreateCompatibleDC()
+
+    hdc.SelectObject(hbmp)
+    hdc.DrawIcon((0, 0), large[0])
+
+    bmpstr = hbmp.GetBitmapBits(True)
+    icon = Image.frombuffer(
+        'RGBA',
+        (ico_x, ico_y),
+        bmpstr, 'raw', 'BGRA', 0, 1
+    )
+
+    win32gui.DestroyIcon(large[0])
+
+    icon.save(output_png_path, format='PNG')
+    return output_png_path
+
+
+def combine_images(background_path, overlay_path, output_path):
+    background = Image.open(background_path).convert("RGBA")
+    overlay = Image.open(overlay_path).convert("RGBA")
+
+    # 调整叠加图像大小为44x44
+    overlay = overlay.resize((44, 44), Image.LANCZOS)
+
+    # 计算粘贴位置（右下角）
+    paste_position = (background.width - overlay.width, background.height - overlay.height)
+
+    # 创建一个新的图像用于合成
+    combined = Image.new("RGBA", background.size)
+    combined.paste(background, (0, 0))
+    combined.paste(overlay, paste_position, overlay)
+
+    combined.save(output_path, format='PNG')
+    return output_path
+
+
+def png_to_ico(png_path, ico_path):
+    img = Image.open(png_path)
+    img.save(ico_path, format='ICO', sizes=[(img.width, img.height)])
+
+
 def create_lnk_for_account(account, status):
     # 获取数据路径
     data_path = func_setting.get_wechat_data_path()
@@ -279,8 +337,15 @@ def create_lnk_for_account(account, status):
     target_file = os.path.join(data_path, "All Users", "config", "config.data")
     if status == "已开启":
         process_path_text = f"\"{wechat_path}\""
+        prefix = "[仅全局下有效]"
     else:
-        process_path_text = f"cscript //B //Nologo \"{Config.MULTI_SUBPROCESS}\""
+        sub_exe = func_setting.get_setting_from_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_SUB_EXE,
+        )
+        process_path_text = f"\"{Config.PROJ_EXTERNAL_RES_PATH}\\{sub_exe}\""
+        prefix = f"{sub_exe.split('_')[1].split('.')[0]}"
 
     bat_content = f"""
     @echo off
@@ -293,11 +358,15 @@ def create_lnk_for_account(account, status):
     echo 复制配置文件成功
 
     REM 根据状态启动微信
-    start "" /B {process_path_text}
+    start "" {process_path_text}
         """
 
+    # 确保路径存在
+    account_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}')
+    if not os.path.exists(account_file_path):
+        os.makedirs(account_file_path)
     # 保存为批处理文件
-    bat_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}', f'{status} - {account}.bat')
+    bat_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}', f'{prefix} - {account}.bat')
     with open(bat_file_path, 'w', encoding='utf-8') as bat_file:
         bat_file.write(bat_content.strip())
 
@@ -312,13 +381,38 @@ def create_lnk_for_account(account, status):
     # 构建快捷方式路径
     shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
 
-    # 图标文件路径
-    icon_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
-    ico_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.ico")
+    avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
+    if not os.path.exists(avatar_path):
+        messagebox.showerror("错误", "您尚未获取头像，不能够创建快捷启动！")
+        return False
+    if status == "已开启":
+        sub_exe_path = func_setting.get_wechat_install_path()
+    else:
+        sub_exe = func_setting.get_setting_from_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_SUB_EXE,
+        )
+        sub_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, sub_exe)
 
-    # 将JPG转换为ICO
-    image = Image.open(icon_path)
-    image.save(ico_path, format='ICO')
+    # 图标文件路径
+    base_dir = os.path.dirname(avatar_path)
+    sub_exe_name = os.path.splitext(os.path.basename(sub_exe_path))[0]
+
+    # 步骤1：提取图标为图片
+    extracted_exe_png_path = os.path.join(base_dir, f"{sub_exe_name}_extracted.png")
+    extract_icon_to_png(sub_exe_path, extracted_exe_png_path)
+
+    # 步骤2：合成图片
+    ico_jpg_path = os.path.join(base_dir, f"{account}_{sub_exe_name}.png")
+    combine_images(avatar_path, extracted_exe_png_path, ico_jpg_path)
+
+    # 步骤3：对图片转格式
+    ico_path = os.path.join(base_dir, f"{account}_{sub_exe_name}.ico")
+    png_to_ico(ico_jpg_path, ico_path)
+
+    # 清理临时文件
+    os.remove(extracted_exe_png_path)
 
     # 创建快捷方式
     with winshell.shortcut(shortcut_path) as shortcut:
@@ -415,6 +509,35 @@ def set_sub_executable(file_name, initialization):
     initialization()
 
 
+def create_app_lnk():
+    # 当前是打包后的环境
+    if getattr(sys, 'frozen', False):
+        # 当前是打包后的环境
+        exe_path = sys.executable
+    else:
+        # 当前是在IDE调试环境，使用指定的测试路径
+        exe_path = os.path.abspath(r'./dist/微信多开管理器/微信多开管理器.exe')
+
+    exe_name = os.path.basename(exe_path)
+    shortcut_name = os.path.splitext(exe_name)[0]  # 去掉 .exe 后缀
+    desktop = winshell.desktop()
+    shortcut_path = os.path.join(desktop, f"{shortcut_name}.lnk")
+
+    shell = Dispatch('WScript.Shell')
+    shortcut = shell.CreateShortCut(shortcut_path)
+    shortcut.TargetPath = exe_path
+    shortcut.WorkingDirectory = os.path.dirname(exe_path)
+    shortcut.IconLocation = exe_path
+    shortcut.save()
+
+    if getattr(sys, 'frozen', False):
+
+        print(f"打包程序环境，桌面快捷方式已创建: {shortcut_path}")
+    else:
+        # 当前是在IDE调试环境
+        print(f"IDE调试环境，桌面快捷方式已创建: {shortcut_path}")
+
+
 class MainWindow:
     """构建主窗口的类"""
 
@@ -483,11 +606,6 @@ class MainWindow:
         manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
                                          command=self.manual_login_account, style='Custom.TButton')
         manual_login_button.pack(side=tk.LEFT)
-
-        # 创建lnk
-        self.create_lnk_button = ttk.Button(self.bottom_frame, text="创建lnk", width=8,
-                                            command=self.create_lnk, style='Custom.TButton')
-        self.create_lnk_button.pack(side=tk.RIGHT)
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
         self.canvas = tk.Canvas(master, highlightthickness=0)
@@ -570,17 +688,31 @@ class MainWindow:
         else:
             self.config_file_menu.add_command(label="打开", command=open_config_file)
             self.config_file_menu.add_command(label="清除", command=clear_config_file)
+        # 创建软件快捷方式
+        self.file_menu.add_command(label="创建程序快捷方式", command=create_app_lnk)
+        # 创建快捷启动
+        self.file_menu.add_command(label="创建快捷启动", command=self.create_multiple_lnk)
 
         # 编辑菜单
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
         self.edit_menu.add_command(label="刷新", command=self.create_main_frame_and_menu)
 
+        login_size = func_setting.get_setting_from_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_LOGIN_SIZE,
+        )
+
         # 设置菜单
         self.status = func_wechat_dll.check_dll()
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
-        self.settings_menu.add_command(label="应用设置", command=self.open_settings)
+        if not login_size or login_size == "" or login_size == "None":
+            self.menu_bar.add_cascade(label="!!!设置", menu=self.settings_menu, foreground='red')
+            self.settings_menu.add_command(label="!!!应用设置", command=self.open_settings, foreground='red')
+        else:
+            self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
+            self.settings_menu.add_command(label="应用设置", command=self.open_settings)
         # ————————————————分割线————————————————
         # 全局多开子菜单
         self.settings_menu.add_separator()
@@ -590,13 +722,13 @@ class MainWindow:
         # 多开子程序子菜单
         self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
         # 获取选定子程序
-        chosed_sub_exe = func_setting.get_setting_from_ini(
+        chosen_sub_exe = func_setting.get_setting_from_ini(
             Config.SETTING_INI_PATH,
             Config.INI_SECTION,
             Config.INI_KEY_SUB_EXE,
         )
         # 若没有选择则默认选择
-        if not chosed_sub_exe or chosed_sub_exe == "":
+        if not chosen_sub_exe or chosen_sub_exe == "":
             func_setting.save_setting_to_ini(
                 Config.SETTING_INI_PATH,
                 Config.INI_SECTION,
@@ -604,10 +736,10 @@ class MainWindow:
                 Config.DEFAULT_SUB_EXE
             )
         if self.status == "已开启":
-            self.settings_menu.add_cascade(label=f"子程序 不需要", menu=self.sub_executable_menu)
-            self.settings_menu.entryconfig(f"子程序 不需要", state="disable")
+            self.settings_menu.add_cascade(label=f"子程序   不需要", menu=self.sub_executable_menu)
+            self.settings_menu.entryconfig(f"子程序   不需要", state="disable")
         else:
-            self.settings_menu.add_cascade(label=f"子程序 选择", menu=self.sub_executable_menu)
+            self.settings_menu.add_cascade(label=f"子程序     选择", menu=self.sub_executable_menu)
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
             # 获取 WeChatMultiple_*.exe 的文件列表
             exe_files = glob.glob(os.path.join(external_res_path, "WeChatMultiple_*.exe"))
@@ -617,7 +749,7 @@ class MainWindow:
                 file_name = os.path.basename(exe_file)
                 right_part = file_name.split('_', 1)[1].rsplit('.exe', 1)[0]  # 提取 `*` 部分
                 # 创建子菜单项
-                if file_name == chosed_sub_exe:
+                if file_name == chosen_sub_exe:
                     self.sub_executable_menu.add_command(
                         label=f'√ {right_part}'
                     )
@@ -1019,8 +1151,13 @@ class MainWindow:
         ]
         self.master.iconify()  # 最小化主窗口
         try:
-            self.thread_manager.login_accounts(func_login.auto_login_accounts, accounts, self.status,
-                                               self.create_main_frame_and_menu)
+            self.thread_manager.login_accounts(
+                func_login.auto_login_accounts,
+                accounts,
+                self.status,
+                self.create_main_frame_and_menu
+            )
+
         finally:
             # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
@@ -1085,11 +1222,14 @@ class MainWindow:
         self.thread_manager.auto_login_account(auto_login, account, self.status, self.create_main_frame_and_menu,
                                                self.bring_window_to_front)
 
-    def create_lnk(self):
+    def create_multiple_lnk(self):
 
         configured_accounts = []
 
         configured_accounts = get_all_configs()
 
         for account in configured_accounts:
-            create_lnk_for_account(account, self.status)
+            result = create_lnk_for_account(account, self.status)
+            if result is False:
+                self.create_main_frame_and_menu()
+                return False

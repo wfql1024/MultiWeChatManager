@@ -9,6 +9,7 @@
       <excludeFolder url="file://$MODULE_DIR$/dist/微信多开管理器" />
       <excludeFolder url="file://$MODULE_DIR$/user_files" />
       <excludeFolder url="file://$MODULE_DIR$/build" />
+      <excludeFolder url="file://$MODULE_DIR$/Demo" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.12" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -6,7 +6,7 @@ from tkinter import messagebox
 
 from functions import func_setting
 from resources.config import Config
-from utils.window_utils import wait_for_window_open, close_window
+from utils.window_utils import wait_for_window_open, close_window_by_name
 
 
 def test_and_create_config(account):
@@ -34,7 +34,7 @@ class ConfigCreator:
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
                 return self.create_config()
             else:
-                close_window("WeChatLoginWndForPC")
+                close_window_by_name("WeChatLoginWndForPC")
                 return False
         return False
 
@@ -55,7 +55,7 @@ class ConfigCreator:
                 os.remove(dest_path)
 
             shutil.copy2(source_path, dest_path, follow_symlinks=False)
-            close_window("WeChatLoginWndForPC")
+            close_window_by_name("WeChatLoginWndForPC")
 
             messagebox.showinfo("成功", f"配置文件已生成：{dest_filename}")
 

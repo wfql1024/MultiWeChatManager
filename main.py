@@ -2,6 +2,7 @@ import ctypes
 import os
 import sys
 import tkinter as tk
+
 from ui.loading_ui import LoadingWindow
 from ui.main_ui import MainWindow
 

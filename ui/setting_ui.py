@@ -1,16 +1,12 @@
 import re
-import subprocess
-import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk, filedialog, messagebox
 
-import pyautogui
-
-from functions.func_login import open_wechat
-from utils import window_utils
 from functions import func_setting
+from functions.func_login import open_wechat
 from resources.config import Config
+from utils import window_utils
 
 
 class SettingWindow:
@@ -97,7 +93,8 @@ class SettingWindow:
         self.login_size_entry = tk.Entry(master, textvariable=self.login_size_var, width=70)
         self.login_size_entry.grid(row=4, column=1, padx=5, pady=5, sticky="we")
 
-        self.login_size_get_button = ttk.Button(master, text="获取", command=partial(self.auto_get_login_size, self.status))
+        self.login_size_get_button = ttk.Button(master, text="获取",
+                                                command=partial(self.auto_get_login_size, self.status))
         self.login_size_get_button.grid(row=4, column=2, padx=5, pady=5)
 
         # 添加确定按钮
@@ -228,12 +225,12 @@ class SettingWindow:
             print(f"打开了登录窗口{wechat_hwnd}")
             login_wnd_details = window_utils.get_window_details_from_hwnd(wechat_hwnd)
             login_wnd = login_wnd_details["window"]
-            screen_size = func_setting.get_setting_from_ini(
+            login_screen = func_setting.get_setting_from_ini(
                 Config.SETTING_INI_PATH,
                 Config.INI_SECTION,
-                Config.INI_KEY_SCREEN_SIZE,
+                Config.INI_KEY_LOGIN_SIZE,
             )
-            if not screen_size or screen_size == "":
+            if not login_screen or login_screen == "":
                 login_width = login_wnd_details["width"]
                 login_height = login_wnd_details["height"]
                 if 0.734 < login_width / login_height < 0.740:

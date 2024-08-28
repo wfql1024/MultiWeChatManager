@@ -13,17 +13,18 @@ KEY_SIZE = 32
 DEFAULT_PAGESIZE = 4096
 DEFAULT_ITER = 64000
 
-def check_sqlite_pass(db_file,password):
+
+def check_sqlite_pass(db_file, password):
     db_file = Path(db_file)
-    if type(password)==str: #要是类型是string的，就转bytes
+    if type(password) == str:  # 要是类型是string的，就转bytes
         password = bytes.fromhex(password.replace(' ', ''))
     with open(db_file, 'rb') as (f):
-        salt = f.read(16) #开头的16字节做salt
-        first_page_data = f.read(DEFAULT_PAGESIZE-16) #从开头第16字节开始到DEFAULT_PAGESIZE整个第一页
-    if not len(salt)==16:
+        salt = f.read(16)  # 开头的16字节做salt
+        first_page_data = f.read(DEFAULT_PAGESIZE - 16)  # 从开头第16字节开始到DEFAULT_PAGESIZE整个第一页
+    if not len(salt) == 16:
         print(f"{db_file} read failed ")
         return False
-    if not len(first_page_data)==DEFAULT_PAGESIZE-16:
+    if not len(first_page_data) == DEFAULT_PAGESIZE - 16:
         print(f"{db_file} read failed ")
         return False
     # print(f"{salt=}")
@@ -41,6 +42,7 @@ def check_sqlite_pass(db_file,password):
         print(f'{db_file},valid password Error')
         return False
 
+
 def get_logger(log_file):
     # 定log输出格式，配置同时输出到标准输出与log文件，返回logger这个对象
     logger = logging.getLogger('mylogger')
@@ -57,5 +59,6 @@ def get_logger(log_file):
     logger.addHandler(log_ch)
     return logger
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     pass

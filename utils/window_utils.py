@@ -1,11 +1,9 @@
-import ctypes
 import time
 import tkinter as tk
 
 import win32con
 import win32gui
-import pygetwindow as gw
-from pywinauto import Desktop
+from pywinauto.controls.hwndwrapper import HwndWrapper
 
 
 class Tooltip:
@@ -34,13 +32,18 @@ class Tooltip:
             self.tooltip = None
 
 
-class RECT(ctypes.Structure):
-    _fields_ = [
-        ('left', ctypes.c_long),
-        ('top', ctypes.c_long),
-        ('right', ctypes.c_long),
-        ('bottom', ctypes.c_long),
-    ]
+def find_all_windows(class_name, window_title):
+    def enum_windows_callback(hwnd, results):
+        # 获取窗口的类名和标题
+        if win32gui.IsWindowVisible(hwnd):
+            curr_class_name = win32gui.GetClassName(hwnd)
+            curr_window_title = win32gui.GetWindowText(hwnd)
+            if curr_class_name == class_name and curr_window_title == window_title:
+                results.append(hwnd)
+
+    results = []
+    win32gui.EnumWindows(enum_windows_callback, results)
+    return results
 
 
 def wait_for_window_open(class_name, timeout=30):
@@ -56,20 +59,20 @@ def wait_for_window_open(class_name, timeout=30):
 
 def get_window_details_from_hwnd(hwnd):
     """通过句柄获取窗口的尺寸和位置"""
-    desktop = Desktop(backend="win32")
-    windows = desktop.windows()
+    w = HwndWrapper(hwnd)
+    if w.handle == hwnd:
+        print(w.handle)
+        return {
+            "window": w,
+            "handle": w.handle,
+            "title": w.window_text(),
+            "top": w.rectangle().top,
+            "left": w.rectangle().left,
+            "width": w.rectangle().width(),
+            "height": w.rectangle().height()
+        }
 
-    for w in windows:
-        if w.handle == hwnd:
-            return {
-                "window": w,
-                "handle": w.handle,
-                "title": w.window_text(),
-                "top": w.rectangle().top,
-                "left": w.rectangle().left,
-                "width": w.rectangle().width(),
-                "height": w.rectangle().height()
-            }
+    return None  # 如果没有找到匹配的窗口句柄，返回 None
 
 
 def close_windows_by_class(class_names):
@@ -107,7 +110,7 @@ def center_window(window):
     window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
 
 
-def close_window(window_name):
+def close_window_by_name(window_name):
     login_window = win32gui.FindWindow(window_name, None)
     if login_window:
         win32gui.PostMessage(login_window, win32con.WM_CLOSE, 0, 0)
