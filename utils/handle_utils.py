@@ -1,6 +1,8 @@
+import ctypes
 import time
 import tkinter as tk
 
+import win32api
 import win32con
 import win32gui
 from pywinauto.controls.hwndwrapper import HwndWrapper
@@ -31,6 +33,41 @@ class Tooltip:
             self.tooltip.destroy()
             self.tooltip = None
 
+
+def get_all_child_handles(parent_handle):
+    """
+    获取指定父窗口句柄下的所有子窗口句柄。
+
+    :param parent_handle: 父窗口句柄
+    :return: 子窗口句柄列表
+    """
+    child_handles = []
+
+    def enum_child_windows_proc(hwnd, lParam):
+        child_handles.append(hwnd)
+        return True
+
+    # 定义回调函数类型
+    EnumChildWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+    enum_proc = EnumChildWindowsProc(enum_child_windows_proc)
+
+    # 调用 EnumChildWindows 来获取所有子窗口
+    ctypes.windll.user32.EnumChildWindows(parent_handle, enum_proc, 0)
+
+    return child_handles
+
+
+def do_click(handle, cx, cy):  # 第四种，可后台
+    """
+    在窗口中的相对位置点击鼠标，可以后台
+    :param handle: 句柄
+    :param cx: 相对横坐标
+    :param cy: 相对纵坐标
+    :return: 无
+    """
+    long_position = win32api.MAKELONG(cx, cy)  # 模拟鼠标指针 传送到指定坐标
+    win32api.SendMessage(handle, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, long_position)  # 模拟鼠标按下
+    win32api.SendMessage(handle, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)  # 模拟鼠标弹起
 
 def find_all_windows(class_name, window_title):
     def enum_windows_callback(hwnd, results):

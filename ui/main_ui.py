@@ -10,6 +10,7 @@ import sys
 import tempfile
 import time
 import tkinter as tk
+import webbrowser
 from functools import partial
 from tkinter import messagebox
 from tkinter import ttk
@@ -24,6 +25,7 @@ from PIL import Image, ImageTk
 from PIL import ImageDraw
 from win32com.client import Dispatch
 
+import utils
 from functions import func_config, func_setting, func_wechat_dll, func_login, func_file
 from functions.func_account_list import AccountManager, get_config_status
 from functions.func_login import manual_login, auto_login
@@ -32,8 +34,8 @@ from resources.config import Config
 from resources.strings import Strings
 from thread_manager import ThreadManager
 from ui import about_ui, setting_ui, detail_ui
-from utils import json_utils
-from utils.window_utils import center_window, Tooltip
+from utils import json_utils, process_utils
+from utils.handle_utils import center_window, Tooltip
 
 
 def get_avatar_from_files(account):
@@ -128,8 +130,9 @@ class AccountRow:
     为每一个账号创建其行布局的类
     """
 
-    def __init__(self, parent_frame, account, display_name, is_logged_in, config_status, callbacks,
+    def __init__(self, parent_frame, account, status, display_name, is_logged_in, config_status, callbacks,
                  update_top_checkbox_callback):
+        self.status = status
         self.start_time = time.time()
         self.tooltip = None
         self.toggle_avatar_label = None
@@ -185,7 +188,7 @@ class AccountRow:
                 text=self.config_button_text,
                 style='Custom.TButton',
                 width=8,
-                command=lambda: callbacks['config'](account)
+                command=lambda: callbacks['config'](account, self.status)
             )
             self.config_button.pack(side=tk.RIGHT, padx=0)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
@@ -440,13 +443,22 @@ def get_all_configs():
 
 
 def process_exists(pid):
-    output = None
+    output = 'default'
     try:
         output = subprocess.check_output(['tasklist', '/FI', f'PID eq {pid}'])
-        return str(pid) in output.decode()
+        # 尝试直接使用 utf-8 解码
+        decoded_output = output.decode('utf-8')
+        return str(pid) in decoded_output
     except UnicodeDecodeError as e:
         print(f"解码错误：{e}")
-        print(output.decode('GBK').strip())
+        # 如果 utf-8 解码失败，尝试使用 gbk 解码
+        try:
+            decoded_output = output.decode('GBK')
+            print(decoded_output.strip())
+            return str(pid) in decoded_output
+        except UnicodeDecodeError:
+            print("解码失败，无法解析输出。")
+            return False
     except subprocess.CalledProcessError:
         return False
 
@@ -457,46 +469,19 @@ def open_user_file():
     os.startfile(Config.PROJ_USER_PATH)
 
 
-def clear_user_file():
-    confirm = messagebox.askokcancel(
-        "确认清除",
-        "该操作将会清空头像、昵称、配置的路径等数据，请确认是否需要清除？"
-    )
-    directory_path = Config.PROJ_USER_PATH
-    if confirm:
-        for item in os.listdir(directory_path):
-            item_path = os.path.join(directory_path, item)
-            if os.path.isfile(item_path) or os.path.islink(item_path):
-                os.unlink(item_path)
-            elif os.path.isdir(item_path):
-                shutil.rmtree(item_path)
-        messagebox.showinfo("重置完成", "目录已成功重置。将唤起微信以获取尺寸。")
-
-
 def open_config_file():
     data_path = get_wechat_data_path()
-    config_path = os.path.join(data_path, "All Users", "config")
-    os.startfile(config_path)
+    if os.path.exists(data_path):
+        config_path = os.path.join(data_path, "All Users", "config")
+        if os.path.exists(config_path):
+            os.startfile(config_path)
 
 
-def clear_config_file():
-    data_path = get_wechat_data_path()
-    config_path = os.path.join(data_path, "All Users", "config")
-    # 获取所有 `.data` 文件，除了 `config.data`
-    data_files = glob.glob(os.path.join(config_path, "*.data"))
-    files_to_delete = [file for file in data_files if not file.endswith("config.data")]
-    confirm = messagebox.askokcancel(
-        "确认清除",
-        "该操作将会清空登录配置文件，请确认是否需要清除？"
-    )
-    if confirm:
-        # 删除这些文件
-        for file_path in files_to_delete:
-            try:
-                os.remove(file_path)
-                print(f"已删除: {file_path}")
-            except Exception as e:
-                print(f"无法删除 {file_path}: {e}")
+def open_last_ver_path():
+    last_ver_path = func_setting.get_wechat_latest_version_path()
+    if os.path.exists(last_ver_path):
+        os.startfile(last_ver_path)
+
 
 
 def set_sub_executable(file_name, initialization):
@@ -518,24 +503,25 @@ def create_app_lnk():
         # 当前是在IDE调试环境，使用指定的测试路径
         exe_path = os.path.abspath(r'./dist/微信多开管理器/微信多开管理器.exe')
 
-    exe_name = os.path.basename(exe_path)
-    shortcut_name = os.path.splitext(exe_name)[0]  # 去掉 .exe 后缀
-    desktop = winshell.desktop()
-    shortcut_path = os.path.join(desktop, f"{shortcut_name}.lnk")
+    exe_dir = os.path.dirname(exe_path)
+    exes_basename = ["微信多开管理器.exe", "微信多开管理器_调试版.exe"]
+    for basename in exes_basename:
+        exe_path = os.path.join(exe_dir, basename)
+        exe_name = os.path.basename(exe_path)
+        shortcut_name = os.path.splitext(exe_name)[0]  # 去掉 .exe 后缀
+        desktop = winshell.desktop()
+        shortcut_path = os.path.join(desktop, f"{shortcut_name}.lnk")
 
-    shell = Dispatch('WScript.Shell')
-    shortcut = shell.CreateShortCut(shortcut_path)
-    shortcut.TargetPath = exe_path
-    shortcut.WorkingDirectory = os.path.dirname(exe_path)
-    shortcut.IconLocation = exe_path
-    shortcut.save()
-
-    if getattr(sys, 'frozen', False):
-
-        print(f"打包程序环境，桌面快捷方式已创建: {shortcut_path}")
-    else:
-        # 当前是在IDE调试环境
-        print(f"IDE调试环境，桌面快捷方式已创建: {shortcut_path}")
+        shell = Dispatch('WScript.Shell')
+        shortcut = shell.CreateShortCut(shortcut_path)
+        shortcut.TargetPath = exe_path
+        shortcut.WorkingDirectory = os.path.dirname(exe_path)
+        shortcut.IconLocation = exe_path
+        shortcut.save()
+        if getattr(sys, 'frozen', False):
+            print(f"打包程序环境，桌面快捷方式已创建: {shortcut_path}")
+        else:
+            print(f"IDE调试环境，桌面快捷方式已创建: {shortcut_path}")
 
 
 class MainWindow:
@@ -678,16 +664,16 @@ class MainWindow:
         self.user_file_menu = tk.Menu(self.file_menu, tearoff=0)
         self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
         self.user_file_menu.add_command(label="打开", command=open_user_file)
-        self.user_file_menu.add_command(label="清除", command=clear_user_file)
+        self.user_file_menu.add_command(label="清除", command=self.clear_user_file)
         # 创建“配置文件”菜单
         self.config_file_menu = tk.Menu(self.file_menu, tearoff=0)
-        self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
         if not self.data_path:
-            self.config_file_menu.add_command(label="未获取", command=open_config_file)
-            self.config_file_menu.entryconfig(f"未获取", state="disable")
+            self.file_menu.add_command(label="配置文件  未获取")
+            self.file_menu.entryconfig(f"配置文件  未获取", state="disable")
         else:
+            self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
             self.config_file_menu.add_command(label="打开", command=open_config_file)
-            self.config_file_menu.add_command(label="清除", command=clear_config_file)
+            self.config_file_menu.add_command(label="清除", command=self.clear_config_file)
         # 创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=create_app_lnk)
         # 创建快捷启动
@@ -765,6 +751,7 @@ class MainWindow:
         # 帮助菜单
         self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="帮助", menu=self.help_menu)
+        self.help_menu.add_command(label="视频教程", command=lambda: messagebox.showinfo("提醒", "这不是正录着了嘛~"))
         self.help_menu.add_command(label="关于", command=self.open_about)
 
         # 作者标签
@@ -962,7 +949,7 @@ class MainWindow:
         }
 
         # 创建列表实例
-        row = AccountRow(parent_frame, account, display_name, is_logged_in, config_status, callbacks,
+        row = AccountRow(parent_frame, account, self.status, display_name, is_logged_in, config_status, callbacks,
                          self.update_top_title)
 
         # 将已登录、未登录但已配置实例存入字典
@@ -1111,36 +1098,77 @@ class MainWindow:
                 checkbox_var.set(0)
                 self.disable_button_and_add_tip(button, tip)
 
+    def clear_user_file(self):
+        confirm = messagebox.askokcancel(
+            "确认清除",
+            "该操作将会清空头像、昵称、配置的路径等数据，请确认是否需要清除？"
+        )
+        directory_path = Config.PROJ_USER_PATH
+        if confirm:
+            for item in os.listdir(directory_path):
+                item_path = os.path.join(directory_path, item)
+                if os.path.isfile(item_path) or os.path.islink(item_path):
+                    os.unlink(item_path)
+                elif os.path.isdir(item_path):
+                    shutil.rmtree(item_path)
+            messagebox.showinfo("重置完成", "目录已成功重置。")
+            self.create_main_frame_and_menu()
+
+    def clear_config_file(self):
+        data_path = get_wechat_data_path()
+        config_path = os.path.join(data_path, "All Users", "config")
+        # 获取所有 `.data` 文件，除了 `config.data`
+        data_files = glob.glob(os.path.join(config_path, "*.data"))
+        files_to_delete = [file for file in data_files if not file.endswith("config.data")]
+        confirm = messagebox.askokcancel(
+            "确认清除",
+            "该操作将会清空登录配置文件，请确认是否需要清除？"
+        )
+        if confirm:
+            # 删除这些文件
+            for file_path in files_to_delete:
+                try:
+                    os.remove(file_path)
+                    print(f"已删除: {file_path}")
+                except Exception as e:
+                    print(f"无法删除 {file_path}: {e}")
+            self.create_main_frame_and_menu()
+
     def quit_selected_accounts(self):
-        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-        accounts = [
-            account
-            for account, row in self.logged_in_rows.items()
-            if row.is_checked()
-        ]
-        quited_accounts = []
-        for account in accounts:
-            try:
-                pid = account_data.get(account, {}).get("pid", None)
-                nickname = account_data.get(account, {}).get("nickname", None)
-                process = psutil.Process(pid)
-                if process.name() == "WeChat.exe":
-                    # 普通关闭进程
-                    process.terminate()
-                    if process_exists(pid):
-                        # 静默强制关闭进程
-                        startupinfo = None
-                        if sys.platform == 'win32':
-                            startupinfo = subprocess.STARTUPINFO()
-                            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                        subprocess.check_output(
-                            ['taskkill', '/F', '/PID', f'{pid}'], startupinfo=startupinfo
-                        )
-                    print(f"结束了{pid}")
-                    quited_accounts.append((nickname, pid))
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
-        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+        messagebox.showinfo("待修复", "测试中发现重大bug，先不给点，略~")
+        # account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+        # accounts = [
+        #     account
+        #     for account, row in self.logged_in_rows.items()
+        #     if row.is_checked()
+        # ]
+        # quited_accounts = []
+        # for account in accounts:
+        #     try:
+        #         pid = account_data.get(account, {}).get("pid", None)
+        #         nickname = account_data.get(account, {}).get("nickname", None)
+        #         process = psutil.Process(pid)
+        #         if process_utils.process_exists(pid) and process.name() == "WeChat.exe":
+        #             startupinfo = None
+        #             if sys.platform == 'win32':
+        #                 startupinfo = subprocess.STARTUPINFO()
+        #                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        #             result = subprocess.run(
+        #                 ['taskkill', '/T', '/F', '/PID', f'{pid}'],
+        #                 startupinfo=startupinfo,
+        #                 capture_output=True,
+        #                 text=True
+        #             )
+        #             if result.returncode == 0:
+        #                 print(f"结束了 {pid} 的进程树")
+        #                 quited_accounts.append((nickname, pid))
+        #             else:
+        #                 print(f"无法结束 PID {pid} 的进程树，错误：{result.stderr.strip()}")
+        #         else:
+        #             print(f"进程 {pid} 已经不存在。")
+        #     except (psutil.NoSuchProcess, psutil.AccessDenied):
+        #         pass
+        # json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
         self.create_main_frame_and_menu()
 
     def login_selected_accounts(self):
@@ -1206,11 +1234,12 @@ class MainWindow:
         center_window(detail_window)
         detail_window.focus_set()
 
-    def create_config(self, account):
+    def create_config(self, account, status):
 
         self.thread_manager.create_config(
             account,
             func_config.test_and_create_config,
+            status,
             self.create_main_frame_and_menu
         )
 
@@ -1224,9 +1253,10 @@ class MainWindow:
 
     def create_multiple_lnk(self):
 
-        configured_accounts = []
-
         configured_accounts = get_all_configs()
+        if len(configured_accounts) == 0:
+            messagebox.showinfo("提醒", "您还没有创建过登录配置")
+            return False
 
         for account in configured_accounts:
             result = create_lnk_for_account(account, self.status)

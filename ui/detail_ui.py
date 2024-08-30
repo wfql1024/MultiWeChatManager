@@ -12,7 +12,7 @@ from functions import func_setting, func_detail
 from resources.config import Config
 from resources.strings import Strings
 from utils import json_utils
-from utils.window_utils import Tooltip
+from utils.handle_utils import Tooltip
 
 
 class DetailWindow:

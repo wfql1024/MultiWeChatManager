@@ -4,27 +4,24 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="麻了啊啊啊啊">
-      <change afterPath="$PROJECT_DIR$/external_res/WeChatMultiple_GsuhyFihx.exe" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external_res/WeChatMultiple_moyan123.exe" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/external_res/WeChatMultiple_wudixiaozi135.exe" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/functions/func_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" afterDir="false" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="添加适配子程序，完善多选登录功能">
+      <change afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/utils/wechat_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Demo/decrypt/WeChatSQL_p.py" beforeDir="false" afterPath="$PROJECT_DIR$/Demo/decrypt/WeChatSQL_p.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Demo/decrypt/mainfuncTion.py" beforeDir="false" afterPath="$PROJECT_DIR$/Demo/decrypt/mainfuncTion.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Demo/decrypt/search_wechat_key.py" beforeDir="false" afterPath="$PROJECT_DIR$/Demo/decrypt/search_wechat_key.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Demo/decrypt/util.py" beforeDir="false" afterPath="$PROJECT_DIR$/Demo/decrypt/util.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_account_list.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_account_list.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.bat" beforeDir="false" afterPath="$PROJECT_DIR$/build.bat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_login.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/func_wechat_dll.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_wechat_dll.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/thread_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/thread_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/about_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/about_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/detail_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/detail_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/setting_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/setting_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/wechat_decrypt_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/wechat_decrypt_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/window_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/window_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/process_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/process_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/window_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/handle_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/点我创建快捷方式.bat" beforeDir="false" afterPath="$PROJECT_DIR$/点我创建快捷方式.bat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -82,52 +79,53 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python.Createlnk.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.MultiWeChatManager.executor&quot;: &quot;Run&quot;,
-    &quot;Python.control_by_handle.executor&quot;: &quot;Run&quot;,
-    &quot;Python.control_in_background.executor&quot;: &quot;Run&quot;,
-    &quot;Python.detail_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_account_list.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_config.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_database.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_decrypt.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_detail.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_login.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_path.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_setting.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_wechat_dll.executor&quot;: &quot;Run&quot;,
-    &quot;Python.get_path_of_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.get_path_of_wechat.executor&quot;: &quot;Run&quot;,
-    &quot;Python.get_wechat_mutex_handle.executor&quot;: &quot;Run&quot;,
-    &quot;Python.json_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.logger_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.mainTest.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.modify_wechat_dll.executor&quot;: &quot;Run&quot;,
-    &quot;Python.more_open.executor&quot;: &quot;Run&quot;,
-    &quot;Python.path_setting_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.process_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.search_wechat_key.executor&quot;: &quot;Run&quot;,
-    &quot;Python.thread_manager.executor&quot;: &quot;Run&quot;,
-    &quot;Python.wechat_decrypt_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.wechat_multiple.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/SpaceDev/MyProj/MultiWeChatManager/external_res&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.Createlnk.executor": "Run",
+    "Python.Main.executor": "Run",
+    "Python.MultiWeChatManager.executor": "Run",
+    "Python.control_by_handle.executor": "Run",
+    "Python.control_in_background.executor": "Run",
+    "Python.detail_ui.executor": "Run",
+    "Python.func_account_list.executor": "Run",
+    "Python.func_config.executor": "Run",
+    "Python.func_database.executor": "Run",
+    "Python.func_decrypt.executor": "Run",
+    "Python.func_detail.executor": "Run",
+    "Python.func_login.executor": "Run",
+    "Python.func_path.executor": "Run",
+    "Python.func_setting.executor": "Run",
+    "Python.func_wechat_dll.executor": "Run",
+    "Python.get_path_of_data.executor": "Run",
+    "Python.get_path_of_wechat.executor": "Run",
+    "Python.get_wechat_mutex_handle.executor": "Run",
+    "Python.json_utils.executor": "Run",
+    "Python.logger_utils.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.mainTest.executor": "Run",
+    "Python.main_ui.executor": "Run",
+    "Python.modify_wechat_dll.executor": "Run",
+    "Python.more_open.executor": "Run",
+    "Python.path_setting_ui.executor": "Run",
+    "Python.process_utils.executor": "Run",
+    "Python.search_wechat_key.executor": "Run",
+    "Python.thread_manager.executor": "Run",
+    "Python.wechat_decrypt_utils.executor": "Run",
+    "Python.wechat_multiple.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "com.codeium.enabled": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "D:/SpaceDev/MyProj/MultiWeChatManager/external_res",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\external_res" />
@@ -277,7 +275,11 @@
       <workItem from="1724777033069" duration="275000" />
       <workItem from="1724777888245" duration="7081000" />
       <workItem from="1724788551529" duration="2691000" />
-      <workItem from="1724804889189" duration="29095000" />
+      <workItem from="1724804889189" duration="40620000" />
+      <workItem from="1724902304450" duration="172000" />
+      <workItem from="1724902493157" duration="14503000" />
+      <workItem from="1724943611351" duration="232000" />
+      <workItem from="1724995290455" duration="5509000" />
     </task>
     <task id="LOCAL-00001" summary="I have finished the coding work. Core functions have been implemented.">
       <option name="closed" value="true" />
@@ -487,7 +489,15 @@
       <option name="project" value="LOCAL" />
       <updated>1724778027776</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="添加适配子程序，完善多选登录功能">
+      <option name="closed" value="true" />
+      <created>1724858144438</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1724858144438</updated>
+    </task>
+    <option name="localTasksCounter" value="28" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -552,13 +562,14 @@
     <MESSAGE value="绿起来" />
     <MESSAGE value="麻了，怎么突然不能绿了" />
     <MESSAGE value="麻了啊啊啊啊" />
-    <option name="LAST_COMMIT_MESSAGE" value="麻了啊啊啊啊" />
+    <MESSAGE value="添加适配子程序，完善多选登录功能" />
+    <option name="LAST_COMMIT_MESSAGE" value="添加适配子程序，完善多选登录功能" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$detail_ui.coverage" NAME="detail_ui Coverage Results" MODIFIED="1723965579899" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$control_in_background.coverage" NAME="control_in_background Coverage Results" MODIFIED="1724623766091" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1724857700804" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1725006687324" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_database.coverage" NAME="func_database Coverage Results" MODIFIED="1723960716503" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_decrypt_utils.coverage" NAME="wechat_decrypt_utils Coverage Results" MODIFIED="1723959593571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_setting.coverage" NAME="func_setting Coverage Results" MODIFIED="1724511173987" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />

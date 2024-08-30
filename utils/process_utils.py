@@ -137,6 +137,27 @@ def iter_open_files(pid):
         print(f"An error occurred: {e}")
 
 
+def process_exists(pid):
+    output = 'default'
+    try:
+        output = subprocess.check_output(['tasklist', '/FI', f'PID eq {pid}'])
+        # 尝试直接使用 utf-8 解码
+        decoded_output = output.decode('utf-8')
+        return str(pid) in decoded_output
+    except UnicodeDecodeError as e:
+        print(f"解码错误：{e}")
+        # 如果 utf-8 解码失败，尝试使用 gbk 解码
+        try:
+            decoded_output = output.decode('GBK')
+            print(decoded_output.strip())
+            return str(pid) in decoded_output
+        except UnicodeDecodeError:
+            print("解码失败，无法解析输出。")
+            return False
+    except subprocess.CalledProcessError:
+        return False
+
+
 if __name__ == '__main__':
     pass
     # print(get_file_from_pid(20040))

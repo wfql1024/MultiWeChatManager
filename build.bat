@@ -40,6 +40,8 @@ if exist "dist\微信多开管理器_调试版\微信多开管理器_调试版.e
 rmdir /S /Q "build"
 del /Q "*.spec"
 
+copy "点我创建快捷方式.bat" "dist\微信多开管理器\"
+
 echo 打包完成！正式版和调试版都已生成，共用同一个 _internal 文件夹。
 
 :end

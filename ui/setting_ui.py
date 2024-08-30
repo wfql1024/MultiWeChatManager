@@ -6,7 +6,7 @@ from tkinter import ttk, filedialog, messagebox
 from functions import func_setting
 from functions.func_login import open_wechat
 from resources.config import Config
-from utils import window_utils
+from utils import handle_utils
 
 
 class SettingWindow:
@@ -219,11 +219,11 @@ class SettingWindow:
         )
 
     def auto_get_login_size(self, status):
-        window_utils.close_windows_by_class(["WTWindow", "WeChatLoginWndForPC"])
+        handle_utils.close_windows_by_class(["WTWindow", "WeChatLoginWndForPC"])
         wechat_hwnd = open_wechat(status)
         if wechat_hwnd:
             print(f"打开了登录窗口{wechat_hwnd}")
-            login_wnd_details = window_utils.get_window_details_from_hwnd(wechat_hwnd)
+            login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
             login_wnd = login_wnd_details["window"]
             login_screen = func_setting.get_setting_from_ini(
                 Config.SETTING_INI_PATH,

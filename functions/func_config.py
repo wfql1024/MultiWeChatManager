@@ -6,36 +6,37 @@ from tkinter import messagebox
 
 from functions import func_setting
 from resources.config import Config
-from utils.window_utils import wait_for_window_open, close_window_by_name
+from utils import wechat_utils
+from utils.wechat_utils import clear_idle_wnd_and_process
+from utils.handle_utils import wait_for_window_open, close_window_by_name
 
 
-def test_and_create_config(account):
+def test_and_create_config(account, status):
     creator = ConfigCreator(account)
-    return creator.test()
+    return creator.test(status)
 
 
 class ConfigCreator:
     def __init__(self, account):
         self.account = account
 
-    def test(self):
+    def test(self, status):
         if messagebox.askyesno(
                 "确认",
                 "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
         ):
-            multi_wechat_process = subprocess.Popen(Config.MULTI_SUBPROCESS, creationflags=subprocess.CREATE_NO_WINDOW)
-            if not wait_for_window_open("WeChatLoginWndForPC", 3):
-                messagebox.showerror("错误", "未检测到微信登录界面")
-                multi_wechat_process.terminate()
-                return False
-
-            time.sleep(2)
-
-            if messagebox.askyesno("确认", "是否为对应的微信号？"):
-                return self.create_config()
+            clear_idle_wnd_and_process()
+            time.sleep(0.5)
+            wechat_hwnd = wechat_utils.open_wechat(status)
+            if wechat_hwnd:
+                time.sleep(2)
+                if messagebox.askyesno("确认", "是否为对应的微信号？"):
+                    return self.create_config()
+                else:
+                    wechat_hwnd.close()
+                    return False
             else:
-                close_window_by_name("WeChatLoginWndForPC")
-                return False
+                messagebox.showerror("错误", "打开登录窗口失败")
         return False
 
     def create_config(self):

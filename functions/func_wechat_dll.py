@@ -2,6 +2,7 @@ import mmap
 import os
 import shutil
 import time
+from tkinter import messagebox
 
 import psutil
 
@@ -96,6 +97,7 @@ def switch_dll():
                 print("当前是稳定模式")
                 if not os.path.exists(bak_path):
                     shutil.copyfile(dll_path, bak_path)
+                    messagebox.showinfo("提醒", "当前是您首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin.dll.bak，并也拷贝到桌面，可另外备份保存。")
                 pos = mmapped_file.find(stable_pattern)
                 if pos != -1:
                     mmapped_file[pos:pos + len(stable_pattern)] = patch_pattern
