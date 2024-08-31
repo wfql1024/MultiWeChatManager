@@ -17,6 +17,7 @@ from tkinter import ttk
 
 import psutil
 import win32api
+import win32com
 import win32con
 import win32gui
 import win32ui
@@ -480,8 +481,13 @@ def open_config_file():
 def open_last_ver_path():
     last_ver_path = func_setting.get_wechat_latest_version_path()
     if os.path.exists(last_ver_path):
-        os.startfile(last_ver_path)
+        # 获取文件夹路径
+        folder_path = os.path.dirname(last_ver_path)
 
+        # 打开文件夹
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shell.CurrentDirectory = last_ver_path
+        shell.Run(f'explorer /select,"WeChatWin.dll"')
 
 
 def set_sub_executable(file_name, initialization):
@@ -674,6 +680,8 @@ class MainWindow:
             self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
             self.config_file_menu.add_command(label="打开", command=open_config_file)
             self.config_file_menu.add_command(label="清除", command=self.clear_config_file)
+        # 打开主dll所在文件夹
+        self.file_menu.add_command(label="查看DLL", command=open_last_ver_path)
         # 创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=create_app_lnk)
         # 创建快捷启动

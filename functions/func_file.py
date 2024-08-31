@@ -29,7 +29,7 @@ def reset(initialization):
                 print(f"Deleted: {dll_path}")
 
             # 将 .bak 文件重命名为 WeChatWin.dll
-            shutil.copyfile(bak_path, dll_path)
+            os.rename(bak_path, dll_path)
             print(f"Restored: {dll_path} from {bak_path}")
         else:
             print(f"No action needed. {bak_path} not found.")

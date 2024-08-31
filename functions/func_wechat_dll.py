@@ -5,6 +5,7 @@ import time
 from tkinter import messagebox
 
 import psutil
+import winshell
 
 from functions import func_setting
 
@@ -72,8 +73,12 @@ def switch_dll():
 
     # 获取 DLL 路径
     last_ver_path = func_setting.get_wechat_latest_version_path()
+    # 获取桌面路径
+    desktop_path = winshell.desktop()
+    # 定义目标路径和文件名
     dll_path = os.path.join(last_ver_path, "WeChatWin.dll")
     bak_path = os.path.join(last_ver_path, "WeChatWin.dll.bak")
+    bak_desktop_path = os.path.join(desktop_path, "WeChatWin.dll.bak")
 
     try:
         with open(dll_path, 'r+b') as f:
@@ -96,8 +101,9 @@ def switch_dll():
             elif current_mode == "未开启":
                 print("当前是稳定模式")
                 if not os.path.exists(bak_path):
-                    shutil.copyfile(dll_path, bak_path)
                     messagebox.showinfo("提醒", "当前是您首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin.dll.bak，并也拷贝到桌面，可另外备份保存。")
+                    shutil.copyfile(dll_path, bak_path)
+                    shutil.copyfile(dll_path, bak_desktop_path)
                 pos = mmapped_file.find(stable_pattern)
                 if pos != -1:
                     mmapped_file[pos:pos + len(stable_pattern)] = patch_pattern

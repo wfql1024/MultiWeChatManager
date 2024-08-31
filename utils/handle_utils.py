@@ -83,11 +83,11 @@ def find_all_windows(class_name, window_title):
     return results
 
 
-def wait_for_window_open(class_name, timeout=30):
+def wait_for_window_open(class_name, timeout=30, name=None):
     """等待指定类名的窗口打开，并返回窗口句柄"""
     end_time = time.time() + timeout
     while time.time() < end_time:
-        hwnd = win32gui.FindWindow(class_name, None)
+        hwnd = win32gui.FindWindow(class_name, name)
         if hwnd:
             return hwnd  # 返回窗口句柄
         time.sleep(0.5)

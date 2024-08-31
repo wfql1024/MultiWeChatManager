@@ -4,9 +4,8 @@ from functools import partial
 from tkinter import ttk, filedialog, messagebox
 
 from functions import func_setting
-from functions.func_login import open_wechat
 from resources.config import Config
-from utils import handle_utils
+from utils import handle_utils, wechat_utils
 
 
 class SettingWindow:
@@ -220,7 +219,7 @@ class SettingWindow:
 
     def auto_get_login_size(self, status):
         handle_utils.close_windows_by_class(["WTWindow", "WeChatLoginWndForPC"])
-        wechat_hwnd = open_wechat(status)
+        wechat_hwnd = wechat_utils.open_wechat(status)
         if wechat_hwnd:
             print(f"打开了登录窗口{wechat_hwnd}")
             login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
@@ -237,7 +236,7 @@ class SettingWindow:
                     func_setting.save_setting_to_ini(
                         Config.SETTING_INI_PATH,
                         Config.INI_SECTION,
-                        Config.INI_KEY_SCREEN_SIZE,
+                        Config.INI_KEY_LOGIN_SIZE,
                         f"{login_width}*{login_height}",
                     )
                     self.login_size_var.set(f"{login_width}*{login_height}")
