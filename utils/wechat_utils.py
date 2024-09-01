@@ -1,10 +1,26 @@
+import ctypes
 import subprocess
 import time
+
+import psutil
 import win32gui
 from pywinauto.controls.hwndwrapper import HwndWrapper
 from functions import func_setting
 from resources.config import Config
 from utils import handle_utils
+
+
+def kill_wechat_multiple_processes():
+    # 遍历所有的进程
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            # 检查进程名是否以"WeChatMultiple_"开头
+            if proc.name() and proc.name().startswith('WeChatMultiple_'):
+                proc.kill()
+                print(f"Killed process tree for {proc.name()} (PID: {proc.pid})")
+
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
 
 
 def clear_idle_wnd_and_process():
@@ -15,6 +31,7 @@ def clear_idle_wnd_and_process():
             "WindowsForms10.Window.8.app.0.141b42a_r13_ad1"
         ]
     )
+    kill_wechat_multiple_processes()
 
 
 def open_wechat(status):
@@ -23,32 +40,34 @@ def open_wechat(status):
     :param status: 状态
     :return: 微信窗口句柄
     """
-    multi_wechat_process = None
+    sub_exe_process = None
     wechat_path = func_setting.get_wechat_install_path()
     data_path = func_setting.get_wechat_data_path()
     if not wechat_path or not data_path:
         return None
 
     if status == "已开启":
-        wechat_process = subprocess.Popen(wechat_path, creationflags=subprocess.CREATE_NO_WINDOW)
+        subprocess.Popen(wechat_path, creationflags=subprocess.CREATE_NO_WINDOW)
     else:
+        # 获取当前选择的多开子程序
         sub_exe = func_setting.get_setting_from_ini(
             Config.SETTING_INI_PATH,
             Config.INI_SECTION,
             Config.INI_KEY_SUB_EXE,
         )
+        # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if sub_exe == "WeChatMultiple_Anhkgg.exe":
-            multi_wechat_process = subprocess.Popen(
+            sub_exe_process = subprocess.Popen(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-
+        # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
         elif sub_exe == "WeChatMultiple_lyie15.exe":
-            multi_wechat_process = subprocess.Popen(
+            sub_exe_process = subprocess.Popen(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
-            sub_exe_hwnd = handle_utils.wait_for_window_open("WTWindow", 3)
+            sub_exe_hwnd = handle_utils.wait_for_window_open("WTWindow", 8)
             if sub_exe_hwnd:
                 button_handle = handle_utils.get_all_child_handles(
                     sub_exe_hwnd
@@ -57,30 +76,34 @@ def open_wechat(status):
                 if button:
                     handle_utils.do_click(button_handle, int(button.rectangle().width() / 2),
                                           int(button.rectangle().height() / 2))
-            else:
-                return None
-
+        # ————————————————————————————————WeChatMultiple_pipihan.exe————————————————————————————————
         elif sub_exe == "WeChatMultiple_pipihan.exe":
-            multi_wechat_process = subprocess.Popen(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}"
-            )
-            print(multi_wechat_process)
-            sub_exe_hwnd = handle_utils.wait_for_window_open("WTWindow", 3)
-            print(sub_exe_hwnd)
-            if sub_exe_hwnd:
-                button_handle = handle_utils.get_all_child_handles(
-                    sub_exe_hwnd
-                )[2]
-                time.sleep(3)
-                button = HwndWrapper(button_handle)
-                if button:
-                    handle_utils.do_click(button_handle, int(button.rectangle().width() / 2),
-                                          int(button.rectangle().height() / 2))
+            sub_exe_hwnd_list = handle_utils.find_all_windows("WTWindow", "微信多开----by 雄雄")
+            if len(sub_exe_hwnd_list) == 0:
+                print("找不到")
+                sub_exe_process = subprocess.Popen(
+                    f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                )
+                sub_exe_hwnd = handle_utils.wait_for_window_open("WTWindow", 3)
+                if not sub_exe_hwnd:
+                    return None
             else:
-                return None
+                sub_exe_hwnd = sub_exe_hwnd_list[0]
+            print(f"找到了{sub_exe_hwnd}")
+            button_handle = handle_utils.get_all_child_handles(
+                sub_exe_hwnd
+            )[2]
+            time.sleep(0.5)
+            button = HwndWrapper(button_handle)
+            if button:
+                handle_utils.do_click(button_handle, int(button.rectangle().width() / 2),
+                                      int(button.rectangle().height() / 2))
 
+                time.sleep(2.5)
+        # ————————————————————————————————WeChatMultiple_moyan123.exe————————————————————————————————
         elif sub_exe == "WeChatMultiple_moyan123.exe":
-            multi_wechat_process = subprocess.Popen(
+            sub_exe_process = subprocess.Popen(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
                 creationflags=subprocess.CREATE_NO_WINDOW
             )
@@ -89,19 +112,16 @@ def open_wechat(status):
                 button_handle = handle_utils.get_all_child_handles(
                     sub_exe_hwnd
                 )[2]
-                time.sleep(0.5)
                 button = HwndWrapper(button_handle)
                 if button:
                     handle_utils.do_click(button_handle, int(button.rectangle().width() / 2),
                                           int(button.rectangle().height() / 2))
+                time.sleep(1)
+                sub_exe_process.terminate()
             else:
                 return None
 
-    # 等待登录窗口
-    if multi_wechat_process:
-        multi_wechat_process.terminate()
-    time.sleep(0.1)
-    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 3)
+    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)
     if wechat_hwnd:
         return wechat_hwnd
     else:

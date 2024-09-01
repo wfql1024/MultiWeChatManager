@@ -85,8 +85,14 @@ def auto_login(account, status):
     return False
 
 
-def auto_login_accounts(accounts, status, max_gap_width=30):
-    def get_wnd_position(n):
+def auto_login_accounts(accounts, status):
+    """
+    对选择的账号，进行
+    :param accounts:
+    :param status:
+    :return:
+    """
+    def get_wnd_positions(n):
         # 实际的间隔设置
         actual_gap_width = int((screen_width - n * login_width) / (n + 1))
         # 去除两边间隔总共的宽度
@@ -136,7 +142,7 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
     screen_height = int(screen_height)
 
     # 计算一行最多可以显示多少个
-    max_column = int((screen_width - max_gap_width) / (login_width + max_gap_width))
+    max_column = int(screen_width / login_width)
 
     # 存放登录窗口的起始位置的列表
     positions = []
@@ -144,11 +150,14 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
     # 若账号个数超过最多显示个数，则只创建最多显示个数的位置列表
     if count > max_column:
         print("不能一行显示")
-        get_wnd_position(max_column)
+        get_wnd_positions(max_column)
     else:
         print("可以一行显示")
-        get_wnd_position(count)
+        get_wnd_positions(count)
 
+    start_time = time.time()
+    # 使用一个set存储不重复的handle
+    wechat_handles = set()
     # 遍历登录账号
     for j in range(count):
         # 读取配置
@@ -162,12 +171,18 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
 
         # 等待打开窗口
         wechat_hwnd = wechat_utils.open_wechat(status)
-        if wechat_hwnd:
+        if wechat_hwnd is None:
+            return False
+        if wechat_hwnd not in wechat_handles:
             print(f"{accounts[j]}:打开了登录窗口{wechat_hwnd}")
-            wechat_wnd = HwndWrapper(wechat_hwnd)
+            wechat_handles.add(wechat_hwnd)
         else:
-            print(f"{accounts[j]}:登录窗口打开失败")
-            break
+            print(f"{accounts[j]}:非对应窗口，继续等待")
+            while True:
+                wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 3)
+                if wechat_hwnd not in wechat_handles:
+                    wechat_handles.add(wechat_hwnd)
+                    break
 
         # 横坐标算出完美的平均位置
         new_left = positions[j % max_column][0]
@@ -183,15 +198,19 @@ def auto_login_accounts(accounts, status, max_gap_width=30):
             int(login_height),
             win32con.SWP_SHOWWINDOW
         )
-        time.sleep(0.8)
+        print(f"登录到第{j + 1}个账号用时：{time.time() - start_time:.4f}秒")
 
+    # 如果有，关掉多余的多开器
+    wechat_utils.kill_wechat_multiple_processes()
+
+    # 两轮点击所有窗口的登录，防止遗漏
     handles = handle_utils.find_all_windows("WeChatLoginWndForPC", "微信")
     for h in handles:
         handle_utils.do_click(h, int(login_width * 0.5), int(login_height * 0.75))
-    # 两遍防止遗漏
     for h in handles:
         handle_utils.do_click(h, int(login_width * 0.5), int(login_height * 0.75))
 
+    # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
     end_time = time.time() + 20
     while True:
         hs = handle_utils.find_all_windows("WeChatLoginWndForPC", "微信")

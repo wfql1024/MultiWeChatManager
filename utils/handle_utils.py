@@ -69,6 +69,7 @@ def do_click(handle, cx, cy):  # 第四种，可后台
     win32api.SendMessage(handle, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, long_position)  # 模拟鼠标按下
     win32api.SendMessage(handle, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)  # 模拟鼠标弹起
 
+
 def find_all_windows(class_name, window_title):
     def enum_windows_callback(hwnd, results):
         # 获取窗口的类名和标题
