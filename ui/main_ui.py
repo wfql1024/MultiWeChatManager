@@ -420,7 +420,8 @@ def create_lnk_for_account(account, status):
 
     # 创建快捷方式
     with winshell.shortcut(shortcut_path) as shortcut:
-        shortcut.path = bat_file_path
+        shortcut.path = "cmd.exe"
+        shortcut.arguments = f'/u /c "{bat_file_path}"'
         shortcut.working_directory = os.path.dirname(bat_file_path)
         # 修正icon_location的传递方式，传入一个包含路径和索引的元组
         shortcut.icon_location = (ico_path, 0)
@@ -737,7 +738,7 @@ class MainWindow:
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
             # 获取 WeChatMultiple_*.exe 的文件列表
             exe_files = glob.glob(os.path.join(external_res_path, "WeChatMultiple_*.exe"))
-            print(exe_files)
+            print(f"获取到子程序：{exe_files}")
             for exe_file in exe_files:
                 # 提取右半部分（* 部分）的内容
                 file_name = os.path.basename(exe_file)

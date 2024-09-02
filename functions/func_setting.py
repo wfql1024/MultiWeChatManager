@@ -41,7 +41,7 @@ def get_setting_from_ini(ini_filename, section, key, validation_func=None):
         if section in config and key in config[section]:
             current_setting = config[section][key]
             if validation_func is None or validation_func(current_setting):
-                print(f"在{os.path.basename(ini_filename)}[{section}]{key}中获取到数据：{current_setting}")
+                print(f"{os.path.basename(ini_filename)}[{section}]{key}》》》》》》》》》{current_setting}")
                 return current_setting
     return None
 
@@ -64,6 +64,7 @@ def save_setting_to_ini(ini_path, section, key, value):
 
     with open(ini_path, 'w') as configfile:
         config.write(configfile)
+        print(f"{os.path.basename(ini_path)}[{section}]{key}《《《《《《《《《{value}")
 
 
 def get_wechat_install_path_from_process():

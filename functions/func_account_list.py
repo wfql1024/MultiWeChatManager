@@ -95,7 +95,6 @@ class AccountManager:
         logged_in_wxids = set()
 
         pids = process_utils.get_process_ids_by_name("WeChat.exe")
-        print(f"wechat_processes: {wechat_processes}")
         print(f"读取到微信所有进程，用时：{time.time() - start_time:.4f} 秒")
         # if len(pids) != 0:
         #     pool = ThreadPoolExecutor(max_workers=len(pids) + 1)

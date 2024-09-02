@@ -172,16 +172,21 @@ def auto_login_accounts(accounts, status):
         # 等待打开窗口
         wechat_hwnd = wechat_utils.open_wechat(status)
         if wechat_hwnd is None:
+            messagebox.showerror("错误", "打不开登录窗口")
             return False
         if wechat_hwnd not in wechat_handles:
             print(f"{accounts[j]}:打开了登录窗口{wechat_hwnd}")
             wechat_handles.add(wechat_hwnd)
         else:
             print(f"{accounts[j]}:非对应窗口，继续等待")
+            end_time = time.time() + 8
             while True:
-                wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 3)
+                wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)
                 if wechat_hwnd not in wechat_handles:
                     wechat_handles.add(wechat_hwnd)
+                    break
+                if time.time() > end_time:
+                    print("超时！换下一个账号")
                     break
 
         # 横坐标算出完美的平均位置
