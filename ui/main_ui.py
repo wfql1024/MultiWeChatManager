@@ -337,10 +337,11 @@ def create_lnk_for_account(account, status):
         return False
 
     # 构建源文件和目标文件路径
-    source_file = os.path.join(data_path, "All Users", "config", f"{account}.data")
-    target_file = os.path.join(data_path, "All Users", "config", "config.data")
+    source_file = os.path.join(data_path, "All Users", "config", f"{account}.data").replace('/', '\\')
+    target_file = os.path.join(data_path, "All Users", "config", "config.data").replace('/', '\\')
     if status == "已开启":
-        process_path_text = f"\"{wechat_path}\""
+        process_path_text = f"{wechat_path}"
+
         prefix = "[仅全局下有效]"
     else:
         sub_exe = func_setting.get_setting_from_ini(
@@ -348,21 +349,28 @@ def create_lnk_for_account(account, status):
             Config.INI_SECTION,
             Config.INI_KEY_SUB_EXE,
         )
-        process_path_text = f"\"{Config.PROJ_EXTERNAL_RES_PATH}\\{sub_exe}\""
+        process_path_text = f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}".replace('/', '\\')
         prefix = f"{sub_exe.split('_')[1].split('.')[0]}"
 
     bat_content = f"""
-    @echo off
-    REM 复制配置文件
-    copy "{source_file}" "{target_file}"
-    if errorlevel 1 (
-        echo 复制配置文件失败
-        exit /b 1
-    )
-    echo 复制配置文件成功
+        @echo off
+        chcp 65001
+        REM 复制配置文件
+        copy "{source_file}" "{target_file}"
+        if errorlevel 1 (
+            echo 复制配置文件失败
+            exit /b 1
+        )
+        echo 复制配置文件成功
 
-    REM 根据状态启动微信
-    start "" {process_path_text}
+        REM 根据状态启动微信
+        @echo off
+        cmd /u /c "start "" "{process_path_text}""
+        if errorlevel 1 (
+        echo 启动微信失败，请检查路径是否正确。
+        pause
+        exit /b 1
+        )
         """
 
     # 确保路径存在
@@ -371,8 +379,9 @@ def create_lnk_for_account(account, status):
         os.makedirs(account_file_path)
     # 保存为批处理文件
     bat_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}', f'{prefix} - {account}.bat')
-    with open(bat_file_path, 'w', encoding='utf-8') as bat_file:
-        bat_file.write(bat_content.strip())
+    # 以带有BOM的UTF-8格式写入bat文件
+    with open(bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
+        bat_file.write(bat_content)
 
     print(f"批处理文件已生成: {bat_file_path}")
 
@@ -420,8 +429,7 @@ def create_lnk_for_account(account, status):
 
     # 创建快捷方式
     with winshell.shortcut(shortcut_path) as shortcut:
-        shortcut.path = "cmd.exe"
-        shortcut.arguments = f'/u /c "{bat_file_path}"'
+        shortcut.path = bat_file_path
         shortcut.working_directory = os.path.dirname(bat_file_path)
         # 修正icon_location的传递方式，传入一个包含路径和索引的元组
         shortcut.icon_location = (ico_path, 0)
@@ -760,7 +768,7 @@ class MainWindow:
         # 帮助菜单
         self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="帮助", menu=self.help_menu)
-        self.help_menu.add_command(label="视频教程", command=lambda: messagebox.showinfo("提醒", "这不是正录着了嘛~"))
+        self.help_menu.add_command(label="视频教程", command=lambda: webbrowser.open_new("https://www.bilibili.com/video/BV174H1eBE9r/"))
         self.help_menu.add_command(label="关于", command=self.open_about)
 
         # 作者标签
