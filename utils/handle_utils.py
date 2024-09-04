@@ -2,6 +2,10 @@ import ctypes
 import time
 import tkinter as tk
 
+import sys
+# set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
+sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
+
 import win32api
 import win32con
 import win32gui

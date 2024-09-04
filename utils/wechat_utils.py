@@ -1,10 +1,15 @@
-import ctypes
 import subprocess
 import time
+
+import sys
+
+# set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
+sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
 
 import psutil
 import win32gui
 from pywinauto.controls.hwndwrapper import HwndWrapper
+
 from functions import func_setting
 from resources.config import Config
 from utils import handle_utils

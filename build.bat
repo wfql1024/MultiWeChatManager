@@ -3,12 +3,12 @@
 :: 清空 dist 文件夹（如果存在）
 if exist "dist" rmdir /S /Q "dist"
 if exist "build" rmdir /S /Q "build"
-del /Q "*.spec"
+if exist "*.spec" del /Q "*.spec"
 
 :: 使用 PyInstaller 创建正常版本（无窗口）
 pyinstaller --name="微信多开管理器" --windowed --icon=external_res\SunnyMultiWxMng.ico ^
 --add-data="external_res;external_res" --manifest=app.manifest --exclude-module=PyQt5 --exclude-module=numpy ^
---noconfirm Main.py > build_log_正式版.txt 2>&1
+--noconfirm Main.py | tee build_log_正式版.txt
 
 :: 检查打包是否成功
 if exist "dist\微信多开管理器\微信多开管理器.exe" (
@@ -21,7 +21,7 @@ if exist "dist\微信多开管理器\微信多开管理器.exe" (
 :: 使用 PyInstaller 创建调试版本（有窗口）
 pyinstaller --name="微信多开管理器_调试版" --icon=external_res\SunnyMultiWxMng.ico ^
 --add-data="external_res;external_res" --manifest=app.manifest --exclude-module=PyQt5 --exclude-module=numpy ^
---noconfirm Main.py > build_log_调试版.txt 2>&1
+--noconfirm Main.py | tee build_log_调试版.txt
 
 :: 检查调试版打包是否成功
 if exist "dist\微信多开管理器_调试版\微信多开管理器_调试版.exe" (
@@ -38,8 +38,8 @@ if exist "dist\微信多开管理器_调试版\微信多开管理器_调试版.e
 )
 
 :: 清理中间文件
-rmdir /S /Q "build"
-del /Q "*.spec"
+if exist "build" rmdir /S /Q "build"
+if exist "*.spec" del /Q "*.spec"
 
 :: 复制快捷方式创建脚本到打包文件夹
 copy "点我创建快捷方式.bat" "dist\微信多开管理器\"

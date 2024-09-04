@@ -1,14 +1,12 @@
 import os
 import shutil
-import subprocess
 import time
 from tkinter import messagebox
 
 from functions import func_setting
-from resources.config import Config
 from utils import wechat_utils
+from utils.handle_utils import close_window_by_name
 from utils.wechat_utils import clear_idle_wnd_and_process
-from utils.handle_utils import wait_for_window_open, close_window_by_name
 
 
 def test_and_create_config(account, status):

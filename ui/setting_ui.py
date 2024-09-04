@@ -3,6 +3,9 @@ import tkinter as tk
 from functools import partial
 from tkinter import ttk, filedialog, messagebox
 
+import win32com
+import win32com.client
+
 from functions import func_setting
 from resources.config import Config
 from utils import handle_utils, wechat_utils
@@ -151,10 +154,23 @@ class SettingWindow:
 
     def choose_wechat_latest_version_path(self):
         while True:
-            path = filedialog.askdirectory()
-            if not path:  # 用户取消选择
-                return
-            path = path.replace('\\', '/')
+            try:
+                # 尝试使用 `filedialog.askdirectory` 方法
+                path = filedialog.askdirectory()
+                if not path:  # 用户取消选择
+                    return
+            except Exception as e:
+                print(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
+                try:
+                    # 异常处理部分，使用 `win32com.client`
+                    shell = win32com.client.Dispatch("Shell.Application")
+                    folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
+                    if not folder:  # 用户取消选择
+                        return
+                    path = folder.Self.Path.replace('\\', '/')
+                except Exception as e:
+                    print(f"win32com.client 也失败了: {e}")
+                    return
             if func_setting.is_valid_wechat_latest_version_path(path):
                 self.dll_path_var.set(path)
                 func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
@@ -193,10 +209,23 @@ class SettingWindow:
 
     def choose_wechat_data_path(self):
         while True:
-            path = filedialog.askdirectory()
-            if not path:  # 用户取消选择
-                return
-            path = path.replace('\\', '/')
+            try:
+                # 尝试使用 `filedialog.askdirectory` 方法
+                path = filedialog.askdirectory()
+                if not path:  # 用户取消选择
+                    return
+            except Exception as e:
+                print(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
+                try:
+                    # 异常处理部分，使用 `win32com.client`
+                    shell = win32com.client.Dispatch("Shell.Application")
+                    folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
+                    if not folder:  # 用户取消选择
+                        return
+                    path = folder.Self.Path.replace('\\', '/')
+                except Exception as e:
+                    print(f"win32com.client 也失败了: {e}")
+                    return
             if func_setting.is_valid_wechat_data_path(path):
                 self.data_path_var.set(path)
                 func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
@@ -245,5 +274,5 @@ class SettingWindow:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    app = SettingWindow(root, "已开启")
-    root.mainloop()
+    root.withdraw()  # 隐藏根窗口
+    filedialog.askopenfilename(filetypes=[("Executable files", "*.exe"), ("All files", "*.*")])

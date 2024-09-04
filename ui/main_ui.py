@@ -1,13 +1,11 @@
 # main_ui.py
 import base64
-import ctypes
 import glob
 import os
 import queue
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 import tkinter as tk
 import webbrowser
@@ -26,7 +24,6 @@ from PIL import Image, ImageTk
 from PIL import ImageDraw
 from win32com.client import Dispatch
 
-import utils
 from functions import func_config, func_setting, func_wechat_dll, func_login, func_file
 from functions.func_account_list import AccountManager, get_config_status
 from functions.func_login import manual_login, auto_login
@@ -35,7 +32,6 @@ from resources.config import Config
 from resources.strings import Strings
 from thread_manager import ThreadManager
 from ui import about_ui, setting_ui, detail_ui
-from utils import json_utils, process_utils
 from utils.handle_utils import center_window, Tooltip
 
 

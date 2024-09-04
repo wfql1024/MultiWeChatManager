@@ -1,23 +1,17 @@
 # func_login.py
-import ctypes
-import subprocess
-import threading
 import time
 import tkinter as tk
 from tkinter import messagebox
 
-import win32api
 import win32con
 import win32gui
-from pywinauto.controls.hwndwrapper import HwndWrapper
 
-import utils
-from utils.wechat_utils import clear_idle_wnd_and_process
 from functions import func_setting
 from functions.func_config import ConfigCreator
 from resources.config import Config
 from utils import handle_utils, wechat_utils
-from utils.handle_utils import wait_for_window_open, wait_for_window_close
+from utils.handle_utils import wait_for_window_close
+from utils.wechat_utils import clear_idle_wnd_and_process
 
 
 def manual_login(status):
