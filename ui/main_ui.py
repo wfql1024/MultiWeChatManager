@@ -600,9 +600,9 @@ class MainWindow:
         self.bottom_frame = ttk.Frame(master, padding="10")
         self.bottom_frame.pack(side=tk.BOTTOM)
 
-        manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
+        self.manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
                                          command=self.manual_login_account, style='Custom.TButton')
-        manual_login_button.pack(side=tk.LEFT)
+        self.manual_login_button.pack(side=tk.LEFT)
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
         self.canvas = tk.Canvas(master, highlightthickness=0)
@@ -797,6 +797,7 @@ class MainWindow:
 
         install_path = func_setting.get_wechat_install_path()
         data_path = func_setting.get_wechat_data_path()
+        data_path = None
         last_version_path = func_setting.get_wechat_latest_version_path()
 
         if not install_path or not data_path or not last_version_path:
@@ -833,6 +834,10 @@ class MainWindow:
             widget.destroy()
         error_label = ttk.Label(self.main_frame, text="路径设置错误，请进入设置-路径中修改", foreground="red")
         error_label.pack(pady=20)
+        # 修改按钮文字
+        self.manual_login_button.config(text="设置路径")
+        # 修改按钮的 command
+        self.manual_login_button.config(command=self.open_settings)
 
     def create_main_frame_and_menu(self):
         print("刷新...")
@@ -1217,7 +1222,7 @@ class MainWindow:
                 "检测到正在使用微信。切换模式需要修改 WechatWin.dll 文件，请先手动退出所有微信后再进行，否则将会强制关闭微信进程。"
             )
             if not answer:
-                MainWindow.create_menu_bar(self)
+                self.create_menu_bar()
                 return
 
         try:
