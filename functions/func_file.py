@@ -16,8 +16,6 @@ def reset(initialization):
     last_ver_path = func_setting.get_wechat_latest_version_path()
     if confirm:
         # 恢复原始的dll
-        func_wechat_dll.switch_dll()
-
         dll_path = os.path.join(last_ver_path, "WeChatWin.dll")
         bak_path = os.path.join(last_ver_path, "WeChatWin.dll.bak")
 

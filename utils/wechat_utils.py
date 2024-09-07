@@ -1,7 +1,13 @@
+import ctypes
+import os
 import subprocess
 import time
 
 import sys
+
+import win32api
+import ctypes
+from ctypes import wintypes
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
@@ -52,7 +58,8 @@ def open_wechat(status):
         return None
 
     if status == "已开启":
-        subprocess.Popen(wechat_path, creationflags=subprocess.CREATE_NO_WINDOW)
+        cmd = f'cmd /u /c "start "" "{wechat_path}""'
+        subprocess.run(f'runas /user:2535912997@qq.com "{cmd}"', shell=True)
         time.sleep(0.2)
     else:
         # 获取当前选择的多开子程序
@@ -65,14 +72,14 @@ def open_wechat(status):
         if sub_exe == "WeChatMultiple_Anhkgg.exe":
             sub_exe_process = subprocess.Popen(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
-                creationflags=subprocess.CREATE_NO_WINDOW
+                creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB
             )
             time.sleep(1.1)
         # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
         elif sub_exe == "WeChatMultiple_lyie15.exe":
             sub_exe_process = subprocess.Popen(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
-                creationflags=subprocess.CREATE_NO_WINDOW
+                creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB
             )
             sub_exe_hwnd = handle_utils.wait_for_window_open("WTWindow", 8)
             if sub_exe_hwnd:

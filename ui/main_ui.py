@@ -539,6 +539,7 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window):
+        self.settings_button = None
         self.sub_executable_menu = None
         self.config_file_menu = None
         self.user_file_menu = None
@@ -596,12 +597,12 @@ class MainWindow:
         # 定期检查队列中的消息
         self.update_status()
 
-        # 底部框架=创建lnk+手动登录
+        # 底部框架=手动登录
         self.bottom_frame = ttk.Frame(master, padding="10")
         self.bottom_frame.pack(side=tk.BOTTOM)
 
         self.manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
-                                         command=self.manual_login_account, style='Custom.TButton')
+                                              command=self.manual_login_account, style='Custom.TButton')
         self.manual_login_button.pack(side=tk.LEFT)
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
@@ -764,7 +765,8 @@ class MainWindow:
         # 帮助菜单
         self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="帮助", menu=self.help_menu)
-        self.help_menu.add_command(label="视频教程", command=lambda: webbrowser.open_new("https://www.bilibili.com/video/BV174H1eBE9r/"))
+        self.help_menu.add_command(label="视频教程",
+                                   command=lambda: webbrowser.open_new("https://www.bilibili.com/video/BV174H1eBE9r/"))
         self.help_menu.add_command(label="关于", command=self.open_about)
 
         # 作者标签
@@ -797,7 +799,6 @@ class MainWindow:
 
         install_path = func_setting.get_wechat_install_path()
         data_path = func_setting.get_wechat_data_path()
-        data_path = None
         last_version_path = func_setting.get_wechat_latest_version_path()
 
         if not install_path or not data_path or not last_version_path:
@@ -832,12 +833,11 @@ class MainWindow:
         """路径错误提醒"""
         for widget in self.main_frame.winfo_children():
             widget.destroy()
-        error_label = ttk.Label(self.main_frame, text="路径设置错误，请进入设置-路径中修改", foreground="red")
+        error_label = ttk.Label(self.main_frame, text="路径设置错误，请点击按钮修改", foreground="red")
         error_label.pack(pady=20)
-        # 修改按钮文字
-        self.manual_login_button.config(text="设置路径")
-        # 修改按钮的 command
-        self.manual_login_button.config(command=self.open_settings)
+        self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
+                                          command=self.open_settings, style='Custom.TButton')
+        self.settings_button.pack()
 
     def create_main_frame_and_menu(self):
         print("刷新...")
@@ -868,6 +868,9 @@ class MainWindow:
         if logged_in is None or not_logged_in is None or wechat_processes is None:
             error_label = ttk.Label(self.main_frame, text="无法获取账户列表，请检查路径设置", foreground="red")
             error_label.pack(pady=20)
+            self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
+                                              command=self.open_settings, style='Custom.TButton')
+            self.settings_button.pack()
             return
 
         self.logged_in_rows.clear()

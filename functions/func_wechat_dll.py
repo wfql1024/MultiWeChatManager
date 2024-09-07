@@ -8,18 +8,21 @@ import psutil
 import winshell
 
 from functions import func_setting
+from resources import version_config
 
 
 def check_dll():
-    dll_path = os.path.join(func_setting.get_wechat_latest_version_path(), "WeChatWin.dll")
+    latest_ver_path = func_setting.get_wechat_latest_version_path()
+    dll_path = os.path.join(latest_ver_path, "WeChatWin.dll")
+    current_ver = latest_ver_path.split('[')[1].split(']')[0]
     try:
         # 以只读模式打开文件
         with open(dll_path, 'rb') as f:
             content = f.read()
 
         # 检查是否包含目标字节序列
-        pattern1 = b'\x0F\x84\xBD\x00\x00\x00\xFF\x15\xF4\x24\x65\x01'
-        pattern2 = b'\xE9\xBE\x00\x00\x00\x00\xFF\x15\xF4\x24\x65\x01'
+        pattern1 = version_config.OFFSET.get_config(current_ver, "STABLE").pattern
+        pattern2 = version_config.OFFSET.get_config(current_ver, "PATCH").pattern
 
         has_pattern1 = pattern1 in content
         has_pattern2 = pattern2 in content
@@ -29,6 +32,8 @@ def check_dll():
             return "未开启"
         elif has_pattern2 and not has_pattern1:
             return "已开启"
+        elif has_pattern1 and has_pattern2:
+            return "两条都有，不可用"
         else:
             return "不可用"
 
@@ -72,20 +77,21 @@ def switch_dll():
             return False
 
     # 获取 DLL 路径
-    last_ver_path = func_setting.get_wechat_latest_version_path()
+    latest_ver_path = func_setting.get_wechat_latest_version_path()
     # 获取桌面路径
     desktop_path = winshell.desktop()
     # 定义目标路径和文件名
-    dll_path = os.path.join(last_ver_path, "WeChatWin.dll")
-    bak_path = os.path.join(last_ver_path, "WeChatWin.dll.bak")
+    dll_path = os.path.join(latest_ver_path, "WeChatWin.dll")
+    bak_path = os.path.join(latest_ver_path, "WeChatWin.dll.bak")
     bak_desktop_path = os.path.join(desktop_path, "WeChatWin.dll.bak")
+    current_ver = latest_ver_path.split('[')[1].split(']')[0]
 
     try:
         with open(dll_path, 'r+b') as f:
             result = None
             mmapped_file = mmap.mmap(f.fileno(), 0)
-            stable_pattern = b'\x0F\x84\xBD\x00\x00\x00\xFF\x15\xF4\x24\x65\x01'
-            patch_pattern = b'\xE9\xBE\x00\x00\x00\x00\xFF\x15\xF4\x24\x65\x01'
+            stable_pattern = version_config.OFFSET.get_config(current_ver, "STABLE").pattern
+            patch_pattern = version_config.OFFSET.get_config(current_ver, "PATCH").pattern
 
             current_mode = check_dll()
 
