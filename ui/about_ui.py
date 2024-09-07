@@ -3,7 +3,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import ttk
 
-from resources import Config
+from resources import Config, Strings
 
 
 class AboutWindow:
@@ -39,11 +39,11 @@ class AboutWindow:
         author_label.pack(pady=(10, 0))
 
         # 创建 GitHub 链接标签
-        github_link = tk.Label(frame, text=f"GitHub开源：{Config.GITHUB_REPO}", font=("", 10), fg="blue", cursor="hand2")
+        github_link = tk.Label(frame, text=f"GitHub开源：{Strings.GITHUB_REPO}", font=("", 10), fg="blue", cursor="hand2")
         github_link.pack(pady=(5, 0))
 
         # 哔哩哔哩主页链接标签
-        bilibili_link = tk.Label(frame, text=f"哔哩哔哩主页：{Config.BILIBILI_SPACE}", font=("", 10), fg="blue",
+        bilibili_link = tk.Label(frame, text=f"哔哩哔哩主页：{Strings.BILIBILI_SPACE}", font=("", 10), fg="blue",
                                  cursor="hand2")
         bilibili_link.pack(pady=(5, 0))
 
@@ -64,7 +64,7 @@ class AboutWindow:
         thanks_text.insert(tk.END, "鸣谢\n", "title")
         # 配置标签样式
         thanks_text.tag_configure("title", font=("", 12), justify="center")  # 调整字号并居中
-        thanks_text.insert(tk.END, Config.THANKS_TEXT)
+        thanks_text.insert(tk.END, Strings.THANKS_TEXT)
         thanks_text.config(state=tk.DISABLED)  # 设置文本框为不可编辑
         thanks_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 

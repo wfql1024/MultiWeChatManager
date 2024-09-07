@@ -59,7 +59,8 @@ def open_wechat(status):
 
     if status == "已开启":
         cmd = f'cmd /u /c "start "" "{wechat_path}""'
-        subprocess.run(f'runas /user:2535912997@qq.com "{cmd}"', shell=True)
+        # subprocess.run(f'runas /user:2535912997@qq.com "{cmd}"', shell=True)
+        subprocess.run(cmd, shell=True)
         time.sleep(0.2)
     else:
         # 获取当前选择的多开子程序
