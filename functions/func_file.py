@@ -2,7 +2,7 @@ import os
 import shutil
 from tkinter import messagebox
 
-from functions import func_wechat_dll, func_setting
+from functions import func_setting
 from resources import Config
 
 

@@ -1,13 +1,6 @@
-import ctypes
-import os
-import subprocess
-import time
-
+import getpass
 import sys
-
-import win32api
-import ctypes
-from ctypes import wintypes
+import time
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
@@ -18,7 +11,7 @@ from pywinauto.controls.hwndwrapper import HwndWrapper
 
 from functions import func_setting
 from resources.config import Config
-from utils import handle_utils
+from utils import handle_utils, process_utils
 
 
 def kill_wechat_multiple_processes():
@@ -53,14 +46,13 @@ def open_wechat(status):
     """
     sub_exe_process = None
     wechat_path = func_setting.get_wechat_install_path()
-    data_path = func_setting.get_wechat_data_path()
-    if not wechat_path or not data_path:
+    current_user = getpass.getuser()
+    if not wechat_path:
         return None
 
     if status == "已开启":
-        cmd = f'cmd /u /c "start "" "{wechat_path}""'
-        # subprocess.run(f'runas /user:2535912997@qq.com "{cmd}"', shell=True)
-        subprocess.run(cmd, shell=True)
+        print(current_user)
+        process_utils.create_process_with_medium_il(wechat_path, None)
         time.sleep(0.2)
     else:
         # 获取当前选择的多开子程序
@@ -71,16 +63,15 @@ def open_wechat(status):
         )
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if sub_exe == "WeChatMultiple_Anhkgg.exe":
-            sub_exe_process = subprocess.Popen(
+            sub_exe_process = process_utils.create_process_with_medium_il(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
-                creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB
+                creation_flags=process_utils.CREATE_NO_WINDOW
             )
             time.sleep(1.1)
         # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
         elif sub_exe == "WeChatMultiple_lyie15.exe":
-            sub_exe_process = subprocess.Popen(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
-                creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB
+            sub_exe_process = process_utils.create_process_with_medium_il(
+                f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}"
             )
             sub_exe_hwnd = handle_utils.wait_for_window_open("WTWindow", 8)
             if sub_exe_hwnd:

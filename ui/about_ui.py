@@ -48,8 +48,8 @@ class AboutWindow:
         bilibili_link.pack(pady=(5, 0))
 
         # 绑定点击事件到标签
-        github_link.bind("<Button-1>", lambda e: webbrowser.open_new(Config.GITHUB_REPO))
-        bilibili_link.bind("<Button-1>", lambda e: webbrowser.open_new(Config.BILIBILI_SPACE))
+        github_link.bind("<Button-1>", lambda e: webbrowser.open_new(Strings.GITHUB_REPO))
+        bilibili_link.bind("<Button-1>", lambda e: webbrowser.open_new(Strings.BILIBILI_SPACE))
 
         # 创建一个用于放置滚动文本框的框架
         thanks_frame = ttk.Frame(frame)

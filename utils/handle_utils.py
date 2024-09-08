@@ -1,8 +1,8 @@
 import ctypes
+import sys
 import time
 import tkinter as tk
 
-import sys
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
 
@@ -70,8 +70,10 @@ def do_click(handle, cx, cy):  # 第四种，可后台
     :return: 无
     """
     long_position = win32api.MAKELONG(cx, cy)  # 模拟鼠标指针 传送到指定坐标
+    print(f"要点击的handle：{handle}")
     win32api.SendMessage(handle, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, long_position)  # 模拟鼠标按下
     win32api.SendMessage(handle, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)  # 模拟鼠标弹起
+    print("模拟点击按钮")
 
 
 def find_all_windows(class_name, window_title):

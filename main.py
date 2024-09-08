@@ -1,5 +1,6 @@
 import ctypes
 import os
+import subprocess
 import sys
 import tkinter as tk
 
@@ -31,6 +32,14 @@ def is_admin():
         return os.geteuid() == 0
 
 
+def restart_explorer():
+    # 关闭资源管理器
+    subprocess.run(["taskkill", "/f", "/im", "explorer.exe"], check=True)
+
+    # 重启资源管理器
+    subprocess.run(["start", "explorer.exe"], shell=True, check=True)
+
+
 def main():
     print(f"是否管理员模式：{is_admin()}")
     root = tk.Tk()
@@ -40,7 +49,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if not ctypes.windll.shell32.IsUserAnAdmin():
+    if not is_admin():
         print("当前没有管理员权限，尝试获取...")
         if not elevate():
             print("无法获得管理员权限，程序将退出。")
@@ -50,3 +59,4 @@ if __name__ == "__main__":
     else:
         print("已获得管理员权限，正在执行主逻辑...")
         main()
+    # main()

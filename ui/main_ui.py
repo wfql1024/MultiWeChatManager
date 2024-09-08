@@ -28,10 +28,10 @@ from functions import func_config, func_setting, func_wechat_dll, func_login, fu
 from functions.func_account_list import AccountManager, get_config_status
 from functions.func_login import manual_login, auto_login
 from functions.func_setting import get_wechat_data_path
+from resources import Strings
 from resources.config import Config
-from resources.strings import Strings
 from thread_manager import ThreadManager
-from ui import about_ui, setting_ui, detail_ui
+from ui import about_ui, setting_ui, detail_ui, rewards_ui
 from utils.handle_utils import center_window, Tooltip
 
 
@@ -56,7 +56,7 @@ def get_avatar_from_files(account):
     if os.path.exists(default_path):
         return Image.open(default_path)
 
-    # 如果default.jpg也不存在，尝试从URL获取
+    # 如果default.jpg也不存在，则将从字符串转换出来
     try:
         base64_string = Strings.DEFAULT_AVATAR_BASE64
         image_data = base64.b64decode(base64_string)
@@ -765,6 +765,7 @@ class MainWindow:
         # 帮助菜单
         self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="帮助", menu=self.help_menu)
+        self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new("https://www.bilibili.com/video/BV174H1eBE9r/"))
         self.help_menu.add_command(label="关于", command=self.open_about)
@@ -838,6 +839,19 @@ class MainWindow:
         self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
                                           command=self.open_settings, style='Custom.TButton')
         self.settings_button.pack()
+        # 设定一个默认的尺寸和默认的子程序
+        func_setting.save_setting_to_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_LOGIN_SIZE,
+            "347*471"
+        )
+        func_setting.save_setting_to_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_SUB_EXE,
+            Config.DEFAULT_SUB_EXE
+        )
 
     def create_main_frame_and_menu(self):
         print("刷新...")
@@ -1248,6 +1262,11 @@ class MainWindow:
         about_window = tk.Toplevel(self.master)
         about_ui.AboutWindow(about_window)
         center_window(about_window)
+
+    def open_rewards(self):
+        rewards_window = tk.Toplevel(self.master)
+        rewards_ui.RewardsWindow(rewards_window, Config.REWARDS_PNG_PATH)
+        center_window(rewards_window)
 
     def open_detail(self, account):
         detail_window = tk.Toplevel(self.master)

@@ -10,8 +10,6 @@ from functions import func_setting
 from functions.func_config import ConfigCreator
 from resources.config import Config
 from utils import handle_utils, wechat_utils
-from utils.handle_utils import wait_for_window_close
-from utils.wechat_utils import clear_idle_wnd_and_process
 
 
 def manual_login(status):
@@ -20,29 +18,23 @@ def manual_login(status):
     :param status: 状态
     :return: 成功与否
     """
-    clear_idle_wnd_and_process()
+    wechat_utils.clear_idle_wnd_and_process()
     time.sleep(0.5)
     wechat_hwnd = wechat_utils.open_wechat(status)
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")
-        login_size = func_setting.get_setting_from_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_LOGIN_SIZE,
-        )
-        if not login_size or login_size == "":
-            login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
-            login_wnd = login_wnd_details["window"]
-            login_width = login_wnd_details["width"]
-            login_height = login_wnd_details["height"]
-            if 0.734 < login_width / login_height < 0.740:
-                func_setting.save_setting_to_ini(
-                    Config.SETTING_INI_PATH,
-                    Config.INI_SECTION,
-                    Config.INI_KEY_LOGIN_SIZE,
-                    f"{login_width}*{login_height}"
-                )
-        if wait_for_window_close(wechat_hwnd, timeout=60):
+        login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
+        login_wnd = login_wnd_details["window"]
+        login_width = login_wnd_details["width"]
+        login_height = login_wnd_details["height"]
+        if 0.734 < login_width / login_height < 0.740:
+            func_setting.save_setting_to_ini(
+                Config.SETTING_INI_PATH,
+                Config.INI_SECTION,
+                Config.INI_KEY_LOGIN_SIZE,
+                f"{login_width}*{login_height}"
+            )
+        if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
             print("登录窗口已关闭")
             return True
     else:
@@ -52,31 +44,7 @@ def manual_login(status):
 
 
 def auto_login(account, status):
-    clear_idle_wnd_and_process()
-    creator = ConfigCreator(account)
-    result = creator.use_config()
-    if result:
-        print("复制配置文件成功")
-    else:
-        return False
-    wechat_hwnd = wechat_utils.open_wechat(status)
-    if wechat_hwnd:
-        print(f"打开了登录窗口{wechat_hwnd}")
-        wechat_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
-        wechat_wnd = wechat_wnd_details["window"]
-        wechat_width = wechat_wnd_details["width"]
-        wechat_height = wechat_wnd_details["height"]
-        end_time = time.time() + 60
-        while True:
-            handle_utils.do_click(wechat_hwnd, int(wechat_width * 0.5), int(wechat_height * 0.75))
-            time.sleep(0.2)
-            if win32gui.IsWindow(wechat_hwnd) == 0:
-                print("登录窗口已关闭")
-                return True
-            elif time.time() > end_time:
-                print("登录超时")
-                return False
-    return False
+    return auto_login_accounts([account], status)
 
 
 def auto_login_accounts(accounts, status):
@@ -100,7 +68,7 @@ def auto_login_accounts(accounts, status):
         print(positions)
 
     # 关闭闲置的子程序和登录窗口
-    clear_idle_wnd_and_process()
+    wechat_utils.clear_idle_wnd_and_process()
 
     # 检测尺寸设置是否完整
     login_size = func_setting.get_setting_from_ini(

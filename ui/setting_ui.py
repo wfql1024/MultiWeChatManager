@@ -1,4 +1,5 @@
 import re
+import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk, filedialog, messagebox
@@ -247,28 +248,24 @@ class SettingWindow:
         )
 
     def auto_get_login_size(self, status):
-        handle_utils.close_windows_by_class(["WTWindow", "WeChatLoginWndForPC"])
+        wechat_utils.clear_idle_wnd_and_process()
         wechat_hwnd = wechat_utils.open_wechat(status)
         if wechat_hwnd:
             print(f"打开了登录窗口{wechat_hwnd}")
+            time.sleep(2)
             login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
             login_wnd = login_wnd_details["window"]
-            login_screen = func_setting.get_setting_from_ini(
-                Config.SETTING_INI_PATH,
-                Config.INI_SECTION,
-                Config.INI_KEY_LOGIN_SIZE,
-            )
-            if not login_screen or login_screen == "":
-                login_width = login_wnd_details["width"]
-                login_height = login_wnd_details["height"]
-                if 0.734 < login_width / login_height < 0.740:
-                    func_setting.save_setting_to_ini(
-                        Config.SETTING_INI_PATH,
-                        Config.INI_SECTION,
-                        Config.INI_KEY_LOGIN_SIZE,
-                        f"{login_width}*{login_height}",
-                    )
-                    self.login_size_var.set(f"{login_width}*{login_height}")
+            login_width = login_wnd_details["width"]
+            login_height = login_wnd_details["height"]
+            print(login_width, login_height)
+            if 0.734 < login_width / login_height < 0.740:
+                func_setting.save_setting_to_ini(
+                    Config.SETTING_INI_PATH,
+                    Config.INI_SECTION,
+                    Config.INI_KEY_LOGIN_SIZE,
+                    f"{login_width}*{login_height}",
+                )
+                self.login_size_var.set(f"{login_width}*{login_height}")
             login_wnd.close()
 
 

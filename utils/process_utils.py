@@ -23,6 +23,49 @@ K32GetModuleFileNameExA.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.HMOD
                                     ctypes.wintypes.DWORD]
 K32GetModuleFileNameExA.restype = ctypes.wintypes.DWORD
 
+import ctypes
+from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
+
+# 加载 Windows API 库
+advapi32 = ctypes.WinDLL('advapi32', use_last_error=True)
+kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
+user32 = ctypes.WinDLL('user32', use_last_error=True)
+
+# 常量定义
+CREATE_NO_WINDOW = 0x08000000  # 隐藏窗口
+PROCESS_QUERY_INFORMATION = 0x0400
+TOKEN_DUPLICATE = 0x0002
+TOKEN_ALL_ACCESS = 0xF01FF
+SecurityImpersonation = 2
+TokenPrimary = 1
+CREATE_NEW_CONSOLE = 0x00000010
+
+# 函数声明
+OpenProcess = kernel32.OpenProcess
+OpenProcess.restype = HANDLE
+OpenProcess.argtypes = [DWORD, BOOL, DWORD]
+
+OpenProcessToken = advapi32.OpenProcessToken
+OpenProcessToken.restype = BOOL
+OpenProcessToken.argtypes = [HANDLE, DWORD, ctypes.POINTER(HANDLE)]
+
+DuplicateTokenEx = advapi32.DuplicateTokenEx
+DuplicateTokenEx.restype = BOOL
+DuplicateTokenEx.argtypes = [HANDLE, DWORD, ctypes.POINTER(ctypes.c_void_p), ctypes.c_int, ctypes.c_int,
+                             ctypes.POINTER(HANDLE)]
+
+CreateProcessWithTokenW = advapi32.CreateProcessWithTokenW
+CreateProcessWithTokenW.restype = BOOL
+CreateProcessWithTokenW.argtypes = [HANDLE, DWORD, LPCWSTR, LPCWSTR, DWORD, ctypes.c_void_p, LPCWSTR, ctypes.c_void_p,
+                                    ctypes.c_void_p]
+
+GetShellWindow = user32.GetShellWindow
+GetShellWindow.restype = HANDLE
+
+GetWindowThreadProcessId = user32.GetWindowThreadProcessId
+GetWindowThreadProcessId.restype = DWORD
+GetWindowThreadProcessId.argtypes = [HANDLE, ctypes.POINTER(DWORD)]
+
 
 def get_process_ids_by_name(process_name):
     matching_processes = []
@@ -156,6 +199,71 @@ def process_exists(pid):
             return False
     except subprocess.CalledProcessError:
         return False
+
+
+def create_process_with_medium_il(executable, args=None, creation_flags=CREATE_NEW_CONSOLE):
+    # 获取 Explorer 的窗口句柄
+    h_progman = GetShellWindow()
+    if not h_progman:
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 获取 Explorer 进程 ID
+    explorer_pid = DWORD()
+    GetWindowThreadProcessId(h_progman, ctypes.byref(explorer_pid))
+
+    # 打开 Explorer 进程
+    h_process = OpenProcess(PROCESS_QUERY_INFORMATION, False, explorer_pid.value)
+    if not h_process:
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 打开 Explorer 的进程令牌
+    h_token = HANDLE()
+    if not OpenProcessToken(h_process, TOKEN_DUPLICATE, ctypes.byref(h_token)):
+        kernel32.CloseHandle(h_process)
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 复制令牌
+    h_token2 = HANDLE()
+    if not DuplicateTokenEx(h_token, TOKEN_ALL_ACCESS, None, SecurityImpersonation, TokenPrimary,
+                            ctypes.byref(h_token2)):
+        kernel32.CloseHandle(h_token)
+        kernel32.CloseHandle(h_process)
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 设置启动信息结构
+    startup_info = ctypes.create_string_buffer(104)  # STARTUPINFO结构体的大小
+    process_info = ctypes.create_string_buffer(24)  # PROCESS_INFORMATION结构体的大小
+
+    # 创建带有 Explorer 令牌的进程
+    if not CreateProcessWithTokenW(h_token2, 0, executable, args, creation_flags, None, None, startup_info, process_info):
+        kernel32.CloseHandle(h_token2)
+        kernel32.CloseHandle(h_token)
+        kernel32.CloseHandle(h_process)
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 清理句柄
+    kernel32.CloseHandle(h_token2)
+    kernel32.CloseHandle(h_token)
+    kernel32.CloseHandle(h_process)
+
+    print("Process started successfully.")
+
+    # 获取 PROCESS_INFORMATION 结构体
+    pi = ctypes.cast(process_info, ctypes.POINTER(ctypes.c_void_p))
+    h_process = pi[0]  # 进程句柄
+    h_thread = pi[1]  # 线程句柄
+
+    class Process:
+        def __init__(self, handle_process, handle_thread):
+            self.h_process = handle_process
+            self.h_thread = handle_thread
+
+        def terminate(self):
+            kernel32.TerminateProcess(self.h_process, 0)
+            kernel32.CloseHandle(self.h_thread)
+            kernel32.CloseHandle(self.h_process)
+
+    return Process(h_process, h_thread)
 
 
 if __name__ == '__main__':

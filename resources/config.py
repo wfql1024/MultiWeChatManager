@@ -6,7 +6,7 @@ current_file_dir = os.path.dirname(os.path.abspath(__file__))
 class Config:
     INI_KEY_DELAY_TIME = 'delay_time'
     VIDEO_TUTORIAL_LINK = "https://space.bilibili.com/3546733357304606"
-    APP_VERSION = "v2.0.0 Beta"
+    APP_VERSION = "v2.0.8 Beta"
     INI_SECTION = 'default'
     INI_KEY_INSTALL_PATH = 'install_path'
     INI_KEY_DATA_PATH = 'data_path'
@@ -24,3 +24,4 @@ class Config:
     ACC_DATA_JSON_PATH = fr'{PROJ_USER_PATH}\account_data.json'
     SETTING_INI_PATH = fr'{PROJ_USER_PATH}\setting.ini'
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\SunnyMultiWxMng.ico'
+    REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\Rewards.png'
