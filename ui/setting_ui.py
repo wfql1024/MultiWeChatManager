@@ -4,6 +4,7 @@ import tkinter as tk
 from functools import partial
 from tkinter import ttk, filedialog, messagebox
 
+import win32api
 import win32com
 import win32com.client
 
@@ -64,45 +65,56 @@ class SettingWindow:
         self.data_choose_button.grid(row=1, column=3, padx=5, pady=5)
 
         # 新增第三行 - WeChatWin.dll 路径
-        self.dll_label = tk.Label(master, text="最新版本路径：")
+        self.dll_label = tk.Label(master, text="DLL所在路径：")
         self.dll_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
 
         self.dll_path_var = tk.StringVar()
         self.dll_path_entry = tk.Entry(master, textvariable=self.dll_path_var, state='readonly', width=70)
         self.dll_path_entry.grid(row=2, column=1, padx=5, pady=5, sticky="we")
 
-        self.dll_get_button = ttk.Button(master, text="获取", command=self.auto_get_wechat_latest_version_path)
+        self.dll_get_button = ttk.Button(master, text="获取", command=self.auto_get_wechat_dll_dir_path)
         self.dll_get_button.grid(row=2, column=2, padx=5, pady=5)
 
         self.dll_choose_button = ttk.Button(master, text="选择路径", command=self.choose_wechat_latest_version_path)
         self.dll_choose_button.grid(row=2, column=3, padx=5, pady=5)
 
-        # 新增第四行 - 屏幕大小
-        self.screen_size_label = tk.Label(master, text="屏幕大小：")
-        self.screen_size_label.grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        # 新增第四行 - 当前版本
+        self.version_label = tk.Label(master, text="当前微信版本：")
+        self.version_label.grid(row=3, column=0, padx=5, pady=5, sticky="w")
+
+        self.version_var = tk.StringVar()
+        self.version_entry = tk.Entry(master, textvariable=self.version_var, state='readonly', width=70)
+        self.version_entry.grid(row=3, column=1, padx=5, pady=5, sticky="we")
+
+        self.screen_size_get_button = ttk.Button(master, text="获取", command=self.auto_get_current_ver)
+        self.screen_size_get_button.grid(row=3, column=2, padx=5, pady=5)
+
+        # 新增第五行 - 屏幕大小
+        self.screen_size_label = tk.Label(master, text="当前屏幕大小：")
+        self.screen_size_label.grid(row=4, column=0, padx=5, pady=5, sticky="w")
 
         self.screen_size_var = tk.StringVar()
         self.screen_size_entry = tk.Entry(master, textvariable=self.screen_size_var, state='readonly', width=70)
-        self.screen_size_entry.grid(row=3, column=1, padx=5, pady=5, sticky="we")
+        self.screen_size_entry.grid(row=4, column=1, padx=5, pady=5, sticky="we")
 
         self.screen_size_get_button = ttk.Button(master, text="获取", command=self.auto_get_screen_size)
-        self.screen_size_get_button.grid(row=3, column=2, padx=5, pady=5)
+        self.screen_size_get_button.grid(row=4, column=2, padx=5, pady=5)
 
-        # 新增第四行 - 登录窗口大小
+        # 新增第六行 - 登录窗口大小
         self.login_size_label = tk.Label(master, text="登录窗口大小：")
-        self.login_size_label.grid(row=4, column=0, padx=5, pady=5, sticky="w")
+        self.login_size_label.grid(row=5, column=0, padx=5, pady=5, sticky="w")
 
         self.login_size_var = tk.StringVar()
         self.login_size_entry = tk.Entry(master, textvariable=self.login_size_var, width=70)
-        self.login_size_entry.grid(row=4, column=1, padx=5, pady=5, sticky="we")
+        self.login_size_entry.grid(row=5, column=1, padx=5, pady=5, sticky="we")
 
         self.login_size_get_button = ttk.Button(master, text="获取",
                                                 command=partial(self.auto_get_login_size, self.status))
-        self.login_size_get_button.grid(row=4, column=2, padx=5, pady=5)
+        self.login_size_get_button.grid(row=5, column=2, padx=5, pady=5)
 
-        # 添加确定按钮
+        # 修改确定按钮，从第4行到第6行
         self.ok_button = ttk.Button(master, text="确定", command=self.on_ok)
-        self.ok_button.grid(row=3, column=3, rowspan=2, padx=5, pady=5, sticky="nsew")
+        self.ok_button.grid(row=3, column=3, rowspan=3, padx=5, pady=5, sticky="nsew")
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         master.grid_columnconfigure(1, weight=1)
@@ -110,7 +122,8 @@ class SettingWindow:
         # 初始获取路径
         self.auto_get_wechat_install_path()
         self.auto_get_wechat_data_path()
-        self.auto_get_wechat_latest_version_path()
+        self.auto_get_wechat_dll_dir_path()
+        self.auto_get_current_ver()
         self.auto_get_screen_size()
 
         login_size = func_setting.get_setting_from_ini(
@@ -144,10 +157,16 @@ class SettingWindow:
             Config.INI_KEY_LOGIN_SIZE,
             f"{self.login_size_var.get()}"
         )
+        func_setting.save_setting_to_ini(
+            Config.SETTING_INI_PATH,
+            Config.INI_SECTION,
+            Config.INI_KEY_CUR_VER,
+            f"{self.version_var.get()}"
+        )
         return True
 
-    def auto_get_wechat_latest_version_path(self):
-        path = func_setting.get_wechat_latest_version_path()
+    def auto_get_wechat_dll_dir_path(self):
+        path = func_setting.get_wechat_dll_dir_path()
         if path:
             self.dll_path_var.set(path.replace('\\', '/'))
         else:
@@ -172,10 +191,10 @@ class SettingWindow:
                 except Exception as e:
                     print(f"win32com.client 也失败了: {e}")
                     return
-            if func_setting.is_valid_wechat_latest_version_path(path):
+            if func_setting.is_valid_wechat_dll_dir_path(path):
                 self.dll_path_var.set(path)
                 func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                                 Config.INI_KEY_VER_PATH, path)
+                                                 Config.INI_KEY_DLL_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "请选择包含WeChatWin.dll的版本号最新的文件夹")
@@ -234,6 +253,15 @@ class SettingWindow:
                 break
             else:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
+
+    def auto_get_current_ver(self):
+        install_path = func_setting.get_wechat_install_path()
+        version_info = win32api.GetFileVersionInfo(install_path, '\\')
+        version = (f"{win32api.HIWORD(version_info['FileVersionMS'])}."
+                   f"{win32api.LOWORD(version_info['FileVersionMS'])}."
+                   f"{win32api.HIWORD(version_info['FileVersionLS'])}."
+                   f"{win32api.LOWORD(version_info['FileVersionLS'])}")
+        self.version_var.set(version)
 
     def auto_get_screen_size(self):
         # 获取屏幕和登录窗口尺寸

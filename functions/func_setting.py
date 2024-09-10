@@ -1,10 +1,12 @@
 import configparser
 import os
+import re
 import winreg
 
 import psutil
 
 from resources import Config
+from utils import process_utils, debug_utils
 
 
 def is_valid_wechat_install_path(path) -> bool:
@@ -22,11 +24,8 @@ def is_valid_wechat_data_path(path) -> bool:
         return False
 
 
-def is_valid_wechat_latest_version_path(path) -> bool:
-    valid_path = get_wechat_latest_version_path_by_sort()
-    if valid_path and path == valid_path:
-        return True
-    elif not valid_path and path and path != "":
+def is_valid_wechat_dll_dir_path(path) -> bool:
+    if path and path != "":
         return os.path.exists(os.path.join(path, "WeChatWin.dll"))
     else:
         return False
@@ -64,7 +63,7 @@ def save_setting_to_ini(ini_path, section, key, value):
 
     with open(ini_path, 'w') as configfile:
         config.write(configfile)
-        print(f"{os.path.basename(ini_path)}[{section}]{key}《《《《《《《《《{value}")
+        print(f"{debug_utils.get_call_stack(3)}::{os.path.basename(ini_path)}[{section}]{key}《《《《《《《《《{value}")
 
 
 def get_wechat_install_path_from_process():
@@ -115,19 +114,76 @@ def get_wechat_data_path_from_user_register():
     return None
 
 
-def get_wechat_latest_version_path_by_sort():
+def get_wechat_dll_dir_path_by_files():
     install_path = get_wechat_install_path()  # 获得完整路径
     # install_path = "D:/software/Tencent/WeChat/WeChat.exe"
     # 删除路径末尾的 WeChat.exe，保留目录部分
     if install_path and install_path != "":
         install_path = os.path.dirname(install_path)
 
-    version_folders = [f for f in os.listdir(install_path) if f.startswith("[") and f.endswith("]")]
+    version_folders = []
+
+    # 遍历所有文件及子文件夹
+    for root, dirs, files in os.walk(install_path):
+        if 'WeChatWin.dll' in files:
+            version_folders.append(root)  # 将包含WeChatWin.dll的目录添加到列表中
+
     if not version_folders:
         return None
 
-    latest_version = max(version_folders, key=lambda v: list(map(int, v[1:-1].split("."))))
-    return os.path.join(install_path, latest_version).replace('\\', '/')
+    # 只有一个文件夹，直接返回
+    if len(version_folders) == 1:
+        dll_dir = version_folders[0].replace('\\', '/')
+        print(dll_dir)
+        return dll_dir
+
+    # 使用正则表达式匹配 1-5 个数字组成的版本号
+    version_pattern = re.compile(r'(\d+(?:\.\d+){0,4})')
+
+    # 提取并比较版本号
+    def extract_version(folder):
+        matches = version_pattern.findall(folder)  # 找到所有匹配的版本号
+        if matches:
+            # 取最右边的版本号
+            version_str = matches[-1]
+            version_parts = list(map(int, version_str.split(".")))
+
+            # 如果版本号不足 5 位，补足 0；如果超过 5 位，只取前 5 位
+            while len(version_parts) < 5:
+                version_parts.append(0)
+            key = version_parts[:5]  # 使用 5 个数字的版本号作为key
+            # print(key)
+            return key
+        return [0, 0, 0, 0, 0]  # 如果没有匹配到版本号，默认返回0.0.0.0
+
+    # 找到最大版本号的文件夹
+    dll_dir = max(version_folders, key=extract_version).replace('\\', '/')
+    print(dll_dir)
+    return dll_dir
+
+
+def get_wechat_dll_dir_path_by_memo_maps():
+    pids = process_utils.get_process_ids_by_name("WeChat.exe")
+    if len(pids) == 0:
+        print("没有运行微信。")
+        return None
+    else:
+        process_id = pids[0]
+        try:
+            for f in psutil.Process(process_id).memory_maps():
+                normalized_path = f.path.replace('\\', '/')
+                # print(normalized_path)
+                # 检查路径是否以 data_path 开头
+                if normalized_path.endswith('WeChatWin.dll'):
+                    dll_dir_path = os.path.dirname(normalized_path)
+                    # print(dll_dir_path)
+                    return dll_dir_path
+        except psutil.AccessDenied:
+            print(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
+        except psutil.NoSuchProcess:
+            print(f"进程ID为 {process_id} 的进程不存在或已退出。")
+        except Exception as e:
+            print(f"发生意外错误: {e}")
 
 
 def get_wechat_install_path():
@@ -180,19 +236,20 @@ def get_wechat_data_path():
     return None
 
 
-def get_wechat_latest_version_path():
+def get_wechat_dll_dir_path():
     path_finders = [
-        get_wechat_latest_version_path_by_sort,
         lambda: get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                     Config.INI_KEY_VER_PATH)
+                                     Config.INI_KEY_DLL_PATH),
+        get_wechat_dll_dir_path_by_memo_maps,
+        get_wechat_dll_dir_path_by_files,
     ]
 
     for index, finder in enumerate(path_finders):
         # print(f"当前方法：{finder.__name__}")
         found_path = finder()
-        if is_valid_wechat_latest_version_path(found_path):
+        if is_valid_wechat_dll_dir_path(found_path):
             save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                Config.INI_KEY_VER_PATH, found_path)
+                                Config.INI_KEY_DLL_PATH, found_path)
             print(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
             return found_path
 
@@ -202,6 +259,4 @@ def get_wechat_latest_version_path():
 
 
 if __name__ == "__main__":
-    get_wechat_install_path()
-    get_wechat_data_path()
-    get_wechat_latest_version_path()
+    get_wechat_dll_dir_path_by_files()

@@ -54,8 +54,7 @@ class AccountManager:
         self.account_data = json_utils.load_json_data(self.account_data_file)
 
     def get_account_list(self):
-        def get_files_by_pid_thread(process_id):
-            db_paths = []  # 初始化空列表，用于存储符合条件的路径
+        def get_account_by_pid(process_id):
             try:
                 # 获取指定进程的内存映射文件路径
                 for f in psutil.Process(process_id).memory_maps():
@@ -63,28 +62,25 @@ class AccountManager:
                     normalized_path = f.path.replace('\\', '/')
                     # 检查路径是否以 data_path 开头
                     if normalized_path.startswith(data_path):
-                        # 如果条件符合，将路径添加到列表中
-                        db_paths.append(f.path)
+                        print(
+                            f"┌———匹配到进程{process_id}使用的符合的文件，待对比，已用时：{time.time() - start_time:.4f}秒")
+                        print(f"提取中：{f.path}")
+                        path_parts = f.path.split(os.path.sep)
+                        try:
+                            wxid_index = path_parts.index(os.path.basename(data_path)) + 1
+                            wxid = path_parts[wxid_index]
+                            wechat_processes.append((wxid, process_id))
+                            logged_in_wxids.add(wxid)
+                            print(f"└———提取到进程{process_id}对应账号{wxid}，已用时：{time.time() - start_time:.4f}秒")
+                            return logged_in_wxids
+                        except ValueError:
+                            pass
             except psutil.AccessDenied:
                 print(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
             except psutil.NoSuchProcess:
                 print(f"进程ID为 {process_id} 的进程不存在或已退出。")
             except Exception as e:
                 print(f"发生意外错误: {e}")
-            print(f"┌———通过内存获取进程{process_id}所有文件，已用时：{time.time() - start_time:.4f}秒")
-            if db_paths:  # 如果存在匹配的文件路径
-                db_file = db_paths[0]  # 取第一个匹配的文件路径
-                print(db_file)
-                path_parts = db_file.split(os.path.sep)
-                try:
-                    wxid_index = path_parts.index(os.path.basename(data_path)) + 1
-                    wxid = path_parts[wxid_index]
-                    wechat_processes.append((wxid, process_id))
-                    logged_in_wxids.add(wxid)
-                    print(f"└———获取进程{process_id}对应账号{wxid}，已用时：{time.time() - start_time:.4f}秒")
-                    return logged_in_wxids
-                except ValueError:
-                    pass
 
         start_time = time.time()
         data_path = func_get_path.get_wechat_data_path()
@@ -99,8 +95,9 @@ class AccountManager:
         # if len(pids) != 0:
         #     pool = ThreadPoolExecutor(max_workers=len(pids) + 1)
         #     pool.map(get_files_by_pid_thread, pids)
-        for pid in pids:
-            get_files_by_pid_thread(pid)
+        if len(pids) != 0:
+            for pid in pids:
+                get_account_by_pid(pid)
         print(f"完成判断进程对应账号，用时：{time.time() - start_time:.4f} 秒")
 
         # 获取文件夹并分类

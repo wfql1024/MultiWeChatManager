@@ -483,15 +483,15 @@ def open_config_file():
             os.startfile(config_path)
 
 
-def open_last_ver_path():
-    last_ver_path = func_setting.get_wechat_latest_version_path()
-    if os.path.exists(last_ver_path):
+def open_dll_dir_path():
+    dll_dir_path = func_setting.get_wechat_dll_dir_path()
+    if os.path.exists(dll_dir_path):
         # 获取文件夹路径
-        folder_path = os.path.dirname(last_ver_path)
+        folder_path = os.path.dirname(dll_dir_path)
 
         # 打开文件夹
         shell = win32com.client.Dispatch("WScript.Shell")
-        shell.CurrentDirectory = last_ver_path
+        shell.CurrentDirectory = dll_dir_path
         shell.Run(f'explorer /select,"WeChatWin.dll"')
 
 
@@ -687,7 +687,7 @@ class MainWindow:
             self.config_file_menu.add_command(label="打开", command=open_config_file)
             self.config_file_menu.add_command(label="清除", command=self.clear_config_file)
         # 打开主dll所在文件夹
-        self.file_menu.add_command(label="查看DLL", command=open_last_ver_path)
+        self.file_menu.add_command(label="查看DLL", command=open_dll_dir_path)
         # 创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=create_app_lnk)
         # 创建快捷启动
@@ -800,14 +800,14 @@ class MainWindow:
 
         install_path = func_setting.get_wechat_install_path()
         data_path = func_setting.get_wechat_data_path()
-        last_version_path = func_setting.get_wechat_latest_version_path()
+        dll_dir_path = func_setting.get_wechat_dll_dir_path()
 
-        if not install_path or not data_path or not last_version_path:
+        if not install_path or not data_path or not dll_dir_path:
             self.show_setting_error()
         else:
             self.install_path = install_path
             self.data_path = data_path
-            self.last_version_path = last_version_path
+            self.last_version_path = dll_dir_path
 
             screen_size = func_setting.get_setting_from_ini(
                 Config.SETTING_INI_PATH,

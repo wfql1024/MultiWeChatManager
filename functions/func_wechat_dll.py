@@ -12,9 +12,9 @@ from resources import version_config
 
 
 def check_dll():
-    latest_ver_path = func_setting.get_wechat_latest_version_path()
-    dll_path = os.path.join(latest_ver_path, "WeChatWin.dll")
-    current_ver = latest_ver_path.split('[')[1].split(']')[0]
+    dll_dir_path = func_setting.get_wechat_dll_dir_path()
+    dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
+    current_ver = dll_dir_path.split('[')[1].split(']')[0]
     try:
         # 以只读模式打开文件
         with open(dll_path, 'rb') as f:
@@ -77,14 +77,14 @@ def switch_dll():
             return False
 
     # 获取 DLL 路径
-    latest_ver_path = func_setting.get_wechat_latest_version_path()
+    dll_dir_path = func_setting.get_wechat_dll_dir_path()
     # 获取桌面路径
     desktop_path = winshell.desktop()
     # 定义目标路径和文件名
-    dll_path = os.path.join(latest_ver_path, "WeChatWin.dll")
-    bak_path = os.path.join(latest_ver_path, "WeChatWin.dll.bak")
+    dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
+    bak_path = os.path.join(dll_dir_path, "WeChatWin.dll.bak")
     bak_desktop_path = os.path.join(desktop_path, "WeChatWin.dll.bak")
-    current_ver = latest_ver_path.split('[')[1].split(']')[0]
+    current_ver = dll_dir_path.split('[')[1].split(']')[0]
 
     try:
         with open(dll_path, 'r+b') as f:
