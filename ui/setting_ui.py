@@ -255,12 +255,7 @@ class SettingWindow:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
 
     def auto_get_current_ver(self):
-        install_path = func_setting.get_wechat_install_path()
-        version_info = win32api.GetFileVersionInfo(install_path, '\\')
-        version = (f"{win32api.HIWORD(version_info['FileVersionMS'])}."
-                   f"{win32api.LOWORD(version_info['FileVersionMS'])}."
-                   f"{win32api.HIWORD(version_info['FileVersionLS'])}."
-                   f"{win32api.LOWORD(version_info['FileVersionLS'])}")
+        version = func_setting.get_current_ver()
         self.version_var.set(version)
 
     def auto_get_screen_size(self):

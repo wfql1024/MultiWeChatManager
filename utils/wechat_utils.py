@@ -61,6 +61,7 @@ def open_wechat(status):
             Config.INI_SECTION,
             Config.INI_KEY_SUB_EXE,
         )
+        sub_exe = None
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if sub_exe == "WeChatMultiple_Anhkgg.exe":
             sub_exe_process = process_utils.create_process_with_medium_il(
@@ -83,12 +84,19 @@ def open_wechat(status):
                     handle_utils.do_click(button_handle, int(button.rectangle().width() / 2),
                                           int(button.rectangle().height() / 2))
                     time.sleep(1.2)
+        # ————————————————————————————————原生开发————————————————————————————————
+        elif not sub_exe:
+            pids = process_utils.get_process_ids_by_name("WeChat.exe")
+            for pid in pids:
+                handle_utils.close_mutex_by_id(f"{pid}")
+            process_utils.create_process_with_medium_il(wechat_path, None)
 
     wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)
 
     if sub_exe_process:
         sub_exe_process.terminate()
     if wechat_hwnd:
+        print("打开了登录窗口")
         return wechat_hwnd
     else:
         return None
@@ -117,3 +125,7 @@ def logging_in_listener():
         # 检测到出现开始，直接列表再次为空结束
         if flag and len(handles) == 0:
             return
+
+
+if __name__ == '__main__':
+    open_wechat("未开启")

@@ -41,8 +41,6 @@ def get_avatar_from_files(account):
     :param account: 原始微信号
     :return: 头像文件 -> ImageFile
     """
-    # 获取WeChat数据路径
-    wechat_data_path = get_wechat_data_path()
 
     # 构建头像文件路径
     avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")

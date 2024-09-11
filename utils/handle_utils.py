@@ -1,9 +1,12 @@
 import ctypes
+import os.path
 import re
 import subprocess
 import sys
 import time
 import tkinter as tk
+
+from resources import Config
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
@@ -43,22 +46,13 @@ class Tooltip:
 def close_mutex_by_id(process_id):
     # 定义句柄名称
     handle_name = "_WeChat_App_Instance_Identity_Mutex_Name"
-
     start_time = time.time()
+    handle_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'handle.exe')
 
     # 获取句柄信息
-    handle_info = subprocess.check_output(['handle.exe', '-a', handle_name, '-p', process_id]).decode()
-    print(handle_info)
+    handle_info = subprocess.check_output([handle_exe_path, '-a', handle_name, '-p', process_id]).decode()
+    print("完成获取句柄信息")
     print(time.time() - start_time)
-    # # 将句柄信息写入 2.txt
-    # 在powershell中无法直接使用返回的字符串进行正则表达式，所以整了个文件中转
-
-    # with open("2.txt", "w") as f:
-    #     f.write(handle_info)
-    #
-    # # 从 2.txt 读取句柄信息
-    # with open("2.txt", "r") as f:
-    #     handle_info = f.read()
 
     # 匹配 PID 和句柄
     match = re.search(r"pid:\s*(\d+).*?(\w+):\s*\\Sessions", handle_info)
@@ -66,27 +60,16 @@ def close_mutex_by_id(process_id):
         wechat_pid = match.group(1)
         handle = match.group(2)
     else:
-        exit()
-
-    print(wechat_pid)
-    print(handle)
+        return False
+    print("完成匹配 PID 和句柄")
     print(time.time() - start_time)
-
-    # 将 PID 写入 1.txt
-    # with open("1.txt", "w") as f:
-    #     f.write(f"handle: {handle}\n")
-    #     f.write(f"PID: {wechat_pid}\n")
 
     # 尝试关闭句柄
     try:
-        subprocess.run(['handle.exe', '-c', handle, '-p', wechat_pid, '-y'], check=True)
+        subprocess.run([handle_exe_path, '-c', handle, '-p', wechat_pid, '-y'], check=True)
         print(time.time() - start_time)
-        # with open("1.txt", "a") as f:
-        #     f.write(f"run！PID: {wechat_pid}\n")
     except subprocess.CalledProcessError as e:
         print(f"无法关闭句柄 PID: {wechat_pid}，错误信息: {e}\n")
-        # with open("1.txt", "a") as f:
-        #     f.write(f"无法关闭句柄 PID: {wechat_pid}，错误信息: {e}\n")
 
 
 def get_all_child_handles(parent_handle):

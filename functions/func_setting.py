@@ -4,6 +4,7 @@ import re
 import winreg
 
 import psutil
+import win32api
 
 from resources import Config
 from utils import process_utils, debug_utils
@@ -40,6 +41,7 @@ def get_setting_from_ini(ini_filename, section, key, validation_func=None):
         if section in config and key in config[section]:
             current_setting = config[section][key]
             if validation_func is None or validation_func(current_setting):
+                # print(f"{debug_utils.get_call_stack(10)}↓")
                 print(f"{os.path.basename(ini_filename)}[{section}]{key}》》》》》》》》》{current_setting}")
                 return current_setting
     return None
@@ -63,7 +65,8 @@ def save_setting_to_ini(ini_path, section, key, value):
 
     with open(ini_path, 'w') as configfile:
         config.write(configfile)
-        print(f"{debug_utils.get_call_stack(3)}::{os.path.basename(ini_path)}[{section}]{key}《《《《《《《《《{value}")
+        # print(f"{debug_utils.get_call_stack(10)}↓")
+        print(f"{os.path.basename(ini_path)}[{section}]{key}《《《《《《《《《{value}")
 
 
 def get_wechat_install_path_from_process():
@@ -256,6 +259,18 @@ def get_wechat_dll_dir_path():
     # print("——————————所有方法都已测试——————————")
 
     return None
+
+
+def get_current_ver():
+    install_path = get_wechat_install_path()
+    version_info = win32api.GetFileVersionInfo(install_path, '\\')
+    version = (
+        f"{win32api.HIWORD(version_info['FileVersionMS'])}."
+        f"{win32api.LOWORD(version_info['FileVersionMS'])}."
+        f"{win32api.HIWORD(version_info['FileVersionLS'])}."
+        f"{win32api.LOWORD(version_info['FileVersionLS'])}"
+    )
+    return version
 
 
 if __name__ == "__main__":

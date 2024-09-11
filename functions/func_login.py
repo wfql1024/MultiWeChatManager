@@ -23,17 +23,6 @@ def manual_login(status):
     wechat_hwnd = wechat_utils.open_wechat(status)
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")
-        login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
-        login_wnd = login_wnd_details["window"]
-        login_width = login_wnd_details["width"]
-        login_height = login_wnd_details["height"]
-        if 0.734 < login_width / login_height < 0.740:
-            func_setting.save_setting_to_ini(
-                Config.SETTING_INI_PATH,
-                Config.INI_SECTION,
-                Config.INI_KEY_LOGIN_SIZE,
-                f"{login_width}*{login_height}"
-            )
         if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
             print("登录窗口已关闭")
             return True
