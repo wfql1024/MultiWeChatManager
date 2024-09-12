@@ -9,12 +9,14 @@ import win32com
 import win32com.client
 
 from functions import func_setting
-from resources.config import Config
 from utils import handle_utils, wechat_utils
 
 
 class SettingWindow:
     def __init__(self, master, status, on_close_callback=None):
+        self.install_path = None
+        self.data_path = None
+        self.dll_dir_path = None
         self.status = status
         self.master = master
         self.on_close_callback = on_close_callback
@@ -75,7 +77,7 @@ class SettingWindow:
         self.dll_get_button = ttk.Button(master, text="获取", command=self.auto_get_wechat_dll_dir_path)
         self.dll_get_button.grid(row=2, column=2, padx=5, pady=5)
 
-        self.dll_choose_button = ttk.Button(master, text="选择路径", command=self.choose_wechat_latest_version_path)
+        self.dll_choose_button = ttk.Button(master, text="选择路径", command=self.choose_wechat_dll_dir_path)
         self.dll_choose_button.grid(row=2, column=3, padx=5, pady=5)
 
         # 新增第四行 - 当前版本
@@ -125,13 +127,7 @@ class SettingWindow:
         self.auto_get_wechat_dll_dir_path()
         self.auto_get_current_ver()
         self.auto_get_screen_size()
-
-        login_size = func_setting.get_setting_from_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_LOGIN_SIZE,
-        )
-
+        login_size = func_setting.get_login_size_from_ini()
         self.login_size_var.set(login_size)
 
     def on_ok(self):
@@ -141,28 +137,21 @@ class SettingWindow:
             self.master.destroy()
 
     def validate_paths(self):
-        install_path = self.install_path_var.get()
-        data_path = self.data_path_var.get()
-        dll_path = self.dll_path_var.get()
+        self.install_path = self.install_path_var.get()
+        self.data_path = self.data_path_var.get()
+        self.dll_dir_path = self.dll_path_var.get()
 
-        if "获取失败" in install_path or "获取失败" in data_path or "获取失败" in dll_path:
+        if "获取失败" in self.install_path or "获取失败" in self.data_path or "获取失败" in self.dll_dir_path:
             messagebox.showerror("错误", "请确保所有路径都已正确设置")
             return False
         elif not bool(re.match(r'^\d+\*\d+$', self.login_size_var.get())):
             messagebox.showerror("错误", f"请确保填入的尺寸符合\"整数*整数\"的形式")
             return False
-        func_setting.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_LOGIN_SIZE,
-            f"{self.login_size_var.get()}"
-        )
-        func_setting.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_CUR_VER,
-            f"{self.version_var.get()}"
-        )
+        func_setting.save_login_size_to_ini(f"{self.login_size_var.get()}")
+        func_setting.save_wechat_install_path_to_ini(self.install_path)
+        func_setting.save_wechat_data_path_to_ini(self.data_path)
+        func_setting.save_wechat_dll_dir_path_to_ini(self.dll_dir_path)
+
         return True
 
     def auto_get_wechat_dll_dir_path(self):
@@ -172,7 +161,7 @@ class SettingWindow:
         else:
             self.dll_path_var.set("获取失败，请手动选择安装目录下最新版本号文件夹")
 
-    def choose_wechat_latest_version_path(self):
+    def choose_wechat_dll_dir_path(self):
         while True:
             try:
                 # 尝试使用 `filedialog.askdirectory` 方法
@@ -191,10 +180,8 @@ class SettingWindow:
                 except Exception as e:
                     print(f"win32com.client 也失败了: {e}")
                     return
-            if func_setting.is_valid_wechat_dll_dir_path(path):
+            if wechat_utils.is_valid_wechat_dll_dir_path(path):
                 self.dll_path_var.set(path)
-                func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                                 Config.INI_KEY_DLL_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "请选择包含WeChatWin.dll的版本号最新的文件夹")
@@ -212,10 +199,8 @@ class SettingWindow:
             if not path:  # 用户取消选择
                 return
             path = path.replace('\\', '/')
-            if func_setting.is_valid_wechat_install_path(path):
+            if wechat_utils.is_valid_wechat_install_path(path):
                 self.install_path_var.set(path)
-                func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                                 Config.INI_KEY_INSTALL_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "请选择WeChat.exe文件")
@@ -246,16 +231,22 @@ class SettingWindow:
                 except Exception as e:
                     print(f"win32com.client 也失败了: {e}")
                     return
-            if func_setting.is_valid_wechat_data_path(path):
+            if wechat_utils.is_valid_wechat_data_path(path):
                 self.data_path_var.set(path)
-                func_setting.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                                 Config.INI_KEY_DATA_PATH, path)
                 break
             else:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
 
     def auto_get_current_ver(self):
-        version = func_setting.get_current_ver()
+        version = func_setting.update_current_ver()
+        if not version and self.install_path:
+            version_info = win32api.GetFileVersionInfo(self.install_path, '\\')
+            version = (
+                f"{win32api.HIWORD(version_info['FileVersionMS'])}."
+                f"{win32api.LOWORD(version_info['FileVersionMS'])}."
+                f"{win32api.HIWORD(version_info['FileVersionLS'])}."
+                f"{win32api.LOWORD(version_info['FileVersionLS'])}"
+            )
         self.version_var.set(version)
 
     def auto_get_screen_size(self):
@@ -263,12 +254,7 @@ class SettingWindow:
         screen_width = self.master.winfo_screenwidth()
         screen_height = self.master.winfo_screenheight()
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        func_setting.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_SCREEN_SIZE,
-            f"{screen_width}*{screen_height}"
-        )
+        func_setting.save_screen_size_to_ini(f"{screen_width}*{screen_height}")
 
     def auto_get_login_size(self, status):
         wechat_utils.clear_idle_wnd_and_process()
@@ -282,12 +268,7 @@ class SettingWindow:
             login_height = login_wnd_details["height"]
             print(login_width, login_height)
             if 0.734 < login_width / login_height < 0.740:
-                func_setting.save_setting_to_ini(
-                    Config.SETTING_INI_PATH,
-                    Config.INI_SECTION,
-                    Config.INI_KEY_LOGIN_SIZE,
-                    f"{login_width}*{login_height}",
-                )
+                func_setting.save_login_size_to_ini(f"{login_width}*{login_height}")
                 self.login_size_var.set(f"{login_width}*{login_height}")
             login_wnd.close()
 

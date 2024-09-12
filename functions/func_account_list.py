@@ -7,45 +7,7 @@ import psutil
 import functions.func_setting as func_get_path
 import utils.json_utils as json_utils
 from resources.config import Config
-from utils import process_utils
-
-
-def wrap_text(text, max_width):
-    """
-    将文本按指定宽度换行，并且对超过这个长度的进行分两行处理，两行长度尽量相等
-    :param text: 要处理的文本
-    :param max_width: 每行最大字符数
-    :return: 处理后的文本
-    """
-    wrapped_text = ""
-
-    # 对每一段进行处理
-    for i in range(0, len(text), max_width):
-        segment = text[i:i + max_width]
-
-        if len(segment) > max_width:
-            # 如果段落的长度超过了一半，则将其均分成两行
-            middle = (len(segment) + 1) // 2
-            wrapped_text += segment[:middle] + "\n" + segment[middle:] + "\n"
-        else:
-            # 如果长度小于等于max_width // 2，直接添加并换行
-            wrapped_text += segment + "\n"
-
-    return wrapped_text.strip()  # 移除最后的换行符
-
-
-def get_config_status(account):
-    data_path = func_get_path.get_wechat_data_path()
-    if not data_path:
-        return "无法获取配置路径"
-
-    config_path = os.path.join(data_path, "All Users", "config", f"{account}.data")
-    if os.path.exists(config_path):
-        mod_time = os.path.getmtime(config_path)
-        date = datetime.fromtimestamp(mod_time)
-        return f"{date.month}-{date.day} {date.hour:02}:{date.minute:02}"
-    else:
-        return "无配置"
+from utils import process_utils, string_utils
 
 
 class AccountManager:
@@ -126,6 +88,20 @@ class AccountManager:
 
         return logged_in, not_logged_in, wechat_processes
 
+    @staticmethod
+    def get_config_status(account):
+        data_path = func_get_path.get_wechat_data_path()
+        if not data_path:
+            return "无法获取配置路径"
+
+        config_path = os.path.join(data_path, "All Users", "config", f"{account}.data")
+        if os.path.exists(config_path):
+            mod_time = os.path.getmtime(config_path)
+            date = datetime.fromtimestamp(mod_time)
+            return f"{date.month}-{date.day} {date.hour:02}:{date.minute:02}"
+        else:
+            return "无配置"
+
     def update_note(self, account, note):
         self.account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
         if account not in self.account_data:
@@ -146,7 +122,7 @@ class AccountManager:
         else:
             display_name = f"{account}"
 
-        return wrap_text(display_name, 10)
+        return string_utils.balanced_wrap_text(display_name, 10)
 
     def get_account_note(self, account):
         return self.account_data.get(account, {}).get("note", "")

@@ -36,9 +36,9 @@ class ThreadManager:
         self.account_manager = account_manager
         self.condition = threading.Condition()
 
-    def create_config(self, account, test_and_create_config, status, create_main_frame):
+    def create_config_thread(self, account, func_test_and_create_config, status, create_main_frame):
         def thread_func():
-            result = test_and_create_config(account, status)
+            result = func_test_and_create_config(account, status)
             self.master.after(0, _handle_create_config_result, result, create_main_frame)
 
         threading.Thread(target=thread_func).start()
@@ -70,7 +70,7 @@ class ThreadManager:
 
         threading.Thread(target=thread_func).start()
 
-    def login_accounts(self, login, accounts, status, callback):
+    def login_accounts_thread(self, login, accounts, status, callback):
         def thread_func():
             login_thread = threading.Thread(target=login, args=(accounts, status))
             login_thread.start()

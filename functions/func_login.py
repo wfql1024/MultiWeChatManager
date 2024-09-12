@@ -8,7 +8,6 @@ import win32gui
 
 from functions import func_setting
 from functions.func_config import ConfigCreator
-from resources.config import Config
 from utils import handle_utils, wechat_utils
 
 
@@ -60,11 +59,7 @@ def auto_login_accounts(accounts, status):
     wechat_utils.clear_idle_wnd_and_process()
 
     # 检测尺寸设置是否完整
-    login_size = func_setting.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_LOGIN_SIZE
-    )
+    login_size = func_setting.get_login_size_from_ini()
     if not login_size or login_size == "":
         messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
         return False
@@ -81,17 +76,10 @@ def auto_login_accounts(accounts, status):
     count = len(accounts)
 
     # 优先自动获取尺寸，若获取不到从配置中获取
-    screen_width = tk.Tk().winfo_screenwidth()
-    screen_height = tk.Tk().winfo_screenheight()
+    screen_width = int(tk.Tk().winfo_screenwidth())
+    screen_height = int(tk.Tk().winfo_screenheight())
     if not screen_height or not screen_width:
-        screen_width, screen_height = func_setting.get_setting_from_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_SCREEN_SIZE
-        ).split('*')
-    screen_width = int(screen_width)
-    screen_height = int(screen_height)
-
+        screen_width, screen_height = func_setting.get_screen_size_from_ini()
     # 计算一行最多可以显示多少个
     max_column = int(screen_width / login_width)
 

@@ -4,7 +4,7 @@ import sqlite3
 import requests
 
 from functions import func_setting
-from functions.func_decrypt import decrypt_and_copy
+from functions.func_decrypt import decrypt_acc_and_copy_by_pid
 from resources.config import Config
 from utils import json_utils
 
@@ -12,7 +12,7 @@ from utils import json_utils
 def fetch_account_detail(pid, account, before, after):
     before()
     print("开始解密...")
-    decrypt_and_copy(pid, account)
+    decrypt_acc_and_copy_by_pid(pid, account)
     print("连接数据库...")
     user_directory = Config.PROJ_USER_PATH
     db_file = user_directory + rf"/{account}/edit_{account}_MicroMsg.db"
