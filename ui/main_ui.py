@@ -25,7 +25,7 @@ from PIL import ImageDraw
 from win32com.client import Dispatch
 
 from functions import func_config, func_setting, func_wechat_dll, func_login, func_file
-from functions.func_account_list import AccountManager, get_config_status
+from functions.func_account_list import AccountManager
 from functions.func_login import manual_login, auto_login
 from functions.func_setting import get_wechat_data_path
 from resources import Strings
@@ -324,6 +324,7 @@ def png_to_ico(png_path, ico_path):
 
 
 def create_lnk_for_account(account, status):
+    # TODO: 原生下创建快捷开启
     # 获取数据路径
     data_path = func_setting.get_wechat_data_path()
     wechat_path = func_setting.get_wechat_install_path()
@@ -335,14 +336,9 @@ def create_lnk_for_account(account, status):
     target_file = os.path.join(data_path, "All Users", "config", "config.data").replace('/', '\\')
     if status == "已开启":
         process_path_text = f"{wechat_path}"
-
         prefix = "[仅全局下有效]"
     else:
-        sub_exe = func_setting.get_setting_from_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_SUB_EXE,
-        )
+        sub_exe = func_setting.fetch_sub_exe()
         process_path_text = f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}".replace('/', '\\')
         prefix = f"{sub_exe.split('_')[1].split('.')[0]}"
 
@@ -395,11 +391,7 @@ def create_lnk_for_account(account, status):
     if status == "已开启":
         sub_exe_path = func_setting.get_wechat_install_path()
     else:
-        sub_exe = func_setting.get_setting_from_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_SUB_EXE,
-        )
+        sub_exe = func_setting.fetch_sub_exe()
         sub_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, sub_exe)
 
     # 图标文件路径
@@ -491,16 +483,6 @@ def open_dll_dir_path():
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.CurrentDirectory = dll_dir_path
         shell.Run(f'explorer /select,"WeChatWin.dll"')
-
-
-def set_sub_executable(file_name, initialization):
-    func_setting.save_setting_to_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_SUB_EXE,
-        file_name
-    )
-    initialization()
 
 
 def create_app_lnk():
@@ -667,15 +649,15 @@ class MainWindow:
         self.menu_bar = tk.Menu(self.master)
         self.master.config(menu=self.menu_bar)
 
-        # 文件菜单
+        # ————————————————————————————文件菜单————————————————————————————
         self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="文件", menu=self.file_menu)
-        # 创建“用户文件”菜单
+        # >用户文件
         self.user_file_menu = tk.Menu(self.file_menu, tearoff=0)
         self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
         self.user_file_menu.add_command(label="打开", command=open_user_file)
         self.user_file_menu.add_command(label="清除", command=self.clear_user_file)
-        # 创建“配置文件”菜单
+        # >配置文件
         self.config_file_menu = tk.Menu(self.file_menu, tearoff=0)
         if not self.data_path:
             self.file_menu.add_command(label="配置文件  未获取")
@@ -684,93 +666,82 @@ class MainWindow:
             self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
             self.config_file_menu.add_command(label="打开", command=open_config_file)
             self.config_file_menu.add_command(label="清除", command=self.clear_config_file)
-        # 打开主dll所在文件夹
+        # -打开主dll所在文件夹
         self.file_menu.add_command(label="查看DLL", command=open_dll_dir_path)
-        # 创建软件快捷方式
+        # -创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=create_app_lnk)
-        # 创建快捷启动
+        # -创建快捷启动
         self.file_menu.add_command(label="创建快捷启动", command=self.create_multiple_lnk)
 
-        # 编辑菜单
+        # ————————————————————————————编辑菜单————————————————————————————
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
+        # -刷新
         self.edit_menu.add_command(label="刷新", command=self.create_main_frame_and_menu)
 
-        login_size = func_setting.get_setting_from_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_LOGIN_SIZE,
-        )
-
-        # 设置菜单
-        self.status = func_wechat_dll.check_dll()
+        # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
+        # -应用设置
+        login_size = func_setting.get_login_size_from_ini()
         if not login_size or login_size == "" or login_size == "None":
-            self.menu_bar.add_cascade(label="!!!设置", menu=self.settings_menu, foreground='red')
+            self.menu_bar.add_cascade(label="!!!设置", menu=self.settings_menu)
             self.settings_menu.add_command(label="!!!应用设置", command=self.open_settings, foreground='red')
         else:
             self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
             self.settings_menu.add_command(label="应用设置", command=self.open_settings)
-        # ————————————————分割线————————————————
-        # 全局多开子菜单
-        self.settings_menu.add_separator()
+        self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        # -全局多开
+        self.status = func_wechat_dll.check_dll()
         self.settings_menu.add_command(label=f"全局多开 {self.status}", command=self.toggle_patch_mode)
         if self.status == "不可用":
             self.settings_menu.entryconfig(f"全局多开 {self.status}", state="disable")
-        # 多开子程序子菜单
+        # >多开子程序选择
         self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
-        # 获取选定子程序
-        chosen_sub_exe = func_setting.get_setting_from_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_SUB_EXE,
-        )
-        # 若没有选择则默认选择
-        if not chosen_sub_exe or chosen_sub_exe == "":
-            func_setting.save_setting_to_ini(
-                Config.SETTING_INI_PATH,
-                Config.INI_SECTION,
-                Config.INI_KEY_SUB_EXE,
-                Config.DEFAULT_SUB_EXE
-            )
         if self.status == "已开启":
             self.settings_menu.add_cascade(label=f"子程序   不需要", menu=self.sub_executable_menu)
             self.settings_menu.entryconfig(f"子程序   不需要", state="disable")
         else:
+            # 检查选择的子程序，若没有则添加默认
+            chosen_sub_exe = func_setting.fetch_sub_exe()
             self.settings_menu.add_cascade(label=f"子程序     选择", menu=self.sub_executable_menu)
+            # 是否选择了原生
+            if chosen_sub_exe == "原生":
+                self.sub_executable_menu.add_command(label=f'√ 原生')
+            else:
+                self.sub_executable_menu.add_command(
+                    label=f'    原生',
+                    command=partial(func_setting.toggle_sub_executable, '原生', self.delayed_initialization)
+                )
+            self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
+            # 渲染子程序列表菜单
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
-            # 获取 WeChatMultiple_*.exe 的文件列表
-            exe_files = glob.glob(os.path.join(external_res_path, "WeChatMultiple_*.exe"))
-            print(f"获取到子程序：{exe_files}")
+            exe_files = glob.glob(os.path.join(external_res_path, "WeChatMultiple_*.exe"))  # 使用glob匹配 WeChatMultiple_*.exe 的文件列表
             for exe_file in exe_files:
-                # 提取右半部分（* 部分）的内容
                 file_name = os.path.basename(exe_file)
                 right_part = file_name.split('_', 1)[1].rsplit('.exe', 1)[0]  # 提取 `*` 部分
-                # 创建子菜单项
                 if file_name == chosen_sub_exe:
                     self.sub_executable_menu.add_command(
                         label=f'√ {right_part}'
                     )
                 else:
                     self.sub_executable_menu.add_command(
-                        label=f'   {right_part}',
-                        command=partial(set_sub_executable, file_name, self.delayed_initialization)
+                        label=f'    {right_part}',
+                        command=partial(func_setting.toggle_sub_executable, file_name, self.delayed_initialization)
                     )
-        # ————————————————分割线————————————————
-        self.settings_menu.add_separator()
+        self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.delayed_initialization))
 
-        # 帮助菜单
+        # ————————————————————————————帮助菜单————————————————————————————
         self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="帮助", menu=self.help_menu)
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
-                                   command=lambda: webbrowser.open_new("https://www.bilibili.com/video/BV174H1eBE9r/"))
+                                   command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
         self.help_menu.add_command(label="关于", command=self.open_about)
 
-        # 作者标签
+        # ————————————————————————————作者标签————————————————————————————
         self.menu_bar.add_command(label="by 吾峰起浪", state="disabled")
-        self.menu_bar.entryconfigure("by 吾峰起浪", foreground="gray")
+        self.menu_bar.entryconfigure("by 吾峰起浪", foreground="grey")
 
     def create_status_bar(self):
         self.status_var = tk.StringVar()
@@ -796,6 +767,9 @@ class MainWindow:
             os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
             print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
 
+        # 设定一个默认的尺寸和默认的子程序
+        func_setting.save_login_size_to_ini("347*471")
+
         install_path = func_setting.get_wechat_install_path()
         data_path = func_setting.get_wechat_data_path()
         dll_dir_path = func_setting.get_wechat_dll_dir_path()
@@ -807,23 +781,14 @@ class MainWindow:
             self.data_path = data_path
             self.last_version_path = dll_dir_path
 
-            screen_size = func_setting.get_setting_from_ini(
-                Config.SETTING_INI_PATH,
-                Config.INI_SECTION,
-                Config.INI_KEY_SCREEN_SIZE,
-            )
+            screen_size = func_setting.get_screen_size_from_ini()
 
             if not screen_size or screen_size == "":
                 # 获取屏幕和登录窗口尺寸
                 screen_width = self.master.winfo_screenwidth()
                 screen_height = self.master.winfo_screenheight()
                 # 保存屏幕尺寸
-                func_setting.save_setting_to_ini(
-                    Config.SETTING_INI_PATH,
-                    Config.INI_SECTION,
-                    Config.INI_KEY_SCREEN_SIZE,
-                    f"{screen_width}*{screen_height}"
-                )
+                func_setting.save_screen_size_to_ini(f"{screen_width}*{screen_height}")
 
             # 开始创建列表
             self.create_main_frame_and_menu()
@@ -837,19 +802,8 @@ class MainWindow:
         self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
                                           command=self.open_settings, style='Custom.TButton')
         self.settings_button.pack()
-        # 设定一个默认的尺寸和默认的子程序
-        func_setting.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_LOGIN_SIZE,
-            "347*471"
-        )
-        func_setting.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
-            Config.INI_KEY_SUB_EXE,
-            Config.DEFAULT_SUB_EXE
-        )
+        # 检查选择的子程序，若没有则添加默认
+        func_setting.fetch_sub_exe()
 
     def create_main_frame_and_menu(self):
         print("刷新...")
@@ -973,7 +927,7 @@ class MainWindow:
 
     def add_account_row(self, parent_frame, account, is_logged_in):
         display_name = self.account_manager.get_account_display_name(account)
-        config_status = get_config_status(account)
+        config_status = AccountManager.get_config_status(account)
 
         callbacks = {
             'detail': self.open_detail,
@@ -1212,7 +1166,7 @@ class MainWindow:
         ]
         self.master.iconify()  # 最小化主窗口
         try:
-            self.thread_manager.login_accounts(
+            self.thread_manager.login_accounts_thread(
                 func_login.auto_login_accounts,
                 accounts,
                 self.status,
@@ -1274,7 +1228,7 @@ class MainWindow:
 
     def create_config(self, account, status):
 
-        self.thread_manager.create_config(
+        self.thread_manager.create_config_thread(
             account,
             func_config.test_and_create_config,
             status,

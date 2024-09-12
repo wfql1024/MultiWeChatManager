@@ -6,12 +6,11 @@ current_file_dir = os.path.dirname(os.path.abspath(__file__))
 class Config:
     INI_KEY_CUR_VER = 'current_version'
     INI_KEY_DELAY_TIME = 'delay_time'
-    VIDEO_TUTORIAL_LINK = "https://space.bilibili.com/3546733357304606"
     APP_VERSION = "v2.0.8 Beta"
     INI_SECTION = 'default'
     INI_KEY_INSTALL_PATH = 'install_path'
     INI_KEY_DATA_PATH = 'data_path'
-    INI_KEY_DLL_PATH = 'dll_dir_path'
+    INI_KEY_DLL_DIR_PATH = 'dll_dir_path'
     INI_KEY_SCREEN_SIZE = 'screen_size'
     INI_KEY_LOGIN_SIZE = 'login_size'
     INI_KEY_SUB_EXE = 'sub_executable'

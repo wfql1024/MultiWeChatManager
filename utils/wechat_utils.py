@@ -1,17 +1,108 @@
 import getpass
+import os
 import sys
 import time
-
-# set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
-sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
+import winreg
 
 import psutil
 import win32gui
-from pywinauto.controls.hwndwrapper import HwndWrapper
-
 from functions import func_setting
 from resources.config import Config
-from utils import handle_utils, process_utils
+from utils import handle_utils, process_utils, ini_utils
+
+
+def is_valid_wechat_install_path(path) -> bool:
+    if path and path != "":
+        return os.path.exists(path)
+    else:
+        return False
+
+
+def is_valid_wechat_data_path(path) -> bool:
+    if path and path != "":
+        config_data_path = os.path.join(path, "All Users", "config", "config.data").replace('\\', '/')
+        return os.path.isfile(config_data_path)
+    else:
+        return False
+
+
+def is_valid_wechat_dll_dir_path(path) -> bool:
+    if path and path != "":
+        return os.path.exists(os.path.join(path, "WeChatWin.dll"))
+    else:
+        return False
+
+
+def get_wechat_install_path_from_process():
+    for process in psutil.process_iter(['name', 'exe']):
+        if process.name() == 'WeChat.exe':
+            path = process.exe().replace('\\', '/')
+            print(f"通过查找进程方式获取了微信安装地址：{path}")
+            return path
+    return None
+
+
+def get_wechat_install_path_from_machine_register():
+    try:
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                             r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\WeChat")
+        found_path = winreg.QueryValueEx(key, "InstallLocation")[0].replace('\\', '/')
+        winreg.CloseKey(key)
+        print(f"通过注册表方式1获取了微信安装地址：{found_path}")
+        if found_path:
+            return os.path.join(found_path, "WeChat.exe").replace('\\', '/')
+    except WindowsError as e:
+        print(e)
+    return None
+
+
+def get_wechat_install_path_from_user_register():
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Tencent\WeChat")
+        found_path = winreg.QueryValueEx(key, "InstallPath")[0].replace('\\', '/')
+        winreg.CloseKey(key)
+        print(f"通过注册表方式2获取了微信安装地址：{found_path}")
+        if found_path:
+            return os.path.join(found_path, "WeChat.exe").replace('\\', '/')
+    except WindowsError as e:
+        print(e)
+    return None
+
+
+def get_wechat_data_path_from_user_register():
+    try:
+        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Tencent\WeChat", 0, winreg.KEY_READ)
+        value, _ = winreg.QueryValueEx(key, "FileSavePath")
+        winreg.CloseKey(key)
+        value = os.path.join(value, "WeChat Files").replace('\\', '/')
+        return value
+    except WindowsError:
+        pass
+    return None
+
+
+def get_wechat_dll_dir_path_by_memo_maps():
+    pids = process_utils.get_process_ids_by_name("WeChat.exe")
+    if len(pids) == 0:
+        print("没有运行微信。")
+        return None
+    else:
+        process_id = pids[0]
+        try:
+            for f in psutil.Process(process_id).memory_maps():
+                normalized_path = f.path.replace('\\', '/')
+                # print(normalized_path)
+                # 检查路径是否以 data_path 开头
+                if normalized_path.endswith('WeChatWin.dll'):
+                    dll_dir_path = os.path.dirname(normalized_path)
+                    # print(dll_dir_path)
+                    return dll_dir_path
+        except psutil.AccessDenied:
+            print(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
+        except psutil.NoSuchProcess:
+            print(f"进程ID为 {process_id} 的进程不存在或已退出。")
+        except Exception as e:
+            print(f"发生意外错误: {e}")
 
 
 def kill_wechat_multiple_processes():
@@ -56,12 +147,11 @@ def open_wechat(status):
         time.sleep(0.2)
     else:
         # 获取当前选择的多开子程序
-        sub_exe = func_setting.get_setting_from_ini(
+        sub_exe = ini_utils.get_setting_from_ini(
             Config.SETTING_INI_PATH,
             Config.INI_SECTION,
             Config.INI_KEY_SUB_EXE,
         )
-        sub_exe = None
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if sub_exe == "WeChatMultiple_Anhkgg.exe":
             sub_exe_process = process_utils.create_process_with_medium_il(
@@ -79,13 +169,14 @@ def open_wechat(status):
                 button_handle = handle_utils.get_all_child_handles(
                     sub_exe_hwnd
                 )[1]
-                button = HwndWrapper(button_handle)
-                if button:
-                    handle_utils.do_click(button_handle, int(button.rectangle().width() / 2),
-                                          int(button.rectangle().height() / 2))
+                if button_handle:
+                    button_details = handle_utils.get_window_details_from_hwnd(button_handle)
+                    button_cx = int(button_details["width"] / 2)
+                    button_cy = int(button_details["height"] / 2)
+                    handle_utils.do_click(button_handle, button_cx, button_cy)
                     time.sleep(1.2)
         # ————————————————————————————————原生开发————————————————————————————————
-        elif not sub_exe:
+        elif sub_exe == "原生":
             pids = process_utils.get_process_ids_by_name("WeChat.exe")
             for pid in pids:
                 handle_utils.close_mutex_by_id(f"{pid}")
@@ -117,7 +208,7 @@ def logging_in_listener():
                 wechat_wnd_details = handle_utils.get_window_details_from_hwnd(handle)
                 wechat_width = wechat_wnd_details["width"]
                 wechat_height = wechat_wnd_details["height"]
-                # handle_utils.do_click(handle, int(wechat_width * 0.5), int(wechat_height * 0.75))
+                handle_utils.do_click(handle, int(wechat_width * 0.5), int(wechat_height * 0.75))
             else:
                 handles.remove(handle)
 
