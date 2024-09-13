@@ -1,3 +1,4 @@
+import json
 import mmap
 import os
 import shutil
@@ -5,24 +6,43 @@ import time
 from tkinter import messagebox
 
 import psutil
+import requests
 import winshell
 
 from functions import func_setting
-from resources import version_config
+from resources import Strings
 
 
 def check_dll():
     dll_dir_path = func_setting.get_wechat_dll_dir_path()
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
     current_ver = func_setting.update_current_ver()
+    # current_ver = '3.9.12.11'
     try:
         # 以只读模式打开文件
         with open(dll_path, 'rb') as f:
             content = f.read()
 
+        config_data = None
+        response = requests.get(Strings.VER_CONFIG_JSON)
+
+        if response.status_code == 200:
+            try:
+                config_data = json.loads(response.text)
+            except Exception as e:
+                print(f"Failed to fetch config: {e}")
+        else:
+            print(f"Failed to fetch data from GitHub: {response.status_code}")
+
+        if not config_data:
+            return "未获取到"
         # 检查是否包含目标字节序列
-        pattern1 = version_config.OFFSET.get_config(current_ver, "STABLE").pattern
-        pattern2 = version_config.OFFSET.get_config(current_ver, "PATCH").pattern
+        pattern1_hex = config_data[current_ver]["STABLE"]["pattern"]
+        pattern2_hex = config_data[current_ver]["PATCH"]["pattern"]
+
+        # 将十六进制字符串转换为二进制字节序列
+        pattern1 = bytes.fromhex(pattern1_hex)
+        pattern2 = bytes.fromhex(pattern2_hex)
 
         has_pattern1 = pattern1 in content
         has_pattern2 = pattern2 in content
@@ -84,14 +104,26 @@ def switch_dll():
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
     bak_path = os.path.join(dll_dir_path, "WeChatWin.dll.bak")
     bak_desktop_path = os.path.join(desktop_path, "WeChatWin.dll.bak")
-    current_ver = dll_dir_path.split('[')[1].split(']')[0]
+    current_ver = func_setting.update_current_ver()
 
     try:
         with open(dll_path, 'r+b') as f:
             result = None
             mmapped_file = mmap.mmap(f.fileno(), 0)
-            stable_pattern = version_config.OFFSET.get_config(current_ver, "STABLE").pattern
-            patch_pattern = version_config.OFFSET.get_config(current_ver, "PATCH").pattern
+
+            config_data = None
+            response = requests.get(Strings.VER_CONFIG_JSON)
+            try:
+                if response.status_code == 200:
+                    config_data = json.loads(response.text)
+            except Exception as e:
+                print(f"Failed to fetch config: {e}, {response.status_code}")
+
+            stable_pattern_hex = config_data[current_ver]["STABLE"]["pattern"]
+            patch_pattern_hex = config_data[current_ver]["PATCH"]["pattern"]
+
+            stable_pattern = bytes.fromhex(stable_pattern_hex)
+            patch_pattern = bytes.fromhex(patch_pattern_hex)
 
             current_mode = check_dll()
 
@@ -107,7 +139,8 @@ def switch_dll():
             elif current_mode == "未开启":
                 print("当前是稳定模式")
                 if not os.path.exists(bak_path):
-                    messagebox.showinfo("提醒", "当前是您首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin.dll.bak，并也拷贝到桌面，可另外备份保存。")
+                    messagebox.showinfo("提醒",
+                                        "当前是您首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin.dll.bak，并也拷贝到桌面，可另外备份保存。")
                     shutil.copyfile(dll_path, bak_path)
                     shutil.copyfile(dll_path, bak_desktop_path)
                 pos = mmapped_file.find(stable_pattern)
