@@ -6,8 +6,7 @@ from tkinter import messagebox
 import win32con
 import win32gui
 
-from functions import func_setting
-from functions.func_config import ConfigCreator
+from functions import func_setting, func_config
 from utils import handle_utils, wechat_utils
 
 
@@ -100,8 +99,7 @@ def auto_login_accounts(accounts, status):
     # 遍历登录账号
     for j in range(count):
         # 读取配置
-        creator = ConfigCreator(accounts[j])
-        result = creator.use_config()
+        result = func_config.use_config(accounts[j])
         if result:
             print(f"{accounts[j]}:复制配置文件成功")
         else:

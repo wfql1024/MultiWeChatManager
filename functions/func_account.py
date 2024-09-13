@@ -1,13 +1,52 @@
+import base64
 import os
 import time
 from datetime import datetime
 
 import psutil
+from PIL import Image
 
 import functions.func_setting as func_get_path
 import utils.json_utils as json_utils
+from resources import Strings
 from resources.config import Config
 from utils import process_utils, string_utils
+from typing import Tuple, Any
+
+
+def get_acc_avatar_from_files(account):
+    """
+    从本地缓存获取头像
+    :param account: 原始微信号
+    :return: 头像文件 -> ImageFile
+    """
+
+    # 构建头像文件路径
+    avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
+
+    # 检查是否存在对应account的头像
+    if os.path.exists(avatar_path):
+        return Image.open(avatar_path)
+
+    # 如果没有，检查default.jpg
+    default_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
+    if os.path.exists(default_path):
+        return Image.open(default_path)
+
+    # 如果default.jpg也不存在，则将从字符串转换出来
+    try:
+        base64_string = Strings.DEFAULT_AVATAR_BASE64
+        image_data = base64.b64decode(base64_string)
+        with open(default_path, "wb") as f:
+            f.write(image_data)
+        return Image.open(default_path)
+    except FileNotFoundError as e:
+        print("文件路径无效或无法创建文件:", e)
+    except IOError as e:
+        print("图像文件读取失败:", e)
+    except Exception as e:
+        print("所有方法都失败，创建空白头像:", e)
+        return Image.new('RGB', (44, 44), color='white')
 
 
 def get_config_status(account) -> str:
@@ -38,9 +77,6 @@ def update_acc_details_to_json(account, **kwargs) -> None:
     for key, value in kwargs.items():
         account_data[account][key] = value
     json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
-
-
-from typing import Tuple, Any
 
 
 def get_acc_details_from_json(account: str, *args: str) -> Tuple[Any, ...]:

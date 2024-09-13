@@ -9,6 +9,14 @@ from utils import json_utils, wechat_decrypt_utils
 
 
 def fetch_acc_detail_by_pid(pid, account, before, after):
+    """
+    根据账号及对应的pid去获取账号详细信息
+    :param pid: 对应的微信进程id
+    :param account: 账号
+    :param before: 开始前的操作：禁用按钮
+    :param after: 结束后的操作：恢复按钮
+    :return: 无
+    """
     before()
     print("开始解密...")
     wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
@@ -47,6 +55,12 @@ def fetch_acc_detail_by_pid(pid, account, before, after):
                 os.makedirs(os.path.dirname(save_path))
 
             def download_image(img_url, path):
+                """
+                将网址中的图像保存到路径上
+                :param img_url: 网址
+                :param path: 路径
+                :return: 是否成功
+                """
                 try:
                     response = requests.get(img_url.rstrip(r'/0') + r'/132', stream=True)
                     response.raise_for_status()  # 确保请求成功

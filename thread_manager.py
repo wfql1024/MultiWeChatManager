@@ -4,15 +4,6 @@ from tkinter import messagebox
 from functions import func_account
 
 
-def _handle_auto_login_result(account, auto_login_result, create_account_list, bring_window_to_front):
-    if auto_login_result:
-        print("自动登录完成")
-    else:
-        messagebox.showerror("错误", f"{account} 自动登录失败")
-    create_account_list()
-    bring_window_to_front()
-
-
 def _handle_manual_login_result(manual_login_result, create_account_list, bring_window_to_front):
     if manual_login_result:
         print("ThreadManager: 手动登录成功，正在刷新")
@@ -52,16 +43,6 @@ class ThreadManager:
     def _manual_login_thread(self, manual_login_func, status, create_account_list, bring_window_to_front):
         manual_login_result = manual_login_func(status)
         self.master.after(0, _handle_manual_login_result, manual_login_result, create_account_list,
-                          bring_window_to_front)
-
-    def auto_login_account(self, auto_login_func, account, status, create_account_list, bring_window_to_front):
-        self.auto_login_thread = threading.Thread(target=self._auto_login_thread, args=(
-            auto_login_func, account, status, create_account_list, bring_window_to_front))
-        self.auto_login_thread.start()
-
-    def _auto_login_thread(self, auto_login_func, account, status, create_account_list, bring_window_to_front):
-        auto_login_result = auto_login_func(account, status)
-        self.master.after(0, _handle_auto_login_result, account, auto_login_result, create_account_list,
                           bring_window_to_front)
 
     def get_account_list_thread(self, callback):

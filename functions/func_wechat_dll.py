@@ -17,7 +17,6 @@ def check_dll():
     dll_dir_path = func_setting.get_wechat_dll_dir_path()
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
     current_ver = func_setting.update_current_ver()
-    # current_ver = '3.9.12.11'
     try:
         # 以只读模式打开文件
         with open(dll_path, 'rb') as f:

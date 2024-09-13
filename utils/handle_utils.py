@@ -43,6 +43,12 @@ class Tooltip:
             self.tooltip = None
 
 
+def bring_window_to_front(self):
+    self.master.after(200, lambda: self.master.lift())
+    self.master.after(300, lambda: self.master.attributes('-topmost', True))
+    self.master.after(400, lambda: self.master.attributes('-topmost', False))
+    self.master.after(500, lambda: self.master.focus_force())
+
 def close_mutex_by_id(process_id):
     # 定义句柄名称
     handle_name = "_WeChat_App_Instance_Identity_Mutex_Name"
