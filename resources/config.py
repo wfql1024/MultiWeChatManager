@@ -15,6 +15,13 @@ class Config:
     INI_KEY_LOGIN_SIZE = 'login_size'
     INI_KEY_SUB_EXE = 'sub_executable'
 
+    JSON_KEY_NOTE = 'note'
+    JSON_KEY_PID = 'pid'
+    JSON_KEY_NICKNAME = 'nickname'
+    JSON_KEY_ALIAS = 'alias'
+    JSON_KEY_AVATAR_URL = 'avatar_url'
+    JSON_KEY_HAS_MUTEX = 'has_mutex'
+
     DEFAULT_SUB_EXE = 'WeChatMultiple_Anhkgg.exe'
 
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))

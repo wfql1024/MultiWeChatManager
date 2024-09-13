@@ -42,6 +42,23 @@ def log_prints(func):
     return wrapper
 
 
+def get_logger(file):
+    # 定log输出格式，配置同时输出到标准输出与log文件，返回logger这个对象
+    logger = logging.getLogger('mylogger')
+    logger.setLevel(logging.DEBUG)
+    log_format = logging.Formatter(
+        '%(asctime)s - %(filename)s- %(levelname)s - %(message)s')
+    log_fh = logging.FileHandler(file)
+    log_fh.setLevel(logging.DEBUG)
+    log_fh.setFormatter(log_format)
+    log_ch = logging.StreamHandler()
+    log_ch.setLevel(logging.DEBUG)
+    log_ch.setFormatter(log_format)
+    logger.addHandler(log_fh)
+    logger.addHandler(log_ch)
+    return logger
+
+
 # 使用示例
 @log_prints
 def my_function():
@@ -49,4 +66,5 @@ def my_function():
     print("Another test message")
 
 
-my_function()
+if __name__ == '__main__':
+    my_function()

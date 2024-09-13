@@ -1,6 +1,8 @@
 import threading
 from tkinter import messagebox
 
+from functions import func_account
+
 
 def _handle_auto_login_result(account, auto_login_result, create_account_list, bring_window_to_front):
     if auto_login_result:
@@ -29,11 +31,10 @@ def _handle_create_config_result(config_result, create_main_frame):
 
 
 class ThreadManager:
-    def __init__(self, master, account_manager):
+    def __init__(self, master):
         self.auto_login_thread = None
         self.manual_login_thread = None
         self.master = master
-        self.account_manager = account_manager
         self.condition = threading.Condition()
 
     def create_config_thread(self, account, func_test_and_create_config, status, create_main_frame):
@@ -63,9 +64,9 @@ class ThreadManager:
         self.master.after(0, _handle_auto_login_result, account, auto_login_result, create_account_list,
                           bring_window_to_front)
 
-    def get_account_list_thread(self, account_manager, callback):
+    def get_account_list_thread(self, callback):
         def thread_func():
-            result = account_manager.get_account_list()
+            result = func_account.get_account_list()
             self.master.after(0, callback, result)
 
         threading.Thread(target=thread_func).start()

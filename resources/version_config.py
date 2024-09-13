@@ -1,8 +1,3 @@
-class WeChatVersion:
-    V3_9_11_25 = "3.9.11.25"
-    # 可以在这里添加其他版本
-
-
 class OffsetConfig:
     def __init__(self, alias, pattern):
         self.alias = alias

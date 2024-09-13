@@ -1,14 +1,15 @@
 import getpass
 import os
 import sys
+import threading
 import time
 import winreg
 
 import psutil
 import win32gui
-from functions import func_setting
+from functions import func_setting, func_account
 from resources.config import Config
-from utils import handle_utils, process_utils, ini_utils
+from utils import handle_utils, process_utils, ini_utils, json_utils
 
 
 def is_valid_wechat_install_path(path) -> bool:
@@ -178,8 +179,34 @@ def open_wechat(status):
         # ————————————————————————————————原生开发————————————————————————————————
         elif sub_exe == "原生":
             pids = process_utils.get_process_ids_by_name("WeChat.exe")
+            account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)  # 加载 JSON 数据
+
             for pid in pids:
-                handle_utils.close_mutex_by_id(f"{pid}")
+                # 查找 JSON 中哪个 account 的 pid 匹配
+                matching_account = None
+                for account, details in account_data.items():
+                    if details.get("pid") == pid:
+                        matching_account = account
+                        break
+
+                if not matching_account:
+                    handle_utils.close_mutex_by_id(pid)
+                    continue
+
+                has_mutex = account_data[matching_account].get("has_mutex", True)  # 默认为 True
+                if has_mutex:
+                    # 尝试关闭互斥体
+                    success = handle_utils.close_mutex_by_id(pid)
+                    if success:
+                        # 更新 has_mutex 为 False 并保存
+                        account_data[matching_account]["has_mutex"] = False
+                        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+                    else:
+                        print(f"关闭互斥体失败，PID: {pid}")
+                else:
+                    print(f"PID {pid} 已经关闭过互斥体，跳过")
+
+            # 所有操作完成后，执行创建进程的操作
             process_utils.create_process_with_medium_il(wechat_path, None)
 
     wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)

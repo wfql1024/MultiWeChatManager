@@ -1,4 +1,4 @@
-def balanced_wrap_text(text, max_width):
+def balanced_wrap_text(text, max_width) -> str:
     """
     将文本按指定宽度换行，并且对超过这个长度的进行平分两行处理，两行长度尽量相等
     :param text: 要处理的文本

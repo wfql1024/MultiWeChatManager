@@ -6,14 +6,14 @@ import sys
 import time
 import tkinter as tk
 
+import win32api
+import win32con
+import win32gui
+
 from resources import Config
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
-
-import win32api
-import win32con
-import win32gui
 from pywinauto.controls.hwndwrapper import HwndWrapper
 
 
@@ -50,7 +50,7 @@ def close_mutex_by_id(process_id):
     handle_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'handle.exe')
 
     # 获取句柄信息
-    handle_info = subprocess.check_output([handle_exe_path, '-a', handle_name, '-p', process_id]).decode()
+    handle_info = subprocess.check_output([handle_exe_path, '-a', handle_name, '-p', f"{process_id}"]).decode()
     print("完成获取句柄信息")
     print(time.time() - start_time)
 
@@ -60,16 +60,18 @@ def close_mutex_by_id(process_id):
         wechat_pid = match.group(1)
         handle = match.group(2)
     else:
-        return False
+        return True
     print("完成匹配 PID 和句柄")
-    print(time.time() - start_time)
+    print(f"{time.time() - start_time:.4f}秒")
 
     # 尝试关闭句柄
     try:
         subprocess.run([handle_exe_path, '-c', handle, '-p', wechat_pid, '-y'], check=True)
-        print(time.time() - start_time)
+        print(f"关闭用时：{time.time() - start_time:.4f}秒")
+        return True
     except subprocess.CalledProcessError as e:
         print(f"无法关闭句柄 PID: {wechat_pid}，错误信息: {e}\n")
+        return False
 
 
 def get_all_child_handles(parent_handle):

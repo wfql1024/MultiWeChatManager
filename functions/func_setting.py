@@ -5,7 +5,7 @@ import re
 import win32api
 
 from resources import Config
-from utils import ini_utils, wechat_utils
+from utils import ini_utils, wechat_utils, file_utils
 
 
 def save_wechat_install_path_to_ini(value):
@@ -49,9 +49,7 @@ def get_wechat_dll_dir_path_from_ini():
 
 
 def get_wechat_dll_dir_path_by_files():
-    install_path = get_wechat_install_path()  # 获得完整路径
-    # install_path = "D:/software/Tencent/WeChat/WeChat.exe"
-    # 删除路径末尾的 WeChat.exe，保留目录部分
+    install_path = get_wechat_install_path()
     if install_path and install_path != "":
         install_path = os.path.dirname(install_path)
 
@@ -177,14 +175,7 @@ def get_wechat_dll_dir_path():
 def update_current_ver():
     install_path = get_wechat_install_path()
     if os.path.exists(install_path):
-        version_info = win32api.GetFileVersionInfo(install_path, '\\')  # type: ignore
-        version = (
-            f"{win32api.HIWORD(version_info['FileVersionMS'])}."  # type: ignore
-            f"{win32api.LOWORD(version_info['FileVersionMS'])}."  # type: ignore
-            f"{win32api.HIWORD(version_info['FileVersionLS'])}."  # type: ignore
-            f"{win32api.LOWORD(version_info['FileVersionLS'])}"  # type: ignore
-        )
-        return version
+        return file_utils.get_file_version(install_path)
     return None
 
 

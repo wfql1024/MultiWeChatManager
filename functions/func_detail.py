@@ -4,15 +4,14 @@ import sqlite3
 import requests
 
 from functions import func_setting
-from functions.func_decrypt import decrypt_acc_and_copy_by_pid
 from resources.config import Config
-from utils import json_utils
+from utils import json_utils, wechat_decrypt_utils
 
 
-def fetch_account_detail(pid, account, before, after):
+def fetch_acc_detail_by_pid(pid, account, before, after):
     before()
     print("开始解密...")
-    decrypt_acc_and_copy_by_pid(pid, account)
+    wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
     print("连接数据库...")
     user_directory = Config.PROJ_USER_PATH
     db_file = user_directory + rf"/{account}/edit_{account}_MicroMsg.db"
@@ -47,19 +46,19 @@ def fetch_account_detail(pid, account, before, after):
             if not os.path.exists(os.path.dirname(save_path)):
                 os.makedirs(os.path.dirname(save_path))
 
-            def download_image(url, save_path):
+            def download_image(img_url, path):
                 try:
-                    response = requests.get(url.rstrip(r'/0') + r'/132', stream=True)
+                    response = requests.get(img_url.rstrip(r'/0') + r'/132', stream=True)
                     response.raise_for_status()  # 确保请求成功
 
-                    with open(save_path, 'wb') as file:
+                    with open(path, 'wb') as file:
                         for chunk in response.iter_content(chunk_size=8192):
                             file.write(chunk)
 
-                    print(f"图像已成功保存到 {save_path}")
+                    print(f"图像已成功保存到 {path}")
                     return True
-                except requests.RequestException as e:
-                    print(f"下载图像时出错: {e}")
+                except requests.RequestException as re:
+                    print(f"下载图像时出错: {re}")
                     return False
 
             success = None
@@ -82,7 +81,3 @@ def fetch_account_detail(pid, account, before, after):
         json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
         conn.close()
         after()
-
-
-if __name__ == '__main__':
-    fetch_account_detail(35520, "wxid_t2dchu5zw9y022")

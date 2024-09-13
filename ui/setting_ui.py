@@ -4,12 +4,11 @@ import tkinter as tk
 from functools import partial
 from tkinter import ttk, filedialog, messagebox
 
-import win32api
 import win32com
 import win32com.client
 
 from functions import func_setting
-from utils import handle_utils, wechat_utils
+from utils import handle_utils, wechat_utils, file_utils
 
 
 class SettingWindow:
@@ -151,7 +150,6 @@ class SettingWindow:
         func_setting.save_wechat_install_path_to_ini(self.install_path)
         func_setting.save_wechat_data_path_to_ini(self.data_path)
         func_setting.save_wechat_dll_dir_path_to_ini(self.dll_dir_path)
-
         return True
 
     def auto_get_wechat_dll_dir_path(self):
@@ -240,13 +238,7 @@ class SettingWindow:
     def auto_get_current_ver(self):
         version = func_setting.update_current_ver()
         if not version and self.install_path:
-            version_info = win32api.GetFileVersionInfo(self.install_path, '\\')
-            version = (
-                f"{win32api.HIWORD(version_info['FileVersionMS'])}."
-                f"{win32api.LOWORD(version_info['FileVersionMS'])}."
-                f"{win32api.HIWORD(version_info['FileVersionLS'])}."
-                f"{win32api.LOWORD(version_info['FileVersionLS'])}"
-            )
+            version = file_utils.get_file_version(self.install_path)
         self.version_var.set(version)
 
     def auto_get_screen_size(self):

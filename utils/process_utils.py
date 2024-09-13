@@ -1,9 +1,11 @@
-import ctypes
 import subprocess
 import sys
 from ctypes import wintypes
 
 import psutil
+
+import ctypes
+from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
 
 kernel32 = ctypes.windll.kernel32
 OpenProcess = kernel32.OpenProcess
@@ -23,9 +25,6 @@ K32GetModuleFileNameExA.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.HMOD
                                     ctypes.wintypes.DWORD]
 K32GetModuleFileNameExA.restype = ctypes.wintypes.DWORD
 
-import ctypes
-from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
-
 # 加载 Windows API 库
 advapi32 = ctypes.WinDLL('advapi32', use_last_error=True)
 kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
@@ -41,7 +40,6 @@ TokenPrimary = 1
 CREATE_NEW_CONSOLE = 0x00000010
 
 # 函数声明
-OpenProcess = kernel32.OpenProcess
 OpenProcess.restype = HANDLE
 OpenProcess.argtypes = [DWORD, BOOL, DWORD]
 
@@ -67,7 +65,120 @@ GetWindowThreadProcessId.restype = DWORD
 GetWindowThreadProcessId.argtypes = [HANDLE, ctypes.POINTER(DWORD)]
 
 
+def get_process_by_name(process_name):
+    """通过进程名获取单个进程ID和句柄"""
+    for proc in psutil.process_iter(['name', 'pid']):
+        if proc.name().lower() == process_name.lower():
+            pid = proc.pid
+            handle = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
+            return pid, handle
+    return None, None
+
+
+def get_process_handle(pid):
+    """
+    通过pid获得句柄
+    :param pid: 进程id
+    :return: 获得的句柄
+    """
+    handle = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
+
+    if handle == 0 or handle == -1:  # 0 和 -1 都表示失败
+        error = ctypes.get_last_error()
+        print(f"无法获取进程句柄，错误码：{error}")
+        return None
+
+    return handle
+
+
+def get_module_base_address(process_handle, module_name):
+    """
+    获取指定模块（DLL）在目标进程中的基址
+    :param process_handle: 句柄
+    :param module_name: 模块名（如dll）
+    :return: 基址
+    """
+    h_modules = (ctypes.wintypes.HMODULE * 1024)()
+    cb_needed = ctypes.wintypes.DWORD()
+    module_name_bytes = module_name.encode('ascii')
+
+    if K32EnumProcessModules(process_handle, h_modules, ctypes.sizeof(h_modules), ctypes.byref(cb_needed)):
+        for i in range(cb_needed.value // ctypes.sizeof(ctypes.wintypes.HMODULE)):
+            module_path = ctypes.create_string_buffer(260)
+            if K32GetModuleFileNameExA(process_handle, h_modules[i], module_path, ctypes.sizeof(module_path)):
+                if module_path.value.decode('ascii').lower().endswith(module_name_bytes.lower()):
+                    return h_modules[i]
+    return None
+
+
+def get_base_address(process_name, pid, process_handle, module_name):
+    """通过句柄和模块名获得基址"""
+    if not process_handle:
+        print(f"无法打开 {process_name} 的进程 {pid} 及其句柄 {process_handle}")
+        return None
+
+    try:
+        base_address = get_module_base_address(process_handle, module_name)
+        if not base_address:
+            print(f"无法获取 {module_name} 的基址")
+            return None
+
+        return base_address
+    finally:
+        CloseHandle(process_handle)
+
+
+def get_file_from_pid(pid):
+    """通过pid获取进程打开文件的列表"""
+    try:
+        process = psutil.Process(pid)
+        memory_maps = process.memory_maps()
+        paths = [f.path for f in memory_maps]
+    except psutil.NoSuchProcess:
+        print(f"No process found with PID: {pid}")
+        paths = []
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        paths = []
+
+    return paths
+
+
+def iter_open_files(pid):
+    """通过pid获得使用文件列表的迭代器"""
+    try:
+        for f in psutil.Process(pid).memory_maps():
+            yield f.path
+    except psutil.NoSuchProcess:
+        print(f"No process found with PID: {pid}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+
+def process_exists(pid):
+    """判断进程id是否存在"""
+    output = 'default'
+    try:
+        output = subprocess.check_output(['tasklist', '/FI', f'PID eq {pid}'])
+        # 尝试直接使用 utf-8 解码
+        decoded_output = output.decode('utf-8')
+        return str(pid) in decoded_output
+    except UnicodeDecodeError as e:
+        print(f"解码错误：{e}")
+        # 如果 utf-8 解码失败，尝试使用 gbk 解码
+        try:
+            decoded_output = output.decode('GBK')
+            print(decoded_output.strip())
+            return str(pid) in decoded_output
+        except UnicodeDecodeError:
+            print("解码失败，无法解析输出。")
+            return False
+    except subprocess.CalledProcessError:
+        return False
+
+
 def get_process_ids_by_name(process_name):
+    """通过进程名获取所有的进程id"""
     matching_processes = []
     try:
         # 设置创建不显示窗口的子进程标志
@@ -103,105 +214,14 @@ def get_process_ids_by_name(process_name):
     return matching_processes
 
 
-def get_process_by_name(process_name):
-    """通过进程名获取进程ID和句柄"""
-    for proc in psutil.process_iter(['name', 'pid']):
-        if proc.name().lower() == process_name.lower():
-            pid = proc.pid
-            handle = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
-            return pid, handle
-    return None, None
-
-
-def get_process_handle(pid):
-    handle = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
-
-    if handle == 0 or handle == -1:  # 0 和 -1 都表示失败
-        error = ctypes.get_last_error()
-        print(f"无法获取进程句柄，错误码：{error}")
-        return None
-
-    return handle
-
-
-def get_module_base_address(process_handle, module_name):
-    """获取指定模块（DLL）在目标进程中的基址"""
-    hModules = (ctypes.wintypes.HMODULE * 1024)()
-    cbNeeded = ctypes.wintypes.DWORD()
-    module_name_bytes = module_name.encode('ascii')
-
-    if K32EnumProcessModules(process_handle, hModules, ctypes.sizeof(hModules), ctypes.byref(cbNeeded)):
-        for i in range(cbNeeded.value // ctypes.sizeof(ctypes.wintypes.HMODULE)):
-            module_path = ctypes.create_string_buffer(260)
-            if K32GetModuleFileNameExA(process_handle, hModules[i], module_path, ctypes.sizeof(module_path)):
-                if module_path.value.decode('ascii').lower().endswith(module_name.lower()):
-                    return hModules[i]
-    return None
-
-
-def get_base_address(process_name, pid, process_handle, module_name):
-    if not process_handle:
-        print(f"无法打开 {process_name} 的进程 {pid} 及其句柄 {process_handle}")
-        return None
-
-    try:
-        base_address = get_module_base_address(process_handle, module_name)
-        if not base_address:
-            print(f"无法获取 {module_name} 的基址")
-            return None
-
-        return base_address
-    finally:
-        CloseHandle(process_handle)
-
-
-def get_file_from_pid(pid):
-    try:
-        process = psutil.Process(pid)
-        memory_maps = process.memory_maps()
-        paths = [f.path for f in memory_maps]
-    except psutil.NoSuchProcess:
-        print(f"No process found with PID: {pid}")
-        paths = []
-    except Exception as e:
-        print(f"An error occurred: {e}")
-        paths = []
-
-    return paths
-
-
-def iter_open_files(pid):
-    try:
-        for f in psutil.Process(pid).memory_maps():
-            yield f.path
-    except psutil.NoSuchProcess:
-        print(f"No process found with PID: {pid}")
-    except Exception as e:
-        print(f"An error occurred: {e}")
-
-
-def process_exists(pid):
-    output = 'default'
-    try:
-        output = subprocess.check_output(['tasklist', '/FI', f'PID eq {pid}'])
-        # 尝试直接使用 utf-8 解码
-        decoded_output = output.decode('utf-8')
-        return str(pid) in decoded_output
-    except UnicodeDecodeError as e:
-        print(f"解码错误：{e}")
-        # 如果 utf-8 解码失败，尝试使用 gbk 解码
-        try:
-            decoded_output = output.decode('GBK')
-            print(decoded_output.strip())
-            return str(pid) in decoded_output
-        except UnicodeDecodeError:
-            print("解码失败，无法解析输出。")
-            return False
-    except subprocess.CalledProcessError:
-        return False
-
-
 def create_process_with_medium_il(executable, args=None, creation_flags=CREATE_NEW_CONSOLE):
+    """
+    以文件管理器的令牌打开可执行文件
+    :param executable: 可执行文件
+    :param args: 传入的其他参数
+    :param creation_flags: 窗口标志参数
+    :return: 无
+    """
     # 获取 Explorer 的窗口句柄
     h_progman = GetShellWindow()
     if not h_progman:
@@ -235,7 +255,8 @@ def create_process_with_medium_il(executable, args=None, creation_flags=CREATE_N
     process_info = ctypes.create_string_buffer(24)  # PROCESS_INFORMATION结构体的大小
 
     # 创建带有 Explorer 令牌的进程
-    if not CreateProcessWithTokenW(h_token2, 0, executable, args, creation_flags, None, None, startup_info, process_info):
+    if not CreateProcessWithTokenW(h_token2, 0, executable, args, creation_flags, None, None, startup_info,
+                                   process_info):
         kernel32.CloseHandle(h_token2)
         kernel32.CloseHandle(h_token)
         kernel32.CloseHandle(h_process)

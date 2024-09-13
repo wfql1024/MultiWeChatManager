@@ -8,7 +8,7 @@ from tkinter import ttk, messagebox
 import psutil
 from PIL import Image, ImageTk
 
-from functions import func_setting, func_detail
+from functions import func_detail, func_account
 from resources.config import Config
 from resources.strings import Strings
 from utils import json_utils
@@ -16,11 +16,10 @@ from utils.handle_utils import Tooltip
 
 
 class DetailWindow:
-    def __init__(self, master, account, account_manager, update_callback):
+    def __init__(self, master, account, update_callback):
         self.account_data = None
         self.master = master
         self.account = account
-        self.account_manager = account_manager
         self.update_callback = update_callback
         self.tooltip = None  # 初始化 tooltip 属性
 
@@ -75,7 +74,8 @@ class DetailWindow:
         note_label = ttk.Label(self.note_frame, text="备注：")
         note_label.pack(side=tk.LEFT, anchor="w")
 
-        self.note_var = tk.StringVar(value=self.account_manager.get_account_note(account))
+        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+        self.note_var = tk.StringVar(value=account_data.get(account, {}).get("note", ""))
         self.note_entry = ttk.Entry(self.note_frame, textvariable=self.note_var, width=25)
         self.note_entry.pack(side=tk.LEFT, pady=(5, 10), fill=tk.X)
 
@@ -98,7 +98,6 @@ class DetailWindow:
     def load_data_label(self):
         self.account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
         print("尝试获取...")
-        data_path = func_setting.get_wechat_data_path()
 
         # 构建头像文件路径
         avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{self.account}", f"{self.account}.jpg")
@@ -123,10 +122,15 @@ class DetailWindow:
 
         # 更新其他标签
         pid = self.account_data.get(self.account, {}).get("pid", None)
-        self.pid_label.config(text=f"PID: {pid}")
         if not pid:
+            self.pid_label.config(text=f"PID: 未登录")
             self.disable_fetch_button()
         else:
+            has_mutex = self.account_data.get(self.account, {}).get("has_mutex", True)
+            if has_mutex:
+                self.pid_label.config(text=f"PID: {pid}(有互斥体)")
+            else:
+                self.pid_label.config(text=f"PID: {pid}(无互斥体)")
             self.enable_fetch_button()
         self.current_account_label.config(
             text=f"当前微信号: {self.account_data.get(self.account, {}).get("alias", "请获取数据")}")
@@ -151,7 +155,7 @@ class DetailWindow:
     def load_avatar(self, avatar_path, avatar_url):
         try:
             img = Image.open(avatar_path)
-            img = img.resize((44, 44), Image.LANCZOS)
+            img = img.resize((44, 44), Image.LANCZOS)  # type: ignore
             photo = ImageTk.PhotoImage(img)
             self.avatar_label.config(image=photo)
             self.avatar_label.image = photo
@@ -190,12 +194,12 @@ class DetailWindow:
 
         json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, self.account_data)
 
-        func_detail.fetch_account_detail(pid, self.account, self.disable_fetch_button, self.enable_fetch_button)
+        func_detail.fetch_acc_detail_by_pid(pid, self.account, self.disable_fetch_button, self.enable_fetch_button)
         # 刷新显示
         self.load_data_label()
 
     def save_note(self):
         new_note = self.note_var.get().strip()
-        self.account_manager.update_note(self.account, new_note)
+        func_account.update_acc_details_to_json(self.account, note=new_note)
         self.update_callback()
         self.master.destroy()

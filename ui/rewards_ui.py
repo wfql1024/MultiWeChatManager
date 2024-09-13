@@ -34,7 +34,8 @@ class RewardsWindow:
         # 调用方法在frame中显示图片
         self.show_image_in_frame(frame, img)
 
-    def show_image_in_frame(self, frame, img):
+    @staticmethod
+    def show_image_in_frame(frame, img):
         # 将图片转换为Tkinter格式
         tk_img = ImageTk.PhotoImage(img)
 
@@ -42,6 +43,7 @@ class RewardsWindow:
         label = ttk.Label(frame, image=tk_img)
         label.image = tk_img  # 防止图片被垃圾回收
         label.pack()
+
 
 # 创建Tkinter应用窗口
 if __name__ == "__main__":

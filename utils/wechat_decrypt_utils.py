@@ -2,7 +2,6 @@ import binascii
 import ctypes
 import hashlib
 import hmac
-import logging
 import os
 import shutil
 import struct
@@ -17,6 +16,7 @@ from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
 
 from resources.config import Config
+from utils import logger_utils
 
 app_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 IV_SIZE = 16
@@ -26,27 +26,13 @@ DEFAULT_PAGESIZE = 4096
 DEFAULT_ITER = 64000
 
 
-def get_logger(file):
-    # 定log输出格式，配置同时输出到标准输出与log文件，返回logger这个对象
-    logger = logging.getLogger('mylogger')
-    logger.setLevel(logging.DEBUG)
-    log_format = logging.Formatter(
-        '%(asctime)s - %(filename)s- %(levelname)s - %(message)s')
-    log_fh = logging.FileHandler(file)
-    log_fh.setLevel(logging.DEBUG)
-    log_fh.setFormatter(log_format)
-    log_ch = logging.StreamHandler()
-    log_ch.setLevel(logging.DEBUG)
-    log_ch.setFormatter(log_format)
-    logger.addHandler(log_fh)
-    logger.addHandler(log_ch)
-    return logger
-
-
 log_file = os.path.basename(sys.argv[0]).split('.')[0] + '.log'
 cfg_file = os.path.basename(sys.argv[0]).split('.')[0] + '.ini'
 
-mylog = get_logger(log_file)
+
+# 几种内存段可以写入的类型
+MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",
+                            0x08: "PAGE_WRITECOPY"}
 
 
 class MEMORY_BASIC_INFORMATION(Structure):
@@ -59,11 +45,6 @@ class MEMORY_BASIC_INFORMATION(Structure):
         ("Protect", ctypes.c_uint32),
         ("Type", ctypes.c_uint32),
     ]
-
-
-# 几种内存段可以写入的类型
-MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",
-                            0x08: "PAGE_WRITECOPY"}
 
 
 # 第一步：找key -> 1. 判断可写
@@ -129,7 +110,7 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
             f"{win32api.HIWORD(version_info['FileVersionLS'])}."  # type: ignore
             f"{win32api.LOWORD(version_info['FileVersionLS'])}"  # type: ignore
         )
-        mylog.info(f"wechat version：{version}, wechat pid: {pid}")
+        logger_utils.get_logger(log_file).info(f"wechat version：{version}, wechat pid: {pid}")
 
         targetdb = [f.path for f in p.open_files() if f.path[-11:] == 'MicroMsg.db']
         print("targetdb", targetdb)
@@ -144,11 +125,11 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
             shutil.copyfile(targetdb[0], file_mm)
         misc_dbs = [f.path for f in p.open_files() if f.path[-7:] == 'Misc.db']
         if len(misc_dbs) < 1:
-            mylog.error("没有找到微信当前打开的数据文件，是不是你的微信还没有登录？？")
+            logger_utils.get_logger(log_file).error("没有找到微信当前打开的数据文件，是不是你的微信还没有登录？？")
             sys.exit(-1)
 
         db_file = misc_dbs[0]  # 在wechat.exe打开文件列表里面，找到最后文件名是Misc.db的，用这个做db_file,做校验
-        mylog.info(f"db_file:{db_file}")
+        logger_utils.get_logger(log_file).info(f"db_file:{db_file}")
         min_entrypoint = min([m.EntryPoint for m in pm.list_modules() if
                               m.EntryPoint is not None])  # 遍历wechat载入的所有模块（包括它自己），找到所有模块最小的入口地址
         min_base = min([m.lpBaseOfDll for m in pm.list_modules() if
@@ -165,7 +146,7 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
         if not phone_addr:
             # mylog.error(f"没有找到电话类型之一的关键字{phone_types}")
             sys.exit(-1)
-        mylog.info(f"phone_addr:{phone_addr:X}")
+        logger_utils.get_logger(log_file).info(f"phone_addr:{phone_addr:X}")
         # key_addr=pm.pattern_scan_all(hex_key)
         i = phone_addr  # 从找到的电话类型地址，作为基址，从后往前进行查找
         key = None
@@ -263,3 +244,22 @@ def decrypt_db_file_by_pwd(db_file_path, pwd):
             f.write(i[-48:])
 
     os.remove(db_file_path)
+
+
+# 使用pid进行数据库解密
+def decrypt_acc_and_copy_by_pid(pid, account):
+    print("pid:", pid)
+    # 获取pid对应账号的wechat key
+    str_key = get_acc_key_by_pid(pid, account)
+    # mylog.info(str_key)
+    str_key_res = ' '.join([str_key[i:i + 2] for i in range(0, len(str_key), 2)])
+    usr_dir = Config.PROJ_USER_PATH
+    file_mm = usr_dir + rf"\{account}\{account}_MicroMsg.db"
+    print("pwd: file", file_mm)
+    print("str key:", str_key)
+    print("str key res:", str_key_res)
+
+    try:
+        decrypt_db_file_by_pwd(file_mm, str_key_res)
+    except Exception as e:
+        print("decrypt has error:", e)

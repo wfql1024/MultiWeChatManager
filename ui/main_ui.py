@@ -24,8 +24,7 @@ from PIL import Image, ImageTk
 from PIL import ImageDraw
 from win32com.client import Dispatch
 
-from functions import func_config, func_setting, func_wechat_dll, func_login, func_file
-from functions.func_account_list import AccountManager
+from functions import func_config, func_setting, func_wechat_dll, func_login, func_file, func_account
 from functions.func_login import manual_login, auto_login
 from functions.func_setting import get_wechat_data_path
 from resources import Strings
@@ -555,8 +554,7 @@ class MainWindow:
         self.menu_bar = None
         self.master = master
         self.loading_window = loading_window
-        self.account_manager = AccountManager(Config.ACC_DATA_JSON_PATH)
-        self.thread_manager = ThreadManager(master, self.account_manager)
+        self.thread_manager = ThreadManager(master)
         style = ttk.Style()
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
@@ -815,7 +813,7 @@ class MainWindow:
 
         # 使用ThreadManager异步获取账户列表
         try:
-            self.thread_manager.get_account_list_thread(self.account_manager, self.create_account_ui)
+            self.thread_manager.get_account_list_thread(self.create_account_ui)
         finally:
             # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
@@ -926,8 +924,8 @@ class MainWindow:
         self.on_canvas_configure(event)
 
     def add_account_row(self, parent_frame, account, is_logged_in):
-        display_name = self.account_manager.get_account_display_name(account)
-        config_status = AccountManager.get_config_status(account)
+        display_name = func_account.get_account_display_name(account)
+        config_status = func_account.get_config_status(account)
 
         callbacks = {
             'detail': self.open_detail,
@@ -1184,7 +1182,7 @@ class MainWindow:
         settings_window.focus_set()
 
     def toggle_patch_mode(self):
-        logged_in, _, _ = self.account_manager.get_account_list()
+        logged_in, _, _ = func_account.get_account_list()
         if logged_in:
             answer = messagebox.askokcancel(
                 "警告",
@@ -1222,7 +1220,7 @@ class MainWindow:
 
     def open_detail(self, account):
         detail_window = tk.Toplevel(self.master)
-        detail_ui.DetailWindow(detail_window, account, self.account_manager, self.create_main_frame_and_menu)
+        detail_ui.DetailWindow(detail_window, account, self.create_main_frame_and_menu)
         center_window(detail_window)
         detail_window.focus_set()
 
