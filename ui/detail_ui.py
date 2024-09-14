@@ -1,6 +1,7 @@
 # detail_ui.py
 import base64
 import os
+import time
 import tkinter as tk
 import webbrowser
 from tkinter import ttk, messagebox
@@ -8,25 +9,23 @@ from tkinter import ttk, messagebox
 import psutil
 from PIL import Image, ImageTk
 
-from functions import func_detail, func_account
+from functions import func_detail
 from resources.config import Config
 from resources.strings import Strings
-from utils import json_utils
 from utils.handle_utils import Tooltip
 
 
 class DetailWindow:
     def __init__(self, master, account, update_callback):
-        self.account_data = None
         self.master = master
         self.account = account
         self.update_callback = update_callback
         self.tooltip = None  # 初始化 tooltip 属性
 
-        master.title(f"属性 - {account}")
+        master.title(f"属性 - {self.account}")
 
-        window_width = 275
-        window_height = 345
+        window_width = 265
+        window_height = 300
         screen_width = master.winfo_screenwidth()
         screen_height = master.winfo_screenheight()
         x = (screen_width - window_width) // 2
@@ -44,38 +43,43 @@ class DetailWindow:
         frame.pack(fill=tk.BOTH, expand=True)
 
         # 头像
-        self.avatar_frame = ttk.Frame(frame)
-        self.avatar_frame.pack(side=tk.TOP, pady=(5, 10), fill=tk.X)
+        self.top_frame = ttk.Frame(frame)
+        self.top_frame.pack(side=tk.TOP, fill=tk.X)
+        self.avatar_frame = ttk.Frame(self.top_frame)
+        self.avatar_frame.pack(side=tk.LEFT, padx=5, pady=10, fill=tk.X)
         self.avatar_label = ttk.Label(self.avatar_frame)
-        self.avatar_label.pack(side=tk.LEFT)
+        self.avatar_label.pack(side=tk.TOP)
         self.avatar_status_label = ttk.Label(self.avatar_frame, text="")
-        self.avatar_status_label.pack(side=tk.LEFT, padx=(10, 0))
+        self.avatar_status_label.pack(side=tk.BOTTOM)
 
         # PID
-        self.pid_label = ttk.Label(frame, text="PID: ")
-        self.pid_label.pack(side=tk.TOP, pady=(5, 10), anchor="w")
+        self.pid_label = ttk.Label(self.top_frame, text="PID: ")
+        self.pid_label.pack(side=tk.LEFT, padx=5, pady=10, anchor="w")
 
         # 原始微信号
-        self.original_account_label = ttk.Label(frame, text=f"原始微信号: {account}")
+        self.original_account_label = ttk.Label(frame, text=f"原wxid: {self.account}")
         self.original_account_label.pack(side=tk.TOP, pady=(5, 10), anchor="w")
 
         # 当前微信号
-        self.current_account_label = ttk.Label(frame, text="当前微信号: ")
+        self.current_account_label = ttk.Label(frame, text="现wxid: ")
         self.current_account_label.pack(side=tk.TOP, pady=(5, 10), anchor="w")
 
         # 昵称
-        self.nickname_label = ttk.Label(frame, text="昵称: ")
+        self.nickname_label = ttk.Label(frame, text="昵    称: ")
         self.nickname_label.pack(side=tk.TOP, pady=(5, 10), anchor="w")
 
         # 备注
         self.note_frame = ttk.Frame(frame)
         self.note_frame.pack(side=tk.TOP, pady=(5, 10), fill=tk.X, expand=True)
 
-        note_label = ttk.Label(self.note_frame, text="备注：")
+        note_label = ttk.Label(self.note_frame, text="备    注：")
         note_label.pack(side=tk.LEFT, anchor="w")
 
-        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-        self.note_var = tk.StringVar(value=account_data.get(account, {}).get("note", ""))
+        note, = func_detail.get_acc_details_from_json(self.account, note=None)
+        if not note:
+            self.note_var = tk.StringVar(value="")
+        else:
+            self.note_var = tk.StringVar(value=note)
         self.note_entry = ttk.Entry(self.note_frame, textvariable=self.note_var, width=25)
         self.note_entry.pack(side=tk.LEFT, pady=(5, 10), fill=tk.X)
 
@@ -91,54 +95,53 @@ class DetailWindow:
 
         ttk.Frame(frame).pack(fill=tk.BOTH, expand=True)
 
-        print("加载控件完成")
+        print(f"加载控件完成")
 
         self.load_data_label()
 
     def load_data_label(self):
-        self.account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-        print("尝试获取...")
+        print(f"尝试获取...")
 
         # 构建头像文件路径
         avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{self.account}", f"{self.account}.jpg")
-        print("加载对应头像...")
+        print(f"加载对应头像...")
 
         # 加载头像
         if os.path.exists(avatar_path):
-            print("对应头像存在...")
-            avatar_url = self.account_data.get(self.account, {}).get("avatar_url", None)
-            self.load_avatar(avatar_path, avatar_url)
+            print(f"对应头像存在...")
         else:
             # 如果没有，检查default.jpg
-            print("没有对应头像，加载默认头像...")
+            print(f"没有对应头像，加载默认头像...")
             default_path = os.path.join(Config.PROJ_USER_PATH, f"default.jpg")
             base64_string = Strings.DEFAULT_AVATAR_BASE64
             image_data = base64.b64decode(base64_string)
             with open(default_path, "wb") as f:
                 f.write(image_data)
             print(f"默认头像已保存到 {default_path}")
-            avatar_url = self.account_data.get(self.account, {}).get("avatar_url", None)
-            self.load_avatar(default_path, avatar_url)
-
-        # 更新其他标签
-        pid = self.account_data.get(self.account, {}).get("pid", None)
+            avatar_path = default_path
+        avatar_url, alias, nickname, pid = func_detail.get_acc_details_from_json(
+            self.account,
+            avatar_url=None,
+            alias="请获取数据",
+            nickname="请获取数据",
+            pid=None
+        )
+        self.load_avatar(avatar_path, avatar_url)
+        self.current_account_label.config(text=f"现wxid: {alias}")
+        self.nickname_label.config(text=f"昵    称: {nickname}")
+        self.pid_label.config(text=f"PID: {pid}")
         if not pid:
-            self.pid_label.config(text=f"PID: 未登录")
             self.disable_fetch_button()
+            self.pid_label.config(text=f"PID: 未登录")
+            func_detail.update_acc_details_to_json(self.account, has_mutex=True)
         else:
-            has_mutex = self.account_data.get(self.account, {}).get("has_mutex", True)
+            has_mutex, = func_detail.get_acc_details_from_json(self.account, has_mutex=True)
             if has_mutex:
-                self.pid_label.config(text=f"PID: {pid}(有互斥体)")
+                self.pid_label.config(text=f"PID: {pid}\n(有互斥体)")
             else:
-                self.pid_label.config(text=f"PID: {pid}(无互斥体)")
+                self.pid_label.config(text=f"PID: {pid}\n(无互斥体)")
             self.enable_fetch_button()
-        self.current_account_label.config(
-            text=f"当前微信号: {self.account_data.get(self.account, {}).get("alias", "请获取数据")}")
-        self.nickname_label.config(
-            text=f"昵称: {self.account_data.get(self.account, {}).get("nickname", "请获取数据")}")
-
-        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, self.account_data)
-        print("载入数据完成")
+        print(f"载入数据完成")
 
     def disable_fetch_button(self):
         self.fetch_button.state(['disabled'])
@@ -164,20 +167,19 @@ class DetailWindow:
                 self.avatar_label.bind("<Enter>", lambda event: self.avatar_label.config(cursor="hand2"))
                 self.avatar_label.bind("<Leave>", lambda event: self.avatar_label.config(cursor=""))
                 self.avatar_label.bind("<Button-1>", lambda event: webbrowser.open(avatar_url))
-                self.avatar_status_label.config(text="")
+                self.avatar_status_label.forget()
             else:
                 self.avatar_label.bind("<Enter>", lambda event: self.avatar_label.config(cursor=""))
                 self.avatar_label.bind("<Leave>", lambda event: self.avatar_label.config(cursor=""))
                 self.avatar_label.unbind("<Button-1>")
-                self.avatar_status_label.config(text="头像未更新")
+                self.avatar_status_label.config(text="未更新")
         except Exception as e:
             print(f"Error loading avatar: {e}")
             self.avatar_label.config(text="无头像")
 
     def fetch_data(self):
-        self.account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
 
-        pid = self.account_data.get(self.account, {}).get("pid", "")
+        pid, = func_detail.get_acc_details_from_json(self.account, pid=None)
         if not pid:
             self.disable_fetch_button()
             messagebox.showinfo("提示", "未检测到该账号登录")
@@ -187,12 +189,9 @@ class DetailWindow:
             psutil.Process(pid)
         except psutil.NoSuchProcess:
             print(f"No process found with PID: {pid}")
-            json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, self.account_data)
             self.disable_fetch_button()
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
-
-        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, self.account_data)
 
         func_detail.fetch_acc_detail_by_pid(pid, self.account, self.disable_fetch_button, self.enable_fetch_button)
         # 刷新显示
@@ -200,6 +199,9 @@ class DetailWindow:
 
     def save_note(self):
         new_note = self.note_var.get().strip()
-        func_account.update_acc_details_to_json(self.account, note=new_note)
+        if new_note == "":
+            func_detail.update_acc_details_to_json(self.account, note=None)
+        else:
+            func_detail.update_acc_details_to_json(self.account, note=new_note)
         self.update_callback()
         self.master.destroy()

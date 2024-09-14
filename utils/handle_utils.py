@@ -49,6 +49,7 @@ def bring_window_to_front(self):
     self.master.after(400, lambda: self.master.attributes('-topmost', False))
     self.master.after(500, lambda: self.master.focus_force())
 
+
 def close_mutex_by_id(process_id):
     # 定义句柄名称
     handle_name = "_WeChat_App_Instance_Identity_Mutex_Name"
@@ -57,17 +58,18 @@ def close_mutex_by_id(process_id):
 
     # 获取句柄信息
     handle_info = subprocess.check_output([handle_exe_path, '-a', handle_name, '-p', f"{process_id}"]).decode()
-    print("完成获取句柄信息")
-    print(time.time() - start_time)
+    print(f"完成获取句柄信息")
+    print(f"{time.time() - start_time}")
 
     # 匹配 PID 和句柄
     match = re.search(r"pid:\s*(\d+).*?(\w+):\s*\\Sessions", handle_info)
     if match:
         wechat_pid = match.group(1)
         handle = match.group(2)
+        print(f"找到互斥体hwnd:{handle}")
     else:
+        print(f"没有互斥体")
         return True
-    print("完成匹配 PID 和句柄")
     print(f"{time.time() - start_time:.4f}秒")
 
     # 尝试关闭句柄
@@ -115,7 +117,7 @@ def do_click(handle, cx, cy):  # 第四种，可后台
     print(f"要点击的handle：{handle}")
     win32api.SendMessage(handle, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, long_position)  # 模拟鼠标按下
     win32api.SendMessage(handle, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)  # 模拟鼠标弹起
-    print("模拟点击按钮")
+    print(f"模拟点击按钮")
 
 
 def find_all_windows(class_name, window_title):
@@ -147,7 +149,7 @@ def get_window_details_from_hwnd(hwnd):
     """通过句柄获取窗口的尺寸和位置"""
     w = HwndWrapper(hwnd)
     if w.handle == hwnd:
-        print(w.handle)
+        print(f"{w.handle}")
         return {
             "window": w,
             "handle": w.handle,

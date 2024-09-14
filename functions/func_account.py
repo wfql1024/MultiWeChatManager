@@ -6,12 +6,10 @@ from datetime import datetime
 import psutil
 from PIL import Image
 
-import functions.func_setting as func_get_path
-import utils.json_utils as json_utils
-from resources import Strings
+from functions import func_detail, func_setting
 from resources.config import Config
+from resources.strings import Strings
 from utils import process_utils, string_utils
-from typing import Tuple, Any
 
 
 def get_acc_avatar_from_files(account):
@@ -49,13 +47,13 @@ def get_acc_avatar_from_files(account):
         return Image.new('RGB', (44, 44), color='white')
 
 
-def get_config_status(account) -> str:
+def get_config_status(account, data_path) -> str:
     """
     通过账号的配置状态
+    :param data_path: 微信数据存储路径
     :param account: 账号
     :return: 配置状态
     """
-    data_path = func_get_path.get_wechat_data_path()
     if not data_path:
         return "无法获取配置路径"
 
@@ -68,47 +66,18 @@ def get_config_status(account) -> str:
         return "无配置"
 
 
-def update_acc_details_to_json(account, **kwargs) -> None:
-    """更新账户信息到 JSON"""
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-    if account not in account_data:
-        account_data[account] = {}
-    # 遍历 kwargs 中的所有参数，并更新到 account_data 中
-    for key, value in kwargs.items():
-        account_data[account][key] = value
-    json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
-
-
-def get_acc_details_from_json(account: str, *args: str) -> Tuple[Any, ...]:
-    """
-    根据用户输入的变量名，获取对应的账户信息
-    :param account: 账户名
-    :param args: 需要获取的变量名（如 'note', 'nickname', 'alias'）
-    :return: 包含所请求数据的元组
-    """
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-    account_info = account_data.get(account, {})
-
-    # 根据 args 中传递的变量名，返回对应的值
-    result = tuple(account_info.get(arg, None) for arg in args)
-
-    return result
-
-
 def get_account_display_name(account) -> str:
     """
     获取账号的展示名
     :param account: 微信账号
     :return: 展示在界面的名字
     """
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-    account_info = account_data.get(account, {})
     # 依次查找 note, nickname, alias，找到第一个不为 None 的值
     display_name = next(
         (
-            account_info.get(key)
+            value
             for key in ("note", "nickname", "alias")
-            if account_info.get(key)
+            if (value := func_detail.get_acc_details_from_json(account, **{key: None})[0]) is not None
         ),
         account
     )
@@ -156,7 +125,7 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
             print(f"发生意外错误: {e}")
 
     start_time = time.time()
-    data_path = func_get_path.get_wechat_data_path()
+    data_path = func_setting.get_wechat_data_path()
     if not data_path:
         return None, None, None
 
@@ -179,15 +148,21 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
     logged_in = list(logged_in_wxids & folders)
     not_logged_in = list(folders - logged_in_wxids)
 
-    print("logged_in", logged_in)
-    print("not_logged_in", not_logged_in)
+    print(f"logged_in", logged_in)
+    print(f"not_logged_in", not_logged_in)
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
     pid_dict = dict(wechat_processes)
     for acc in logged_in + not_logged_in:
-        # 如果找不到 acc 对应的 PID，存入空字符串 ""
-        update_acc_details_to_json(acc, pid=pid_dict.get(acc, ""))
+        # 如果找不到 acc 对应的 PID，存入None
+        old_pid, = func_detail.get_acc_details_from_json(acc, pid=None)
+        new_pid = pid_dict.get(acc, None)
+        # 登录状态未改变
+        if old_pid == new_pid:
+            pass
+        else:
+            func_detail.update_acc_details_to_json(acc, pid=new_pid, has_mutex=True)
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
 
@@ -195,4 +170,5 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
 
 
 if __name__ == '__main__':
-    pass
+    note = func_detail.get_acc_details_from_json('wxid_t2dchu5zw9y022', note=None)[0]
+    print(note)

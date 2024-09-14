@@ -1,11 +1,39 @@
 import os
 import sqlite3
-
-import requests
+from typing import Tuple, Any
 
 from functions import func_setting
 from resources.config import Config
-from utils import json_utils, wechat_decrypt_utils
+from utils import json_utils, wechat_decrypt_utils, image_utils
+
+
+def update_acc_details_to_json(account, **kwargs) -> None:
+    """更新账户信息到 JSON"""
+    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+    if account not in account_data:
+        account_data[account] = {}
+    # 遍历 kwargs 中的所有参数，并更新到 account_data 中
+    for key, value in kwargs.items():
+        account_data[account][key] = value
+        print(f"更新[{account}][{key}]:{value}")
+    json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+
+
+def get_acc_details_from_json(account: str, **kwargs) -> Tuple[Any, ...]:
+    """
+    根据用户输入的变量名，获取对应的账户信息
+    :param account: 账户名
+    :param kwargs: 需要获取的变量名及其默认值（如 note="", nickname=None）
+    :return: 包含所请求数据的元组
+    """
+    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+    account_info = account_data.get(account, {})
+    result = tuple()
+    for key, default in kwargs.items():
+        result += (account_info.get(key, default),)
+        print(f"获取[{account}][{key}]：{account_info.get(key, default)}")
+    print(f"└—————————————————————————————————————————")
+    return result
 
 
 def fetch_acc_detail_by_pid(pid, account, before, after):
@@ -31,7 +59,6 @@ def fetch_acc_detail_by_pid(pid, account, before, after):
         if os.path.isdir(os.path.join(data_path, folder))
     ) - excluded_folders
     for folder in folders:
-        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
         conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
         sql_contact = f"SELECT UserName, Alias, NickName FROM 'Contact' WHERE UserName = '{folder}';"
@@ -40,58 +67,37 @@ def fetch_acc_detail_by_pid(pid, account, before, after):
             cursor.execute(sql_contact)
             contact_results = cursor.fetchall()
             user_name, alias, nickname = contact_results[0]
-            if alias == "":
-                account_data[user_name]["alias"] = user_name
-            else:
-                account_data[user_name]["alias"] = alias
-            account_data[user_name]["nickname"] = nickname
-
             cursor.execute(sql_contact_head_img_url)
             avatar_results = cursor.fetchall()
             usr_name, url = avatar_results[0]
-            account_data[usr_name]["avatar_url"] = url
+            # alias的存储比较特殊，如果用户没有重新改过微信名，那么表中alias为空，但是软件希望alias存储的是当前的
+            # 因此，若alias是空的，则原始名就是当前名
+            update_acc_details_to_json(user_name, alias=alias, nickname=nickname, avatar_url=url)
+            if alias == "":
+                update_acc_details_to_json(user_name, alias=user_name)
+
             save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
+
             if not os.path.exists(os.path.dirname(save_path)):
                 os.makedirs(os.path.dirname(save_path))
 
-            def download_image(img_url, path):
-                """
-                将网址中的图像保存到路径上
-                :param img_url: 网址
-                :param path: 路径
-                :return: 是否成功
-                """
-                try:
-                    response = requests.get(img_url.rstrip(r'/0') + r'/132', stream=True)
-                    response.raise_for_status()  # 确保请求成功
-
-                    with open(path, 'wb') as file:
-                        for chunk in response.iter_content(chunk_size=8192):
-                            file.write(chunk)
-
-                    print(f"图像已成功保存到 {path}")
-                    return True
-                except requests.RequestException as re:
-                    print(f"下载图像时出错: {re}")
-                    return False
-
             success = None
-
+            # 若不是当前账号且本地无缓存，才会下载
             if usr_name != account:
                 if not os.path.exists(save_path):
-                    success = download_image(url, save_path)
+                    success = image_utils.download_image(url, save_path)
+                else:
+                    print("已有缓存，不需要下载")
+                    success = True
+            # 是当前账号，直接下载更新
             else:
-                success = download_image(url, save_path)
+                success = image_utils.download_image(url, save_path)
 
-            if success:
-                # 如果需要，这里可以添加额外的处理逻辑
-                pass
-            else:
-                # 处理下载失败的情况
-                print("无法下载图像，可能是不需要下载吧")
+            if not success:
+                print("无法下载图像")
+
         except Exception as e:
             print("sql executed have some error", e)
 
-        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
         conn.close()
         after()

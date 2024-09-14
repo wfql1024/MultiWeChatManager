@@ -1,10 +1,7 @@
 # main_ui.py
-import base64
 import glob
 import os
 import queue
-import shutil
-import subprocess
 import sys
 import time
 import tkinter as tk
@@ -14,19 +11,10 @@ from tkinter import messagebox
 from tkinter import ttk
 
 import psutil
-import win32api
-import win32com
-import win32con
-import win32gui
-import win32ui
-import winshell
-from PIL import Image, ImageTk
-from PIL import ImageDraw
-from win32com.client import Dispatch
+from PIL import ImageTk
 
 from functions import func_config, func_setting, func_wechat_dll, func_login, func_file, func_account
-from functions.func_login import manual_login, auto_login
-from functions.func_setting import get_wechat_data_path
+from functions.func_login import manual_login
 from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
@@ -37,20 +25,27 @@ from utils.handle_utils import center_window, Tooltip
 
 class RedirectText:
     """
-    用以传送打印到窗口状态栏的类
+    用以传送打印到窗口状态栏的类，将输出按行分割处理。
     """
 
     def __init__(self, text_var, message_queue):
         self.text_var = text_var
         self.message_queue = message_queue
-        self.original_stdout = sys.stdout
+        self.original_stdout = sys.stdout  # 保存原始标准输出
 
     def write(self, text):
-        self.message_queue.put(" " + text)  # 将文本放入队列
+        # 按行分割输入的文本
+        lines = text.splitlines()
+
+        for line in lines:
+            self.message_queue.put(" " + line)  # 将每行文本放入队列
+
+        # 如果输出中有多行内容，依然继续在控制台输出
         if self.original_stdout:
-            self.original_stdout.write(text)  # 继续在控制台显示
+            self.original_stdout.write(text)
 
     def flush(self):
+        # 确保标准输出的缓冲区被清空
         self.original_stdout.flush()
 
 
@@ -77,18 +72,7 @@ class AccountRow:
 
         # 复选框
         self.checkbox_var = tk.BooleanVar(value=False)
-        if is_logged_in:
-            self.checkbox = tk.Checkbutton(
-                self.row_frame,
-                # command=self.update_logged_in_top_checkbox_callback,
-                variable=self.checkbox_var
-            )
-        else:
-            self.checkbox = tk.Checkbutton(
-                self.row_frame,
-                # command=self.update_not_logged_in_top_checkbox_callback,
-                variable=self.checkbox_var
-            )
+        self.checkbox = tk.Checkbutton(self.row_frame,variable=self.checkbox_var)
         self.checkbox.pack(side=tk.LEFT)
 
         # 头像标签
@@ -143,7 +127,7 @@ class AccountRow:
 
         # 头像绑定详情事件
         self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
-        print(f"内部：加载{account}界面用时{time.time() - self.start_time:.4f}秒")
+        print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
 
     def disable_button_and_add_tip(self, button, text):
         """
@@ -296,6 +280,7 @@ class MainWindow:
 
     def delayed_initialization(self):
         """延迟加载，等待路径检查"""
+        print(f"初始化检查.........................................................")
         self.master.after(200, self.finalize_initialization)
         self.check_and_init()
 
@@ -427,6 +412,7 @@ class MainWindow:
 
     def create_status_bar(self):
         """创建状态栏"""
+        print(f"加载状态栏.........................................................")
         self.status_var = tk.StringVar()
         self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
                                    height=1)
@@ -491,14 +477,18 @@ class MainWindow:
 
     def create_main_frame_and_menu(self):
         """加载或刷新主界面和菜单栏"""
-        print("刷新...")
+        print(f"刷新.........................................................")
         # 菜单也刷新
+        print(f"加载菜单栏.........................................................")
         self.create_menu_bar()
+
+        print(f"加载主界面.........................................................")
         self.start_time = time.time()
         self.edit_menu.entryconfig("刷新", state="disabled")
         print(f"初始化，已用时：{time.time() - self.start_time:.4f}秒")
 
         # 使用ThreadManager异步获取账户列表
+        print(f"获取登录状态.........................................................")
         try:
             self.thread_manager.get_account_list_thread(self.create_account_ui)
         finally:
@@ -510,6 +500,7 @@ class MainWindow:
 
     def create_account_ui(self, result):
         """渲染主界面账号列表"""
+        print(f"渲染账号列表.........................................................")
         logged_in, not_logged_in, wechat_processes = result
         self.wechat_processes = wechat_processes
 
@@ -613,8 +604,9 @@ class MainWindow:
 
     def add_account_row(self, parent_frame, account, is_logged_in):
         """渲染账号所在行"""
+        print(f"渲染{account}.........................................................")
         display_name = func_account.get_account_display_name(account)
-        config_status = func_account.get_config_status(account)
+        config_status = func_account.get_config_status(account, self.data_path)
 
         callbacks = {
             'detail': self.open_detail,

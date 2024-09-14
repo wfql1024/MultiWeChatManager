@@ -1,3 +1,4 @@
+import requests
 import win32api
 import win32con
 import win32gui
@@ -34,6 +35,28 @@ def create_round_corner_image(img, radius):
 
     img.putalpha(alpha)
     return img
+
+
+def download_image(img_url, path):
+    """
+    将网址中的图像保存到路径上
+    :param img_url: 网址
+    :param path: 路径
+    :return: 是否成功
+    """
+    try:
+        response = requests.get(img_url.rstrip(r'/0') + r'/132', stream=True)
+        response.raise_for_status()  # 确保请求成功
+
+        with open(path, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+
+        print(f"图像已成功保存到 {path}")
+        return True
+    except requests.RequestException as re:
+        print(f"下载图像时出错: {re}")
+        return False
 
 
 def png_to_ico(png_path, ico_path):

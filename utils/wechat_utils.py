@@ -1,13 +1,12 @@
 import getpass
 import os
-import sys
-import threading
 import time
 import winreg
 
 import psutil
 import win32gui
-from functions import func_setting, func_account
+
+from functions import func_setting
 from resources.config import Config
 from utils import handle_utils, process_utils, ini_utils, json_utils
 
@@ -85,7 +84,7 @@ def get_wechat_data_path_from_user_register():
 def get_wechat_dll_dir_path_by_memo_maps():
     pids = process_utils.get_process_ids_by_name("WeChat.exe")
     if len(pids) == 0:
-        print("没有运行微信。")
+        print(f"没有运行微信。")
         return None
     else:
         process_id = pids[0]
@@ -199,6 +198,7 @@ def open_wechat(status):
                     success = handle_utils.close_mutex_by_id(pid)
                     if success:
                         # 更新 has_mutex 为 False 并保存
+                        print(f"该进程没有互斥体或已关闭互斥体")
                         account_data[matching_account]["has_mutex"] = False
                         json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
                     else:
@@ -214,7 +214,7 @@ def open_wechat(status):
     if sub_exe_process:
         sub_exe_process.terminate()
     if wechat_hwnd:
-        print("打开了登录窗口")
+        print(f"打开了登录窗口")
         return wechat_hwnd
     else:
         return None

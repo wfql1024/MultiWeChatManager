@@ -6,6 +6,7 @@ import tkinter as tk
 
 from ui.loading_ui import LoadingWindow
 from ui.main_ui import MainWindow
+from utils import print_override
 
 
 def elevate():
@@ -19,7 +20,8 @@ def elevate():
             if hinstance <= 32:
                 return False
             return True
-        except:
+        except Exception as e:
+            print(e)
             return False
 
 
@@ -49,6 +51,7 @@ def main():
 
 
 if __name__ == "__main__":
+    print_override.test()
     if not is_admin():
         print("当前没有管理员权限，尝试获取...")
         if not elevate():

@@ -4,13 +4,8 @@ import shutil
 import sys
 from tkinter import messagebox
 
-import win32api
 import win32com
-import win32con
-import win32gui
-import win32ui
 import winshell
-from PIL import Image
 from win32com.client import Dispatch
 
 from functions import func_setting

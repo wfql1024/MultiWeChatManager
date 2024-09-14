@@ -1,11 +1,10 @@
+import ctypes
 import subprocess
 import sys
 from ctypes import wintypes
+from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
 
 import psutil
-
-import ctypes
-from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
 
 kernel32 = ctypes.windll.kernel32
 OpenProcess = kernel32.OpenProcess
@@ -192,15 +191,15 @@ def get_process_ids_by_name(process_name):
             ['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/FO', 'CSV', '/NH'],
             startupinfo=startupinfo
         )
-        print(origin_output)
+        print(f"{origin_output}")
 
         try:
             output = origin_output.decode('utf-8').strip()
         except UnicodeDecodeError as e:
             print(f"解码错误：{e}")
-            print(origin_output.decode('GBK').strip())
+            print(f"{origin_output.decode('GBK').strip()}")
             return []  # 或者根据需求返回其他值或执行其他逻辑
-        print(output)
+        # print(f"{debug_utils.get_call_stack_indent()}{output}")
 
         # 解析输出并获取进程 ID
         for line in output.split('\n'):
@@ -267,7 +266,7 @@ def create_process_with_medium_il(executable, args=None, creation_flags=CREATE_N
     kernel32.CloseHandle(h_token)
     kernel32.CloseHandle(h_process)
 
-    print("Process started successfully.")
+    print(f"Process started successfully.")
 
     # 获取 PROCESS_INFORMATION 结构体
     pi = ctypes.cast(process_info, ctypes.POINTER(ctypes.c_void_p))

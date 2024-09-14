@@ -6,7 +6,7 @@ from functions import func_account
 
 def _handle_manual_login_result(manual_login_result, create_account_list, bring_window_to_front):
     if manual_login_result:
-        print("ThreadManager: 手动登录成功，正在刷新")
+        print(f"ThreadManager: 手动登录成功，正在刷新")
     else:
         messagebox.showerror("错误", "手动登录失败，请重试")
     create_account_list()
@@ -15,9 +15,9 @@ def _handle_manual_login_result(manual_login_result, create_account_list, bring_
 
 def _handle_create_config_result(config_result, create_main_frame):
     if config_result:
-        print("ThreadManager: 配置创建成功")
+        print(f"ThreadManager: 配置创建成功")
     else:
-        print("ThreadManager: 配置创建失败")
+        print(f"ThreadManager: 配置创建失败")
     create_main_frame()
 
 

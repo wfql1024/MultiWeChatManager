@@ -1,24 +1,42 @@
-def balanced_wrap_text(text, max_width) -> str:
+def balanced_wrap_text(text, max_width=10) -> str:
     """
-    将文本按指定宽度换行，并且对超过这个长度的进行平分两行处理，两行长度尽量相等
+    将文本按指定宽度尽量平分两行处理，超过 max_width 的部分尽量让上行更长。
     :param text: 要处理的文本
     :param max_width: 每行最大字符数
     :return: 处理后的文本
     """
-    wrapped_text = ""
+    # 如果文本长度小于等于 max_width，直接返回文本
+    if len(text) <= max_width:
+        return text
 
-    # 对每一段进行处理
-    while len(text) > max_width:
-        # 获取超过 max_width 的段落
-        segment = text[:max_width]
-        text = text[max_width:]
+    # 计算平分点，使得上行尽量更长
+    middle = (len(text) + 1) // 2
 
-        # 计算分割点，平分成两行
-        middle = (len(segment) + 1) // 2
-        wrapped_text += segment[:middle] + "\n" + segment[middle:] + "\n"
+    # 将文本平分为两行
+    return text[:middle] + "\n" + text[middle:]
 
-    # 对剩余不足 max_width 的部分直接输出
-    if len(text) > 0:
-        wrapped_text += text
 
-    return wrapped_text.strip()  # 移除最后的换行符
+if __name__ == '__main__':
+    print(balanced_wrap_text("a"))
+    print(balanced_wrap_text("ab"))
+    print(balanced_wrap_text("abc"))
+    print(balanced_wrap_text("abcd"))
+    print(balanced_wrap_text("abcde"))
+    print(balanced_wrap_text("abcdef"))
+    print(balanced_wrap_text("abcdefg"))
+    print(balanced_wrap_text("abcdefgh"))
+    print(balanced_wrap_text("abcdefghi"))
+    print(balanced_wrap_text("abcdefghij"))
+    print(balanced_wrap_text("abcdefghijk"))
+    print(balanced_wrap_text("abcdefghijkl"))
+    print(balanced_wrap_text("abcdefghijklm"))
+    print(balanced_wrap_text("abcdefghijklmn"))
+    print(balanced_wrap_text("abcdefghijklmno"))
+    print(balanced_wrap_text("abcdefghijklmnop"))
+    print(balanced_wrap_text("abcdefghijklmnopq"))
+    print(balanced_wrap_text("abcdefghijklmnopqr"))
+    print(balanced_wrap_text("abcdefghijklmnopqrs"))
+    print(balanced_wrap_text("abcdefghijklmnopqrst"))
+
+
+

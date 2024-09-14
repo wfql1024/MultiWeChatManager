@@ -2,8 +2,6 @@
 import os
 import re
 
-import win32api
-
 from resources import Config
 from utils import ini_utils, wechat_utils, file_utils
 
@@ -66,7 +64,7 @@ def get_wechat_dll_dir_path_by_files():
     # 只有一个文件夹，直接返回
     if len(version_folders) == 1:
         dll_dir = version_folders[0].replace('\\', '/')
-        print(dll_dir)
+        print(f"{dll_dir}")
         return dll_dir
 
     # 使用正则表达式匹配 1-5 个数字组成的版本号
@@ -95,12 +93,16 @@ def get_wechat_dll_dir_path_by_files():
 
 
 def get_screen_size_from_ini():
-    screen_width, screen_height = ini_utils.get_setting_from_ini(
+    result = ini_utils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
         Config.INI_SECTION,
         Config.INI_KEY_SCREEN_SIZE
-    ).split('*')
-    return int(screen_width), int(screen_height)
+    )
+    if not result or result == "":
+        return None
+    else:
+        screen_width, screen_height = result.split('*')
+        return int(screen_width), int(screen_height)
 
 
 def get_login_size_from_ini():

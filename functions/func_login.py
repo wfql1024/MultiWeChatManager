@@ -22,10 +22,10 @@ def manual_login(status):
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")
         if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
-            print("登录窗口已关闭")
+            print(f"登录窗口已关闭")
             return True
     else:
-        print("打开失败，请重试！")
+        print(f"打开失败，请重试！")
         return False
     return True
 
@@ -87,10 +87,10 @@ def auto_login_accounts(accounts, status):
 
     # 若账号个数超过最多显示个数，则只创建最多显示个数的位置列表
     if count > max_column:
-        print("不能一行显示")
+        print(f"不能一行显示")
         get_wnd_positions(max_column)
     else:
-        print("可以一行显示")
+        print(f"可以一行显示")
         get_wnd_positions(count)
 
     start_time = time.time()
@@ -123,7 +123,7 @@ def auto_login_accounts(accounts, status):
                     wechat_handles.add(wechat_hwnd)
                     break
                 if time.time() > end_time:
-                    print("超时！换下一个账号")
+                    print(f"超时！换下一个账号")
                     break
 
         # 横坐标算出完美的平均位置

@@ -54,7 +54,6 @@ def create_config(account):
 
     try:
         if os.path.exists(dest_path):
-            print("到这了")
             os.remove(dest_path)
 
         shutil.copy2(source_path, dest_path, follow_symlinks=False)
