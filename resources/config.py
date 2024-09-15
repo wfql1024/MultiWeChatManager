@@ -32,3 +32,4 @@ class Config:
     SETTING_INI_PATH = fr'{PROJ_USER_PATH}\setting.ini'
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\SunnyMultiWxMng.ico'
     REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\Rewards.png'
+    VER_CONFIG_JSON_PATH = fr'{PROJ_USER_PATH}\version_config.json'

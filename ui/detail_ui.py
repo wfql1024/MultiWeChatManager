@@ -25,7 +25,7 @@ class DetailWindow:
         master.title(f"属性 - {self.account}")
 
         window_width = 265
-        window_height = 300
+        window_height = 345
         screen_width = master.winfo_screenwidth()
         screen_height = master.winfo_screenheight()
         x = (screen_width - window_width) // 2

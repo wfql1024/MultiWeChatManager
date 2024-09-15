@@ -170,8 +170,8 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
                 # print("这个指针指向的区域不能写，那也跳过")
                 continue
             key = pm.read_bytes(key_addr, 32)
-            if key.count(0x00) >= 5:  # 如果一个key里面有5个0x00的话，就很不像是一个sqlite的key，就跳过
-                continue
+            # if key.count(0x00) >= 5:  # 如果一个key里面有5个0x00的话，就很不像是一个sqlite的key，就跳过
+            #     continue
             if check_sqlite_pass(db_file, key):
                 str_key = binascii.hexlify(key).decode()
                 # mylog.info(f"found key pointer addr:{i:X}, key_addr:{key_addr:X}")

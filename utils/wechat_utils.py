@@ -6,7 +6,7 @@ import winreg
 import psutil
 import win32gui
 
-from functions import func_setting
+from functions import func_setting, func_detail
 from resources.config import Config
 from utils import handle_utils, process_utils, ini_utils, json_utils
 
@@ -137,12 +137,10 @@ def open_wechat(status):
     """
     sub_exe_process = None
     wechat_path = func_setting.get_wechat_install_path()
-    current_user = getpass.getuser()
     if not wechat_path:
         return None
 
     if status == "已开启":
-        print(current_user)
         process_utils.create_process_with_medium_il(wechat_path, None)
         time.sleep(0.2)
     else:
@@ -209,7 +207,7 @@ def open_wechat(status):
             # 所有操作完成后，执行创建进程的操作
             process_utils.create_process_with_medium_il(wechat_path, None)
 
-    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)
+    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 4)
 
     if sub_exe_process:
         sub_exe_process.terminate()
@@ -217,6 +215,13 @@ def open_wechat(status):
         print(f"打开了登录窗口")
         return wechat_hwnd
     else:
+        print(f"没有打开窗口，尝试二次打开")
+        process_utils.create_process_with_medium_il(wechat_path, None)
+        time.sleep(0.2)
+        wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 4)
+        if wechat_hwnd:
+            print(f"打开了登录窗口")
+            return wechat_hwnd
         return None
 
 
@@ -246,4 +251,9 @@ def logging_in_listener():
 
 
 if __name__ == '__main__':
-    open_wechat("未开启")
+    pass
+
+
+
+
+

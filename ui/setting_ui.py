@@ -106,7 +106,7 @@ class SettingWindow:
         self.login_size_label.grid(row=5, column=0, padx=5, pady=5, sticky="w")
 
         self.login_size_var = tk.StringVar()
-        self.login_size_entry = tk.Entry(master, textvariable=self.login_size_var, width=70)
+        self.login_size_entry = tk.Entry(master, textvariable=self.login_size_var, state='readonly', width=70)
         self.login_size_entry.grid(row=5, column=1, padx=5, pady=5, sticky="we")
 
         self.login_size_get_button = ttk.Button(master, text="获取",
@@ -262,6 +262,8 @@ class SettingWindow:
             if 0.734 < login_width / login_height < 0.740:
                 func_setting.save_login_size_to_ini(f"{login_width}*{login_height}")
                 self.login_size_var.set(f"{login_width}*{login_height}")
+            else:
+                self.login_size_var.set(f"347*471")
             login_wnd.close()
 
 

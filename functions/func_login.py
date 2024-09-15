@@ -118,8 +118,9 @@ def auto_login_accounts(accounts, status):
             print(f"{accounts[j]}:非对应窗口，继续等待")
             end_time = time.time() + 8
             while True:
-                wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)
+                wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 0.1)
                 if wechat_hwnd not in wechat_handles:
+                    # 确保打开了新的微信登录窗口
                     wechat_handles.add(wechat_hwnd)
                     break
                 if time.time() > end_time:
@@ -130,16 +131,18 @@ def auto_login_accounts(accounts, status):
         new_left = positions[j % max_column][0]
         # 纵坐标由居中位置稍向上偏移，然后每轮完一行，位置向下移动一个登录窗口宽度的距离
         new_top = positions[j % max_column][1] - int(login_width / 2) + int(j / max_column) * login_width
-        # do_click(wechat_hwnd, int(login_width * 0.5), int(login_height * 0.75))
+
+        # 只调整窗口的位置，不改变大小
         win32gui.SetWindowPos(
             wechat_hwnd,
             win32con.HWND_TOP,
             new_left,
             new_top,
-            int(login_width),
-            int(login_height),
-            win32con.SWP_SHOWWINDOW
+            0,  # 宽度设置为 0 表示不改变
+            0,  # 高度设置为 0 表示不改变
+            win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
         )
+
         print(f"登录到第{j + 1}个账号用时：{time.time() - start_time:.4f}秒")
 
     # 如果有，关掉多余的多开器
@@ -150,7 +153,12 @@ def auto_login_accounts(accounts, status):
     for h in handles:
         handle_utils.do_click(h, int(login_width * 0.5), int(login_height * 0.75))
     for h in handles:
-        handle_utils.do_click(h, int(login_width * 0.5), int(login_height * 0.75))
+        try:
+            cx, cy = handle_utils.get_center_pos_by_handle_and_title(h, "进入微信")
+            handle_utils.do_click(h, int(cx), int(cy))
+        except TypeError as e:
+            print(e)
+            print("没有按钮，应该是点过啦~")
 
     # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
     end_time = time.time() + 20

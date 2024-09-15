@@ -72,7 +72,7 @@ class AccountRow:
 
         # 复选框
         self.checkbox_var = tk.BooleanVar(value=False)
-        self.checkbox = tk.Checkbutton(self.row_frame,variable=self.checkbox_var)
+        self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
         self.checkbox.pack(side=tk.LEFT)
 
         # 头像标签
@@ -329,8 +329,8 @@ class MainWindow:
         else:
             self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
             self.config_file_menu.add_command(label="打开", command=func_file.open_config_file)
-            self.config_file_menu.add_command(label="清除", command=partial(func_file.clear_config_file,
-                                                                            self.create_main_frame_and_menu))
+            self.config_file_menu.add_command(label="清除",
+                                              command=partial(func_file.clear_config_file, self.create_main_frame_and_menu))
         # -打开主dll所在文件夹
         self.file_menu.add_command(label="查看DLL", command=func_file.open_dll_dir_path)
         # -创建软件快捷方式
@@ -359,7 +359,7 @@ class MainWindow:
         # -全局多开
         self.status = func_wechat_dll.check_dll()
         self.settings_menu.add_command(label=f"全局多开 {self.status}", command=self.toggle_patch_mode)
-        if self.status == "不可用":
+        if self.status == "不可用" or self.status.startswith("错误"):
             self.settings_menu.entryconfig(f"全局多开 {self.status}", state="disable")
         # >多开子程序选择
         self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
@@ -436,9 +436,6 @@ class MainWindow:
         if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
             os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
             print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
-
-        # 设定一个默认的尺寸和默认的子程序
-        func_setting.save_login_size_to_ini("347*471")
 
         install_path = func_setting.get_wechat_install_path()
         data_path = func_setting.get_wechat_data_path()
@@ -904,4 +901,3 @@ class MainWindow:
         finally:
             # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
-

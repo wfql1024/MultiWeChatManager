@@ -10,7 +10,7 @@ import requests
 import winshell
 
 from functions import func_setting
-from resources import Strings
+from resources import Strings, Config
 
 
 def check_dll():
@@ -21,49 +21,76 @@ def check_dll():
         # 以只读模式打开文件
         with open(dll_path, 'rb') as f:
             content = f.read()
-
         config_data = None
-        response = requests.get(Strings.VER_CONFIG_JSON)
-
-        if response.status_code == 200:
+        # 判断文件是否存在
+        if not os.path.exists(Config.VER_CONFIG_JSON_PATH):
+            print(f"本地没有版本对照表, 正从此处下载： {Strings.VER_CONFIG_JSON}...")
+            # 下载JSON文件并保存到指定位置
             try:
-                config_data = json.loads(response.text)
+                # 设置2秒超时时间
+                response = requests.get(Strings.VER_CONFIG_JSON, timeout=2)
+                if response.status_code == 200:
+                    try:
+                        with open(Config.VER_CONFIG_JSON_PATH, 'w', encoding='utf-8') as config_file:
+                            config_file.write(response.text)  # 将下载的JSON保存到文件
+                        config_data = json.loads(response.text)  # 加载JSON数据
+                    except Exception as e:
+                        return f"错误：加载失败: {e}"
+                else:
+                    return f"错误：获取失败: {response.status_code}"
+            except requests.exceptions.Timeout:
+                return "错误：超时"
             except Exception as e:
-                print(f"Failed to fetch config: {e}")
+                return f"错误：{e}"
         else:
-            print(f"Failed to fetch data from GitHub: {response.status_code}")
-
+            # 文件存在时，读取本地文件
+            with open(Config.VER_CONFIG_JSON_PATH, 'r', encoding='utf-8') as f:
+                try:
+                    config_data = json.load(f)
+                except Exception as e:
+                    return f"错误：读取失败: {e}"
+        # 继续处理 config_data
         if not config_data:
-            return "未获取到"
+            return "错误：没有数据"
         # 检查是否包含目标字节序列
         pattern1_hex = config_data[current_ver]["STABLE"]["pattern"]
         pattern2_hex = config_data[current_ver]["PATCH"]["pattern"]
-
         # 将十六进制字符串转换为二进制字节序列
         pattern1 = bytes.fromhex(pattern1_hex)
         pattern2 = bytes.fromhex(pattern2_hex)
-
+        # 根据检测结果返回相应的状态
         has_pattern1 = pattern1 in content
         has_pattern2 = pattern2 in content
-
-        # 根据检测结果返回相应的状态
         if has_pattern1 and not has_pattern2:
             return "未开启"
         elif has_pattern2 and not has_pattern1:
             return "已开启"
         elif has_pattern1 and has_pattern2:
-            return "两条都有，不可用"
+            return "错误：匹配到多条"
         else:
             return "不可用"
-
     except PermissionError:
-        return "权限不足，无法检查 DLL 文件。"
-
+        return "错误：权限不足，无法检查 DLL 文件。"
     except FileNotFoundError:
-        return "未找到 DLL 文件，请检查路径。"
-
+        return "错误：未找到 DLL 文件，请检查路径。"
     except Exception as e:
-        return f"发生错误: {str(e)}"
+        try:
+            # 设置2秒超时时间
+            response = requests.get(Strings.VER_CONFIG_JSON, timeout=2)
+            if response.status_code == 200:
+                try:
+                    with open(Config.VER_CONFIG_JSON_PATH, 'w', encoding='utf-8') as config_file:
+                        config_file.write(response.text)  # 将下载的JSON保存到文件
+                    config_data = json.loads(response.text)  # 加载JSON数据
+                except Exception as e:
+                    return f"错误：加载失败: {e}"
+            else:
+                return f"错误：获取失败: {response.status_code}"
+        except requests.exceptions.Timeout:
+            return "错误：超时"
+        except Exception as e:
+            return f"错误：{e}"
+        return f"错误: {str(e)}"
 
 
 def switch_dll():

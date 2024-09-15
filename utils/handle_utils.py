@@ -11,6 +11,7 @@ import win32con
 import win32gui
 
 from resources import Config
+from pywinauto import Application
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
@@ -149,7 +150,7 @@ def get_window_details_from_hwnd(hwnd):
     """通过句柄获取窗口的尺寸和位置"""
     w = HwndWrapper(hwnd)
     if w.handle == hwnd:
-        print(f"{w.handle}")
+        # print(f"{w.handle}")
         return {
             "window": w,
             "handle": w.handle,
@@ -202,3 +203,38 @@ def close_window_by_name(window_name):
     login_window = win32gui.FindWindow(window_name, None)
     if login_window:
         win32gui.PostMessage(login_window, win32con.WM_CLOSE, 0, 0)
+
+
+def get_center_pos_by_handle_and_title(handle, title, control_type="Button"):
+    """获取指定控件中点的相对位置"""
+    # 连接到应用程序窗口
+    app = Application(backend="uia").connect(handle=handle)
+
+    # 获取主窗口对象
+    main_window = app.window(handle=handle)
+
+    # 查找 "进入微信" 按钮
+    wechat_button = main_window.child_window(title=title, control_type=control_type)
+
+    if wechat_button.exists():
+        # 获取主窗口的矩形区域（绝对位置）
+        main_window_rect = main_window.rectangle()
+
+        # 获取按钮的矩形区域（绝对位置）
+        button_rect = wechat_button.rectangle()
+
+        # 计算按钮相对于主窗口的相对位置
+        relative_x = button_rect.left - main_window_rect.left
+        relative_y = button_rect.top - main_window_rect.top
+        relative_center_x = button_rect.mid_point().x - main_window_rect.left
+        relative_center_y = button_rect.mid_point().y - main_window_rect.top
+
+        print(f"相对于主窗口的左上角位置: ({relative_x}, {relative_y})")
+        print(f"相对于主窗口的中心位置: ({relative_center_x}, {relative_center_y})")
+        return relative_center_x, relative_center_y
+    else:
+        print("Button '进入微信' not found!")
+
+
+if __name__ == '__main__':
+    get_center_pos_by_handle_and_title(662940, "进入微信")
