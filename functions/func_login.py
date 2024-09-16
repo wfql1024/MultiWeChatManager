@@ -6,8 +6,8 @@ from tkinter import messagebox
 import win32con
 import win32gui
 
-from functions import func_setting, func_config
-from utils import handle_utils, wechat_utils
+from functions import func_setting, func_config, subfunc_wechat, func_file
+from utils import handle_utils, process_utils
 
 
 def manual_login(status):
@@ -16,10 +16,14 @@ def manual_login(status):
     :param status: 状态
     :return: 成功与否
     """
-    wechat_utils.clear_idle_wnd_and_process()
+    # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
+    subfunc_wechat.clear_idle_wnd_and_process()
     time.sleep(0.5)
-    wechat_hwnd = wechat_utils.open_wechat(status)
+    func_file.clear_all_wechat_in_json() and func_file.update_all_wechat_in_json()
+    subfunc_wechat.open_wechat(status, dict())
+    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 4)
     if wechat_hwnd:
+        func_file.set_all_wechat_values_to_false()
         print(f"打开了登录窗口{wechat_hwnd}")
         if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
             print(f"登录窗口已关闭")
@@ -30,17 +34,14 @@ def manual_login(status):
     return True
 
 
-def auto_login(account, status):
-    return auto_login_accounts([account], status)
-
-
 def auto_login_accounts(accounts, status):
     """
-    对选择的账号，进行
-    :param accounts:
-    :param status:
-    :return:
+    对选择的账号，进行全自动登录
+    :param accounts: 选择的账号列表
+    :param status: 是否全局多开
+    :return: 是否成功
     """
+
     def get_wnd_positions(n):
         # 实际的间隔设置
         actual_gap_width = int((screen_width - n * login_width) / (n + 1))
@@ -54,8 +55,12 @@ def auto_login_accounts(accounts, status):
             positions.append((x + i * (login_width + actual_gap_width), y))
         print(positions)
 
-    # 关闭闲置的子程序和登录窗口
-    wechat_utils.clear_idle_wnd_and_process()
+    if len(accounts) == 0:
+        return False
+    # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
+    subfunc_wechat.clear_idle_wnd_and_process()
+    time.sleep(0.5)
+    func_file.clear_all_wechat_in_json() and func_file.update_all_wechat_in_json()
 
     # 检测尺寸设置是否完整
     login_size = func_setting.get_login_size_from_ini()
@@ -69,11 +74,6 @@ def auto_login_accounts(accounts, status):
     login_width = int(login_width)
     login_height = int(login_height)
 
-    # 登录账号个数
-    if len(accounts) == 0:
-        return False
-    count = len(accounts)
-
     # 优先自动获取尺寸，若获取不到从配置中获取
     screen_width = int(tk.Tk().winfo_screenwidth())
     screen_height = int(tk.Tk().winfo_screenheight())
@@ -84,8 +84,8 @@ def auto_login_accounts(accounts, status):
 
     # 存放登录窗口的起始位置的列表
     positions = []
-
     # 若账号个数超过最多显示个数，则只创建最多显示个数的位置列表
+    count = len(accounts)
     if count > max_column:
         print(f"不能一行显示")
         get_wnd_positions(max_column)
@@ -106,26 +106,32 @@ def auto_login_accounts(accounts, status):
             print(f"{accounts[j]}:复制配置文件失败")
             break
 
+        pids = process_utils.get_process_ids_by_name("WeChat.exe")
+        print(f"获取进程列表用时：{time.time() - start_time:.4f}秒")
+        has_mutex_dict = dict()
+        for pid in pids:
+            # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
+            has_mutex, = func_file.get_acc_details_from_json("all_wechat", **{f"{pid}": True})
+            print(f"判断互斥体是否已经被关闭：{time.time() - start_time:.4f}秒")
+            if has_mutex:
+                # 尝试关闭互斥体
+                func_file.update_acc_details_to_json("all_wechat", **{f"{pid}": True})
+                has_mutex_dict.update({pid: has_mutex})
+
+        subfunc_wechat.open_wechat(status, has_mutex_dict)
         # 等待打开窗口
-        wechat_hwnd = wechat_utils.open_wechat(status)
-        if wechat_hwnd is None:
-            messagebox.showerror("错误", "打不开登录窗口")
-            return False
-        if wechat_hwnd not in wechat_handles:
-            print(f"{accounts[j]}:打开了登录窗口{wechat_hwnd}")
-            wechat_handles.add(wechat_hwnd)
-        else:
-            print(f"{accounts[j]}:非对应窗口，继续等待")
-            end_time = time.time() + 8
-            while True:
-                wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 0.1)
-                if wechat_hwnd not in wechat_handles:
-                    # 确保打开了新的微信登录窗口
-                    wechat_handles.add(wechat_hwnd)
-                    break
-                if time.time() > end_time:
-                    print(f"超时！换下一个账号")
-                    break
+        end_time = time.time() + 8
+        while True:
+            wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 1)
+            if wechat_hwnd not in wechat_handles:
+                # 确保打开了新的微信登录窗口
+                wechat_handles.add(wechat_hwnd)
+                print(f"打开窗口成功：{wechat_hwnd}")
+                func_file.set_all_wechat_values_to_false()
+                break
+            if time.time() > end_time:
+                print(f"超时！换下一个账号")
+                break
 
         # 横坐标算出完美的平均位置
         new_left = positions[j % max_column][0]
@@ -133,29 +139,32 @@ def auto_login_accounts(accounts, status):
         new_top = positions[j % max_column][1] - int(login_width / 2) + int(j / max_column) * login_width
 
         # 只调整窗口的位置，不改变大小
-        win32gui.SetWindowPos(
-            wechat_hwnd,
-            win32con.HWND_TOP,
-            new_left,
-            new_top,
-            0,  # 宽度设置为 0 表示不改变
-            0,  # 高度设置为 0 表示不改变
-            win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
-        )
+        try:
+            win32gui.SetWindowPos(
+                wechat_hwnd,
+                win32con.HWND_TOP,
+                new_left,
+                new_top,
+                0,  # 宽度设置为 0 表示不改变
+                0,  # 高度设置为 0 表示不改变
+                win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+            )
+        except Exception as e:
+            print(e)
 
         print(f"登录到第{j + 1}个账号用时：{time.time() - start_time:.4f}秒")
 
     # 如果有，关掉多余的多开器
-    wechat_utils.kill_wechat_multiple_processes()
+    subfunc_wechat.kill_wechat_multiple_processes()
 
     # 两轮点击所有窗口的登录，防止遗漏
-    handles = handle_utils.find_all_windows("WeChatLoginWndForPC", "微信")
+    handles = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC", "微信")
     for h in handles:
-        handle_utils.do_click(h, int(login_width * 0.5), int(login_height * 0.75))
+        handle_utils.do_click_in_window(h, int(login_width * 0.5), int(login_height * 0.75))
     for h in handles:
         try:
             cx, cy = handle_utils.get_center_pos_by_handle_and_title(h, "进入微信")
-            handle_utils.do_click(h, int(cx), int(cy))
+            handle_utils.do_click_in_window(h, int(cx), int(cy))
         except TypeError as e:
             print(e)
             print("没有按钮，应该是点过啦~")
@@ -163,7 +172,7 @@ def auto_login_accounts(accounts, status):
     # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
     end_time = time.time() + 20
     while True:
-        hs = handle_utils.find_all_windows("WeChatLoginWndForPC", "微信")
+        hs = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC", "微信")
         if len(hs) == 0:
             return True
         if time.time() > end_time:

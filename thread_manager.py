@@ -58,4 +58,5 @@ class ThreadManager:
             login_thread.start()
             login_thread.join()
             self.master.after(0, callback)
+
         threading.Thread(target=thread_func).start()

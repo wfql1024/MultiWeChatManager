@@ -9,7 +9,8 @@ class Strings:
                    "https://blog.51cto.com/u_16213427/7225602\n"
                    "https://www.cnblogs.com/flyinghou/p/14606383.html\n"
                    "https://www.52pojie.cn/thread-1951224-1-1.html\n"
-                   "https://blog.csdn.net/qq411633267/article/details/56291270")
+                   "https://blog.csdn.net/qq411633267/article/details/56291270\n"
+                   "https://github.com/yihleego/pywinhandle")
     GITHUB_REPO = "https://github.com/wfql1024/MultiWeChatManager"
     BILIBILI_SPACE = "https://space.bilibili.com/3546733357304606"
     VIDEO_TUTORIAL_LINK = "https://www.bilibili.com/video/BV174H1eBE9r"

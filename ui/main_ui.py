@@ -7,7 +7,7 @@ import time
 import tkinter as tk
 import webbrowser
 from functools import partial
-from tkinter import messagebox
+from tkinter import messagebox, scrolledtext
 from tkinter import ttk
 
 import psutil
@@ -25,21 +25,27 @@ from utils.handle_utils import center_window, Tooltip
 
 class RedirectText:
     """
-    用以传送打印到窗口状态栏的类，将输出按行分割处理。
+    用以传送打印到窗口状态栏的类，将输出按行分割处理，并保存所有输出。
     """
 
-    def __init__(self, text_var, message_queue):
+    def __init__(self, text_var, message_queue, debug):
+        self.debug = debug
         self.text_var = text_var
         self.message_queue = message_queue
         self.original_stdout = sys.stdout  # 保存原始标准输出
+        self.logs = []  # 用于保存所有的输出
 
     def write(self, text):
         # 按行分割输入的文本
-        lines = text.splitlines()
-
-        for line in lines:
-            self.message_queue.put(" " + line)  # 将每行文本放入队列
-
+        if self.debug:
+            lines = text.splitlines()
+            for line in lines:
+                self.message_queue.put(" " + line)  # 将每行文本放入队列
+                self.logs.append(line)  # 保存每一行到日志
+        else:
+            lines = text.splitlines()
+            for line in lines:
+                self.message_queue.put(" " + line)  # 将每行文本放入队列
         # 如果输出中有多行内容，依然继续在控制台输出
         if self.original_stdout:
             self.original_stdout.write(text)
@@ -47,6 +53,10 @@ class RedirectText:
     def flush(self):
         # 确保标准输出的缓冲区被清空
         self.original_stdout.flush()
+
+    def get_logs(self):
+        # 返回所有保存的日志
+        return '\n'.join(self.logs)
 
 
 class AccountRow:
@@ -82,7 +92,13 @@ class AccountRow:
         self.avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
 
         # 账号标签
-        self.account_label = ttk.Label(self.row_frame, text=display_name)
+        has_mutex, = func_file.get_acc_details_from_json(account, has_mutex=None)
+        style = ttk.Style()
+        style.configure("Red.TLabel", foreground="red")
+        if has_mutex:
+            self.account_label = ttk.Label(self.row_frame, text=display_name, style="Red.TLabel")
+        else:
+            self.account_label = ttk.Label(self.row_frame, text=display_name)
         self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
 
         # 按钮区域=配置或登录按钮
@@ -192,7 +208,8 @@ class AccountRow:
 class MainWindow:
     """构建主窗口的类"""
 
-    def __init__(self, master, loading_window):
+    def __init__(self, master, loading_window, debug):
+        self.debug = debug
         self.settings_button = None
         self.sub_executable_menu = None
         self.config_file_menu = None
@@ -210,7 +227,6 @@ class MainWindow:
         self.not_logged_in_bottom_frame = None
         self.logged_in_title = None
         self.tooltips = {}
-        self.wechat_processes = None
         self.status = None
         self.last_version_path = None
         self.data_path = None
@@ -238,13 +254,13 @@ class MainWindow:
 
         self.master.withdraw()  # 初始化时隐藏主窗口
         self.setup_main_window()
+
         # self.create_menu_bar()
         self.create_status_bar()
-
         # 创建消息队列
         self.message_queue = queue.Queue()
         # 重定向 stdout
-        sys.stdout = RedirectText(self.status_var, self.message_queue)
+        sys.stdout = RedirectText(self.status_var, self.message_queue, self.debug)
         # 定期检查队列中的消息
         self.update_status()
 
@@ -330,7 +346,8 @@ class MainWindow:
             self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
             self.config_file_menu.add_command(label="打开", command=func_file.open_config_file)
             self.config_file_menu.add_command(label="清除",
-                                              command=partial(func_file.clear_config_file, self.create_main_frame_and_menu))
+                                              command=partial(func_file.clear_config_file,
+                                                              self.create_main_frame_and_menu))
         # -打开主dll所在文件夹
         self.file_menu.add_command(label="查看DLL", command=func_file.open_dll_dir_path)
         # -创建软件快捷方式
@@ -370,13 +387,22 @@ class MainWindow:
             # 检查选择的子程序，若没有则添加默认
             chosen_sub_exe = func_setting.fetch_sub_exe()
             self.settings_menu.add_cascade(label=f"子程序     选择", menu=self.sub_executable_menu)
-            # 是否选择了原生
-            if chosen_sub_exe == "原生":
-                self.sub_executable_menu.add_command(label=f'√ 原生')
+            # 是否选择了python
+            if chosen_sub_exe == "python":
+                self.sub_executable_menu.add_command(label=f'√ python')
             else:
                 self.sub_executable_menu.add_command(
-                    label=f'    原生',
-                    command=partial(func_setting.toggle_sub_executable, '原生', self.delayed_initialization)
+                    label=f'    python',
+                    command=partial(func_setting.toggle_sub_executable, 'python', self.delayed_initialization)
+                )
+            self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
+            # 是否选择了handle
+            if chosen_sub_exe == "handle":
+                self.sub_executable_menu.add_command(label=f'√ handle')
+            else:
+                self.sub_executable_menu.add_command(
+                    label=f'    handle',
+                    command=partial(func_setting.toggle_sub_executable, 'handle', self.delayed_initialization)
                 )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
             # 渲染子程序列表菜单
@@ -417,6 +443,10 @@ class MainWindow:
         self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
                                    height=1)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # 绑定点击事件
+        if self.debug:
+            self.status_bar.bind("<Button-1>", lambda event: self.open_debug_window())
 
     def update_status(self):
         """即时更新状态栏"""
@@ -499,7 +529,6 @@ class MainWindow:
         """渲染主界面账号列表"""
         print(f"渲染账号列表.........................................................")
         logged_in, not_logged_in, wechat_processes = result
-        self.wechat_processes = wechat_processes
 
         # 清除所有子部件
         for widget in self.main_frame.winfo_children():
@@ -827,15 +856,14 @@ class MainWindow:
     def manual_login_account(self):
         """按钮：手动登录"""
         self.thread_manager.manual_login_account(manual_login, self.status, self.create_main_frame_and_menu,
-                                                 partial(handle_utils.bring_window_to_front, self=self))
+                                                 partial(handle_utils.bring_window_to_front, window_class=self))
 
     def auto_login_account(self, account):
         """按钮：自动登录某个账号"""
-        accounts = [account]
         try:
             self.thread_manager.login_accounts_thread(
                 func_login.auto_login_accounts,
-                accounts,
+                [account],
                 self.status,
                 self.create_main_frame_and_menu
             )
@@ -901,3 +929,18 @@ class MainWindow:
         finally:
             # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
+
+    def open_debug_window(self):
+        """打开调试窗口，显示所有输出日志"""
+        debug_window = tk.Toplevel(self.master)
+        debug_window.title("Debug Window")
+        debug_window.geometry("600x400")
+
+        # 创建带滚动条的文本框
+        text_area = scrolledtext.ScrolledText(debug_window, wrap=tk.WORD)
+        text_area.pack(fill=tk.BOTH, expand=True)
+
+        # 获取日志并插入到文本框
+        logs = sys.stdout.get_logs()
+        text_area.insert(tk.END, logs)
+        text_area.config(state=tk.DISABLED)  # 只读模式

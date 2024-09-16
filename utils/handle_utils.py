@@ -9,9 +9,9 @@ import tkinter as tk
 import win32api
 import win32con
 import win32gui
+from pywinauto import Application
 
 from resources import Config
-from pywinauto import Application
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
@@ -44,43 +44,52 @@ class Tooltip:
             self.tooltip = None
 
 
-def bring_window_to_front(self):
-    self.master.after(200, lambda: self.master.lift())
-    self.master.after(300, lambda: self.master.attributes('-topmost', True))
-    self.master.after(400, lambda: self.master.attributes('-topmost', False))
-    self.master.after(500, lambda: self.master.focus_force())
+def bring_window_to_front(window_class):
+    window_class.master.after(200, lambda: window_class.master.lift())
+    window_class.master.after(300, lambda: window_class.master.attributes('-topmost', True))
+    window_class.master.after(400, lambda: window_class.master.attributes('-topmost', False))
+    window_class.master.after(500, lambda: window_class.master.focus_force())
 
 
-def close_mutex_by_id(process_id):
+def close_mutex_of_pids():
+    """
+    通过微信进程id查找互斥体并关闭
+    :return: 是否成功
+    """
+    print(f"进入了关闭互斥体的方法...")
     # 定义句柄名称
     handle_name = "_WeChat_App_Instance_Identity_Mutex_Name"
     start_time = time.time()
     handle_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'handle.exe')
 
     # 获取句柄信息
-    handle_info = subprocess.check_output([handle_exe_path, '-a', handle_name, '-p', f"{process_id}"]).decode()
-    print(f"完成获取句柄信息")
+    handle_info = subprocess.check_output([handle_exe_path, '-a', '-p', f"WeChat", handle_name]).decode()
+    print(f"完成获取句柄信息：{handle_info}")
     print(f"{time.time() - start_time}")
 
-    # 匹配 PID 和句柄
-    match = re.search(r"pid:\s*(\d+).*?(\w+):\s*\\Sessions", handle_info)
-    if match:
-        wechat_pid = match.group(1)
-        handle = match.group(2)
-        print(f"找到互斥体hwnd:{handle}")
+    # 匹配所有 PID 和句柄信息
+    matches = re.findall(r"pid:\s*(\d+).*?(\w+):\s*\\Sessions", handle_info)
+    if matches:
+        print(f"找到互斥体：{matches}")
     else:
-        print(f"没有互斥体")
-        return True
-    print(f"{time.time() - start_time:.4f}秒")
+        print(f"没有找到任何互斥体")
+        return []
 
-    # 尝试关闭句柄
-    try:
-        subprocess.run([handle_exe_path, '-c', handle, '-p', wechat_pid, '-y'], check=True)
-        print(f"关闭用时：{time.time() - start_time:.4f}秒")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"无法关闭句柄 PID: {wechat_pid}，错误信息: {e}\n")
-        return False
+    # 用于存储成功关闭的句柄
+    successful_closes = []
+
+    # 遍历所有匹配项，尝试关闭每个句柄
+    for wechat_pid, handle in matches:
+        print(f"尝试关闭互斥体句柄: hwnd:{handle}, pid:{wechat_pid}")
+        try:
+            subprocess.run([handle_exe_path, '-c', handle, '-p', wechat_pid, '-y'], check=True)
+            print(f"成功关闭句柄: hwnd:{handle}, pid:{wechat_pid}")
+            successful_closes.append((wechat_pid, handle))
+        except subprocess.CalledProcessError as e:
+            print(f"无法关闭句柄 PID: {wechat_pid}, 错误信息: {e}")
+
+    print(f"成功关闭的句柄列表: {successful_closes}")
+    return successful_closes
 
 
 def get_all_child_handles(parent_handle):
@@ -106,7 +115,7 @@ def get_all_child_handles(parent_handle):
     return child_handles
 
 
-def do_click(handle, cx, cy):  # 第四种，可后台
+def do_click_in_window(handle, cx, cy):  # 第四种，可后台
     """
     在窗口中的相对位置点击鼠标，可以后台
     :param handle: 句柄
@@ -121,7 +130,7 @@ def do_click(handle, cx, cy):  # 第四种，可后台
     print(f"模拟点击按钮")
 
 
-def find_all_windows(class_name, window_title):
+def find_all_windows_by_class_and_title(class_name, window_title):
     def enum_windows_callback(hwnd, results):
         # 获取窗口的类名和标题
         if win32gui.IsWindowVisible(hwnd):

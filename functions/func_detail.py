@@ -1,39 +1,9 @@
 import os
 import sqlite3
-from typing import Tuple, Any
 
-from functions import func_setting
+from functions import func_setting, func_file
 from resources.config import Config
-from utils import json_utils, wechat_decrypt_utils, image_utils
-
-
-def update_acc_details_to_json(account, **kwargs) -> None:
-    """更新账户信息到 JSON"""
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-    if account not in account_data:
-        account_data[account] = {}
-    # 遍历 kwargs 中的所有参数，并更新到 account_data 中
-    for key, value in kwargs.items():
-        account_data[account][key] = value
-        print(f"更新[{account}][{key}]:{value}")
-    json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
-
-
-def get_acc_details_from_json(account: str, **kwargs) -> Tuple[Any, ...]:
-    """
-    根据用户输入的变量名，获取对应的账户信息
-    :param account: 账户名
-    :param kwargs: 需要获取的变量名及其默认值（如 note="", nickname=None）
-    :return: 包含所请求数据的元组
-    """
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-    account_info = account_data.get(account, {})
-    result = tuple()
-    for key, default in kwargs.items():
-        result += (account_info.get(key, default),)
-        print(f"获取[{account}][{key}]：{account_info.get(key, default)}")
-    print(f"└—————————————————————————————————————————")
-    return result
+from utils import wechat_decrypt_utils, image_utils
 
 
 def fetch_acc_detail_by_pid(pid, account, before, after):
@@ -72,9 +42,9 @@ def fetch_acc_detail_by_pid(pid, account, before, after):
             usr_name, url = avatar_results[0]
             # alias的存储比较特殊，如果用户没有重新改过微信名，那么表中alias为空，但是软件希望alias存储的是当前的
             # 因此，若alias是空的，则原始名就是当前名
-            update_acc_details_to_json(user_name, alias=alias, nickname=nickname, avatar_url=url)
+            func_file.update_acc_details_to_json(user_name, alias=alias, nickname=nickname, avatar_url=url)
             if alias == "":
-                update_acc_details_to_json(user_name, alias=user_name)
+                func_file.update_acc_details_to_json(user_name, alias=user_name)
 
             save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
 

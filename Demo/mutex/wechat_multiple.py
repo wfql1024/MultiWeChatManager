@@ -123,3 +123,11 @@ for handle in handles_array[:handle_info.NumberOfHandles]:
                         kernel32.CloseHandle(h_handle)
 
             kernel32.CloseHandle(h_handle)
+
+
+if __name__ == '__main__':
+    from pywinhandle import find_handles, close_handles
+
+    handles = find_handles(handle_names=["_WeChat_App_Instance_Identity_Mutex_Name"])
+    close_handles(handles)
+

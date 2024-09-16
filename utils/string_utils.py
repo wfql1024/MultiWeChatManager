@@ -37,6 +37,3 @@ if __name__ == '__main__':
     print(balanced_wrap_text("abcdefghijklmnopqr"))
     print(balanced_wrap_text("abcdefghijklmnopqrs"))
     print(balanced_wrap_text("abcdefghijklmnopqrst"))
-
-
-

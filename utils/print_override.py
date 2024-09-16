@@ -12,7 +12,12 @@ original_print = builtins.print
 def new_print(*args, **kwargs):
     indent_prefix = f"{debug_utils.indent()}"
     # indent_prefix = f"{debug_utils.indent()}╭{debug_utils.get_call_stack()}\n{debug_utils.indent()}╰"
-    modified_args = (f"{indent_prefix}{arg}" for arg in args)
+    modified_args = (
+        "\n".join(
+            f"{indent_prefix}{line}↓" for line in str(arg).splitlines()
+        ).rstrip("↓")
+        for arg in args
+    )
     original_print(*modified_args, **kwargs)
 
 

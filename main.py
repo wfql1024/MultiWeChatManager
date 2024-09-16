@@ -1,12 +1,11 @@
+import argparse
 import ctypes
 import os
-import subprocess
 import sys
 import tkinter as tk
 
 from ui.loading_ui import LoadingWindow
 from ui.main_ui import MainWindow
-from utils import print_override
 
 
 def elevate():
@@ -34,32 +33,33 @@ def is_admin():
         return os.geteuid() == 0
 
 
-def restart_explorer():
-    # 关闭资源管理器
-    subprocess.run(["taskkill", "/f", "/im", "explorer.exe"], check=True)
-
-    # 重启资源管理器
-    subprocess.run(["start", "explorer.exe"], shell=True, check=True)
-
-
 def main():
     print(f"是否管理员模式：{is_admin()}")
     root = tk.Tk()
     loading_window = LoadingWindow(root)
-    MainWindow(root, loading_window)
+    MainWindow(root, loading_window, debug=args.debug)
     root.mainloop()
 
 
 if __name__ == "__main__":
-    print_override.test()
+    # 创建参数解析器
+    parser = argparse.ArgumentParser(description="Process command line flags.")
+    # 添加 --debug 和 -d 选项
+    parser.add_argument('--debug', '-d', action='store_true', help="Enable debug mode.")
+    # 解析命令行参数
+    args = parser.parse_args()
+    # 检查是否有 --debug 或 -d 参数
+    if args.debug:
+        print("当前是调试模式")
+        from utils import print_override
+        print_override.test()
+    else:
+        print("当前是普通模式")
     if not is_admin():
         print("当前没有管理员权限，尝试获取...")
         if not elevate():
             print("无法获得管理员权限，程序将退出。")
             sys.exit(1)
-        # 如果 elevate() 成功，程序会在新的管理员权限进程中重新启动
-        # 所以这里不需要 else 语句
     else:
         print("已获得管理员权限，正在执行主逻辑...")
         main()
-    # main()

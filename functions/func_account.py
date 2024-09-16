@@ -6,7 +6,7 @@ from datetime import datetime
 import psutil
 from PIL import Image
 
-from functions import func_detail, func_setting
+from functions import func_setting, func_file, func_wechat_dll
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, string_utils
@@ -77,7 +77,7 @@ def get_account_display_name(account) -> str:
         (
             value
             for key in ("note", "nickname", "alias")
-            if (value := func_detail.get_acc_details_from_json(account, **{key: None})[0]) is not None
+            if (value := func_file.get_acc_details_from_json(account, **{key: None})[0]) is not None
         ),
         account
     )
@@ -153,16 +153,20 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
+    status = func_wechat_dll.check_dll()
     pid_dict = dict(wechat_processes)
-    for acc in logged_in + not_logged_in:
-        # 如果找不到 acc 对应的 PID，存入None
-        old_pid, = func_detail.get_acc_details_from_json(acc, pid=None)
-        new_pid = pid_dict.get(acc, None)
-        # 登录状态未改变
-        if old_pid == new_pid:
-            pass
-        else:
-            func_detail.update_acc_details_to_json(acc, pid=new_pid, has_mutex=True)
+    if status == "已开启":
+        for acc in logged_in + not_logged_in:
+            print(f"由于是全局多开模式，直接所有has_mutex都为false")
+            func_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
+    else:
+        for acc in logged_in + not_logged_in:
+            pid = pid_dict.get(acc, None)
+            if pid is None:
+                func_file.update_acc_details_to_json(acc, has_mutex=False)
+            func_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None))
+        # 更新json表中各微信进程的互斥体情况
+        func_file.update_has_mutex_from_all_wechat()
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
 
@@ -170,5 +174,5 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
 
 
 if __name__ == '__main__':
-    note = func_detail.get_acc_details_from_json('wxid_t2dchu5zw9y022', note=None)[0]
+    note = func_file.get_acc_details_from_json('wxid_t2dchu5zw9y022', note=None)[0]
     print(note)

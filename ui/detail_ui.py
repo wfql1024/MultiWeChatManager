@@ -1,7 +1,6 @@
 # detail_ui.py
 import base64
 import os
-import time
 import tkinter as tk
 import webbrowser
 from tkinter import ttk, messagebox
@@ -9,7 +8,7 @@ from tkinter import ttk, messagebox
 import psutil
 from PIL import Image, ImageTk
 
-from functions import func_detail
+from functions import func_detail, func_file
 from resources.config import Config
 from resources.strings import Strings
 from utils.handle_utils import Tooltip
@@ -75,7 +74,7 @@ class DetailWindow:
         note_label = ttk.Label(self.note_frame, text="备    注：")
         note_label.pack(side=tk.LEFT, anchor="w")
 
-        note, = func_detail.get_acc_details_from_json(self.account, note=None)
+        note, = func_file.get_acc_details_from_json(self.account, note=None)
         if not note:
             self.note_var = tk.StringVar(value="")
         else:
@@ -119,7 +118,7 @@ class DetailWindow:
                 f.write(image_data)
             print(f"默认头像已保存到 {default_path}")
             avatar_path = default_path
-        avatar_url, alias, nickname, pid = func_detail.get_acc_details_from_json(
+        avatar_url, alias, nickname, pid = func_file.get_acc_details_from_json(
             self.account,
             avatar_url=None,
             alias="请获取数据",
@@ -133,9 +132,9 @@ class DetailWindow:
         if not pid:
             self.disable_fetch_button()
             self.pid_label.config(text=f"PID: 未登录")
-            func_detail.update_acc_details_to_json(self.account, has_mutex=True)
+            func_file.update_acc_details_to_json(self.account, has_mutex=True)
         else:
-            has_mutex, = func_detail.get_acc_details_from_json(self.account, has_mutex=True)
+            has_mutex, = func_file.get_acc_details_from_json(self.account, has_mutex=True)
             if has_mutex:
                 self.pid_label.config(text=f"PID: {pid}\n(有互斥体)")
             else:
@@ -179,7 +178,7 @@ class DetailWindow:
 
     def fetch_data(self):
 
-        pid, = func_detail.get_acc_details_from_json(self.account, pid=None)
+        pid, = func_file.get_acc_details_from_json(self.account, pid=None)
         if not pid:
             self.disable_fetch_button()
             messagebox.showinfo("提示", "未检测到该账号登录")
@@ -200,8 +199,8 @@ class DetailWindow:
     def save_note(self):
         new_note = self.note_var.get().strip()
         if new_note == "":
-            func_detail.update_acc_details_to_json(self.account, note=None)
+            func_file.update_acc_details_to_json(self.account, note=None)
         else:
-            func_detail.update_acc_details_to_json(self.account, note=new_note)
+            func_file.update_acc_details_to_json(self.account, note=new_note)
         self.update_callback()
         self.master.destroy()

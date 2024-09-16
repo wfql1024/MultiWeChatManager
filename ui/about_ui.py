@@ -39,7 +39,8 @@ class AboutWindow:
         author_label.pack(pady=(10, 0))
 
         # 创建 GitHub 链接标签
-        github_link = tk.Label(frame, text=f"GitHub开源：{Strings.GITHUB_REPO}", font=("", 10), fg="blue", cursor="hand2")
+        github_link = tk.Label(frame, text=f"GitHub开源：{Strings.GITHUB_REPO}", font=("", 10), fg="blue",
+                               cursor="hand2")
         github_link.pack(pady=(5, 0))
 
         # 哔哩哔哩主页链接标签

@@ -25,10 +25,8 @@ KEY_SIZE = 32
 DEFAULT_PAGESIZE = 4096
 DEFAULT_ITER = 64000
 
-
 log_file = os.path.basename(sys.argv[0]).split('.')[0] + '.log'
 cfg_file = os.path.basename(sys.argv[0]).split('.')[0] + '.ini'
-
 
 # 几种内存段可以写入的类型
 MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",

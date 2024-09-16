@@ -3,10 +3,8 @@ import shutil
 import time
 from tkinter import messagebox
 
-from functions import func_setting
-from utils import wechat_utils
+from functions import func_setting, subfunc_wechat
 from utils.handle_utils import close_window_by_name
-from utils.wechat_utils import clear_idle_wnd_and_process
 
 
 def use_config(account):
@@ -79,9 +77,9 @@ def test(account, status):
             "确认",
             "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
     ):
-        clear_idle_wnd_and_process()
+        subfunc_wechat.clear_idle_wnd_and_process()
         time.sleep(0.5)
-        wechat_hwnd = wechat_utils.open_wechat(status)
+        wechat_hwnd = subfunc_wechat.open_wechat(status)
         if wechat_hwnd:
             time.sleep(2)
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
