@@ -1,13 +1,9 @@
-import threading
 import time
 
 import psutil
-import win32api
-import win32process
-from win32api import GetCurrentProcessId
 import win32gui
 
-from functions import func_setting, func_file
+from functions import func_setting
 from resources import Config
 from utils import handle_utils, process_utils, ini_utils, pywinhandle
 
@@ -36,7 +32,7 @@ def clear_idle_wnd_and_process():
     kill_wechat_multiple_processes()
 
 
-def open_wechat(status, has_mutex_dictionary):
+def open_wechat(status, has_mutex_dictionary=None):
     """
     根据状态以不同方式打开微信
     :param status: 状态
@@ -44,6 +40,8 @@ def open_wechat(status, has_mutex_dictionary):
     :return: 微信窗口句柄
     """
 
+    if has_mutex_dictionary is None:
+        has_mutex_dictionary = dict()
     print(f"进入了打开微信的方法...")
     start_time = time.time()
     sub_exe_process = None

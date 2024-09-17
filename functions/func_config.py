@@ -4,6 +4,7 @@ import time
 from tkinter import messagebox
 
 from functions import func_setting, subfunc_wechat
+from utils import handle_utils
 from utils.handle_utils import close_window_by_name
 
 
@@ -79,7 +80,8 @@ def test(account, status):
     ):
         subfunc_wechat.clear_idle_wnd_and_process()
         time.sleep(0.5)
-        wechat_hwnd = subfunc_wechat.open_wechat(status)
+        subfunc_wechat.open_wechat(status, dict())
+        wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
             time.sleep(2)
             if messagebox.askyesno("确认", "是否为对应的微信号？"):

@@ -10,8 +10,15 @@ original_print = builtins.print
 # 创建新的 print 函数，自动添加 debug_utils.indent() 前缀
 @functools.wraps(original_print)
 def new_print(*args, **kwargs):
-    indent_prefix = f"{debug_utils.indent()}"
-    # indent_prefix = f"{debug_utils.indent()}╭{debug_utils.get_call_stack()}\n{debug_utils.indent()}╰"
+    # 灰色的ANSI颜色代码，37代表亮灰色
+    gray_color_code = "\033[90m"
+    # 重置颜色的代码
+    reset_color_code = "\033[0m"
+
+    indent_prefix = f"{debug_utils.indent()}{debug_utils.get_call_stack()}\n{debug_utils.indent()}"
+    # 将调用栈部分的文本设置为灰色
+    indent_prefix = gray_color_code + indent_prefix + reset_color_code
+
     modified_args = (
         "\n".join(
             f"{indent_prefix}{line}↓" for line in str(arg).splitlines()

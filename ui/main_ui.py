@@ -7,7 +7,7 @@ import time
 import tkinter as tk
 import webbrowser
 from functools import partial
-from tkinter import messagebox, scrolledtext
+from tkinter import messagebox
 from tkinter import ttk
 
 import psutil
@@ -18,14 +18,14 @@ from functions.func_login import manual_login
 from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
-from ui import about_ui, setting_ui, detail_ui, rewards_ui
-from utils import handle_utils
+from ui import about_ui, setting_ui, detail_ui, rewards_ui, debug_ui
+from utils import handle_utils, debug_utils
 from utils.handle_utils import center_window, Tooltip
 
 
 class RedirectText:
     """
-    用以传送打印到窗口状态栏的类，将输出按行分割处理，并保存所有输出。
+    用以传送打印到窗口状态栏的类，将输出按结构化的方式分割处理，并保存所有输出。
     """
 
     def __init__(self, text_var, message_queue, debug):
@@ -33,20 +33,20 @@ class RedirectText:
         self.text_var = text_var
         self.message_queue = message_queue
         self.original_stdout = sys.stdout  # 保存原始标准输出
-        self.logs = []  # 用于保存所有的输出
+        self.logs = []  # 用于保存结构化的输出
 
     def write(self, text):
-        # 按行分割输入的文本
         if self.debug:
-            lines = text.splitlines()
-            for line in lines:
-                self.message_queue.put(" " + line)  # 将每行文本放入队列
-                self.logs.append(line)  # 保存每一行到日志
+            # 使用 rstrip() 去除末尾的换行符或空白字符
+            cleaned_text = text.rstrip()
+            self.logs.append(cleaned_text)
+            self.message_queue.put(cleaned_text)
         else:
             lines = text.splitlines()
             for line in lines:
-                self.message_queue.put(" " + line)  # 将每行文本放入队列
-        # 如果输出中有多行内容，依然继续在控制台输出
+                self.message_queue.put(line)  # 仅将内容放入队列
+
+        # 继续在控制台输出
         if self.original_stdout:
             self.original_stdout.write(text)
 
@@ -55,8 +55,8 @@ class RedirectText:
         self.original_stdout.flush()
 
     def get_logs(self):
-        # 返回所有保存的日志
-        return '\n'.join(self.logs)
+        # 返回保存的日志
+        return self.logs  # 返回结构化日志
 
 
 class AccountRow:
@@ -209,6 +209,7 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window, debug):
+        self.chosen_sub_exe_var = None
         self.debug = debug
         self.settings_button = None
         self.sub_executable_menu = None
@@ -380,47 +381,46 @@ class MainWindow:
             self.settings_menu.entryconfig(f"全局多开 {self.status}", state="disable")
         # >多开子程序选择
         self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
+        self.chosen_sub_exe_var = tk.StringVar()  # 用于跟踪当前选中的子程序
+
+        # 检查状态
+        self.status = "未开启"  # 假设状态为"未开启"
         if self.status == "已开启":
-            self.settings_menu.add_cascade(label=f"子程序   不需要", menu=self.sub_executable_menu)
-            self.settings_menu.entryconfig(f"子程序   不需要", state="disable")
+            self.settings_menu.add_cascade(label="子程序   不需要", menu=self.sub_executable_menu)
+            self.settings_menu.entryconfig("子程序   不需要", state="disable")
         else:
-            # 检查选择的子程序，若没有则添加默认
+            # 获取已选择的子程序（假设 func_setting.fetch_sub_exe() 返回 'python', 'handle' 或其他值）
             chosen_sub_exe = func_setting.fetch_sub_exe()
-            self.settings_menu.add_cascade(label=f"子程序     选择", menu=self.sub_executable_menu)
-            # 是否选择了python
-            if chosen_sub_exe == "python":
-                self.sub_executable_menu.add_command(label=f'√ python')
-            else:
-                self.sub_executable_menu.add_command(
-                    label=f'    python',
-                    command=partial(func_setting.toggle_sub_executable, 'python', self.delayed_initialization)
-                )
+            self.chosen_sub_exe_var.set(chosen_sub_exe)  # 设置初始选中的子程序
+            self.settings_menu.add_cascade(label="子程序     选择", menu=self.sub_executable_menu)
+            # 添加 Python 的单选按钮
+            self.sub_executable_menu.add_radiobutton(
+                label='python',
+                value='python',
+                variable=self.chosen_sub_exe_var,
+                command=partial(func_setting.toggle_sub_executable, 'python', self.delayed_initialization)
+            )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
-            # 是否选择了handle
-            if chosen_sub_exe == "handle":
-                self.sub_executable_menu.add_command(label=f'√ handle')
-            else:
-                self.sub_executable_menu.add_command(
-                    label=f'    handle',
-                    command=partial(func_setting.toggle_sub_executable, 'handle', self.delayed_initialization)
-                )
+            # 添加 Handle 的单选按钮
+            self.sub_executable_menu.add_radiobutton(
+                label='handle',
+                value='handle',
+                variable=self.chosen_sub_exe_var,
+                command=partial(func_setting.toggle_sub_executable, 'handle', self.delayed_initialization)
+            )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
-            # 渲染子程序列表菜单
+            # 动态添加外部子程序
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
-            exe_files = glob.glob(
-                os.path.join(external_res_path, "WeChatMultiple_*.exe"))  # 使用glob匹配 WeChatMultiple_*.exe 的文件列表
+            exe_files = glob.glob(os.path.join(external_res_path, "WeChatMultiple_*.exe"))
             for exe_file in exe_files:
                 file_name = os.path.basename(exe_file)
-                right_part = file_name.split('_', 1)[1].rsplit('.exe', 1)[0]  # 提取 `*` 部分
-                if file_name == chosen_sub_exe:
-                    self.sub_executable_menu.add_command(
-                        label=f'√ {right_part}'
-                    )
-                else:
-                    self.sub_executable_menu.add_command(
-                        label=f'    {right_part}',
-                        command=partial(func_setting.toggle_sub_executable, file_name, self.delayed_initialization)
-                    )
+                right_part = file_name.split('_', 1)[1].rsplit('.exe', 1)[0]
+                self.sub_executable_menu.add_radiobutton(
+                    label=right_part,
+                    value=file_name,
+                    variable=self.chosen_sub_exe_var,
+                    command=partial(func_setting.toggle_sub_executable, file_name, self.delayed_initialization)
+                )
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.delayed_initialization))
 
@@ -933,14 +933,5 @@ class MainWindow:
     def open_debug_window(self):
         """打开调试窗口，显示所有输出日志"""
         debug_window = tk.Toplevel(self.master)
-        debug_window.title("Debug Window")
-        debug_window.geometry("600x400")
-
-        # 创建带滚动条的文本框
-        text_area = scrolledtext.ScrolledText(debug_window, wrap=tk.WORD)
-        text_area.pack(fill=tk.BOTH, expand=True)
-
-        # 获取日志并插入到文本框
-        logs = sys.stdout.get_logs()
-        text_area.insert(tk.END, logs)
-        text_area.config(state=tk.DISABLED)  # 只读模式
+        debug_ui.DebugWindow(debug_window)
+        center_window(debug_window)

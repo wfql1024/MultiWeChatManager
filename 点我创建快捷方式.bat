@@ -7,16 +7,10 @@ set "currentDir=%~dp0"
 
 :: 设置目标文件名
 set "targetFile1=微信多开管理器.exe"
-set "targetFile2=微信多开管理器_调试版.exe"
 
 :: 检查目标文件是否存在
 if not exist "%currentDir%%targetFile1%" (
     echo 错误：未找到目标文件 "%targetFile1%"
-    goto :error
-)
-
-if not exist "%currentDir%%targetFile2%" (
-    echo 错误：未找到目标文件 "%targetFile2%"
     goto :error
 )
 
@@ -28,19 +22,19 @@ if not defined desktopPath (
     goto :error
 )
 
-:: 创建快捷方式1
+:: 创建常规版快捷方式
 powershell -ExecutionPolicy Bypass -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%desktopPath%\微信多开管理器.lnk'); $Shortcut.TargetPath = '%currentDir%%targetFile1%'; $Shortcut.WorkingDirectory = '%currentDir%'; $Shortcut.Save(); if ($?) { exit 0 } else { exit 1 }"
 
 if %errorlevel% neq 0 (
-    echo 创建快捷方式失败
+    echo 创建常规版快捷方式失败
     goto :error
 )
 
-:: 创建快捷方式2
-powershell -ExecutionPolicy Bypass -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%desktopPath%\微信多开管理器_调试版.lnk'); $Shortcut.TargetPath = '%currentDir%%targetFile2%'; $Shortcut.WorkingDirectory = '%currentDir%'; $Shortcut.Save(); if ($?) { exit 0 } else { exit 1 }"
+:: 创建调试版快捷方式，添加 --debug 参数
+powershell -ExecutionPolicy Bypass -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%desktopPath%\微信多开管理器_调试版.lnk'); $Shortcut.TargetPath = '%currentDir%%targetFile1%'; $Shortcut.Arguments = '--debug'; $Shortcut.WorkingDirectory = '%currentDir%'; $Shortcut.Save(); if ($?) { exit 0 } else { exit 1 }"
 
 if %errorlevel% neq 0 (
-    echo 创建快捷方式失败
+    echo 创建调试版快捷方式失败
     goto :error
 )
 

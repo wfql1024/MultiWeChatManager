@@ -163,7 +163,7 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
         for acc in logged_in + not_logged_in:
             pid = pid_dict.get(acc, None)
             if pid is None:
-                func_file.update_acc_details_to_json(acc, has_mutex=False)
+                func_file.update_acc_details_to_json(acc, has_mutex=None)
             func_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None))
         # 更新json表中各微信进程的互斥体情况
         func_file.update_has_mutex_from_all_wechat()

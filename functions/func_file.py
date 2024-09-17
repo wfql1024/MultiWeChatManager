@@ -125,6 +125,8 @@ def update_has_mutex_from_all_wechat():
     #         if details.get("pid") == pid:
     #             update_acc_details_to_json(account, has_mutex=has_mutex)
     account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+    if "all_wechat" not in account_data:
+        account_data["all_wechat"] = {}
     for account, details in account_data.items():
         if account == "all_wechat":
             continue
@@ -189,31 +191,39 @@ def clear_config_file(after):
 def create_app_lnk():
     # 当前是打包后的环境
     if getattr(sys, 'frozen', False):
-        # 当前是打包后的环境
         exe_path = sys.executable
     else:
-        # 当前是在IDE调试环境，使用指定的测试路径
         exe_path = os.path.abspath(r'./dist/微信多开管理器/微信多开管理器.exe')
 
     exe_dir = os.path.dirname(exe_path)
-    exes_basename = ["微信多开管理器.exe", "微信多开管理器_调试版.exe"]
-    for basename in exes_basename:
-        exe_path = os.path.join(exe_dir, basename)
-        exe_name = os.path.basename(exe_path)
-        shortcut_name = os.path.splitext(exe_name)[0]  # 去掉 .exe 后缀
-        desktop = winshell.desktop()
-        shortcut_path = os.path.join(desktop, f"{shortcut_name}.lnk")
+    exe_name = os.path.basename(exe_path)
 
-        shell = Dispatch('WScript.Shell')
-        shortcut = shell.CreateShortCut(shortcut_path)
-        shortcut.TargetPath = exe_path
-        shortcut.WorkingDirectory = os.path.dirname(exe_path)
-        shortcut.IconLocation = exe_path
-        shortcut.save()
-        if getattr(sys, 'frozen', False):
-            print(f"打包程序环境，桌面快捷方式已创建: {shortcut_path}")
-        else:
-            print(f"IDE调试环境，桌面快捷方式已创建: {shortcut_path}")
+    # 创建常规版本快捷方式
+    shortcut_name = os.path.splitext(exe_name)[0]  # 去掉 .exe 后缀
+    desktop = winshell.desktop()
+    shortcut_path = os.path.join(desktop, f"{shortcut_name}.lnk")
+
+    shell = Dispatch('WScript.Shell')
+    shortcut = shell.CreateShortCut(shortcut_path)
+    shortcut.TargetPath = exe_path
+    shortcut.WorkingDirectory = exe_dir
+    shortcut.IconLocation = exe_path
+    shortcut.save()
+
+    # 打印常规版本创建成功信息
+    print(f"常规版快捷方式已创建： {shortcut_path}")
+
+    # 创建_调试版快捷方式，添加 --debug 参数
+    debug_shortcut_path = os.path.join(desktop, f"{shortcut_name}_调试版.lnk")
+    debug_shortcut = shell.CreateShortCut(debug_shortcut_path)
+    debug_shortcut.TargetPath = exe_path
+    debug_shortcut.Arguments = "--debug"  # 添加调试参数
+    debug_shortcut.WorkingDirectory = exe_dir
+    debug_shortcut.IconLocation = exe_path
+    debug_shortcut.save()
+
+    # 打印调试版创建成功信息
+    print(f"调试版快捷方式已创建： {debug_shortcut_path}")
 
 
 def open_dll_dir_path():

@@ -51,8 +51,8 @@ if __name__ == "__main__":
     # 检查是否有 --debug 或 -d 参数
     if args.debug:
         print("当前是调试模式")
-        from utils import print_override
-        print_override.test()
+        # from utils import print_override
+        # print_override.test()
     else:
         print("当前是普通模式")
     if not is_admin():
