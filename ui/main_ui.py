@@ -37,10 +37,14 @@ class RedirectText:
 
     def write(self, text):
         if self.debug:
-            # 使用 rstrip() 去除末尾的换行符或空白字符
-            cleaned_text = text.rstrip()
-            self.logs.append(cleaned_text)
-            self.message_queue.put(cleaned_text)
+            lines = text.splitlines()  # 分割成行
+            # 去掉最后一行（可能为空或包含特殊符号）
+            if lines:
+                lines = lines[:-1]  # 移除最后一行
+            # 保存每行内容到 logs
+            for line in lines:
+                self.logs.append(line)
+                self.message_queue.put(line)
         else:
             lines = text.splitlines()
             for line in lines:
