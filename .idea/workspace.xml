@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="合并正常版与调试版，按照程序的参数来区分">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-    </list>
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="摸鱼……" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -250,14 +247,7 @@
       <workItem from="1726501430559" duration="30887000" />
       <workItem from="1726632186480" duration="4497000" />
       <workItem from="1726642959643" duration="3749000" />
-    </task>
-    <task id="LOCAL-00002" summary="I have finished the coding work. Core functions have been implemented.">
-      <option name="closed" value="true" />
-      <created>1723322218589</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1723322218589</updated>
+      <workItem from="1726674520355" duration="70000" />
     </task>
     <task id="LOCAL-00003" summary="修改目录结构，完善bat文件，修改路径获取逻辑，增加初次获取成功率。">
       <option name="closed" value="true" />
@@ -643,7 +633,15 @@
       <option name="project" value="LOCAL" />
       <updated>1726587889418</updated>
     </task>
-    <option name="localTasksCounter" value="51" />
+    <task id="LOCAL-00051" summary="摸鱼……">
+      <option name="closed" value="true" />
+      <created>1726674550295</created>
+      <option name="number" value="00051" />
+      <option name="presentableId" value="LOCAL-00051" />
+      <option name="project" value="LOCAL" />
+      <updated>1726674550296</updated>
+    </task>
+    <option name="localTasksCounter" value="52" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -686,7 +684,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="今天不绿誓不罢休" />
     <MESSAGE value="绿绿绿，我要绿" />
     <MESSAGE value="绿绿绿，我要绿绿绿" />
     <MESSAGE value="绿起来" />
@@ -711,7 +708,8 @@
     <MESSAGE value="调整源码结构，全局多开适配改为从云中数据获取而非源码上" />
     <MESSAGE value="重写print，为输出打印添加了按调用层数确定的前缀" />
     <MESSAGE value="合并正常版与调试版，按照程序的参数来区分" />
-    <option name="LAST_COMMIT_MESSAGE" value="合并正常版与调试版，按照程序的参数来区分" />
+    <MESSAGE value="摸鱼……" />
+    <option name="LAST_COMMIT_MESSAGE" value="摸鱼……" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
