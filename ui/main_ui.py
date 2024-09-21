@@ -39,12 +39,25 @@ class RedirectText:
         if self.debug:
             lines = text.splitlines()  # 分割成行
             # 去掉最后一行（可能为空或包含特殊符号）
-            if lines:
-                lines = lines[:-1]  # 移除最后一行
-            # 保存每行内容到 logs
+            # 保存每行内容到 logs，注意需要排除结尾符号
             for line in lines:
-                self.logs.append(line)
-                self.message_queue.put(line)
+                if len(line) > 0:
+                    # 从你的工具中获取前缀、堆栈等结构化部分
+                    stack_prefix = debug_utils.indent()  # 缩进前缀
+                    call_stack = debug_utils.get_call_stack()  # 堆栈
+                    output_prefix = debug_utils.indent()  # 输出前缀
+                    output_content = line  # 实际输出内容
+
+                    # 保存为字典
+                    log_entry = {
+                        'stack_prefix': stack_prefix,
+                        'call_stack': call_stack,
+                        'output_prefix': output_prefix,
+                        'output_content': output_content
+                    }
+
+                    self.message_queue.put(output_content)  # 将原始内容放入队列
+                    self.logs.append(log_entry)  # 保存结构化日志条目
         else:
             lines = text.splitlines()
             for line in lines:
@@ -212,7 +225,7 @@ class AccountRow:
 class MainWindow:
     """构建主窗口的类"""
 
-    def __init__(self, master, loading_window, debug):
+    def __init__(self, master, loading_window, debug=None):
         self.chosen_sub_exe_var = None
         self.debug = debug
         self.settings_button = None

@@ -148,8 +148,8 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
     logged_in = list(logged_in_wxids & folders)
     not_logged_in = list(folders - logged_in_wxids)
 
-    print(f"logged_in", logged_in)
-    print(f"not_logged_in", not_logged_in)
+    print(f"logged_in：{logged_in}")
+    print(f"not_logged_in：{not_logged_in}")
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据

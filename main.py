@@ -37,7 +37,11 @@ def main():
     print(f"是否管理员模式：{is_admin()}")
     root = tk.Tk()
     loading_window = LoadingWindow(root)
-    MainWindow(root, loading_window, debug=args.debug)
+    MainWindow(
+        root,
+        loading_window,
+        debug=args.debug
+    )
     root.mainloop()
 
 

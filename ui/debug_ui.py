@@ -48,7 +48,17 @@ class DebugWindow:
 
         # 处理日志输出，不改变原始 logs 内容
         for log in logs:
-            self.text_area.insert(tk.END, f"（{log}）")
+            # Initialize parts of the log
+            stack_prefix = log['stack_prefix'] if self.indent_var.get() and self.callstack_var.get() else ""
+            call_stack = log['call_stack'] if self.callstack_var.get() else ""
+            output_prefix = log['output_prefix'] if self.indent_var.get() else ""
+            output_content = log['output_content']
+
+            # Concatenate the parts dynamically based on user selections
+            output_line = f"{stack_prefix}{call_stack}\n{output_prefix}{output_content}\n"
+
+            # Insert the dynamically generated output line into the text area
+            self.text_area.insert(tk.END, output_line)
 
         self.text_area.config(state=tk.DISABLED)
 
