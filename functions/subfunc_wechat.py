@@ -3,7 +3,7 @@ import time
 import psutil
 import win32gui
 
-from functions import func_setting
+from functions import func_setting, func_file, subfunc_file
 from resources import Config
 from utils import handle_utils, process_utils, ini_utils, pywinhandle
 
@@ -30,6 +30,18 @@ def clear_idle_wnd_and_process():
         ]
     )
     kill_wechat_multiple_processes()
+
+
+def get_mutex_dict():
+    pids = process_utils.get_process_ids_by_name("WeChat.exe")
+    has_mutex_dict = dict()
+    for pid in pids:
+        # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
+        has_mutex, = subfunc_file.get_acc_details_from_json("all_wechat", **{f"{pid}": True})
+        if has_mutex:
+            subfunc_file.update_acc_details_to_json("all_wechat", **{f"{pid}": True})
+            has_mutex_dict.update({pid: has_mutex})
+    return has_mutex_dict
 
 
 def open_wechat(status, has_mutex_dictionary=None):

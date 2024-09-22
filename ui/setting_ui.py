@@ -7,7 +7,7 @@ from tkinter import ttk, filedialog, messagebox
 import win32com
 import win32com.client
 
-from functions import func_setting, subfunc_wechat
+from functions import func_setting, subfunc_wechat, subfunc_file
 from utils import handle_utils, wechat_utils, file_utils
 
 
@@ -146,10 +146,10 @@ class SettingWindow:
         elif not bool(re.match(r'^\d+\*\d+$', self.login_size_var.get())):
             messagebox.showerror("错误", f"请确保填入的尺寸符合\"整数*整数\"的形式")
             return False
-        func_setting.save_login_size_to_ini(f"{self.login_size_var.get()}")
-        func_setting.save_wechat_install_path_to_ini(self.install_path)
-        func_setting.save_wechat_data_path_to_ini(self.data_path)
-        func_setting.save_wechat_dll_dir_path_to_ini(self.dll_dir_path)
+        subfunc_file.save_login_size_to_ini(f"{self.login_size_var.get()}")
+        subfunc_file.save_wechat_install_path_to_ini(self.install_path)
+        subfunc_file.save_wechat_data_path_to_ini(self.data_path)
+        subfunc_file.save_wechat_dll_dir_path_to_ini(self.dll_dir_path)
         return True
 
     def auto_get_wechat_dll_dir_path(self):
@@ -246,7 +246,7 @@ class SettingWindow:
         screen_width = self.master.winfo_screenwidth()
         screen_height = self.master.winfo_screenheight()
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        func_setting.save_screen_size_to_ini(f"{screen_width}*{screen_height}")
+        subfunc_file.save_screen_size_to_ini(f"{screen_width}*{screen_height}")
 
     def auto_get_login_size(self, status):
         subfunc_wechat.clear_idle_wnd_and_process()
@@ -261,7 +261,7 @@ class SettingWindow:
             login_height = login_wnd_details["height"]
             print(login_width, login_height)
             if 0.734 < login_width / login_height < 0.740:
-                func_setting.save_login_size_to_ini(f"{login_width}*{login_height}")
+                subfunc_file.save_login_size_to_ini(f"{login_width}*{login_height}")
                 self.login_size_var.set(f"{login_width}*{login_height}")
             else:
                 self.login_size_var.set(f"347*471")

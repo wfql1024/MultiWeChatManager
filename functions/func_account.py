@@ -6,7 +6,7 @@ from datetime import datetime
 import psutil
 from PIL import Image
 
-from functions import func_setting, func_file, func_wechat_dll
+from functions import func_setting, func_file, func_wechat_dll, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, string_utils
@@ -47,25 +47,6 @@ def get_acc_avatar_from_files(account):
         return Image.new('RGB', (44, 44), color='white')
 
 
-def get_config_status(account, data_path) -> str:
-    """
-    通过账号的配置状态
-    :param data_path: 微信数据存储路径
-    :param account: 账号
-    :return: 配置状态
-    """
-    if not data_path:
-        return "无法获取配置路径"
-
-    config_path = os.path.join(data_path, "All Users", "config", f"{account}.data")
-    if os.path.exists(config_path):
-        mod_time = os.path.getmtime(config_path)
-        date = datetime.fromtimestamp(mod_time)
-        return f"{date.month}-{date.day} {date.hour:02}:{date.minute:02}"
-    else:
-        return "无配置"
-
-
 def get_account_display_name(account) -> str:
     """
     获取账号的展示名
@@ -77,7 +58,7 @@ def get_account_display_name(account) -> str:
         (
             value
             for key in ("note", "nickname", "alias")
-            if (value := func_file.get_acc_details_from_json(account, **{key: None})[0]) is not None
+            if (value := subfunc_file.get_acc_details_from_json(account, **{key: None})[0]) is not None
         ),
         account
     )
@@ -158,15 +139,15 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
     if status == "已开启":
         for acc in logged_in + not_logged_in:
             print(f"由于是全局多开模式，直接所有has_mutex都为false")
-            func_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
+            subfunc_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
     else:
         for acc in logged_in + not_logged_in:
             pid = pid_dict.get(acc, None)
             if pid is None:
-                func_file.update_acc_details_to_json(acc, has_mutex=None)
-            func_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None))
+                subfunc_file.update_acc_details_to_json(acc, has_mutex=None)
+            subfunc_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None))
         # 更新json表中各微信进程的互斥体情况
-        func_file.update_has_mutex_from_all_wechat()
+        subfunc_file.update_has_mutex_from_all_wechat()
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
 
@@ -174,5 +155,5 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
 
 
 if __name__ == '__main__':
-    note = func_file.get_acc_details_from_json('wxid_t2dchu5zw9y022', note=None)[0]
+    note = subfunc_file.get_acc_details_from_json('wxid_t2dchu5zw9y022', note=None)[0]
     print(note)

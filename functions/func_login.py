@@ -6,8 +6,8 @@ from tkinter import messagebox
 import win32con
 import win32gui
 
-from functions import func_setting, func_config, subfunc_wechat, func_file
-from utils import handle_utils, process_utils
+from functions import func_setting, func_config, subfunc_wechat, func_file, subfunc_file
+from utils import handle_utils
 
 
 def manual_login(status):
@@ -17,13 +17,15 @@ def manual_login(status):
     :return: 成功与否
     """
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
+    start_time = time.time()
     subfunc_wechat.clear_idle_wnd_and_process()
     time.sleep(0.5)
-    func_file.clear_all_wechat_in_json() and func_file.update_all_wechat_in_json()
-    subfunc_wechat.open_wechat(status, dict())
+    subfunc_file.clear_all_wechat_in_json() and subfunc_file.update_all_wechat_in_json()
+    has_mutex_dict = subfunc_wechat.get_mutex_dict()
+    subfunc_wechat.open_wechat(status, has_mutex_dict)
     wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 4)
     if wechat_hwnd:
-        func_file.set_all_wechat_values_to_false()
+        subfunc_file.set_all_wechat_values_to_false()
         print(f"打开了登录窗口{wechat_hwnd}")
         if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
             print(f"登录窗口已关闭")
@@ -60,7 +62,7 @@ def auto_login_accounts(accounts, status):
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
     subfunc_wechat.clear_idle_wnd_and_process()
     time.sleep(0.5)
-    func_file.clear_all_wechat_in_json() and func_file.update_all_wechat_in_json()
+    subfunc_file.clear_all_wechat_in_json() and subfunc_file.update_all_wechat_in_json()
 
     # 检测尺寸设置是否完整
     login_size = func_setting.get_login_size_from_ini()
@@ -106,18 +108,7 @@ def auto_login_accounts(accounts, status):
             print(f"{accounts[j]}:复制配置文件失败")
             break
 
-        pids = process_utils.get_process_ids_by_name("WeChat.exe")
-        print(f"获取进程列表用时：{time.time() - start_time:.4f}秒")
-        has_mutex_dict = dict()
-        for pid in pids:
-            # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
-            has_mutex, = func_file.get_acc_details_from_json("all_wechat", **{f"{pid}": True})
-            print(f"判断互斥体是否已经被关闭：{time.time() - start_time:.4f}秒")
-            if has_mutex:
-                # 尝试关闭互斥体
-                func_file.update_acc_details_to_json("all_wechat", **{f"{pid}": True})
-                has_mutex_dict.update({pid: has_mutex})
-
+        has_mutex_dict = subfunc_wechat.get_mutex_dict()
         subfunc_wechat.open_wechat(status, has_mutex_dict)
         # 等待打开窗口
         end_time = time.time() + 8
@@ -127,7 +118,7 @@ def auto_login_accounts(accounts, status):
                 # 确保打开了新的微信登录窗口
                 wechat_handles.add(wechat_hwnd)
                 print(f"打开窗口成功：{wechat_hwnd}")
-                func_file.set_all_wechat_values_to_false()
+                subfunc_file.set_all_wechat_values_to_false()
                 break
             if time.time() > end_time:
                 print(f"超时！换下一个账号")

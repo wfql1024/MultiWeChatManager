@@ -13,7 +13,7 @@ from tkinter import ttk
 import psutil
 from PIL import ImageTk
 
-from functions import func_config, func_setting, func_wechat_dll, func_login, func_file, func_account
+from functions import func_config, func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file
 from functions.func_login import manual_login
 from resources import Strings
 from resources.config import Config
@@ -44,7 +44,7 @@ class RedirectText:
                 if len(line) > 0:
                     # 从你的工具中获取前缀、堆栈等结构化部分
                     stack_prefix = debug_utils.indent()  # 缩进前缀
-                    call_stack = debug_utils.get_call_stack()  # 堆栈
+                    call_stack = debug_utils.get_call_stack() + "\n"  # 堆栈
                     output_prefix = debug_utils.indent()  # 输出前缀
                     output_content = line  # 实际输出内容
 
@@ -109,7 +109,7 @@ class AccountRow:
         self.avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
 
         # 账号标签
-        has_mutex, = func_file.get_acc_details_from_json(account, has_mutex=None)
+        has_mutex, = subfunc_file.get_acc_details_from_json(account, has_mutex=None)
         style = ttk.Style()
         style.configure("Red.TLabel", foreground="red")
         if has_mutex:
@@ -502,7 +502,7 @@ class MainWindow:
                 screen_width = self.master.winfo_screenwidth()
                 screen_height = self.master.winfo_screenheight()
                 # 保存屏幕尺寸
-                func_setting.save_screen_size_to_ini(f"{screen_width}*{screen_height}")
+                subfunc_file.save_screen_size_to_ini(f"{screen_width}*{screen_height}")
 
             # 开始创建列表
             self.create_main_frame_and_menu()
@@ -649,7 +649,7 @@ class MainWindow:
         """渲染账号所在行"""
         print(f"渲染{account}.........................................................")
         display_name = func_account.get_account_display_name(account)
-        config_status = func_account.get_config_status(account, self.data_path)
+        config_status = func_config.get_config_status_by_account(account, self.data_path)
 
         callbacks = {
             'detail': self.open_detail,
@@ -925,7 +925,7 @@ class MainWindow:
         #     except (psutil.NoSuchProcess, psutil.AccessDenied):
         #         pass
         # json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
-        self.create_main_frame_and_menu()
+        # self.create_main_frame_and_menu()
 
     def auto_login_selected_accounts(self):
         """登录所选账号"""

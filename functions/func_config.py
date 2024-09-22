@@ -1,11 +1,31 @@
 import os
 import shutil
 import time
+from datetime import datetime
 from tkinter import messagebox
 
 from functions import func_setting, subfunc_wechat
 from utils import handle_utils
 from utils.handle_utils import close_window_by_name
+
+
+def get_config_status_by_account(account, data_path) -> str:
+    """
+    通过账号的配置状态
+    :param data_path: 微信数据存储路径
+    :param account: 账号
+    :return: 配置状态
+    """
+    if not data_path:
+        return "无法获取配置路径"
+
+    config_path = os.path.join(data_path, "All Users", "config", f"{account}.data")
+    if os.path.exists(config_path):
+        mod_time = os.path.getmtime(config_path)
+        date = datetime.fromtimestamp(mod_time)
+        return f"{date.month}-{date.day} {date.hour:02}:{date.minute:02}"
+    else:
+        return "无配置"
 
 
 def use_config(account):
@@ -80,6 +100,7 @@ def test(account, status):
     ):
         subfunc_wechat.clear_idle_wnd_and_process()
         time.sleep(0.5)
+        subfunc_wechat.get_mutex_dict()
         subfunc_wechat.open_wechat(status, dict())
         wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
