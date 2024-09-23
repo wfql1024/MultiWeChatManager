@@ -6,7 +6,7 @@ from tkinter import messagebox
 import win32con
 import win32gui
 
-from functions import func_setting, func_config, subfunc_wechat, func_file, subfunc_file
+from functions import func_config, subfunc_wechat, subfunc_file
 from utils import handle_utils
 
 
@@ -22,11 +22,13 @@ def manual_login(status):
     time.sleep(0.5)
     subfunc_file.clear_all_wechat_in_json() and subfunc_file.update_all_wechat_in_json()
     has_mutex_dict = subfunc_wechat.get_mutex_dict()
-    subfunc_wechat.open_wechat(status, has_mutex_dict)
-    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 4)
+    sub_exe_process = subfunc_wechat.open_wechat(status, has_mutex_dict)
+    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)
     if wechat_hwnd:
         subfunc_file.set_all_wechat_values_to_false()
         print(f"打开了登录窗口{wechat_hwnd}")
+        if sub_exe_process:
+            sub_exe_process.terminate()
         if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
             print(f"登录窗口已关闭")
             return True
@@ -65,7 +67,7 @@ def auto_login_accounts(accounts, status):
     subfunc_file.clear_all_wechat_in_json() and subfunc_file.update_all_wechat_in_json()
 
     # 检测尺寸设置是否完整
-    login_size = func_setting.get_login_size_from_ini()
+    login_size = subfunc_file.get_login_size_from_ini()
     if not login_size or login_size == "":
         messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
         return False
@@ -80,7 +82,7 @@ def auto_login_accounts(accounts, status):
     screen_width = int(tk.Tk().winfo_screenwidth())
     screen_height = int(tk.Tk().winfo_screenheight())
     if not screen_height or not screen_width:
-        screen_width, screen_height = func_setting.get_screen_size_from_ini()
+        screen_width, screen_height = subfunc_file.get_screen_size_from_ini()
     # 计算一行最多可以显示多少个
     max_column = int(screen_width / login_width)
 
@@ -109,7 +111,7 @@ def auto_login_accounts(accounts, status):
             break
 
         has_mutex_dict = subfunc_wechat.get_mutex_dict()
-        subfunc_wechat.open_wechat(status, has_mutex_dict)
+        sub_exe_process = subfunc_wechat.open_wechat(status, has_mutex_dict)
         # 等待打开窗口
         end_time = time.time() + 8
         while True:
@@ -117,8 +119,11 @@ def auto_login_accounts(accounts, status):
             if wechat_hwnd not in wechat_handles:
                 # 确保打开了新的微信登录窗口
                 wechat_handles.add(wechat_hwnd)
+                if sub_exe_process:
+                    sub_exe_process.terminate()
                 print(f"打开窗口成功：{wechat_hwnd}")
                 subfunc_file.set_all_wechat_values_to_false()
+                time.sleep(0.2)
                 break
             if time.time() > end_time:
                 print(f"超时！换下一个账号")

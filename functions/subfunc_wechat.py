@@ -63,7 +63,6 @@ def open_wechat(status, has_mutex_dictionary=None):
 
     if status == "已开启":
         process_utils.create_process_with_medium_il(wechat_path)
-        time.sleep(0.2)
     else:
         # 获取当前选择的多开子程序
         sub_exe = ini_utils.get_setting_from_ini(
@@ -78,6 +77,12 @@ def open_wechat(status, has_mutex_dictionary=None):
                 creation_flags=process_utils.CREATE_NO_WINDOW
             )
             time.sleep(1.1)
+        # ————————————————————————————————WeChatMultiple_wfql.exe————————————————————————————————
+        if sub_exe == "WeChatMultiple_wfql.exe":
+            sub_exe_process = process_utils.create_process_with_medium_il(
+                f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
+                creation_flags=process_utils.CREATE_NO_WINDOW
+            )
         # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
         elif sub_exe == "WeChatMultiple_lyie15.exe":
             sub_exe_process = process_utils.create_process_with_medium_il(
@@ -93,7 +98,7 @@ def open_wechat(status, has_mutex_dictionary=None):
                     button_cx = int(button_details["width"] / 2)
                     button_cy = int(button_details["height"] / 2)
                     handle_utils.do_click_in_window(button_handle, button_cx, button_cy)
-                    time.sleep(1.2)
+                    # time.sleep(1.2)
         # ————————————————————————————————handle————————————————————————————————
         elif sub_exe == "handle":
             success_lists = handle_utils.close_mutex_of_pids()
@@ -121,9 +126,7 @@ def open_wechat(status, has_mutex_dictionary=None):
             # 所有操作完成后，执行创建进程的操作
             process_utils.create_process_with_medium_il(wechat_path, None)
 
-    if sub_exe_process:
-        sub_exe_process.terminate()
-    return True
+    return sub_exe_process
 
 
 def logging_in_listener():

@@ -123,23 +123,35 @@ def create_lnk_for_account(account, status):
     :param status: 是否多开状态
     :return: 是否成功
     """
-    # TODO: 原生下创建快捷开启
-    # 获取数据路径
+    # 确保可以创建快捷启动
     data_path = func_setting.get_wechat_data_path()
     wechat_path = func_setting.get_wechat_install_path()
     if not data_path:
+        return False
+    avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
+    if not os.path.exists(avatar_path):
+        messagebox.showerror("错误", "您尚未获取头像，不能够创建快捷启动！")
         return False
 
     # 构建源文件和目标文件路径
     source_file = os.path.join(data_path, "All Users", "config", f"{account}.data").replace('/', '\\')
     target_file = os.path.join(data_path, "All Users", "config", "config.data").replace('/', '\\')
+    close_mutex_executable = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, "WeChatMultiple_wfql.exe")
     if status == "已开启":
-        process_path_text = f"{wechat_path}"
-        prefix = "[仅全局多开下有效]"
+        close_mutex_code = ""
+        prefix = "[要开全局] - "
+        exe_path = wechat_path
     else:
-        sub_exe = func_setting.fetch_sub_exe()
-        process_path_text = f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}".replace('/', '\\')
-        prefix = f"{sub_exe.split('_')[1].split('.')[0]}"
+        close_mutex_code = \
+            f"""
+                \n{close_mutex_executable}
+            """
+        prefix = ""
+        # 判断环境
+        if getattr(sys, 'frozen', False):  # 打包环境
+            exe_path = sys.executable  # 当前程序的 exe
+        else:  # PyCharm 或其他开发环境
+            exe_path = close_mutex_executable  # 使用 handle_path
 
     bat_content = f"""
         @echo off
@@ -153,8 +165,8 @@ def create_lnk_for_account(account, status):
         echo 复制配置文件成功
 
         REM 根据状态启动微信
-        @echo off
-        cmd /u /c "start "" "{process_path_text}""
+        @echo off{close_mutex_code}
+        cmd /u /c "start "" "{wechat_path}""
         if errorlevel 1 (
         echo 启动微信失败，请检查路径是否正确。
         pause
@@ -167,46 +179,33 @@ def create_lnk_for_account(account, status):
     if not os.path.exists(account_file_path):
         os.makedirs(account_file_path)
     # 保存为批处理文件
-    bat_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}', f'{prefix} - {account}.bat')
+    bat_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}', f'{prefix}{account}.bat')
     # 以带有BOM的UTF-8格式写入bat文件
     with open(bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
         bat_file.write(bat_content)
-
     print(f"批处理文件已生成: {bat_file_path}")
 
     # 获取桌面路径
     desktop = winshell.desktop()
-
     # 获取批处理文件名并去除后缀
     bat_file_name = os.path.splitext(os.path.basename(bat_file_path))[0]
-
     # 构建快捷方式路径
     shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
 
-    avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
-    if not os.path.exists(avatar_path):
-        messagebox.showerror("错误", "您尚未获取头像，不能够创建快捷启动！")
-        return False
-    if status == "已开启":
-        sub_exe_path = func_setting.get_wechat_install_path()
-    else:
-        sub_exe = func_setting.fetch_sub_exe()
-        sub_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, sub_exe)
-
     # 图标文件路径
     base_dir = os.path.dirname(avatar_path)
-    sub_exe_name = os.path.splitext(os.path.basename(sub_exe_path))[0]
+    exe_name = os.path.splitext(os.path.basename(exe_path))[0]
 
     # 步骤1：提取图标为图片
-    extracted_exe_png_path = os.path.join(base_dir, f"{sub_exe_name}_extracted.png")
-    image_utils.extract_icon_to_png(sub_exe_path, extracted_exe_png_path)
+    extracted_exe_png_path = os.path.join(base_dir, f"{exe_name}_extracted.png")
+    image_utils.extract_icon_to_png(exe_path, extracted_exe_png_path)
 
     # 步骤2：合成图片
-    ico_jpg_path = os.path.join(base_dir, f"{account}_{sub_exe_name}.png")
+    ico_jpg_path = os.path.join(base_dir, f"{account}_{exe_name}.png")
     image_utils.add_diminished_se_corner_mark_to_image(avatar_path, extracted_exe_png_path, ico_jpg_path)
 
     # 步骤3：对图片转格式
-    ico_path = os.path.join(base_dir, f"{account}_{sub_exe_name}.ico")
+    ico_path = os.path.join(base_dir, f"{account}_{exe_name}.ico")
     image_utils.png_to_ico(ico_jpg_path, ico_path)
 
     # 清理临时文件

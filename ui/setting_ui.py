@@ -126,7 +126,7 @@ class SettingWindow:
         self.auto_get_wechat_dll_dir_path()
         self.auto_get_current_ver()
         self.auto_get_screen_size()
-        login_size = func_setting.get_login_size_from_ini()
+        login_size = subfunc_file.get_login_size_from_ini()
         self.login_size_var.set(login_size)
 
     def on_ok(self):
@@ -250,10 +250,12 @@ class SettingWindow:
 
     def auto_get_login_size(self, status):
         subfunc_wechat.clear_idle_wnd_and_process()
-        subfunc_wechat.open_wechat(status, dict())
+        sub_exe_process = subfunc_wechat.open_wechat(status, dict())
         wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
             print(f"打开了登录窗口{wechat_hwnd}")
+            if sub_exe_process:
+                sub_exe_process.terminate()
             time.sleep(2)
             login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
             login_wnd = login_wnd_details["window"]

@@ -53,27 +53,6 @@ def get_wechat_dll_dir_path_by_files():
     return dll_dir
 
 
-def get_screen_size_from_ini():
-    result = ini_utils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_SCREEN_SIZE
-    )
-    if not result or result == "":
-        return None
-    else:
-        screen_width, screen_height = result.split('*')
-        return int(screen_width), int(screen_height)
-
-
-def get_login_size_from_ini():
-    return ini_utils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_LOGIN_SIZE
-    )
-
-
 def get_wechat_install_path():
     path_finders = [
         wechat_utils.get_wechat_install_path_from_process,

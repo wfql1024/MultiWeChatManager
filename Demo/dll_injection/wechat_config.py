@@ -1,5 +1,6 @@
 class WeChatVersion:
     V3_9_11_25 = "3.9.11.25"
+    V3_9_12_15 = "3.9.12.15"
     # 可以在这里添加其他版本
 
 
@@ -17,6 +18,11 @@ class OFFSET:
             "NICKNAME": OffsetConfig("昵称", 0x595C3D8, 0, "string"),  # 将 size 设置为 0
             "PHONE_NUMBER": OffsetConfig("手机号", 0x595C318, 11, "ascii_number"),
             "PHONE_TYPE": OffsetConfig("电话类型", 0x595C980, 0, "string")
+        },
+        WeChatVersion.V3_9_12_15: {
+            "NICKNAME": OffsetConfig("昵称", 0x595C3D8, 0, "string"),  # 将 size 设置为 0
+            "PHONE_NUMBER": OffsetConfig("手机号", 0x5977A68, 11, "ascii_number"),
+            "PHONE_TYPE": OffsetConfig("电话类型", 0x595C980, 0, "string")
         }
     }
 
@@ -25,4 +31,4 @@ class OFFSET:
         return OFFSET.CONFIGS[version][key]
 
 
-CURRENT_VERSION = WeChatVersion.V3_9_11_25
+CURRENT_VERSION = WeChatVersion.V3_9_12_15

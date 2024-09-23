@@ -101,9 +101,11 @@ def test(account, status):
         subfunc_wechat.clear_idle_wnd_and_process()
         time.sleep(0.5)
         subfunc_wechat.get_mutex_dict()
-        subfunc_wechat.open_wechat(status, dict())
+        sub_exe_process = subfunc_wechat.open_wechat(status)
         wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
+            if sub_exe_process:
+                sub_exe_process.terminate()
             time.sleep(2)
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
                 return create_config(account)

@@ -4,6 +4,27 @@ from resources import Config
 from utils import json_utils, ini_utils
 
 
+def get_screen_size_from_ini():
+    result = ini_utils.get_setting_from_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY_SCREEN_SIZE
+    )
+    if not result or result == "":
+        return None
+    else:
+        screen_width, screen_height = result.split('*')
+        return int(screen_width), int(screen_height)
+
+
+def get_login_size_from_ini():
+    return ini_utils.get_setting_from_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY_LOGIN_SIZE
+    )
+
+
 def save_wechat_install_path_to_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                          Config.INI_KEY_INSTALL_PATH, value)

@@ -23,59 +23,6 @@ from utils import handle_utils, debug_utils
 from utils.handle_utils import center_window, Tooltip
 
 
-class RedirectText:
-    """
-    用以传送打印到窗口状态栏的类，将输出按结构化的方式分割处理，并保存所有输出。
-    """
-
-    def __init__(self, text_var, message_queue, debug):
-        self.debug = debug
-        self.text_var = text_var
-        self.message_queue = message_queue
-        self.original_stdout = sys.stdout  # 保存原始标准输出
-        self.logs = []  # 用于保存结构化的输出
-
-    def write(self, text):
-        if self.debug:
-            lines = text.splitlines()  # 分割成行
-            # 去掉最后一行（可能为空或包含特殊符号）
-            # 保存每行内容到 logs，注意需要排除结尾符号
-            for line in lines:
-                if len(line) > 0:
-                    # 从你的工具中获取前缀、堆栈等结构化部分
-                    stack_prefix = debug_utils.indent()  # 缩进前缀
-                    call_stack = debug_utils.get_call_stack() + "\n"  # 堆栈
-                    output_prefix = debug_utils.indent()  # 输出前缀
-                    output_content = line  # 实际输出内容
-
-                    # 保存为字典
-                    log_entry = {
-                        'stack_prefix': stack_prefix,
-                        'call_stack': call_stack,
-                        'output_prefix': output_prefix,
-                        'output_content': output_content
-                    }
-
-                    self.message_queue.put(output_content)  # 将原始内容放入队列
-                    self.logs.append(log_entry)  # 保存结构化日志条目
-        else:
-            lines = text.splitlines()
-            for line in lines:
-                self.message_queue.put(line)  # 仅将内容放入队列
-
-        # 继续在控制台输出
-        if self.original_stdout:
-            self.original_stdout.write(text)
-
-    def flush(self):
-        # 确保标准输出的缓冲区被清空
-        self.original_stdout.flush()
-
-    def get_logs(self):
-        # 返回保存的日志
-        return self.logs  # 返回结构化日志
-
-
 class AccountRow:
     """
     为每一个账号创建其行布局的类
@@ -278,7 +225,7 @@ class MainWindow:
         # 创建消息队列
         self.message_queue = queue.Queue()
         # 重定向 stdout
-        sys.stdout = RedirectText(self.status_var, self.message_queue, self.debug)
+        sys.stdout = debug_utils.RedirectText(self.status_var, self.message_queue, self.debug)
         # 定期检查队列中的消息
         self.update_status()
 
@@ -383,7 +330,7 @@ class MainWindow:
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
         # -应用设置
-        login_size = func_setting.get_login_size_from_ini()
+        login_size = subfunc_file.get_login_size_from_ini()
         if not login_size or login_size == "" or login_size == "None":
             self.menu_bar.add_cascade(label="!!!设置", menu=self.settings_menu)
             self.settings_menu.add_command(label="!!!应用设置", command=self.open_settings, foreground='red')
@@ -460,7 +407,6 @@ class MainWindow:
         self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
                                    height=1)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-
         # 绑定点击事件
         if self.debug:
             self.status_bar.bind("<Button-1>", lambda event: self.open_debug_window())
@@ -495,7 +441,7 @@ class MainWindow:
             self.data_path = data_path
             self.last_version_path = dll_dir_path
 
-            screen_size = func_setting.get_screen_size_from_ini()
+            screen_size = subfunc_file.get_screen_size_from_ini()
 
             if not screen_size or screen_size == "":
                 # 获取屏幕和登录窗口尺寸
