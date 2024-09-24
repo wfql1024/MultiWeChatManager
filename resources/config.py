@@ -28,6 +28,7 @@ class Config:
     PROJ_USER_PATH = fr'{PROJ_PATH}\user_files'
     PROJ_EXTERNAL_RES_PATH = fr'{PROJ_PATH}\external_res'
 
+    STATISTIC_JSON_PATH = fr'{PROJ_USER_PATH}\statistics.json'
     ACC_DATA_JSON_PATH = fr'{PROJ_USER_PATH}\account_data.json'
     SETTING_INI_PATH = fr'{PROJ_USER_PATH}\setting.ini'
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\SunnyMultiWxMng.ico'

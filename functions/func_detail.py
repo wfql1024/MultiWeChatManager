@@ -42,9 +42,9 @@ def fetch_acc_detail_by_pid(pid, account, before, after):
             usr_name, url = avatar_results[0]
             # alias的存储比较特殊，如果用户没有重新改过微信名，那么表中alias为空，但是软件希望alias存储的是当前的
             # 因此，若alias是空的，则原始名就是当前名
-            subfunc_file.update_acc_details_to_json(user_name, alias=alias, nickname=nickname, avatar_url=url)
+            subfunc_file.update_acc_details_to_acc_json(user_name, alias=alias, nickname=nickname, avatar_url=url)
             if alias == "":
-                subfunc_file.update_acc_details_to_json(user_name, alias=user_name)
+                subfunc_file.update_acc_details_to_acc_json(user_name, alias=user_name)
 
             save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
 

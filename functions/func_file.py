@@ -46,23 +46,40 @@ def open_config_file():
 
 
 def clear_config_file(after):
-    data_path = func_setting.get_wechat_data_path()
-    config_path = os.path.join(data_path, "All Users", "config")
-    # 获取所有 `.data` 文件，除了 `config.data`
-    data_files = glob.glob(os.path.join(config_path, "*.data"))
-    files_to_delete = [file for file in data_files if not file.endswith("config.data")]
+
     confirm = messagebox.askokcancel(
         "确认清除",
         "该操作将会清空登录配置文件，请确认是否需要清除？"
     )
     if confirm:
-        # 删除这些文件
-        for file_path in files_to_delete:
-            try:
-                os.remove(file_path)
-                print(f"已删除: {file_path}")
-            except Exception as e:
-                print(f"无法删除 {file_path}: {e}")
+        data_path = func_setting.get_wechat_data_path()
+        config_path = os.path.join(data_path, "All Users", "config")
+        # 获取所有 `.data` 文件，除了 `config.data`
+        data_files = glob.glob(os.path.join(config_path, "*.data"))
+        files_to_delete = [file for file in data_files if not file.endswith("config.data")]
+        if len(files_to_delete) > 0:
+            # 删除这些文件
+            for file_path in files_to_delete:
+                try:
+                    os.remove(file_path)
+                    print(f"已删除: {file_path}")
+                except Exception as e:
+                    print(f"无法删除 {file_path}: {e}")
+            after()
+
+
+def clear_statistic_data(after):
+    confirm = messagebox.askokcancel(
+        "确认清除",
+        "该操作将会清空统计的数据，请确认是否需要清除？"
+    )
+    if confirm:
+        file_path = Config.STATISTIC_JSON_PATH
+        try:
+            os.remove(file_path)
+            print(f"已删除: {file_path}")
+        except Exception as e:
+            print(f"无法删除 {file_path}: {e}")
         after()
 
 

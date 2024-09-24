@@ -74,7 +74,7 @@ class DetailWindow:
         note_label = ttk.Label(self.note_frame, text="备    注：")
         note_label.pack(side=tk.LEFT, anchor="w")
 
-        note, = subfunc_file.get_acc_details_from_json(self.account, note=None)
+        note, = subfunc_file.get_acc_details_from_acc_json(self.account, note=None)
         if not note:
             self.note_var = tk.StringVar(value="")
         else:
@@ -118,7 +118,7 @@ class DetailWindow:
                 f.write(image_data)
             print(f"默认头像已保存到 {default_path}")
             avatar_path = default_path
-        avatar_url, alias, nickname, pid = subfunc_file.get_acc_details_from_json(
+        avatar_url, alias, nickname, pid = subfunc_file.get_acc_details_from_acc_json(
             self.account,
             avatar_url=None,
             alias="请获取数据",
@@ -132,9 +132,9 @@ class DetailWindow:
         if not pid:
             self.disable_fetch_button()
             self.pid_label.config(text=f"PID: 未登录")
-            subfunc_file.update_acc_details_to_json(self.account, has_mutex=True)
+            subfunc_file.update_acc_details_to_acc_json(self.account, has_mutex=True)
         else:
-            has_mutex, = subfunc_file.get_acc_details_from_json(self.account, has_mutex=True)
+            has_mutex, = subfunc_file.get_acc_details_from_acc_json(self.account, has_mutex=True)
             if has_mutex:
                 self.pid_label.config(text=f"PID: {pid}\n(有互斥体)")
             else:
@@ -178,7 +178,7 @@ class DetailWindow:
 
     def fetch_data(self):
 
-        pid, = subfunc_file.get_acc_details_from_json(self.account, pid=None)
+        pid, = subfunc_file.get_acc_details_from_acc_json(self.account, pid=None)
         if not pid:
             self.disable_fetch_button()
             messagebox.showinfo("提示", "未检测到该账号登录")
@@ -199,8 +199,8 @@ class DetailWindow:
     def save_note(self):
         new_note = self.note_var.get().strip()
         if new_note == "":
-            subfunc_file.update_acc_details_to_json(self.account, note=None)
+            subfunc_file.update_acc_details_to_acc_json(self.account, note=None)
         else:
-            subfunc_file.update_acc_details_to_json(self.account, note=new_note)
+            subfunc_file.update_acc_details_to_acc_json(self.account, note=new_note)
         self.update_callback()
         self.master.destroy()

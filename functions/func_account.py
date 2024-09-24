@@ -1,7 +1,6 @@
 import base64
 import os
 import time
-from datetime import datetime
 
 import psutil
 from PIL import Image
@@ -58,7 +57,7 @@ def get_account_display_name(account) -> str:
         (
             value
             for key in ("note", "nickname", "alias")
-            if (value := subfunc_file.get_acc_details_from_json(account, **{key: None})[0]) is not None
+            if (value := subfunc_file.get_acc_details_from_acc_json(account, **{key: None})[0]) is not None
         ),
         account
     )
@@ -139,13 +138,13 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
     if status == "已开启":
         for acc in logged_in + not_logged_in:
             print(f"由于是全局多开模式，直接所有has_mutex都为false")
-            subfunc_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
+            subfunc_file.update_acc_details_to_acc_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
     else:
         for acc in logged_in + not_logged_in:
             pid = pid_dict.get(acc, None)
             if pid is None:
-                subfunc_file.update_acc_details_to_json(acc, has_mutex=None)
-            subfunc_file.update_acc_details_to_json(acc, pid=pid_dict.get(acc, None))
+                subfunc_file.update_acc_details_to_acc_json(acc, has_mutex=None)
+            subfunc_file.update_acc_details_to_acc_json(acc, pid=pid_dict.get(acc, None))
         # 更新json表中各微信进程的互斥体情况
         subfunc_file.update_has_mutex_from_all_wechat()
 
@@ -155,5 +154,5 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
 
 
 if __name__ == '__main__':
-    note = subfunc_file.get_acc_details_from_json('wxid_t2dchu5zw9y022', note=None)[0]
+    note = subfunc_file.get_acc_details_from_acc_json('wxid_t2dchu5zw9y022', note=None)[0]
     print(note)

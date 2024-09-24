@@ -20,13 +20,15 @@ def manual_login(status):
     start_time = time.time()
     subfunc_wechat.clear_idle_wnd_and_process()
     time.sleep(0.5)
-    subfunc_file.clear_all_wechat_in_json() and subfunc_file.update_all_wechat_in_json()
+    subfunc_file.clear_all_wechat_in_acc_json() and subfunc_file.update_all_wechat_in_acc_json()
     has_mutex_dict = subfunc_wechat.get_mutex_dict()
-    sub_exe_process = subfunc_wechat.open_wechat(status, has_mutex_dict)
+    print(f"当前模式是：{status}")
+    sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict)
     wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)
     if wechat_hwnd:
         subfunc_file.set_all_wechat_values_to_false()
         print(f"打开了登录窗口{wechat_hwnd}")
+        subfunc_file.update_manual_time_statistic(sub_exe, time.time() - start_time)
         if sub_exe_process:
             sub_exe_process.terminate()
         if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
@@ -64,10 +66,10 @@ def auto_login_accounts(accounts, status):
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
     subfunc_wechat.clear_idle_wnd_and_process()
     time.sleep(0.5)
-    subfunc_file.clear_all_wechat_in_json() and subfunc_file.update_all_wechat_in_json()
+    subfunc_file.clear_all_wechat_in_acc_json() and subfunc_file.update_all_wechat_in_acc_json()
 
     # 检测尺寸设置是否完整
-    login_size = subfunc_file.get_login_size_from_ini()
+    login_size = subfunc_file.get_login_size_from_setting_ini()
     if not login_size or login_size == "":
         messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
         return False
@@ -82,7 +84,7 @@ def auto_login_accounts(accounts, status):
     screen_width = int(tk.Tk().winfo_screenwidth())
     screen_height = int(tk.Tk().winfo_screenheight())
     if not screen_height or not screen_width:
-        screen_width, screen_height = subfunc_file.get_screen_size_from_ini()
+        screen_width, screen_height = subfunc_file.get_screen_size_from_setting_ini()
     # 计算一行最多可以显示多少个
     max_column = int(screen_width / login_width)
 
@@ -111,19 +113,18 @@ def auto_login_accounts(accounts, status):
             break
 
         has_mutex_dict = subfunc_wechat.get_mutex_dict()
-        sub_exe_process = subfunc_wechat.open_wechat(status, has_mutex_dict)
+        sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict)
         # 等待打开窗口
         end_time = time.time() + 8
         while True:
             wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 1)
-            if wechat_hwnd not in wechat_handles:
+            if wechat_hwnd is not None and wechat_hwnd not in wechat_handles:
                 # 确保打开了新的微信登录窗口
                 wechat_handles.add(wechat_hwnd)
                 if sub_exe_process:
                     sub_exe_process.terminate()
                 print(f"打开窗口成功：{wechat_hwnd}")
                 subfunc_file.set_all_wechat_values_to_false()
-                time.sleep(0.2)
                 break
             if time.time() > end_time:
                 print(f"超时！换下一个账号")
@@ -148,7 +149,7 @@ def auto_login_accounts(accounts, status):
         except Exception as e:
             print(e)
 
-        print(f"登录到第{j + 1}个账号用时：{time.time() - start_time:.4f}秒")
+        subfunc_file.update_auto_time_statistic(sub_exe, time.time() - start_time, j + 1)
 
     # 如果有，关掉多余的多开器
     subfunc_wechat.kill_wechat_multiple_processes()

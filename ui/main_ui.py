@@ -14,13 +14,11 @@ import psutil
 from PIL import ImageTk
 
 from functions import func_config, func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file
-from functions.func_login import manual_login
 from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
-from ui import about_ui, setting_ui, detail_ui, rewards_ui, debug_ui
+from ui import about_ui, setting_ui, detail_ui, rewards_ui, debug_ui, statistic_ui
 from utils import handle_utils, debug_utils
-from utils.handle_utils import center_window, Tooltip
 
 
 class AccountRow:
@@ -56,7 +54,7 @@ class AccountRow:
         self.avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
 
         # 账号标签
-        has_mutex, = subfunc_file.get_acc_details_from_json(account, has_mutex=None)
+        has_mutex, = subfunc_file.get_acc_details_from_acc_json(account, has_mutex=None)
         style = ttk.Style()
         style.configure("Red.TLabel", foreground="red")
         if has_mutex:
@@ -116,7 +114,7 @@ class AccountRow:
         """
         button.state(['disabled'])
         if not self.tooltip:
-            self.tooltip = Tooltip(button, text)
+            self.tooltip = handle_utils.Tooltip(button, text)
 
     def enable_button_and_unbind_tip(self, button):
         """
@@ -173,6 +171,7 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window, debug=None):
+        self.statistic_menu = None
         self.chosen_sub_exe_var = None
         self.debug = debug
         self.settings_button = None
@@ -313,6 +312,12 @@ class MainWindow:
             self.config_file_menu.add_command(label="清除",
                                               command=partial(func_file.clear_config_file,
                                                               self.create_main_frame_and_menu))
+        # >统计数据
+        self.statistic_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
+        self.statistic_menu.add_command(label="查看", command=self.open_statistic)
+        self.statistic_menu.add_command(label="清除",
+                                        command=partial(func_file.clear_statistic_data, self.create_main_frame_and_menu))
         # -打开主dll所在文件夹
         self.file_menu.add_command(label="查看DLL", command=func_file.open_dll_dir_path)
         # -创建软件快捷方式
@@ -330,7 +335,7 @@ class MainWindow:
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
         # -应用设置
-        login_size = subfunc_file.get_login_size_from_ini()
+        login_size = subfunc_file.get_login_size_from_setting_ini()
         if not login_size or login_size == "" or login_size == "None":
             self.menu_bar.add_cascade(label="!!!设置", menu=self.settings_menu)
             self.settings_menu.add_command(label="!!!应用设置", command=self.open_settings, foreground='red')
@@ -348,7 +353,6 @@ class MainWindow:
         self.chosen_sub_exe_var = tk.StringVar()  # 用于跟踪当前选中的子程序
 
         # 检查状态
-        self.status = "未开启"  # 假设状态为"未开启"
         if self.status == "已开启":
             self.settings_menu.add_cascade(label="子程序   不需要", menu=self.sub_executable_menu)
             self.settings_menu.entryconfig("子程序   不需要", state="disable")
@@ -441,14 +445,14 @@ class MainWindow:
             self.data_path = data_path
             self.last_version_path = dll_dir_path
 
-            screen_size = subfunc_file.get_screen_size_from_ini()
+            screen_size = subfunc_file.get_screen_size_from_setting_ini()
 
             if not screen_size or screen_size == "":
                 # 获取屏幕和登录窗口尺寸
                 screen_width = self.master.winfo_screenwidth()
                 screen_height = self.master.winfo_screenheight()
                 # 保存屏幕尺寸
-                subfunc_file.save_screen_size_to_ini(f"{screen_width}*{screen_height}")
+                subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
 
             # 开始创建列表
             self.create_main_frame_and_menu()
@@ -666,7 +670,7 @@ class MainWindow:
         """
         button.state(['disabled'])
         if button not in self.tooltips:
-            self.tooltips[button] = Tooltip(button, text)
+            self.tooltips[button] = handle_utils.Tooltip(button, text)
 
     def enable_button_and_unbind_tip(self, button):
         """
@@ -753,11 +757,18 @@ class MainWindow:
                 checkbox_var.set(0)
                 self.disable_button_and_add_tip(button, tip)
 
+    def open_statistic(self):
+        """打开统计窗口"""
+        statistic_window = tk.Toplevel(self.master)
+        statistic_ui.StatisticWindow(statistic_window)
+        handle_utils.center_window(statistic_window)
+        statistic_window.focus_set()
+
     def open_settings(self):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.master)
         setting_ui.SettingWindow(settings_window, self.status, self.delayed_initialization)
-        center_window(settings_window)
+        handle_utils.center_window(settings_window)
         settings_window.focus_set()
 
     def toggle_patch_mode(self):
@@ -792,19 +803,19 @@ class MainWindow:
         """打开关于窗口"""
         about_window = tk.Toplevel(self.master)
         about_ui.AboutWindow(about_window)
-        center_window(about_window)
+        handle_utils.center_window(about_window)
 
     def open_rewards(self):
         """打开支持窗口"""
         rewards_window = tk.Toplevel(self.master)
         rewards_ui.RewardsWindow(rewards_window, Config.REWARDS_PNG_PATH)
-        center_window(rewards_window)
+        handle_utils.center_window(rewards_window)
 
     def open_detail(self, account):
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.master)
         detail_ui.DetailWindow(detail_window, account, self.create_main_frame_and_menu)
-        center_window(detail_window)
+        handle_utils.center_window(detail_window)
         detail_window.focus_set()
 
     def create_config(self, account, status):
@@ -818,7 +829,7 @@ class MainWindow:
 
     def manual_login_account(self):
         """按钮：手动登录"""
-        self.thread_manager.manual_login_account(manual_login, self.status, self.create_main_frame_and_menu,
+        self.thread_manager.manual_login_account(func_login.manual_login, self.status, self.create_main_frame_and_menu,
                                                  partial(handle_utils.bring_window_to_front, window_class=self))
 
     def auto_login_account(self, account):
@@ -897,4 +908,4 @@ class MainWindow:
         """打开调试窗口，显示所有输出日志"""
         debug_window = tk.Toplevel(self.master)
         debug_ui.DebugWindow(debug_window)
-        center_window(debug_window)
+        handle_utils.center_window(debug_window)

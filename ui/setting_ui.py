@@ -126,7 +126,7 @@ class SettingWindow:
         self.auto_get_wechat_dll_dir_path()
         self.auto_get_current_ver()
         self.auto_get_screen_size()
-        login_size = subfunc_file.get_login_size_from_ini()
+        login_size = subfunc_file.get_login_size_from_setting_ini()
         self.login_size_var.set(login_size)
 
     def on_ok(self):
@@ -146,10 +146,10 @@ class SettingWindow:
         elif not bool(re.match(r'^\d+\*\d+$', self.login_size_var.get())):
             messagebox.showerror("错误", f"请确保填入的尺寸符合\"整数*整数\"的形式")
             return False
-        subfunc_file.save_login_size_to_ini(f"{self.login_size_var.get()}")
-        subfunc_file.save_wechat_install_path_to_ini(self.install_path)
-        subfunc_file.save_wechat_data_path_to_ini(self.data_path)
-        subfunc_file.save_wechat_dll_dir_path_to_ini(self.dll_dir_path)
+        subfunc_file.save_login_size_to_setting_ini(f"{self.login_size_var.get()}")
+        subfunc_file.save_wechat_install_path_to_setting_ini(self.install_path)
+        subfunc_file.save_wechat_data_path_to_setting_ini(self.data_path)
+        subfunc_file.save_wechat_dll_dir_path_to_setting_ini(self.dll_dir_path)
         return True
 
     def auto_get_wechat_dll_dir_path(self):
@@ -246,11 +246,11 @@ class SettingWindow:
         screen_width = self.master.winfo_screenwidth()
         screen_height = self.master.winfo_screenheight()
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        subfunc_file.save_screen_size_to_ini(f"{screen_width}*{screen_height}")
+        subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
 
     def auto_get_login_size(self, status):
         subfunc_wechat.clear_idle_wnd_and_process()
-        sub_exe_process = subfunc_wechat.open_wechat(status, dict())
+        sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, dict())
         wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
             print(f"打开了登录窗口{wechat_hwnd}")
@@ -263,7 +263,7 @@ class SettingWindow:
             login_height = login_wnd_details["height"]
             print(login_width, login_height)
             if 0.734 < login_width / login_height < 0.740:
-                subfunc_file.save_login_size_to_ini(f"{login_width}*{login_height}")
+                subfunc_file.save_login_size_to_setting_ini(f"{login_width}*{login_height}")
                 self.login_size_var.set(f"{login_width}*{login_height}")
             else:
                 self.login_size_var.set(f"347*471")

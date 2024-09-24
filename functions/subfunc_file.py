@@ -1,10 +1,11 @@
+import math
 from typing import Tuple, Any
 
 from resources import Config
 from utils import json_utils, ini_utils
 
 
-def get_screen_size_from_ini():
+def get_screen_size_from_setting_ini():
     result = ini_utils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
         Config.INI_SECTION,
@@ -17,7 +18,7 @@ def get_screen_size_from_ini():
         return int(screen_width), int(screen_height)
 
 
-def get_login_size_from_ini():
+def get_login_size_from_setting_ini():
     return ini_utils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
         Config.INI_SECTION,
@@ -25,47 +26,47 @@ def get_login_size_from_ini():
     )
 
 
-def save_wechat_install_path_to_ini(value):
+def save_wechat_install_path_to_setting_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                          Config.INI_KEY_INSTALL_PATH, value)
 
 
-def save_wechat_data_path_to_ini(value):
+def save_wechat_data_path_to_setting_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                          Config.INI_KEY_DATA_PATH, value)
 
 
-def save_wechat_dll_dir_path_to_ini(value):
+def save_wechat_dll_dir_path_to_setting_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                          Config.INI_KEY_DLL_DIR_PATH, value)
 
 
-def save_screen_size_to_ini(value):
+def save_screen_size_to_setting_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                          Config.INI_KEY_SCREEN_SIZE, value)
 
 
-def save_login_size_to_ini(value):
+def save_login_size_to_setting_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                          Config.INI_KEY_LOGIN_SIZE, value)
 
 
-def get_wechat_install_path_from_ini():
+def get_wechat_install_path_from_setting_ini():
     return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                           Config.INI_KEY_INSTALL_PATH)
 
 
-def get_wechat_data_path_from_ini():
+def get_wechat_data_path_from_setting_ini():
     return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                           Config.INI_KEY_DATA_PATH)
 
 
-def get_wechat_dll_dir_path_from_ini():
+def get_wechat_dll_dir_path_from_setting_ini():
     return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                           Config.INI_KEY_DLL_DIR_PATH)
 
 
-def update_acc_details_to_json(account, **kwargs) -> None:
+def update_acc_details_to_acc_json(account, **kwargs) -> None:
     """更新账户信息到 JSON"""
     account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
     if account not in account_data:
@@ -77,7 +78,7 @@ def update_acc_details_to_json(account, **kwargs) -> None:
     json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
 
 
-def get_acc_details_from_json(account: str, **kwargs) -> Tuple[Any, ...]:
+def get_acc_details_from_acc_json(account: str, **kwargs) -> Tuple[Any, ...]:
     """
     根据用户输入的变量名，获取对应的账户信息
     :param account: 账户名
@@ -90,11 +91,11 @@ def get_acc_details_from_json(account: str, **kwargs) -> Tuple[Any, ...]:
     for key, default in kwargs.items():
         result += (account_info.get(key, default),)
         print(f"获取[{account}][{key}]：{account_info.get(key, default)}")
-    print(f"└—————————————————————————————————————————")
+    print(f"└———")
     return result
 
 
-def clear_all_wechat_in_json():
+def clear_all_wechat_in_acc_json():
     """
     清空登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
@@ -113,7 +114,7 @@ def clear_all_wechat_in_json():
     return True
 
 
-def update_all_wechat_in_json():
+def update_all_wechat_in_acc_json():
     """
     清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
@@ -133,7 +134,7 @@ def update_all_wechat_in_json():
             all_wechat[str(pid)] = has_mutex
 
     # 更新 all_wechat 到 JSON 文件
-    update_acc_details_to_json("all_wechat", **all_wechat)
+    update_acc_details_to_acc_json("all_wechat", **all_wechat)
     return True
 
 
@@ -155,6 +156,7 @@ def set_all_wechat_values_to_false():
 
     # 保存更新后的数据
     json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+    return True
 
 
 def update_has_mutex_from_all_wechat():
@@ -171,6 +173,93 @@ def update_has_mutex_from_all_wechat():
         pid = details.get("pid", None)
         if pid and pid is not None:
             has_mutex = account_data["all_wechat"].get(f"{pid}", True)
-            update_acc_details_to_json(account, has_mutex=has_mutex)
+            update_acc_details_to_acc_json(account, has_mutex=has_mutex)
+
+    return True
+
+
+# 更新手动模式的函数
+def update_manual_time_statistic(sub_exe, time_spent):
+    if sub_exe.startswith("WeChatMultiple"):
+        sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
+
+    account_data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    if "manual" not in account_data:
+        account_data["manual"] = {}
+    if sub_exe not in account_data["manual"]:
+        account_data["manual"][sub_exe] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+
+    # 获取当前最小、最大值，次数，平均用时
+    current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
+                                                    account_data["manual"][sub_exe].split(","))
+
+    # 更新最小和最大值
+    new_min = min(current_min or math.inf, time_spent)
+    new_max = max(current_max or 0, time_spent)
+
+    # 更新次数和平均用时
+    new_count = count + 1
+    new_avg_time = (avg_time * count + time_spent) / new_count
+
+    account_data["manual"][sub_exe] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, account_data)
+
+
+def update_auto_time_statistic(sub_exe, time_spent, index):
+    if sub_exe.startswith("WeChatMultiple"):
+        sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
+
+    account_data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    if "auto" not in account_data:
+        account_data["auto"] = {}
+    if sub_exe not in account_data["auto"]:
+        account_data["auto"][sub_exe] = {}
+
+    # 检查该行是否存在
+    if str(index) not in account_data["auto"][sub_exe]:
+        account_data["auto"][sub_exe][str(index)] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+
+    # 获取当前最小、最大值，次数，平均用时
+    current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
+                                                    account_data["auto"][sub_exe][str(index)].split(","))
+
+    # 更新最小和最大值
+    new_min = min(current_min or math.inf, time_spent)
+    new_max = max(current_max or 0, time_spent)
+
+    # 更新次数和平均用时
+    new_count = count + 1
+    new_avg_time = (avg_time * count + time_spent) / new_count
+
+    account_data["auto"][sub_exe][str(index)] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, account_data)
+
+
+def convert_stat_json_to_md_table():
+    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+
+    # 手动表格
+    manual_md = "| Mode | Min Time | Count | Avg Time | Max Time |\n"
+    manual_md += "| --- | --- | --- | --- | --- |\n"
+    for mode, stats in data["manual"].items():
+        min_time, count, avg_time, max_time = stats.split(",")
+        manual_md += f"| {mode} | {min_time.replace('inf', 'null')} | {count} | {avg_time} | {max_time} |\n"
+
+    # 自动表格
+    auto_md = "| Index | " + " | ".join(data["auto"].keys()) + " |\n"
+    auto_md += "| --- | " + " | ".join(["---"] * len(data["auto"])) + " |\n"
+    max_rows = max(len(times_dict) for times_dict in data["auto"].values())
+
+    for i in range(1, max_rows + 1):
+        row = f"| {i} "
+        for mode, times_dict in data["auto"].items():
+            row += f"| {times_dict.get(str(i), 'null,null,null,null').replace('inf', 'null')} "
+        row += "|\n"
+        auto_md += row
+
+    return manual_md, auto_md
+
+
+
 
 

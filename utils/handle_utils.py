@@ -14,6 +14,8 @@ from resources import Config
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
+from pywinauto.controls.hwndwrapper import HwndWrapper
+from pywinauto import Application
 
 
 class Tooltip:
@@ -155,7 +157,6 @@ def wait_for_window_open(class_name, timeout=30, name=None):
 
 def get_window_details_from_hwnd(hwnd):
     """通过句柄获取窗口的尺寸和位置"""
-    from pywinauto.controls.hwndwrapper import HwndWrapper
     w = HwndWrapper(hwnd)
     if w.handle == hwnd:
         # print(f"{w.handle}")
@@ -215,7 +216,6 @@ def close_window_by_name(window_name):
 
 def get_center_pos_by_handle_and_title(handle, title, control_type="Button"):
     """获取指定控件中点的相对位置"""
-    from pywinauto import Application
     # 连接到应用程序窗口
     app = Application(backend="uia").connect(handle=handle)
 
