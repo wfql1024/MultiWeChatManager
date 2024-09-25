@@ -288,7 +288,7 @@ def reset(after):
     # 显示确认对话框
     confirm = messagebox.askokcancel(
         "确认重置",
-        "该操作需要关闭所有微信进程，将清空头像、昵称、配置的路径等数据以及恢复到非全局模式，但不影响登录配置文件，请确认是否需要重置？"
+        "该操作需要关闭所有微信进程，将清空除配置文件外的所有文件及设置，请确认是否需要重置？"
     )
     directory_path = Config.PROJ_USER_PATH
     dll_dir_path = func_setting.get_wechat_dll_dir_path()

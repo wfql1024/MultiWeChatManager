@@ -277,10 +277,7 @@ class MainWindow:
         y = int((screen_height - 50 - self.window_height - 60) // 2)
         self.master.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
 
-        self.master.deiconify()  # 显示主窗口
-
-        # time.sleep(500)
-        # self.ui_helper.center_window(self.master)
+        self.master.deiconify()
 
     def setup_main_window(self):
         """创建主窗口"""

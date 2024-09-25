@@ -1,4 +1,5 @@
 # about_ui.py
+import re
 import tkinter as tk
 import webbrowser
 from tkinter import ttk
@@ -31,7 +32,14 @@ class AboutWindow:
         title_label = ttk.Label(frame, text="微信多开管理器", font=("", 16, "bold"))
         title_label.pack(pady=(0, 10))
 
-        version_label = ttk.Label(frame, text=f"版本号：{Config.APP_VERSION}", font=("", 10))
+        with open(Config.VERSION_FILE, 'r', encoding='utf-8') as version_file:
+            version_info = version_file.read()
+            # 使用正则表达式提取文件版本
+            match = re.search(r'(\d+,\s*\d+,\s*\d+,\s*\d+)', version_info)
+            version_number = match.group(0) if match else "未知版本"
+
+        version_label = ttk.Label(frame, text=f"版本号：{version_number}", font=("", 10))
+
         version_label.pack()
 
         # 原创作者标签
