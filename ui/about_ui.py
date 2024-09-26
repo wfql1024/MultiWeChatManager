@@ -1,10 +1,12 @@
 # about_ui.py
 import re
+import sys
 import tkinter as tk
 import webbrowser
 from tkinter import ttk
 
 from resources import Config, Strings
+from utils import file_utils
 
 
 class AboutWindow:
@@ -32,14 +34,18 @@ class AboutWindow:
         title_label = ttk.Label(frame, text="微信多开管理器", font=("", 16, "bold"))
         title_label.pack(pady=(0, 10))
 
-        with open(Config.VERSION_FILE, 'r', encoding='utf-8') as version_file:
-            version_info = version_file.read()
-            # 使用正则表达式提取文件版本
-            match = re.search(r'(\d+,\s*\d+,\s*\d+,\s*\d+)', version_info)
-            version_number = match.group(0) if match else "未知版本"
+        # 判断当前环境
+        if getattr(sys, 'frozen', False):
+            exe_path = sys.executable
+            version_number = file_utils.get_file_version(exe_path)  # 获取当前执行文件的版本信息
+        else:
+            with open(Config.VERSION_FILE, 'r', encoding='utf-8') as version_file:
+                version_info = version_file.read()
+                # 使用正则表达式提取文件版本
+                match = re.search(r'filevers=\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)', version_info)
+                version_number = '.'.join([match.group(1), match.group(2), match.group(3), match.group(4)])
 
-        version_label = ttk.Label(frame, text=f"版本号：{version_number}", font=("", 10))
-
+        version_label = ttk.Label(frame, text=f"版本号：{version_number} {Config.VER_STATUS}", font=("", 10))
         version_label.pack()
 
         # 原创作者标签

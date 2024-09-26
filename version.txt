@@ -1,8 +1,46 @@
+# UTF-8
+#
+# For more details about fixed file info 'ffi' see:
+# http://msdn.microsoft.com/en-us/library/ms646997.aspx
 VSVersionInfo(
-  1, 0, 0, 0,  # 文件版本
-  1, 0, 0, 0,  # 产品版本
-  '微信多开管理器，旨在提升微信多开使用体验，便捷管理多个账号。',
-  '极峰创科',
-  '微信多开管理器',
-  'Copyright (c) 2024 吾峰起浪'
+  ffi=FixedFileInfo(
+    # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
+    # Set not needed items to zero 0.
+    filevers=(2, 3, 3, 333),  # 文件版本
+    # Contains a bitmask that specifies the valid bits 'flags'r
+    mask=0x3f,
+    # Contains a bitmask that specifies the Boolean attributes of the file.
+    flags=0x0,
+    # The operating system for which this file was designed.
+    # 0x4 - NT and there is no need to change it.
+    OS=0x4,
+    # The general type of file.
+    # 0x1 - the file is an application.
+    fileType=0x1, # 类型
+    # The function of the file.
+    # 0x0 - the function is not defined for this fileType
+    subtype=0x0,
+    # Creation date and time stamp.
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          u'040904B0',
+          [
+            StringStruct(u'CompanyName', u'极峰创科 JhiFeng Chan Tech'),
+            StringStruct(u'FileDescription', u'微信多开管理器，旨在提升微信多开使用体验。'),    # 文件说明
+            StringStruct(u'InternalName', u'微信多开'),
+            StringStruct(u'LegalCopyright', u'吾峰起浪版权所有'), #版权
+            StringStruct(u'OriginalFilename', u'MultiWeChatManager.exe'), #原始文件名
+            StringStruct(u'ProductName', u'微信多开管理器'),      #产品名称
+          ]
+        )
+      ]
+    ),
+    VarFileInfo(
+      [VarStruct(u'Translation', [2052, 1200])]
+    ) # 语言
+  ]
 )

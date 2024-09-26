@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from resources import Config
-from utils import json_utils, handle_utils
+from utils import json_utils
 
 
 def try_convert(value):
@@ -13,6 +13,7 @@ def try_convert(value):
 
 class StatisticWindow:
     def __init__(self, master):
+        self.refresh_tree = None
         self.manual_tree = None
         self.auto_tree = None
         self.index_combobox = None
@@ -46,10 +47,11 @@ class StatisticWindow:
         # 配置Canvas的滚动区域
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
-        self.sort_order = {"manual": True, "auto": True}  # 控制排序顺序
+        self.sort_order = {"manual": True, "auto": True, "refresh": True}  # 控制排序顺序
 
         self.create_manual_table()
         self.create_auto_table()
+        self.create_refresh_table()
 
         self.display_table()
 
@@ -97,10 +99,12 @@ class StatisticWindow:
             self.scrollbar.pack_forget()
 
     def create_manual_table(self):
+        """定义手动登录表格"""
         label = tk.Label(self.main_frame, text="手动登录", font=("Microsoft YaHei", 14, "bold"))
         label.pack(padx=(20, 0))
 
-        self.manual_tree = ttk.Treeview(self.main_frame, columns=("模式", "最短时间", "使用次数", "平均时间", "最长时间"),
+        self.manual_tree = ttk.Treeview(self.main_frame,
+                                        columns=("模式", "最短时间", "使用次数", "平均时间", "最长时间"),
                                         show='headings', height=1)
         for col in ("模式", "最短时间", "使用次数", "平均时间", "最长时间"):
             self.manual_tree.heading(col, text=col,
@@ -110,6 +114,7 @@ class StatisticWindow:
         self.manual_tree.pack(fill=tk.X, expand=True, padx=(20, 0), pady=(0, 10))
 
     def create_auto_table(self):
+        """定义自动登录表格"""
         label = tk.Label(self.main_frame, text="自动登录", font=("Microsoft YaHei", 14, "bold"))
         label.pack(padx=(20, 10))
 
@@ -118,7 +123,7 @@ class StatisticWindow:
 
         self.index_combobox = ttk.Combobox(self.main_frame, values=[], state="readonly")
         self.index_combobox.pack()
-        self.index_combobox.bind("<<ComboboxSelected>>", self.update_auto_table)
+        self.index_combobox.bind("<<ComboboxSelected>>", self.on_selected)
 
         self.auto_tree = ttk.Treeview(self.main_frame, columns=("模式", "最短时间", "使用次数", "平均时间", "最长时间"),
                                       show='headings', height=1)
@@ -128,15 +133,23 @@ class StatisticWindow:
 
         self.auto_tree.pack(fill=tk.X, expand=True, padx=(20, 0), pady=(0, 10))
 
+    def create_refresh_table(self):
+        """定义刷新表格"""
+        label = tk.Label(self.main_frame, text="刷新", font=("Microsoft YaHei", 14, "bold"))
+        label.pack(padx=(20, 0))
+
+        self.refresh_tree = ttk.Treeview(self.main_frame,
+                                         columns=("账号数", "最短时间", "使用次数", "平均时间", "最长时间"),
+                                         show='headings', height=1)
+        for col in ("账号数", "最短时间", "使用次数", "平均时间", "最长时间"):
+            self.refresh_tree.heading(col, text=col,
+                                      command=lambda c=col: self.sort_column(self.refresh_tree, c, "refresh"))
+            self.refresh_tree.column(col, anchor='center' if col == "账号数" else 'e', width=100)  # 设置列宽
+
+        self.refresh_tree.pack(fill=tk.X, expand=True, padx=(20, 0), pady=(0, 10))
+
     def display_table(self):
         data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-
-        # 清空之前的数据
-        for item in self.manual_tree.get_children():
-            self.manual_tree.delete(item)
-        for item in self.auto_tree.get_children():
-            self.auto_tree.delete(item)
-
         # 添加手动统计数据
         manual_data = data.get("manual", {}).items()
         for mode, stats in manual_data:
@@ -145,33 +158,43 @@ class StatisticWindow:
                                     values=(mode, min_time.replace("inf", "null"),
                                             int(float(count)), avg_time, max_time))
         self.manual_tree.config(height=len(manual_data) + 1)
-
         # 更新下拉框选项
         auto_data = data.get("auto", {})
-        index_values = []
+        index_values = set()  # 使用集合去重
         for mode, times_dict in auto_data.items():
-            index_values.extend(times_dict.keys())  # 获取所有index值
-        self.index_combobox['values'] = index_values
-
+            index_values.update(times_dict.keys())  # 添加索引值
+        sorted_index_values = sorted(map(int, index_values))  # 将字符串转为整数后排序
+        self.index_combobox['values'] = sorted_index_values  # 设置为排序后的列表
+        # 添加自动统计数据
         if self.index_combobox['values']:  # 确保下拉框有值
             self.index_combobox.current(0)  # 默认选择第一个
-            self.update_auto_table_selection(self.index_combobox.get())
+            self.update_auto_table_from_selection(self.index_combobox.get())
+        # 添加手动统计数据
+        refresh_data = data.get("refresh", {}).items()
+        for acc_count, stats in refresh_data:
+            min_time, count, avg_time, max_time = stats.split(",")
+            self.refresh_tree.insert("", "end",
+                                     values=(acc_count, min_time.replace("inf", "null"),
+                                             int(float(count)), avg_time, max_time))
+        self.refresh_tree.config(height=len(refresh_data) + 1)
 
         self.adjust_column_width(self.manual_tree)
         self.adjust_column_width(self.auto_tree)
+        self.adjust_column_width(self.refresh_tree)
 
     def adjust_column_width(self, tree):
+        """自适应调节列宽"""
         for col in tree["columns"]:
             tree.column(col, width=int(self.window_width // len(tree["columns"]) - 10))  # 计算并设置适合的列宽
 
-    def update_auto_table_selection(self, selected_index):
+    def update_auto_table_from_selection(self, selected_index):
+        """根据下拉框的选择，更新对应的表数据"""
         data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-
         # 清空之前的数据
         for item in self.auto_tree.get_children():
             self.auto_tree.delete(item)
-
         auto_data = data.get("auto", {}).items()
+        i = 0
         for mode, times_dict in auto_data:
             if selected_index in times_dict:  # 仅显示选中的index
                 stats = times_dict[selected_index]
@@ -179,28 +202,26 @@ class StatisticWindow:
                 self.auto_tree.insert("", "end",
                                       values=(mode, min_time.replace("inf", "null"),
                                               int(float(count)), avg_time, max_time))
-        self.auto_tree.config(height=len(auto_data) + 1)
+                i += 1
+        self.auto_tree.config(height=i + 1)
 
-    def update_auto_table(self, event):
+    def on_selected(self, event):
+        """选中下拉框中的数值时"""
         selected_index = self.index_combobox.get()  # 获取选中的index
-        self.update_auto_table_selection(selected_index)
+        self.update_auto_table_from_selection(selected_index)
 
     def sort_column(self, tree, col, table_type):
         items = [(tree.item(i)["values"], i) for i in tree.get_children()]
         is_ascending = self.sort_order[table_type]
-
         items.sort(key=lambda x: (try_convert(x[0][list(tree["columns"]).index(col)])
                                   if col not in ["模式"] else x[0][list(tree["columns"]).index(col)]),
                    reverse=not is_ascending)
-
         # 清空表格并重新插入排序后的数据
         for i in tree.get_children():
             tree.delete(i)
         for item in items:
             tree.insert("", "end", values=item[0])
-
         tree.configure(height=len(items) + 1)
-
         self.sort_order[table_type] = not is_ascending  # 切换排序顺序
 
 

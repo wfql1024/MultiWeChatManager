@@ -46,17 +46,27 @@ def get_logger(file):
     # 定log输出格式，配置同时输出到标准输出与log文件，返回logger这个对象
     logger = logging.getLogger('mylogger')
     logger.setLevel(logging.DEBUG)
-    log_format = logging.Formatter(
-        '%(asctime)s - %(filename)s- %(levelname)s - %(message)s')
+    log_format = logging.Formatter('%(asctime)s - %(filename)s - %(levelname)s - %(message)s')
+
+    # 创建文件处理器
     log_fh = logging.FileHandler(file)
     log_fh.setLevel(logging.DEBUG)
     log_fh.setFormatter(log_format)
-    log_ch = logging.StreamHandler()
-    log_ch.setLevel(logging.DEBUG)
-    log_ch.setFormatter(log_format)
     logger.addHandler(log_fh)
-    logger.addHandler(log_ch)
+
+    # 创建控制台处理器，检查是否已添加
+    if not any(isinstance(handler, logging.StreamHandler) for handler in logger.handlers):
+        log_ch = logging.StreamHandler()
+        log_ch.setLevel(logging.DEBUG)
+        log_ch.setFormatter(log_format)
+        logger.addHandler(log_ch)
+
     return logger
+
+
+class LoggerUtils:
+    def __init__(self, file):
+        self.logger = get_logger(file)
 
 
 # 使用示例
@@ -64,7 +74,3 @@ def get_logger(file):
 def my_function():
     print("This is a test message")
     print("Another test message")
-
-
-if __name__ == '__main__':
-    my_function()

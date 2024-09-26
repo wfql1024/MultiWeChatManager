@@ -192,7 +192,9 @@ class DetailWindow:
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
 
-        func_detail.fetch_acc_detail_by_pid(pid, self.account, self.disable_fetch_button, self.enable_fetch_button)
+        success = func_detail.fetch_acc_detail_by_pid(pid, self.account, self.disable_fetch_button, self.enable_fetch_button)
+        if success is False:
+            messagebox.showerror(f"错误", "失败：超时")
         # 刷新显示
         self.load_data_label()
 

@@ -4,9 +4,9 @@ current_file_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 class Config:
+    VER_STATUS = 'Beta'
     INI_KEY_CUR_VER = 'current_version'
     INI_KEY_DELAY_TIME = 'delay_time'
-    APP_VERSION = "v2.0.8 Beta"
     INI_SECTION = 'default'
     INI_KEY_INSTALL_PATH = 'install_path'
     INI_KEY_DATA_PATH = 'data_path'

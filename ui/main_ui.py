@@ -2,6 +2,7 @@
 import glob
 import os
 import queue
+import subprocess
 import sys
 import time
 import tkinter as tk
@@ -18,7 +19,7 @@ from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
 from ui import about_ui, setting_ui, detail_ui, rewards_ui, debug_ui, statistic_ui
-from utils import handle_utils, debug_utils
+from utils import handle_utils, debug_utils, json_utils, process_utils
 
 
 class AccountRow:
@@ -581,6 +582,7 @@ class MainWindow:
         self.update_top_title(True)
         self.update_top_title(False)
 
+        subfunc_file.update_refresh_time_statistic(str(len(logged_in)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
@@ -845,41 +847,41 @@ class MainWindow:
 
     def quit_selected_accounts(self):
         """退出所选账号"""
-        messagebox.showinfo("待修复", "测试中发现重大bug，先不给点，略~")
-        # account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-        # accounts = [
-        #     account
-        #     for account, row in self.logged_in_rows.items()
-        #     if row.is_checked()
-        # ]
-        # quited_accounts = []
-        # for account in accounts:
-        #     try:
-        #         pid = account_data.get(account, {}).get("pid", None)
-        #         nickname = account_data.get(account, {}).get("nickname", None)
-        #         process = psutil.Process(pid)
-        #         if process_utils.process_exists(pid) and process.name() == "WeChat.exe":
-        #             startupinfo = None
-        #             if sys.platform == 'win32':
-        #                 startupinfo = subprocess.STARTUPINFO()
-        #                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        #             result = subprocess.run(
-        #                 ['taskkill', '/T', '/F', '/PID', f'{pid}'],
-        #                 startupinfo=startupinfo,
-        #                 capture_output=True,
-        #                 text=True
-        #             )
-        #             if result.returncode == 0:
-        #                 print(f"结束了 {pid} 的进程树")
-        #                 quited_accounts.append((nickname, pid))
-        #             else:
-        #                 print(f"无法结束 PID {pid} 的进程树，错误：{result.stderr.strip()}")
-        #         else:
-        #             print(f"进程 {pid} 已经不存在。")
-        #     except (psutil.NoSuchProcess, psutil.AccessDenied):
-        #         pass
-        # json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
-        # self.create_main_frame_and_menu()
+        # messagebox.showinfo("待修复", "测试中发现重大bug，先不给点，略~")
+        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+        accounts = [
+            account
+            for account, row in self.logged_in_rows.items()
+            if row.is_checked()
+        ]
+        quited_accounts = []
+        for account in accounts:
+            try:
+                pid = account_data.get(account, {}).get("pid", None)
+                nickname = account_data.get(account, {}).get("nickname", None)
+                process = psutil.Process(pid)
+                if process_utils.process_exists(pid) and process.name() == "WeChat.exe":
+                    startupinfo = None
+                    if sys.platform == 'win32':
+                        startupinfo = subprocess.STARTUPINFO()
+                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    result = subprocess.run(
+                        ['taskkill', '/T', '/F', '/PID', f'{pid}'],
+                        startupinfo=startupinfo,
+                        capture_output=True,
+                        text=True
+                    )
+                    if result.returncode == 0:
+                        print(f"结束了 {pid} 的进程树")
+                        quited_accounts.append((nickname, pid))
+                    else:
+                        print(f"无法结束 PID {pid} 的进程树，错误：{result.stderr.strip()}")
+                else:
+                    print(f"进程 {pid} 已经不存在。")
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+        self.create_main_frame_and_menu()
 
     def auto_login_selected_accounts(self):
         """登录所选账号"""

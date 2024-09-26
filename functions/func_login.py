@@ -24,20 +24,22 @@ def manual_login(status):
     has_mutex_dict = subfunc_wechat.get_mutex_dict()
     print(f"当前模式是：{status}")
     sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict)
-    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 8)
+    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 20)
     if wechat_hwnd:
         subfunc_file.set_all_wechat_values_to_false()
-        print(f"打开了登录窗口{wechat_hwnd}")
         subfunc_file.update_manual_time_statistic(sub_exe, time.time() - start_time)
+        print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
         if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
             print(f"登录窗口已关闭")
             return True
+        else:
+            messagebox.showinfo("提示", "登录窗口长时间未操作，即将刷新列表")
+            return True
     else:
         print(f"打开失败，请重试！")
         return False
-    return True
 
 
 def auto_login_accounts(accounts, status):
@@ -115,7 +117,7 @@ def auto_login_accounts(accounts, status):
         has_mutex_dict = subfunc_wechat.get_mutex_dict()
         sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict)
         # 等待打开窗口
-        end_time = time.time() + 8
+        end_time = time.time() + 20
         while True:
             wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 1)
             if wechat_hwnd is not None and wechat_hwnd not in wechat_handles:
@@ -167,7 +169,7 @@ def auto_login_accounts(accounts, status):
             print("没有按钮，应该是点过啦~")
 
     # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
-    end_time = time.time() + 20
+    end_time = time.time() + 30
     while True:
         hs = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC", "微信")
         if len(hs) == 0:

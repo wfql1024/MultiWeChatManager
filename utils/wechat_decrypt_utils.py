@@ -6,6 +6,7 @@ import os
 import shutil
 import struct
 import sys
+import time
 from pathlib import Path
 
 import psutil
@@ -31,6 +32,8 @@ cfg_file = os.path.basename(sys.argv[0]).split('.')[0] + '.ini'
 # 几种内存段可以写入的类型
 MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",
                             0x08: "PAGE_WRITECOPY"}
+
+logger = logger_utils.LoggerUtils(log_file).logger
 
 
 class MEMORY_BASIC_INFORMATION(Structure):
@@ -87,7 +90,8 @@ def check_sqlite_pass(db_file, password):
     hash_mac.update(first_page_data[:-32])
     hash_mac.update(bytes(ctypes.c_int(1)))
     if hash_mac.digest() == first_page_data[-32:-12]:
-        print(f'{db_file},valid password Success')
+        # print(f'{db_file},valid password Success')
+        logger.info(f"{db_file},valid password Success")
         return True
     else:
         print(f'{db_file},valid password Error')
@@ -108,7 +112,7 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
             f"{win32api.HIWORD(version_info['FileVersionLS'])}."  # type: ignore
             f"{win32api.LOWORD(version_info['FileVersionLS'])}"  # type: ignore
         )
-        logger_utils.get_logger(log_file).info(f"wechat version：{version}, wechat pid: {pid}")
+        logger.info(f"wechat version：{version}, wechat pid: {pid}")
 
         targetdb = [f.path for f in p.open_files() if f.path[-11:] == 'MicroMsg.db']
         print("targetdb", targetdb)
@@ -123,11 +127,11 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
             shutil.copyfile(targetdb[0], file_mm)
         misc_dbs = [f.path for f in p.open_files() if f.path[-7:] == 'Misc.db']
         if len(misc_dbs) < 1:
-            logger_utils.get_logger(log_file).error("没有找到微信当前打开的数据文件，是不是你的微信还没有登录？？")
+            logger.error("没有找到微信当前打开的数据文件，是不是你的微信还没有登录？？")
             sys.exit(-1)
 
         db_file = misc_dbs[0]  # 在wechat.exe打开文件列表里面，找到最后文件名是Misc.db的，用这个做db_file,做校验
-        logger_utils.get_logger(log_file).info(f"db_file:{db_file}")
+        logger.info(f"db_file:{db_file}")
         min_entrypoint = min([m.EntryPoint for m in pm.list_modules() if
                               m.EntryPoint is not None])  # 遍历wechat载入的所有模块（包括它自己），找到所有模块最小的入口地址
         min_base = min([m.lpBaseOfDll for m in pm.list_modules() if
@@ -144,11 +148,13 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
         if not phone_addr:
             # mylog.error(f"没有找到电话类型之一的关键字{phone_types}")
             sys.exit(-1)
-        logger_utils.get_logger(log_file).info(f"phone_addr:{phone_addr:X}")
+        logger.info(f"phone_addr:{phone_addr:X}")
         # key_addr=pm.pattern_scan_all(hex_key)
         i = phone_addr  # 从找到的电话类型地址，作为基址，从后往前进行查找
         key = None
         str_key = None
+        logger.info(f"正在从电话类型基址往回查找……")
+        end_time = time.time() + 5
         while i > min_address:
             i -= 1
             if phone_addr <= 2 ** 32:  # 虽然OS可能是64bit的，但微信是有32bit和64bit的，这里通过前面获得的phone_addr的地址来判断是在32位以内，还是以上，来决定
@@ -175,8 +181,11 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
                 # mylog.info(f"found key pointer addr:{i:X}, key_addr:{key_addr:X}")
                 # mylog.info(f"key:{str_key}")
                 break
+            if time.time() > end_time:
+                logger.error(f"超时了，肯定出问题了")
+                break
         if not key:
-            # mylog.error("没有找到key")
+            logger.error("没有找到key")
             sys.exit(-1)
         return str_key
     except Exception as e:
@@ -249,7 +258,9 @@ def decrypt_acc_and_copy_by_pid(pid, account):
     print("pid:", pid)
     # 获取pid对应账号的wechat key
     str_key = get_acc_key_by_pid(pid, account)
-    # mylog.info(str_key)
+    if str_key is None:
+        return False
+    logger.info(str_key)
     str_key_res = ' '.join([str_key[i:i + 2] for i in range(0, len(str_key), 2)])
     usr_dir = Config.PROJ_USER_PATH
     file_mm = usr_dir + rf"\{account}\{account}_MicroMsg.db"

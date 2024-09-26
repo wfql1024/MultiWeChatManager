@@ -183,15 +183,15 @@ def update_manual_time_statistic(sub_exe, time_spent):
     if sub_exe.startswith("WeChatMultiple"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
 
-    account_data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    if "manual" not in account_data:
-        account_data["manual"] = {}
-    if sub_exe not in account_data["manual"]:
-        account_data["manual"][sub_exe] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    if "manual" not in data:
+        data["manual"] = {}
+    if sub_exe not in data["manual"]:
+        data["manual"][sub_exe] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
 
     # 获取当前最小、最大值，次数，平均用时
     current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    account_data["manual"][sub_exe].split(","))
+                                                    data["manual"][sub_exe].split(","))
 
     # 更新最小和最大值
     new_min = min(current_min or math.inf, time_spent)
@@ -201,27 +201,27 @@ def update_manual_time_statistic(sub_exe, time_spent):
     new_count = count + 1
     new_avg_time = (avg_time * count + time_spent) / new_count
 
-    account_data["manual"][sub_exe] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, account_data)
+    data["manual"][sub_exe] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
 def update_auto_time_statistic(sub_exe, time_spent, index):
     if sub_exe.startswith("WeChatMultiple"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
 
-    account_data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    if "auto" not in account_data:
-        account_data["auto"] = {}
-    if sub_exe not in account_data["auto"]:
-        account_data["auto"][sub_exe] = {}
+    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    if "auto" not in data:
+        data["auto"] = {}
+    if sub_exe not in data["auto"]:
+        data["auto"][sub_exe] = {}
 
     # 检查该行是否存在
-    if str(index) not in account_data["auto"][sub_exe]:
-        account_data["auto"][sub_exe][str(index)] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+    if str(index) not in data["auto"][sub_exe]:
+        data["auto"][sub_exe][str(index)] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
 
     # 获取当前最小、最大值，次数，平均用时
     current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    account_data["auto"][sub_exe][str(index)].split(","))
+                                                    data["auto"][sub_exe][str(index)].split(","))
 
     # 更新最小和最大值
     new_min = min(current_min or math.inf, time_spent)
@@ -231,8 +231,32 @@ def update_auto_time_statistic(sub_exe, time_spent, index):
     new_count = count + 1
     new_avg_time = (avg_time * count + time_spent) / new_count
 
-    account_data["auto"][sub_exe][str(index)] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, account_data)
+    data["auto"][sub_exe][str(index)] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+
+
+def update_refresh_time_statistic(acc_count, time_spent):
+    """更新刷新时间统计"""
+    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    if "refresh" not in data:
+        data["refresh"] = {}
+    if acc_count not in data["refresh"]:
+        data["refresh"][acc_count] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+
+    # 获取当前最小、最大值，次数，平均用时
+    current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
+                                                    data["refresh"][acc_count].split(","))
+
+    # 更新最小和最大值
+    new_min = min(current_min or math.inf, time_spent)
+    new_max = max(current_max or 0, time_spent)
+
+    # 更新次数和平均用时
+    new_count = count + 1
+    new_avg_time = (avg_time * count + time_spent) / new_count
+
+    data["refresh"][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
 def convert_stat_json_to_md_table():

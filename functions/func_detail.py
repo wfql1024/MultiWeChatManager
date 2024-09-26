@@ -17,7 +17,9 @@ def fetch_acc_detail_by_pid(pid, account, before, after):
     """
     before()
     print("开始解密...")
-    wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
+    success = wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
+    if success is False:
+        return False
     print("连接数据库...")
     user_directory = Config.PROJ_USER_PATH
     db_file = user_directory + rf"/{account}/edit_{account}_MicroMsg.db"

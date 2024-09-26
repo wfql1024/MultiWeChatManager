@@ -24,16 +24,6 @@ def elevate():
             return False
 
 
-def filter_sys_argv():
-    # 过滤掉不是命令行参数的路径
-    filtered_argv = []
-    for arg in sys.argv:
-        if not os.path.isfile(arg):  # 过滤掉文件路径
-            print(arg)
-            filtered_argv.append(arg)
-    return filtered_argv
-
-
 def is_admin():
     """检查当前进程是否具有管理员权限。"""
     try:
