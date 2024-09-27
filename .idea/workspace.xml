@@ -4,8 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="增加的统计面板方便测试程序性能">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="更新下README.md">
+      <change afterPath="$PROJECT_DIR$/create_dir_tree.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tree_config.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -67,6 +70,7 @@
     "Python.MultiWeChatManager.executor": "Run",
     "Python.control_by_handle.executor": "Run",
     "Python.control_in_background.executor": "Run",
+    "Python.create_dir_tree.executor": "Run",
     "Python.detail_ui.executor": "Run",
     "Python.func_account.executor": "Run",
     "Python.func_account_list.executor": "Run",
@@ -113,7 +117,7 @@
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "reference.settings.ide.settings.new.ui",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -265,15 +269,7 @@
       <workItem from="1727278197411" duration="4498000" />
       <workItem from="1727288897309" duration="20571000" />
       <workItem from="1727317792548" duration="2806000" />
-      <workItem from="1727451468606" duration="53000" />
-    </task>
-    <task id="LOCAL-00010" summary="获取进程列表性能大优化；添加一键退出功能；初步试验创建登录快捷方式功能和一键登录功能">
-      <option name="closed" value="true" />
-      <created>1724354515698</created>
-      <option name="number" value="00010" />
-      <option name="presentableId" value="LOCAL-00010" />
-      <option name="project" value="LOCAL" />
-      <updated>1724354515698</updated>
+      <workItem from="1727451468606" duration="18697000" />
     </task>
     <task id="LOCAL-00011" summary="获取进程列表性能大优化；添加一键退出功能；初步试验创建登录快捷方式功能和一键登录功能">
       <option name="closed" value="true" />
@@ -659,7 +655,15 @@
       <option name="project" value="LOCAL" />
       <updated>1727317826378</updated>
     </task>
-    <option name="localTasksCounter" value="59" />
+    <task id="LOCAL-00059" summary="更新下README.md">
+      <option name="closed" value="true" />
+      <created>1727451831602</created>
+      <option name="number" value="00059" />
+      <option name="presentableId" value="LOCAL-00059" />
+      <option name="project" value="LOCAL" />
+      <updated>1727451831602</updated>
+    </task>
+    <option name="localTasksCounter" value="60" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -702,7 +706,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="添加鸣谢，添加视频教程" />
     <MESSAGE value="逐一测试，剔除低效率的工具" />
     <MESSAGE value="找到更好方式进行多选登录" />
     <MESSAGE value="又剔除两款子程序，多轮测试子程序多选登录效率" />
@@ -727,7 +730,8 @@
     <MESSAGE value="添加了统计功能" />
     <MESSAGE value="统计面板加入了滚动条了，版本信息尝试改为通过txt文件决定，并会写入程序文件。" />
     <MESSAGE value="增加的统计面板方便测试程序性能" />
-    <option name="LAST_COMMIT_MESSAGE" value="增加的统计面板方便测试程序性能" />
+    <MESSAGE value="更新下README.md" />
+    <option name="LAST_COMMIT_MESSAGE" value="更新下README.md" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
@@ -738,6 +742,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_database.coverage" NAME="func_database Coverage Results" MODIFIED="1723960716503" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_account.coverage" NAME="func_account Coverage Results" MODIFIED="1726264691782" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_setting.coverage" NAME="func_setting Coverage Results" MODIFIED="1725980020985" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$create_dir_tree.coverage" NAME="create_dir_tree Coverage Results" MODIFIED="1727470604816" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$handle_utils.coverage" NAME="handle_utils Coverage Results" MODIFIED="1726347749276" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$logger_utils.coverage" NAME="logger_utils Coverage Results" MODIFIED="1724548505597" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$pywinhandle.coverage" NAME="pywinhandle Coverage Results" MODIFIED="1726458725147" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />

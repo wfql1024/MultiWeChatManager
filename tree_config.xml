@@ -1,0 +1,9 @@
+<config>
+    <ignore_dot_dir>true</ignore_dot_dir>
+    <ignore_dot_file>true</ignore_dot_file>
+    <ignore_file_suffix_list>.pyc,.log</ignore_file_suffix_list>
+    <least_indent_length>2</least_indent_length>
+    <indent_char>-</indent_char>
+    <ignore_dir_list>__pycache__,user_files</ignore_dir_list>
+    <tree_info_tip_xml>DirectoryV3.xml</tree_info_tip_xml>
+</config>
