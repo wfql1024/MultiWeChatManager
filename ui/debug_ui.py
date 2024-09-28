@@ -72,13 +72,7 @@ class DebugWindow:
 
     # 更新缩进滑块逻辑
     def update_indent_scales(self):
-        # if self.indent_var.get():
-        #     self.min_indent_scale.config(state=tk.NORMAL)  # 启用
-        #     self.max_indent_scale.config(state=tk.NORMAL)  # 启用
-        # else:
-        #     self.min_indent_scale.config(state=tk.DISABLED)  # 禁用
-        #     self.max_indent_scale.config(state=tk.DISABLED)  # 禁用
-
+        """缩进滑块的更新"""
         min_indent = self.min_indent_scale.get()
         max_indent = self.max_indent_scale.get()
 
@@ -91,6 +85,7 @@ class DebugWindow:
         self.refresh_text()
 
     def update_simplify_checkbox(self):
+        """刷新简化复选框"""
         if self.callstack_var.get():
             self.simplify_checkbox.config(state=tk.NORMAL)  # 启用
         else:

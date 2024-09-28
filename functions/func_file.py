@@ -15,12 +15,14 @@ from utils import image_utils, json_utils
 
 
 def open_user_file():
+    """打开用户文件夹"""
     if not os.path.exists(Config.PROJ_USER_PATH):
         os.makedirs(Config.PROJ_USER_PATH)
     os.startfile(Config.PROJ_USER_PATH)
 
 
 def clear_user_file(after):
+    """清除用户文件夹"""
     confirm = messagebox.askokcancel(
         "确认清除",
         "该操作将会清空头像、昵称、配置的路径等数据，请确认是否需要清除？"
@@ -38,6 +40,7 @@ def clear_user_file(after):
 
 
 def open_config_file():
+    """打开配置文件夹"""
     data_path = func_setting.get_wechat_data_path()
     if os.path.exists(data_path):
         config_path = os.path.join(data_path, "All Users", "config")
@@ -46,7 +49,7 @@ def open_config_file():
 
 
 def clear_config_file(after):
-
+    """清除配置文件"""
     confirm = messagebox.askokcancel(
         "确认清除",
         "该操作将会清空登录配置文件，请确认是否需要清除？"
@@ -69,6 +72,7 @@ def clear_config_file(after):
 
 
 def clear_statistic_data(after):
+    """清除统计数据"""
     confirm = messagebox.askokcancel(
         "确认清除",
         "该操作将会清空统计的数据，请确认是否需要清除？"
@@ -83,7 +87,21 @@ def clear_statistic_data(after):
         after()
 
 
+def open_dll_dir_path():
+    """打开注册表所在文件夹，并将光标移动到文件"""
+    dll_dir_path = func_setting.get_wechat_dll_dir_path()
+    if os.path.exists(dll_dir_path):
+        # 获取文件夹路径
+        folder_path = os.path.dirname(dll_dir_path)
+
+        # 打开文件夹
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shell.CurrentDirectory = dll_dir_path
+        shell.Run(f'explorer /select,"WeChatWin.dll"')
+
+
 def create_app_lnk():
+    """创建程序快捷方式"""
     # 当前是打包后的环境
     if getattr(sys, 'frozen', False):
         exe_path = sys.executable
@@ -119,18 +137,6 @@ def create_app_lnk():
 
     # 打印调试版创建成功信息
     print(f"调试版快捷方式已创建： {debug_shortcut_path}")
-
-
-def open_dll_dir_path():
-    dll_dir_path = func_setting.get_wechat_dll_dir_path()
-    if os.path.exists(dll_dir_path):
-        # 获取文件夹路径
-        folder_path = os.path.dirname(dll_dir_path)
-
-        # 打开文件夹
-        shell = win32com.client.Dispatch("WScript.Shell")
-        shell.CurrentDirectory = dll_dir_path
-        shell.Run(f'explorer /select,"WeChatWin.dll"')
 
 
 def create_lnk_for_account(account, status):

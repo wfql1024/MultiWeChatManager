@@ -25,13 +25,19 @@ def load_config(xml_file):
 def traverse_directory(path, level=0, **kwargs):
     formatted_dirs = []  # 用于存放文件夹的列表
     formatted_files = []  # 用于存放文件的列表
-    indent = '│ ' * level + '├─'
+    output_type = kwargs.get('output_type', 'text')
+    if output_type == 'markdown':
+        indent = '\t' * level + ' - '
+    else:
+        indent = '│ ' * level + '├─'
 
     ignore_dot_dir = kwargs.get('ignore_dot_dir', 'false').lower() == 'true'
     ignore_dot_file = kwargs.get('ignore_dot_file', 'false').lower() == 'true'
     ignore_file_suffix_list = kwargs.get('ignore_file_suffix_list', '').split(',')
     ignore_dir_list = kwargs.get('ignore_dir_list', '').split(',')
+    ignore_file = kwargs.get('ignore_file', False)
     tree_info_tip_xml = kwargs.get('tree_info_tip_xml', '')
+    comment_prefix = kwargs.get('comment_prefix', ' ')
 
     for item in os.listdir(path):
         item_path = os.path.join(path, item)
@@ -44,10 +50,12 @@ def traverse_directory(path, level=0, **kwargs):
             if tree_info_tip_xml:
                 comment = get_title_by_path(tree_info_tip_xml, item_path.replace('\\', '/').replace(base_dir, ''))
                 if comment:
-                    comment = " # " + comment
+                    comment = comment_prefix + comment
             formatted_dirs.append((f"{indent}📁 {item}", comment))
             formatted_dirs.extend(traverse_directory(item_path, level + 1, **kwargs))  # Recurse into the folder
         else:
+            if ignore_file == 'true':
+                continue
             if ignore_dot_file and item.startswith('.'):
                 continue
             if ignore_file_suffix_list and any(item.endswith(suffix) for suffix in ignore_file_suffix_list):
@@ -56,11 +64,14 @@ def traverse_directory(path, level=0, **kwargs):
             if tree_info_tip_xml:
                 comment = get_title_by_path(tree_info_tip_xml, item_path.replace('\\', '/').replace(base_dir, ''))
                 if comment:
-                    comment = " # " + comment
+                    comment = comment_prefix + comment
             formatted_files.append((f"{indent}📄 {item}", comment))
 
-    # 合并文件夹和文件
-    return formatted_dirs + formatted_files
+    merged_list = formatted_dirs + formatted_files
+    if len(merged_list) > 0:
+        merged_list[-1] = (merged_list[-1][0].replace("├─", "└─"), merged_list[-1][1])
+    # 合并文件夹和文件，这样可以保证文件夹和文件更有序显示
+    return merged_list
 
 
 def main():
@@ -74,11 +85,11 @@ def main():
         least_indent_length = int(least_indent_length)
     except ValueError:
         least_indent_length = 2  # 转换失败时使用默认值2
-    indent_char = config.get('indent_char', '-')
+    connection_symbol = config.get('connection_symbol', '-')
 
     dir_tree = []
     for i in range(len(formatted_output)):
-        dir_tree_lines = formatted_output[i][0] + indent_char * (
+        dir_tree_lines = formatted_output[i][0] + connection_symbol * (
                 max_length - len(formatted_output[i][0]) + least_indent_length) + formatted_output[i][1]
         dir_tree.append(dir_tree_lines)
     # Write to tree.txt

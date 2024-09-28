@@ -180,6 +180,7 @@ def update_has_mutex_from_all_wechat():
 
 # 更新手动模式的函数
 def update_manual_time_statistic(sub_exe, time_spent):
+    """更新手动登录统计数据到json"""
     if sub_exe.startswith("WeChatMultiple"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
 
@@ -206,6 +207,7 @@ def update_manual_time_statistic(sub_exe, time_spent):
 
 
 def update_auto_time_statistic(sub_exe, time_spent, index):
+    """更新自动登录统计数据到json"""
     if sub_exe.startswith("WeChatMultiple"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
 
@@ -257,33 +259,3 @@ def update_refresh_time_statistic(acc_count, time_spent):
 
     data["refresh"][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
-
-
-def convert_stat_json_to_md_table():
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-
-    # 手动表格
-    manual_md = "| Mode | Min Time | Count | Avg Time | Max Time |\n"
-    manual_md += "| --- | --- | --- | --- | --- |\n"
-    for mode, stats in data["manual"].items():
-        min_time, count, avg_time, max_time = stats.split(",")
-        manual_md += f"| {mode} | {min_time.replace('inf', 'null')} | {count} | {avg_time} | {max_time} |\n"
-
-    # 自动表格
-    auto_md = "| Index | " + " | ".join(data["auto"].keys()) + " |\n"
-    auto_md += "| --- | " + " | ".join(["---"] * len(data["auto"])) + " |\n"
-    max_rows = max(len(times_dict) for times_dict in data["auto"].values())
-
-    for i in range(1, max_rows + 1):
-        row = f"| {i} "
-        for mode, times_dict in data["auto"].items():
-            row += f"| {times_dict.get(str(i), 'null,null,null,null').replace('inf', 'null')} "
-        row += "|\n"
-        auto_md += row
-
-    return manual_md, auto_md
-
-
-
-
-

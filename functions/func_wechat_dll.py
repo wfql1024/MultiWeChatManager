@@ -14,6 +14,7 @@ from resources import Strings, Config
 
 
 def check_dll():
+    """检查当前的dll状态，判断是否为全局多开或者不可用"""
     dll_dir_path = func_setting.get_wechat_dll_dir_path()
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
     current_ver = func_setting.update_current_ver()
@@ -94,6 +95,7 @@ def check_dll():
 
 
 def switch_dll():
+    """切换dll状态"""
     # 尝试终止微信进程
     wechat_processes = []
     for proc in psutil.process_iter(['pid', 'name']):

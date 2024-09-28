@@ -8,6 +8,7 @@ from utils import ini_utils, wechat_utils, file_utils
 
 
 def get_wechat_dll_dir_path_by_files():
+    """通过文件遍历获取dll文件夹"""
     install_path = get_wechat_install_path()
     if install_path and install_path != "":
         install_path = os.path.dirname(install_path)
@@ -54,6 +55,7 @@ def get_wechat_dll_dir_path_by_files():
 
 
 def get_wechat_install_path():
+    """获取微信安装路径"""
     path_finders = [
         wechat_utils.get_wechat_install_path_from_process,
         subfunc_file.get_wechat_install_path_from_setting_ini,
@@ -74,6 +76,7 @@ def get_wechat_install_path():
 
 
 def get_wechat_data_path():
+    """获取微信数据存储地址"""
     # 获取地址的各种方法
     path_finders = [
         subfunc_file.get_wechat_data_path_from_setting_ini,
@@ -96,6 +99,7 @@ def get_wechat_data_path():
 
 
 def get_wechat_dll_dir_path():
+    """获取微信dll所在文件夹"""
     path_finders = [
         subfunc_file.get_wechat_dll_dir_path_from_setting_ini,
         wechat_utils.get_wechat_dll_dir_path_by_memo_maps,
@@ -111,6 +115,7 @@ def get_wechat_dll_dir_path():
 
 
 def update_current_ver():
+    """获取当前使用的版本号"""
     install_path = get_wechat_install_path()
     if os.path.exists(install_path):
         return file_utils.get_file_version(install_path)

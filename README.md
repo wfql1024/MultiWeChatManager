@@ -44,214 +44,102 @@
   - 若在新设备登录，需要满三天才会在手机上出现自动登录选项
 
 # 项目目录结构
-```text
-├───Demo  # 做项目时候拿出来单独测试的
-│   │   control_by_handle.py
-│   │   version_config.py
-│   │
-│   ├───close_wechat_mutex
-│   │       build.bat
-│   │       close_wechat_mutex.py
-│   │       double_sun.ico
-│   │       process_utils.py
-│   │       pywinhandle.py
-│   │
-│   ├───decrypt
-│   │   │   mainfuncTion.py
-│   │   │   search_wechat_key.py
-│   │   │   util.py
-│   │   │   WeChatSQL_p.py
-│   │   │
-│   │   └───__pycache__
-│   │           util.cpython-312.pyc
-│   │           WeChatSQL_p.cpython-312.pyc
-│   │
-│   ├───dll_injection
-│   │   │   mainTest.py
-│   │   │   memory_utils.py
-│   │   │   process_utils.py
-│   │   │   read_wechat_memory.py
-│   │   │   wechat_config.py
-│   │   │
-│   │   └───__pycache__
-│   │           memory_utils.cpython-312.pyc
-│   │           process_utils.cpython-312.pyc
-│   │           read_wechat_memory.cpython-312.pyc
-│   │           wechat_config.cpython-312.pyc
-│   │
-│   ├───dll_modify
-│   │       modify_wechat_dll.py
-│   │
-│   ├───mutex
-│   │       close_mutex_handle.py
-│   │       get_wechat_mutex_handle.py
-│   │       handle.exe
-│   │       main.py
-│   │       more_open.py
-│   │       wechat_multiple.py
-│   │
-│   └───__pycache__
-│           control_by_handle.cpython-312.pyc
-│
-├───dist
-├───external_res
-│       handle.exe
-│       path.ini
-│       rewards.png
-│       SunnyMultiWxMng.ico
-│       sy.ini
-│       WeChatMultiple_Anhkgg.exe
-│       WeChatMultiple_lyie15.exe
-│       WeChatMultiple_wfql.exe
-│
-├───functions
-│   │   func_account.py
-│   │   func_config.py
-│   │   func_detail.py
-│   │   func_file.py
-│   │   func_login.py
-│   │   func_setting.py
-│   │   func_wechat_dll.py
-│   │   subfunc_file.py
-│   │   subfunc_wechat.py
-│   │   __init__.py
-│   │
-│   └───__pycache__
-│           func_account.cpython-312.pyc
-│           func_config.cpython-312.pyc
-│           func_detail.cpython-312.pyc
-│           func_file.cpython-312.pyc
-│           func_login.cpython-312.pyc
-│           func_setting.cpython-312.pyc
-│           func_wechat_dll.cpython-312.pyc
-│           subfunc_file.cpython-312.pyc
-│           subfunc_wechat.cpython-312.pyc
-│           __init__.cpython-312.pyc
-│
-├───resources
-│   │   config.py
-│   │   constants.py
-│   │   strings.py
-│   │   __init__.py
-│   │
-│   └───__pycache__
-│           config.cpython-312.pyc
-│           constants.cpython-312.pyc
-│           strings.cpython-312.pyc
-│           __init__.cpython-312.pyc
-│
-├───ui
-│   │   about_ui.py
-│   │   debug_ui.py
-│   │   detail_ui.py
-│   │   loading_ui.py
-│   │   main_ui.py
-│   │   rewards_ui.py
-│   │   setting_ui.py
-│   │   statistic_ui.py
-│   │   __init__.py
-│   │
-│   └───__pycache__
-│           about_ui.cpython-312.pyc
-│           debug_ui.cpython-312.pyc
-│           detail_ui.cpython-312.pyc
-│           loading_ui.cpython-312.pyc
-│           main_ui.cpython-312.pyc
-│           rewards_ui.cpython-312.pyc
-│           setting_ui.cpython-312.pyc
-│           statistic_ui.cpython-312.pyc
-│           __init__.cpython-312.pyc
-│
-├───user_files
-│   │   account_data.json
-│   │   default.jpg
-│   │   setting.ini
-│   │   statistics.json
-│   │   version_config.json
-│   │
-│   ├───wxid_5daddxikoccs22
-│   │       wxid_5daddxikoccs22.bat
-│   │       wxid_5daddxikoccs22.jpg
-│   │       wxid_5daddxikoccs22_WeChat.ico
-│   │       wxid_5daddxikoccs22_WeChat.png
-│   │       wxid_5daddxikoccs22_WeChatMultiple_wfql.ico
-│   │       wxid_5daddxikoccs22_WeChatMultiple_wfql.png
-│   │
-│   ├───wxid_73y712me4tlc22
-│   │       wxid_73y712me4tlc22.bat
-│   │       wxid_73y712me4tlc22.jpg
-│   │       wxid_73y712me4tlc22_WeChat.ico
-│   │       wxid_73y712me4tlc22_WeChat.png
-│   │       wxid_73y712me4tlc22_WeChatMultiple_wfql.ico
-│   │       wxid_73y712me4tlc22_WeChatMultiple_wfql.png
-│   │
-│   ├───wxid_eeqegbzm9nh822
-│   │       wxid_eeqegbzm9nh822.jpg
-│   │
-│   ├───wxid_g80vnkatetb222
-│   │       wxid_g80vnkatetb222.jpg
-│   │
-│   ├───wxid_h5m0aq1uvr2f22
-│   │       wxid_h5m0aq1uvr2f22.bat
-│   │       wxid_h5m0aq1uvr2f22.jpg
-│   │       wxid_h5m0aq1uvr2f22_WeChat.ico
-│   │       wxid_h5m0aq1uvr2f22_WeChat.png
-│   │       wxid_h5m0aq1uvr2f22_WeChatMultiple_wfql.ico
-│   │       wxid_h5m0aq1uvr2f22_WeChatMultiple_wfql.png
-│   │
-│   ├───wxid_hvq8w4kcyg8122
-│   │       wxid_hvq8w4kcyg8122.bat
-│   │       wxid_hvq8w4kcyg8122.jpg
-│   │       wxid_hvq8w4kcyg8122_WeChat.ico
-│   │       wxid_hvq8w4kcyg8122_WeChat.png
-│   │       wxid_hvq8w4kcyg8122_WeChatMultiple_wfql.ico
-│   │       wxid_hvq8w4kcyg8122_WeChatMultiple_wfql.png
-│   │
-│   └───wxid_t2dchu5zw9y022
-│           edit_wxid_t2dchu5zw9y022_MicroMsg.db
-│           wxid_t2dchu5zw9y022.bat
-│           wxid_t2dchu5zw9y022.jpg
-│           wxid_t2dchu5zw9y022_WeChat.ico
-│           wxid_t2dchu5zw9y022_WeChat.png
-│           wxid_t2dchu5zw9y022_WeChatMultiple_wfql.ico
-│           wxid_t2dchu5zw9y022_WeChatMultiple_wfql.png
-│
-├───utils
-│   │   debug_utils.py
-│   │   file_utils.py
-│   │   handle_utils.py
-│   │   image_utils.py
-│   │   ini_utils.py
-│   │   json_utils.py
-│   │   logger_utils.py
-│   │   memory_utils.py
-│   │   print_override.py
-│   │   process_utils.py
-│   │   pywinhandle.py
-│   │   string_utils.py
-│   │   wechat_decrypt_utils.py
-│   │   wechat_utils.py
-│   │   __init__.py
-│   │
-│   └───__pycache__
-│           debug_utils.cpython-312.pyc
-│           file_utils.cpython-312.pyc
-│           handle_utils.cpython-312.pyc
-│           image_utils.cpython-312.pyc
-│           ini_utils.cpython-312.pyc
-│           json_utils.cpython-312.pyc
-│           logger_utils.cpython-312.pyc
-│           print_override.cpython-312.pyc
-│           process_utils.cpython-312.pyc
-│           pywinhandle.cpython-312.pyc
-│           string_utils.cpython-312.pyc
-│           wechat_decrypt_utils.cpython-312.pyc
-│           wechat_utils.cpython-312.pyc
-│           __init__.cpython-312.pyc
-│
-└───__pycache__
-        thread_manager.cpython-312.pyc
-```
+ - 📁 Demo-------------------------- # 与项目相关的独立示例代码，可以探索下
+	 - 📁 close_wechat_mutex-----------
+		 - 📄 build.bat-------------------
+		 - 📄 close_wechat_mutex.py-------
+		 - 📄 double_sun.ico--------------
+		 - 📄 process_utils.py------------
+		 - 📄 pywinhandle.py--------------
+	 - 📁 debug------------------------
+		 - 📄 print_override.py-----------
+	 - 📁 decrypt----------------------
+		 - 📄 mainfuncTion.py-------------
+		 - 📄 search_wechat_key.py--------
+		 - 📄 util.py---------------------
+		 - 📄 WeChatSQL_p.py--------------
+	 - 📁 dll_injection----------------
+		 - 📄 mainTest.py-----------------
+		 - 📄 memory_utils.py-------------
+		 - 📄 process_utils.py------------
+		 - 📄 read_wechat_memory.py-------
+		 - 📄 wechat_config.py------------
+	 - 📁 dll_modify-------------------
+		 - 📄 modify_wechat_dll.py--------
+	 - 📁 mutex------------------------
+		 - 📄 close_mutex_handle.py-------
+		 - 📄 get_wechat_mutex_handle.py--
+		 - 📄 handle.exe------------------
+		 - 📄 main.py---------------------
+		 - 📄 more_open.py----------------
+		 - 📄 wechat_multiple.py----------
+	 - 📄 control_by_handle.py---------
+	 - 📄 debug_utils.py---------------
+	 - 📄 version_config.py------------
+ - 📁 dist--------------------------
+ - 📁 external_res------------------ # 引用到的外部资源
+	 - 📄 handle.exe-------------------
+	 - 📄 path.ini---------------------
+	 - 📄 rewards.png------------------
+	 - 📄 SunnyMultiWxMng.ico----------
+	 - 📄 sy.ini-----------------------
+	 - 📄 WeChatMultiple_Anhkgg.exe----
+	 - 📄 WeChatMultiple_lyie15.exe----
+	 - 📄 WeChatMultiple_wfql.exe------
+ - 📁 functions--------------------- # 功能层代码，实现项目中的具体功能
+	 - 📄 func_account.py--------------
+	 - 📄 func_config.py---------------
+	 - 📄 func_detail.py---------------
+	 - 📄 func_file.py-----------------
+	 - 📄 func_login.py----------------
+	 - 📄 func_setting.py--------------
+	 - 📄 func_wechat_dll.py-----------
+	 - 📄 subfunc_file.py--------------
+	 - 📄 subfunc_wechat.py------------
+	 - 📄 __init__.py------------------
+ - 📁 resources--------------------- # 项目代码资源
+	 - 📄 config.py--------------------
+	 - 📄 constants.py-----------------
+	 - 📄 strings.py-------------------
+	 - 📄 __init__.py------------------
+ - 📁 ui---------------------------- # 界面层代码，实现界面创建和更新
+	 - 📄 about_ui.py------------------
+	 - 📄 debug_ui.py------------------
+	 - 📄 detail_ui.py-----------------
+	 - 📄 loading_ui.py----------------
+	 - 📄 main_ui.py-------------------
+	 - 📄 rewards_ui.py----------------
+	 - 📄 setting_ui.py----------------
+	 - 📄 statistic_ui.py--------------
+	 - 📄 __init__.py------------------
+ - 📁 utils------------------------- # 工具类代码，可移植到其他项目中使用
+	 - 📄 debug_utils.py---------------
+	 - 📄 file_utils.py----------------
+	 - 📄 handle_utils.py--------------
+	 - 📄 image_utils.py---------------
+	 - 📄 ini_utils.py-----------------
+	 - 📄 json_utils.py----------------
+	 - 📄 logger_utils.py--------------
+	 - 📄 memory_utils.py--------------
+	 - 📄 process_utils.py-------------
+	 - 📄 pywinhandle.py---------------
+	 - 📄 string_utils.py--------------
+	 - 📄 wechat_decrypt_utils.py------
+	 - 📄 wechat_utils.py--------------
+	 - 📄 __init__.py------------------
+ - 📄 app.manifest------------------
+ - 📄 build.bat--------------------- # 打包命令，控制台直接使用可以打包项目
+ - 📄 create_dir_tree.py------------
+ - 📄 DirectoryV3.xml---------------
+ - 📄 main.py----------------------- # 入口，管理员身份及程序参数解析
+ - 📄 README.md---------------------
+ - 📄 requirements.txt--------------
+ - 📄 thread_manager.py------------- # 线程管理器，项目中线程操作统一写在这里
+ - 📄 tree.txt----------------------
+ - 📄 tree_config.xml---------------
+ - 📄 version.txt------------------- # 打包程序的文件版本等信息说明
+ - 📄 version_config.json----------- # 版本适配表，在这里更新微信新版本的偏移地址
+ - 📄 点我创建快捷方式.bat------------------
 
 
 ## 支持作者

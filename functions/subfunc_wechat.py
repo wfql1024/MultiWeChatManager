@@ -9,6 +9,7 @@ from utils import handle_utils, process_utils, ini_utils, pywinhandle
 
 
 def kill_wechat_multiple_processes():
+    """清理多开器的进程"""
     # 遍历所有的进程
     for proc in psutil.process_iter(['pid', 'name']):
         try:
@@ -22,6 +23,7 @@ def kill_wechat_multiple_processes():
 
 
 def clear_idle_wnd_and_process():
+    """清理闲置的登录窗口和多开器子窗口"""
     handle_utils.close_windows_by_class(
         [
             "WTWindow",
@@ -33,6 +35,7 @@ def clear_idle_wnd_and_process():
 
 
 def get_mutex_dict():
+    """拿到当前时间下系统中所有微信进程的互斥体情况"""
     pids = process_utils.get_process_ids_by_name("WeChat.exe")
     has_mutex_dict = dict()
     for pid in pids:

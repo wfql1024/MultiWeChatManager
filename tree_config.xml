@@ -1,9 +1,26 @@
 <config>
+  <!--  扫描  -->
+    <!--  忽略.开头的文件夹  -->
     <ignore_dot_dir>true</ignore_dot_dir>
+    <!--  忽略.开头的文件  -->
     <ignore_dot_file>true</ignore_dot_file>
+    <!--  忽略的文件后缀名  -->
     <ignore_file_suffix_list>.pyc,.log</ignore_file_suffix_list>
-    <least_indent_length>2</least_indent_length>
-    <indent_char>-</indent_char>
+    <!--  忽略的文件夹  -->
     <ignore_dir_list>__pycache__,user_files</ignore_dir_list>
+    <!--  忽略文件  -->
+    <ignore_file>false</ignore_file>
+  <!--  预览  -->
+    <!--  输出格式: text或markdown  -->
+    <output_type>markdown</output_type>
+    <!--  最短桥梁长度  -->
+    <least_indent_length>2</least_indent_length>
+    <!--  桥梁连接符  -->
+    <bridge_symbol>-</bridge_symbol>
+    <!--  始终显示桥梁  -->
+    <always_show_bridge>true</always_show_bridge>
+    <!--  注释前缀  -->
+    <comment_prefix> # </comment_prefix>
+  <!--  TreeInfoTip配置文件位置  -->
     <tree_info_tip_xml>DirectoryV3.xml</tree_info_tip_xml>
 </config>
