@@ -45,11 +45,11 @@
     "3.9.12.15": {
       "STABLE": {
         "alias": "原版",
-        "pattern": "0F84BD000000FF15A4646501"
+        "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
       },
       "PATCH": {
         "alias": "补丁",
-        "pattern": "E9BE00000000FF15A4646501"
+        "pattern": "C00F8438FDFFFF9090418B00240F3C02"
       }
     }
   }
