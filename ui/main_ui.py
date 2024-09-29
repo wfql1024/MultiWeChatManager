@@ -172,6 +172,8 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window, debug=None):
+        self.revoke_status = None
+        self.logo_click_count = 0
         self.statistic_menu = None
         self.chosen_sub_exe_var = None
         self.debug = debug
@@ -192,7 +194,7 @@ class MainWindow:
         self.not_logged_in_bottom_frame = None
         self.logged_in_title = None
         self.tooltips = {}
-        self.status = None
+        self.multiple_status = None
         self.last_version_path = None
         self.data_path = None
         self.install_path = None
@@ -209,6 +211,7 @@ class MainWindow:
         self.edit_menu = None
         self.menu_bar = None
         self.master = master
+        self.reset_timer = self.master.after(0, lambda: setattr(self, 'logo_click_count', 0))
         self.loading_window = loading_window
         self.thread_manager = ThreadManager(master)
         style = ttk.Style()
@@ -322,7 +325,7 @@ class MainWindow:
         self.file_menu.add_command(label="创建程序快捷方式", command=func_file.create_app_lnk)
         # -创建快捷启动
         self.file_menu.add_command(label="创建快捷启动", command=partial(
-            func_file.create_multiple_lnk, self.status, self.create_main_frame_and_menu))
+            func_file.create_multiple_lnk, self.multiple_status, self.create_main_frame_and_menu))
 
         # ————————————————————————————编辑菜单————————————————————————————
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=0)
@@ -341,17 +344,27 @@ class MainWindow:
             self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
             self.settings_menu.add_command(label="应用设置", command=self.open_settings)
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        # -防撤回
+        unlock_revoke = subfunc_file.get_unlock_revoke_from_ini() == "true"
+        if unlock_revoke is True:
+            self.revoke_status, _, _ = func_wechat_dll.check_dll("revoke")
+            self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}", command=partial(self.toggle_patch_mode, mode="revoke"))
+            if self.revoke_status == "不可用" or self.revoke_status.startswith("错误"):
+                self.settings_menu.entryconfig(f"防撤回   {self.revoke_status}", state="disable")
+            self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        else:
+            pass
         # -全局多开
-        self.status = func_wechat_dll.check_dll()
-        self.settings_menu.add_command(label=f"全局多开 {self.status}", command=self.toggle_patch_mode)
-        if self.status == "不可用" or self.status.startswith("错误"):
-            self.settings_menu.entryconfig(f"全局多开 {self.status}", state="disable")
+        self.multiple_status, _, _ = func_wechat_dll.check_dll("multiple")
+        self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}", command=partial(self.toggle_patch_mode, mode="multiple"))
+        if self.multiple_status == "不可用" or self.multiple_status.startswith("错误"):
+            self.settings_menu.entryconfig(f"全局多开 {self.multiple_status}", state="disable")
         # >多开子程序选择
         self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
         self.chosen_sub_exe_var = tk.StringVar()  # 用于跟踪当前选中的子程序
 
         # 检查状态
-        if self.status == "已开启":
+        if self.multiple_status == "已开启":
             self.settings_menu.add_cascade(label="子程序   不需要", menu=self.sub_executable_menu)
             self.settings_menu.entryconfig("子程序   不需要", state="disable")
         else:
@@ -399,8 +412,12 @@ class MainWindow:
         self.help_menu.add_command(label="关于", command=self.open_about)
 
         # ————————————————————————————作者标签————————————————————————————
-        self.menu_bar.add_command(label="by 吾峰起浪", state="disabled")
-        self.menu_bar.entryconfigure("by 吾峰起浪", foreground="grey")
+        if unlock_revoke is True:
+            self.menu_bar.add_command(label=Strings.UNLOCKED_REVOKE_LOGO)
+            self.menu_bar.entryconfigure(Strings.UNLOCKED_REVOKE_LOGO, state="disabled")
+        else:
+            self.menu_bar.add_command(label=Strings.LOCKED_REVOKE_LOGO)
+            self.menu_bar.entryconfigure(Strings.LOCKED_REVOKE_LOGO, command=self.logo_on_click)
 
     def create_status_bar(self):
         """创建状态栏"""
@@ -607,7 +624,7 @@ class MainWindow:
         }
 
         # 创建列表实例
-        row = AccountRow(parent_frame, account, self.status, display_name, is_logged_in, config_status, callbacks,
+        row = AccountRow(parent_frame, account, self.multiple_status, display_name, is_logged_in, config_status, callbacks,
                          self.update_top_title)
 
         # 将已登录、未登录但已配置实例存入字典
@@ -766,12 +783,18 @@ class MainWindow:
     def open_settings(self):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.master)
-        setting_ui.SettingWindow(settings_window, self.status, self.delayed_initialization)
+        setting_ui.SettingWindow(settings_window, self.multiple_status, self.delayed_initialization)
         handle_utils.center_window(settings_window)
         settings_window.focus_set()
 
-    def toggle_patch_mode(self):
-        """切换是否全局多开"""
+    def toggle_patch_mode(self, mode):
+        """切换是否全局多开或防撤回"""
+        if mode == "multiple":
+            mode_text = "全局多开"
+        elif mode == "revoke":
+            mode_text = "防撤回"
+        else:
+            return
         logged_in, _, _ = func_account.get_account_list()
         if logged_in:
             answer = messagebox.askokcancel(
@@ -783,12 +806,11 @@ class MainWindow:
                 return
 
         try:
-            result = func_wechat_dll.switch_dll()  # 执行切换操作
-            print(result)
+            result = func_wechat_dll.switch_dll(mode)  # 执行切换操作
             if result is True:
-                messagebox.showinfo("提示", "成功开启！")
+                messagebox.showinfo("提示", f"成功开启:{mode_text}")
             elif result is False:
-                messagebox.showinfo("提示", "成功关闭！")
+                messagebox.showinfo("提示", f"成功关闭:{mode_text}")
             else:
                 messagebox.showinfo("提示", "请重试！")
         except psutil.AccessDenied:
@@ -810,6 +832,20 @@ class MainWindow:
         rewards_ui.RewardsWindow(rewards_window, Config.REWARDS_PNG_PATH)
         handle_utils.center_window(rewards_window)
 
+    def logo_on_click(self):
+        print("触发了点击")
+        self.logo_click_count += 1
+        if self.logo_click_count == 3:
+            self.unlock_revoke()
+            self.logo_click_count = 0  # 重置计数器
+        else:
+            self.reset_timer = self.master.after(1000, lambda: setattr(self, 'logo_click_count', 0))  # 1秒后重置
+
+    def unlock_revoke(self):
+        subfunc_file.set_unlock_revoke_in_ini("true")
+        messagebox.showinfo("发现彩蛋", "解锁新菜单，快去设置菜单下看看吧！")
+        self.create_main_frame_and_menu()
+
     def open_detail(self, account):
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.master)
@@ -828,7 +864,7 @@ class MainWindow:
 
     def manual_login_account(self):
         """按钮：手动登录"""
-        self.thread_manager.manual_login_account(func_login.manual_login, self.status, self.create_main_frame_and_menu,
+        self.thread_manager.manual_login_account(func_login.manual_login, self.multiple_status, self.create_main_frame_and_menu,
                                                  partial(handle_utils.bring_window_to_front, window_class=self))
 
     def auto_login_account(self, account):
@@ -837,7 +873,7 @@ class MainWindow:
             self.thread_manager.login_accounts_thread(
                 func_login.auto_login_accounts,
                 [account],
-                self.status,
+                self.multiple_status,
                 self.create_main_frame_and_menu
             )
 
@@ -895,7 +931,7 @@ class MainWindow:
             self.thread_manager.login_accounts_thread(
                 func_login.auto_login_accounts,
                 accounts,
-                self.status,
+                self.multiple_status,
                 self.create_main_frame_and_menu
             )
 

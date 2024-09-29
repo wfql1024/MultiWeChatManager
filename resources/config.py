@@ -5,6 +5,7 @@ current_file_dir = os.path.dirname(os.path.abspath(__file__))
 
 class Config:
     VER_STATUS = 'Beta'
+
     INI_KEY_CUR_VER = 'current_version'
     INI_KEY_DELAY_TIME = 'delay_time'
     INI_SECTION = 'default'
@@ -14,6 +15,7 @@ class Config:
     INI_KEY_SCREEN_SIZE = 'screen_size'
     INI_KEY_LOGIN_SIZE = 'login_size'
     INI_KEY_SUB_EXE = 'sub_executable'
+    INI_KEY_UNLOCK_REVOKE = 'unlock_revoke'
 
     JSON_KEY_NOTE = 'note'
     JSON_KEY_PID = 'pid'
@@ -34,4 +36,4 @@ class Config:
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\SunnyMultiWxMng.ico'
     REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\Rewards.png'
     VER_CONFIG_JSON_PATH = fr'{PROJ_USER_PATH}\version_config.json'
-    VERSION_FILE = fr'{PROJ_PATH}\version.txt'
+    VER_ADAPTATION_JSON_PATH = fr'{PROJ_USER_PATH}\version_adaptation.json'

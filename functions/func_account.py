@@ -133,7 +133,7 @@ def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
-    status = func_wechat_dll.check_dll()
+    status, _, _ = func_wechat_dll.check_dll("multiple")
     pid_dict = dict(wechat_processes)
     if status == "已开启":
         for acc in logged_in + not_logged_in:

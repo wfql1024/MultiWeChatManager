@@ -76,22 +76,32 @@ def traverse_directory(path, level=0, **kwargs):
 
 def main():
     config = load_config('tree_config.xml')
+    least_indent_length = config.get('least_indent_length', '2')  # 默认值为字符串'2'
+    connection_symbol = config.get('connection_symbol', '-')
+    always_show_bridge = config.get('always_show_bridge', 'true').lower() == 'true'
     formatted_output = traverse_directory(os.getcwd(), **config)
     print(os.getcwd())
 
     max_length = max(len(line[0]) for line in formatted_output) if formatted_output else 0
-    least_indent_length = config.get('least_indent_length', '2')  # 默认值为字符串'2'
     try:
         least_indent_length = int(least_indent_length)
     except ValueError:
         least_indent_length = 2  # 转换失败时使用默认值2
-    connection_symbol = config.get('connection_symbol', '-')
 
     dir_tree = []
-    for i in range(len(formatted_output)):
-        dir_tree_lines = formatted_output[i][0] + connection_symbol * (
-                max_length - len(formatted_output[i][0]) + least_indent_length) + formatted_output[i][1]
-        dir_tree.append(dir_tree_lines)
+    if always_show_bridge:
+        for i in range(len(formatted_output)):
+            dir_tree_lines = formatted_output[i][0] + connection_symbol * (
+                    max_length - len(formatted_output[i][0]) + least_indent_length) + formatted_output[i][1]
+            dir_tree.append(dir_tree_lines)
+    else:
+        for i in range(len(formatted_output)):
+            if len(formatted_output[i][1]) == 0:
+                dir_tree_lines = formatted_output[i][0]
+            else:
+                dir_tree_lines = formatted_output[i][0] + connection_symbol * (
+                        max_length - len(formatted_output[i][0]) + least_indent_length) + formatted_output[i][1]
+            dir_tree.append(dir_tree_lines)
     # Write to tree.txt
     with open('tree.txt', 'w', encoding='utf-8') as f:
         f.write('\n'.join(dir_tree))

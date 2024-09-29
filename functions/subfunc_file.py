@@ -5,27 +5,6 @@ from resources import Config
 from utils import json_utils, ini_utils
 
 
-def get_screen_size_from_setting_ini():
-    result = ini_utils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_SCREEN_SIZE
-    )
-    if not result or result == "":
-        return None
-    else:
-        screen_width, screen_height = result.split('*')
-        return int(screen_width), int(screen_height)
-
-
-def get_login_size_from_setting_ini():
-    return ini_utils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_LOGIN_SIZE
-    )
-
-
 def save_wechat_install_path_to_setting_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                          Config.INI_KEY_INSTALL_PATH, value)
@@ -51,6 +30,11 @@ def save_login_size_to_setting_ini(value):
                                          Config.INI_KEY_LOGIN_SIZE, value)
 
 
+def set_unlock_revoke_in_ini(value):
+    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+                                         Config.INI_KEY_UNLOCK_REVOKE, value)
+
+
 def get_wechat_install_path_from_setting_ini():
     return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                           Config.INI_KEY_INSTALL_PATH)
@@ -64,6 +48,36 @@ def get_wechat_data_path_from_setting_ini():
 def get_wechat_dll_dir_path_from_setting_ini():
     return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                           Config.INI_KEY_DLL_DIR_PATH)
+
+
+def get_screen_size_from_setting_ini():
+    result = ini_utils.get_setting_from_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY_SCREEN_SIZE
+    )
+    if not result or result == "":
+        return None
+    else:
+        screen_width, screen_height = result.split('*')
+        return int(screen_width), int(screen_height)
+
+
+def get_login_size_from_setting_ini():
+    return ini_utils.get_setting_from_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY_LOGIN_SIZE
+    )
+
+
+def get_unlock_revoke_from_ini():
+    return ini_utils.get_setting_from_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY_UNLOCK_REVOKE,
+        default_value="false"
+    )
 
 
 def update_acc_details_to_acc_json(account, **kwargs) -> None:

@@ -2,7 +2,7 @@ import configparser
 import os
 
 
-def get_setting_from_ini(ini_filename, section, key, validation_func=None):
+def get_setting_from_ini(ini_filename, section, key, default_value=None, validation_func=None):
     script_dir = os.path.dirname(os.path.abspath(__file__))
     ini_path = os.path.join(script_dir, ini_filename).replace('\\', '/')
     if os.path.exists(ini_path):
@@ -14,6 +14,8 @@ def get_setting_from_ini(ini_filename, section, key, validation_func=None):
                 # print(f"{debug_utils.get_call_stack(10)}↓")
                 print(f"┌—读取{os.path.basename(ini_filename)}[{section}]{key} ====== {current_setting}")
                 return current_setting
+            if current_setting is None:
+                return default_value
     return None
 
 
