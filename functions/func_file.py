@@ -302,7 +302,7 @@ def reset(after):
         try:
             # 恢复原始的dll
             dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
-            bak_path = os.path.join(dll_dir_path, "WeChatWin.dll.bak")
+            bak_path = os.path.join(dll_dir_path, "WeChatWin_bak.dll")
 
             # 检查 .bak 文件是否存在
             if os.path.exists(bak_path):

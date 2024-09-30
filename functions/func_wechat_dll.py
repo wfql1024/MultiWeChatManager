@@ -144,8 +144,8 @@ def switch_dll(mode):
     desktop_path = winshell.desktop()
     # 定义目标路径和文件名
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
-    bak_path = os.path.join(dll_dir_path, "WeChatWin.dll.bak")
-    bak_desktop_path = os.path.join(desktop_path, "WeChatWin.dll.bak")
+    bak_path = os.path.join(dll_dir_path, "WeChatWin_bak.dll")
+    bak_desktop_path = os.path.join(desktop_path, "WeChatWin_bak.dll")
     current_ver = func_setting.update_current_ver()
 
     try:
@@ -176,7 +176,7 @@ def switch_dll(mode):
                 print(f"当前：{mode}已开启")
                 if not os.path.exists(bak_path):
                     messagebox.showinfo("提醒",
-                                        "当前是您首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin.dll.bak，并也拷贝到桌面，可另外备份保存。")
+                                        "当前是您首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
                     shutil.copyfile(dll_path, bak_path)
                     shutil.copyfile(dll_path, bak_desktop_path)
                 pos = mmapped_file.find(stable_pattern)
