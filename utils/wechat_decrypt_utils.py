@@ -99,7 +99,8 @@ def check_sqlite_pass(db_file, password):
 
 
 # 第一步：找key
-def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
+def get_acc_key_by_pid(pid, account):
+    logger.info("遍历微信内存，去暴力找key......")
     phone_types = [b'android\x00', b'iphone\x00']
     try:
         pm = pymem.Pymem()
@@ -153,47 +154,50 @@ def get_acc_key_by_pid(pid, account):  # 遍历微信内存，去暴力找key
         i = phone_addr  # 从找到的电话类型地址，作为基址，从后往前进行查找
         key = None
         str_key = None
-        logger.info(f"正在从电话类型基址往回查找……")
+        logger.info(f"正在从电话类型基址的附近查找……")
         end_time = time.time() + 5
+        j = 0
+        k = 0
         while i > min_address:
-            i -= 1
+            k = k + 1
+            j = (k if k % 2 != 0 else -k)
+            i += j
             if phone_addr <= 2 ** 32:  # 虽然OS可能是64bit的，但微信是有32bit和64bit的，这里通过前面获得的phone_addr的地址来判断是在32位以内，还是以上，来决定
                 key_addr_bytes = pm.read_bytes(i, 4)  # 32位寻址下，地址指针占4个字节，找到存key的地址指针
                 key_addr = struct.unpack('<I', key_addr_bytes)[0]
-                # mylog.info(f"尝试使用32位寻址去找key,i:{i:X},key_addr:{key_addr:X}")
+                # logger.info(f"尝试使用32位寻址去找key,i:{i:X},key_addr:{key_addr:X}")
             else:
                 key_addr_bytes = pm.read_bytes(i, 8)  # 64位寻址下，地址指针占8个字节，，找到存key的地址指针
                 key_addr = struct.unpack('<Q', key_addr_bytes)[0]
-                # mylog.info(f"尝试使用64位寻址去找key,i:{i:X},key_addr:{key_addr:X}")
-            # mylog.info(f"{i=},{key_addr=}")
-            # if key_addr <min_address:   #key_pointer_addr一定是>min_address的，但是key_addr可能是new出来的，不一定，因此这里要这样判断的话，就是个bug，会把正确地址给跳跑了
-            # 如果取得的指针在最小的内存内置范围之外，跳过
-            # print("取得的指针在最小的内存内置范围之外，跳过")
-            # continue
+                # logger.info(f"尝试使用64位寻址去找key,i:{i:X},key_addr:{key_addr:X}")
             if not is_writable_region(pm.process_id, key_addr):  # 要是这个指针指向的区域不能写，那也跳过
-                # print("这个指针指向的区域不能写，那也跳过")
                 continue
             key = pm.read_bytes(key_addr, 32)
-            # if key.count(0x00) >= 5:  # 如果一个key里面有5个0x00的话，就很不像是一个sqlite的key，就跳过
-            #     continue
+            logger.info(f"{i=},{key_addr=},{key=}")
             if check_sqlite_pass(db_file, key):
+                # 到这里就是找到了……
                 str_key = binascii.hexlify(key).decode()
-                # mylog.info(f"found key pointer addr:{i:X}, key_addr:{key_addr:X}")
-                # mylog.info(f"key:{str_key}")
+                logger.info(f"found key pointer addr:{i:X}, key_addr:{key_addr:X}")
+                logger.info(f"key:{str_key}")
+                logger.info(f"查找用时：{time.time() + 5 - end_time:.4f}秒")
                 break
+            else:
+                key = None
             if time.time() > end_time:
-                logger.error(f"超时了，肯定出问题了")
+                logger.info(f"超时了")
                 break
         if not key:
             logger.error("没有找到key")
             sys.exit(-1)
         return str_key
+
     except Exception as e:
         print("has some exception ", e)
 
 
 # 第二步：解密
 def decrypt_db_file_by_pwd(db_file_path, pwd):
+    logger.info("正在对数据库解密......")
     sqlite_file_header = bytes("SQLite format 3", encoding='ASCII') + bytes(1)  # 文件头
     key_size = 32
     default_pagesize = 4096  # 4048数据 + 16IV + 20 HMAC + 12
@@ -207,6 +211,7 @@ def decrypt_db_file_by_pwd(db_file_path, pwd):
 
     salt = blist[:16]  # 微信将文件头换成了盐
     key = hashlib.pbkdf2_hmac('sha1', password, salt, default_iter, key_size)  # 获得Key
+    logger.info(f"{key=}")
 
     first = blist[16:default_pagesize]  # 丢掉salt
 
@@ -260,13 +265,11 @@ def decrypt_acc_and_copy_by_pid(pid, account):
     str_key = get_acc_key_by_pid(pid, account)
     if str_key is None:
         return False
-    logger.info(str_key)
     str_key_res = ' '.join([str_key[i:i + 2] for i in range(0, len(str_key), 2)])
     usr_dir = Config.PROJ_USER_PATH
     file_mm = usr_dir + rf"\{account}\{account}_MicroMsg.db"
-    print("pwd: file", file_mm)
-    print("str key:", str_key)
-    print("str key res:", str_key_res)
+    logger.info(f"copied file:{file_mm}")
+    logger.info(f"{str_key=},{str_key_res=}")
 
     try:
         decrypt_db_file_by_pwd(file_mm, str_key_res)

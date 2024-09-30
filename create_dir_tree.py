@@ -36,8 +36,9 @@ def traverse_directory(path, level=0, **kwargs):
     ignore_file_suffix_list = kwargs.get('ignore_file_suffix_list', '').split(',')
     ignore_dir_list = kwargs.get('ignore_dir_list', '').split(',')
     ignore_file = kwargs.get('ignore_file', False)
-    tree_info_tip_xml = kwargs.get('tree_info_tip_xml', '')
     comment_prefix = kwargs.get('comment_prefix', ' ')
+    tree_info_tip_xml = kwargs.get('tree_info_tip_xml', 'DirectoryV3.xml')
+    tree_info_tip_xml_path = os.path.join(base_dir, tree_info_tip_xml)
 
     for item in os.listdir(path):
         item_path = os.path.join(path, item)
@@ -47,7 +48,7 @@ def traverse_directory(path, level=0, **kwargs):
             if len(ignore_dir_list) > 0 and any(item == dirname for dirname in ignore_dir_list):
                 continue
             comment = ''
-            if tree_info_tip_xml:
+            if os.path.exists(tree_info_tip_xml_path):
                 comment = get_title_by_path(tree_info_tip_xml, item_path.replace('\\', '/').replace(base_dir, ''))
                 if comment:
                     comment = comment_prefix + comment
@@ -61,7 +62,7 @@ def traverse_directory(path, level=0, **kwargs):
             if ignore_file_suffix_list and any(item.endswith(suffix) for suffix in ignore_file_suffix_list):
                 continue
             comment = ''
-            if tree_info_tip_xml:
+            if os.path.exists(tree_info_tip_xml_path):
                 comment = get_title_by_path(tree_info_tip_xml, item_path.replace('\\', '/').replace(base_dir, ''))
                 if comment:
                     comment = comment_prefix + comment

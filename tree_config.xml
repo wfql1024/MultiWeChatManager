@@ -7,7 +7,7 @@
     <!--  忽略的文件后缀名  -->
     <ignore_file_suffix_list>.pyc,.log</ignore_file_suffix_list>
     <!--  忽略的文件夹  -->
-    <ignore_dir_list>__pycache__,user_files</ignore_dir_list>
+    <ignore_dir_list>__pycache__,user_files,dist</ignore_dir_list>
     <!--  忽略文件  -->
     <ignore_file>false</ignore_file>
   <!--  预览  -->
