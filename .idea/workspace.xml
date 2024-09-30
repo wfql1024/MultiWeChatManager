@@ -4,13 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="新功能写完">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="更新README的结构图">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DirectoryV3.xml" beforeDir="false" afterPath="$PROJECT_DIR$/DirectoryV3.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/create_dir_tree.py" beforeDir="false" afterPath="$PROJECT_DIR$/create_dir_tree.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tree_config.xml" beforeDir="false" afterPath="$PROJECT_DIR$/tree_config.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/wechat_decrypt_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/wechat_decrypt_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -119,7 +114,7 @@
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settings.ide.settings.new.ui&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
@@ -274,15 +269,7 @@
       <workItem from="1727451468606" duration="30103000" />
       <workItem from="1727503673984" duration="46000" />
       <workItem from="1727503780469" duration="18374000" />
-      <workItem from="1727580269196" duration="20210000" />
-    </task>
-    <task id="LOCAL-00016" summary="添加诸多菜单功能">
-      <option name="closed" value="true" />
-      <created>1724773812062</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1724773812062</updated>
+      <workItem from="1727580269196" duration="20695000" />
     </task>
     <task id="LOCAL-00017" summary="GitHub怎么不绿了">
       <option name="closed" value="true" />
@@ -668,7 +655,15 @@
       <option name="project" value="LOCAL" />
       <updated>1727568024539</updated>
     </task>
-    <option name="localTasksCounter" value="65" />
+    <task id="LOCAL-00065" summary="更新README的结构图">
+      <option name="closed" value="true" />
+      <created>1727658923310</created>
+      <option name="number" value="00065" />
+      <option name="presentableId" value="LOCAL-00065" />
+      <option name="project" value="LOCAL" />
+      <updated>1727658923310</updated>
+    </task>
+    <option name="localTasksCounter" value="66" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -711,7 +706,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="修复了中文路径下创建快捷启动失败的问题，修复路径选择界面卡死问题，添加了视频教程" />
     <MESSAGE value="今日摸下鱼，但是想变绿" />
     <MESSAGE value="修复未获取路径时候菜单栏未加载的问题" />
     <MESSAGE value="微信升级了，适配了多个版本" />
@@ -736,7 +730,8 @@
     <MESSAGE value="增加了markdown格式的目录树，提交测试看看GitHub显示效果" />
     <MESSAGE value="加入新功能，上传下新版的适配文件做测试" />
     <MESSAGE value="新功能写完" />
-    <option name="LAST_COMMIT_MESSAGE" value="新功能写完" />
+    <MESSAGE value="更新README的结构图" />
+    <option name="LAST_COMMIT_MESSAGE" value="更新README的结构图" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
