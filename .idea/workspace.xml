@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="新版功能，发个预览版">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="远程仓库新增gitee" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -31,6 +29,12 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="PUSH_TAGS">
+      <GitPushTagMode>
+        <option name="argument" value="--tags" />
+        <option name="title" value="All" />
+      </GitPushTagMode>
+    </option>
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
         <entry key="$PROJECT_DIR$" value="master" />
@@ -277,15 +281,7 @@
       <workItem from="1727580269196" duration="20695000" />
       <workItem from="1727659335917" duration="691000" />
       <workItem from="1727699074778" duration="3969000" />
-      <workItem from="1727753172394" duration="298000" />
-    </task>
-    <task id="LOCAL-00019" summary="今天不绿誓不罢休">
-      <option name="closed" value="true" />
-      <created>1724776024378</created>
-      <option name="number" value="00019" />
-      <option name="presentableId" value="LOCAL-00019" />
-      <option name="project" value="LOCAL" />
-      <updated>1724776024378</updated>
+      <workItem from="1727753172394" duration="599000" />
     </task>
     <task id="LOCAL-00020" summary="绿绿绿，我要绿">
       <option name="closed" value="true" />
@@ -671,7 +667,15 @@
       <option name="project" value="LOCAL" />
       <updated>1727702840648</updated>
     </task>
-    <option name="localTasksCounter" value="68" />
+    <task id="LOCAL-00068" summary="远程仓库新增gitee">
+      <option name="closed" value="true" />
+      <created>1727753581653</created>
+      <option name="number" value="00068" />
+      <option name="presentableId" value="LOCAL-00068" />
+      <option name="project" value="LOCAL" />
+      <updated>1727753581653</updated>
+    </task>
+    <option name="localTasksCounter" value="69" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -714,7 +718,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="修复未获取路径时候菜单栏未加载的问题" />
     <MESSAGE value="微信升级了，适配了多个版本" />
     <MESSAGE value="调整了文件结构" />
     <MESSAGE value="修复微信不能拖动传输文件的问题，优化获取登录窗口尺寸逻辑，添加打赏作者功能" />
@@ -739,7 +742,8 @@
     <MESSAGE value="新功能写完" />
     <MESSAGE value="更新README的结构图" />
     <MESSAGE value="新版功能，发个预览版" />
-    <option name="LAST_COMMIT_MESSAGE" value="新版功能，发个预览版" />
+    <MESSAGE value="远程仓库新增gitee" />
+    <option name="LAST_COMMIT_MESSAGE" value="远程仓库新增gitee" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
