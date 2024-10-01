@@ -13,99 +13,75 @@ from functions import func_setting
 from resources import Strings, Config
 
 
+def fetch_config_data():
+    """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
+    urls = [Strings.VER_ADAPTATION_JSON_GITEE, Strings.VER_ADAPTATION_JSON_GITHUB]
+
+    for url in urls:
+        print(f"正在尝试从此处下载: {url}...")
+        try:
+            response = requests.get(url, timeout=2)
+            if response.status_code == 200:
+                with open(Config.VER_ADAPTATION_JSON_PATH, 'w', encoding='utf-8') as config_file:
+                    config_file.write(response.text)
+                print(f"成功从 {url} 获取并保存 JSON 文件")
+                return json.loads(response.text)
+            else:
+                print(f"获取失败: {response.status_code}，尝试下一个源...")
+        except requests.exceptions.Timeout:
+            print(f"请求 {url} 超时，尝试下一个源...")
+        except Exception as e:
+            print(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
+
+    raise RuntimeError("所有源获取配置数据失败")
+
+
 def check_dll(mode):
     """检查当前的dll状态，判断是否为全局多开或者不可用"""
     dll_dir_path = func_setting.get_wechat_dll_dir_path()
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
-    print("找到了dll文件")
     current_ver = func_setting.update_current_ver()
+
     try:
-        # 以只读模式打开文件
         with open(dll_path, 'rb') as f:
-            print("打开了dll文件")
             content = f.read()
-        config_data = None
-        # 判断文件是否存在
-        if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
-            print(f"本地没有版本对照表, 正从此处下载： {Strings.VER_CONFIG_JSON}...")
-            # 下载JSON文件并保存到指定位置
-            try:
-                # 设置2秒超时时间
-                response = requests.get(Strings.VER_ADAPTATION_JSON, timeout=2)
-                if response.status_code == 200:
-                    try:
-                        with open(Config.VER_ADAPTATION_JSON_PATH, 'w', encoding='utf-8') as config_file:
-                            config_file.write(response.text)  # 将下载的JSON保存到文件
-                        config_data = json.loads(response.text)  # 加载JSON数据
-                    except Exception as e:
-                        return f"错误：加载失败: {e}", None, None
-                else:
-                    return f"错误：获取失败: {response.status_code}", None, None
-            except requests.exceptions.Timeout:
-                return "错误：超时", None, None
-            except Exception as e:
-                return f"错误：{e}", None, None
-        else:
-            # 文件存在时，读取本地文件
-            with open(Config.VER_ADAPTATION_JSON_PATH, 'r', encoding='utf-8') as f:
-                try:
-                    config_data = json.load(f)
-                except Exception as e:
-                    return f"错误：读取失败: {e}", None, None
-        # 继续处理 config_data
+
+        config_data = fetch_config_data()
+
         if not config_data:
             return "错误：没有数据", None, None
-        result = "不可用"
+
         result1 = config_data[mode][current_ver]["STABLE"]["pattern"]
         result2 = config_data[mode][current_ver]["PATCH"]["pattern"]
+
         pattern1_hex_list = result1.split(',')
         pattern2_hex_list = result2.split(',')
 
-        for i in range(len(pattern1_hex_list)):
-            # 检查是否包含目标字节序列
-            pattern1_hex = pattern1_hex_list[i]
-            pattern2_hex = pattern2_hex_list[i]
-            # 将十六进制字符串转换为二进制字节序列
+        for pattern1_hex, pattern2_hex in zip(pattern1_hex_list, pattern2_hex_list):
             pattern1 = bytes.fromhex(pattern1_hex)
             pattern2 = bytes.fromhex(pattern2_hex)
-            # 根据检测结果返回相应的状态
+
             has_pattern1 = pattern1 in content
             has_pattern2 = pattern2 in content
+
             if has_pattern1 and not has_pattern2:
                 return "未开启", pattern1, pattern2
             elif has_pattern2 and not has_pattern1:
                 return "已开启", pattern1, pattern2
             elif has_pattern1 and has_pattern2:
-                result = "错误，匹配到多条", None, None
-                continue
-            else:
-                result = "不可用", None, None
-                continue
-        return result
+                return "错误，匹配到多条", None, None
+
+        return "不可用", None, None
+
     except PermissionError as pe:
         return f"错误：权限不足，无法检查 DLL 文件。{pe}", None, None
     except FileNotFoundError as fe:
         return f"错误：未找到文件，请检查路径。{fe}", None, None
     except KeyError as ke:
         return f"错误，未找到{current_ver}的适配。{ke}", None, None
-    except Exception as e:
-        try:
-            # 设置2秒超时时间
-            response = requests.get(Strings.VER_ADAPTATION_JSON, timeout=2)
-            if response.status_code == 200:
-                try:
-                    with open(Config.VER_ADAPTATION_JSON_PATH, 'w', encoding='utf-8') as config_file:
-                        config_file.write(response.text)  # 将下载的JSON保存到文件
-                    config_data = json.loads(response.text)  # 加载JSON数据
-                except Exception as e:
-                    return f"错误：加载失败: {e}", None, None
-            else:
-                return f"错误：获取失败: {response.status_code}", None, None
-        except requests.exceptions.Timeout:
-            return "错误：超时", None, None
-        except Exception as e:
-            return f"错误：{e}", None, None
-        return f"错误: {str(e)}", None, None
+    except (TimeoutError, RuntimeError, Exception) as e:
+        fetch_config_data()
+        return f"错误：{str(e)}", None, None
 
 
 def switch_dll(mode):
@@ -152,14 +128,6 @@ def switch_dll(mode):
         with open(dll_path, 'r+b') as f:
             result = None
             mmapped_file = mmap.mmap(f.fileno(), 0)
-
-            config_data = None
-            response = requests.get(Strings.VER_CONFIG_JSON)
-            try:
-                if response.status_code == 200:
-                    config_data = json.loads(response.text)
-            except Exception as e:
-                print(f"Failed to fetch config: {e}, {response.status_code}")
 
             current_mode, stable_pattern, patch_pattern = check_dll(mode)
 
