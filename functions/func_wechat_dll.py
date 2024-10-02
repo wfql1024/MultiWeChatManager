@@ -11,10 +11,12 @@ import winshell
 
 from functions import func_setting
 from resources import Strings, Config
+from utils import file_utils
 
 
 def fetch_config_data():
     """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
+    print(f"正从远程源下载...")
     urls = [Strings.VER_ADAPTATION_JSON_GITEE, Strings.VER_ADAPTATION_JSON_GITHUB]
 
     for url in urls:
@@ -23,9 +25,9 @@ def fetch_config_data():
             response = requests.get(url, timeout=2)
             if response.status_code == 200:
                 with open(Config.VER_ADAPTATION_JSON_PATH, 'w', encoding='utf-8') as config_file:
-                    config_file.write(response.text)
+                    config_file.write(response.text)  # 将下载的 JSON 保存到文件
                 print(f"成功从 {url} 获取并保存 JSON 文件")
-                return json.loads(response.text)
+                return json.loads(response.text)  # 返回加载的 JSON 数据
             else:
                 print(f"获取失败: {response.status_code}，尝试下一个源...")
         except requests.exceptions.Timeout:
@@ -46,7 +48,18 @@ def check_dll(mode):
         with open(dll_path, 'rb') as f:
             content = f.read()
 
-        config_data = fetch_config_data()
+        if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
+            config_data = fetch_config_data()
+        else:
+            print("本地版本对照表存在，读取中...")
+            try:
+                with open(Config.VER_ADAPTATION_JSON_PATH, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+            except Exception as e:
+                print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
+                config_data = fetch_config_data()
+                print(f"从云端下载了文件：{config_data}")
+                raise RuntimeError("本地 JSON 文件读取失败")
 
         if not config_data:
             return "错误：没有数据", None, None
@@ -78,9 +91,9 @@ def check_dll(mode):
     except FileNotFoundError as fe:
         return f"错误：未找到文件，请检查路径。{fe}", None, None
     except KeyError as ke:
-        return f"错误，未找到{current_ver}的适配。{ke}", None, None
-    except (TimeoutError, RuntimeError, Exception) as e:
         fetch_config_data()
+        return f"错误，未找到该版本的适配：{ke}", None, None
+    except (TimeoutError, RuntimeError, Exception) as e:
         return f"错误：{str(e)}", None, None
 
 
@@ -122,7 +135,6 @@ def switch_dll(mode):
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
     bak_path = os.path.join(dll_dir_path, "WeChatWin_bak.dll")
     bak_desktop_path = os.path.join(desktop_path, "WeChatWin_bak.dll")
-    current_ver = func_setting.update_current_ver()
 
     try:
         with open(dll_path, 'r+b') as f:
@@ -142,9 +154,12 @@ def switch_dll(mode):
                     print("未找到对应的HEX模式")
             elif current_mode == "未开启":
                 print(f"当前：{mode}已开启")
-                if not os.path.exists(bak_path):
+                if not os.path.exists(bak_path) or (
+                        os.path.exists(bak_path) and (
+                        file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path))):
+                    print("没有备份")
                     messagebox.showinfo("提醒",
-                                        "当前是您首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
+                                        "当前是您该版本首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
                     shutil.copyfile(dll_path, bak_path)
                     shutil.copyfile(dll_path, bak_desktop_path)
                 pos = mmapped_file.find(stable_pattern)
@@ -172,4 +187,10 @@ def switch_dll(mode):
 
 
 if __name__ == "__main__":
-    print(check_dll("multiple"))
+    dll_dir_path = func_setting.get_wechat_dll_dir_path()
+    # dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
+    # bak_path = os.path.join(dll_dir_path, "WeChatWin_bak.dll")
+    # if not os.path.exists(bak_path) or (
+    #         os.path.exists(bak_path) and file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path)):
+    #     print("没有备份")
+

@@ -11,6 +11,7 @@ from functools import partial
 from tkinter import messagebox
 from tkinter import ttk
 
+import Pmw
 import psutil
 from PIL import ImageTk
 
@@ -172,6 +173,8 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window, debug=None):
+        self.revoke_err = None
+        self.multiple_err = None
         self.revoke_status = None
         self.logo_click_count = 0
         self.statistic_menu = None
@@ -318,7 +321,8 @@ class MainWindow:
         self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
         self.statistic_menu.add_command(label="查看", command=self.open_statistic)
         self.statistic_menu.add_command(label="清除",
-                                        command=partial(func_file.clear_statistic_data, self.create_main_frame_and_menu))
+                                        command=partial(func_file.clear_statistic_data,
+                                                        self.create_main_frame_and_menu))
         # -打开主dll所在文件夹
         self.file_menu.add_command(label="查看DLL", command=func_file.open_dll_dir_path)
         # -创建软件快捷方式
@@ -347,27 +351,41 @@ class MainWindow:
         # -防撤回
         unlock_revoke = subfunc_file.get_unlock_revoke_from_ini() == "true"
         if unlock_revoke is True:
+            # -防撤回
             self.revoke_status, _, _ = func_wechat_dll.check_dll("revoke")
-            self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}", command=partial(self.toggle_patch_mode, mode="revoke"))
-            if self.revoke_status == "不可用" or self.revoke_status.startswith("错误"):
-                self.settings_menu.entryconfig(f"防撤回   {self.revoke_status}", state="disable")
+            if self.revoke_status == "不可用":
+                self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}", state="disabled")
+            elif self.revoke_status.startswith("错误"):
+                self.revoke_err = tk.Menu(self.settings_menu, tearoff=0)
+                self.settings_menu.add_cascade(label="防撤回   错误!", menu=self.revoke_err, foreground="red")
+                self.revoke_err.add_command(label=f"[点击复制]{self.revoke_status}", foreground="red",
+                                            command=lambda: self.master.clipboard_append(self.revoke_status))
+            else:
+                self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}",
+                                               command=partial(self.toggle_patch_mode, mode="revoke"))
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
         else:
             pass
         # -全局多开
         self.multiple_status, _, _ = func_wechat_dll.check_dll("multiple")
-        self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}", command=partial(self.toggle_patch_mode, mode="multiple"))
-        if self.multiple_status == "不可用" or self.multiple_status.startswith("错误"):
-            self.settings_menu.entryconfig(f"全局多开 {self.multiple_status}", state="disable")
+        if self.multiple_status == "不可用":
+            self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}", state="disabled")
+        elif self.multiple_status.startswith("错误"):
+            self.multiple_err = tk.Menu(self.settings_menu, tearoff=0)
+            self.settings_menu.add_cascade(label="全局多开 错误!", menu=self.multiple_err, foreground="red")
+            self.multiple_err.add_command(label=f"[点击复制]{self.multiple_status}", foreground="red",
+                                          command=lambda: self.master.clipboard_append(self.multiple_status))
+        else:
+            self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}",
+                                           command=partial(self.toggle_patch_mode, mode="multiple"))
         # >多开子程序选择
-        self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
         self.chosen_sub_exe_var = tk.StringVar()  # 用于跟踪当前选中的子程序
-
         # 检查状态
         if self.multiple_status == "已开启":
-            self.settings_menu.add_cascade(label="子程序   不需要", menu=self.sub_executable_menu)
+            self.settings_menu.add_command(label="子程序   不需要")
             self.settings_menu.entryconfig("子程序   不需要", state="disable")
         else:
+            self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
             # 获取已选择的子程序（假设 func_setting.fetch_sub_exe() 返回 'python', 'handle' 或其他值）
             chosen_sub_exe = func_setting.fetch_sub_exe()
             self.chosen_sub_exe_var.set(chosen_sub_exe)  # 设置初始选中的子程序
@@ -624,7 +642,8 @@ class MainWindow:
         }
 
         # 创建列表实例
-        row = AccountRow(parent_frame, account, self.multiple_status, display_name, is_logged_in, config_status, callbacks,
+        row = AccountRow(parent_frame, account, self.multiple_status, display_name, is_logged_in, config_status,
+                         callbacks,
                          self.update_top_title)
 
         # 将已登录、未登录但已配置实例存入字典
@@ -864,7 +883,8 @@ class MainWindow:
 
     def manual_login_account(self):
         """按钮：手动登录"""
-        self.thread_manager.manual_login_account(func_login.manual_login, self.multiple_status, self.create_main_frame_and_menu,
+        self.thread_manager.manual_login_account(func_login.manual_login, self.multiple_status,
+                                                 self.create_main_frame_and_menu,
                                                  partial(handle_utils.bring_window_to_front, window_class=self))
 
     def auto_login_account(self, account):

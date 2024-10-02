@@ -51,6 +51,16 @@
         "alias": "补丁",
         "pattern": "C00F8438FDFFFF9090418B00240F3C02"
       }
+    },
+    "3.9.12.17": {
+      "STABLE": {
+        "alias": "原版",
+        "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+      },
+      "PATCH": {
+        "alias": "补丁",
+        "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+      }
     }
   }
 }
