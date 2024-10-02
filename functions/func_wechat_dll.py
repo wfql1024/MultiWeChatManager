@@ -135,6 +135,7 @@ def switch_dll(mode):
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
     bak_path = os.path.join(dll_dir_path, "WeChatWin_bak.dll")
     bak_desktop_path = os.path.join(desktop_path, "WeChatWin_bak.dll")
+    not_same_version = file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path)
 
     try:
         with open(dll_path, 'r+b') as f:
@@ -153,10 +154,9 @@ def switch_dll(mode):
                 else:
                     print("未找到对应的HEX模式")
             elif current_mode == "未开启":
-                print(f"当前：{mode}已开启")
+                print(f"当前：{mode}未开启")
                 if not os.path.exists(bak_path) or (
-                        os.path.exists(bak_path) and (
-                        file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path))):
+                        os.path.exists(bak_path) and not_same_version):
                     print("没有备份")
                     messagebox.showinfo("提醒",
                                         "当前是您该版本首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
@@ -193,4 +193,3 @@ if __name__ == "__main__":
     # if not os.path.exists(bak_path) or (
     #         os.path.exists(bak_path) and file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path)):
     #     print("没有备份")
-

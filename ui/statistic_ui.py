@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+
 from resources import Config
 from utils import json_utils
 
