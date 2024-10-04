@@ -82,7 +82,8 @@ def close_mutex_of_pids():
     for wechat_pid, handle in matches:
         print(f"尝试关闭互斥体句柄: hwnd:{handle}, pid:{wechat_pid}")
         try:
-            subprocess.run([handle_exe_path, '-c', handle, '-p', wechat_pid, '-y'], check=True)
+            success = subprocess.run([handle_exe_path, '-c', handle, '-p', wechat_pid, '-y'], check=True)
+            print(success)
             print(f"成功关闭句柄: hwnd:{handle}, pid:{wechat_pid}")
             successful_closes.append((wechat_pid, handle))
         except subprocess.CalledProcessError as e:

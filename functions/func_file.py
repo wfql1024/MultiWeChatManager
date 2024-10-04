@@ -11,7 +11,7 @@ from win32com.client import Dispatch
 
 from functions import func_setting
 from resources import Config
-from utils import image_utils, json_utils
+from utils import image_utils
 
 
 def open_user_file():

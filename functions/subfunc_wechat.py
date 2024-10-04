@@ -3,7 +3,7 @@ import time
 import psutil
 import win32gui
 
-from functions import func_setting, func_file, subfunc_file
+from functions import func_setting, subfunc_file
 from resources import Config
 from utils import handle_utils, process_utils, ini_utils, pywinhandle
 

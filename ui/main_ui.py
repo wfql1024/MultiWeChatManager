@@ -11,7 +11,6 @@ from functools import partial
 from tkinter import messagebox
 from tkinter import ttk
 
-import Pmw
 import psutil
 from PIL import ImageTk
 

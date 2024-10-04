@@ -135,7 +135,9 @@ def switch_dll(mode):
     dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
     bak_path = os.path.join(dll_dir_path, "WeChatWin_bak.dll")
     bak_desktop_path = os.path.join(desktop_path, "WeChatWin_bak.dll")
-    not_same_version = file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path)
+    not_same_version = True
+    if os.path.exists(bak_path):
+        not_same_version = file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path)
 
     try:
         with open(dll_path, 'r+b') as f:

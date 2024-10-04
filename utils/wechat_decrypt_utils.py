@@ -173,7 +173,7 @@ def get_acc_key_by_pid(pid, account):
             if not is_writable_region(pm.process_id, key_addr):  # 要是这个指针指向的区域不能写，那也跳过
                 continue
             key = pm.read_bytes(key_addr, 32)
-            logger.info(f"{i=},{key_addr=},{key=}")
+            logger.info(f"i={i},key_addr={key_addr},key={key}")
             if check_sqlite_pass(db_file, key):
                 # 到这里就是找到了……
                 str_key = binascii.hexlify(key).decode()
@@ -211,7 +211,7 @@ def decrypt_db_file_by_pwd(db_file_path, pwd):
 
     salt = blist[:16]  # 微信将文件头换成了盐
     key = hashlib.pbkdf2_hmac('sha1', password, salt, default_iter, key_size)  # 获得Key
-    logger.info(f"{key=}")
+    logger.info(f"key={key}")
 
     first = blist[16:default_pagesize]  # 丢掉salt
 
@@ -269,7 +269,7 @@ def decrypt_acc_and_copy_by_pid(pid, account):
     usr_dir = Config.PROJ_USER_PATH
     file_mm = usr_dir + rf"\{account}\{account}_MicroMsg.db"
     logger.info(f"copied file:{file_mm}")
-    logger.info(f"{str_key=},{str_key_res=}")
+    logger.info(f"str_key={str_key},str_key_res={str_key_res}")
 
     try:
         decrypt_db_file_by_pwd(file_mm, str_key_res)

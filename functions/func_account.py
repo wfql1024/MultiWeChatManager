@@ -1,6 +1,7 @@
 import base64
 import os
 import time
+from typing import Union, Tuple, List
 
 import psutil
 from PIL import Image
@@ -53,18 +54,17 @@ def get_account_display_name(account) -> str:
     :return: 展示在界面的名字
     """
     # 依次查找 note, nickname, alias，找到第一个不为 None 的值
-    display_name = next(
-        (
-            value
-            for key in ("note", "nickname", "alias")
-            if (value := subfunc_file.get_acc_details_from_acc_json(account, **{key: None})[0]) is not None
-        ),
-        account
-    )
+    display_name = account  # 默认值为 account
+    for key in ("note", "nickname", "alias"):
+        value = subfunc_file.get_acc_details_from_acc_json(account, **{key: None})[0]
+        if value is not None:
+            display_name = value
+            break
+
     return string_utils.balanced_wrap_text(display_name, 10)
 
 
-def get_account_list() -> tuple[None, None, None] | tuple[list, list[str], list]:
+def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], list]]:
     """
     获取账号及其登录情况
 

@@ -8,7 +8,7 @@ from tkinter import ttk, messagebox
 import psutil
 from PIL import Image, ImageTk
 
-from functions import func_detail, func_file, subfunc_file
+from functions import func_detail, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
 from utils.handle_utils import Tooltip

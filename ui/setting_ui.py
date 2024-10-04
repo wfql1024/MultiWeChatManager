@@ -22,7 +22,7 @@ class SettingWindow:
         master.title("应用设置")
 
         window_width = 750
-        window_height = 240  # 增加窗口高度以适应新的行
+        window_height = 250  # 增加窗口高度以适应新的行
         screen_width = master.winfo_screenwidth()
         screen_height = master.winfo_screenheight()
         x = (screen_width - window_width) // 2

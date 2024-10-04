@@ -15,5 +15,5 @@ class Strings:
     GITHUB_REPO = "https://github.com/wfql1024/MultiWeChatManager"
     BILIBILI_SPACE = "https://space.bilibili.com/3546733357304606"
     VIDEO_TUTORIAL_LINK = "https://www.bilibili.com/video/BV174H1eBE9r"
-    LOCKED_REVOKE_LOGO = "by 吾峰起浪👆👆👆"
+    LOCKED_REVOKE_LOGO = "by 吾峰起浪（连点三下）"
     UNLOCKED_REVOKE_LOGO = "by 吾峰起浪"
