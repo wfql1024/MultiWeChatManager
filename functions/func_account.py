@@ -6,7 +6,7 @@ from typing import Union, Tuple, List
 import psutil
 from PIL import Image
 
-from functions import func_setting, func_file, func_wechat_dll, subfunc_file
+from functions import func_setting, func_wechat_dll, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, string_utils
@@ -154,5 +154,7 @@ def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], 
 
 
 if __name__ == '__main__':
-    note = subfunc_file.get_acc_details_from_acc_json('wxid_t2dchu5zw9y022', note=None)[0]
-    print(note)
+    # note = subfunc_file.get_acc_details_from_acc_json('wxid_t2dchu5zw9y022', note=None)[0]
+    # print(note)
+    for f in psutil.Process(36100).open_files():
+        print(f.path)

@@ -139,11 +139,11 @@ def create_app_lnk():
     print(f"调试版快捷方式已创建： {debug_shortcut_path}")
 
 
-def create_lnk_for_account(account, status):
+def create_lnk_for_account(account, multiple_status):
     """
     为账号创建快捷开启
     :param account: 账号
-    :param status: 是否多开状态
+    :param multiple_status: 是否多开状态
     :return: 是否成功
     """
     # 确保可以创建快捷启动
@@ -159,8 +159,8 @@ def create_lnk_for_account(account, status):
     # 构建源文件和目标文件路径
     source_file = os.path.join(data_path, "All Users", "config", f"{account}.data").replace('/', '\\')
     target_file = os.path.join(data_path, "All Users", "config", "config.data").replace('/', '\\')
-    close_mutex_executable = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, "WeChatMultiple_wfql.exe")
-    if status == "已开启":
+    close_mutex_executable = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, "WeChatMultiple_Anhkgg.exe")
+    if multiple_status == "已开启":
         close_mutex_code = ""
         prefix = "[要开全局] - "
         exe_path = wechat_path

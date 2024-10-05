@@ -11,6 +11,7 @@ import win32con
 import win32gui
 
 from resources import Config
+from utils import process_utils
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
@@ -82,8 +83,29 @@ def close_mutex_of_pids():
     for wechat_pid, handle in matches:
         print(f"尝试关闭互斥体句柄: hwnd:{handle}, pid:{wechat_pid}")
         try:
-            success = subprocess.run([handle_exe_path, '-c', handle, '-p', wechat_pid, '-y'], check=True)
-            print(success)
+            stdout = None
+            try:
+                command = " ".join([handle_exe_path, '-c', handle, '-p', str(wechat_pid), '-y'])
+                print(f"执行命令：{command}")
+                # 使用 Popen 启动子程序并捕获输出
+                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                           shell=True)
+                # 检查子程序是否具有管理员权限
+                if process_utils.is_process_admin(process.pid):
+                    print(f"子进程 {process.pid} 以管理员权限运行")
+                else:
+                    print(f"子进程 {process.pid} 没有管理员权限")
+                # 获取输出结果
+                stdout, stderr = process.communicate()
+                # 检查返回的 stdout 和 stderr
+                if stdout:
+                    print(f"输出：{stdout}完毕。")
+                if stderr:
+                    print(f"错误：{stderr}")
+            except subprocess.CalledProcessError as e:
+                print(f"Command failed with exit code {e.returncode}")
+            if stdout is not None and "Error closing handle:" in stdout:
+                continue
             print(f"成功关闭句柄: hwnd:{handle}, pid:{wechat_pid}")
             successful_closes.append((wechat_pid, handle))
         except subprocess.CalledProcessError as e:

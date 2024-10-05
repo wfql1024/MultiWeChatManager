@@ -253,6 +253,8 @@ def update_auto_time_statistic(sub_exe, time_spent, index):
 
 def update_refresh_time_statistic(acc_count, time_spent):
     """更新刷新时间统计"""
+    if time_spent > 2:
+        return
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
     if "refresh" not in data:
         data["refresh"] = {}

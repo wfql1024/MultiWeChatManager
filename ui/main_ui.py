@@ -1,4 +1,5 @@
 # main_ui.py
+import ctypes
 import glob
 import os
 import queue
@@ -225,7 +226,7 @@ class MainWindow:
         self.master.withdraw()  # 初始化时隐藏主窗口
         self.setup_main_window()
 
-        # self.create_menu_bar()
+        # 创建状态栏
         self.create_status_bar()
         # 创建消息队列
         self.message_queue = queue.Queue()
@@ -259,16 +260,86 @@ class MainWindow:
         # 配置Canvas的滚动区域
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
+        print(True if ctypes.windll.shell32.IsUserAnAdmin() else False)
+        self.show_setting_error()
+
         self.logged_in_rows = {}
         self.not_logged_in_rows = {}
 
         self.master.after(200, self.delayed_initialization)
 
+    def setup_main_window(self):
+        """创建主窗口"""
+        self.master.title("微信多开管理器")
+        self.master.iconbitmap(Config.PROJ_ICO_PATH)
+
+    def create_status_bar(self):
+        """创建状态栏"""
+        print(f"加载状态栏.........................................................")
+        self.status_var = tk.StringVar()
+        self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
+                                   height=1)
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        # 绑定点击事件
+        if self.debug:
+            self.status_bar.bind("<Button-1>", lambda event: self.open_debug_window())
+
+    def update_status(self):
+        """即时更新状态栏"""
+        try:
+            # 从队列中获取消息并更新状态栏
+            message = self.message_queue.get_nowait()
+            if message.strip():  # 如果消息不为空，更新状态栏
+                self.status_var.set(message)
+        except queue.Empty:
+            pass
+        # 每 1 毫秒检查一次队列
+        self.master.after(1, self.update_status)
+
     def delayed_initialization(self):
         """延迟加载，等待路径检查"""
         print(f"初始化检查.........................................................")
-        self.master.after(200, self.finalize_initialization)
+        self.master.after(800, self.finalize_initialization)
         self.check_and_init()
+
+    def check_and_init(self):
+        """检查和初始化"""
+        # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
+        if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
+            os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
+            print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
+
+        install_path = func_setting.get_wechat_install_path()
+        data_path = func_setting.get_wechat_data_path()
+        dll_dir_path = func_setting.get_wechat_dll_dir_path()
+
+        if not install_path or not data_path or not dll_dir_path:
+            self.show_setting_error()
+        else:
+            self.install_path = install_path
+            self.data_path = data_path
+            self.last_version_path = dll_dir_path
+            screen_size = subfunc_file.get_screen_size_from_setting_ini()
+            if not screen_size or screen_size == "":
+                # 获取屏幕和登录窗口尺寸
+                screen_width = self.master.winfo_screenwidth()
+                screen_height = self.master.winfo_screenheight()
+                # 保存屏幕尺寸
+                subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
+            # 开始创建列表
+            self.create_main_frame_and_menu()
+
+    def show_setting_error(self):
+        """路径错误提醒"""
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        error_label = ttk.Label(self.main_frame, text="路径设置错误，请点击按钮修改", foreground="red")
+        error_label.pack(pady=20)
+        self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
+                                          command=self.open_settings, style='Custom.TButton')
+        self.settings_button.pack()
+        # 检查选择的子程序，若没有则添加默认
+        func_setting.fetch_sub_exe()
 
     def finalize_initialization(self):
         """路径检查完毕后进入，销毁等待窗口，居中显示主窗口"""
@@ -284,11 +355,6 @@ class MainWindow:
         self.master.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
 
         self.master.deiconify()
-
-    def setup_main_window(self):
-        """创建主窗口"""
-        self.master.title("微信多开管理器")
-        self.master.iconbitmap(Config.PROJ_ICO_PATH)
 
     def create_menu_bar(self):
         """创建菜单栏"""
@@ -435,71 +501,6 @@ class MainWindow:
         else:
             self.menu_bar.add_command(label=Strings.LOCKED_REVOKE_LOGO)
             self.menu_bar.entryconfigure(Strings.LOCKED_REVOKE_LOGO, command=self.logo_on_click)
-
-    def create_status_bar(self):
-        """创建状态栏"""
-        print(f"加载状态栏.........................................................")
-        self.status_var = tk.StringVar()
-        self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
-                                   height=1)
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-        # 绑定点击事件
-        if self.debug:
-            self.status_bar.bind("<Button-1>", lambda event: self.open_debug_window())
-
-    def update_status(self):
-        """即时更新状态栏"""
-        try:
-            # 从队列中获取消息并更新状态栏
-            message = self.message_queue.get_nowait()
-            if message.strip():  # 如果消息不为空，更新状态栏
-                self.status_var.set(message)
-        except queue.Empty:
-            pass
-        # 每 30 毫秒检查一次队列
-        self.master.after(1, self.update_status)
-
-    def check_and_init(self):
-        """路径检查"""
-        # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
-        if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
-            os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
-            print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
-
-        install_path = func_setting.get_wechat_install_path()
-        data_path = func_setting.get_wechat_data_path()
-        dll_dir_path = func_setting.get_wechat_dll_dir_path()
-
-        if not install_path or not data_path or not dll_dir_path:
-            self.show_setting_error()
-        else:
-            self.install_path = install_path
-            self.data_path = data_path
-            self.last_version_path = dll_dir_path
-
-            screen_size = subfunc_file.get_screen_size_from_setting_ini()
-
-            if not screen_size or screen_size == "":
-                # 获取屏幕和登录窗口尺寸
-                screen_width = self.master.winfo_screenwidth()
-                screen_height = self.master.winfo_screenheight()
-                # 保存屏幕尺寸
-                subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
-
-            # 开始创建列表
-            self.create_main_frame_and_menu()
-
-    def show_setting_error(self):
-        """路径错误提醒"""
-        for widget in self.main_frame.winfo_children():
-            widget.destroy()
-        error_label = ttk.Label(self.main_frame, text="路径设置错误，请点击按钮修改", foreground="red")
-        error_label.pack(pady=20)
-        self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
-                                          command=self.open_settings, style='Custom.TButton')
-        self.settings_button.pack()
-        # 检查选择的子程序，若没有则添加默认
-        func_setting.fetch_sub_exe()
 
     def create_main_frame_and_menu(self):
         """加载或刷新主界面和菜单栏"""

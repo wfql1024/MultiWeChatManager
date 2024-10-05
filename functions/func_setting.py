@@ -117,9 +117,10 @@ def get_wechat_dll_dir_path():
 def update_current_ver():
     """获取当前使用的版本号"""
     install_path = get_wechat_install_path()
-    if os.path.exists(install_path):
-        return file_utils.get_file_version(install_path)
-    return None
+    if install_path is not None:
+        if os.path.exists(install_path):
+            return file_utils.get_file_version(install_path)
+        return None
 
 
 def fetch_sub_exe():

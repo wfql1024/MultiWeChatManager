@@ -64,6 +64,14 @@ GetWindowThreadProcessId.restype = DWORD
 GetWindowThreadProcessId.argtypes = [HANDLE, ctypes.POINTER(DWORD)]
 
 
+def is_process_admin(pid):
+    try:
+        process = psutil.Process(pid)
+        return process.is_running() and ctypes.windll.shell32.IsUserAnAdmin()
+    except psutil.AccessDenied:
+        return False
+
+
 def get_process_by_name(process_name):
     """通过进程名获取单个进程ID和句柄"""
     for proc in psutil.process_iter(['name', 'pid']):

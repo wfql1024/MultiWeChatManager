@@ -4,7 +4,7 @@ current_file_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 class Config:
-    VER_STATUS = 'Beta'
+    VER_STATUS = 'Alpha'
 
     INI_KEY_CUR_VER = 'current_version'
     INI_KEY_DELAY_TIME = 'delay_time'
@@ -24,7 +24,7 @@ class Config:
     JSON_KEY_AVATAR_URL = 'avatar_url'
     JSON_KEY_HAS_MUTEX = 'has_mutex'
 
-    DEFAULT_SUB_EXE = 'WeChatMultiple_Anhkgg.exe'
+    DEFAULT_SUB_EXE = 'python'
 
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))
     PROJ_USER_PATH = fr'{PROJ_PATH}\user_files'
