@@ -3,7 +3,7 @@ import win32api
 import win32con
 import win32gui
 import win32ui
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageTk
 
 
 def create_round_corner_image(img, radius):
@@ -65,7 +65,7 @@ def png_to_ico(png_path, ico_path):
     img.save(ico_path, format='ICO', sizes=[(img.width, img.height)])
 
 
-def extract_icon_to_png(exe_path, output_png_path):
+def extract_icon_to_png(exe_path, output_png_path=None):
     """提取可执行文件的图标并保存为png格式"""
     ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
     ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
@@ -90,8 +90,11 @@ def extract_icon_to_png(exe_path, output_png_path):
 
     win32gui.DestroyIcon(large[0])
 
-    icon.save(output_png_path, format='PNG')
-    return output_png_path
+    if output_png_path is not None:
+        icon.save(output_png_path, format='PNG')
+    else:
+        pass
+    return ImageTk.PhotoImage(icon)
 
 
 def add_diminished_se_corner_mark_to_image(image_path, mark_path, output_path, diminish_time=3):

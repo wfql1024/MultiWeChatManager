@@ -188,7 +188,7 @@ class MainWindow:
         self.help_menu = None
         self.logged_in_checkbox = None
         self.logged_in_checkbox_var = None
-        self.logged_in_bottom_frame = None
+        self.logged_in_button_frame = None
         self.one_key_quit = None
         self.not_logged_in_title = None
         self.not_logged_in_checkbox = None
@@ -567,11 +567,11 @@ class MainWindow:
         self.logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
 
         # 已登录按钮区域=一键退出
-        self.logged_in_bottom_frame = ttk.Frame(self.logged_in_title)
-        self.logged_in_bottom_frame.pack(side=tk.RIGHT)
+        self.logged_in_button_frame = ttk.Frame(self.logged_in_title)
+        self.logged_in_button_frame.pack(side=tk.RIGHT)
 
         # 一键退出
-        self.one_key_quit = ttk.Button(self.logged_in_bottom_frame, text="一键退出", width=8,
+        self.one_key_quit = ttk.Button(self.logged_in_button_frame, text="一键退出", width=8,
                                        command=self.quit_selected_accounts, style='Custom.TButton')
         self.one_key_quit.pack(side=tk.RIGHT, pady=0)
 
