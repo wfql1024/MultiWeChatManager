@@ -1,60 +1,57 @@
 # 获取最新版本号
 import os
+import re
 import tempfile
 from tkinter import messagebox
 
 import requests
 
 
-# def get_latest_version(url):
-#     response = requests.get(url)
-#     if response.status_code == 200:
-#         return response.text.strip()
-#     else:
-#         messagebox.showerror("错误", "无法获取最新版本信息")
-#         return None
-#
-#
-# # 下载文件
-# def download_files(file_urls, temp_dir, progress_callback):
-#     for idx, file_url in enumerate(file_urls):
-#         file_name = os.path.join(temp_dir, os.path.basename(file_url))
-#         with requests.get(file_url, stream=True) as r:
-#             r.raise_for_status()
-#             total_length = int(r.headers.get('content-length', 0))
-#             with open(file_name, 'wb') as f:
-#                 downloaded = 0
-#                 for chunk in r.iter_content(chunk_size=8192):
-#                     f.write(chunk)
-#                     downloaded += len(chunk)
-#                     progress_callback(idx, len(file_urls), downloaded, total_length)
-#     return True
-#
-#
-# # 更新进度条
-# def update_progress(idx, total_files, downloaded, total_length):
-#     percentage = (downloaded / total_length) * 100 if total_length else 0
-#     progress_var.set(f"下载文件 {idx + 1}/{total_files}: {percentage:.2f}% 完成")
-#     progress_bar['value'] = percentage
-#     root.update_idletasks()
-#
-#
-# # 下载窗口
-# def show_download_window(file_urls, temp_dir):
-#     download_window = tk.Toplevel(root)
-#     download_window.title("下载更新")
-#
-#     global progress_var, progress_bar
-#     progress_var = tk.StringVar(value="开始下载...")
-#     tk.Label(download_window, textvariable=progress_var).pack(pady=10)
-#
-#     progress_bar = ttk.Progressbar(download_window, orient="horizontal", length=300, mode="determinate")
-#     progress_bar.pack(pady=10)
-#
-#     tk.Button(download_window, text="关闭并更新", command=lambda: start_update_process(temp_dir)).pack(pady=10)
-#
-#     # 开始下载文件（多线程）
-#     threading.Thread(target=download_files, args=(file_urls, temp_dir, update_progress)).start()
+def get_latest_version(url):
+    try:
+        # 请求Gitee仓库页面
+        response = requests.get(url)
+        if response.status_code == 200:
+            # 正则匹配符合命名格式的文件名，提取版本号
+            match = re.search(
+                r'MultiWeChatManager_x64_v(\d+\.\d+\.\d+\.\d+)([^\s]*).zip', response.text)
+            if match:
+                # 提取版本号部分
+                version_number = match.group(1)  # 提取v后面的数字部分
+                full_version = f"{version_number}{match.group(2)}"  # 完整版本（包括v和后缀）
+                return version_number, full_version  # 返回完整版本
+            else:
+                messagebox.showerror("错误", "未找到最新版本信息")
+                return None
+        else:
+            messagebox.showerror("错误", "无法获取最新版本信息")
+            return None
+    except Exception as e:
+        messagebox.showerror("错误", f"请求过程中出现问题: {e}")
+        return None
+
+
+def download_files(file_urls, temp_dir, progress_callback):
+    print("进入下载文件方法...")
+    for idx, url in enumerate(file_urls):
+        # file_name = os.path.join(temp_dir, os.path.basename(url))
+        file_name = os.path.join(temp_dir, "MultiWeChatManager_x64_v2.5.0.411.Alpha.zip")
+        print(f"Downloading to {file_name}")
+        with requests.get(url, stream=True, allow_redirects=True) as r:
+            r.raise_for_status()
+            total_length = int(r.headers.get('content-length', 0))
+            with open(file_name, 'wb') as f:
+                downloaded = 0
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:  # 过滤掉保持连接的chunk
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        progress_callback(idx, len(file_urls), downloaded, total_length)
+
+    print("All files downloaded successfully.")
+    return True
+
+
 #
 #
 # # 启动更新进程
@@ -92,15 +89,9 @@ import requests
 #     root.quit()
 
 
-# 主程序逻辑
-def check_for_updates():
-    # current_version = "1.0.0"  # 假设当前版本
-    # latest_version = get_latest_version("http://example.com/version.txt")
-    # if latest_version and latest_version != current_version:
-    #     if messagebox.askyesno("更新可用", f"当前版本：{current_version}\n最新版本：{latest_version}\n是否立即更新？"):
-    #         temp_dir = tempfile.mkdtemp()
-    #         file_urls = ["http://example.com/file1.zip", "http://example.com/file2.zip"]  # 更新文件列表
-    #         show_download_window(file_urls, temp_dir)
-    # else:
-    if True:
-        messagebox.showinfo("提醒", f"当前已是最新版本。")
+if __name__ == '__main__':
+    file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052ac9&rlimit=20&us=Ioo2xfdKuS&sign=e813036e84770a466a9686509c3f10a5&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+    file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052a0e&rlimit=20&us=z4FiCcDrRo&sign=6a4127c45ab443b6f4cc84dfd5afa9d8&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+    # file_url = f"https://gitee.com/wfql1024/MultiWeChatManagerDist/raw/master/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+    with requests.get(file_url, stream=True, allow_redirects=True) as r:
+        open(r"E:\Now\Inbox\test\MultiWeChatManager_x64_v2.5.0.411.Alpha.zip", 'wb').write(r.content)

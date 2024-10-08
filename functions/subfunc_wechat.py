@@ -51,7 +51,7 @@ def open_wechat(status, has_mutex_dictionary=None):
     """
     根据状态以不同方式打开微信
     :param status: 状态
-    :param has_mutex_dictionary:
+    :param has_mutex_dictionary: 有互斥体账号的列表
     :return: 微信窗口句柄
     """
 

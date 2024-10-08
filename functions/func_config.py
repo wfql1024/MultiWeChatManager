@@ -100,8 +100,8 @@ def test(account, status):
     ):
         subfunc_wechat.clear_idle_wnd_and_process()
         time.sleep(0.5)
-        subfunc_wechat.get_mutex_dict()
-        sub_exe_process, _ = subfunc_wechat.open_wechat(status)
+        has_mutex_dict = subfunc_wechat.get_mutex_dict()
+        sub_exe_process, _ = subfunc_wechat.open_wechat(status, has_mutex_dict)
         wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
             if sub_exe_process:
@@ -110,7 +110,7 @@ def test(account, status):
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
                 return create_config(account)
             else:
-                wechat_hwnd.close()
+                close_window_by_name("WeChatLoginWndForPC")
                 return False
         else:
             messagebox.showerror("错误", "打开登录窗口失败")

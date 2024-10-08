@@ -162,7 +162,13 @@ def auto_login_accounts(accounts, status):
         handle_utils.do_click_in_window(h, int(login_width * 0.5), int(login_height * 0.75))
     for h in handles:
         try:
-            cx, cy = handle_utils.get_center_pos_by_handle_and_title(h, "进入微信")
+            titles = ["进入微信", "进入WeChat"]  # 添加所有需要查找的标题
+            cx, cy = None, None  # 初始化坐标为 None
+            # 依次查找每个标题
+            for title in titles:
+                cx, cy = handle_utils.get_center_pos_by_handle_and_title(h, title)
+                if cx is not None and cy is not None:
+                    break  # 找到有效坐标后退出循环
             handle_utils.do_click_in_window(h, int(cx), int(cy))
         except TypeError as e:
             print(e)

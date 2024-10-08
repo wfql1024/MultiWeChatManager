@@ -266,6 +266,7 @@ def get_center_pos_by_handle_and_title(handle, title, control_type="Button"):
         return relative_center_x, relative_center_y
     else:
         print("Button '进入微信' not found!")
+        return None, None
 
 
 if __name__ == '__main__':
