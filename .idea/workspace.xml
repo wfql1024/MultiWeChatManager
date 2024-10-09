@@ -4,14 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="修改了下关于页，准备做“检查更新”功能">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="修复配置过程无法弹出登录的问题，优化点击登录按钮的逻辑">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_login.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_update.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_update.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_wechat.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_wechat.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/about_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/about_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/handle_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/handle_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -302,14 +296,8 @@
       <workItem from="1728014149084" duration="30679000" />
       <workItem from="1728212606042" duration="41654000" />
       <workItem from="1728364406566" duration="18583000" />
-    </task>
-    <task id="LOCAL-00028" summary="添加鸣谢，添加视频教程">
-      <option name="closed" value="true" />
-      <created>1725031100449</created>
-      <option name="number" value="00028" />
-      <option name="presentableId" value="LOCAL-00028" />
-      <option name="project" value="LOCAL" />
-      <updated>1725031100449</updated>
+      <workItem from="1728393034266" duration="503000" />
+      <workItem from="1728393564037" duration="177000" />
     </task>
     <task id="LOCAL-00029" summary="添加鸣谢，添加视频教程">
       <option name="closed" value="true" />
@@ -695,7 +683,15 @@
       <option name="project" value="LOCAL" />
       <updated>1728298271748</updated>
     </task>
-    <option name="localTasksCounter" value="77" />
+    <task id="LOCAL-00077" summary="修复配置过程无法弹出登录的问题，优化点击登录按钮的逻辑">
+      <option name="closed" value="true" />
+      <created>1728393225683</created>
+      <option name="number" value="00077" />
+      <option name="presentableId" value="LOCAL-00077" />
+      <option name="project" value="LOCAL" />
+      <updated>1728393225684</updated>
+    </task>
+    <option name="localTasksCounter" value="78" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -738,7 +734,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="调整源码结构，全局多开适配改为从云中数据获取而非源码上" />
     <MESSAGE value="重写print，为输出打印添加了按调用层数确定的前缀" />
     <MESSAGE value="合并正常版与调试版，按照程序的参数来区分" />
     <MESSAGE value="摸鱼……" />
@@ -763,7 +758,8 @@
     <MESSAGE value="一直在调试适配win7，这里备份一下" />
     <MESSAGE value="适配好win7，删除wfql多开器" />
     <MESSAGE value="修改了下关于页，准备做“检查更新”功能" />
-    <option name="LAST_COMMIT_MESSAGE" value="修改了下关于页，准备做“检查更新”功能" />
+    <MESSAGE value="修复配置过程无法弹出登录的问题，优化点击登录按钮的逻辑" />
+    <option name="LAST_COMMIT_MESSAGE" value="修复配置过程无法弹出登录的问题，优化点击登录按钮的逻辑" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
