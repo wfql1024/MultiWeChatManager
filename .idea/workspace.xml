@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="忙，简单push一下" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="继续摸鱼" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -297,14 +297,7 @@
       <workItem from="1728393034266" duration="503000" />
       <workItem from="1728393564037" duration="177000" />
       <workItem from="1728480004619" duration="346000" />
-    </task>
-    <task id="LOCAL-00030" summary="逐一测试，剔除低效率的工具">
-      <option name="closed" value="true" />
-      <created>1725117496248</created>
-      <option name="number" value="00030" />
-      <option name="presentableId" value="LOCAL-00030" />
-      <option name="project" value="LOCAL" />
-      <updated>1725117496248</updated>
+      <workItem from="1728575130427" duration="1249000" />
     </task>
     <task id="LOCAL-00031" summary="找到更好方式进行多选登录">
       <option name="closed" value="true" />
@@ -690,7 +683,15 @@
       <option name="project" value="LOCAL" />
       <updated>1728480240784</updated>
     </task>
-    <option name="localTasksCounter" value="79" />
+    <task id="LOCAL-00079" summary="继续摸鱼">
+      <option name="closed" value="true" />
+      <created>1728575156408</created>
+      <option name="number" value="00079" />
+      <option name="presentableId" value="LOCAL-00079" />
+      <option name="project" value="LOCAL" />
+      <updated>1728575156408</updated>
+    </task>
+    <option name="localTasksCounter" value="80" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -726,6 +727,17 @@
                   <entry key="Show.Git.Branches" value="true" />
                 </map>
               </option>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="HEAD" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
             </State>
           </value>
         </entry>
@@ -733,7 +745,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="合并正常版与调试版，按照程序的参数来区分" />
     <MESSAGE value="摸鱼……" />
     <MESSAGE value="屏幕未到，进度缓慢，调试窗口输出打印格式可调节" />
     <MESSAGE value="简单更新了下文件结构~" />
@@ -758,7 +769,8 @@
     <MESSAGE value="修改了下关于页，准备做“检查更新”功能" />
     <MESSAGE value="修复配置过程无法弹出登录的问题，优化点击登录按钮的逻辑" />
     <MESSAGE value="忙，简单push一下" />
-    <option name="LAST_COMMIT_MESSAGE" value="忙，简单push一下" />
+    <MESSAGE value="继续摸鱼" />
+    <option name="LAST_COMMIT_MESSAGE" value="继续摸鱼" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$modify_wechat_dll.coverage" NAME="modify_wechat_dll Coverage Results" MODIFIED="1723466894977" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
