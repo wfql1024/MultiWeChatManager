@@ -12,13 +12,14 @@ def get_latest_version(url):
         # 请求Gitee仓库页面
         response = requests.get(url)
         if response.status_code == 200:
+            print("访问页面成功")
             # 正则匹配符合命名格式的文件名，提取版本号
             match = re.search(
                 r'MultiWeChatManager_x64_v(\d+\.\d+\.\d+\.\d+)([^\s]*).zip', response.text)
             if match:
                 # 提取版本号部分
                 version_number = match.group(1)  # 提取v后面的数字部分
-                full_version = f"{version_number}{match.group(2)}"  # 完整版本（包括v和后缀）
+                full_version = f"v{version_number}{match.group(2)}"  # 完整版本（包括v和后缀）
                 return version_number, full_version  # 返回完整版本
             else:
                 messagebox.showerror("错误", "未找到最新版本信息")

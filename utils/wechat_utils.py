@@ -87,7 +87,6 @@ def get_wechat_dll_dir_path_by_memo_maps():
             for f in psutil.Process(process_id).memory_maps():
                 normalized_path = f.path.replace('\\', '/')
                 # print(normalized_path)
-                # 检查路径是否以 data_path 开头
                 if normalized_path.endswith('WeChatWin.dll'):
                     dll_dir_path = os.path.dirname(normalized_path)
                     # print(dll_dir_path)

@@ -80,6 +80,7 @@ def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], 
         try:
             # 获取指定进程的内存映射文件路径
             for f in psutil.Process(process_id).memory_maps():
+                print(f)
                 # 将路径中的反斜杠替换为正斜杠
                 normalized_path = f.path.replace('\\', '/')
                 # 检查路径是否以 data_path 开头

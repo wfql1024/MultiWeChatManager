@@ -14,6 +14,7 @@ from PIL import Image, ImageTk
 
 from functions import func_update
 from resources import Config, Strings
+from ui import update_log_ui
 from utils import file_utils, handle_utils
 
 
@@ -54,7 +55,7 @@ class AboutWindow:
         master.geometry(f"{window_width}x{window_height}+{x}+{y}")
 
         # 禁用窗口大小调整
-        master.resizable(False, True)
+        master.resizable(False, False)
 
         # 移除窗口装饰并设置为工具窗口
         master.overrideredirect(True)
@@ -101,7 +102,7 @@ class AboutWindow:
                 else:
                     version_number = "未知版本"
 
-        current_full_version = f"{version_number}-{Config.VER_STATUS}"
+        current_full_version = f"v{version_number}-{Config.VER_STATUS}"
 
         # 标题和版本号标签
         title_version_label = ttk.Label(
@@ -223,43 +224,14 @@ class AboutWindow:
 
     def check_for_updates(self, current_full_version):
         # current_full_version = "2.5.0.411.Alpha"
-        url = "https://gitee.com/wfql1024/MultiWeChatManagerDist"
+        url = "https://share.feijipan.com/s/Z4CpysaZ"
         latest_version = func_update.get_latest_version(url)
         if latest_version and latest_version[1] != current_full_version:
-            if messagebox.askyesno("更新可用",
-                                   f"当前版本：{current_full_version}\n最新版本：{latest_version[1]}\n是否立即更新？"):
-                temp_dir = tempfile.mkdtemp()
-                file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052ac9&rlimit=20&us=Ioo2xfdKuS&sign=e813036e84770a466a9686509c3f10a5&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
-                # file_url = f"https://gitee.com/wfql1024/MultiWeChatManagerDist/raw/master/MultiWeChatManager_x64_v{latest_version[1]}.zip"
-                file_urls = [file_url]  # 更新文件列表
-                self.show_download_window(file_urls, temp_dir)
+            update_log_window = tk.Toplevel(self.master)
+            update_log_ui.UpdateLogWindow(update_log_window, 'new')
+            handle_utils.center_window(update_log_window)
         else:
             messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
-
-    def show_download_window(self, file_urls, temp_dir):
-        download_window = tk.Toplevel(self.master)
-        download_window.title("下载更新")
-        handle_utils.center_window(download_window)
-
-        global progress_var, progress_bar
-        progress_var = tk.StringVar(value="开始下载...")
-        tk.Label(download_window, textvariable=progress_var).pack(pady=10)
-
-        progress_bar = ttk.Progressbar(download_window, orient="horizontal", length=300, mode="determinate")
-        progress_bar.pack(pady=10)
-
-        tk.Button(download_window, text="关闭并更新",
-                  # command=lambda: start_update_process(temp_dir)
-                  ).pack(pady=10)
-
-        # 开始下载文件（多线程）
-        threading.Thread(target=func_update.download_files, args=(file_urls, temp_dir, self.update_progress)).start()
-
-    def update_progress(self, idx, total_files, downloaded, total_length):
-        percentage = (downloaded / total_length) * 100 if total_length else 0
-        progress_var.set(f"下载文件 {idx + 1}/{total_files}: {percentage:.2f}% 完成")
-        progress_bar['value'] = percentage
-        self.master.update_idletasks()
 
 
 if __name__ == '__main__':

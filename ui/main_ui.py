@@ -19,7 +19,7 @@ from functions import func_config, func_setting, func_wechat_dll, func_login, fu
 from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
-from ui import about_ui, setting_ui, detail_ui, rewards_ui, debug_ui, statistic_ui
+from ui import about_ui, setting_ui, detail_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui
 from utils import handle_utils, debug_utils, json_utils, process_utils
 
 
@@ -492,6 +492,7 @@ class MainWindow:
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
+        self.help_menu.add_command(label="更新日志", command=self.open_update_log)
         self.help_menu.add_command(label="关于", command=self.open_about)
 
         # ————————————————————————————作者标签————————————————————————————
@@ -839,17 +840,23 @@ class MainWindow:
         finally:
             self.create_main_frame_and_menu()  # 无论成功与否，最后更新按钮状态
 
-    def open_about(self):
-        """打开关于窗口"""
-        about_window = tk.Toplevel(self.master)
-        about_ui.AboutWindow(about_window)
-        handle_utils.center_window(about_window)
-
     def open_rewards(self):
         """打开支持窗口"""
         rewards_window = tk.Toplevel(self.master)
         rewards_ui.RewardsWindow(rewards_window, Config.REWARDS_PNG_PATH)
         handle_utils.center_window(rewards_window)
+
+    def open_update_log(self):
+        """打开版本日志窗口"""
+        update_log_window = tk.Toplevel(self.master)
+        update_log_ui.UpdateLogWindow(update_log_window, 'old')
+        handle_utils.center_window(update_log_window)
+
+    def open_about(self):
+        """打开关于窗口"""
+        about_window = tk.Toplevel(self.master)
+        about_ui.AboutWindow(about_window)
+        handle_utils.center_window(about_window)
 
     def logo_on_click(self):
         print("触发了点击")

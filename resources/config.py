@@ -38,3 +38,4 @@ class Config:
     VERSION_FILE = fr'{PROJ_PATH}\version.txt'
     VER_CONFIG_JSON_PATH = fr'{PROJ_USER_PATH}\version_config.json'
     VER_ADAPTATION_JSON_PATH = fr'{PROJ_USER_PATH}\version_adaptation.json'
+    UPDATE_LOG_PATH = fr'{PROJ_PATH}\update_log.md'
