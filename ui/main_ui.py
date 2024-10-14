@@ -20,7 +20,7 @@ from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
 from ui import about_ui, setting_ui, detail_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui
-from utils import handle_utils, debug_utils, json_utils, process_utils
+from utils import handle_utils, debug_utils, json_utils, process_utils, string_utils
 
 
 class AccountRow:
@@ -59,11 +59,21 @@ class AccountRow:
         has_mutex, = subfunc_file.get_acc_details_from_acc_json(account, has_mutex=None)
         style = ttk.Style()
         style.configure("Red.TLabel", foreground="red")
-        if has_mutex:
-            self.account_label = ttk.Label(self.row_frame, text=display_name, style="Red.TLabel")
-        else:
-            self.account_label = ttk.Label(self.row_frame, text=display_name)
-        self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
+        # 清理 display_name
+        cleaned_display_name = string_utils.clean_display_name(display_name)
+        try:
+            if has_mutex:
+                self.account_label = ttk.Label(self.row_frame, text=display_name, style="Red.TLabel")
+            else:
+                self.account_label = ttk.Label(self.row_frame, text=display_name)
+            self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
+        except Exception as e:
+            print(e)
+            if has_mutex:
+                self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name, style="Red.TLabel")
+            else:
+                self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name)
+            self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
 
         # 按钮区域=配置或登录按钮
         self.button_frame = ttk.Frame(self.row_frame)
@@ -293,6 +303,8 @@ class MainWindow:
                 self.status_var.set(message)
         except queue.Empty:
             pass
+        except Exception as e:
+            pass
         # 每 1 毫秒检查一次队列
         self.master.after(1, self.update_status)
 
@@ -407,8 +419,8 @@ class MainWindow:
         # -应用设置
         login_size = subfunc_file.get_login_size_from_setting_ini()
         if not login_size or login_size == "" or login_size == "None":
-            self.menu_bar.add_cascade(label="!!!设置", menu=self.settings_menu)
-            self.settings_menu.add_command(label="!!!应用设置", command=self.open_settings, foreground='red')
+            self.menu_bar.add_cascade(label="⚠️设置", menu=self.settings_menu)
+            self.settings_menu.add_command(label="⚠️应用设置", command=self.open_settings, foreground='red')
         else:
             self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
             self.settings_menu.add_command(label="应用设置", command=self.open_settings)

@@ -1,3 +1,25 @@
+def clean_display_name(display_name):
+    """
+    清理 display_name 中的字符，替换所有 Unicode 码点 > U+FFFF 的字符为 '_'
+    并记录其位置和码点。
+
+    Args:
+        display_name (str): 原始显示名称字符串。
+
+    Returns:
+        str: 清理后的字符串。
+    """
+    new_display_name = []
+    for index, char in enumerate(display_name):
+        code_point = ord(char)
+        if code_point > 0xFFFF:
+            print(f"警告: 在位置 {index} 发现不支持的字符 '{char}' (U+{code_point:04X})，已替换为 '_'")
+            new_display_name.append('_')
+        else:
+            new_display_name.append(char)
+    return ''.join(new_display_name)
+
+
 def balanced_wrap_text(text, max_width=10) -> str:
     """
     将文本按指定宽度尽量平分两行处理，超过 max_width 的部分尽量让上行更长。

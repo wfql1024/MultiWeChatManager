@@ -1,17 +1,24 @@
 # detail_ui.py
 import base64
+import ctypes
 import os
+import time
 import tkinter as tk
 import webbrowser
 from tkinter import ttk, messagebox
 
 import psutil
+import win32api
+import win32con
+import win32gui
 from PIL import Image, ImageTk
 
 from functions import func_detail, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
+from utils import string_utils, handle_utils, process_utils
 from utils.handle_utils import Tooltip
+from utils.process_utils import user32
 
 
 class DetailWindow:
@@ -127,7 +134,11 @@ class DetailWindow:
         )
         self.load_avatar(avatar_path, avatar_url)
         self.current_account_label.config(text=f"现wxid: {alias}")
-        self.nickname_label.config(text=f"昵    称: {nickname}")
+        try:
+            self.nickname_label.config(text=f"昵    称: {nickname}")
+        except Exception as e:
+            print(e)
+            self.nickname_label.config(text=f"昵    称: {string_utils.clean_display_name(nickname)}")
         self.pid_label.config(text=f"PID: {pid}")
         if not pid:
             self.disable_fetch_button()
@@ -192,7 +203,8 @@ class DetailWindow:
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
 
-        success = func_detail.fetch_acc_detail_by_pid(pid, self.account, self.disable_fetch_button, self.enable_fetch_button)
+        success = func_detail.fetch_acc_detail_by_pid(pid, self.account, self.disable_fetch_button,
+                                                      self.enable_fetch_button)
         if success is False:
             messagebox.showerror(f"错误", "失败：超时")
         # 刷新显示
@@ -206,3 +218,5 @@ class DetailWindow:
             subfunc_file.update_acc_details_to_acc_json(self.account, note=new_note)
         self.update_callback()
         self.master.destroy()
+
+

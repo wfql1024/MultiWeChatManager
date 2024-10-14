@@ -10,8 +10,11 @@
       <excludeFolder url="file://$MODULE_DIR$/user_files" />
       <excludeFolder url="file://$MODULE_DIR$/build" />
       <excludeFolder url="file://$MODULE_DIR$/Demo" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv312" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv37" />
+      <excludeFolder url="file://$MODULE_DIR$/.venv38" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.7 (MultiWeChatManager)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.8 (MultiWeChatManager)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">

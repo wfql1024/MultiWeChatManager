@@ -34,6 +34,10 @@ def is_admin():
 
 
 def main():
+    # 设置环境变量，告诉 Python 不使用代理
+    os.environ['http_proxy'] = ''
+    os.environ['https_proxy'] = ''
+    os.environ['no_proxy'] = '*'
     print(f"是否管理员模式：{is_admin()}")
     # 创建参数解析器
     parser = argparse.ArgumentParser(description="Process command line flags.")
