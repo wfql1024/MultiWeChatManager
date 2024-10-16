@@ -1,8 +1,13 @@
+import json
 import math
+import re
+import sys
 from typing import Tuple, Any
 
-from resources import Config
-from utils import json_utils, ini_utils
+import requests
+
+from resources import Config, Strings
+from utils import json_utils, ini_utils, file_utils
 
 
 def save_wechat_install_path_to_setting_ini(value):
@@ -275,3 +280,44 @@ def update_refresh_time_statistic(acc_count, time_spent):
 
     data["refresh"][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+
+
+def fetch_config_data():
+    """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
+    print(f"正从远程源下载...")
+    urls = [Strings.VER_ADAPTATION_JSON_GITEE, Strings.VER_ADAPTATION_JSON_GITHUB]
+
+    for url in urls:
+        print(f"正在尝试从此处下载: {url}...")
+        try:
+            response = requests.get(url, timeout=2)
+            if response.status_code == 200:
+                with open(Config.VER_ADAPTATION_JSON_PATH, 'w', encoding='utf-8') as config_file:
+                    config_file.write(response.text)  # 将下载的 JSON 保存到文件
+                print(f"成功从 {url} 获取并保存 JSON 文件")
+                return json.loads(response.text)  # 返回加载的 JSON 数据
+            else:
+                print(f"获取失败: {response.status_code}，尝试下一个源...")
+        except requests.exceptions.Timeout:
+            print(f"请求 {url} 超时，尝试下一个源...")
+        except Exception as e:
+            print(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
+
+    raise RuntimeError("所有源获取配置数据失败")
+
+def get_app_current_version():
+    # 获取版本号
+    if getattr(sys, 'frozen', False):
+        exe_path = sys.executable
+        version_number = file_utils.get_file_version(exe_path)  # 获取当前执行文件的版本信息
+    else:
+        with open(Config.VERSION_FILE, 'r', encoding='utf-8') as version_file:
+            version_info = version_file.read()
+            # 使用正则表达式提取文件版本
+            match = re.search(r'filevers=\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)', version_info)
+            if match:
+                version_number = '.'.join([match.group(1), match.group(2), match.group(3), match.group(4)])
+            else:
+                version_number = "未知版本"
+
+    return f"v{version_number}-{Config.VER_STATUS}"

@@ -265,7 +265,7 @@ def get_center_pos_by_handle_and_title(handle, title, control_type="Button"):
         print(f"相对于主窗口的中心位置: ({relative_center_x}, {relative_center_y})")
         return relative_center_x, relative_center_y
     else:
-        print("Button '进入微信' not found!")
+        print(f"Button '{title}' not found!")
         return None, None
 
 

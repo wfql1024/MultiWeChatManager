@@ -15,7 +15,8 @@ from tkinter import ttk
 import psutil
 from PIL import ImageTk
 
-from functions import func_config, func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file
+from functions import func_config, func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file, \
+    func_update
 from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
@@ -558,39 +559,42 @@ class MainWindow:
         self.logged_in_rows.clear()
         self.not_logged_in_rows.clear()
 
-        # 已登录框架=已登录标题+已登录列表
-        self.logged_in_frame = ttk.Frame(self.main_frame)
-        self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
+        if len(logged_in) != 0:
+            # 已登录框架=已登录标题+已登录列表
+            self.logged_in_frame = ttk.Frame(self.main_frame)
+            self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
 
-        # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
-        self.logged_in_title = ttk.Frame(self.logged_in_frame)
-        self.logged_in_title.pack(side=tk.TOP, fill=tk.X)
+            # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
+            self.logged_in_title = ttk.Frame(self.logged_in_frame)
+            self.logged_in_title.pack(side=tk.TOP, fill=tk.X)
 
-        # 已登录复选框
-        self.logged_in_checkbox_var = tk.IntVar(value=0)
-        self.logged_in_checkbox = tk.Checkbutton(
-            self.logged_in_title,
-            variable=self.logged_in_checkbox_var,
-            tristatevalue=-1
-        )
-        self.logged_in_checkbox.pack(side=tk.LEFT)
+            # 已登录复选框
+            self.logged_in_checkbox_var = tk.IntVar(value=0)
+            self.logged_in_checkbox = tk.Checkbutton(
+                self.logged_in_title,
+                variable=self.logged_in_checkbox_var,
+                tristatevalue=-1
+            )
+            self.logged_in_checkbox.pack(side=tk.LEFT)
 
-        # 已登录标签
-        self.logged_in_label = ttk.Label(self.logged_in_title, text="已登录账号：", font=("", 10, "bold"))
-        self.logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            # 已登录标签
+            self.logged_in_label = ttk.Label(self.logged_in_title, text="已登录账号：", font=("", 10, "bold"))
+            self.logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
 
-        # 已登录按钮区域=一键退出
-        self.logged_in_button_frame = ttk.Frame(self.logged_in_title)
-        self.logged_in_button_frame.pack(side=tk.RIGHT)
+            # 已登录按钮区域=一键退出
+            self.logged_in_button_frame = ttk.Frame(self.logged_in_title)
+            self.logged_in_button_frame.pack(side=tk.RIGHT)
 
-        # 一键退出
-        self.one_key_quit = ttk.Button(self.logged_in_button_frame, text="一键退出", width=8,
-                                       command=self.quit_selected_accounts, style='Custom.TButton')
-        self.one_key_quit.pack(side=tk.RIGHT, pady=0)
+            # 一键退出
+            self.one_key_quit = ttk.Button(self.logged_in_button_frame, text="一键退出", width=8,
+                                           command=self.quit_selected_accounts, style='Custom.TButton')
+            self.one_key_quit.pack(side=tk.RIGHT, pady=0)
 
-        # 加载已登录列表
-        for account in logged_in:
-            self.add_account_row(self.logged_in_frame, account, True)
+            # 加载已登录列表
+            for account in logged_in:
+                self.add_account_row(self.logged_in_frame, account, True)
+
+            self.update_top_title(True)
 
         # 未登录框架=未登录标题+未登录列表
         self.not_logged_in_frame = ttk.Frame(self.main_frame)
@@ -627,7 +631,6 @@ class MainWindow:
             self.add_account_row(self.not_logged_in_frame, account, False)
 
         # 更新顶部复选框状态
-        self.update_top_title(True)
         self.update_top_title(False)
 
         subfunc_file.update_refresh_time_statistic(str(len(logged_in)), time.time() - self.start_time)
@@ -860,8 +863,10 @@ class MainWindow:
 
     def open_update_log(self):
         """打开版本日志窗口"""
+        current_full_version = subfunc_file.get_app_current_version()
+        new_versions, old_versions = func_update.split_versions_by_current(current_full_version)
         update_log_window = tk.Toplevel(self.master)
-        update_log_ui.UpdateLogWindow(update_log_window, 'old')
+        update_log_ui.UpdateLogWindow(update_log_window, old_versions)
         handle_utils.center_window(update_log_window)
 
     def open_about(self):

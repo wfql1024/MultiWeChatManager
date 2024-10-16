@@ -12,7 +12,7 @@ import webbrowser
 import requests
 from PIL import Image, ImageTk
 
-from functions import func_update
+from functions import func_update, subfunc_file
 from resources import Config, Strings
 from ui import update_log_ui
 from utils import file_utils, handle_utils
@@ -88,21 +88,7 @@ class AboutWindow:
         title_version_frame = ttk.Frame(content_frame)
         title_version_frame.pack(fill=tk.X, side=tk.TOP, pady=(30, 0))
 
-        # 获取版本号
-        if getattr(sys, 'frozen', False):
-            exe_path = sys.executable
-            version_number = file_utils.get_file_version(exe_path)  # 获取当前执行文件的版本信息
-        else:
-            with open(Config.VERSION_FILE, 'r', encoding='utf-8') as version_file:
-                version_info = version_file.read()
-                # 使用正则表达式提取文件版本
-                match = re.search(r'filevers=\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)', version_info)
-                if match:
-                    version_number = '.'.join([match.group(1), match.group(2), match.group(3), match.group(4)])
-                else:
-                    version_number = "未知版本"
-
-        current_full_version = f"v{version_number}-{Config.VER_STATUS}"
+        current_full_version = subfunc_file.get_app_current_version()
 
         # 标题和版本号标签
         title_version_label = ttk.Label(
@@ -223,15 +209,16 @@ class AboutWindow:
         scrollbar.config(command=reference_text.yview)
 
     def check_for_updates(self, current_full_version):
-        # current_full_version = "2.5.0.411.Alpha"
-        url = "https://share.feijipan.com/s/Z4CpysaZ"
-        latest_version = func_update.get_latest_version(url)
-        if latest_version and latest_version[1] != current_full_version:
-            update_log_window = tk.Toplevel(self.master)
-            update_log_ui.UpdateLogWindow(update_log_window, 'new')
-            handle_utils.center_window(update_log_window)
+        new_versions, old_versions = func_update.split_versions_by_current(current_full_version)
+        if new_versions and old_versions:
+            if len(new_versions) != 0:
+                update_log_window = tk.Toplevel(self.master)
+                update_log_ui.UpdateLogWindow(update_log_window, old_versions, new_versions)
+                handle_utils.center_window(update_log_window)
+            else:
+                messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
         else:
-            messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
+            messagebox.showinfo("错误", f"获取失败。")
 
 
 if __name__ == '__main__':

@@ -29,29 +29,7 @@ def get_wechat_dll_dir_path_by_files():
         print(f"{dll_dir}")
         return dll_dir
 
-    # 使用正则表达式匹配 1-5 个数字组成的版本号
-    version_pattern = re.compile(r'(\d+(?:\.\d+){0,4})')
-
-    # 提取并比较版本号
-    def extract_version(folder):
-        matches = version_pattern.findall(folder)  # 找到所有匹配的版本号
-        if matches:
-            # 取最右边的版本号
-            version_str = matches[-1]
-            version_parts = list(map(int, version_str.split(".")))
-
-            # 如果版本号不足 5 位，补足 0；如果超过 5 位，只取前 5 位
-            while len(version_parts) < 5:
-                version_parts.append(0)
-            key = version_parts[:5]  # 使用 5 个数字的版本号作为key
-            # print(key)
-            return key
-        return [0, 0, 0, 0, 0]  # 如果没有匹配到版本号，默认返回0.0.0.0
-
-    # 找到最大版本号的文件夹
-    dll_dir = max(version_folders, key=extract_version).replace('\\', '/')
-    print(dll_dir)
-    return dll_dir
+    return file_utils.get_newest_full_version_dir(version_folders)
 
 
 def get_wechat_install_path():

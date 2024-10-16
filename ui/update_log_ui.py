@@ -8,14 +8,10 @@ from resources import Config
 from utils import handle_utils
 
 
-def show_log_by_mode(file, mode):
-    pass
-
-
 class UpdateLogWindow:
-    def __init__(self, master, mode):
+    def __init__(self, master, old_versions, new_versions=None):
         self.master = master
-        master.title("版本日志" if mode == "old" else "发现新版本")
+        master.title("版本日志" if not new_versions else "发现新版本")
 
         window_width = 600
         window_height = 500
@@ -72,11 +68,10 @@ class UpdateLogWindow:
         log_text = tk.Text(log_frame, wrap=tk.WORD, font=("", 8), height=6, bg=master.cget("bg"),
                            yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
 
-        text = show_log_by_mode(Config.UPDATE_LOG_PATH, mode)
-        text = "测试"
-
+        if new_versions:
+            log_text.insert(tk.END, new_versions)
         # 插入文本并为URL添加标签
-        log_text.insert(tk.END, text)
+        log_text.insert(tk.END, old_versions)
 
         # 设置文本框为不可编辑
         log_text.config(state=tk.DISABLED)
@@ -115,8 +110,7 @@ class UpdateLogWindow:
         progress_bar['value'] = percentage
         self.master.update_idletasks()
 
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    update_log_window = UpdateLogWindow(root, 'old')
-    root.mainloop()
+# if __name__ == "__main__":
+#     root = tk.Tk()
+#     update_log_window = UpdateLogWindow(root, 'old')
+#     root.mainloop()

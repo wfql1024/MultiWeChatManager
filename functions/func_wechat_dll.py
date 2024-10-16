@@ -6,36 +6,11 @@ import time
 from tkinter import messagebox
 
 import psutil
-import requests
 import winshell
 
-from functions import func_setting
-from resources import Strings, Config
+from functions import func_setting, subfunc_file
+from resources import Config
 from utils import file_utils
-
-
-def fetch_config_data():
-    """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
-    print(f"正从远程源下载...")
-    urls = [Strings.VER_ADAPTATION_JSON_GITEE, Strings.VER_ADAPTATION_JSON_GITHUB]
-
-    for url in urls:
-        print(f"正在尝试从此处下载: {url}...")
-        try:
-            response = requests.get(url, timeout=2)
-            if response.status_code == 200:
-                with open(Config.VER_ADAPTATION_JSON_PATH, 'w', encoding='utf-8') as config_file:
-                    config_file.write(response.text)  # 将下载的 JSON 保存到文件
-                print(f"成功从 {url} 获取并保存 JSON 文件")
-                return json.loads(response.text)  # 返回加载的 JSON 数据
-            else:
-                print(f"获取失败: {response.status_code}，尝试下一个源...")
-        except requests.exceptions.Timeout:
-            print(f"请求 {url} 超时，尝试下一个源...")
-        except Exception as e:
-            print(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
-
-    raise RuntimeError("所有源获取配置数据失败")
 
 
 def check_dll(mode):
@@ -49,7 +24,7 @@ def check_dll(mode):
             content = f.read()
 
         if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
-            config_data = fetch_config_data()
+            config_data = subfunc_file.fetch_config_data()
         else:
             print("本地版本对照表存在，读取中...")
             try:
@@ -57,7 +32,7 @@ def check_dll(mode):
                     config_data = json.load(f)
             except Exception as e:
                 print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
-                config_data = fetch_config_data()
+                config_data = subfunc_file.fetch_config_data()
                 print(f"从云端下载了文件：{config_data}")
                 raise RuntimeError("本地 JSON 文件读取失败")
 
@@ -91,7 +66,7 @@ def check_dll(mode):
     except FileNotFoundError as fe:
         return f"错误：未找到文件，请检查路径。{fe}", None, None
     except KeyError as ke:
-        fetch_config_data()
+        subfunc_file.fetch_config_data()
         return f"错误，未找到该版本的适配：{ke}", None, None
     except (TimeoutError, RuntimeError, Exception) as e:
         return f"错误：{str(e)}", None, None

@@ -3,8 +3,6 @@ import os
 import shutil
 import sys
 from tkinter import messagebox
-from typing import Tuple, Any
-
 import win32com
 import winshell
 from win32com.client import Dispatch

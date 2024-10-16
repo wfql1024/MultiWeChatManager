@@ -2,34 +2,44 @@
 import os
 import re
 import tempfile
+import time
 from tkinter import messagebox
 
 import requests
 
+from functions import subfunc_file
+from utils import file_utils
 
-def get_latest_version(url):
+
+def split_versions_by_current(current_ver):
     try:
-        # 请求Gitee仓库页面
-        response = requests.get(url)
-        if response.status_code == 200:
-            print("访问页面成功")
-            # 正则匹配符合命名格式的文件名，提取版本号
-            match = re.search(
-                r'MultiWeChatManager_x64_v(\d+\.\d+\.\d+\.\d+)([^\s]*).zip', response.text)
-            if match:
-                # 提取版本号部分
-                version_number = match.group(1)  # 提取v后面的数字部分
-                full_version = f"v{version_number}{match.group(2)}"  # 完整版本（包括v和后缀）
-                return version_number, full_version  # 返回完整版本
-            else:
-                messagebox.showerror("错误", "未找到最新版本信息")
-                return None
+        config_data = subfunc_file.fetch_config_data()
+        if not config_data:
+            print("没有数据")
+            return "错误：没有数据"
         else:
-            messagebox.showerror("错误", "无法获取最新版本信息")
-            return None
+            # 获取 update 节点的所有版本
+            all_versions = list(config_data["update"].keys())
+            # 对版本号进行排序
+            sorted_versions = file_utils.get_sorted_full_versions(all_versions)
+            if len(sorted_versions) == 0:
+                return [], []
+            # 遍历 sorted_versions，通过 file_utils.get_newest_full_version 比较
+            for i, version in enumerate(sorted_versions):
+                if file_utils.get_newest_full_version([current_ver, version]) == current_ver:
+                    # 如果找到第一个不高于 current_ver 的版本
+                    lower_or_equal_versions = sorted_versions[i:]
+                    higher_versions = sorted_versions[:i]
+                    break
+            else:
+                # 如果没有找到比 current_ver 小或等于的版本，所有都更高
+                higher_versions = sorted_versions
+                lower_or_equal_versions = []
+            return higher_versions, lower_or_equal_versions
+
     except Exception as e:
-        messagebox.showerror("错误", f"请求过程中出现问题: {e}")
-        return None
+        print(f"发生错误：{str(e)}")
+        return "错误：无法获取版本信息"
 
 
 def download_files(file_urls, temp_dir, progress_callback):
@@ -91,8 +101,17 @@ def download_files(file_urls, temp_dir, progress_callback):
 
 
 if __name__ == '__main__':
-    file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052ac9&rlimit=20&us=Ioo2xfdKuS&sign=e813036e84770a466a9686509c3f10a5&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
-    file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052a0e&rlimit=20&us=z4FiCcDrRo&sign=6a4127c45ab443b6f4cc84dfd5afa9d8&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+    # 设置环境变量，告诉 Python 不使用代理
+    os.environ['http_proxy'] = ''
+    os.environ['https_proxy'] = ''
+    os.environ['no_proxy'] = '*'
+    split_versions_by_current("v2.5.0.411.Alpha")
+    # file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052ac9&rlimit=20&us=Ioo2xfdKuS&sign=e813036e84770a466a9686509c3f10a5&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+    # file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=670f77dc&rlimit=20&us=ulApVrrrB0&sign=026566dbd74c8088d4b9958b87b2bbc9&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
     # file_url = f"https://gitee.com/wfql1024/MultiWeChatManagerDist/raw/master/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
-    with requests.get(file_url, stream=True, allow_redirects=True) as r:
-        open(r"E:\Now\Inbox\test\MultiWeChatManager_x64_v2.5.0.411.Alpha.zip", 'wb').write(r.content)
+    # file_url = "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+    # current_time = time.strftime("%Y%m%d%H%M%S", time.localtime())
+    # if not os.path.exists(rf"E:\Now\Inbox\test{current_time}"):
+    #     os.makedirs(rf"E:\Now\Inbox\test{current_time}")
+    # with requests.get(file_url, stream=True, allow_redirects=True) as r:
+    #     open(rf"E:\Now\Inbox\test{current_time}\MultiWeChatManager_x64_v2.5.0.411.Alpha.zip", 'wb').write(r.content)
