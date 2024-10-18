@@ -306,15 +306,7 @@
       <workItem from="1728737959131" duration="23578000" />
       <workItem from="1728837937843" duration="8064000" />
       <workItem from="1728962343796" duration="8880000" />
-      <workItem from="1729005607371" duration="24052000" />
-    </task>
-    <task id="LOCAL-00038" summary="调整了文件结构">
-      <option name="closed" value="true" />
-      <created>1725719434755</created>
-      <option name="number" value="00038" />
-      <option name="presentableId" value="LOCAL-00038" />
-      <option name="project" value="LOCAL" />
-      <updated>1725719434755</updated>
+      <workItem from="1729005607371" duration="27043000" />
     </task>
     <task id="LOCAL-00039" summary="修复微信不能拖动传输文件的问题，优化获取登录窗口尺寸逻辑，添加打赏作者功能">
       <option name="closed" value="true" />
@@ -700,7 +692,15 @@
       <option name="project" value="LOCAL" />
       <updated>1729091342772</updated>
     </task>
-    <option name="localTasksCounter" value="87" />
+    <task id="LOCAL-00087" summary="写好了获取新版本逻辑">
+      <option name="closed" value="true" />
+      <created>1729179952814</created>
+      <option name="number" value="00087" />
+      <option name="presentableId" value="LOCAL-00087" />
+      <option name="project" value="LOCAL" />
+      <updated>1729179952814</updated>
+    </task>
+    <option name="localTasksCounter" value="88" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
