@@ -4,11 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="算摸吧，PyCharm升级了，这个项目重新导入了一下">
-      <change beforePath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-    </list>
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="算摸吧，PyCharm升级了，这个项目重新导入了一下" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -314,15 +310,7 @@
       <workItem from="1729363058386" duration="153000" />
       <workItem from="1729363225967" duration="1347000" />
       <workItem from="1729365326986" duration="4854000" />
-      <workItem from="1729439271761" duration="6114000" />
-    </task>
-    <task id="LOCAL-00042" summary="调整目录结构">
-      <option name="closed" value="true" />
-      <created>1726156154863</created>
-      <option name="number" value="00042" />
-      <option name="presentableId" value="LOCAL-00042" />
-      <option name="project" value="LOCAL" />
-      <updated>1726156154863</updated>
+      <workItem from="1729439271761" duration="6243000" />
     </task>
     <task id="LOCAL-00043" summary="调整目录结构">
       <option name="closed" value="true" />
@@ -708,7 +696,15 @@
       <option name="project" value="LOCAL" />
       <updated>1729439333924</updated>
     </task>
-    <option name="localTasksCounter" value="91" />
+    <task id="LOCAL-00091" summary="算摸吧，PyCharm升级了，这个项目重新导入了一下">
+      <option name="closed" value="true" />
+      <created>1729524598735</created>
+      <option name="number" value="00091" />
+      <option name="presentableId" value="LOCAL-00091" />
+      <option name="project" value="LOCAL" />
+      <updated>1729524598735</updated>
+    </task>
+    <option name="localTasksCounter" value="92" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
