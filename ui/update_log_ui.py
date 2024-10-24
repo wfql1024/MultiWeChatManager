@@ -70,6 +70,7 @@ class UpdateLogWindow:
 
         if new_versions:
             log_text.insert(tk.END, new_versions)
+            log_text.insert(tk.END, "\n")
         # 插入文本并为URL添加标签
         log_text.insert(tk.END, old_versions)
 

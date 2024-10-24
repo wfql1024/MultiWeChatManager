@@ -105,7 +105,7 @@ if __name__ == '__main__':
     os.environ['http_proxy'] = ''
     os.environ['https_proxy'] = ''
     os.environ['no_proxy'] = '*'
-    split_versions_by_current("v2.5.0.411.Alpha")
+    print(split_versions_by_current("v2.7.0.411.Alpha"))
     # file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052ac9&rlimit=20&us=Ioo2xfdKuS&sign=e813036e84770a466a9686509c3f10a5&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
     # file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=670f77dc&rlimit=20&us=ulApVrrrB0&sign=026566dbd74c8088d4b9958b87b2bbc9&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
     # file_url = f"https://gitee.com/wfql1024/MultiWeChatManagerDist/raw/master/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"

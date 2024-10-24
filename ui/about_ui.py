@@ -209,8 +209,10 @@ class AboutWindow:
         scrollbar.config(command=reference_text.yview)
 
     def check_for_updates(self, current_full_version):
-        new_versions, old_versions = func_update.split_versions_by_current(current_full_version)
-        if new_versions and old_versions:
+        result = func_update.split_versions_by_current(current_full_version)
+        print(result)
+        if result:
+            new_versions, old_versions = result
             if len(new_versions) != 0:
                 update_log_window = tk.Toplevel(self.master)
                 update_log_ui.UpdateLogWindow(update_log_window, old_versions, new_versions)
