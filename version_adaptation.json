@@ -319,7 +319,7 @@
     "v2.6.0.420-test": {
       "urls": {
         "win7": "",
-        "default": "https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052ac9&rlimit=20&us=Ioo2xfdKuS&sign=e813036e84770a466a9686509c3f10a5&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+        "default": "https://gitee.com/wfql1024/MultiWeChatManagerDist/raw/master/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
       },
       "logs": [
         "测试在线升级"
