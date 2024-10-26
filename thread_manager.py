@@ -35,7 +35,7 @@ class ThreadManager:
 
         threading.Thread(target=thread_func).start()
 
-    def manual_login_account(self, manual_login_func, status, create_account_list, bring_window_to_front):
+    def manual_login_account_thread(self, manual_login_func, status, create_account_list, bring_window_to_front):
         self.manual_login_thread = threading.Thread(target=self._manual_login_thread, args=(
             manual_login_func, status, create_account_list, bring_window_to_front))
         self.manual_login_thread.start()

@@ -1,11 +1,14 @@
+import json
+import os
 import tempfile
 import threading
 import tkinter as tk
+from functools import partial
 from tkinter import messagebox, ttk
 
-from functions import func_update
+from functions import func_update, subfunc_file
 from resources import Config
-from utils import handle_utils
+from utils import handle_utils, file_utils
 
 
 class UpdateLogWindow:
@@ -39,22 +42,18 @@ class UpdateLogWindow:
 
         print("显示更新日志")
 
-        # 底部区域=声明+检查更新按钮
-        bottom_frame = ttk.Frame(main_frame)
-        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)
-        cancel_button = ttk.Button(bottom_frame, text="以后再说",
-                                   command=lambda: self.master.destroy())
-        cancel_button.pack(side=tk.RIGHT)
-        download_button = ttk.Button(bottom_frame, text="下载新版",
-                                     command=self.show_download_window)
-        download_button.pack(side=tk.RIGHT)
-
-        # 说明
-        information_label = ttk.Label(
-            bottom_frame,
-            text="发现新版本，是否下载？"
-        )
-        information_label.pack(side=tk.RIGHT, pady=(5, 0))
+        if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
+            config_data = subfunc_file.fetch_config_data()
+        else:
+            print("本地版本对照表存在，读取中...")
+            try:
+                with open(Config.VER_ADAPTATION_JSON_PATH, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+            except Exception as e:
+                print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
+                config_data = subfunc_file.fetch_config_data()
+                print(f"从云端下载了文件：{config_data}")
+                raise RuntimeError("本地 JSON 文件读取失败")
 
         # 创建一个用于放置滚动文本框的框架
         log_frame = ttk.Frame(main_frame)
@@ -65,28 +64,60 @@ class UpdateLogWindow:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # 创建不可编辑且可滚动的文本框
-        log_text = tk.Text(log_frame, wrap=tk.WORD, font=("", 8), height=6, bg=master.cget("bg"),
-                           yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
+        self.log_text = tk.Text(log_frame, wrap=tk.WORD, font=("", 10), height=6, bg=master.cget("bg"),
+                                yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
 
+        # 需要显示新版本
         if new_versions:
-            log_text.insert(tk.END, new_versions)
-            log_text.insert(tk.END, "\n")
-        # 插入文本并为URL添加标签
-        log_text.insert(tk.END, old_versions)
+            try:
+                newest_version = file_utils.get_newest_full_version(new_versions)
+                print(newest_version)
+                newest_ver_url = config_data["update"][newest_version]["urls"]["default"]
+                bottom_frame = ttk.Frame(main_frame)
+                bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)
+                cancel_button = ttk.Button(bottom_frame, text="以后再说",
+                                           command=lambda: self.master.destroy())
+                cancel_button.pack(side=tk.RIGHT)
+                download_button = ttk.Button(bottom_frame, text="下载新版",
+                                             command=partial(self.show_download_window, file_urls=[newest_ver_url]))
+                download_button.pack(side=tk.RIGHT)
+
+                # 说明
+                information_label = ttk.Label(
+                    bottom_frame,
+                    text="发现新版本，是否下载？"
+                )
+                information_label.pack(side=tk.RIGHT, pady=(5, 0))
+
+                self.log_text.insert(tk.END, "新版本：\n")
+                for v in new_versions:
+                    self.log_text.insert(tk.END, v + "：\n")
+                    self.log_text.insert(tk.END, "\n".join(config_data["update"][v]["logs"]))
+                    self.log_text.insert(tk.END, "\n\n")
+                self.log_text.insert(tk.END, "\n\n旧版本：\n")
+            except Exception as e:
+                print(e)
+                messagebox.showerror("错误", f"发生错误：{e}")
+
+        try:
+            for v in old_versions:
+                self.log_text.insert(tk.END, v + "：\n")
+                self.log_text.insert(tk.END, "\n".join(config_data["update"][v]["logs"]))
+                self.log_text.insert(tk.END, "\n\n")
+        except Exception as e:
+            print(e)
+            messagebox.showerror("错误", f"发生错误：{e}")
 
         # 设置文本框为不可编辑
-        log_text.config(state=tk.DISABLED)
-        log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.log_text.config(state=tk.DISABLED)
+        self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # 配置滚动条
-        scrollbar.config(command=log_text.yview)
+        scrollbar.config(command=self.log_text.yview)
 
-    def show_download_window(self, file_urls, temp_dir):
-        temp_dir = tempfile.mkdtemp()
-        file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052ac9&rlimit=20&us=Ioo2xfdKuS&sign=e813036e84770a466a9686509c3f10a5&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
-        # file_url = f"https://gitee.com/wfql1024/MultiWeChatManagerDist/raw/master/MultiWeChatManager_x64_v{latest_version[1]}.zip"
-        file_urls = [file_url]  # 更新文件列表
-        self.show_download_window(file_urls, temp_dir)
+    def show_download_window(self, file_urls, download_dir=None):
+        if download_dir is None:
+            download_dir = os.path.join(tempfile.mkdtemp(), "temp.zip")
         download_window = tk.Toplevel(self.master)
         download_window.title("下载更新")
         handle_utils.center_window(download_window)
@@ -95,15 +126,30 @@ class UpdateLogWindow:
         progress_var = tk.StringVar(value="开始下载...")
         tk.Label(download_window, textvariable=progress_var).pack(pady=10)
 
-        progress_bar = ttk.Progressbar(download_window, orient="horizontal", length=300, mode="determinate")
+        progress_bar = ttk.Progressbar(download_window, orient="horizontal", length=200, mode="determinate")
         progress_bar.pack(pady=10)
 
-        tk.Button(download_window, text="关闭并更新",
-                  # command=lambda: start_update_process(temp_dir)
-                  ).pack(pady=10)
+        close_and_update_btn = tk.Button(download_window, text="关闭并更新",
+                                         # command=lambda: start_update_process(temp_dir)
+                                         )
+        close_and_update_btn.pack(pady=10)
+        close_and_update_btn.config(state="disabled")
 
-        # 开始下载文件（多线程）
-        threading.Thread(target=func_update.download_files, args=(file_urls, temp_dir, self.update_progress)).start()
+        result = None
+        threads = []
+        try:
+            # 开始下载文件（多线程）
+            t = threading.Thread(target=func_update.download_files,
+                                 args=(file_urls, download_dir, self.update_progress))
+            threads.append(t)
+            t.start()
+            # result = func_update.download_files(file_urls, download_dir, self.update_progress)
+            # for t in threads:
+            #     t.join()
+
+            close_and_update_btn.config(state="normal")
+        except Exception as e:
+            print(e)
 
     def update_progress(self, idx, total_files, downloaded, total_length):
         percentage = (downloaded / total_length) * 100 if total_length else 0

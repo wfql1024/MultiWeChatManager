@@ -13,6 +13,8 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv312" />
       <excludeFolder url="file://$MODULE_DIR$/.venv37" />
       <excludeFolder url="file://$MODULE_DIR$/.venv38" />
+      <excludeFolder url="file://$MODULE_DIR$/venv38" />
+      <excludeFolder url="file://$MODULE_DIR$/venv3810" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.8 (MultiWeChatManager)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

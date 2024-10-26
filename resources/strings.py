@@ -35,5 +35,5 @@ class Strings:
     CHERUB0507_PJ = "https://www.52pojie.cn/home.php?mod=space&uid=681049"
 
     VIDEO_TUTORIAL_LINK = "https://www.bilibili.com/video/BV174H1eBE9r"
-    LOCKED_REVOKE_LOGO = "by 吾峰起浪（连点三下）"
-    UNLOCKED_REVOKE_LOGO = "by 吾峰起浪"
+    NOT_ENABLED_NEW_FUNC = "by 吾峰起浪（狂按）"
+    ENABLED_NEW_FUNC = "by 吾峰起浪"

@@ -16,7 +16,7 @@ tree.heading("#0", text="图片")  # #0 列用于显示图片
 for col in columns:
     tree.heading(col, text=col)  # 隐藏“英语”列的显示标题
 
-tree.column("#0", stretch=tk.NO, minwidth=50, width=50, anchor="e")
+tree.column("#0", stretch=tk.NO, minwidth=50, width=50)
 
 # 隐藏“英语”这一整列
 tree.column("英语", width=20, stretch=tk.NO)  # 将“英语”列的宽度设置为0
@@ -38,7 +38,7 @@ tree.tag_configure("selected", background="lightblue", foreground="black")
 
 # 插入50行数据，每行添加图片
 data = [
-    (str(i), f"Word {i}", f"字符{i}", f"字符大写{i}") for i in range(1, 51)
+    (str(i), f"Word {i}", f"字符{i}", f"字符💘大写{i}") for i in range(1, 51)
 ]
 for row in data:
     item_id = row[0]
@@ -78,15 +78,13 @@ def toggle_selection(event):
         else:
             if item_id in selected_items:
                 selected_items.remove(item_id)
-                print(tree.item(item_id, "tags"))
                 # 移除“selected”标签
                 current_tags = tree.item(item_id, "tags")
                 if isinstance(current_tags, str) and current_tags == "":
                     current_tags = ()  # 将空字符串转换为元组
-                current_tags = tuple(tag for tag in current_tags if tag != "selected")  # 移除“selected”
-                tree.item(item_id, tags=current_tags)
-                print("↓")
-                print(tree.item(item_id, "tags"))
+                new_tags = tuple(tag for tag in current_tags if tag != "selected")  # 移除“selected”
+                tree.item(item_id, tags=list(new_tags))
+                print(current_tags, new_tags, tree.item(item_id, "tags"))
             else:
                 selected_items.append(item_id)
                 # 添加“selected”标签
@@ -94,7 +92,8 @@ def toggle_selection(event):
                 if isinstance(current_tags, str) and current_tags == "":
                     current_tags = ()  # 将空字符串转换为元组
                 new_tags = current_tags + ("selected",)  # 添加“selected”
-                tree.item(item_id, tags=new_tags)
+                tree.item(item_id, tags=list(new_tags))
+                print(current_tags, new_tags, tree.item(item_id, "tags"))
             update_selected_display()  # 实时更新选中行显示
 
 

@@ -32,9 +32,9 @@ def extract_version(folder):
 
 def get_newest_full_version_dir(versions):
     # 找到最大版本号的文件夹
-    dll_dir = max(versions, key=extract_version).replace('\\', '/')
-    print(dll_dir)
-    return dll_dir
+    max_version_dir = max(versions, key=extract_version).replace('\\', '/')
+    print(max_version_dir)
+    return max_version_dir
 
 
 def get_newest_full_version(versions):

@@ -21,7 +21,7 @@ def check_dll(mode):
 
     try:
         with open(dll_path, 'rb') as f:
-            content = f.read()
+            dll_content = f.read()
 
         if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
             config_data = subfunc_file.fetch_config_data()
@@ -49,8 +49,8 @@ def check_dll(mode):
             pattern1 = bytes.fromhex(pattern1_hex)
             pattern2 = bytes.fromhex(pattern2_hex)
 
-            has_pattern1 = pattern1 in content
-            has_pattern2 = pattern2 in content
+            has_pattern1 = pattern1 in dll_content
+            has_pattern2 = pattern2 in dll_content
 
             if has_pattern1 and not has_pattern2:
                 return "未开启", pattern1, pattern2

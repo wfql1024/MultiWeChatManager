@@ -35,9 +35,9 @@ def save_login_size_to_setting_ini(value):
                                          Config.INI_KEY_LOGIN_SIZE, value)
 
 
-def set_unlock_revoke_in_ini(value):
+def set_enable_new_func_in_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                         Config.INI_KEY_UNLOCK_REVOKE, value)
+                                         Config.INI_KEY_ENABLE_NEW_FUNC, value)
 
 
 def get_wechat_install_path_from_setting_ini():
@@ -76,11 +76,11 @@ def get_login_size_from_setting_ini():
     )
 
 
-def get_unlock_revoke_from_ini():
+def get_enable_new_func_from_ini():
     return ini_utils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
         Config.INI_SECTION,
-        Config.INI_KEY_UNLOCK_REVOKE,
+        Config.INI_KEY_ENABLE_NEW_FUNC,
         default_value="false"
     )
 

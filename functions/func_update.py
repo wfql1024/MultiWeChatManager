@@ -42,25 +42,26 @@ def split_versions_by_current(current_ver):
         return "错误：无法获取版本信息"
 
 
-def download_files(file_urls, temp_dir, progress_callback):
-    print("进入下载文件方法...")
-    for idx, url in enumerate(file_urls):
-        # file_name = os.path.join(temp_dir, os.path.basename(url))
-        file_name = os.path.join(temp_dir, "MultiWeChatManager_x64_v2.5.0.411.Alpha.zip")
-        print(f"Downloading to {file_name}")
-        with requests.get(url, stream=True, allow_redirects=True) as r:
-            r.raise_for_status()
-            total_length = int(r.headers.get('content-length', 0))
-            with open(file_name, 'wb') as f:
-                downloaded = 0
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:  # 过滤掉保持连接的chunk
-                        f.write(chunk)
-                        downloaded += len(chunk)
-                        progress_callback(idx, len(file_urls), downloaded, total_length)
-
-    print("All files downloaded successfully.")
-    return True
+def download_files(file_urls, download_dir, progress_callback):
+    try:
+        print("进入下载文件方法...")
+        for idx, url in enumerate(file_urls):
+            print(f"Downloading to {download_dir}")
+            with requests.get(url, stream=True, allow_redirects=True) as r:
+                r.raise_for_status()
+                total_length = int(r.headers.get('content-length', 0))
+                with open(download_dir, 'wb') as f:
+                    downloaded = 0
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:  # 过滤掉保持连接的chunk
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            progress_callback(idx, len(file_urls), downloaded, total_length)
+        print("All files downloaded successfully.")
+        return True
+    except Exception as e:
+        print(e)
+        raise e
 
 
 #

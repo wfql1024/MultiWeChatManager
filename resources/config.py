@@ -15,7 +15,7 @@ class Config:
     INI_KEY_SCREEN_SIZE = 'screen_size'
     INI_KEY_LOGIN_SIZE = 'login_size'
     INI_KEY_SUB_EXE = 'sub_executable'
-    INI_KEY_UNLOCK_REVOKE = 'unlock_revoke'
+    INI_KEY_ENABLE_NEW_FUNC = 'enable_new_func'
 
     JSON_KEY_NOTE = 'note'
     JSON_KEY_PID = 'pid'
