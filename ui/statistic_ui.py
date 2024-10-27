@@ -23,6 +23,8 @@ class StatisticWindow:
         self.master.attributes('-toolwindow', True)
         self.window_width = 420
         self.window_height = 540
+        style = ttk.Style()
+        style.configure("Treeview", rowheight=50, relief="flat")  # 设置行高为50
         screen_width = master.winfo_screenwidth()
         screen_height = master.winfo_screenheight()
         x = (screen_width - self.window_width) // 2
@@ -102,22 +104,23 @@ class StatisticWindow:
     def create_manual_table(self):
         """定义手动登录表格"""
         label = tk.Label(self.main_frame, text="手动登录", font=("Microsoft YaHei", 14, "bold"))
-        label.pack(padx=(20, 0))
+        label.pack(padx=(20, 5))
 
+        columns = ("模式", "最短时间", "使用次数", "平均时间", "最长时间")
         self.manual_tree = ttk.Treeview(self.main_frame,
-                                        columns=("模式", "最短时间", "使用次数", "平均时间", "最长时间"),
+                                        columns=columns,
                                         show='headings', height=1)
-        for col in ("模式", "最短时间", "使用次数", "平均时间", "最长时间"):
+        for col in columns:
             self.manual_tree.heading(col, text=col,
                                      command=lambda c=col: self.sort_column(self.manual_tree, c, "manual"))
             self.manual_tree.column(col, anchor='center' if col == "模式" else 'e', width=100)  # 设置列宽
 
-        self.manual_tree.pack(fill=tk.X, expand=True, padx=(20, 0), pady=(0, 10))
+        self.manual_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
 
     def create_auto_table(self):
         """定义自动登录表格"""
         label = tk.Label(self.main_frame, text="自动登录", font=("Microsoft YaHei", 14, "bold"))
-        label.pack(padx=(20, 10))
+        label.pack(padx=(20, 5))
 
         description = tk.Label(self.main_frame, text="查看登录第i个账号的数据：")
         description.pack()
@@ -126,28 +129,31 @@ class StatisticWindow:
         self.index_combobox.pack()
         self.index_combobox.bind("<<ComboboxSelected>>", self.on_selected)
 
-        self.auto_tree = ttk.Treeview(self.main_frame, columns=("模式", "最短时间", "使用次数", "平均时间", "最长时间"),
+        columns = ("模式", "最短时间", "使用次数", "平均时间", "最长时间")
+
+        self.auto_tree = ttk.Treeview(self.main_frame, columns=columns,
                                       show='headings', height=1)
-        for col in ("模式", "最短时间", "使用次数", "平均时间", "最长时间"):
+        for col in columns:
             self.auto_tree.heading(col, text=col, command=lambda c=col: self.sort_column(self.auto_tree, c, "auto"))
             self.auto_tree.column(col, anchor='center' if col == "模式" else 'e', width=100)  # 设置列宽
 
-        self.auto_tree.pack(fill=tk.X, expand=True, padx=(20, 0), pady=(0, 10))
+        self.auto_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
 
     def create_refresh_table(self):
         """定义刷新表格"""
         label = tk.Label(self.main_frame, text="刷新", font=("Microsoft YaHei", 14, "bold"))
-        label.pack(padx=(20, 0))
+        label.pack(padx=(20, 5))
 
+        columns = ("账号数", "最短时间", "使用次数", "平均时间", "最长时间")
         self.refresh_tree = ttk.Treeview(self.main_frame,
-                                         columns=("账号数", "最短时间", "使用次数", "平均时间", "最长时间"),
+                                         columns=columns,
                                          show='headings', height=1)
-        for col in ("账号数", "最短时间", "使用次数", "平均时间", "最长时间"):
+        for col in columns:
             self.refresh_tree.heading(col, text=col,
                                       command=lambda c=col: self.sort_column(self.refresh_tree, c, "refresh"))
             self.refresh_tree.column(col, anchor='center' if col == "账号数" else 'e', width=100)  # 设置列宽
 
-        self.refresh_tree.pack(fill=tk.X, expand=True, padx=(20, 0), pady=(0, 10))
+        self.refresh_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
 
     def display_table(self):
         data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
@@ -178,15 +184,6 @@ class StatisticWindow:
                                      values=(acc_count, min_time.replace("inf", "null"),
                                              int(float(count)), avg_time, max_time))
         self.refresh_tree.config(height=len(refresh_data) + 1)
-
-        self.adjust_column_width(self.manual_tree)
-        self.adjust_column_width(self.auto_tree)
-        self.adjust_column_width(self.refresh_tree)
-
-    def adjust_column_width(self, tree):
-        """自适应调节列宽"""
-        for col in tree["columns"]:
-            tree.column(col, width=int(self.window_width // len(tree["columns"]) - 10))  # 计算并设置适合的列宽
 
     def update_auto_table_from_selection(self, selected_index):
         """根据下拉框的选择，更新对应的表数据"""

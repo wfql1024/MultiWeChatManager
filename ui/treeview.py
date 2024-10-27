@@ -16,7 +16,7 @@ tree.heading("#0", text="图片")  # #0 列用于显示图片
 for col in columns:
     tree.heading(col, text=col)  # 隐藏“英语”列的显示标题
 
-tree.column("#0", stretch=tk.NO, minwidth=50, width=50)
+tree.column("#0", stretch=tk.NO, minwidth=70, width=70)
 
 # 隐藏“英语”这一整列
 tree.column("英语", width=20, stretch=tk.NO)  # 将“英语”列的宽度设置为0

@@ -18,12 +18,13 @@ from functions import func_setting, func_wechat_dll, func_login, func_file, func
 from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
-from ui import about_ui, setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui
+from ui import about_ui, setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui
 from utils import handle_utils, debug_utils
 
 
 class MainWindow:
     """构建主窗口的类"""
+
     def __init__(self, master, loading_window, debug=None):
         self.is_tree_view = None
         self.tree_view_menu = None
@@ -424,7 +425,9 @@ class MainWindow:
             return
 
         # 创建账号列表界面
-        classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path, self.multiple_status)
+        # classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path, self.multiple_status)
+        treeview_row_ui.TreeviewRowUI(self, self.master, self.main_frame, result, self.data_path,
+                                      self.multiple_status)
 
         subfunc_file.update_refresh_time_statistic(str(len(logged_in)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")

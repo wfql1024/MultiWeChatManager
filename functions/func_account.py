@@ -9,12 +9,12 @@ from PIL import Image
 from functions import func_setting, func_wechat_dll, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
-from utils import process_utils, string_utils
+from utils import process_utils, string_utils, image_utils
 
 
 def get_acc_avatar_from_files(account):
     """
-    从本地缓存获取头像
+    从本地缓存或网络获取头像，失败则默认头像
     :param account: 原始微信号
     :return: 头像文件 -> ImageFile
     """
@@ -23,6 +23,15 @@ def get_acc_avatar_from_files(account):
     avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
 
     # 检查是否存在对应account的头像
+    if os.path.exists(avatar_path):
+        return Image.open(avatar_path)
+
+    # 如果没有，从网络下载
+    url, = subfunc_file.get_acc_details_from_acc_json(account, avatar_url=None)
+    print(f"测试：{url}")
+    success = image_utils.download_image(url, avatar_path)
+
+    # 第二次检查是否存在对应account的头像
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
 

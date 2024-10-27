@@ -54,19 +54,19 @@ class AccountRow:
         # 账号标签
         has_mutex, = subfunc_file.get_acc_details_from_acc_json(account, has_mutex=None)
         style = ttk.Style()
-        style.configure("Red.TLabel", foreground="red")
+        style.configure("Mutex.TLabel", foreground="red")
         # 清理 display_name
         cleaned_display_name = string_utils.clean_display_name(display_name)
         try:
             if has_mutex:
-                self.account_label = ttk.Label(self.row_frame, text=display_name, style="Red.TLabel")
+                self.account_label = ttk.Label(self.row_frame, text=display_name, style="Mutex.TLabel")
             else:
                 self.account_label = ttk.Label(self.row_frame, text=display_name)
             self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
         except Exception as e:
             print(e)
             if has_mutex:
-                self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name, style="Red.TLabel")
+                self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name, style="Mutex.TLabel")
             else:
                 self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name)
             self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
@@ -189,6 +189,7 @@ class ClassicRowUI:
         self.not_logged_in_rows.clear()
         logged_in, not_logged_in, wechat_processes = result
 
+        # TODO: 精简一下
         if len(logged_in) != 0:
             # 已登录框架=已登录标题+已登录列表
             self.logged_in_frame = ttk.Frame(self.main_frame)
