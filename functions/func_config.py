@@ -23,7 +23,7 @@ def get_config_status_by_account(account, data_path) -> str:
     if os.path.exists(config_path):
         mod_time = os.path.getmtime(config_path)
         date = datetime.fromtimestamp(mod_time)
-        return f"{date.month}-{date.day} {date.hour:02}:{date.minute:02}"
+        return f"{date.year % 100:02}-{date.month}-{date.day} {date.hour:02}:{date.minute:02}"
     else:
         return "无配置"
 

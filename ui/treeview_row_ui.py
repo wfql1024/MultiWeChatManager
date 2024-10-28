@@ -116,6 +116,7 @@ class TreeviewRowUI:
         # 更新顶部复选框状态
         self.create_not_logged_in_table()
         self.display_not_logged_in_table(not_logged_in)
+        self.master.bind("<Configure>", self.adjust_columns_on_maximize)
 
     def disable_button_and_add_tip(self, button, text):
         """
@@ -462,7 +463,7 @@ class TreeviewRowUI:
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
             print("测试", len(tree.identify_row(event.y)))
             # 弹出提示窗口
-            self.open_detail(item_id)
+            self.open_detail(tree.item(item_id, "values")[1])
         else:
             if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发
                 if item_id in selected_items:
@@ -499,3 +500,18 @@ class TreeviewRowUI:
             selected_accounts = [tree.item(item, "values")[1] for item in selected_items]
             self.selected_not_logged_in_accounts = selected_accounts
         print(selected_accounts)
+
+    def adjust_columns_on_maximize(self, event=None):
+        columns_to_hide = ["原始微信号", "当前微信号", "昵称"]
+
+        if self.master.state() != "zoomed":  # 检查窗口是否最大化
+            for tree in [self.logged_in_tree, self.not_logged_in_tree]:
+                for col in columns_to_hide:
+                    tree.column(col, width=0, stretch=False)
+                    tree.heading(col, text="")  # 可选：隐藏列标题
+        else:
+            for tree in [self.logged_in_tree, self.not_logged_in_tree]:
+                for col in columns_to_hide:
+                    tree.column(col, width=100)  # 根据需要调整宽度
+                    tree.heading(col, text=col)  # 可选：恢复列标题
+

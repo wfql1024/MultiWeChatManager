@@ -61,8 +61,8 @@ class MainWindow:
         style = ttk.Style()
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
-        self.window_width = 420
-        self.window_height = 540
+        self.window_width = 480
+        self.window_height = 600
 
         self.master.withdraw()  # 初始化时隐藏主窗口
         self.setup_main_window()
