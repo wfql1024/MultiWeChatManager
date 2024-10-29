@@ -52,7 +52,7 @@ class TreeviewRowUI:
         if len(logged_in) != 0:
             # 已登录框架=已登录标题+已登录列表
             self.logged_in_frame = ttk.Frame(self.main_frame)
-            self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=10)
+            self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=(10, 0))
 
             # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
             self.logged_in_title = ttk.Frame(self.logged_in_frame)
@@ -80,7 +80,7 @@ class TreeviewRowUI:
                                            command=self.quit_selected_accounts, style='Custom.TButton')
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
 
-            self.create_logged_in_table()
+            self.create_table("logged_in")
             self.display_logged_in_table(logged_in)
 
         # 未登录框架=未登录标题+未登录列表
@@ -114,7 +114,7 @@ class TreeviewRowUI:
         self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
 
         # 更新顶部复选框状态
-        self.create_not_logged_in_table()
+        self.create_table("not_logged_in")
         self.display_not_logged_in_table(not_logged_in)
         self.master.bind("<Configure>", self.adjust_columns_on_maximize)
 
@@ -317,52 +317,44 @@ class TreeviewRowUI:
             # 恢复刷新可用性
             self.main_window.edit_menu.entryconfig("刷新", state="normal")
 
-    def create_logged_in_table(self):
-        """定义手动登录表格"""
+    def create_table(self, table_type):
+        """定义表格，根据表格类型选择手动或自动登录表格"""
+        # 根据表格类型保存实例
+        if table_type == "logged_in":
+            tree = self.logged_in_tree
+        else:
+            tree = self.not_logged_in_tree
+
         columns = (" ", "原始微信号", "当前微信号", "昵称", "配置", "pid")
-        self.logged_in_tree = ttk.Treeview(self.main_frame,
-                                           columns=columns,
-                                           show='tree', height=1, style="RowTreeview")
+        tree = ttk.Treeview(self.main_frame, columns=columns, show='tree', height=1, style="RowTreeview")
+
+        # 设置列标题和排序功能
         for col in columns:
-            self.logged_in_tree.heading(
+            tree.heading(
                 col, text=col,
-                command=lambda c=col: self.sort_column(self.logged_in_tree, c, "logged_in")
+                command=lambda c=col: self.sort_column(tree, c, table_type)
             )
-            self.logged_in_tree.column(col, anchor='center')  # 设置列宽
+            tree.column(col, anchor='center')  # 设置列宽
 
-        self.logged_in_tree.column("#0", minwidth=70, width=70, anchor='w', stretch=tk.NO)
-        self.logged_in_tree.column("pid", minwidth=80, width=80, anchor='center', stretch=tk.NO)
-        self.logged_in_tree.column("配置", minwidth=140, width=140, anchor='center', stretch=tk.NO)
-        self.logged_in_tree.column(" ", minwidth=140, anchor='w')
-        self.logged_in_tree.column("原始微信号", anchor='center')
-        self.logged_in_tree.column("当前微信号", anchor='center')
+        # 特定列的宽度和样式设置
+        tree.column("#0", minwidth=70, width=70, anchor='w', stretch=tk.NO)
+        tree.column("pid", minwidth=80, width=80, anchor='center', stretch=tk.NO)
+        tree.column("配置", minwidth=140, width=140, anchor='center', stretch=tk.NO)
+        tree.column(" ", minwidth=140, anchor='w')
+        tree.column("原始微信号", anchor='center')
+        tree.column("当前微信号", anchor='center')
 
-        self.logged_in_tree.pack(fill=tk.X, expand=True, padx=(10, 0), pady=(0, 10))
+        tree.pack(fill=tk.X, expand=True, padx=(10, 0), pady=(0, 10))
 
-        # 设置不可选行的灰色背景
-        self.logged_in_tree.tag_configure("disabled", background="#F5F7FA", foreground="grey")
-        # 设置选中行的蓝色背景
-        self.logged_in_tree.tag_configure("selected", background="lightblue", foreground="black")
+        # 设置标签样式
+        tree.tag_configure("disabled", background="#F5F7FA", foreground="grey")
+        tree.tag_configure("selected", background="lightblue", foreground="black")
 
-    def create_not_logged_in_table(self):
-        """定义自动登录表格"""
-        columns = (" ", "原始微信号", "当前微信号", "昵称", "配置", "pid")
-        self.not_logged_in_tree = ttk.Treeview(self.main_frame,
-                                               columns=columns,
-                                               show='tree headings', height=1, style="RowTreeview")
-        for col in columns:
-            self.not_logged_in_tree.heading(
-                col, text=col,
-                command=lambda c=col: self.sort_column(self.not_logged_in_tree, c, "not_logged_in")
-            )
-            self.not_logged_in_tree.column(col, anchor='center' if col == "模式" else 'w', width=100)  # 设置列宽
-
-        self.not_logged_in_tree.pack(fill=tk.X, expand=True, padx=(10, 0), pady=(0, 10))
-
-        # 设置不可选行的灰色背景
-        self.not_logged_in_tree.tag_configure("disabled", background="#F5F7FA", foreground="grey")
-        # 设置选中行的蓝色背景
-        self.not_logged_in_tree.tag_configure("selected", background="lightblue", foreground="black")
+        # 根据表格类型保存实例
+        if table_type == "logged_in":
+            self.logged_in_tree = tree
+        else:
+            self.not_logged_in_tree = tree
 
     def display_logged_in_table(self, accounts):
         for account in accounts:
@@ -504,14 +496,16 @@ class TreeviewRowUI:
     def adjust_columns_on_maximize(self, event=None):
         columns_to_hide = ["原始微信号", "当前微信号", "昵称"]
 
-        if self.master.state() != "zoomed":  # 检查窗口是否最大化
+        if self.master.state() != "zoomed":  # 非最大化时隐藏列和标题
             for tree in [self.logged_in_tree, self.not_logged_in_tree]:
+                tree["show"] = "tree"  # 隐藏标题
                 for col in columns_to_hide:
                     tree.column(col, width=0, stretch=False)
-                    tree.heading(col, text="")  # 可选：隐藏列标题
-        else:
+        else:  # 最大化时显示列和标题
             for tree in [self.logged_in_tree, self.not_logged_in_tree]:
+                tree["show"] = "tree headings"  # 显示标题
                 for col in columns_to_hide:
-                    tree.column(col, width=100)  # 根据需要调整宽度
-                    tree.heading(col, text=col)  # 可选：恢复列标题
+                    tree.column(col, width=100)  # 设置合适的宽度
+
+
 
