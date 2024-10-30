@@ -5,6 +5,7 @@ import os
 import time
 import tkinter as tk
 import webbrowser
+from functools import partial
 from tkinter import ttk, messagebox
 
 import psutil
@@ -16,8 +17,7 @@ from PIL import Image, ImageTk
 from functions import func_detail, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
-from utils import string_utils, handle_utils, process_utils
-from utils.handle_utils import Tooltip
+from utils import string_utils, handle_utils, process_utils, widget_utils
 from utils.process_utils import user32
 
 
@@ -26,7 +26,7 @@ class DetailWindow:
         self.master = master
         self.account = account
         self.update_callback = update_callback
-        self.tooltip = None  # 初始化 tooltip 属性
+        self.tooltips = {}  # 初始化 tooltip 属性
 
         master.title(f"属性 - {self.account}")
 
@@ -141,7 +141,7 @@ class DetailWindow:
             self.nickname_label.config(text=f"昵    称: {string_utils.clean_display_name(nickname)}")
         self.pid_label.config(text=f"PID: {pid}")
         if not pid:
-            self.disable_fetch_button()
+            widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
             self.pid_label.config(text=f"PID: 未登录")
             subfunc_file.update_acc_details_to_acc_json(self.account, has_mutex=True)
         else:
@@ -150,20 +150,20 @@ class DetailWindow:
                 self.pid_label.config(text=f"PID: {pid}\n(有互斥体)")
             else:
                 self.pid_label.config(text=f"PID: {pid}\n(无互斥体)")
-            self.enable_fetch_button()
+            widget_utils.enable_button_and_unbind_tip(self.tooltips, self.fetch_button)
         print(f"载入数据完成")
 
     def disable_fetch_button(self):
         self.fetch_button.state(['disabled'])
-        if not self.tooltip:
-            self.tooltip = Tooltip(self.fetch_button, "请登录后获取")
+        if not self.tooltips:
+            self.tooltips = Tooltip(self.fetch_button, "请登录后获取")
 
     def enable_fetch_button(self):
         self.fetch_button.state(['!disabled'])
-        if self.tooltip:
-            self.tooltip.widget.unbind("<Enter>")
-            self.tooltip.widget.unbind("<Leave>")
-            self.tooltip = None
+        if self.tooltips:
+            self.tooltips.widget.unbind("<Enter>")
+            self.tooltips.widget.unbind("<Leave>")
+            self.tooltips = None
 
     def load_avatar(self, avatar_path, avatar_url):
         try:
@@ -191,20 +191,23 @@ class DetailWindow:
 
         pid, = subfunc_file.get_acc_details_from_acc_json(self.account, pid=None)
         if not pid:
-            self.disable_fetch_button()
+            widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
-
         try:
             psutil.Process(pid)
         except psutil.NoSuchProcess:
             print(f"No process found with PID: {pid}")
-            self.disable_fetch_button()
+            widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
 
-        success = func_detail.fetch_acc_detail_by_pid(pid, self.account, self.disable_fetch_button,
-                                                      self.enable_fetch_button)
+        success = func_detail.fetch_acc_detail_by_pid(pid, self.account,
+                                                      partial(widget_utils.disable_button_and_add_tip,
+                                                              (self.tooltips, self.fetch_button, "请登录后获取")),
+                                                      partial(widget_utils.disable_button_and_add_tip,
+                                                              (self.tooltips, self.fetch_button))
+                                                      )
         if success is False:
             messagebox.showerror(f"错误", "失败：超时")
         # 刷新显示
@@ -218,5 +221,3 @@ class DetailWindow:
             subfunc_file.update_acc_details_to_acc_json(self.account, note=new_note)
         self.update_callback()
         self.master.destroy()
-
-

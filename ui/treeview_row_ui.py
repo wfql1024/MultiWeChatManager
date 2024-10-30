@@ -1,8 +1,7 @@
 from PIL import ImageTk, Image
-from utils import string_utils
+from utils import widget_utils, string_utils
 import subprocess
 import sys
-import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk
@@ -24,6 +23,9 @@ def try_convert(value):
 
 class TreeviewRowUI:
     def __init__(self, main_window, m_master, m_main_frame, result, data_path, multiple_status):
+        self.acc_index = None
+        self.hovered_item = None
+        self.single_click_id = None
         self.photo_images = []
         self.selected_not_logged_in_accounts = None
         self.selected_logged_in_accounts = None
@@ -34,13 +36,9 @@ class TreeviewRowUI:
         self.main_window = main_window
         self.data_path = data_path
         self.multiple_status = multiple_status
-        self.not_logged_in_rows = {}
-        self.logged_in_rows = {}
         self.tooltips = {}
         self.master = m_master
         self.main_frame = m_main_frame
-        self.logged_in_rows.clear()
-        self.not_logged_in_rows.clear()
         self.sort_order = {"logged_in": True, "not_logged_in": True}  # 控制排序顺序
         logged_in, not_logged_in, wechat_processes = result
         # 调整行高
@@ -80,8 +78,13 @@ class TreeviewRowUI:
                                            command=self.quit_selected_accounts, style='Custom.TButton')
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
 
-            self.create_table("logged_in")
+            self.logged_in_tree = self.create_table("logged_in")
             self.display_logged_in_table(logged_in)
+            self.update_top_title(True)
+            self.logged_in_tree.bind("<Leave>", lambda event: setattr(self, 'hovered_item', None))
+            self.logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion, is_logged_in=True))
+            self.logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in=True))
+            self.logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in=True))
 
         # 未登录框架=未登录标题+未登录列表
         self.not_logged_in_frame = ttk.Frame(self.main_frame)
@@ -114,29 +117,14 @@ class TreeviewRowUI:
         self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
 
         # 更新顶部复选框状态
-        self.create_table("not_logged_in")
+        self.not_logged_in_tree = self.create_table("not_logged_in")
         self.display_not_logged_in_table(not_logged_in)
+        self.update_top_title(False)
+        self.not_logged_in_tree.bind("<Leave>", lambda event: setattr(self, 'hovered_item', None))
+        self.not_logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion, is_logged_in=False))
+        self.not_logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in=False))
+        self.not_logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in=False))
         self.master.bind("<Configure>", self.adjust_columns_on_maximize)
-
-    def disable_button_and_add_tip(self, button, text):
-        """
-        禁用按钮，启用提示
-        :return: None
-        """
-        button.state(['disabled'])
-        if button not in self.tooltips:
-            self.tooltips[button] = handle_utils.Tooltip(button, text)
-
-    def enable_button_and_unbind_tip(self, button):
-        """
-        启用按钮，去除提示
-        :return: None
-        """
-        button.state(['!disabled'])
-        if button in self.tooltips:
-            self.tooltips[button].widget.unbind("<Enter>")
-            self.tooltips[button].widget.unbind("<Leave>")
-            del self.tooltips[button]
 
     def toggle_top_checkbox(self, event, is_logged_in):
         """
@@ -160,30 +148,20 @@ class TreeviewRowUI:
         checkbox_var.set(not checkbox_var.get())
         value = checkbox_var.get()
         if value:
-            self.enable_button_and_unbind_tip(button)
+            widget_utils.enable_button_and_unbind_tip(self.tooltips, button)
             # 执行全选
             for item_id in tree.get_children():
                 print(tree.item(item_id, "tags"))
                 if "disabled" not in tree.item(item_id, "tags"):  # 只选择允许选中的行
                     selected_items.append(item_id)
-                    # 添加“selected”标签
-                    current_tags = tree.item(item_id, "tags")
-                    if isinstance(current_tags, str) and current_tags == "":
-                        current_tags = ()  # 将空字符串转换为元组
-                    new_tags = current_tags + ("selected",)  # 添加“selected”
-                    tree.item(item_id, tags=new_tags)
+                    widget_utils.add_a_tag_to_item(tree, item_id, "selected")
         else:
-            self.disable_button_and_add_tip(button, tip)
+            widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
             # 取消所有选择
             selected_items.clear()
             for item_id in tree.get_children():
                 if "disabled" not in tree.item(item_id, "tags"):
-                    # 移除“selected”标签
-                    current_tags = tree.item(item_id, "tags")
-                    if isinstance(current_tags, str) and current_tags == "":
-                        current_tags = ()  # 将空字符串转换为元组
-                    current_tags = tuple(tag for tag in current_tags if tag != "selected")  # 移除“selected”
-                    tree.item(item_id, tags=current_tags)
+                    widget_utils.remove_a_tag_of_item(tree, item_id, "selected")
         self.update_selected_display(is_logged_in)  # 更新显示
         return "break"
 
@@ -219,7 +197,7 @@ class TreeviewRowUI:
             for child in title.winfo_children():
                 child.unbind("<Button-1>")
             checkbox.config(state="disabled")
-            self.disable_button_and_add_tip(button, tip)
+            widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
         else:
             # 列表不为空则绑定和复用
             title.bind("<Button-1>", toggle, add="+")
@@ -230,13 +208,13 @@ class TreeviewRowUI:
             # 从子列表的状态来更新顶部复选框
             if len(selected_rows) == len(all_rows):
                 checkbox_var.set(1)
-                self.enable_button_and_unbind_tip(button)
+                widget_utils.enable_button_and_unbind_tip(self.tooltips, button)
             elif 0 < len(selected_rows) < len(all_rows):
                 checkbox_var.set(-1)
-                self.enable_button_and_unbind_tip(button)
+                widget_utils.enable_button_and_unbind_tip(self.tooltips, button)
             else:
                 checkbox_var.set(0)
-                self.disable_button_and_add_tip(button, tip)
+                widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
 
     def open_detail(self, account):
         """打开详情窗口"""
@@ -271,7 +249,7 @@ class TreeviewRowUI:
         """退出所选账号"""
         # messagebox.showinfo("待修复", "测试中发现重大bug，先不给点，略~")
         account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-        accounts = self.selected_logged_in_accounts
+        accounts = self.selected_logged_in_items
         quited_accounts = []
         for account in accounts:
             try:
@@ -303,7 +281,7 @@ class TreeviewRowUI:
 
     def auto_login_selected_accounts(self):
         """登录所选账号"""
-        accounts = self.selected_not_logged_in_accounts
+        accounts = self.selected_not_logged_in_items
         self.master.iconify()  # 最小化主窗口
         try:
             self.main_window.thread_manager.login_accounts_thread(
@@ -319,13 +297,8 @@ class TreeviewRowUI:
 
     def create_table(self, table_type):
         """定义表格，根据表格类型选择手动或自动登录表格"""
-        # 根据表格类型保存实例
-        if table_type == "logged_in":
-            tree = self.logged_in_tree
-        else:
-            tree = self.not_logged_in_tree
-
-        columns = (" ", "原始微信号", "当前微信号", "昵称", "配置", "pid")
+        columns = (" ", "配置", "pid", "原始微信号", "当前微信号", "昵称")
+        self.acc_index = columns.index("原始微信号")
         tree = ttk.Treeview(self.main_frame, columns=columns, show='tree', height=1, style="RowTreeview")
 
         # 设置列标题和排序功能
@@ -346,15 +319,15 @@ class TreeviewRowUI:
 
         tree.pack(fill=tk.X, expand=True, padx=(10, 0), pady=(0, 10))
 
+        selected_bg = "#B2E0F7"
+        hover_bg = "#E5F5FD"
+
         # 设置标签样式
         tree.tag_configure("disabled", background="#F5F7FA", foreground="grey")
-        tree.tag_configure("selected", background="lightblue", foreground="black")
+        tree.tag_configure("selected", background=selected_bg, foreground="black")
+        tree.tag_configure("hover", background=hover_bg, foreground="black")
 
-        # 根据表格类型保存实例
-        if table_type == "logged_in":
-            self.logged_in_tree = tree
-        else:
-            self.not_logged_in_tree = tree
+        return tree
 
     def display_logged_in_table(self, accounts):
         for account in accounts:
@@ -375,11 +348,9 @@ class TreeviewRowUI:
             self.photo_images.append(photo)
 
             self.logged_in_tree.insert("", "end", iid=account, image=photo,
-                                       values=(display_name, account, alias, nickname, config_status, pid))
+                                       values=(display_name, config_status, pid, account, alias, nickname))
 
         self.logged_in_tree.config(height=len(accounts))
-        self.update_top_title(True)
-        self.logged_in_tree.bind("<Button-1>", partial(self.toggle_selection, is_logged_in=True))
 
     def display_not_logged_in_table(self, accounts):
         for account in accounts:
@@ -399,18 +370,12 @@ class TreeviewRowUI:
             self.photo_images.append(photo)
             
             self.not_logged_in_tree.insert("", "end", iid=account, image=photo,
-                                           values=(display_name, account, alias, nickname, config_status, pid))
+                                           values=(display_name, config_status, pid, account, alias, nickname))
 
             if config_status == "无配置":
-                current_tags = self.not_logged_in_tree.item(account, "tags")
-                if isinstance(current_tags, str) and current_tags == "":
-                    current_tags = ()  # 将空字符串转换为元组
-                new_tags = current_tags + ("disabled",)  # 添加“disabled”
-                self.not_logged_in_tree.item(account, tags=new_tags)
+                widget_utils.add_a_tag_to_item(self.not_logged_in_tree, account, "disabled")
 
         self.not_logged_in_tree.config(height=len(accounts))
-        self.update_top_title(False)
-        self.not_logged_in_tree.bind("<Button-1>", partial(self.toggle_selection, is_logged_in=False))
 
     def sort_column(self, tree, col, table_type):
         # 获取当前表格数据的 values、text、image 和 tags
@@ -442,7 +407,38 @@ class TreeviewRowUI:
         # 切换排序顺序
         self.sort_order[table_type] = not is_ascending
 
+    def on_mouse_motion(self, event, is_logged_in):
+        if is_logged_in is True:
+            tree = self.logged_in_tree
+        else:
+            tree = self.not_logged_in_tree
+
+        # 获取当前鼠标所在的行 ID
+        item = tree.identify_row(event.y)
+
+        # 检查是否是新的悬停行
+        if self.hovered_item != item:
+            for t in (self.logged_in_tree, self.not_logged_in_tree):
+                # 清除之前悬停行的颜色
+                if self.hovered_item in t.get_children():
+                    widget_utils.remove_a_tag_of_item(tree, self.hovered_item, "hover")
+            for t in (self.logged_in_tree, self.not_logged_in_tree):
+                if item in t.get_children():
+                    widget_utils.add_a_tag_to_item(tree, item, "hover")
+            # 更新当前悬停行
+            self.hovered_item = item
+
+    def on_single_click(self, event, is_logged_in):
+        """处理单击事件，并在检测到双击时取消"""
+        # 取消之前的单击延时处理（如果有）
+        if self.single_click_id:
+            self.master.after_cancel(self.single_click_id)
+
+        # 设置一个延时，若在此期间未检测到双击，则处理单击事件
+        self.single_click_id = self.master.after(200, lambda: self.toggle_selection(event, is_logged_in))
+
     def toggle_selection(self, event, is_logged_in):
+        print("进入了单击判定")
         if is_logged_in is True:
             tree = self.logged_in_tree
             selected_items = self.selected_logged_in_items
@@ -455,57 +451,76 @@ class TreeviewRowUI:
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
             print("测试", len(tree.identify_row(event.y)))
             # 弹出提示窗口
-            self.open_detail(tree.item(item_id, "values")[1])
+            self.open_detail(tree.item(item_id, "values")[self.acc_index])
         else:
             if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发
                 if item_id in selected_items:
                     selected_items.remove(item_id)
-                    # 移除“selected”标签
-                    current_tags = tree.item(item_id, "tags")
-                    if isinstance(current_tags, str) and current_tags == "":
-                        current_tags = ()  # 将空字符串转换为元组
-                    new_tags = tuple(tag for tag in current_tags if tag != "selected")  # 移除“selected”
-                    tree.item(item_id, tags=list(new_tags))
-                    print(current_tags, new_tags, tree.item(item_id, "tags"))
+                    widget_utils.remove_a_tag_of_item(tree, item_id, "selected")
                 else:
                     selected_items.append(item_id)
-                    # 添加“selected”标签
-                    current_tags = tree.item(item_id, "tags")
-                    if isinstance(current_tags, str) and current_tags == "":
-                        current_tags = ()  # 将空字符串转换为元组
-                    new_tags = current_tags + ("selected",)  # 添加“selected”
-                    tree.item(item_id, tags=list(new_tags))
-                    print(current_tags, new_tags, tree.item(item_id, "tags"))
+                    widget_utils.add_a_tag_to_item(tree, item_id, "selected")
                 self.update_selected_display(is_logged_in)  # 实时更新选中行显示
                 self.update_top_title(is_logged_in)
+
+    def double_selection(self, event, is_logged_in):
+        if self.single_click_id:
+            self.master.after_cancel(self.single_click_id)
+            self.single_click_id = None
+        print("进入了双击判定")
+        if is_logged_in is True:
+            tree = self.logged_in_tree
+            selected_items = self.selected_logged_in_items
+            callback = self.quit_selected_accounts
+        else:
+            tree = self.not_logged_in_tree
+            selected_items = self.selected_not_logged_in_items
+            callback = self.auto_login_selected_accounts
+        item_id = tree.identify_row(event.y)
+        if len(item_id) == 0:
+            return
+        if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
+            print("测试", len(tree.identify_row(event.y)))
+            # 弹出提示窗口
+            self.open_detail(tree.item(item_id, "values")[self.acc_index])
+        else:
+            if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发
+                selected_items.clear()
+                for i in tree.get_children():
+                    widget_utils.remove_a_tag_of_item(tree, i, "selected")
+                selected_items.append(item_id)
+                widget_utils.add_a_tag_to_item(tree, item_id, "selected")
+                self.update_selected_display(is_logged_in)  # 实时更新选中行显示
+                self.update_top_title(is_logged_in)
+                callback()
 
     def update_selected_display(self, is_logged_in):
         # 获取选中行的“英语”列数据
         if is_logged_in is True:
             tree = self.logged_in_tree
             selected_items = self.selected_logged_in_items
-            selected_accounts = [tree.item(item, "values")[1] for item in selected_items]
+            selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
             self.selected_logged_in_accounts = selected_accounts
         else:
             tree = self.not_logged_in_tree
             selected_items = self.selected_not_logged_in_items
-            selected_accounts = [tree.item(item, "values")[1] for item in selected_items]
+            selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
             self.selected_not_logged_in_accounts = selected_accounts
-        print(selected_accounts)
+        print(is_logged_in, selected_accounts)
 
     def adjust_columns_on_maximize(self, event=None):
         columns_to_hide = ["原始微信号", "当前微信号", "昵称"]
-
         if self.master.state() != "zoomed":  # 非最大化时隐藏列和标题
             for tree in [self.logged_in_tree, self.not_logged_in_tree]:
                 tree["show"] = "tree"  # 隐藏标题
                 for col in columns_to_hide:
                     tree.column(col, width=0, stretch=False)
         else:  # 最大化时显示列和标题
+            width = int(self.master.winfo_screenwidth() / 5)
             for tree in [self.logged_in_tree, self.not_logged_in_tree]:
                 tree["show"] = "tree headings"  # 显示标题
                 for col in columns_to_hide:
-                    tree.column(col, width=100)  # 设置合适的宽度
+                    tree.column(col, width=width)  # 设置合适的宽度
 
 
 

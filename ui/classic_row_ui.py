@@ -1,5 +1,5 @@
 from PIL import ImageTk
-from utils import string_utils
+from utils import string_utils, widget_utils
 import subprocess
 import sys
 import time
@@ -25,7 +25,7 @@ class AccountRow:
         self.data_path = data_path
         self.status = status
         self.start_time = time.time()
-        self.tooltip = None
+        self.tooltips = {}
         self.toggle_avatar_label = None
         self.size = None
         self.update_top_checkbox_callback = update_top_checkbox_callback
@@ -101,12 +101,12 @@ class AccountRow:
 
             if config_status == "无配置":
                 # 无配置禁用按钮且置底
-                self.disable_button_and_add_tip(self.login_button, "请先手动登录后配置")
+                widget_utils.disable_button_and_add_tip(self.tooltips, self.login_button, "请先手动登录后配置")
                 self.checkbox.config(state='disabled')
                 self.row_frame.pack(side=tk.BOTTOM)
             else:
                 # 启用按钮且为行区域添加复选框绑定
-                self.enable_button_and_unbind_tip(self.login_button)
+                widget_utils.enable_button_and_unbind_tip(self.tooltips, self.login_button)
                 self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
                 for child in self.row_frame.winfo_children():
                     child.bind("<Button-1>", self.toggle_checkbox, add="+")
@@ -114,26 +114,6 @@ class AccountRow:
         # 头像绑定详情事件
         self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
-
-    def disable_button_and_add_tip(self, button, text):
-        """
-        禁用按钮，启用提示
-        :return: None
-        """
-        button.state(['disabled'])
-        if not self.tooltip:
-            self.tooltip = handle_utils.Tooltip(button, text)
-
-    def enable_button_and_unbind_tip(self, button):
-        """
-        启用按钮，去除提示
-        :return: None
-        """
-        button.state(['!disabled'])
-        if self.tooltip:
-            self.tooltip.widget.unbind("<Enter>")
-            self.tooltip.widget.unbind("<Leave>")
-            self.tooltip = None
 
     def toggle_checkbox(self, event):
         """
@@ -289,26 +269,6 @@ class ClassicRowUI:
             else:
                 self.not_logged_in_rows[account] = row
 
-    def disable_button_and_add_tip(self, button, text):
-        """
-        禁用按钮，启用提示
-        :return: None
-        """
-        button.state(['disabled'])
-        if button not in self.tooltips:
-            self.tooltips[button] = handle_utils.Tooltip(button, text)
-
-    def enable_button_and_unbind_tip(self, button):
-        """
-        启用按钮，去除提示
-        :return: None
-        """
-        button.state(['!disabled'])
-        if button in self.tooltips:
-            self.tooltips[button].widget.unbind("<Enter>")
-            self.tooltips[button].widget.unbind("<Leave>")
-            del self.tooltips[button]
-
     def toggle_top_checkbox(self, event, is_logged_in):
         """
         切换顶部复选框状态，更新子列表
@@ -329,9 +289,9 @@ class ClassicRowUI:
         checkbox_var.set(not checkbox_var.get())
         value = checkbox_var.get()
         if value:
-            self.enable_button_and_unbind_tip(button)
+            widget_utils.enable_button_and_unbind_tip(self.tooltips, button)
         else:
-            self.disable_button_and_add_tip(button, tip)
+            widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
         for row in rows.values():
             row.set_checkbox(value)
         return "break"
@@ -363,7 +323,7 @@ class ClassicRowUI:
             for child in title.winfo_children():
                 child.unbind("<Button-1>")
             checkbox.config(state="disabled")
-            self.disable_button_and_add_tip(button, tip)
+            widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
         else:
             # 列表不为空则绑定和复用
             title.bind("<Button-1>", toggle, add="+")
@@ -375,13 +335,13 @@ class ClassicRowUI:
             states = [row.checkbox_var.get() for row in all_rows]
             if all(states):
                 checkbox_var.set(1)
-                self.enable_button_and_unbind_tip(button)
+                widget_utils.enable_button_and_unbind_tip(self.tooltips, button)
             elif any(states):
                 checkbox_var.set(-1)
-                self.enable_button_and_unbind_tip(button)
+                widget_utils.enable_button_and_unbind_tip(self.tooltips, button)
             else:
                 checkbox_var.set(0)
-                self.disable_button_and_add_tip(button, tip)
+                widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
 
     def open_detail(self, account):
         """打开详情窗口"""
