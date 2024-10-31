@@ -111,7 +111,7 @@ def add_diminished_se_corner_mark_to_image(image_path, mark_path, output_path, d
 
     # 计算叠加图像的大小为 background 大小的 1/3
     new_size = (int(image.width // diminish_time), int(image.height // diminish_time))
-    mark = mark.resize(new_size, Image.LANCZOS)
+    mark = mark.resize(new_size, Image.Resampling.NEAREST)
 
     # 计算粘贴位置（右下角）
     paste_position = (image.width - mark.width, image.height - mark.height)

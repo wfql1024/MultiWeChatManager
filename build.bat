@@ -6,7 +6,7 @@ if exist "build" rmdir /S /Q "build"
 if exist "*.spec" del /Q "*.spec"
 
 :: 使用 PyInstaller 创建正常版本（无窗口）
-.\.venv37\Scripts\pyinstaller --name="微信多开管理器" --windowed --icon=external_res\SunnyMultiWxMng.ico ^
+.\.venv312\Scripts\pyinstaller --name="微信多开管理器" --windowed --icon=external_res\SunnyMultiWxMng.ico ^
 --add-data="external_res;external_res" --manifest=app.manifest ^
 --version-file=version.txt --noconfirm --hidden-import=comtypes.stream Main.py
 

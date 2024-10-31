@@ -29,7 +29,8 @@ def get_acc_avatar_from_files(account):
     # 如果没有，从网络下载
     url, = subfunc_file.get_acc_details_from_acc_json(account, avatar_url=None)
     print(f"测试：{url}")
-    success = image_utils.download_image(url, avatar_path)
+    if url is not None and url.endswith("/0"):
+        success = image_utils.download_image(url, avatar_path)
 
     # 第二次检查是否存在对应account的头像
     if os.path.exists(avatar_path):

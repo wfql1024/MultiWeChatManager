@@ -153,18 +153,6 @@ class DetailWindow:
             widget_utils.enable_button_and_unbind_tip(self.tooltips, self.fetch_button)
         print(f"载入数据完成")
 
-    def disable_fetch_button(self):
-        self.fetch_button.state(['disabled'])
-        if not self.tooltips:
-            self.tooltips = Tooltip(self.fetch_button, "请登录后获取")
-
-    def enable_fetch_button(self):
-        self.fetch_button.state(['!disabled'])
-        if self.tooltips:
-            self.tooltips.widget.unbind("<Enter>")
-            self.tooltips.widget.unbind("<Leave>")
-            self.tooltips = None
-
     def load_avatar(self, avatar_path, avatar_url):
         try:
             img = Image.open(avatar_path)
@@ -202,12 +190,12 @@ class DetailWindow:
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
 
-        success = func_detail.fetch_acc_detail_by_pid(pid, self.account,
-                                                      partial(widget_utils.disable_button_and_add_tip,
-                                                              (self.tooltips, self.fetch_button, "请登录后获取")),
-                                                      partial(widget_utils.disable_button_and_add_tip,
-                                                              (self.tooltips, self.fetch_button))
-                                                      )
+        success = func_detail.fetch_acc_detail_by_pid(
+            pid, self.account, partial(widget_utils.disable_button_and_add_tip,
+                                       tooltips=self.tooltips, button=self.fetch_button, text="请登录后获取"),
+            partial(widget_utils.enable_button_and_unbind_tip,
+                    self.tooltips, self.fetch_button)
+        )
         if success is False:
             messagebox.showerror(f"错误", "失败：超时")
         # 刷新显示
