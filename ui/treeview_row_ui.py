@@ -332,6 +332,7 @@ class TreeviewRowUI:
     def display_logged_in_table(self, accounts):
         for account in accounts:
             display_name = func_account.get_account_display_name(account)
+            cleaned_display_name = string_utils.clean_display_name(display_name)
             config_status = func_config.get_config_status_by_account(account, self.data_path)
             avatar_url, alias, nickname, pid = subfunc_file.get_acc_details_from_acc_json(
                 account,
@@ -340,6 +341,7 @@ class TreeviewRowUI:
                 nickname="请获取数据",
                 pid=None
             )
+            cleaned_nickname = string_utils.clean_display_name(nickname)
 
             img = func_account.get_acc_avatar_from_files(account)
             img = img.resize((44, 44), Image.Resampling.NEAREST)
@@ -347,8 +349,14 @@ class TreeviewRowUI:
 
             self.photo_images.append(photo)
 
-            self.logged_in_tree.insert("", "end", iid=account, image=photo,
-                                       values=(display_name, config_status, pid, account, alias, nickname))
+            try:
+                self.logged_in_tree.insert("", "end", iid=account, image=photo,
+                                           values=(display_name, config_status, pid, account, alias, nickname))
+            except Exception as e:
+                print("含有超出字符。", e)
+                self.logged_in_tree.insert("", "end", iid=account, image=photo,
+                                           values=(cleaned_display_name, config_status,
+                                                   pid, account, alias, cleaned_nickname))
 
         self.logged_in_tree.config(height=len(accounts))
 
@@ -368,7 +376,7 @@ class TreeviewRowUI:
             photo = ImageTk.PhotoImage(img)
 
             self.photo_images.append(photo)
-            
+
             self.not_logged_in_tree.insert("", "end", iid=account, image=photo,
                                            values=(display_name, config_status, pid, account, alias, nickname))
 
@@ -521,6 +529,3 @@ class TreeviewRowUI:
                 tree["show"] = "tree headings"  # 显示标题
                 for col in columns_to_hide:
                     tree.column(col, width=width)  # 设置合适的宽度
-
-
-

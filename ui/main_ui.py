@@ -3,6 +3,7 @@ import ctypes
 import glob
 import os
 import queue
+import subprocess
 import sys
 import time
 import tkinter as tk
@@ -373,7 +374,7 @@ class MainWindow:
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
-        self.help_menu.add_command(label="更新日志", command=self.open_update_log)
+        self.help_menu.add_command(label="更新日志", command=self.start_update_program)
         self.help_menu.add_command(label="关于", command=self.open_about)
 
         # ————————————————————————————作者标签————————————————————————————
@@ -588,3 +589,8 @@ class MainWindow:
         debug_window = tk.Toplevel(self.master)
         debug_ui.DebugWindow(debug_window)
         handle_utils.center_window(debug_window)
+
+    def start_update_program(self):
+        update_program_path = os.path.join(os.path.dirname(__file__), 'update_program.py')
+        subprocess.Popen([sys.executable, update_program_path],
+                         creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)

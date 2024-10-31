@@ -1,9 +1,7 @@
 # 获取最新版本号
 import os
-import re
-import tempfile
-import time
-from tkinter import messagebox
+import subprocess
+import zipfile
 
 import requests
 
@@ -64,55 +62,61 @@ def download_files(file_urls, download_dir, progress_callback):
         raise e
 
 
-#
-#
-# # 启动更新进程
-# def start_update_process(temp_dir):
-#     # 新进程执行更新，删除旧文件，拷贝新文件并重启
-#     update_script = f"""
-# import os
-# import shutil
-# import sys
-# import time
-#
-# old_dir = r'{sys.argv[0]}'
-# new_dir = r'{temp_dir}'
-#
-# def replace_files():
-#     time.sleep(2)  # 等待主程序退出
-#     for item in os.listdir(new_dir):
-#         s = os.path.join(new_dir, item)
-#         d = os.path.join(old_dir, item)
-#         if os.path.isfile(s):
-#             shutil.copy2(s, d)
-#         elif os.path.isdir(s):
-#             shutil.copytree(s, d, dirs_exist_ok=True)
-#     shutil.rmtree(new_dir)
-#     os.startfile(old_dir)
-#
-# replace_files()
-# """
-#
-#     # 写入临时脚本并启动新进程
-#     update_file = os.path.join(temp_dir, 'update_script.py')
-#     with open(update_file, 'w') as f:
-#         f.write(update_script)
-#     Popen([sys.executable, update_file])
-#     root.quit()
+def create_and_execute_bat(current_version, zip_path, current_exe_path):
+    bat_content = f"""@echo off
+chcp 65001 >nul  :: 设置代码页为 UTF-8，避免乱码
+setlocal
+
+
+tasklist /FI "WINDOWTITLE eq 微信多开管理器" | find /I "微信多开管理器" >nul
+if %errorlevel% == 0 (
+    taskkill /F /IM "当前程序.exe"
+)
+
+
+set "version_folder={current_version}"
+set "program_folder=%~dp0"
+mkdir "%program_folder%%version_folder%"
+move "%program_folder%*" "%program_folder%%version_folder%\\" /Y
+
+
+set "zip_path={zip_path}"
+powershell -command "Expand-Archive -Path '%zip_path%' -DestinationPath '%program_folder%' -Force"
+
+
+set "user_files_folder=%program_folder%%version_folder%\\user_files"
+set "external_res_folder=%program_folder%external_res"
+
+if exist "%user_files_folder%" (
+    xcopy "%user_files_folder%" "%program_folder%user_files" /E /I /Y
+)
+
+:: 5. 强制删除当前 exe 文件（如果程序仍在运行，删除会失败）
+del /F /Q "{current_exe_path}"
+
+:: 6. 打开新的 exe 程序
+start "" "%program_folder%新的程序.exe"
+
+endlocal
+"""
+
+    bat_file_path = os.path.join(os.path.dirname(__file__), 'update.bat')
+
+    # 写入内容到 .bat 文件
+    with open(bat_file_path, 'w', encoding='utf-8') as bat_file:
+        bat_file.write(bat_content)
+
+    # 执行 .bat 文件
+    subprocess.run([bat_file_path], shell=True)
 
 
 if __name__ == '__main__':
-    # 设置环境变量，告诉 Python 不使用代理
-    os.environ['http_proxy'] = ''
-    os.environ['https_proxy'] = ''
-    os.environ['no_proxy'] = '*'
-    print(split_versions_by_current("v2.7.0.411.Alpha"))
-    # file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=67052ac9&rlimit=20&us=Ioo2xfdKuS&sign=e813036e84770a466a9686509c3f10a5&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
-    # file_url = f"https://d.feijix.com/storage/files/2024/10/06/6/10172646/17281995030431.gz?t=670f77dc&rlimit=20&us=ulApVrrrB0&sign=026566dbd74c8088d4b9958b87b2bbc9&download_name=MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
-    # file_url = f"https://gitee.com/wfql1024/MultiWeChatManagerDist/raw/master/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
-    # file_url = "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
-    # current_time = time.strftime("%Y%m%d%H%M%S", time.localtime())
-    # if not os.path.exists(rf"E:\Now\Inbox\test{current_time}"):
-    #     os.makedirs(rf"E:\Now\Inbox\test{current_time}")
-    # with requests.get(file_url, stream=True, allow_redirects=True) as r:
-    #     open(rf"E:\Now\Inbox\test{current_time}\MultiWeChatManager_x64_v2.5.0.411.Alpha.zip", 'wb').write(r.content)
+    # 解压更新
+    update_zip = r"C:\Users\25359\AppData\Local\Temp\tmpu_tm66gw\temp.zip"
+    tmp_dir = os.path.dirname(update_zip)
+    with zipfile.ZipFile(update_zip, 'r') as zip_ref:
+        zip_ref.extractall(tmp_dir)
+    # create_and_execute_bat(
+    #     "2.5.0.410",
+    #     r"C:\Users\25359\AppData\Local\Temp\tmpa75gt106\temp.zip",
+    #     r"E:\Now\Inbox\测试\微信多开管理器 v2.4.0.365 Alpha")
