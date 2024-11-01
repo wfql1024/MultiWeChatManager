@@ -40,7 +40,7 @@ def split_versions_by_current(current_ver):
         return "错误：无法获取版本信息"
 
 
-def download_files(file_urls, download_dir, progress_callback):
+def download_files(file_urls, download_dir, progress_callback, on_complete_callback):
     try:
         print("进入下载文件方法...")
         for idx, url in enumerate(file_urls):
@@ -55,7 +55,9 @@ def download_files(file_urls, download_dir, progress_callback):
                             f.write(chunk)
                             downloaded += len(chunk)
                             progress_callback(idx, len(file_urls), downloaded, total_length)
-        print("All files downloaded successfully.")
+
+        print("所有文件下载成功。")
+        on_complete_callback()  # 调用回调启用按钮
         return True
     except Exception as e:
         print(e)

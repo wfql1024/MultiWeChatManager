@@ -1,5 +1,8 @@
 import json
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
 import threading
 import tkinter as tk
@@ -7,7 +10,7 @@ from functools import partial
 from tkinter import messagebox, ttk
 
 from functions import func_update, subfunc_file
-from resources import Config
+from resources import Config, Strings
 from utils import handle_utils, file_utils
 
 
@@ -115,9 +118,10 @@ class UpdateLogWindow:
         # 配置滚动条
         scrollbar.config(command=self.log_text.yview)
 
-    def show_download_window(self, file_urls, download_dir=None):
-        if download_dir is None:
-            download_dir = os.path.join(tempfile.mkdtemp(), "temp.zip")
+    def show_download_window(self, file_urls, download_path=None):
+        if download_path is None:
+            download_path = os.path.join(tempfile.mkdtemp(), "temp.zip")
+
         download_window = tk.Toplevel(self.master)
         download_window.title("下载更新")
         handle_utils.center_window(download_window)
@@ -130,32 +134,38 @@ class UpdateLogWindow:
         progress_bar.pack(pady=10)
 
         close_and_update_btn = tk.Button(download_window, text="关闭并更新",
-                                         # command=lambda: start_update_process(temp_dir)
-                                         )
+                                         command=partial(self.close_and_update, tmp_path=download_path))
         close_and_update_btn.pack(pady=10)
         close_and_update_btn.config(state="disabled")
 
-        result = None
-        threads = []
-        try:
-            # 开始下载文件（多线程）
-            t = threading.Thread(target=func_update.download_files,
-                                 args=(file_urls, download_dir, self.update_progress))
-            threads.append(t)
-            t.start()
-            # result = func_update.download_files(file_urls, download_dir, self.update_progress)
-            # for t in threads:
-            #     t.join()
-
-            close_and_update_btn.config(state="normal")
-        except Exception as e:
-            print(e)
+        # 开始下载文件（多线程）
+        t = threading.Thread(target=func_update.download_files,
+                             args=(file_urls, download_path, self.update_progress,
+                                   lambda: close_and_update_btn.config(state="normal")))
+        t.start()
 
     def update_progress(self, idx, total_files, downloaded, total_length):
         percentage = (downloaded / total_length) * 100 if total_length else 0
         progress_var.set(f"下载文件 {idx + 1}/{total_files}: {percentage:.2f}% 完成")
         progress_bar['value'] = percentage
         self.master.update_idletasks()
+
+    def close_and_update(self, tmp_path):
+        if getattr(sys, 'frozen', False):
+            exe_path = sys.executable
+            current_version = subfunc_file.get_app_current_version()
+            install_dir = os.path.dirname(exe_path)
+
+            update_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'update.exe')
+            new_update_exe_path = os.path.join(os.path.dirname(tmp_path), 'update.exe')
+            try:
+                shutil.copy(update_exe_path, new_update_exe_path)
+                print(f"成功将 {update_exe_path} 拷贝到 {new_update_exe_path}")
+            except Exception as e:
+                print(f"拷贝文件时出错: {e}")
+
+            subprocess.Popen([new_update_exe_path, current_version, install_dir],
+                             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
 
 # if __name__ == "__main__":
 #     root = tk.Tk()

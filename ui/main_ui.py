@@ -374,7 +374,7 @@ class MainWindow:
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
-        self.help_menu.add_command(label="更新日志", command=self.start_update_program)
+        self.help_menu.add_command(label="更新日志", command=self.open_update_log)
         self.help_menu.add_command(label="关于", command=self.open_about)
 
         # ————————————————————————————作者标签————————————————————————————
@@ -426,9 +426,9 @@ class MainWindow:
             return
 
         # 创建账号列表界面
-        # classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path, self.multiple_status)
-        treeview_row_ui.TreeviewRowUI(self, self.master, self.main_frame, result, self.data_path,
-                                      self.multiple_status)
+        classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path, self.multiple_status)
+        # treeview_row_ui.TreeviewRowUI(self, self.master, self.main_frame, result, self.data_path,
+        #                               self.multiple_status)
 
         subfunc_file.update_refresh_time_statistic(str(len(logged_in)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
@@ -591,6 +591,15 @@ class MainWindow:
         handle_utils.center_window(debug_window)
 
     def start_update_program(self):
-        update_program_path = os.path.join(os.path.dirname(__file__), 'update_program.py')
-        subprocess.Popen([sys.executable, update_program_path],
-                         creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
+        # 获取版本号
+        if getattr(sys, 'frozen', False):
+            exe_path = sys.executable
+            current_version = "2.5.0"
+            package_path = "path/to/package.zip"
+            update_exe_path = os.path.join(os.path.dirname(exe_path), '更新程序.exe')
+            subprocess.Popen([update_exe_path, current_version, package_path],
+                             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
+
+        # update_program_path = os.path.join(os.path.dirname(__file__), 'update_program.py')
+        # subprocess.Popen([sys.executable, update_program_path],
+        #                  creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)

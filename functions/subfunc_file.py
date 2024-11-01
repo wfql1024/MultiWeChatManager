@@ -305,6 +305,7 @@ def fetch_config_data():
 
     raise RuntimeError("所有源获取配置数据失败")
 
+
 def get_app_current_version():
     # 获取版本号
     if getattr(sys, 'frozen', False):

@@ -10,6 +10,9 @@ if exist "*.spec" del /Q "*.spec"
 --add-data="external_res;external_res" --manifest=app.manifest ^
 --version-file=version.txt --noconfirm --hidden-import=comtypes.stream Main.py
 
+.\.venv312\Scripts\pyinstaller --name="更新程序" --windowed --onefile --version-file=version.txt --noconfirm ^
+update_program.py
+
 
 :: 检查打包是否成功
 if exist "dist\微信多开管理器\微信多开管理器.exe" (
