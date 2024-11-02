@@ -1,8 +1,5 @@
 import json
 import os
-import shutil
-import subprocess
-import sys
 import tempfile
 import threading
 import tkinter as tk
@@ -10,7 +7,7 @@ from functools import partial
 from tkinter import messagebox, ttk
 
 from functions import func_update, subfunc_file
-from resources import Config, Strings
+from resources import Config
 from utils import handle_utils, file_utils
 
 
@@ -75,7 +72,8 @@ class UpdateLogWindow:
             try:
                 newest_version = file_utils.get_newest_full_version(new_versions)
                 print(newest_version)
-                newest_ver_url = config_data["update"][newest_version]["urls"]["default"]
+                current_version_name = file_utils.get_sys_major_version_name()
+                newest_ver_url = config_data["update"][newest_version]["urls"][current_version_name]
                 bottom_frame = ttk.Frame(main_frame)
                 bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)
                 cancel_button = ttk.Button(bottom_frame, text="以后再说",
@@ -124,18 +122,30 @@ class UpdateLogWindow:
 
         download_window = tk.Toplevel(self.master)
         download_window.title("下载更新")
+        window_width = 300
+        window_height = 135
+
+        # 计算窗口位置
+        screen_width = download_window.winfo_screenwidth()
+        screen_height = download_window.winfo_screenheight()
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+
+        download_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        download_window.resizable(False, False)
         handle_utils.center_window(download_window)
 
         global progress_var, progress_bar
         progress_var = tk.StringVar(value="开始下载...")
         tk.Label(download_window, textvariable=progress_var).pack(pady=10)
 
-        progress_bar = ttk.Progressbar(download_window, orient="horizontal", length=200, mode="determinate")
-        progress_bar.pack(pady=10)
+        progress_bar = ttk.Progressbar(download_window, orient="horizontal", length=250, mode="determinate")
+        progress_bar.pack(pady=5)
 
-        close_and_update_btn = tk.Button(download_window, text="关闭并更新",
-                                         command=partial(self.close_and_update, tmp_path=download_path))
-        close_and_update_btn.pack(pady=10)
+        close_and_update_btn = ttk.Button(download_window, text="关闭并更新", style='Custom.TButton',
+                                          command=partial(
+                                              func_update.close_and_update, tmp_path=download_path))
+        close_and_update_btn.pack(pady=5)
         close_and_update_btn.config(state="disabled")
 
         # 开始下载文件（多线程）
@@ -145,29 +155,10 @@ class UpdateLogWindow:
         t.start()
 
     def update_progress(self, idx, total_files, downloaded, total_length):
-        percentage = (downloaded / total_length) * 100 if total_length else 0
-        progress_var.set(f"下载文件 {idx + 1}/{total_files}: {percentage:.2f}% 完成")
-        progress_bar['value'] = percentage
-        self.master.update_idletasks()
-
-    def close_and_update(self, tmp_path):
-        if getattr(sys, 'frozen', False):
-            exe_path = sys.executable
-            current_version = subfunc_file.get_app_current_version()
-            install_dir = os.path.dirname(exe_path)
-
-            update_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'update.exe')
-            new_update_exe_path = os.path.join(os.path.dirname(tmp_path), 'update.exe')
-            try:
-                shutil.copy(update_exe_path, new_update_exe_path)
-                print(f"成功将 {update_exe_path} 拷贝到 {new_update_exe_path}")
-            except Exception as e:
-                print(f"拷贝文件时出错: {e}")
-
-            subprocess.Popen([new_update_exe_path, current_version, install_dir],
-                             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
-
-# if __name__ == "__main__":
-#     root = tk.Tk()
-#     update_log_window = UpdateLogWindow(root, 'old')
-#     root.mainloop()
+        try:
+            percentage = (downloaded / total_length) * 100 if total_length else 0
+            progress_var.set(f"下载文件 {idx + 1}/{total_files}: {percentage:.2f}% 完成")
+            progress_bar['value'] = percentage
+            self.master.update_idletasks()
+        except Exception as e:
+            print(e)

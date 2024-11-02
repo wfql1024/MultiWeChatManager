@@ -318,7 +318,9 @@
   "update": {
     "v2.6.0.420-test": {
       "urls": {
-        "win7": "",
+        "win7": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+        "win10": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+        "win11": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
         "default": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
       },
       "logs": [
@@ -326,20 +328,35 @@
       ]
     },
     "v2.5.0.411.Alpha": {
-      "urls": "",
+      "urls": {
+        "win7": "",
+        "win10": "",
+        "win11": "",
+        "default": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+      },
       "logs": [
         "为了适配win7，降低python版本：3.12->3.7，由此安装包体积大幅缩减",
         "适配win7系统"
       ]
     },
     "v2.4.0.365.Alpha": {
-      "urls": "",
+      "urls": {
+        "win7": "",
+        "win10": "",
+        "win11": "",
+        "default": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+      },
       "logs": [
         "新增防撤回"
       ]
     },
     "v2.3.3.333.Beta": {
-      "urls": "",
+      "urls": {
+        "win7": "",
+        "win10": "",
+        "win11": "",
+        "default": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+      },
       "logs": [
         "新增调试窗口",
         "新增原生多开（加入互斥体概念，可在主界面和账号详情中查看是否含有互斥体），及作者自制的可执行文件（很拉，别用）",
@@ -352,7 +369,12 @@
       ]
     },
     "v2.0.8.208.Beta": {
-      "urls": "",
+      "urls": {
+        "win7": "",
+        "win10": "",
+        "win11": "",
+        "default": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+      },
       "logs": [
         "修复初次使用时未获取到路径无处设置的问题",
         "修复无法拖动文件发送到微信的问题",
@@ -362,7 +384,12 @@
       ]
     },
     "v2.0.0.200.Beta": {
-      "urls": "",
+      "urls": {
+        "win7": "",
+        "win10": "",
+        "win11": "",
+        "default": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+      },
       "logs": [
         "新增全局多开模式和多种子多开器",
         "新增多选自动登录",
@@ -372,7 +399,12 @@
       ]
     },
     "v1.0.79.100.Beta": {
-      "urls": "",
+      "urls": {
+        "win7": "",
+        "win10": "",
+        "win11": "",
+        "default": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip"
+      },
       "logs": [
         "新增全局多开模式和多种子多开器",
         "新增多选自动登录",

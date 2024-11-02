@@ -1,11 +1,15 @@
 # 获取最新版本号
 import os
+import shutil
 import subprocess
+import sys
 import zipfile
+from tkinter import messagebox
 
 import requests
 
 from functions import subfunc_file
+from resources import Config
 from utils import file_utils
 
 
@@ -64,61 +68,21 @@ def download_files(file_urls, download_dir, progress_callback, on_complete_callb
         raise e
 
 
-def create_and_execute_bat(current_version, zip_path, current_exe_path):
-    bat_content = f"""@echo off
-chcp 65001 >nul  :: 设置代码页为 UTF-8，避免乱码
-setlocal
+def close_and_update(tmp_path):
+    if getattr(sys, 'frozen', False):
+        answer = messagebox.askokcancel("将关闭主程序进行更新操作，请确认")
+        if answer:
+            exe_path = sys.executable
+            current_version = subfunc_file.get_app_current_version()
+            install_dir = os.path.dirname(exe_path)
 
+            update_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'update.exe')
+            new_update_exe_path = os.path.join(os.path.dirname(tmp_path), 'update.exe')
+            try:
+                shutil.copy(update_exe_path, new_update_exe_path)
+                print(f"成功将 {update_exe_path} 拷贝到 {new_update_exe_path}")
+            except Exception as e:
+                print(f"拷贝文件时出错: {e}")
 
-tasklist /FI "WINDOWTITLE eq 微信多开管理器" | find /I "微信多开管理器" >nul
-if %errorlevel% == 0 (
-    taskkill /F /IM "当前程序.exe"
-)
-
-
-set "version_folder={current_version}"
-set "program_folder=%~dp0"
-mkdir "%program_folder%%version_folder%"
-move "%program_folder%*" "%program_folder%%version_folder%\\" /Y
-
-
-set "zip_path={zip_path}"
-powershell -command "Expand-Archive -Path '%zip_path%' -DestinationPath '%program_folder%' -Force"
-
-
-set "user_files_folder=%program_folder%%version_folder%\\user_files"
-set "external_res_folder=%program_folder%external_res"
-
-if exist "%user_files_folder%" (
-    xcopy "%user_files_folder%" "%program_folder%user_files" /E /I /Y
-)
-
-:: 5. 强制删除当前 exe 文件（如果程序仍在运行，删除会失败）
-del /F /Q "{current_exe_path}"
-
-:: 6. 打开新的 exe 程序
-start "" "%program_folder%新的程序.exe"
-
-endlocal
-"""
-
-    bat_file_path = os.path.join(os.path.dirname(__file__), 'update.bat')
-
-    # 写入内容到 .bat 文件
-    with open(bat_file_path, 'w', encoding='utf-8') as bat_file:
-        bat_file.write(bat_content)
-
-    # 执行 .bat 文件
-    subprocess.run([bat_file_path], shell=True)
-
-
-if __name__ == '__main__':
-    # 解压更新
-    update_zip = r"C:\Users\25359\AppData\Local\Temp\tmpu_tm66gw\temp.zip"
-    tmp_dir = os.path.dirname(update_zip)
-    with zipfile.ZipFile(update_zip, 'r') as zip_ref:
-        zip_ref.extractall(tmp_dir)
-    # create_and_execute_bat(
-    #     "2.5.0.410",
-    #     r"C:\Users\25359\AppData\Local\Temp\tmpa75gt106\temp.zip",
-    #     r"E:\Now\Inbox\测试\微信多开管理器 v2.4.0.365 Alpha")
+            subprocess.Popen([new_update_exe_path, current_version, install_dir],
+                             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)

@@ -43,14 +43,14 @@ class TreeviewRowUI:
         self.master = m_master
         self.main_frame = m_main_frame
         self.sort_order = {"logged_in": True, "not_logged_in": True}  # 控制排序顺序
-        logged_in, not_logged_in, wechat_processes = result
+        logged_in_list, not_logged_in_list, wechat_processes = result
         # 调整行高
         style = ttk.Style()
         style.configure("RowTreeview", background="#FFFFFF", foreground="black", rowheight=50,
                         selectmode="none", borderwidth=20)
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
 
-        if len(logged_in) != 0:
+        if len(logged_in_list) != 0:
             # 已登录框架=已登录标题+已登录列表
             self.logged_in_frame = ttk.Frame(self.main_frame)
             self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=(10, 0))
@@ -82,7 +82,7 @@ class TreeviewRowUI:
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
 
             self.logged_in_tree = self.create_table("logged_in")
-            self.display_logged_in_table(logged_in)
+            self.display_logged_in_table(logged_in_list)
             self.update_top_title(True)
             self.logged_in_tree.bind("<Leave>", lambda event: setattr(self, 'hovered_item', None))
             self.logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion, is_logged_in=True))
@@ -121,7 +121,7 @@ class TreeviewRowUI:
 
         # 更新顶部复选框状态
         self.not_logged_in_tree = self.create_table("not_logged_in")
-        self.display_not_logged_in_table(not_logged_in)
+        self.display_not_logged_in_table(not_logged_in_list)
         self.update_top_title(False)
         self.not_logged_in_tree.bind("<Leave>", lambda event: setattr(self, 'hovered_item', None))
         self.not_logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion, is_logged_in=False))
@@ -363,6 +363,43 @@ class TreeviewRowUI:
 
         self.logged_in_tree.config(height=len(accounts))
 
+    def display_table(self, accounts, is_logged_in):
+        if is_logged_in == "logged_in":
+            tree = self.logged_in_tree
+        elif is_logged_in == "not_logged_in":
+            tree = self.not_logged_in_tree
+        else:
+            tree = None
+        for account in accounts:
+            display_name = func_account.get_account_display_name(account)
+            cleaned_display_name = string_utils.clean_display_name(display_name)
+            config_status = func_config.get_config_status_by_account(account, self.data_path)
+            avatar_url, alias, nickname, pid = subfunc_file.get_acc_details_from_acc_json(
+                account,
+                avatar_url=None,
+                alias="请获取数据",
+                nickname="请获取数据",
+                pid=None
+            )
+            cleaned_nickname = string_utils.clean_display_name(nickname)
+
+            img = func_account.get_acc_avatar_from_files(account)
+            img = img.resize((44, 44), Image.Resampling.NEAREST)
+            photo = ImageTk.PhotoImage(img)
+
+            self.photo_images.append(photo)
+
+            try:
+                tree.insert("", "end", iid=account, image=photo,
+                            values=(display_name, config_status, pid, account, alias, nickname))
+            except Exception as e:
+                print("含有超出字符。", e)
+                tree.insert("", "end", iid=account, image=photo,
+                            values=(cleaned_display_name, config_status,
+                                    pid, account, alias, cleaned_nickname))
+
+        tree.config(height=len(accounts))
+
     def display_not_logged_in_table(self, accounts):
         for account in accounts:
             display_name = func_account.get_account_display_name(account)
@@ -384,12 +421,12 @@ class TreeviewRowUI:
 
             try:
                 self.not_logged_in_tree.insert("", "end", iid=account, image=photo,
-                                           values=(display_name, config_status, pid, account, alias, nickname))
+                                               values=(display_name, config_status, pid, account, alias, nickname))
             except Exception as e:
                 print("含有超出字符。", e)
                 self.not_logged_in_tree.insert("", "end", iid=account, image=photo,
-                                           values=(cleaned_display_name, config_status,
-                                                   pid, account, alias, cleaned_nickname))
+                                               values=(cleaned_display_name, config_status,
+                                                       pid, account, alias, cleaned_nickname))
 
             if config_status == "无配置":
                 widget_utils.add_a_tag_to_item(self.not_logged_in_tree, account, "disabled")
@@ -540,31 +577,3 @@ class TreeviewRowUI:
                 tree["show"] = "tree headings"  # 显示标题
                 for col in columns_to_hide:
                     tree.column(col, width=width)  # 设置合适的宽度
-
-
-if __name__ == '__main__':
-    def find_file(start_dir, filename):
-        """递归查找指定文件"""
-        for root, dirs, files in os.walk(start_dir):
-            # print(root, dirs, files)
-            if filename in dirs:
-                return os.path.join(root, filename)
-        return None
-
-
-    install_dir = r"E:\Now\Inbox\测试\微信多开管理器"
-    version_dir = r"E:\Now\Inbox\测试\微信多开管理器\[v2.5.0.410-Alpha]"
-
-    external_res_path = find_file(install_dir, 'external_res')
-    user_files_src = find_file(version_dir, 'user_files')
-    print(external_res_path, user_files_src)
-    if user_files_src and external_res_path:
-        dest_path = os.path.join(os.path.dirname(external_res_path), 'user_files')
-        if os.path.exists(dest_path):
-            shutil.rmtree(dest_path)
-        try:
-            shutil.copytree(str(user_files_src), dest_path)
-        except Exception as e:
-            print(e)
-    else:
-        print("未找到 external_res 文件夹或 user_files 文件夹不存在。")

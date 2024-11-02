@@ -11,10 +11,18 @@ import zipfile
 CREATE_NO_WINDOW = 0x08000000
 
 
-def find_dir(start_dir, filename):
+def find_dir(start_dir, dirname):
     """递归查找指定文件"""
     for root, dirs, files in os.walk(start_dir):
-        if filename in dirs:
+        if dirname in dirs:
+            return os.path.join(root, dirname)
+    return None
+
+
+def find_file(start_dir, filename):
+    """递归查找指定文件"""
+    for root, dirs, files in os.walk(start_dir):
+        if filename in files:
             return os.path.join(root, filename)
     return None
 
@@ -128,7 +136,7 @@ def main():
         print(e)
 
     # 3. 拷贝 tmp_dir 中 "微信多开管理器.exe" 所在的目录的所有文件和文件夹到 install_path 中
-    new_exe_path = find_dir(tmp_dir, "微信多开管理器.exe")
+    new_exe_path = find_file(tmp_dir, "微信多开管理器.exe")
     if new_exe_path:
         exe_dir = os.path.dirname(new_exe_path)
         for item in os.listdir(exe_dir):

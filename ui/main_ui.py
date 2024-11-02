@@ -426,9 +426,9 @@ class MainWindow:
             return
 
         # 创建账号列表界面
-        classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path, self.multiple_status)
-        # treeview_row_ui.TreeviewRowUI(self, self.master, self.main_frame, result, self.data_path,
-        #                               self.multiple_status)
+        # classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path, self.multiple_status)
+        treeview_row_ui.TreeviewRowUI(self, self.master, self.main_frame, result, self.data_path,
+                                      self.multiple_status)
 
         subfunc_file.update_refresh_time_statistic(str(len(logged_in)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
