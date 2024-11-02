@@ -30,8 +30,9 @@ class UpdateLogWindow:
 
         # 移除窗口装饰并设置为工具窗口
         master.overrideredirect(True)
-        master.overrideredirect(False)
         master.attributes('-toolwindow', True)
+
+        master.grab_set()
 
         main_frame = ttk.Frame(master, padding="5")
         main_frame.pack(fill="both", expand=True)

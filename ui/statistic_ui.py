@@ -24,12 +24,13 @@ class StatisticWindow:
         self.window_width = 420
         self.window_height = 540
         style = ttk.Style()
-        style.configure("Treeview", rowheight=50, relief="flat")  # 设置行高为50
+        style.configure("Treeview")
         screen_width = master.winfo_screenwidth()
         screen_height = master.winfo_screenheight()
         x = (screen_width - self.window_width) // 2
         y = (screen_height - self.window_height) // 2
         master.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
+        master.grab_set()
         master.update_idletasks()
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高

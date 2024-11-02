@@ -1,25 +1,27 @@
 import os
 import sqlite3
+from tkinter import messagebox
 
-from functions import func_setting, func_file, subfunc_file
+from functions import func_setting, subfunc_file
 from resources.config import Config
 from utils import wechat_decrypt_utils, image_utils
 
 
-def fetch_acc_detail_by_pid(pid, account, before, after):
+def fetch_acc_detail_by_pid(pid, account, after):
     """
     根据账号及对应的pid去获取账号详细信息
     :param pid: 对应的微信进程id
     :param account: 账号
-    :param before: 开始前的操作：禁用按钮
     :param after: 结束后的操作：恢复按钮
     :return: 无
     """
-    before()
-    print("开始解密...")
-    success = wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
-    if success is False:
-        return False
+    print(f"pid：{pid}，开始解密...")
+    error = wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
+    if error:
+        messagebox.showerror(f"错误", error)
+        after()
+        return error
+
     print("连接数据库...")
     user_directory = Config.PROJ_USER_PATH
     db_file = user_directory + rf"/{account}/edit_{account}_MicroMsg.db"
@@ -39,6 +41,7 @@ def fetch_acc_detail_by_pid(pid, account, before, after):
             cursor.execute(sql_contact)
             contact_results = cursor.fetchall()
             user_name, alias, nickname = contact_results[0]
+
             cursor.execute(sql_contact_head_img_url)
             avatar_results = cursor.fetchall()
             usr_name, url = avatar_results[0]
@@ -70,6 +73,10 @@ def fetch_acc_detail_by_pid(pid, account, before, after):
 
         except Exception as e:
             print("sql executed have some error", e)
+            conn.close()
+            messagebox.showerror(f"错误", f"数据库执行出错:{e}")
+            after()
+            return "数据库执行出错"
 
         conn.close()
         after()

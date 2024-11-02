@@ -1,7 +1,24 @@
+import os
 import platform
 import re
 
 import win32api
+
+
+def find_dir(start_dir, dirname):
+    """递归查找指定文件"""
+    for root, dirs, files in os.walk(start_dir):
+        if dirname in dirs:
+            return os.path.join(root, dirname)
+    return None
+
+
+def find_file(start_dir, filename):
+    """递归查找指定文件"""
+    for root, dirs, files in os.walk(start_dir):
+        if filename in files:
+            return os.path.join(root, filename)
+    return None
 
 
 def get_file_version(file_path):
@@ -67,3 +84,7 @@ def get_sys_major_version_name():
     else:
         print("当前不是 Windows 7、10 或 11")
         return "default"
+
+
+if __name__ == '__main__':
+    print(platform.platform())

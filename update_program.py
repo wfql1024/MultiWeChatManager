@@ -2,7 +2,7 @@ import argparse
 import ctypes
 import shutil
 import subprocess
-import time
+import threading
 import tkinter as tk
 import os
 import sys
@@ -64,50 +64,10 @@ def quit_main():
             print(f"结束进程时出错: {e}")
 
 
-def main():
-    # 设置环境变量，告诉 Python 不使用代理
-    os.environ['http_proxy'] = ''
-    os.environ['https_proxy'] = ''
-    os.environ['no_proxy'] = '*'
-    print(f"是否管理员模式：{is_admin()}")
-    # 创建参数解析器
-    parser = argparse.ArgumentParser(description="Process command line flags.")
-    # 添加 --debug 和 -d 选项
-    parser.add_argument('--debug', '-d', action='store_true', help="Enable debug mode.")
-    parser.add_argument("before_version", help="更新前版本号")
-    parser.add_argument("install_dir", help="安装路径")
-    # 解析命令行参数
-    args, unknown = parser.parse_known_args()
-
-    root = tk.Tk()
-    root.title("更新程序")
-
-    # 打开升级程序窗口
-    window_width = 600
-    window_height = 500
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    x = (screen_width - window_width) // 2
-    y = (screen_height - window_height) // 2
-    root.geometry(f"{window_width}x{window_height}+{x}+{y}")
-    # 禁用窗口大小调整
-    root.resizable(False, False)
-    # 移除窗口装饰并设置为工具窗口
-    root.overrideredirect(True)
-    root.overrideredirect(False)
-    root.attributes('-toolwindow', True)
-
+def update_and_reopen(args):
     # 提取参数
     before_version = args.before_version
     install_dir = args.install_dir
-
-    label = tk.Label(root, text=before_version)
-    label.pack(padx=20, pady=20)
-    label = tk.Label(root, text=install_dir)
-    label.pack(padx=20, pady=20)
-
-    btn = tk.Button(root, text="关闭主程序", command=quit_main)
-    btn.pack()
 
     quit_main()
 
@@ -178,6 +138,43 @@ def main():
         os.startfile(wechat_exe_path)  # 在 Windows 上启动 exe 文件
     else:
         print("微信多开管理器.exe 不存在。")
+
+
+def main():
+    # 设置环境变量，告诉 Python 不使用代理
+    os.environ['http_proxy'] = ''
+    os.environ['https_proxy'] = ''
+    os.environ['no_proxy'] = '*'
+    print(f"是否管理员模式：{is_admin()}")
+    # 创建参数解析器
+    parser = argparse.ArgumentParser(description="Process command line flags.")
+    # 添加 --debug 和 -d 选项
+    parser.add_argument('--debug', '-d', action='store_true', help="Enable debug mode.")
+    parser.add_argument("before_version", help="更新前版本号")
+    parser.add_argument("install_dir", help="安装路径")
+    # 解析命令行参数
+    args, unknown = parser.parse_known_args()
+
+    root = tk.Tk()
+    root.title("更新程序")
+
+    # 打开升级程序窗口
+    window_width = 600
+    window_height = 500
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width - window_width) // 2
+    y = (screen_height - window_height) // 2
+    root.geometry(f"{window_width}x{window_height}+{x}+{y}")
+    # 禁用窗口大小调整
+    root.resizable(False, False)
+    # 移除窗口装饰并设置为工具窗口
+    root.overrideredirect(True)
+    root.overrideredirect(False)
+    root.attributes('-toolwindow', True)
+
+    # 将更新和重启的操作放在一个线程中执行
+    threading.Thread(target=update_and_reopen, args=(args,)).start()
 
     root.mainloop()
 

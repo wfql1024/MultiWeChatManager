@@ -2,6 +2,7 @@
 import base64
 import ctypes
 import os
+import threading
 import time
 import tkinter as tk
 import webbrowser
@@ -190,15 +191,12 @@ class DetailWindow:
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
 
-        success = func_detail.fetch_acc_detail_by_pid(
-            pid, self.account, partial(widget_utils.disable_button_and_add_tip,
-                                       tooltips=self.tooltips, button=self.fetch_button, text="请登录后获取"),
-            partial(widget_utils.enable_button_and_unbind_tip,
-                    self.tooltips, self.fetch_button)
-        )
-        if success is False:
-            messagebox.showerror(f"错误", "失败：超时")
-        # 刷新显示
+        # 线程启动获取详情
+        threading.Thread(target=func_detail.fetch_acc_detail_by_pid, args=(pid, self.account, self.after_fetch)).start()
+        widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, text="获取中...")
+
+    def after_fetch(self):
+        widget_utils.enable_button_and_unbind_tip(self.tooltips, self.fetch_button)
         self.load_data_label()
 
     def save_note(self):

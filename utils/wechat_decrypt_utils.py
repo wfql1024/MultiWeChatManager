@@ -19,24 +19,24 @@ from win32con import PROCESS_ALL_ACCESS
 from resources.config import Config
 from utils import logger_utils
 
-app_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 IV_SIZE = 16
 HMAC_SHA1_SIZE = 20
+cfg_file = os.path.basename(sys.argv[0]).split('.')[0] + '.ini'
+
 KEY_SIZE = 32
 DEFAULT_PAGESIZE = 4096
 DEFAULT_ITER = 64000
-
-log_file = os.path.basename(sys.argv[0]).split('.')[0] + '.log'
-cfg_file = os.path.basename(sys.argv[0]).split('.')[0] + '.ini'
-
 # 几种内存段可以写入的类型
 MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",
                             0x08: "PAGE_WRITECOPY"}
 
-logger = logger_utils.LoggerUtils(log_file).logger
+app_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+app_path = os.path.basename(os.path.abspath(sys.argv[0]))
+log_file = app_path.split('.')[0] + '.log'
+logger = logger_utils.mylogger
 
 
-class MEMORY_BASIC_INFORMATION(Structure):
+class MemoryBasicInformation(Structure):
     _fields_ = [
         ("BaseAddress", ctypes.c_void_p),
         ("AllocationBase", ctypes.c_void_p),
@@ -51,7 +51,7 @@ class MEMORY_BASIC_INFORMATION(Structure):
 # 第一步：找key -> 1. 判断可写
 def is_writable_region(pid, address):  # 判断给定的内存地址是否是可写内存区域，因为可写内存区域，才能指针指到这里写数据
     process_handle = ctypes.windll.kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
-    mbi = MEMORY_BASIC_INFORMATION()
+    mbi = MemoryBasicInformation()
     mbi_pointer = byref(mbi)
     size = sizeof(mbi)
     success = ctypes.windll.kernel32.VirtualQueryEx(
@@ -94,12 +94,12 @@ def check_sqlite_pass(db_file, password):
         logger.info(f"{db_file},valid password Success")
         return True
     else:
-        print(f'{db_file},valid password Error')
+        logger.warning(f'{db_file},valid password Error')
         return False
 
 
-# 第一步：找key
-def get_acc_key_by_pid(pid, account):
+# 第一步：拷贝数据库文件和找key
+def copy_db_and_get_acc_key_by_pid(pid, account):
     logger.info("遍历微信内存，去暴力找key......")
     phone_types = [b'android\x00', b'iphone\x00']
     try:
@@ -116,16 +116,18 @@ def get_acc_key_by_pid(pid, account):
         logger.info(f"wechat version：{version}, wechat pid: {pid}")
 
         targetdb = [f.path for f in p.open_files() if f.path[-11:] == 'MicroMsg.db']
-        print("targetdb", targetdb)
+        logger.info(f"找到MicroMsg：{targetdb}")
 
         if len(targetdb) < 1:
             sys.exit(-1)
         else:
+            # 将数据库文件拷贝到项目
             usr_dir = Config.PROJ_USER_PATH
             file_mm = usr_dir + rf"\{account}\{account}_MicroMsg.db"
             if not os.path.exists(os.path.dirname(file_mm)):
                 os.makedirs(os.path.dirname(file_mm))
             shutil.copyfile(targetdb[0], file_mm)
+
         misc_dbs = [f.path for f in p.open_files() if f.path[-7:] == 'Misc.db']
         if len(misc_dbs) < 1:
             logger.error("没有找到微信当前打开的数据文件，是不是你的微信还没有登录？？")
@@ -141,8 +143,8 @@ def get_acc_key_by_pid(pid, account):
         # mylog.info(f"min_address:{min_address:X}")
         phone_addr = None
         for phone_type in phone_types:
-            res = pm.pattern_scan_module(phone_type, "wechatwin.dll",
-                                         return_multiple=True)  # 只在wechatwin.dll这个模块的内存地址段中去寻找电话类型的地址
+            res = pm.pattern_scan_module(phone_type, "WeChatWin.dll",
+                                         return_multiple=True)  # 只在 WeChatWin.dll 这个模块的内存地址段中去寻找电话类型的地址
             if res:
                 phone_addr = res[-1]  # 地址选搜到的最后一个地址
                 break
@@ -156,9 +158,9 @@ def get_acc_key_by_pid(pid, account):
         str_key = None
         logger.info(f"正在从电话类型基址的附近查找……")
         end_time = time.time() + 5
-        j = 0
         k = 0
         while i > min_address:
+            # j 的数列：-1,2,-3,4,-5...
             k = k + 1
             j = (k if k % 2 != 0 else -k)
             i += j
@@ -180,7 +182,7 @@ def get_acc_key_by_pid(pid, account):
                 logger.info(f"found key pointer addr:{i:X}, key_addr:{key_addr:X}")
                 logger.info(f"key:{str_key}")
                 logger.info(f"查找用时：{time.time() + 5 - end_time:.4f}秒")
-                break
+                return str_key
             else:
                 key = None
             if time.time() > end_time:
@@ -189,28 +191,27 @@ def get_acc_key_by_pid(pid, account):
         if not key:
             logger.error("没有找到key")
             sys.exit(-1)
-        return str_key
 
     except Exception as e:
-        print("has some exception ", e)
+        logger.error(f"has some exception {e}")
 
 
 # 第二步：解密
-def decrypt_db_file_by_pwd(db_file_path, pwd):
+def decrypt_db_file_by_str_key_res(db_file_path, str_key_res):
     logger.info("正在对数据库解密......")
     sqlite_file_header = bytes("SQLite format 3", encoding='ASCII') + bytes(1)  # 文件头
     key_size = 32
     default_pagesize = 4096  # 4048数据 + 16IV + 20 HMAC + 12
     default_iter = 64000
     # your_key
-    password = bytes.fromhex(pwd.replace(' ', ''))
+    str_key = bytes.fromhex(str_key_res.replace(' ', ''))
 
     with open(db_file_path, 'rb') as f:
         blist = f.read()
-    print(len(blist))
+    logger.info(f"数据库文件长度：{len(blist)}")
 
     salt = blist[:16]  # 微信将文件头换成了盐
-    key = hashlib.pbkdf2_hmac('sha1', password, salt, default_iter, key_size)  # 获得Key
+    key = hashlib.pbkdf2_hmac('sha1', str_key, salt, default_iter, key_size)  # 获得Key
     logger.info(f"key={key}")
 
     first = blist[16:default_pagesize]  # 丢掉salt
@@ -260,11 +261,10 @@ def decrypt_db_file_by_pwd(db_file_path, pwd):
 
 # 使用pid进行数据库解密
 def decrypt_acc_and_copy_by_pid(pid, account):
-    print("pid:", pid)
     # 获取pid对应账号的wechat key
-    str_key = get_acc_key_by_pid(pid, account)
+    str_key = copy_db_and_get_acc_key_by_pid(pid, account)
     if str_key is None:
-        return False
+        return "获取key失败"
     str_key_res = ' '.join([str_key[i:i + 2] for i in range(0, len(str_key), 2)])
     usr_dir = Config.PROJ_USER_PATH
     file_mm = usr_dir + rf"\{account}\{account}_MicroMsg.db"
@@ -272,6 +272,8 @@ def decrypt_acc_and_copy_by_pid(pid, account):
     logger.info(f"str_key={str_key},str_key_res={str_key_res}")
 
     try:
-        decrypt_db_file_by_pwd(file_mm, str_key_res)
+        decrypt_db_file_by_str_key_res(file_mm, str_key_res)
     except Exception as e:
+        logger.error(e)
         print("decrypt has error:", e)
+        return "解密数据库失败"

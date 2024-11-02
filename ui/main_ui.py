@@ -489,8 +489,8 @@ class MainWindow:
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.master)
         statistic_ui.StatisticWindow(statistic_window)
-        handle_utils.center_window(statistic_window)
-        statistic_window.focus_set()
+        # handle_utils.center_window(statistic_window)
+        # statistic_window.focus_set()
 
     def change_classic_view(self):
         # TODO
@@ -508,8 +508,8 @@ class MainWindow:
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.master)
         setting_ui.SettingWindow(settings_window, self.multiple_status, self.delayed_initialization)
-        handle_utils.center_window(settings_window)
-        settings_window.focus_set()
+        # handle_utils.center_window(settings_window)
+        # settings_window.focus_set()
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
