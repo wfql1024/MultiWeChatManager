@@ -2,6 +2,9 @@ import tkinter as tk
 from tkinter import colorchooser
 
 from resources import Constants
+from utils import logger_utils
+
+logger = logger_utils.mylogger
 
 
 def clean_display_name(display_name):
@@ -19,7 +22,7 @@ def clean_display_name(display_name):
     for index, char in enumerate(display_name):
         code_point = ord(char)
         if code_point > 0xFFFF:
-            print(f"警告: 在位置 {index} 发现不支持的字符 '{char}' (U+{code_point:04X})，已替换为 '_'")
+            logger.warning(f"警告: 在位置 {index} 发现不支持的字符(U+{code_point:04X})，已替换为 '_'")
             new_display_name.append('_')
         else:
             new_display_name.append(char)

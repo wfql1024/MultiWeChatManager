@@ -18,7 +18,6 @@ class LoadingWindow:
         screen_height = self.window.winfo_screenheight()
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
-
         self.window.geometry(f"{window_width}x{window_height}+{x}+{y}")
         self.window.resizable(False, False)
 

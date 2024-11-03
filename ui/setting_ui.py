@@ -87,7 +87,7 @@ class SettingWindow:
         self.version_entry = tk.Entry(master, textvariable=self.version_var, state='readonly', width=70)
         self.version_entry.grid(row=3, column=1, padx=5, pady=5, sticky="we")
 
-        self.screen_size_get_button = ttk.Button(master, text="获取", command=self.auto_get_current_ver)
+        self.screen_size_get_button = ttk.Button(master, text="获取", command=self.auto_get_cur_wechat_ver)
         self.screen_size_get_button.grid(row=3, column=2, padx=5, pady=5)
 
         # 新增第五行 - 屏幕大小
@@ -124,7 +124,7 @@ class SettingWindow:
         self.auto_get_wechat_install_path()
         self.auto_get_wechat_data_path()
         self.auto_get_wechat_dll_dir_path()
-        self.auto_get_current_ver()
+        self.auto_get_cur_wechat_ver()
         self.auto_get_screen_size()
         login_size = subfunc_file.get_login_size_from_setting_ini()
         self.login_size_var.set(login_size)
@@ -153,7 +153,7 @@ class SettingWindow:
         return True
 
     def auto_get_wechat_dll_dir_path(self):
-        path = func_setting.get_wechat_dll_dir_path()
+        path = func_setting.get_wechat_dll_dir()
         if path:
             self.dll_path_var.set(path.replace('\\', '/'))
         else:
@@ -204,7 +204,7 @@ class SettingWindow:
                 messagebox.showerror("错误", "请选择WeChat.exe文件")
 
     def auto_get_wechat_data_path(self):
-        path = func_setting.get_wechat_data_path()
+        path = func_setting.get_wechat_data_dir()
         if path:
             self.data_path_var.set(path.replace('\\', '/'))
         else:
@@ -235,8 +235,8 @@ class SettingWindow:
             else:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
 
-    def auto_get_current_ver(self):
-        version = func_setting.update_current_ver()
+    def auto_get_cur_wechat_ver(self):
+        version = func_setting.get_cur_wechat_ver()
         if not version and self.install_path:
             version = file_utils.get_file_version(self.install_path)
         self.version_var.set(version)
@@ -250,7 +250,8 @@ class SettingWindow:
 
     def auto_get_login_size(self, status):
         subfunc_wechat.clear_idle_wnd_and_process()
-        sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, dict())
+        has_mutex_dict = subfunc_wechat.get_mutex_dict()
+        sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict)
         wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
             print(f"打开了登录窗口{wechat_hwnd}")

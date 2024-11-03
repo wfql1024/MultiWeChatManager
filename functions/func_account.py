@@ -1,5 +1,7 @@
 import base64
 import os
+import subprocess
+import sys
 import time
 from typing import Union, Tuple, List
 
@@ -10,6 +12,35 @@ from functions import func_setting, func_wechat_dll, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, string_utils, image_utils
+
+
+def quit_accounts(accounts):
+    quited_accounts = []
+    for account in accounts:
+        try:
+            nickname, pid = subfunc_file.get_acc_details_from_acc_json(account, nickname=None, pid=None)
+            process = psutil.Process(pid)
+            if process_utils.process_exists(pid) and process.name() == "WeChat.exe":
+                startupinfo = None
+                if sys.platform == 'win32':
+                    startupinfo = subprocess.STARTUPINFO()
+                    startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                result = subprocess.run(
+                    ['taskkill', '/T', '/F', '/PID', f'{pid}'],
+                    startupinfo=startupinfo,
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode == 0:
+                    print(f"结束了 {pid} 的进程树")
+                    quited_accounts.append((nickname, pid))
+                else:
+                    print(f"无法结束 PID {pid} 的进程树，错误：{result.stderr.strip()}")
+            else:
+                print(f"进程 {pid} 已经不存在。")
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass
+    return quited_accounts
 
 
 def get_acc_avatar_from_files(account):
@@ -116,7 +147,7 @@ def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], 
             print(f"发生意外错误: {e}")
 
     start_time = time.time()
-    data_path = func_setting.get_wechat_data_path()
+    data_path = func_setting.get_wechat_data_dir()
     if not data_path:
         return None, None, None
 

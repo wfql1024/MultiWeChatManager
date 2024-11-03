@@ -1,13 +1,11 @@
 # func_setting.py
 import os
-import re
-
 from functions import subfunc_file
 from resources import Config
 from utils import ini_utils, wechat_utils, file_utils
 
 
-def get_wechat_dll_dir_path_by_files():
+def get_wechat_dll_dir_by_files():
     """通过文件遍历获取dll文件夹"""
     install_path = get_wechat_install_path()
     if install_path and install_path != "":
@@ -53,12 +51,12 @@ def get_wechat_install_path():
     return None
 
 
-def get_wechat_data_path():
-    """获取微信数据存储地址"""
+def get_wechat_data_dir():
+    """获取微信数据存储文件夹"""
     # 获取地址的各种方法
     path_finders = [
-        subfunc_file.get_wechat_data_path_from_setting_ini,
-        wechat_utils.get_wechat_data_path_from_user_register,
+        subfunc_file.get_wechat_data_dir_from_setting_ini,
+        wechat_utils.get_wechat_data_dir_from_user_register,
         lambda: os.path.join(os.path.expanduser('~'), 'Documents', 'WeChat Files').replace('\\', '/'),
         lambda: os.path.join(os.environ.get('APPDATA'), 'Tencent', 'WeChat').replace('\\', '/')
     ]
@@ -76,12 +74,12 @@ def get_wechat_data_path():
     return None
 
 
-def get_wechat_dll_dir_path():
+def get_wechat_dll_dir():
     """获取微信dll所在文件夹"""
     path_finders = [
-        subfunc_file.get_wechat_dll_dir_path_from_setting_ini,
-        wechat_utils.get_wechat_dll_dir_path_by_memo_maps,
-        get_wechat_dll_dir_path_by_files,
+        subfunc_file.get_wechat_dll_dir_from_setting_ini,
+        wechat_utils.get_wechat_dll_dir_by_memo_maps,
+        get_wechat_dll_dir_by_files,
     ]
     for index, finder in enumerate(path_finders):
         found_path = finder()
@@ -92,7 +90,7 @@ def get_wechat_dll_dir_path():
     return None
 
 
-def update_current_ver():
+def get_cur_wechat_ver():
     """获取当前使用的版本号"""
     install_path = get_wechat_install_path()
     if install_path is not None:
@@ -101,24 +99,24 @@ def update_current_ver():
         return None
 
 
-def fetch_sub_exe():
+def fetch_setting_or_set_default(setting_key):
     """
-    检查选择的子程序，若没有则添加默认
+    获取配置项，若没有则添加默认
     :return: 已选择的子程序
     """
     chosen_sub_exe = ini_utils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
         Config.INI_SECTION,
-        Config.INI_KEY_SUB_EXE,
+        Config.INI_KEY[setting_key],
     )
     if not chosen_sub_exe or chosen_sub_exe == "":
         ini_utils.save_setting_to_ini(
             Config.SETTING_INI_PATH,
             Config.INI_SECTION,
-            Config.INI_KEY_SUB_EXE,
-            Config.DEFAULT_SUB_EXE
+            Config.INI_KEY[setting_key],
+            Config.INI_DEFAULT_VALUE[setting_key]
         )
-        chosen_sub_exe = Config.DEFAULT_SUB_EXE
+        chosen_sub_exe = Config.INI_DEFAULT_VALUE[setting_key]
     return chosen_sub_exe
 
 
@@ -132,8 +130,25 @@ def toggle_sub_executable(file_name, initialization):
     ini_utils.save_setting_to_ini(
         Config.SETTING_INI_PATH,
         Config.INI_SECTION,
-        Config.INI_KEY_SUB_EXE,
+        Config.INI_KEY["sub_exe"],
         file_name
+    )
+    initialization()
+    return True
+
+
+def toggle_view(view, initialization):
+    """
+    切换视图，之后进入初始化
+    :param view: 选择的视图
+    :param initialization: 初始化方法
+    :return: 成功与否
+    """
+    ini_utils.save_setting_to_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_SECTION,
+        Config.INI_KEY["view"],
+        view
     )
     initialization()
     return True

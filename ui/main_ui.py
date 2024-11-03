@@ -20,13 +20,17 @@ from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
 from ui import about_ui, setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui
-from utils import handle_utils, debug_utils
+from utils import handle_utils, debug_utils, file_utils
 
 
 class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window, debug=None):
+        self.chosen_view = None
+        self.classic_view_menu = None
+        self.unlock_revoke = subfunc_file.get_enable_new_func_from_ini() == "true"
+        self.current_full_version = subfunc_file.get_app_current_version()
         self.is_tree_view = None
         self.tree_view_menu = None
         self.view_menu = None
@@ -155,8 +159,10 @@ class MainWindow:
             print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
 
         install_path = func_setting.get_wechat_install_path()
-        data_path = func_setting.get_wechat_data_path()
-        dll_dir_path = func_setting.get_wechat_dll_dir_path()
+        data_path = func_setting.get_wechat_data_dir()
+        dll_dir_path = func_setting.get_wechat_dll_dir()
+        func_setting.fetch_setting_or_set_default("sub_exe")
+        func_setting.fetch_setting_or_set_default("view")
 
         if not install_path or not data_path or not dll_dir_path:
             self.show_setting_error()
@@ -183,8 +189,6 @@ class MainWindow:
         self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
                                           command=self.open_settings, style='Custom.TButton')
         self.settings_button.pack()
-        # 检查选择的子程序，若没有则添加默认
-        func_setting.fetch_sub_exe()
 
     def finalize_initialization(self):
         """路径检查完毕后进入，销毁等待窗口，居中显示主窗口"""
@@ -248,41 +252,23 @@ class MainWindow:
         self.edit_menu.add_command(label="刷新", command=self.create_main_frame_and_menu)
 
         # ————————————————————————————视图菜单————————————————————————————
+        self.chosen_view = func_setting.fetch_setting_or_set_default("view")
         self.view_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="视图", menu=self.view_menu)
-        # -经典
-        self.view_menu.add_command(label="经典", command=self.change_classic_view)
-        # >列表
-        self.is_tree_view = tk.BooleanVar()
-        self.show_avatar = tk.BooleanVar()
-        self.show_origin_acc_id = tk.BooleanVar()
-        self.show_now_acc_id = tk.BooleanVar()
-        self.show_nickname = tk.BooleanVar()
-        self.show_config_status = tk.BooleanVar()
-        self.show_pid = tk.BooleanVar()
-        self.show_has_mutex = tk.BooleanVar()
-        self.tree_view_menu = tk.Menu(self.view_menu, tearoff=0)
-        self.view_menu.add_cascade(label="列表", menu=self.tree_view_menu)
-        self.tree_view_menu.add_checkbutton(
-            label="开启",
-            variable=self.is_tree_view,
-            command=self.change_tree_view
-        )
-        self.tree_view_menu.add_separator()  # ————————————————分割线————————————————
-        self.tree_view_menu.add_checkbutton(label="显示头像", variable=self.show_avatar,
-                                            command=partial(self.toggle_show_or_not_show, view="avatar"))
-        self.tree_view_menu.add_checkbutton(label="显示原始微信号", variable=self.show_origin_acc_id,
-                                            command=partial(self.toggle_show_or_not_show, view="origin_acc_id"))
-        self.tree_view_menu.add_checkbutton(label="显示当前微信号", variable=self.show_now_acc_id,
-                                            command=partial(self.toggle_show_or_not_show, view="now_acc_id"))
-        self.tree_view_menu.add_checkbutton(label="显示昵称", variable=self.show_nickname,
-                                            command=partial(self.toggle_show_or_not_show, view="nickname"))
-        self.tree_view_menu.add_checkbutton(label="显示配置", variable=self.show_config_status,
-                                            command=partial(self.toggle_show_or_not_show, view="config_status"))
-        self.tree_view_menu.add_checkbutton(label="显示pid", variable=self.show_pid,
-                                            command=partial(self.toggle_show_or_not_show, view="pid"))
-        self.tree_view_menu.add_checkbutton(label="显示互斥体", variable=self.show_has_mutex,
-                                            command=partial(self.toggle_show_or_not_show, view="has_mutex"))
+        if self.chosen_view == "tree":
+            # -经典
+            self.view_menu.add_command(label="    经典", command=self.change_classic_view)
+            # >列表
+            self.tree_view_menu = tk.Menu(self.view_menu, tearoff=0)
+            self.view_menu.add_cascade(label="√ 列表", menu=self.tree_view_menu)
+            self.tree_view_menu.add_separator()  # ————————————————分割线————————————————
+        elif self.chosen_view == "classic":
+            # -列表
+            self.view_menu.add_command(label="    列表", command=self.change_tree_view)
+            # >经典
+            self.classic_view_menu = tk.Menu(self.view_menu, tearoff=0)
+            self.view_menu.add_cascade(label="√ 经典", menu=self.classic_view_menu)
+            self.classic_view_menu.add_separator()  # ————————————————分割线————————————————
 
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
@@ -296,23 +282,18 @@ class MainWindow:
             self.settings_menu.add_command(label="应用设置", command=self.open_settings)
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         # -防撤回
-        unlock_revoke = subfunc_file.get_enable_new_func_from_ini() == "true"
-        if unlock_revoke is True:
-            # -防撤回
-            self.revoke_status, _, _ = func_wechat_dll.check_dll("revoke")
-            if self.revoke_status == "不可用":
-                self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}", state="disabled")
-            elif self.revoke_status.startswith("错误"):
-                self.revoke_err = tk.Menu(self.settings_menu, tearoff=0)
-                self.settings_menu.add_cascade(label="防撤回   错误!", menu=self.revoke_err, foreground="red")
-                self.revoke_err.add_command(label=f"[点击复制]{self.revoke_status}", foreground="red",
-                                            command=lambda: self.master.clipboard_append(self.revoke_status))
-            else:
-                self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}",
-                                               command=partial(self.toggle_patch_mode, mode="revoke"))
-            self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        self.revoke_status, _, _ = func_wechat_dll.check_dll("revoke")
+        if self.revoke_status == "不可用":
+            self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}", state="disabled")
+        elif self.revoke_status.startswith("错误"):
+            self.revoke_err = tk.Menu(self.settings_menu, tearoff=0)
+            self.settings_menu.add_cascade(label="防撤回   错误!", menu=self.revoke_err, foreground="red")
+            self.revoke_err.add_command(label=f"[点击复制]{self.revoke_status}", foreground="red",
+                                        command=lambda: self.master.clipboard_append(self.revoke_status))
         else:
-            pass
+            self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}",
+                                           command=partial(self.toggle_patch_mode, mode="revoke"))
+        self.settings_menu.add_separator()  # ————————————————分割线————————————————
         # -全局多开
         self.multiple_status, _, _ = func_wechat_dll.check_dll("multiple")
         if self.multiple_status == "不可用":
@@ -334,7 +315,7 @@ class MainWindow:
         else:
             self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
             # 获取已选择的子程序（假设 func_setting.fetch_sub_exe() 返回 'python', 'handle' 或其他值）
-            chosen_sub_exe = func_setting.fetch_sub_exe()
+            chosen_sub_exe = func_setting.fetch_setting_or_set_default("sub_exe")
             self.chosen_sub_exe_var.set(chosen_sub_exe)  # 设置初始选中的子程序
             self.settings_menu.add_cascade(label="子程序     选择", menu=self.sub_executable_menu)
             # 添加 Python 的单选按钮
@@ -369,16 +350,31 @@ class MainWindow:
         self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.delayed_initialization))
 
         # ————————————————————————————帮助菜单————————————————————————————
+        # 检查版本表是否当天已更新
+        if (not os.path.exists(Config.VER_ADAPTATION_JSON_PATH) or
+                not file_utils.is_latest_file(Config.VER_ADAPTATION_JSON_PATH)):
+            subfunc_file.fetch_config_data_from_remote()
+        about_text = "关于"
+        help_text = "帮助"
+        if os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
+            result = func_update.split_vers_by_cur_from_local(self.current_full_version)
+            if result:
+                new_versions, old_versions = result
+                if len(new_versions) != 0:
+                    about_text = "✨关于"
+                    help_text = "✨帮助"
+        else:
+            about_text = "关于"
         self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
-        self.menu_bar.add_cascade(label="帮助", menu=self.help_menu)
+        self.menu_bar.add_cascade(label=help_text, menu=self.help_menu)
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
         self.help_menu.add_command(label="更新日志", command=self.open_update_log)
-        self.help_menu.add_command(label="关于", command=self.open_about)
+        self.help_menu.add_command(label=about_text, command=self.open_about)
 
         # ————————————————————————————作者标签————————————————————————————
-        if unlock_revoke is True:
+        if self.unlock_revoke is True:
             self.menu_bar.add_command(label=Strings.ENABLED_NEW_FUNC)
             self.menu_bar.entryconfigure(Strings.ENABLED_NEW_FUNC, state="disabled")
         else:
@@ -390,6 +386,8 @@ class MainWindow:
         print(f"刷新.........................................................")
         # 菜单也刷新
         print(f"加载菜单栏.........................................................")
+        self.unlock_revoke = subfunc_file.get_enable_new_func_from_ini() == "true"
+        self.current_full_version = subfunc_file.get_app_current_version()
         self.create_menu_bar()
 
         print(f"加载主界面.........................................................")
@@ -404,7 +402,6 @@ class MainWindow:
         finally:
             # 恢复刷新可用性
             self.edit_menu.entryconfig("刷新", state="normal")
-
         # 直接调用 on_canvas_configure 方法
         self.canvas.update_idletasks()
 
@@ -426,9 +423,14 @@ class MainWindow:
             return
 
         # 创建账号列表界面
-        # classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path, self.multiple_status)
-        treeview_row_ui.TreeviewRowUI(self, self.master, self.main_frame, result, self.data_path,
-                                      self.multiple_status)
+        if self.chosen_view == "classic":
+            classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path,
+                                        self.multiple_status)
+        elif self.chosen_view == "tree":
+            treeview_row_ui.TreeviewRowUI(self, self.master, self.main_frame, result, self.data_path,
+                                          self.multiple_status)
+        else:
+            pass
 
         subfunc_file.update_refresh_time_statistic(str(len(logged_in)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
@@ -489,20 +491,13 @@ class MainWindow:
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.master)
         statistic_ui.StatisticWindow(statistic_window)
-        # handle_utils.center_window(statistic_window)
-        # statistic_window.focus_set()
 
     def change_classic_view(self):
-        # TODO
-        pass
+        self.master.unbind("<Configure>")
+        func_setting.toggle_view("classic", self.delayed_initialization)
 
     def change_tree_view(self):
-        # TODO
-        pass
-
-    def toggle_show_or_not_show(self, view):
-        # TODO
-        pass
+        func_setting.toggle_view("tree", self.delayed_initialization)
 
     def open_settings(self):
         """打开设置窗口"""
@@ -552,8 +547,7 @@ class MainWindow:
 
     def open_update_log(self):
         """打开版本日志窗口"""
-        current_full_version = subfunc_file.get_app_current_version()
-        new_versions, old_versions = func_update.split_versions_by_current(current_full_version)
+        new_versions, old_versions = func_update.split_vers_by_cur_from_local(self.current_full_version)
         update_log_window = tk.Toplevel(self.master)
         update_log_ui.UpdateLogWindow(update_log_window, old_versions)
         handle_utils.center_window(update_log_window)

@@ -1,8 +1,20 @@
 import os
 import platform
 import re
+from datetime import datetime
 
 import win32api
+
+
+def is_latest_file(file_path):
+    # 获取文件的修改时间（时间戳）
+    modification_time = os.path.getmtime(file_path)
+    # 转换为日期格式
+    modification_date = datetime.fromtimestamp(modification_time).date()
+    # 获取今天的日期
+    today = datetime.now().date()
+
+    return modification_date >= today
 
 
 def find_dir(start_dir, dirname):
@@ -88,3 +100,4 @@ def get_sys_major_version_name():
 
 if __name__ == '__main__':
     print(platform.platform())
+    print(platform.release())

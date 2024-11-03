@@ -22,16 +22,11 @@ class UpdateLogWindow:
         screen_height = master.winfo_screenheight()
         x = (screen_width - window_width) // 2
         y = (screen_height - window_height) // 2
-
         master.geometry(f"{window_width}x{window_height}+{x}+{y}")
-
-        # 禁用窗口大小调整
+        # 禁用窗口大小调整、移除其余无用按钮、置顶
         master.resizable(False, False)
-
         # 移除窗口装饰并设置为工具窗口
-        master.overrideredirect(True)
         master.attributes('-toolwindow', True)
-
         master.grab_set()
 
         main_frame = ttk.Frame(master, padding="5")
@@ -44,7 +39,7 @@ class UpdateLogWindow:
         print("显示更新日志")
 
         if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
-            config_data = subfunc_file.fetch_config_data()
+            config_data = subfunc_file.fetch_config_data_from_remote()
         else:
             print("本地版本对照表存在，读取中...")
             try:
@@ -52,7 +47,7 @@ class UpdateLogWindow:
                     config_data = json.load(f)
             except Exception as e:
                 print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
-                config_data = subfunc_file.fetch_config_data()
+                config_data = subfunc_file.fetch_config_data_from_remote()
                 print(f"从云端下载了文件：{config_data}")
                 raise RuntimeError("本地 JSON 文件读取失败")
 

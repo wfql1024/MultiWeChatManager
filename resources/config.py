@@ -6,8 +6,6 @@ current_file_dir = os.path.dirname(os.path.abspath(__file__))
 class Config:
     VER_STATUS = 'Alpha'
 
-    INI_KEY_CUR_VER = 'current_version'
-    INI_KEY_DELAY_TIME = 'delay_time'
     INI_SECTION = 'default'
     INI_KEY_INSTALL_PATH = 'install_path'
     INI_KEY_DATA_PATH = 'data_path'
@@ -17,14 +15,22 @@ class Config:
     INI_KEY_SUB_EXE = 'sub_executable'
     INI_KEY_ENABLE_NEW_FUNC = 'enable_new_func'
 
+    INI_KEY = {
+        "sub_exe": "sub_executable",
+        "view": "view"
+    }
+
+    INI_DEFAULT_VALUE = {
+        "sub_exe": "python",
+        "view": "tree"
+    }
+
     JSON_KEY_NOTE = 'note'
     JSON_KEY_PID = 'pid'
     JSON_KEY_NICKNAME = 'nickname'
     JSON_KEY_ALIAS = 'alias'
     JSON_KEY_AVATAR_URL = 'avatar_url'
     JSON_KEY_HAS_MUTEX = 'has_mutex'
-
-    DEFAULT_SUB_EXE = 'python'
 
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))
     PROJ_USER_PATH = fr'{PROJ_PATH}\user_files'

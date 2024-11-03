@@ -1,53 +1,7 @@
-import functools
-import logging
-import os
 import sys
 import logging
 import os
 import colorlog
-from logging.handlers import RotatingFileHandler
-from datetime import datetime
-from io import StringIO
-
-
-# class PrintToLogger:
-#     def __init__(self, logger):
-#         self.logger = logger
-#
-#     def write(self, message):
-#         if message.strip():  # 忽略空白行
-#             self.logger.info(message.strip())
-#
-#     def flush(self):
-#         pass
-#
-#
-# def log_prints(func):
-#     @functools.wraps(func)
-#     def wrapper(*args, **kwargs):
-#         # 保存原始的 stdout
-#         original_stdout = sys.stdout
-#         # 创建一个 StringIO 对象来捕获输出
-#         string_io = StringIO()
-#         # 创建一个 PrintToLogger 对象
-#         print_to_logger = PrintToLogger(logger)
-#
-#         try:
-#             # 重定向 stdout 到我们的 PrintToLogger 对象
-#             sys.stdout = print_to_logger
-#             # 执行原始函数
-#             return func(*args, **kwargs)
-#         finally:
-#             # 恢复原始的 stdout
-#             sys.stdout = original_stdout
-#
-#     return wrapper
-#
-#
-# @log_prints
-# def my_function():
-#     print("This is a test message")
-#     print("Another test message")
 
 
 class LoggerUtils:
@@ -80,7 +34,7 @@ class LoggerUtils:
         ch_log_format = colorlog.ColoredFormatter(default_formats["color_format"], log_colors=log_colors_config)
 
         # 创建文件处理器
-        log_fh = logging.FileHandler(file)
+        log_fh = logging.FileHandler(file, encoding='utf-8')
         log_fh.setLevel(logging.DEBUG)
         log_fh.setFormatter(fh_log_format)
         logger.addHandler(log_fh)

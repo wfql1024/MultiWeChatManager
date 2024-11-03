@@ -5,7 +5,7 @@ import sys
 import time
 import tkinter as tk
 from functools import partial
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 import psutil
 
@@ -375,41 +375,20 @@ class ClassicRowUI:
 
     def quit_selected_accounts(self):
         """退出所选账号"""
-        # messagebox.showinfo("待修复", "测试中发现重大bug，先不给点，略~")
-        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
         accounts = [
             account
             for account, row in self.logged_in_rows.items()
             if row.is_checked()
         ]
-        quited_accounts = []
+        accounts_to_quit = []
         for account in accounts:
-            try:
-                pid = account_data.get(account, {}).get("pid", None)
-                nickname = account_data.get(account, {}).get("nickname", None)
-                process = psutil.Process(pid)
-                if process_utils.process_exists(pid) and process.name() == "WeChat.exe":
-                    startupinfo = None
-                    if sys.platform == 'win32':
-                        startupinfo = subprocess.STARTUPINFO()
-                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    result = subprocess.run(
-                        ['taskkill', '/T', '/F', '/PID', f'{pid}'],
-                        startupinfo=startupinfo,
-                        capture_output=True,
-                        text=True
-                    )
-                    if result.returncode == 0:
-                        print(f"结束了 {pid} 的进程树")
-                        quited_accounts.append((nickname, pid))
-                    else:
-                        print(f"无法结束 PID {pid} 的进程树，错误：{result.stderr.strip()}")
-                else:
-                    print(f"进程 {pid} 已经不存在。")
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
-        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
-        self.main_window.create_main_frame_and_menu()
+            nickname, pid = subfunc_file.get_acc_details_from_acc_json(account, nickname=None, pid=None)
+            accounts_to_quit.append(f"[{nickname} {pid}]")
+        if messagebox.askokcancel("提示",
+                                  f"确认退登：\n{', '.join([str(a) for a in accounts_to_quit])}？"):
+            quited_accounts = func_account.quit_accounts(accounts)
+            messagebox.showinfo("提示", f"已退登：{quited_accounts}")
+            self.main_window.create_main_frame_and_menu()
 
     def auto_login_selected_accounts(self):
         """登录所选账号"""

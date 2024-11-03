@@ -1,9 +1,9 @@
 # 获取最新版本号
+import json
 import os
 import shutil
 import subprocess
 import sys
-import zipfile
 from tkinter import messagebox
 
 import requests
@@ -13,9 +13,10 @@ from resources import Config
 from utils import file_utils
 
 
-def split_versions_by_current(current_ver):
+def split_vers_by_cur_from_local(current_ver):
     try:
-        config_data = subfunc_file.fetch_config_data()
+        with open(Config.VER_ADAPTATION_JSON_PATH, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
         if not config_data:
             print("没有数据")
             return "错误：没有数据"
@@ -70,14 +71,14 @@ def download_files(file_urls, download_dir, progress_callback, on_complete_callb
 
 def close_and_update(tmp_path):
     if getattr(sys, 'frozen', False):
-        answer = messagebox.askokcancel("将关闭主程序进行更新操作，请确认")
+        answer = messagebox.askokcancel("提醒", "将关闭主程序进行更新操作，请确认")
         if answer:
             exe_path = sys.executable
             current_version = subfunc_file.get_app_current_version()
             install_dir = os.path.dirname(exe_path)
 
-            update_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'update.exe')
-            new_update_exe_path = os.path.join(os.path.dirname(tmp_path), 'update.exe')
+            update_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'Updater.exe')
+            new_update_exe_path = os.path.join(os.path.dirname(tmp_path), 'Updater.exe')
             try:
                 shutil.copy(update_exe_path, new_update_exe_path)
                 print(f"成功将 {update_exe_path} 拷贝到 {new_update_exe_path}")

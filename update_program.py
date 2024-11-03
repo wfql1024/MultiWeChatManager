@@ -7,6 +7,7 @@ import tkinter as tk
 import os
 import sys
 import zipfile
+from tkinter import ttk
 
 CREATE_NO_WINDOW = 0x08000000
 
@@ -64,7 +65,7 @@ def quit_main():
             print(f"结束进程时出错: {e}")
 
 
-def update_and_reopen(args):
+def update_and_reopen(args, root):
     # 提取参数
     before_version = args.before_version
     install_dir = args.install_dir
@@ -139,6 +140,8 @@ def update_and_reopen(args):
     else:
         print("微信多开管理器.exe 不存在。")
 
+    root.destory()
+
 
 def main():
     # 设置环境变量，告诉 Python 不使用代理
@@ -159,8 +162,8 @@ def main():
     root.title("更新程序")
 
     # 打开升级程序窗口
-    window_width = 600
-    window_height = 500
+    window_width = 300
+    window_height = 100
     screen_width = root.winfo_screenwidth()
     screen_height = root.winfo_screenheight()
     x = (screen_width - window_width) // 2
@@ -169,12 +172,19 @@ def main():
     # 禁用窗口大小调整
     root.resizable(False, False)
     # 移除窗口装饰并设置为工具窗口
-    root.overrideredirect(True)
-    root.overrideredirect(False)
     root.attributes('-toolwindow', True)
+    root.grab_set()
+
+    label = ttk.Label(root, text="正在升级，请勿关闭该窗口……")
+    label.pack(pady=20)
+
+    progress = ttk.Progressbar(root, mode="indeterminate", length=250)
+    progress.pack(pady=10)
+
+    progress.start(5)
 
     # 将更新和重启的操作放在一个线程中执行
-    threading.Thread(target=update_and_reopen, args=(args,)).start()
+    threading.Thread(target=update_and_reopen, args=(args, root)).start()
 
     root.mainloop()
 

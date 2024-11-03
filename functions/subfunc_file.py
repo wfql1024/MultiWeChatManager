@@ -7,7 +7,9 @@ from typing import Tuple, Any
 import requests
 
 from resources import Config, Strings
-from utils import json_utils, ini_utils, file_utils
+from utils import json_utils, ini_utils, file_utils, logger_utils, string_utils
+
+logger = logger_utils.mylogger
 
 
 def save_wechat_install_path_to_setting_ini(value):
@@ -45,12 +47,12 @@ def get_wechat_install_path_from_setting_ini():
                                           Config.INI_KEY_INSTALL_PATH)
 
 
-def get_wechat_data_path_from_setting_ini():
+def get_wechat_data_dir_from_setting_ini():
     return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                           Config.INI_KEY_DATA_PATH)
 
 
-def get_wechat_dll_dir_path_from_setting_ini():
+def get_wechat_dll_dir_from_setting_ini():
     return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
                                           Config.INI_KEY_DLL_DIR_PATH)
 
@@ -93,7 +95,7 @@ def update_acc_details_to_acc_json(account, **kwargs) -> None:
     # 遍历 kwargs 中的所有参数，并更新到 account_data 中
     for key, value in kwargs.items():
         account_data[account][key] = value
-        print(f"更新[{account}][{key}]:{value}")
+        # logger.info(f"在json更新[{account}][{key}]:{string_utils.clean_display_name(str(value))}")
     json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
 
 
@@ -108,9 +110,9 @@ def get_acc_details_from_acc_json(account: str, **kwargs) -> Tuple[Any, ...]:
     account_info = account_data.get(account, {})
     result = tuple()
     for key, default in kwargs.items():
-        result += (account_info.get(key, default),)
-        print(f"获取[{account}][{key}]：{account_info.get(key, default)}")
-    print(f"└———")
+        value = account_info.get(key, default)
+        result += (value,)
+        # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
     return result
 
 
@@ -282,7 +284,7 @@ def update_refresh_time_statistic(acc_count, time_spent):
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
-def fetch_config_data():
+def fetch_config_data_from_remote():
     """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
     print(f"正从远程源下载...")
     urls = [Strings.VER_ADAPTATION_JSON_GITEE, Strings.VER_ADAPTATION_JSON_GITHUB]

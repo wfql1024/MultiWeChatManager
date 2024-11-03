@@ -209,8 +209,7 @@ class AboutWindow:
         scrollbar.config(command=reference_text.yview)
 
     def check_for_updates(self, current_full_version):
-        result = func_update.split_versions_by_current(current_full_version)
-        print(result)
+        result = func_update.split_vers_by_cur_from_local(current_full_version)
         if result:
             new_versions, old_versions = result
             if len(new_versions) != 0:
@@ -219,8 +218,10 @@ class AboutWindow:
                 handle_utils.center_window(update_log_window)
             else:
                 messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
+                return True
         else:
             messagebox.showinfo("错误", f"获取失败。")
+            return False
 
 
 if __name__ == '__main__':

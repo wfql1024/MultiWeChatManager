@@ -26,7 +26,7 @@ def fetch_acc_detail_by_pid(pid, account, after):
     user_directory = Config.PROJ_USER_PATH
     db_file = user_directory + rf"/{account}/edit_{account}_MicroMsg.db"
 
-    data_path = func_setting.get_wechat_data_path()
+    data_path = func_setting.get_wechat_data_dir()
     excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF'}
     folders = set(
         folder for folder in os.listdir(data_path)

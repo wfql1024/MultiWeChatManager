@@ -15,16 +15,16 @@ from utils import file_utils
 
 def check_dll(mode):
     """检查当前的dll状态，判断是否为全局多开或者不可用"""
-    dll_dir_path = func_setting.get_wechat_dll_dir_path()
-    dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
-    current_ver = func_setting.update_current_ver()
+    dll_dir = func_setting.get_wechat_dll_dir()
+    dll_path = os.path.join(dll_dir, "WeChatWin.dll")
+    cur_wechat_ver = func_setting.get_cur_wechat_ver()
 
     try:
         with open(dll_path, 'rb') as f:
             dll_content = f.read()
 
         if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
-            config_data = subfunc_file.fetch_config_data()
+            config_data = subfunc_file.fetch_config_data_from_remote()
         else:
             print("本地版本对照表存在，读取中...")
             try:
@@ -32,15 +32,15 @@ def check_dll(mode):
                     config_data = json.load(f)
             except Exception as e:
                 print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
-                config_data = subfunc_file.fetch_config_data()
+                config_data = subfunc_file.fetch_config_data_from_remote()
                 print(f"从云端下载了文件：{config_data}")
                 raise RuntimeError("本地 JSON 文件读取失败")
 
         if not config_data:
             return "错误：没有数据", None, None
 
-        result1 = config_data[mode][current_ver]["STABLE"]["pattern"]
-        result2 = config_data[mode][current_ver]["PATCH"]["pattern"]
+        result1 = config_data[mode][cur_wechat_ver]["STABLE"]["pattern"]
+        result2 = config_data[mode][cur_wechat_ver]["PATCH"]["pattern"]
 
         pattern1_hex_list = result1.split(',')
         pattern2_hex_list = result2.split(',')
@@ -66,7 +66,7 @@ def check_dll(mode):
     except FileNotFoundError as fe:
         return f"错误：未找到文件，请检查路径。{fe}", None, None
     except KeyError as ke:
-        subfunc_file.fetch_config_data()
+        subfunc_file.fetch_config_data_from_remote()
         return f"错误，未找到该版本的适配：{ke}", None, None
     except (TimeoutError, RuntimeError, Exception) as e:
         return f"错误：{str(e)}", None, None
@@ -103,7 +103,7 @@ def switch_dll(mode):
             return False
 
     # 获取 DLL 路径
-    dll_dir_path = func_setting.get_wechat_dll_dir_path()
+    dll_dir_path = func_setting.get_wechat_dll_dir()
     # 获取桌面路径
     desktop_path = winshell.desktop()
     # 定义目标路径和文件名
@@ -117,15 +117,15 @@ def switch_dll(mode):
     try:
         with open(dll_path, 'r+b') as f:
             result = None
-            mmapped_file = mmap.mmap(f.fileno(), 0)
+            mmap_file = mmap.mmap(f.fileno(), 0)
 
             current_mode, stable_pattern, patch_pattern = check_dll(mode)
 
             if current_mode == "已开启":
                 print(f"当前：{mode}已开启")
-                pos = mmapped_file.find(patch_pattern)
+                pos = mmap_file.find(patch_pattern)
                 if pos != -1:
-                    mmapped_file[pos:pos + len(patch_pattern)] = stable_pattern
+                    mmap_file[pos:pos + len(patch_pattern)] = stable_pattern
                     print("替换完成")
                     result = False
                 else:
@@ -139,9 +139,9 @@ def switch_dll(mode):
                                         "当前是您该版本首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
                     shutil.copyfile(dll_path, bak_path)
                     shutil.copyfile(dll_path, bak_desktop_path)
-                pos = mmapped_file.find(stable_pattern)
+                pos = mmap_file.find(stable_pattern)
                 if pos != -1:
-                    mmapped_file[pos:pos + len(stable_pattern)] = patch_pattern
+                    mmap_file[pos:pos + len(stable_pattern)] = patch_pattern
                     print("替换完成")
                     result = True
                 else:
@@ -149,8 +149,8 @@ def switch_dll(mode):
             else:
                 print("非法操作")
 
-            mmapped_file.flush()
-            mmapped_file.close()
+            mmap_file.flush()
+            mmap_file.close()
 
         print("所有操作完成")
         return result
@@ -161,12 +161,3 @@ def switch_dll(mode):
     except Exception as e:
         print(f"修改 DLL 文件时出错: {str(e)}")
         return result
-
-
-if __name__ == "__main__":
-    dll_dir_path = func_setting.get_wechat_dll_dir_path()
-    # dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
-    # bak_path = os.path.join(dll_dir_path, "WeChatWin_bak.dll")
-    # if not os.path.exists(bak_path) or (
-    #         os.path.exists(bak_path) and file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path)):
-    #     print("没有备份")

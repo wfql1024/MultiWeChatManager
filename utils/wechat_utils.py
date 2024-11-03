@@ -64,7 +64,7 @@ def get_wechat_install_path_from_user_register():
     return None
 
 
-def get_wechat_data_path_from_user_register():
+def get_wechat_data_dir_from_user_register():
     try:
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Tencent\WeChat", 0, winreg.KEY_READ)
         value, _ = winreg.QueryValueEx(key, "FileSavePath")
@@ -76,7 +76,7 @@ def get_wechat_data_path_from_user_register():
     return None
 
 
-def get_wechat_dll_dir_path_by_memo_maps():
+def get_wechat_dll_dir_by_memo_maps():
     pids = process_utils.get_process_ids_by_name("WeChat.exe")
     if len(pids) == 0:
         print(f"没有运行微信。")

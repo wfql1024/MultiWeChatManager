@@ -1,20 +1,16 @@
-import os
-import shutil
+import time
 
 from PIL import ImageTk, Image
-from utils import widget_utils, string_utils
-import subprocess
-import sys
+from utils import widget_utils, string_utils, logger_utils
 import tkinter as tk
 from functools import partial
-from tkinter import ttk
-
-import psutil
+from tkinter import ttk, messagebox
 
 from functions import func_config, func_login, func_account, subfunc_file
-from resources.config import Config
 from ui import detail_ui
-from utils import handle_utils, json_utils, process_utils
+from utils import handle_utils
+
+logger = logger_utils.mylogger
 
 
 def try_convert(value):
@@ -49,6 +45,7 @@ class TreeviewRowUI:
         style.configure("RowTreeview", background="#FFFFFF", foreground="black", rowheight=50,
                         selectmode="none", borderwidth=20)
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
+        self.master.bind("<Configure>", self.adjust_columns_on_maximize)
 
         if len(logged_in_list) != 0:
             # 已登录框架=已登录标题+已登录列表
@@ -82,10 +79,10 @@ class TreeviewRowUI:
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
 
             self.logged_in_tree = self.create_table("logged_in")
-            self.display_logged_in_table(logged_in_list)
+            self.display_table(logged_in_list, "logged_in")
             self.update_top_title(True)
-            self.logged_in_tree.bind("<Leave>", lambda event: setattr(self, 'hovered_item', None))
-            self.logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion, is_logged_in=True))
+            self.logged_in_tree.bind("<Leave>", partial(self.on_leave))
+            self.logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion))
             self.logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in=True))
             self.logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in=True))
 
@@ -121,10 +118,10 @@ class TreeviewRowUI:
 
         # 更新顶部复选框状态
         self.not_logged_in_tree = self.create_table("not_logged_in")
-        self.display_not_logged_in_table(not_logged_in_list)
+        self.display_table(not_logged_in_list, "not_logged_in")
         self.update_top_title(False)
-        self.not_logged_in_tree.bind("<Leave>", lambda event: setattr(self, 'hovered_item', None))
-        self.not_logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion, is_logged_in=False))
+        self.not_logged_in_tree.bind("<Leave>", partial(self.on_leave))
+        self.not_logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion))
         self.not_logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in=False))
         self.not_logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in=False))
         self.master.bind("<Configure>", self.adjust_columns_on_maximize)
@@ -251,36 +248,16 @@ class TreeviewRowUI:
     def quit_selected_accounts(self):
         """退出所选账号"""
         # messagebox.showinfo("待修复", "测试中发现重大bug，先不给点，略~")
-        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
         accounts = self.selected_logged_in_items
-        quited_accounts = []
+        accounts_to_quit = []
         for account in accounts:
-            try:
-                pid = account_data.get(account, {}).get("pid", None)
-                nickname = account_data.get(account, {}).get("nickname", None)
-                process = psutil.Process(pid)
-                if process_utils.process_exists(pid) and process.name() == "WeChat.exe":
-                    startupinfo = None
-                    if sys.platform == 'win32':
-                        startupinfo = subprocess.STARTUPINFO()
-                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    result = subprocess.run(
-                        ['taskkill', '/T', '/F', '/PID', f'{pid}'],
-                        startupinfo=startupinfo,
-                        capture_output=True,
-                        text=True
-                    )
-                    if result.returncode == 0:
-                        print(f"结束了 {pid} 的进程树")
-                        quited_accounts.append((nickname, pid))
-                    else:
-                        print(f"无法结束 PID {pid} 的进程树，错误：{result.stderr.strip()}")
-                else:
-                    print(f"进程 {pid} 已经不存在。")
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
-        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
-        self.main_window.create_main_frame_and_menu()
+            nickname, pid = subfunc_file.get_acc_details_from_acc_json(account, nickname=None, pid=None)
+            accounts_to_quit.append(f"[{nickname} {pid}]")
+        if messagebox.askokcancel("提示",
+                                  f"确认退登：\n{', '.join([str(a) for a in accounts_to_quit])}？"):
+            quited_accounts = func_account.quit_accounts(accounts)
+            messagebox.showinfo("提示", f"已退登：{quited_accounts}")
+            self.main_window.create_main_frame_and_menu()
 
     def auto_login_selected_accounts(self):
         """登录所选账号"""
@@ -332,44 +309,13 @@ class TreeviewRowUI:
 
         return tree
 
-    def display_logged_in_table(self, accounts):
-        for account in accounts:
-            display_name = func_account.get_account_display_name(account)
-            cleaned_display_name = string_utils.clean_display_name(display_name)
-            config_status = func_config.get_config_status_by_account(account, self.data_path)
-            avatar_url, alias, nickname, pid = subfunc_file.get_acc_details_from_acc_json(
-                account,
-                avatar_url=None,
-                alias="请获取数据",
-                nickname="请获取数据",
-                pid=None
-            )
-            cleaned_nickname = string_utils.clean_display_name(nickname)
-
-            img = func_account.get_acc_avatar_from_files(account)
-            img = img.resize((44, 44), Image.Resampling.NEAREST)
-            photo = ImageTk.PhotoImage(img)
-
-            self.photo_images.append(photo)
-
-            try:
-                self.logged_in_tree.insert("", "end", iid=account, image=photo,
-                                           values=(display_name, config_status, pid, account, alias, nickname))
-            except Exception as e:
-                print("含有超出字符。", e)
-                self.logged_in_tree.insert("", "end", iid=account, image=photo,
-                                           values=(cleaned_display_name, config_status,
-                                                   pid, account, alias, cleaned_nickname))
-
-        self.logged_in_tree.config(height=len(accounts))
-
     def display_table(self, accounts, is_logged_in):
         if is_logged_in == "logged_in":
             tree = self.logged_in_tree
         elif is_logged_in == "not_logged_in":
             tree = self.not_logged_in_tree
         else:
-            tree = None
+            tree = ttk.Treeview(self.main_frame, show='tree', height=1, style="RowTreeview")
         for account in accounts:
             display_name = func_account.get_account_display_name(account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
@@ -392,11 +338,14 @@ class TreeviewRowUI:
             try:
                 tree.insert("", "end", iid=account, image=photo,
                             values=(display_name, config_status, pid, account, alias, nickname))
-            except Exception as e:
-                print("含有超出字符。", e)
+            except Exception as ec:
+                logger.warning(ec)
                 tree.insert("", "end", iid=account, image=photo,
                             values=(cleaned_display_name, config_status,
                                     pid, account, alias, cleaned_nickname))
+
+            if config_status == "无配置" and is_logged_in == "not_logged_in":
+                widget_utils.add_a_tag_to_item(self.not_logged_in_tree, account, "disabled")
 
         tree.config(height=len(accounts))
 
@@ -422,8 +371,8 @@ class TreeviewRowUI:
             try:
                 self.not_logged_in_tree.insert("", "end", iid=account, image=photo,
                                                values=(display_name, config_status, pid, account, alias, nickname))
-            except Exception as e:
-                print("含有超出字符。", e)
+            except Exception as ec:
+                logger.warning(ec)
                 self.not_logged_in_tree.insert("", "end", iid=account, image=photo,
                                                values=(cleaned_display_name, config_status,
                                                        pid, account, alias, cleaned_nickname))
@@ -463,26 +412,28 @@ class TreeviewRowUI:
         # 切换排序顺序
         self.sort_order[table_type] = not is_ascending
 
-    def on_mouse_motion(self, event, is_logged_in):
-        if is_logged_in is True:
-            tree = self.logged_in_tree
-        else:
-            tree = self.not_logged_in_tree
+    def on_leave(self, event):
+        if self.hovered_item is not None:
+            widget_utils.remove_a_tag_of_item(self.hovered_item[0], self.hovered_item[1], "hover")
+            self.hovered_item = None
+
+    def on_mouse_motion(self, event):
+        tree = event.widget
 
         # 获取当前鼠标所在的行 ID
         item = tree.identify_row(event.y)
 
         # 检查是否是新的悬停行
-        if self.hovered_item != item:
-            for t in (self.logged_in_tree, self.not_logged_in_tree):
-                # 清除之前悬停行的颜色
-                if self.hovered_item in t.get_children():
-                    widget_utils.remove_a_tag_of_item(tree, self.hovered_item, "hover")
-            for t in (self.logged_in_tree, self.not_logged_in_tree):
-                if item in t.get_children():
-                    widget_utils.add_a_tag_to_item(tree, item, "hover")
+        if self.hovered_item is not None:
+            if self.hovered_item[0] != tree or self.hovered_item[1] != item:
+                widget_utils.remove_a_tag_of_item(tree, self.hovered_item[1], "hover")
+                widget_utils.add_a_tag_to_item(tree, item, "hover")
+                # 更新当前悬停行
+                self.hovered_item = (tree, item)
+        else:
+            widget_utils.add_a_tag_to_item(tree, item, "hover")
             # 更新当前悬停行
-            self.hovered_item = item
+            self.hovered_item = (tree, item)
 
     def on_single_click(self, event, is_logged_in):
         """处理单击事件，并在检测到双击时取消"""
@@ -577,3 +528,27 @@ class TreeviewRowUI:
                 tree["show"] = "tree headings"  # 显示标题
                 for col in columns_to_hide:
                     tree.column(col, width=width)  # 设置合适的宽度
+
+
+if __name__ == '__main__':
+    from itertools import permutations
+
+    start_time = time.time()
+    # 可用数字
+    digits = [1, 3, 4, 5, 6, 8, 9]
+    i = 0
+
+    # 遍历所有可能的排列组合
+    for perm in permutations(digits):
+        i = i + 1
+        print(perm)
+        a, b, c, d, e, f, g = perm
+
+        # 检查条件 (a*100 + b*10 + c) * c == (d*1000 + e*100 + f*10 + g)
+        left_side = (a * 100 + b * 10 + c) * c
+        right_side = (d * 1000 + e * 100 + f * 10 + g)
+
+        if left_side == right_side:
+            print(f"找到的解：a={a}, b={b}, c={c}, d={d}, e={e}, f={f}, g={g}")
+            print(f"在第{i}组找到，用时：{time.time() - start_time:.4f}秒")
+            break

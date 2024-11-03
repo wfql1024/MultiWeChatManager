@@ -50,20 +50,18 @@ def enable_button_and_unbind_tip(tooltips, button):
 
 
 def remove_a_tag_of_item(tree, item_id, tag_to_remove):
-    # 移除“selected”标签
     current_tags = tree.item(item_id, "tags")
     if isinstance(current_tags, str) and current_tags == "":
         current_tags = ()  # 将空字符串转换为元组
     new_tags = tuple(tag for tag in current_tags if tag != tag_to_remove)
     tree.item(item_id, tags=list(new_tags))
-    print(current_tags, new_tags, tree.item(item_id, "tags"))
+    # print(current_tags, new_tags, tree.item(item_id, "tags"))
 
 
 def add_a_tag_to_item(tree, item_id, tag_to_add):
-    # 添加“selected”标签
     current_tags = tree.item(item_id, "tags")
     if isinstance(current_tags, str) and current_tags == "":
         current_tags = ()  # 将空字符串转换为元组
     new_tags = current_tags + (tag_to_add,)
     tree.item(item_id, tags=list(new_tags))
-    print(current_tags, new_tags, tree.item(item_id, "tags"))
+    # print(current_tags, new_tags, tree.item(item_id, "tags"))

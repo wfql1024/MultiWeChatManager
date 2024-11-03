@@ -34,7 +34,7 @@ def use_config(account):
     :param account: 账号
     :return: 是否成功应用配置
     """
-    data_path = func_setting.get_wechat_data_path()
+    data_path = func_setting.get_wechat_data_dir()
     if not data_path:
         messagebox.showerror("错误", "无法获取WeChat数据路径")
         return False
@@ -61,7 +61,7 @@ def create_config(account):
     :param account: 账号
     :return: 是否创建成功
     """
-    data_path = func_setting.get_wechat_data_path()
+    data_path = func_setting.get_wechat_data_dir()
     if not data_path:
         messagebox.showerror("错误", "无法获取WeChat数据路径")
         return False
