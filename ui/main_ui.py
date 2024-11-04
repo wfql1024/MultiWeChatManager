@@ -69,10 +69,11 @@ class MainWindow:
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
         self.window_width = 480
-        self.window_height = 600
+        self.window_height = 650
 
         self.master.withdraw()  # 初始化时隐藏主窗口
         self.setup_main_window()
+        self.master.after(300, self.delayed_initialization)
 
         # 创建状态栏
         self.create_status_bar()
@@ -108,13 +109,10 @@ class MainWindow:
         # 配置Canvas的滚动区域
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
-        print(True if ctypes.windll.shell32.IsUserAnAdmin() else False)
         self.show_setting_error()
 
         self.logged_in_rows = {}
         self.not_logged_in_rows = {}
-
-        self.master.after(200, self.delayed_initialization)
 
     def setup_main_window(self):
         """创建主窗口"""
@@ -150,8 +148,19 @@ class MainWindow:
     def delayed_initialization(self):
         """延迟加载，等待路径检查"""
         print(f"初始化检查.........................................................")
-        self.master.after(800, self.finalize_initialization)
-        self.check_and_init()
+        try:
+            # 线程启动获取登录情况和渲染列表
+            def thread_func():
+                result = self.check_and_init()
+                self.master.after(0, self.finalize_initialization)
+                if result is False:
+                    self.master.after(0, self.show_setting_error)
+                else:
+                    self.master.after(0, self.create_main_frame_and_menu)
+
+            threading.Thread(target=thread_func).start()
+        except Exception as e:
+            logger.error(e)
 
     def check_and_init(self):
         """检查和初始化"""
@@ -167,7 +176,7 @@ class MainWindow:
         func_setting.fetch_setting_or_set_default("view")
 
         if not install_path or not data_path or not dll_dir_path:
-            self.show_setting_error()
+            return False
         else:
             self.install_path = install_path
             self.data_path = data_path
@@ -179,8 +188,7 @@ class MainWindow:
                 screen_height = self.master.winfo_screenheight()
                 # 保存屏幕尺寸
                 subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
-            # 开始创建列表
-            self.create_main_frame_and_menu()
+            return True
 
     def show_setting_error(self):
         """路径错误提醒"""
@@ -403,7 +411,7 @@ class MainWindow:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
                 result = func_account.get_account_list()
-                self.create_account_list_ui(result)
+                self.master.after(0, self.create_account_list_ui, result)
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
