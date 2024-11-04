@@ -1,18 +1,17 @@
+import threading
+
 from PIL import ImageTk
 from utils import string_utils, widget_utils
-import subprocess
-import sys
 import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk, messagebox
 
-import psutil
-
 from functions import func_config, func_login, func_account, subfunc_file
-from resources.config import Config
 from ui import detail_ui
-from utils import handle_utils, json_utils, process_utils
+from utils import handle_utils
+
+from utils.logger_utils import mylogger as logger
 
 
 class AccountRow:
@@ -32,9 +31,7 @@ class AccountRow:
         self.is_logged_in = is_logged_in
         style = ttk.Style()
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
-
-        display_name = func_account.get_account_display_name(account)
-        config_status = func_config.get_config_status_by_account(account, self.data_path)
+        # print(f"初始化用时{time.time() - self.start_time:.4f}秒")
 
         # 行框架=复选框+头像标签+账号标签+按钮区域+配置标签
         self.row_frame = ttk.Frame(parent_frame)
@@ -50,35 +47,43 @@ class AccountRow:
         self.avatar_label.pack(side=tk.LEFT)
         self.avatar_label.bind("<Enter>", lambda event: event.widget.config(cursor="hand2"))
         self.avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
+        # 头像绑定详情事件
+        self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
+        # print(f"加载头像区域用时{time.time() - self.start_time:.4f}秒")
 
         # 账号标签
+        wrapped_display_name = func_account.get_acc_wrapped_display_name(account)
         has_mutex, = subfunc_file.get_acc_details_from_acc_json(account, has_mutex=None)
         style = ttk.Style()
         style.configure("Mutex.TLabel", foreground="red")
-        # 清理 display_name
-        cleaned_display_name = string_utils.clean_display_name(display_name)
         try:
             if has_mutex:
-                self.account_label = ttk.Label(self.row_frame, text=display_name, style="Mutex.TLabel")
+                self.account_label = ttk.Label(self.row_frame, text=wrapped_display_name, style="Mutex.TLabel")
             else:
-                self.account_label = ttk.Label(self.row_frame, text=display_name)
+                self.account_label = ttk.Label(self.row_frame, text=wrapped_display_name)
             self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
         except Exception as e:
-            print(e)
+            logger.warning(e)
+            # 清理 display_name
+            cleaned_display_name = string_utils.clean_display_name(wrapped_display_name)
             if has_mutex:
                 self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name, style="Mutex.TLabel")
             else:
                 self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name)
             self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
 
+        # print(f"加载账号显示区域用时{time.time() - self.start_time:.4f}秒")
+
         # 按钮区域=配置或登录按钮
         self.button_frame = ttk.Frame(self.row_frame)
         self.button_frame.pack(side=tk.RIGHT)
 
         # 配置标签
+        config_status = func_config.get_config_status_by_account(account, self.data_path)
         self.config_status_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
         self.config_status_label.pack(side=tk.RIGHT, padx=5, fill=tk.X, expand=True)
 
+        # 登录/配置按钮
         if is_logged_in:
             # 配置按钮
             self.config_button_text = "重新配置" if config_status != "无配置" else "添加配置"
@@ -110,9 +115,8 @@ class AccountRow:
                 self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
                 for child in self.row_frame.winfo_children():
                     child.bind("<Button-1>", self.toggle_checkbox, add="+")
+        # print(f"加载配置/登录区域用时{time.time() - self.start_time:.4f}秒")
 
-        # 头像绑定详情事件
-        self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
 
     def toggle_checkbox(self, event):
@@ -124,17 +128,6 @@ class AccountRow:
         self.checkbox_var.set(not self.checkbox_var.get())
         self.update_top_checkbox_callback(self.is_logged_in)
         return "break"
-
-    def set_checkbox(self, value):
-        """设置当前复选框的状态"""
-        self.checkbox_var.set(value)
-
-    def is_checked(self):
-        """
-        获取复选框状态
-        :return: 复选框状态 -> bool
-        """
-        return self.checkbox_var.get()
 
     def create_avatar_label(self, account):
         """
@@ -293,7 +286,7 @@ class ClassicRowUI:
         else:
             widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
         for row in rows.values():
-            row.set_checkbox(value)
+            row.checkbox_var.set(value)
         return "break"
 
     def update_top_title(self, is_logged_in):
@@ -362,50 +355,44 @@ class ClassicRowUI:
     def auto_login_account(self, account):
         """按钮：自动登录某个账号"""
         try:
-            self.main_window.thread_manager.login_accounts_thread(
-                func_login.auto_login_accounts,
-                [account],
-                self.multiple_status,
-                self.main_window.create_main_frame_and_menu
-            )
-
-        finally:
-            # 恢复刷新可用性
-            self.main_window.edit_menu.entryconfig("刷新", state="normal")
+            threading.Thread(
+                target=func_login.auto_login_accounts,
+                args=([account], self.multiple_status, self.main_window.create_main_frame_and_menu)
+            ).start()
+        except Exception as e:
+            logger.error(e)
 
     def quit_selected_accounts(self):
         """退出所选账号"""
         accounts = [
             account
-            for account, row in self.logged_in_rows.items()
-            if row.is_checked()
+            for account, row in self.logged_in_rows.items() if row.checkbox_var.get()
         ]
         accounts_to_quit = []
         for account in accounts:
-            nickname, pid = subfunc_file.get_acc_details_from_acc_json(account, nickname=None, pid=None)
-            accounts_to_quit.append(f"[{nickname} {pid}]")
+            pid, = subfunc_file.get_acc_details_from_acc_json(account, pid=None)
+            display_name = func_account.get_acc_origin_display_name(account)
+            cleaned_display_name = string_utils.clean_display_name(display_name)
+            accounts_to_quit.append(f"[{cleaned_display_name}: {pid}]")
+        accounts_to_quit_str = "\n".join(accounts_to_quit)
         if messagebox.askokcancel("提示",
-                                  f"确认退登：\n{', '.join([str(a) for a in accounts_to_quit])}？"):
-            quited_accounts = func_account.quit_accounts(accounts)
-            messagebox.showinfo("提示", f"已退登：{quited_accounts}")
-            self.main_window.create_main_frame_and_menu()
+                                  f"确认退登：\n{accounts_to_quit_str}？"):
+            try:
+                quited_accounts = func_account.quit_accounts(accounts)
+                quited_accounts_str = "\n".join(quited_accounts)
+                messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
+                self.main_window.create_main_frame_and_menu()
+            except Exception as e:
+                logger.error(e)
 
     def auto_login_selected_accounts(self):
         """登录所选账号"""
-        accounts = [
-            account
-            for account, row in self.not_logged_in_rows.items()
-            if row.is_checked()
-        ]
+        accounts = [account for account, row in self.not_logged_in_rows.items() if row.checkbox_var.get()]
         self.master.iconify()  # 最小化主窗口
         try:
-            self.main_window.thread_manager.login_accounts_thread(
-                func_login.auto_login_accounts,
-                accounts,
-                self.multiple_status,
-                self.main_window.create_main_frame_and_menu
-            )
-
-        finally:
-            # 恢复刷新可用性
-            self.main_window.edit_menu.entryconfig("刷新", state="normal")
+            threading.Thread(
+                target=func_login.auto_login_accounts,
+                args=(accounts, self.multiple_status, self.main_window.create_main_frame_and_menu)
+            ).start()
+        except Exception as e:
+            logger.error(e)
