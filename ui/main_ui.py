@@ -3,8 +3,8 @@ import ctypes
 import glob
 import os
 import queue
-import subprocess
 import sys
+import threading
 import time
 import tkinter as tk
 import webbrowser
@@ -20,7 +20,9 @@ from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
 from ui import about_ui, setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui
-from utils import handle_utils, debug_utils, file_utils
+from utils import handle_utils, debug_utils, file_utils, logger_utils
+
+logger = logger_utils.mylogger
 
 
 class MainWindow:
@@ -398,12 +400,13 @@ class MainWindow:
         # 使用ThreadManager异步获取账户列表
         print(f"获取登录状态.........................................................")
         try:
-            self.thread_manager.get_account_list_thread(self.create_account_list_ui)
-        finally:
-            # 恢复刷新可用性
-            self.edit_menu.entryconfig("刷新", state="normal")
-        # 直接调用 on_canvas_configure 方法
-        self.canvas.update_idletasks()
+            # 线程启动获取登录情况和渲染列表
+            def thread_func():
+                result = func_account.get_account_list()
+                self.create_account_list_ui(result)
+            threading.Thread(target=thread_func).start()
+        except Exception as e:
+            logger.error(e)
 
     def create_account_list_ui(self, result):
         """渲染主界面账号列表"""
@@ -420,6 +423,7 @@ class MainWindow:
             self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
                                               command=self.open_settings, style='Custom.TButton')
             self.settings_button.pack()
+            self.edit_menu.entryconfig("刷新", state="normal")
             return
 
         # 创建账号列表界面
@@ -503,8 +507,6 @@ class MainWindow:
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.master)
         setting_ui.SettingWindow(settings_window, self.multiple_status, self.delayed_initialization)
-        # handle_utils.center_window(settings_window)
-        # settings_window.focus_set()
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
@@ -569,7 +571,7 @@ class MainWindow:
 
     def enable_new_func(self):
         subfunc_file.set_enable_new_func_in_ini("true")
-        messagebox.showinfo("发现彩蛋", "解锁新菜单，快去设置菜单下看看吧！")
+        messagebox.showinfo("发现彩蛋", "解锁新菜单，快去看看吧！")
         self.create_main_frame_and_menu()
 
     def manual_login_account(self):
@@ -583,17 +585,3 @@ class MainWindow:
         debug_window = tk.Toplevel(self.master)
         debug_ui.DebugWindow(debug_window)
         handle_utils.center_window(debug_window)
-
-    def start_update_program(self):
-        # 获取版本号
-        if getattr(sys, 'frozen', False):
-            exe_path = sys.executable
-            current_version = "2.5.0"
-            package_path = "path/to/package.zip"
-            update_exe_path = os.path.join(os.path.dirname(exe_path), '更新程序.exe')
-            subprocess.Popen([update_exe_path, current_version, package_path],
-                             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
-
-        # update_program_path = os.path.join(os.path.dirname(__file__), 'update_program.py')
-        # subprocess.Popen([sys.executable, update_program_path],
-        #                  creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
