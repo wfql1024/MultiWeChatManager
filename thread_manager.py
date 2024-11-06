@@ -44,19 +44,3 @@ class ThreadManager:
         manual_login_result = manual_login_func(status)
         self.master.after(0, _handle_manual_login_result, manual_login_result, create_account_list,
                           bring_window_to_front)
-
-    def get_account_list_thread(self, callback):
-        def thread_func():
-            result = func_account.get_account_list()
-            self.master.after(0, callback, result)
-
-        threading.Thread(target=thread_func).start()
-
-    def login_accounts_thread(self, login, accounts, status, callback):
-        def thread_func():
-            login_thread = threading.Thread(target=login, args=(accounts, status))
-            login_thread.start()
-            login_thread.join()
-            self.master.after(0, callback)
-
-        threading.Thread(target=thread_func).start()

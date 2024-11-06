@@ -1,25 +1,18 @@
 # detail_ui.py
 import base64
-import ctypes
 import os
 import threading
-import time
 import tkinter as tk
 import webbrowser
-from functools import partial
 from tkinter import ttk, messagebox
 
 import psutil
-import win32api
-import win32con
-import win32gui
 from PIL import Image, ImageTk
 
 from functions import func_detail, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
-from utils import string_utils, handle_utils, process_utils, widget_utils
-from utils.process_utils import user32
+from utils import string_utils, widget_utils
 
 
 class DetailWindow:

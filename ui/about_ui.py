@@ -41,7 +41,7 @@ def add_hyperlink_events(text_widget, text_content):
 
 
 class AboutWindow:
-    def __init__(self, master):
+    def __init__(self, master, need_to_update):
         self.master = master
         master.title("关于")
 
@@ -58,9 +58,8 @@ class AboutWindow:
         master.resizable(False, False)
 
         # 移除窗口装饰并设置为工具窗口
-        master.overrideredirect(True)
-        master.overrideredirect(False)
         master.attributes('-toolwindow', True)
+        master.grab_set()
 
         # 图标框架
         logo_frame = ttk.Frame(master, padding="20")
@@ -161,11 +160,14 @@ class AboutWindow:
         reference_label.pack(anchor='w', pady=(10, 0))
 
         # 底部区域=声明+检查更新按钮
+        update_text = "检查更新"
+        if need_to_update:
+            update_text = "✨检查更新"
         bottom_frame = ttk.Frame(content_frame)
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)
         disclaimer_frame = ttk.Frame(bottom_frame)
         disclaimer_frame.pack(side=tk.LEFT)
-        update_button = ttk.Button(bottom_frame, text="检查更新",
+        update_button = ttk.Button(bottom_frame, text=update_text,
                                    command=partial(self.check_for_updates,
                                                    current_full_version=current_full_version))
         update_button.pack(side=tk.RIGHT)

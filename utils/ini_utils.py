@@ -16,7 +16,7 @@ def get_setting_from_ini(ini_filename, section, key, default_value=None, validat
         if section in config and key in config[section]:
             current_setting = config[section][key]
             if validation_func is None or validation_func(current_setting):
-                logger.info(f"读取{os.path.basename(ini_filename)}[{section}]{key} ====== {current_setting}")
+                # logger.info(f"读取{os.path.basename(ini_filename)}[{section}]{key} ====== {current_setting}")
                 return current_setting
             if current_setting is None:
                 return default_value
@@ -49,6 +49,6 @@ def save_setting_to_ini(ini_path, section, key, value):
     try:
         with open(ini_path, 'w') as configfile:
             config.write(configfile)
-            logger.info(f"写入{value} -----> {os.path.basename(ini_path)}[{section}]{key}")
+            # logger.info(f"写入{value} -----> {os.path.basename(ini_path)}[{section}]{key}")
     except IOError as e:
         logger.error(f"Failed to write to {ini_path}: {e}")

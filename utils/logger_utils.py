@@ -34,7 +34,7 @@ class LoggerUtils:
         ch_log_format = colorlog.ColoredFormatter(default_formats["color_format"], log_colors=log_colors_config)
 
         # 创建文件处理器
-        log_fh = logging.FileHandler(file, encoding='utf-8')
+        log_fh = logging.FileHandler(file)
         log_fh.setLevel(logging.DEBUG)
         log_fh.setFormatter(fh_log_format)
         logger.addHandler(log_fh)

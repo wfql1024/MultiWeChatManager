@@ -42,7 +42,7 @@ def manual_login(status):
         return False
 
 
-def auto_login_accounts(accounts, status):
+def auto_login_accounts(accounts, status, callback):
     """
     对选择的账号，进行全自动登录
     :param accounts: 选择的账号列表
@@ -179,10 +179,8 @@ def auto_login_accounts(accounts, status):
     while True:
         hs = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC", "微信")
         if len(hs) == 0:
+            callback()
             return True
         if time.time() > end_time:
+            callback()
             return True
-
-
-if __name__ == '__main__':
-    auto_login_accounts([1, 2, 3, 4, 5, 6, 7, 8], "未开启")

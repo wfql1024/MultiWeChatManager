@@ -38,7 +38,7 @@ def main():
     os.environ['http_proxy'] = ''
     os.environ['https_proxy'] = ''
     os.environ['no_proxy'] = '*'
-    print(f"是否管理员模式：{is_admin()}")
+    print("管理员身份" if ctypes.windll.shell32.IsUserAnAdmin() == 1 else "非管理员身份")
     # 创建参数解析器
     parser = argparse.ArgumentParser(description="Process command line flags.")
     # 添加 --debug 和 -d 选项

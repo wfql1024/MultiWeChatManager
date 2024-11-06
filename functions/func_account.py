@@ -1,8 +1,10 @@
 import base64
 import os
+import re
 import subprocess
 import sys
 import time
+from tkinter import messagebox
 from typing import Union, Tuple, List
 
 import psutil
@@ -11,14 +13,36 @@ from PIL import Image
 from functions import func_setting, func_wechat_dll, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
-from utils import process_utils, string_utils, image_utils
+from utils import process_utils, image_utils, string_utils
+from utils.logger_utils import mylogger as logger
+
+
+def to_quit_selected_accounts(accounts_selected, callback):
+    accounts_to_quit = []
+    for acc in accounts_selected:
+        pid, = subfunc_file.get_acc_details_from_acc_json(acc, pid=None)
+        display_name = get_acc_origin_display_name(acc)
+        cleaned_display_name = string_utils.clean_display_name(display_name)
+        accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
+    accounts_to_quit_str = "\n".join(accounts_to_quit)
+    if messagebox.askokcancel("提示",
+                              f"确认退登：\n{accounts_to_quit_str}？"):
+        try:
+            quited_accounts = quit_accounts(accounts_selected)
+            quited_accounts_str = "\n".join(quited_accounts)
+            messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
+            callback()
+        except Exception as e:
+            logger.error(e)
 
 
 def quit_accounts(accounts):
     quited_accounts = []
     for account in accounts:
         try:
-            nickname, pid = subfunc_file.get_acc_details_from_acc_json(account, nickname=None, pid=None)
+            pid, = subfunc_file.get_acc_details_from_acc_json(account, pid=None)
+            display_name = get_acc_origin_display_name(account)
+            cleaned_display_name = string_utils.clean_display_name(display_name)
             process = psutil.Process(pid)
             if process_utils.process_exists(pid) and process.name() == "WeChat.exe":
                 startupinfo = None
@@ -33,7 +57,7 @@ def quit_accounts(accounts):
                 )
                 if result.returncode == 0:
                     print(f"结束了 {pid} 的进程树")
-                    quited_accounts.append((nickname, pid))
+                    quited_accounts.append(f"[{cleaned_display_name}: {pid}]")
                 else:
                     print(f"无法结束 PID {pid} 的进程树，错误：{result.stderr.strip()}")
             else:
@@ -45,7 +69,7 @@ def quit_accounts(accounts):
 
 def get_acc_avatar_from_files(account):
     """
-    从本地缓存或网络获取头像，失败则默认头像
+    从本地缓存或json文件中的url地址获取头像，失败则默认头像
     :param account: 原始微信号
     :return: 头像文件 -> ImageFile
     """
@@ -88,7 +112,7 @@ def get_acc_avatar_from_files(account):
         return Image.new('RGB', (44, 44), color='white')
 
 
-def get_account_display_name(account) -> str:
+def get_acc_origin_display_name(account) -> str:
     """
     获取账号的展示名
     :param account: 微信账号
@@ -102,7 +126,19 @@ def get_account_display_name(account) -> str:
             display_name = value
             break
 
-    return string_utils.balanced_wrap_text(display_name, 10)
+    return display_name
+
+
+def get_acc_wrapped_display_name(account) -> str:
+    """
+    获取账号的展示名
+    :param account: 微信账号
+    :return: 展示在界面的折叠好的名字
+    """
+    return string_utils.balanced_wrap_text(
+        get_acc_origin_display_name(account),
+        10
+    )
 
 
 def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], list]]:
@@ -164,8 +200,8 @@ def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], 
     # 获取文件夹并分类
     excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF'}
     folders = set(
-        folder for folder in os.listdir(data_path)
-        if os.path.isdir(os.path.join(data_path, folder))
+        item for item in os.listdir(data_path)
+        if os.path.isdir(os.path.join(data_path, item))
     ) - excluded_folders
     logged_in = list(logged_in_wxids & folders)
     not_logged_in = list(folders - logged_in_wxids)
@@ -195,8 +231,6 @@ def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], 
     return logged_in, not_logged_in, wechat_processes
 
 
-if __name__ == '__main__':
-    # note = subfunc_file.get_acc_details_from_acc_json('wxid_t2dchu5zw9y022', note=None)[0]
-    # print(note)
-    for f in psutil.Process(36100).open_files():
-        print(f.path)
+
+
+

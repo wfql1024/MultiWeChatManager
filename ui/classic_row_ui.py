@@ -5,11 +5,10 @@ from utils import string_utils, widget_utils
 import time
 import tkinter as tk
 from functools import partial
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
 from functions import func_config, func_login, func_account, subfunc_file
 from ui import detail_ui
-from utils import handle_utils
 
 from utils.logger_utils import mylogger as logger
 
@@ -18,7 +17,6 @@ class AccountRow:
     """
     为每一个账号创建其行布局的类
     """
-
     def __init__(self, parent_frame, account, data_path, status, is_logged_in, callbacks,
                  update_top_checkbox_callback):
         self.data_path = data_path
@@ -47,8 +45,6 @@ class AccountRow:
         self.avatar_label.pack(side=tk.LEFT)
         self.avatar_label.bind("<Enter>", lambda event: event.widget.config(cursor="hand2"))
         self.avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
-        # 头像绑定详情事件
-        self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
         # print(f"加载头像区域用时{time.time() - self.start_time:.4f}秒")
 
         # 账号标签
@@ -116,6 +112,9 @@ class AccountRow:
                 for child in self.row_frame.winfo_children():
                     child.bind("<Button-1>", self.toggle_checkbox, add="+")
         # print(f"加载配置/登录区域用时{time.time() - self.start_time:.4f}秒")
+
+        # 头像绑定详情事件
+        self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
 
@@ -191,7 +190,7 @@ class ClassicRowUI:
 
             # 一键退出
             self.one_key_quit = ttk.Button(self.logged_in_button_frame, text="一键退出", width=8,
-                                           command=self.quit_selected_accounts, style='Custom.TButton')
+                                           command=self.one_click_to_quit, style='Custom.TButton')
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
 
             # 加载已登录列表
@@ -340,8 +339,6 @@ class ClassicRowUI:
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.master)
         detail_ui.DetailWindow(detail_window, account, self.main_window.create_main_frame_and_menu)
-        handle_utils.center_window(detail_window)
-        detail_window.focus_set()
 
     def create_config(self, account, status):
         """按钮：创建或重新配置"""
@@ -354,6 +351,7 @@ class ClassicRowUI:
 
     def auto_login_account(self, account):
         """按钮：自动登录某个账号"""
+        self.master.iconify()  # 最小化主窗口
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
@@ -362,28 +360,16 @@ class ClassicRowUI:
         except Exception as e:
             logger.error(e)
 
-    def quit_selected_accounts(self):
+    def one_click_to_quit(self):
         """退出所选账号"""
         accounts = [
             account
             for account, row in self.logged_in_rows.items() if row.checkbox_var.get()
         ]
-        accounts_to_quit = []
-        for account in accounts:
-            pid, = subfunc_file.get_acc_details_from_acc_json(account, pid=None)
-            display_name = func_account.get_acc_origin_display_name(account)
-            cleaned_display_name = string_utils.clean_display_name(display_name)
-            accounts_to_quit.append(f"[{cleaned_display_name}: {pid}]")
-        accounts_to_quit_str = "\n".join(accounts_to_quit)
-        if messagebox.askokcancel("提示",
-                                  f"确认退登：\n{accounts_to_quit_str}？"):
-            try:
-                quited_accounts = func_account.quit_accounts(accounts)
-                quited_accounts_str = "\n".join(quited_accounts)
-                messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
-                self.main_window.create_main_frame_and_menu()
-            except Exception as e:
-                logger.error(e)
+        try:
+            func_account.to_quit_selected_accounts(accounts, self.main_window.create_main_frame_and_menu)
+        except Exception as e:
+            logger.error(e)
 
     def auto_login_selected_accounts(self):
         """登录所选账号"""

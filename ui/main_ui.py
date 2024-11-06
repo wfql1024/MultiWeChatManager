@@ -1,8 +1,9 @@
 # main_ui.py
-import ctypes
 import glob
+import itertools
 import os
 import queue
+import re
 import sys
 import threading
 import time
@@ -20,7 +21,7 @@ from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
 from ui import about_ui, setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui
-from utils import handle_utils, debug_utils, file_utils, logger_utils
+from utils import handle_utils, debug_utils, file_utils, logger_utils, image_utils
 
 logger = logger_utils.mylogger
 
@@ -29,6 +30,9 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, master, loading_window, debug=None):
+        self.view_options_menu = None
+        self.view_var = None
+        self.need_to_update = False
         self.chosen_view = None
         self.classic_view_menu = None
         self.unlock_revoke = subfunc_file.get_enable_new_func_from_ini() == "true"
@@ -51,7 +55,7 @@ class MainWindow:
         self.help_menu = None
         self.multiple_status = None
         self.last_version_path = None
-        self.data_path = None
+        self.data_dir = None
         self.install_path = None
         self.start_time = None
         self.status_bar = None
@@ -69,7 +73,7 @@ class MainWindow:
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
         self.window_width = 480
-        self.window_height = 650
+        self.window_height = 600
 
         self.master.withdraw()  # 初始化时隐藏主窗口
         self.setup_main_window()
@@ -152,7 +156,7 @@ class MainWindow:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
                 result = self.check_and_init()
-                self.master.after(0, self.finalize_initialization)
+                self.master.after(600, self.finalize_initialization)
                 if result is False:
                     self.master.after(0, self.show_setting_error)
                 else:
@@ -174,12 +178,18 @@ class MainWindow:
         dll_dir_path = func_setting.get_wechat_dll_dir()
         func_setting.fetch_setting_or_set_default("sub_exe")
         func_setting.fetch_setting_or_set_default("view")
+        if os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
+            result = func_update.split_vers_by_cur_from_local(self.current_full_version)
+            if result:
+                new_versions, old_versions = result
+                if len(new_versions) != 0:
+                    self.need_to_update = True
 
         if not install_path or not data_path or not dll_dir_path:
             return False
         else:
             self.install_path = install_path
-            self.data_path = data_path
+            self.data_dir = data_path
             self.last_version_path = dll_dir_path
             screen_size = subfunc_file.get_screen_size_from_setting_ini()
             if not screen_size or screen_size == "":
@@ -231,7 +241,7 @@ class MainWindow:
                                         command=partial(func_file.clear_user_file, self.create_main_frame_and_menu))
         # >配置文件
         self.config_file_menu = tk.Menu(self.file_menu, tearoff=0)
-        if not self.data_path:
+        if not self.data_dir:
             self.file_menu.add_command(label="配置文件  未获取")
             self.file_menu.entryconfig(f"配置文件  未获取", state="disable")
         else:
@@ -265,20 +275,23 @@ class MainWindow:
         self.chosen_view = func_setting.fetch_setting_or_set_default("view")
         self.view_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="视图", menu=self.view_menu)
-        if self.chosen_view == "tree":
-            # -经典
-            self.view_menu.add_command(label="    经典", command=self.change_classic_view)
-            # >列表
-            self.tree_view_menu = tk.Menu(self.view_menu, tearoff=0)
-            self.view_menu.add_cascade(label="√ 列表", menu=self.tree_view_menu)
-            self.tree_view_menu.add_separator()  # ————————————————分割线————————————————
-        elif self.chosen_view == "classic":
-            # -列表
-            self.view_menu.add_command(label="    列表", command=self.change_tree_view)
-            # >经典
-            self.classic_view_menu = tk.Menu(self.view_menu, tearoff=0)
-            self.view_menu.add_cascade(label="√ 经典", menu=self.classic_view_menu)
-            self.classic_view_menu.add_separator()  # ————————————————分割线————————————————
+
+        # 添加单选框选项
+        self.view_var = tk.StringVar(value=self.chosen_view)
+        self.view_menu.add_radiobutton(label="经典", variable=self.view_var, value="classic",
+                                       command=self.change_classic_view)
+        self.view_menu.add_radiobutton(label="列表", variable=self.view_var, value="tree",
+                                       command=self.change_tree_view)
+        self.view_menu.add_separator()  # ————————————————分割线————————————————
+        # 显示当前选择的视图
+        self.view_options_menu = tk.Menu(self.view_menu, tearoff=0)
+        self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
+        if self.chosen_view == "classic":
+            # 添加经典视图的菜单项
+            pass
+        elif self.chosen_view == "tree":
+            # 添加列表视图的菜单项
+            pass
 
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
@@ -364,24 +377,18 @@ class MainWindow:
         if (not os.path.exists(Config.VER_ADAPTATION_JSON_PATH) or
                 not file_utils.is_latest_file(Config.VER_ADAPTATION_JSON_PATH)):
             subfunc_file.fetch_config_data_from_remote()
-        about_text = "关于"
         help_text = "帮助"
-        if os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
-            result = func_update.split_vers_by_cur_from_local(self.current_full_version)
-            if result:
-                new_versions, old_versions = result
-                if len(new_versions) != 0:
-                    about_text = "✨关于"
-                    help_text = "✨帮助"
-        else:
-            about_text = "关于"
+        about_text = "关于"
+        if self.need_to_update is True:
+            help_text = "✨帮助"
+            about_text = "✨关于"
         self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label=help_text, menu=self.help_menu)
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
         self.help_menu.add_command(label="更新日志", command=self.open_update_log)
-        self.help_menu.add_command(label=about_text, command=self.open_about)
+        self.help_menu.add_command(label=about_text, command=partial(self.open_about, self.need_to_update))
 
         # ————————————————————————————作者标签————————————————————————————
         if self.unlock_revoke is True:
@@ -412,6 +419,7 @@ class MainWindow:
             def thread_func():
                 result = func_account.get_account_list()
                 self.master.after(0, self.create_account_list_ui, result)
+
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
@@ -436,11 +444,11 @@ class MainWindow:
 
         # 创建账号列表界面
         if self.chosen_view == "classic":
-            classic_row_ui.ClassicRowUI(self, self.master, self.main_frame, result, self.data_path,
-                                        self.multiple_status)
+            classic_row_ui.ClassicRowUI(
+                self, self.master, self.main_frame, result, self.data_dir, self.multiple_status)
         elif self.chosen_view == "tree":
-            treeview_row_ui.TreeviewRowUI(self, self.master, self.main_frame, result, self.data_path,
-                                          self.multiple_status)
+            treeview_row_ui.TreeviewRowUI(
+                self, self.master, self.main_frame, result, self.data_dir, self.multiple_status)
         else:
             pass
 
@@ -455,6 +463,23 @@ class MainWindow:
         event = tk.Event()
         event.width = self.canvas.winfo_width()
         self.on_canvas_configure(event)
+
+        # 悄悄执行检测昵称和头像
+        # 1. 获取所有账号节点的url和昵称，将空的账号返回
+        accounts_need_to_get_avatar = []
+        accounts_need_to_get_nickname = []
+        for acc in itertools.chain(logged_in, not_logged_in):
+            avatar_url, nickname = subfunc_file.get_acc_details_from_acc_json(acc, avatar_url=None, nickname=None)
+            if avatar_url is None:
+                accounts_need_to_get_avatar.append(acc)
+            if nickname is None:
+                accounts_need_to_get_nickname.append(acc)
+        # 2. 对待获取url的账号遍历尝试获取
+        if len(accounts_need_to_get_avatar) > 0:
+            subfunc_file.get_avatar_url_from_acc_info_file(accounts_need_to_get_avatar, self.data_dir)
+        # 3. 对待获取昵称的账号尝试遍历获取
+        if len(accounts_need_to_get_nickname) > 0:
+            subfunc_file.get_nickname_from_acc_info_file(accounts_need_to_get_nickname, self.data_dir)
 
     def bind_mouse_wheel(self, widget):
         """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
@@ -562,11 +587,10 @@ class MainWindow:
         update_log_ui.UpdateLogWindow(update_log_window, old_versions)
         handle_utils.center_window(update_log_window)
 
-    def open_about(self):
+    def open_about(self, need_to_update):
         """打开关于窗口"""
         about_window = tk.Toplevel(self.master)
-        about_ui.AboutWindow(about_window)
-        handle_utils.center_window(about_window)
+        about_ui.AboutWindow(about_window, need_to_update)
 
     def logo_on_click(self):
         print("触发了点击")

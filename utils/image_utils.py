@@ -1,3 +1,5 @@
+import os
+
 import requests
 import win32api
 import win32con
@@ -47,6 +49,10 @@ def download_image(img_url, path):
     try:
         response = requests.get(img_url.rstrip(r'/0') + r'/132', stream=True)
         response.raise_for_status()  # 确保请求成功
+
+        acc_dir = os.path.dirname(path)
+        if not os.path.exists(acc_dir):
+            os.makedirs(acc_dir)
 
         with open(path, 'wb') as file:
             for chunk in response.iter_content(chunk_size=8192):
