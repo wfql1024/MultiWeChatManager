@@ -76,9 +76,12 @@ class TreeviewRowUI:
             self.one_key_quit = ttk.Button(self.logged_in_button_frame, text="一键退出", width=8,
                                            command=self.quit_selected_accounts, style='Custom.TButton')
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
-            self.one_key_quit = ttk.Button(self.logged_in_button_frame, text="配   置", width=8,
-                                           command=self.quit_selected_accounts, style='Custom.TButton')
-            self.one_key_quit.pack(side=tk.RIGHT, pady=0)
+            # 配置
+            self.config_btn = ttk.Button(self.logged_in_button_frame, text="配   置", width=8,
+                                         command=self.create_config, style='Custom.TButton')
+            self.config_btn.pack(side=tk.RIGHT, pady=0)
+            widget_utils.disable_button_and_add_tip(
+                self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有螺丝符号表示推荐配置的账号")
 
             self.logged_in_tree = self.create_table("logged_in")
             self.display_table(logged_in_list, "logged_in")
@@ -254,6 +257,12 @@ class TreeviewRowUI:
             selected_items = self.selected_logged_in_items
             selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
             self.selected_logged_in_accounts = selected_accounts
+            if len(selected_accounts) == 1:
+                widget_utils.enable_button_and_unbind_tip(
+                    self.tooltips, self.config_btn)
+            else:
+                widget_utils.disable_button_and_add_tip(
+                    self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有螺丝符号表示推荐配置的账号")
         else:
             tree = self.not_logged_in_tree
             selected_items = self.selected_not_logged_in_items
@@ -445,10 +454,11 @@ class TreeviewRowUI:
         detail_ui.DetailWindow(detail_window, account, self.main_window.create_main_frame_and_menu)
         handle_utils.center_window(detail_window)
 
-    def create_config(self, account, status):
+    def create_config(self, status):
         """按钮：创建或重新配置"""
+        accounts = self.selected_logged_in_items
         self.main_window.thread_manager.create_config_thread(
-            account,
+            accounts[0],
             func_config.test,
             status,
             self.main_window.create_main_frame_and_menu
