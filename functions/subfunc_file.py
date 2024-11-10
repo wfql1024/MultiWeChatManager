@@ -372,3 +372,18 @@ def get_nickname_from_acc_info_file(acc_list, data_dir):
             cleaned_str = re.sub(r'\x1A.*?\x12', '', cleaned_str)
             cleaned_str = re.sub(r'[^\x20-\x7E\xC0-\xFF\u4e00-\u9fa5]+', '', cleaned_str)
             update_acc_details_to_acc_json(acc, nickname=cleaned_str)
+
+
+def get_file_with_correct_md5(folders, md5s):
+    for folder in folders:
+        for root, _, files in os.walk(folder):
+            for file_name in files:
+                file_path = os.path.join(root, file_name)
+                try:
+                    file_md5 = file_utils.calculate_md5(file_path)
+                    # 检查 MD5 是否匹配正确的 MD5 列表
+                    if file_md5 in md5s:
+                        return file_path  # 返回匹配的文件路径
+                except Exception as e:
+                    logger.error(e)
+    return None  # 如果没有找到匹配项则返回 None

@@ -69,13 +69,14 @@ def update_and_reopen(args, root):
     # 提取参数
     before_version = args.before_version
     install_dir = args.install_dir
+    download_path = args.download_path
 
     quit_main()
 
     # 0. 解压下载的压缩包
     update_exe_path = sys.executable
+    tmp_zip = download_path
     tmp_dir = os.path.dirname(update_exe_path)
-    tmp_zip = os.path.join(tmp_dir, "temp.zip")
     try:
         with zipfile.ZipFile(tmp_zip, 'r') as zip_ref:
             zip_ref.extractall(tmp_dir)
@@ -154,7 +155,8 @@ def main():
     # 添加 --debug 和 -d 选项
     parser.add_argument('--debug', '-d', action='store_true', help="Enable debug mode.")
     parser.add_argument("before_version", help="更新前版本号")
-    parser.add_argument("install_dir", help="安装路径")
+    parser.add_argument("install_dir", help="安装目录")
+    parser.add_argument("download_path", help="下载路径")
     # 解析命令行参数
     args, unknown = parser.parse_known_args()
 

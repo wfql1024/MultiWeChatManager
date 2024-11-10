@@ -1,18 +1,42 @@
+import hashlib
 import os
 import platform
 import re
-from datetime import datetime
+import datetime as dt
+# from datetime import datetime
 
 import win32api
+
+
+def get_recent_folders_from_dir(directory, minutes=30):
+    now = dt.datetime.now()
+    some_minutes_ago = now - dt.timedelta(minutes=minutes)
+    recent_folders = []
+    for item in os.listdir(directory):
+        item_path = os.path.join(directory, item)
+        if os.path.isdir(item_path):
+            modification_time = dt.datetime.fromtimestamp(os.path.getmtime(item_path))
+            if modification_time >= some_minutes_ago:
+                recent_folders.append(item_path)
+    return recent_folders
+
+
+def calculate_md5(file_path, chunk_size=4096):
+    """计算文件的 MD5 哈希值"""
+    md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(chunk_size), b""):
+            md5.update(chunk)
+    return md5.hexdigest()
 
 
 def is_latest_file(file_path):
     # 获取文件的修改时间（时间戳）
     modification_time = os.path.getmtime(file_path)
     # 转换为日期格式
-    modification_date = datetime.fromtimestamp(modification_time).date()
+    modification_date = dt.datetime.fromtimestamp(modification_time).date()
     # 获取今天的日期
-    today = datetime.now().date()
+    today = dt.datetime.now().date()
 
     return modification_date >= today
 

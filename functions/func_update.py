@@ -45,27 +45,44 @@ def split_vers_by_cur_from_local(current_ver):
         return "错误：无法获取版本信息"
 
 
-def download_files(file_urls, download_dir, progress_callback, on_complete_callback):
+def download_files(ver_dicts, download_dir, progress_callback, on_complete_callback, status):
     try:
         print("进入下载文件方法...")
-        for idx, url in enumerate(file_urls):
-            print(f"Downloading to {download_dir}")
-            with requests.get(url, stream=True, allow_redirects=True) as r:
-                r.raise_for_status()
-                total_length = int(r.headers.get('content-length', 0))
-                with open(download_dir, 'wb') as f:
-                    downloaded = 0
-                    for chunk in r.iter_content(chunk_size=8192):
-                        if chunk:  # 过滤掉保持连接的chunk
-                            f.write(chunk)
-                            downloaded += len(chunk)
-                            progress_callback(idx, len(file_urls), downloaded, total_length)
+        for ver_dict in ver_dicts:
+            if status.get("stop"):  # 检查停止状态
+                print("下载被用户中断")
+                return False
+            url = ver_dict.get("url", "")
+            if not url:
+                print("URL为空，跳过此文件字典...")
+                continue
+            try:
+                urls = [url]
+                for idx, url in enumerate(urls):
+                    print(f"Downloading to {download_dir}")
+                    with requests.get(url, stream=True, allow_redirects=True) as r:
+                        r.raise_for_status()
+                        total_length = int(r.headers.get('content-length', 0))
+                        with open(download_dir, 'wb') as f:
+                            downloaded = 0
+                            for chunk in r.iter_content(chunk_size=8192):
+                                if status.get("stop"):  # 每次读取chunk都检查停止状态
+                                    print("下载被用户中断")
+                                    return False
+                                if chunk:
+                                    f.write(chunk)
+                                    downloaded += len(chunk)
+                                    progress_callback(idx, len(urls), downloaded, total_length)
 
-        print("所有文件下载成功。")
-        on_complete_callback()  # 调用回调启用按钮
-        return True
+                print("所有文件下载成功。")
+                on_complete_callback()
+                return True
+            except Exception as e:
+                print(f"从 {url} 下载失败, 错误: {e}")
+        print("所有提供的URL下载失败。")
+        return False
     except Exception as e:
-        print(e)
+        print(f"发生异常: {e}")
         raise e
 
 
@@ -84,6 +101,7 @@ def close_and_update(tmp_path):
                 print(f"成功将 {update_exe_path} 拷贝到 {new_update_exe_path}")
             except Exception as e:
                 print(f"拷贝文件时出错: {e}")
-
             subprocess.Popen([new_update_exe_path, current_version, install_dir],
                              creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
+    else:
+        messagebox.showinfo("提醒", "请在打包环境中执行")
