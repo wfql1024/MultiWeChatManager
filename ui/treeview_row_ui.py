@@ -518,33 +518,3 @@ class TreeviewRowUI:
             ).start()
         except Exception as e:
             logger.error(e)
-
-
-if __name__ == '__main__':
-    from tkinter import scrolledtext
-
-
-    def print_unicode_symbols(text_widget):
-        for code in range(0x0000, 0xFFFF + 1):
-            symbol = chr(code)
-            # 过滤不可见字符、空白字符、中文和韩文字符
-            if symbol.isprintable() and not symbol.isspace() and symbol not in ' \t\n\r\f\v' \
-                    and not (0x4E00 <= code <= 0x9FFF or 0xAC00 <= code <= 0xD7AF):
-                text_widget.insert(tk.END, f"{symbol}(U+{code:04X})\n")
-        text_widget.config(state=tk.DISABLED)  # 禁止编辑
-
-
-    # 创建主窗口
-    root = tk.Tk()
-    root.title("Unicode Symbol Viewer")
-    root.geometry("400x600")
-    # 创建带滚动条的文本框，设置字体大小
-    text_label = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=50, height=30)
-    text_label.configure(font=("Arial", 16))
-    text_label.pack(expand=True, fill=tk.BOTH)
-
-    # 调用方法，将内容插入文本框中
-    print_unicode_symbols(text_label)
-
-    # 运行主循环
-    root.mainloop()
