@@ -123,5 +123,5 @@ def get_sys_major_version_name():
 
 
 if __name__ == '__main__':
-    print(platform.platform())
-    print(platform.release())
+    md5 = calculate_md5(r'E:\Now\Desktop\MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip')
+    print(md5)

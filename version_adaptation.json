@@ -345,28 +345,28 @@
         "win7": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
-            "md5": "AD73222D3069E2A60C9AAD3318012110",
+            "md5": "ad73222d3069e2a60c9aad3318012110",
             "sha-256": ""
           }
         ],
         "win10": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
-            "md5": "75E7CB3E7610DF3C911A0BD520BB0397",
+            "md5": "75e7cb3e7610df3c911a0bd520bb0397",
             "sha-256": ""
           }
         ],
         "win11": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
-            "md5": "75E7CB3E7610DF3C911A0BD520BB0397",
+            "md5": "75e7cb3e7610df3c911a0bd520bb0397",
             "sha-256": ""
           }
         ],
         "default": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
-            "md5": "AD73222D3069E2A60C9AAD3318012110",
+            "md5": "ad73222d3069e2a60c9aad3318012110",
             "sha-256": ""
           }
         ]
