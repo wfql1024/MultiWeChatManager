@@ -147,9 +147,11 @@ class UpdateLogWindow:
 
         # 在下载文件夹中查找近期的文件夹
         recent_folders = file_utils.get_recent_folders_from_dir(download_dir)
-        print(recent_folders)
         md5_list = [d.get("md5") for d in ver_dicts if "md5" in d]
         matched_file = subfunc_file.get_file_with_correct_md5(recent_folders, md5_list)
+
+        if matched_file:
+            download_path = matched_file
 
         status = {"stop": False}  # 定义状态字典
 
@@ -166,6 +168,7 @@ class UpdateLogWindow:
         download_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
         download_window.resizable(False, False)
         handle_utils.center_window(download_window)
+        download_window.grab_set()
 
         progress_var = tk.StringVar(value="开始下载...")
         tk.Label(download_window, textvariable=progress_var).pack(pady=10)

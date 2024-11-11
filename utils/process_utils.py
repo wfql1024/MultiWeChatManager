@@ -221,6 +221,28 @@ def get_process_ids_by_name(process_name):
     return matching_processes
 
 
+def create_process_for_win7(executable, args=None, creation_flags=0):
+    command = [executable]  # 添加可执行文件路径到命令列表中
+
+    if args:
+        command.extend(args)  # 添加额外的参数
+
+    # 启动进程，不使用管理员权限
+    try:
+        process = subprocess.Popen(
+            command,
+            creationflags=creation_flags,
+            shell=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        print("Process started successfully:", executable)
+        return process
+    except Exception as e:
+        print("Error starting process:", e)
+        return None
+
+
 def create_process_with_medium_il(executable, args=None, creation_flags=CREATE_NEW_CONSOLE):
     """
     以文件管理器的令牌打开可执行文件
@@ -230,13 +252,13 @@ def create_process_with_medium_il(executable, args=None, creation_flags=CREATE_N
     :return: 无
     """
     # 获取 Explorer 的窗口句柄
-    h_progman = GetShellWindow()
-    if not h_progman:
+    h_program = GetShellWindow()
+    if not h_program:
         raise ctypes.WinError(ctypes.get_last_error())
 
     # 获取 Explorer 进程 ID
     explorer_pid = DWORD()
-    GetWindowThreadProcessId(h_progman, ctypes.byref(explorer_pid))
+    GetWindowThreadProcessId(h_program, ctypes.byref(explorer_pid))
 
     # 打开 Explorer 进程
     h_process = OpenProcess(PROCESS_QUERY_INFORMATION, False, explorer_pid.value)

@@ -55,7 +55,6 @@ def is_admin():
 
 def quit_main():
     if getattr(sys, 'frozen', False):
-        exe_path = sys.executable
         try:
             # 查找进程ID并结束进程
             subprocess.run(["taskkill", "/f", "/im", "微信多开管理器.exe"], stdout=subprocess.PIPE,

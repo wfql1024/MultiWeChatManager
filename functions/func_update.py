@@ -101,7 +101,7 @@ def close_and_update(tmp_path):
                 print(f"成功将 {update_exe_path} 拷贝到 {new_update_exe_path}")
             except Exception as e:
                 print(f"拷贝文件时出错: {e}")
-            subprocess.Popen([new_update_exe_path, current_version, install_dir],
+            subprocess.Popen([new_update_exe_path, current_version, install_dir, tmp_path],
                              creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
     else:
         messagebox.showinfo("提醒", "请在打包环境中执行")

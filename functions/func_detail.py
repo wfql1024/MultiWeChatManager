@@ -5,6 +5,7 @@ from tkinter import messagebox
 from functions import func_setting, subfunc_file
 from resources.config import Config
 from utils import wechat_decrypt_utils, image_utils
+from utils.logger_utils import mylogger as logger
 
 
 def fetch_acc_detail_by_pid(pid, account, after):
@@ -18,7 +19,7 @@ def fetch_acc_detail_by_pid(pid, account, after):
     print(f"pid：{pid}，开始解密...")
     error = wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
     if error:
-        messagebox.showerror(f"错误", error)
+        messagebox.showerror("错误", error)
         after()
         return error
 
@@ -32,51 +33,47 @@ def fetch_acc_detail_by_pid(pid, account, after):
         folder for folder in os.listdir(data_path)
         if os.path.isdir(os.path.join(data_path, folder))
     ) - excluded_folders
-    for folder in folders:
-        conn = sqlite3.connect(db_file)
+
+    conn = sqlite3.connect(db_file)
+    try:
         cursor = conn.cursor()
-        sql_contact = f"SELECT UserName, Alias, NickName FROM 'Contact' WHERE UserName = '{folder}';"
-        sql_contact_head_img_url = f"SELECT UsrName, bigHeadImgUrl FROM 'ContactHeadImgUrl' WHERE UsrName = '{folder}';"
-        try:
-            cursor.execute(sql_contact)
-            contact_results = cursor.fetchall()
-            user_name, alias, nickname = contact_results[0]
-
-            cursor.execute(sql_contact_head_img_url)
-            avatar_results = cursor.fetchall()
-            usr_name, url = avatar_results[0]
-            # alias的存储比较特殊，如果用户没有重新改过微信名，那么表中alias为空，但是软件希望alias存储的是当前的
-            # 因此，若alias是空的，则原始名就是当前名
-            subfunc_file.update_acc_details_to_acc_json(user_name, alias=alias, nickname=nickname, avatar_url=url)
-            if alias == "":
-                subfunc_file.update_acc_details_to_acc_json(user_name, alias=user_name)
-
-            save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
-
-            if not os.path.exists(os.path.dirname(save_path)):
-                os.makedirs(os.path.dirname(save_path))
-
-            success = None
-            # 若不是当前账号且本地无缓存，才会下载
-            if usr_name != account:
-                if not os.path.exists(save_path):
-                    success = image_utils.download_image(url, save_path)
+        for folder in folders:
+            sql_contact = f"SELECT UserName, Alias, NickName FROM 'Contact' WHERE UserName = '{folder}';"
+            sql_contact_head_img_url = \
+                f"SELECT UsrName, bigHeadImgUrl FROM 'ContactHeadImgUrl' WHERE UsrName = '{folder}';"
+            try:
+                cursor.execute(sql_contact)
+                contact_results = cursor.fetchall()
+                if len(contact_results) > 0:
+                    user_name, alias, nickname = contact_results[0]
+                    # 处理alias为空的情况
+                    subfunc_file.update_acc_details_to_acc_json(user_name, alias=alias or user_name, nickname=nickname)
                 else:
-                    print("已有缓存，不需要下载")
-                    success = True
-            # 是当前账号，直接下载更新
-            else:
-                success = image_utils.download_image(url, save_path)
+                    logger.error("该账号未能获取到昵称、微信号")
+                    return
 
-            if not success:
-                print("无法下载图像")
-
-        except Exception as e:
-            print("sql executed have some error", e)
-            conn.close()
-            messagebox.showerror(f"错误", f"数据库执行出错:{e}")
-            after()
-            return "数据库执行出错"
-
+                cursor.execute(sql_contact_head_img_url)
+                avatar_results = cursor.fetchall()
+                if len(avatar_results) > 0:
+                    usr_name, url = avatar_results[0]
+                    subfunc_file.update_acc_details_to_acc_json(usr_name, avatar_url=url)
+                    save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
+                    if not os.path.exists(os.path.dirname(save_path)):
+                        os.makedirs(os.path.dirname(save_path))
+                    # 下载头像逻辑
+                    if usr_name != account and not os.path.exists(save_path):
+                        success = image_utils.download_image(url, save_path)
+                    else:
+                        success = image_utils.download_image(url, save_path)
+                    if not success:
+                        print("无法下载图像")
+                else:
+                    logger.error("该账号未能获取头像url")
+                    return
+            except Exception as e:
+                print("sql executed have some error", e)
+                messagebox.showerror("错误", f"数据库执行出错:{e}")
+                return "数据库执行出错"
+    finally:
         conn.close()
         after()

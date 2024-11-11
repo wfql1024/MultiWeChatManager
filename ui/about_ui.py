@@ -31,7 +31,7 @@ def add_hyperlink_events(text_widget, text_content):
         text_widget.tag_config(url, foreground="grey", underline=True)
 
         # 鼠标点击事件 - 打开链接
-        text_widget.tag_bind(url, "<Button-1>", lambda e, url: webbrowser.open_new(url))
+        text_widget.tag_bind(url, "<Button-1>", lambda e, open_url=url: webbrowser.open_new(open_url))
 
         # 鼠标进入事件 - 改变鼠标形状为手型
         text_widget.tag_bind(url, "<Enter>", lambda e: text_widget.config(cursor="hand2"))

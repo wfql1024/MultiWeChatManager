@@ -1,7 +1,7 @@
 import threading
 
 from PIL import ImageTk, Image
-from utils import widget_utils, string_utils, logger_utils
+from utils import widget_utils, string_utils
 import tkinter as tk
 from functools import partial
 from tkinter import ttk, messagebox
@@ -9,8 +9,7 @@ from tkinter import ttk, messagebox
 from functions import func_config, func_login, func_account, subfunc_file
 from ui import detail_ui
 from utils import handle_utils
-
-logger = logger_utils.mylogger
+from utils.logger_utils import mylogger as logger
 
 
 def try_convert(value):
@@ -77,7 +76,7 @@ class TreeviewRowUI:
                                            command=self.quit_selected_accounts, style='Custom.TButton')
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
             # 配置
-            self.config_btn = ttk.Button(self.logged_in_button_frame, text="配   置", width=8,
+            self.config_btn = ttk.Button(self.logged_in_button_frame, text="❐配 置", width=8,
                                          command=self.create_config, style='Custom.TButton')
             self.config_btn.pack(side=tk.RIGHT, pady=0)
             widget_utils.disable_button_and_add_tip(
@@ -85,11 +84,11 @@ class TreeviewRowUI:
 
             self.logged_in_tree = self.create_table("logged_in")
             self.display_table(logged_in_list, "logged_in")
-            self.update_top_title(True)
+            self.update_top_title("logged_in")
             self.logged_in_tree.bind("<Leave>", partial(self.on_leave))
             self.logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion))
-            self.logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in=True))
-            self.logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in=True))
+            self.logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in="logged_in"))
+            self.logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in="logged_in"))
             self.logged_in_tree.bind("<Configure>", self.adjust_columns_on_maximize)
 
         # 未登录框架=未登录标题+未登录列表
@@ -125,11 +124,11 @@ class TreeviewRowUI:
         # 更新顶部复选框状态
         self.not_logged_in_tree = self.create_table("not_logged_in")
         self.display_table(not_logged_in_list, "not_logged_in")
-        self.update_top_title(False)
+        self.update_top_title("not_logged_in")
         self.not_logged_in_tree.bind("<Leave>", partial(self.on_leave))
         self.not_logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion))
-        self.not_logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in=False))
-        self.not_logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in=False))
+        self.not_logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in="not_logged_in"))
+        self.not_logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in="not_logged_in"))
         self.not_logged_in_tree.bind("<Configure>", self.adjust_columns_on_maximize)
 
     def create_table(self, table_type):
@@ -147,9 +146,9 @@ class TreeviewRowUI:
             tree.column(col, anchor='center')  # 设置列宽
 
         # 特定列的宽度和样式设置
-        tree.column("#0", minwidth=70, width=70, anchor='w', stretch=tk.NO)
-        tree.column("pid", minwidth=80, width=80, anchor='center', stretch=tk.NO)
-        tree.column("配置", minwidth=140, width=140, anchor='center', stretch=tk.NO)
+        tree.column("#0", minwidth=64, width=64, stretch=tk.NO)
+        tree.column("pid", minwidth=80, width=80, anchor='e', stretch=tk.NO)
+        tree.column("配置", minwidth=144, width=144, anchor='center', stretch=tk.NO)
         tree.column(" ", minwidth=140, width=10, anchor='w')
         tree.column("原始微信号", anchor='center')
         tree.column("当前微信号", anchor='center')
@@ -174,14 +173,15 @@ class TreeviewRowUI:
         else:
             tree = ttk.Treeview(self.main_frame, show='tree', height=1, style="RowTreeview")
         for account in accounts:
-            display_name = func_account.get_acc_origin_display_name(account)
+            display_name = " " + func_account.get_acc_origin_display_name(account)
             config_status = func_config.get_config_status_by_account(account, self.data_path)
-            avatar_url, alias, nickname, pid = subfunc_file.get_acc_details_from_acc_json(
+            avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_acc_details_from_acc_json(
                 account,
                 avatar_url=None,
                 alias="请获取数据",
                 nickname="请获取数据",
-                pid=None
+                pid=None,
+                has_mutex=None
             )
 
             img = func_account.get_acc_avatar_from_files(account)
@@ -189,6 +189,8 @@ class TreeviewRowUI:
             photo = ImageTk.PhotoImage(img)
 
             self.photo_images.append(photo)
+
+            pid = "⚔" + str(pid) + " " if has_mutex else "" + str(pid) + " "
 
             try:
                 tree.insert("", "end", iid=account, image=photo,
@@ -252,7 +254,7 @@ class TreeviewRowUI:
 
     def update_selected_display(self, is_logged_in):
         # 获取选中行的“英语”列数据
-        if is_logged_in is True:
+        if is_logged_in == "logged_in":
             tree = self.logged_in_tree
             selected_items = self.selected_logged_in_items
             selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
@@ -277,7 +279,9 @@ class TreeviewRowUI:
         :param event: 点击复选框
         :return: 阻断继续切换
         """
-        if is_logged_in:
+        print(event.widget)
+        print(self.logged_in_checkbox)
+        if is_logged_in == "logged_in":
             checkbox_var = self.logged_in_checkbox_var
             tree = self.logged_in_tree
             selected_items = self.selected_logged_in_items
@@ -315,7 +319,7 @@ class TreeviewRowUI:
         toggle = partial(self.toggle_top_checkbox, is_logged_in=is_logged_in)
 
         # 判断是要更新哪一个顶行
-        if is_logged_in:
+        if is_logged_in == "logged_in":
             all_rows = [item for item in self.logged_in_tree.get_children()
                         if "disabled" not in self.logged_in_tree.item(item, "tags")]
             selected_rows = self.selected_logged_in_items
@@ -393,12 +397,15 @@ class TreeviewRowUI:
 
     def toggle_selection(self, event, is_logged_in):
         print("进入了单击判定")
-        if is_logged_in is True:
+        if is_logged_in == "logged_in":
             tree = self.logged_in_tree
             selected_items = self.selected_logged_in_items
-        else:
+        elif is_logged_in == "not_logged_in":
             tree = self.not_logged_in_tree
             selected_items = self.selected_not_logged_in_items
+        else:
+            tree = None
+            selected_items = []
         item_id = tree.identify_row(event.y)
         if len(item_id) == 0:
             return
@@ -422,14 +429,18 @@ class TreeviewRowUI:
             self.master.after_cancel(self.single_click_id)
             self.single_click_id = None
         print("进入了双击判定")
-        if is_logged_in is True:
+        if is_logged_in == "logged_in":
             tree = self.logged_in_tree
             selected_items = self.selected_logged_in_items
             callback = self.quit_selected_accounts
-        else:
+        elif is_logged_in == "not_logged_in":
             tree = self.not_logged_in_tree
             selected_items = self.selected_not_logged_in_items
             callback = self.auto_login_selected_acc
+        else:
+            tree = event.widget
+            selected_items = []
+            callback = None
         item_id = tree.identify_row(event.y)
         if len(item_id) == 0:
             return
@@ -507,3 +518,33 @@ class TreeviewRowUI:
             ).start()
         except Exception as e:
             logger.error(e)
+
+
+if __name__ == '__main__':
+    from tkinter import scrolledtext
+
+
+    def print_unicode_symbols(text_widget):
+        for code in range(0x0000, 0xFFFF + 1):
+            symbol = chr(code)
+            # 过滤不可见字符、空白字符、中文和韩文字符
+            if symbol.isprintable() and not symbol.isspace() and symbol not in ' \t\n\r\f\v' \
+                    and not (0x4E00 <= code <= 0x9FFF or 0xAC00 <= code <= 0xD7AF):
+                text_widget.insert(tk.END, f"{symbol}(U+{code:04X})\n")
+        text_widget.config(state=tk.DISABLED)  # 禁止编辑
+
+
+    # 创建主窗口
+    root = tk.Tk()
+    root.title("Unicode Symbol Viewer")
+    root.geometry("400x600")
+    # 创建带滚动条的文本框，设置字体大小
+    text_label = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=50, height=30)
+    text_label.configure(font=("Arial", 16))
+    text_label.pack(expand=True, fill=tk.BOTH)
+
+    # 调用方法，将内容插入文本框中
+    print_unicode_symbols(text_label)
+
+    # 运行主循环
+    root.mainloop()

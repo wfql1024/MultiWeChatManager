@@ -5,7 +5,7 @@ import win32gui
 
 from functions import func_setting, subfunc_file
 from resources import Config
-from utils import handle_utils, process_utils, ini_utils, pywinhandle
+from utils import handle_utils, process_utils, ini_utils, pywinhandle, file_utils
 
 
 def kill_wechat_multiple_processes():
@@ -67,7 +67,7 @@ def open_wechat(status, has_mutex_dictionary=None):
 
     if status == "已开启":
         print(f"当前是全局多开模式")
-        process_utils.create_process_with_medium_il(wechat_path)
+        create_process_without_admin(wechat_path)
         time.sleep(0.1)
     else:
         # 获取当前选择的多开子程序
@@ -78,19 +78,19 @@ def open_wechat(status, has_mutex_dictionary=None):
         )
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if sub_exe == "WeChatMultiple_Anhkgg.exe":
-            sub_exe_process = process_utils.create_process_with_medium_il(
+            sub_exe_process = create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
                 creation_flags=process_utils.CREATE_NO_WINDOW
             )
         # ————————————————————————————————WeChatMultiple_wfql.exe————————————————————————————————
         elif sub_exe == "WeChatMultiple_wfql.exe":
-            sub_exe_process = process_utils.create_process_with_medium_il(
+            sub_exe_process = create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}",
                 creation_flags=process_utils.CREATE_NO_WINDOW
             )
         # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
         elif sub_exe == "WeChatMultiple_lyie15.exe":
-            sub_exe_process = process_utils.create_process_with_medium_il(
+            sub_exe_process = create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}"
             )
             sub_exe_hwnd = handle_utils.wait_for_window_open("WTWindow", 8)
@@ -111,7 +111,7 @@ def open_wechat(status, has_mutex_dictionary=None):
                 print(f"成功关闭{success_lists}：{time.time() - start_time:.4f}秒")
 
             # 所有操作完成后，执行创建进程的操作
-            process_utils.create_process_with_medium_il(wechat_path, None)
+            create_process_without_admin(wechat_path, None)
         # ————————————————————————————————python————————————————————————————————
         elif sub_exe == "python":
             for pid, has_mutex in has_mutex_dictionary.items():
@@ -128,9 +128,16 @@ def open_wechat(status, has_mutex_dictionary=None):
                     print(f"关闭互斥体失败，PID: {pid}")
 
             # 所有操作完成后，执行创建进程的操作
-            process_utils.create_process_with_medium_il(wechat_path, None)
+            create_process_without_admin(wechat_path, None)
 
     return sub_exe_process, sub_exe
+
+
+def create_process_without_admin(executable, args=None, creation_flags=process_utils.CREATE_NEW_CONSOLE):
+    if file_utils.get_sys_major_version_name() == "win7":
+        return process_utils.create_process_for_win7(executable, args, creation_flags)
+    else:
+        return process_utils.create_process_with_medium_il(executable, args, creation_flags)
 
 
 def logging_in_listener():
