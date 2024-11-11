@@ -340,6 +340,56 @@
     }
   },
   "update": {
+    "v2.8.7.668-Alpha": {
+      "pkgs": {
+        "win7": [
+          {
+            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+            "md5": "AD73222D3069E2A60C9AAD3318012110",
+            "sha-256": ""
+          }
+        ],
+        "win10": [
+          {
+            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+            "md5": "75E7CB3E7610DF3C911A0BD520BB0397",
+            "sha-256": ""
+          }
+        ],
+        "win11": [
+          {
+            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+            "md5": "75E7CB3E7610DF3C911A0BD520BB0397",
+            "sha-256": ""
+          }
+        ],
+        "default": [
+          {
+            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+            "md5": "AD73222D3069E2A60C9AAD3318012110",
+            "sha-256": ""
+          }
+        ]
+      },
+      "logs": {
+        "新增": [
+          "新增“列表”视图",
+          "新增“在线升级”功能",
+          "新增自动静默获取头像昵称的功能"
+        ],
+        "修复": [
+          "修复Python模式下多开微信失败的问题",
+          "修复某些表情符号溢出无法显示的问题",
+          "修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题"
+        ],
+        "优化": [
+          "防撤回功能已默认显示",
+          "优化按钮点击逻辑",
+          "优化日志显示",
+          "优化在线升级，避免重复下载"
+        ]
+      }
+    },
     "v2.6.0.420-test": {
       "pkgs": {
         "win7": [

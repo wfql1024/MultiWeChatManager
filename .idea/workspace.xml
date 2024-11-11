@@ -5,8 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题">
-      <change beforePath="$PROJECT_DIR$/functions/func_account.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_account.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/treeview_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/treeview_row_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.bat" beforeDir="false" afterPath="$PROJECT_DIR$/build.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/version_adaptation.json" beforeDir="false" afterPath="$PROJECT_DIR$/version_adaptation.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -389,23 +390,7 @@
       <workItem from="1730991583403" duration="1059000" />
       <workItem from="1731031017816" duration="30036000" />
       <workItem from="1731239183932" duration="4443000" />
-      <workItem from="1731270954233" duration="29373000" />
-    </task>
-    <task id="LOCAL-00074" summary="一直在调试适配win7，这里备份一下">
-      <option name="closed" value="true" />
-      <created>1728009119875</created>
-      <option name="number" value="00074" />
-      <option name="presentableId" value="LOCAL-00074" />
-      <option name="project" value="LOCAL" />
-      <updated>1728009119876</updated>
-    </task>
-    <task id="LOCAL-00075" summary="适配好win7，删除wfql多开器">
-      <option name="closed" value="true" />
-      <created>1728143156194</created>
-      <option name="number" value="00075" />
-      <option name="presentableId" value="LOCAL-00075" />
-      <option name="project" value="LOCAL" />
-      <updated>1728143156195</updated>
+      <workItem from="1731270954233" duration="33037000" />
     </task>
     <task id="LOCAL-00076" summary="修改了下关于页，准备做“检查更新”功能">
       <option name="closed" value="true" />
@@ -783,7 +768,23 @@
       <option name="project" value="LOCAL" />
       <updated>1731327382996</updated>
     </task>
-    <option name="localTasksCounter" value="123" />
+    <task id="LOCAL-00123" summary="修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题">
+      <option name="closed" value="true" />
+      <created>1731327638016</created>
+      <option name="number" value="00123" />
+      <option name="presentableId" value="LOCAL-00123" />
+      <option name="project" value="LOCAL" />
+      <updated>1731327638016</updated>
+    </task>
+    <task id="LOCAL-00124" summary="修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题">
+      <option name="closed" value="true" />
+      <created>1731330836821</created>
+      <option name="number" value="00124" />
+      <option name="presentableId" value="LOCAL-00124" />
+      <option name="project" value="LOCAL" />
+      <updated>1731330836821</updated>
+    </task>
+    <option name="localTasksCounter" value="125" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
