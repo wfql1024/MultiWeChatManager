@@ -6,6 +6,7 @@ import win32con
 import win32gui
 import win32ui
 from PIL import Image, ImageDraw, ImageTk
+from utils.logger_utils import mylogger as logger
 
 
 def create_round_corner_image(img, radius):
@@ -58,7 +59,7 @@ def download_image(img_url, path):
             for chunk in response.iter_content(chunk_size=8192):
                 file.write(chunk)
 
-        print(f"图像已成功保存到 {path}")
+        logger.info(f"图像已成功保存到 {path}")
         return True
     except requests.RequestException as re:
         print(f"下载图像时出错: {re}")

@@ -16,9 +16,10 @@ def fetch_acc_detail_by_pid(pid, account, after):
     :param after: 结束后的操作：恢复按钮
     :return: 无
     """
-    print(f"pid：{pid}，开始解密...")
+    print(f"pid：{pid}，开始找key...")
     error = wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
     if error:
+        print("解密出错...")
         messagebox.showerror("错误", error)
         after()
         return error
@@ -61,12 +62,16 @@ def fetch_acc_detail_by_pid(pid, account, after):
                     if not os.path.exists(os.path.dirname(save_path)):
                         os.makedirs(os.path.dirname(save_path))
                     # 下载头像逻辑
-                    if usr_name != account and not os.path.exists(save_path):
-                        success = image_utils.download_image(url, save_path)
+                    if usr_name != account:
+                        if not os.path.exists(save_path):
+                            success = image_utils.download_image(url, save_path)
+                        else:
+                            success = "无需下载"
+                            logger.info("该账号无需下载")
                     else:
                         success = image_utils.download_image(url, save_path)
                     if not success:
-                        print("无法下载图像")
+                        logger.error("无法下载图像")
                 else:
                     logger.error("该账号未能获取头像url")
                     return

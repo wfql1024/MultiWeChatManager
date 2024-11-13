@@ -417,7 +417,7 @@ class MainWindow:
         try:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
-                result = func_account.get_account_list()
+                result = func_account.get_account_list(self.multiple_status)
                 self.master.after(0, self.create_account_list_ui, result)
 
             threading.Thread(target=thread_func).start()
@@ -549,7 +549,7 @@ class MainWindow:
             mode_text = "防撤回"
         else:
             return
-        logged_in, _, _ = func_account.get_account_list()
+        logged_in, _, _ = func_account.get_account_list(self.multiple_status)
         if logged_in:
             answer = messagebox.askokcancel(
                 "警告",

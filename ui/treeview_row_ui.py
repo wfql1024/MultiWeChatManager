@@ -76,8 +76,9 @@ class TreeviewRowUI:
                                            command=self.quit_selected_accounts, style='Custom.TButton')
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
             # 配置
-            self.config_btn = ttk.Button(self.logged_in_button_frame, text="❐配 置", width=8,
-                                         command=self.create_config, style='Custom.TButton')
+            self.config_btn = ttk.Button(self.logged_in_button_frame, text="❐配 置", width=8, style='Custom.TButton',
+                                         command=partial(self.create_config, multiple_status=self.multiple_status)
+                                         )
             self.config_btn.pack(side=tk.RIGHT, pady=0)
             widget_utils.disable_button_and_add_tip(
                 self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有螺丝符号表示推荐配置的账号")
@@ -331,7 +332,6 @@ class TreeviewRowUI:
         else:
             all_rows = [item for item in self.not_logged_in_tree.get_children()
                         if "disabled" not in self.not_logged_in_tree.item(item, "tags")]
-            # print("测试：", all_rows)
             selected_rows = self.selected_not_logged_in_items
             checkbox = self.not_logged_in_checkbox
             title = self.not_logged_in_title
@@ -410,7 +410,7 @@ class TreeviewRowUI:
         if len(item_id) == 0:
             return
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            print("测试", len(tree.identify_row(event.y)))
+            # print("测试", len(tree.identify_row(event.y)))
             # 弹出提示窗口
             self.open_detail(tree.item(item_id, "values")[self.acc_index])
         else:
@@ -445,7 +445,7 @@ class TreeviewRowUI:
         if len(item_id) == 0:
             return
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            print("测试", len(tree.identify_row(event.y)))
+            # print("测试", len(tree.identify_row(event.y)))
             # 弹出提示窗口
             self.open_detail(tree.item(item_id, "values")[self.acc_index])
         else:
@@ -465,13 +465,13 @@ class TreeviewRowUI:
         detail_ui.DetailWindow(detail_window, account, self.main_window.create_main_frame_and_menu)
         handle_utils.center_window(detail_window)
 
-    def create_config(self, status):
+    def create_config(self, multiple_status):
         """按钮：创建或重新配置"""
         accounts = self.selected_logged_in_items
         self.main_window.thread_manager.create_config_thread(
             accounts[0],
             func_config.test,
-            status,
+            multiple_status,
             self.main_window.create_main_frame_and_menu
         )
 

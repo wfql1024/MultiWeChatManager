@@ -87,11 +87,11 @@ def create_config(account):
         return False
 
 
-def test(account, status):
+def test(account, multiple_status):
     """
     尝试打开微信，让用户判断是否是对应的账号，根据用户结果去创建配置或结束
     :param account: 账号
-    :param status: 是否全局多开状态
+    :param multiple_status: 是否全局多开状态
     :return: 是否对应
     """
     if messagebox.askyesno(
@@ -101,7 +101,7 @@ def test(account, status):
         subfunc_wechat.clear_idle_wnd_and_process()
         time.sleep(0.5)
         has_mutex_dict = subfunc_wechat.get_mutex_dict()
-        sub_exe_process, _ = subfunc_wechat.open_wechat(status, has_mutex_dict)
+        sub_exe_process, _ = subfunc_wechat.open_wechat(multiple_status, has_mutex_dict)
         wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
             if sub_exe_process:

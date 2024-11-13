@@ -4,6 +4,7 @@ import winreg
 import psutil
 
 from utils import process_utils
+from utils.logger_utils import mylogger as logger
 
 
 def is_valid_wechat_install_path(path) -> bool:
@@ -32,7 +33,7 @@ def get_wechat_install_path_from_process():
     for process in psutil.process_iter(['name', 'exe']):
         if process.name() == 'WeChat.exe':
             path = process.exe().replace('\\', '/')
-            print(f"通过查找进程方式获取了微信安装地址：{path}")
+            logger.info(f"通过查找进程方式获取了微信安装地址：{path}")
             return path
     return None
 
@@ -43,11 +44,11 @@ def get_wechat_install_path_from_machine_register():
                              r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\WeChat")
         found_path = winreg.QueryValueEx(key, "InstallLocation")[0].replace('\\', '/')
         winreg.CloseKey(key)
-        print(f"通过注册表方式1获取了微信安装地址：{found_path}")
+        logger.info(f"通过注册表方式1获取了微信安装地址：{found_path}")
         if found_path:
             return os.path.join(found_path, "WeChat.exe").replace('\\', '/')
     except WindowsError as e:
-        print(e)
+        logger.error(e)
     return None
 
 
@@ -56,11 +57,11 @@ def get_wechat_install_path_from_user_register():
         key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Tencent\WeChat")
         found_path = winreg.QueryValueEx(key, "InstallPath")[0].replace('\\', '/')
         winreg.CloseKey(key)
-        print(f"通过注册表方式2获取了微信安装地址：{found_path}")
+        logger.info(f"通过注册表方式2获取了微信安装地址：{found_path}")
         if found_path:
             return os.path.join(found_path, "WeChat.exe").replace('\\', '/')
     except WindowsError as e:
-        print(e)
+        logger.error(e)
     return None
 
 
@@ -79,7 +80,7 @@ def get_wechat_data_dir_from_user_register():
 def get_wechat_dll_dir_by_memo_maps():
     pids = process_utils.get_process_ids_by_name("WeChat.exe")
     if len(pids) == 0:
-        print(f"没有运行微信。")
+        logger.warning(f"没有运行微信。")
         return None
     else:
         process_id = pids[0]
@@ -92,11 +93,11 @@ def get_wechat_dll_dir_by_memo_maps():
                     # print(dll_dir_path)
                     return dll_dir_path
         except psutil.AccessDenied:
-            print(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
+            logger.error(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
         except psutil.NoSuchProcess:
-            print(f"进程ID为 {process_id} 的进程不存在或已退出。")
+            logger.error(f"进程ID为 {process_id} 的进程不存在或已退出。")
         except Exception as e:
-            print(f"发生意外错误: {e}")
+            logger.error(f"发生意外错误: {e}")
 
 
 if __name__ == '__main__':

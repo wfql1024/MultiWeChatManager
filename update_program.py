@@ -140,7 +140,7 @@ def update_and_reopen(args, root):
     else:
         print("微信多开管理器.exe 不存在。")
 
-    root.destory()
+    root.destroy()
 
 
 def main():

@@ -3,6 +3,7 @@ import os
 from functions import subfunc_file
 from resources import Config
 from utils import ini_utils, wechat_utils, file_utils
+from utils.logger_utils import mylogger as logger
 
 
 def get_wechat_dll_dir_by_files():
@@ -45,7 +46,7 @@ def get_wechat_install_path():
         path = finder()
         if wechat_utils.is_valid_wechat_install_path(path):
             subfunc_file.save_wechat_install_path_to_setting_ini(path)
-            print(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
+            logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
             return path
 
     return None
@@ -68,7 +69,7 @@ def get_wechat_data_dir():
         # 对得到地址进行检验，正确则返回并保存
         if wechat_utils.is_valid_wechat_data_path(found_path):
             subfunc_file.save_wechat_data_path_to_setting_ini(found_path)
-            print(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
+            logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
             return found_path
 
     return None
@@ -85,7 +86,7 @@ def get_wechat_dll_dir():
         found_path = finder()
         if wechat_utils.is_valid_wechat_dll_dir_path(found_path):
             subfunc_file.save_wechat_dll_dir_path_to_setting_ini(found_path)
-            print(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
+            logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
             return found_path
     return None
 

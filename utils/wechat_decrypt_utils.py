@@ -67,7 +67,7 @@ def is_writable_region(pid, address):  # 判断给定的内存地址是否是可
     return mbi.Protect in MEMORY_WRITE_PROTECTIONS
 
 
-# 第一步：找key -> 2. 检验是否成功
+# 第一步：找key -> 2. 检验是否正确
 def check_sqlite_pass(db_file, password):
     db_file = Path(db_file)
     if type(password) is str:  # 要是类型是string的，就转bytes
@@ -76,10 +76,10 @@ def check_sqlite_pass(db_file, password):
         salt = f.read(16)  # 开头的16字节做salt
         first_page_data = f.read(DEFAULT_PAGESIZE - 16)  # 从开头第16字节开始到DEFAULT_PAGESIZE整个第一页
     if not len(salt) == 16:
-        print(f"{db_file} read failed ")
+        logger.error(f"{db_file} read failed ")
         return False
     if not len(first_page_data) == DEFAULT_PAGESIZE - 16:
-        print(f"{db_file} read failed ")
+        logger.error(f"{db_file} read failed ")
         return False
     # print(f"{salt=}")
     # print(f"{first_page_data=}")
@@ -88,14 +88,19 @@ def check_sqlite_pass(db_file, password):
     mac_key = hashlib.pbkdf2_hmac('sha1', key, mac_salt, 2, KEY_SIZE)
     hash_mac = hmac.new(mac_key, digestmod='sha1')
     hash_mac.update(first_page_data[:-32])
-    hash_mac.update(bytes(ctypes.c_int(1)))
-    if hash_mac.digest() == first_page_data[-32:-12]:
-        # print(f'{db_file},valid password Success')
-        logger.info(f"{db_file},valid password Success")
-        return True
-    else:
-        logger.warning(f'{db_file},valid password Error')
-        return False
+    for update_func in [
+        lambda: hash_mac.update(struct.pack('=I', 1)),
+        lambda: hash_mac.update(bytes(ctypes.c_int(1))),
+    ]:
+        hash_mac_copy = hash_mac.copy()  # 复制 hash_mac，避免每次循环修改原 hash_mac
+        update_func()  # 执行 update 操作
+
+        if hash_mac_copy.digest() == first_page_data[-32:-12]:
+            logger.info(f"{db_file}, valid password Success")
+            return True  # 匹配成功，返回 True
+
+    logger.warning(f'{db_file}, valid password Error')
+    return False  # 所有尝试失败，返回 False
 
 
 # 第一步：拷贝数据库文件和找key
@@ -159,28 +164,36 @@ def copy_db_and_get_acc_key_by_pid(pid, account):
         logger.info(f"正在从电话类型基址的附近查找……")
         end_time = time.time() + 5
         k = 0
+
+        # 判断操作系统位数，只需执行一次
+        if phone_addr <= 2 ** 32:  # 如果是32位
+            is_32bit = True
+            logger.info(f"使用32位寻址去找key")
+        else:  # 如果是64位
+            is_32bit = False
+            logger.info(f"使用64位寻址去找key")
+
         while i > min_address:
             # j 的数列：-1,2,-3,4,-5...
             k = k + 1
             j = (k if k % 2 != 0 else -k)
             i += j
-            if phone_addr <= 2 ** 32:  # 虽然OS可能是64bit的，但微信是有32bit和64bit的，这里通过前面获得的phone_addr的地址来判断是在32位以内，还是以上，来决定
+            if is_32bit:
                 key_addr_bytes = pm.read_bytes(i, 4)  # 32位寻址下，地址指针占4个字节，找到存key的地址指针
                 key_addr = struct.unpack('<I', key_addr_bytes)[0]
-                # logger.info(f"尝试使用32位寻址去找key,i:{i:X},key_addr:{key_addr:X}")
             else:
-                key_addr_bytes = pm.read_bytes(i, 8)  # 64位寻址下，地址指针占8个字节，，找到存key的地址指针
+                key_addr_bytes = pm.read_bytes(i, 8)  # 64位寻址下，地址指针占8个字节，找到存key的地址指针
                 key_addr = struct.unpack('<Q', key_addr_bytes)[0]
-                # logger.info(f"尝试使用64位寻址去找key,i:{i:X},key_addr:{key_addr:X}")
             if not is_writable_region(pm.process_id, key_addr):  # 要是这个指针指向的区域不能写，那也跳过
                 continue
+
             key = pm.read_bytes(key_addr, 32)
             logger.info(f"i={i},key_addr={key_addr},key={key}")
             if check_sqlite_pass(db_file, key):
                 # 到这里就是找到了……
                 str_key = binascii.hexlify(key).decode()
                 logger.info(f"found key pointer addr:{i:X}, key_addr:{key_addr:X}")
-                logger.info(f"key:{str_key}")
+                logger.info(f"str_key:{str_key}")
                 logger.info(f"查找用时：{time.time() + 5 - end_time:.4f}秒")
                 return str_key
             else:
@@ -190,8 +203,7 @@ def copy_db_and_get_acc_key_by_pid(pid, account):
                 break
         if not key:
             logger.error("没有找到key")
-            sys.exit(-1)
-
+            return
     except Exception as e:
         logger.error(f"has some exception {e}")
 
@@ -199,6 +211,7 @@ def copy_db_and_get_acc_key_by_pid(pid, account):
 # 第二步：解密
 def decrypt_db_file_by_str_key_res(db_file_path, str_key_res):
     logger.info("正在对数据库解密......")
+    print("成功获取key，正在对数据库解密...")
     sqlite_file_header = bytes("SQLite format 3", encoding='ASCII') + bytes(1)  # 文件头
     key_size = 32
     default_pagesize = 4096  # 4048数据 + 16IV + 20 HMAC + 12
@@ -212,39 +225,45 @@ def decrypt_db_file_by_str_key_res(db_file_path, str_key_res):
 
     salt = blist[:16]  # 微信将文件头换成了盐
     key = hashlib.pbkdf2_hmac('sha1', str_key, salt, default_iter, key_size)  # 获得Key
-    logger.info(f"key={key}")
+    logger.info(f"str_key={str_key}, salt={salt}, key={key}")
 
     first = blist[16:default_pagesize]  # 丢掉salt
-
-    # import struct
     mac_salt = bytes([x ^ 0x3a for x in salt])
     mac_key = hashlib.pbkdf2_hmac('sha1', key, mac_salt, 2, key_size)
+    logger.info(f"key={key}, mac_salt={mac_salt}, mac_key={mac_key}")
 
     hash_mac = hmac.new(mac_key, digestmod='sha1')  # 用第一页的Hash测试一下
     hash_mac.update(first[:-32])
-    hash_mac.update(bytes(ctypes.c_int(1)))
-    # hash_mac.update(struct.pack('=I',1))
-    if hash_mac.digest() == first[-32:-12]:
-        print('Correct Password')
+    for update_func in [
+        lambda: hash_mac.update(struct.pack('=I', 1)),
+        lambda: hash_mac.update(bytes(ctypes.c_int(1))),
+    ]:
+        hash_mac_copy = hash_mac.copy()  # 先复制 hash_mac，避免每次循环修改原 hash_mac
+        update_func()  # 执行 update 操作
+        if hash_mac_copy.digest() == first[-32:-12]:
+            logger.info(f'Correct Password: {mac_key}')
+            break
     else:
-        raise RuntimeError('Wrong Password')
+        logger.info(f'Correct Password: {mac_key}')
+        raise RuntimeError(f'Wrong Password: {mac_key}')
 
+    print("解密成功，数据库写入解密后的内容...")
     blist = [blist[i:i + default_pagesize] for i in range(default_pagesize, len(blist), default_pagesize)]
     # print(blist)
 
     new_db_file_path = None
 
     if os.path.exists(db_file_path):
-        print(f"当前db文件是：{db_file_path}")
+        logger.info(f"数据库源：{db_file_path}")
         if os.path.isdir(db_file_path):
             pass
         elif os.path.isfile(db_file_path):
             index = db_file_path.rfind("\\")
             origin = db_file_path[index + 1:]
             new_db_file_path = db_file_path.replace(origin, "edit_" + origin)
-            print(f"现在db文件已经是{new_db_file_path}")
     else:
-        print(db_file_path, "不存在")
+        logger.error(db_file_path, "不存在")
+        raise FileNotFoundError('db文件已经不存在！')
 
     with open(new_db_file_path, 'wb') as f:
         f.write(sqlite_file_header)  # 写入文件头
@@ -256,6 +275,7 @@ def decrypt_db_file_by_str_key_res(db_file_path, str_key_res):
             f.write(t.decrypt(i[:-48]))
             f.write(i[-48:])
 
+    logger.info(f"写入成功：{new_db_file_path}")
     os.remove(db_file_path)
 
 
@@ -264,7 +284,7 @@ def decrypt_acc_and_copy_by_pid(pid, account):
     # 获取pid对应账号的wechat key
     str_key = copy_db_and_get_acc_key_by_pid(pid, account)
     if str_key is None:
-        return "获取key失败"
+        return "超时，获取key失败"
     str_key_res = ' '.join([str_key[i:i + 2] for i in range(0, len(str_key), 2)])
     usr_dir = Config.PROJ_USER_PATH
     file_mm = usr_dir + rf"\{account}\{account}_MicroMsg.db"
@@ -275,5 +295,4 @@ def decrypt_acc_and_copy_by_pid(pid, account):
         decrypt_db_file_by_str_key_res(file_mm, str_key_res)
     except Exception as e:
         logger.error(e)
-        print("decrypt has error:", e)
         return "解密数据库失败"

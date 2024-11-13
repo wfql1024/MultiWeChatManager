@@ -28,9 +28,9 @@ class ThreadManager:
         self.master = master
         self.condition = threading.Condition()
 
-    def create_config_thread(self, account, func_test_and_create_config, status, create_main_frame):
+    def create_config_thread(self, account, func_test_and_create_config, multiple_status, create_main_frame):
         def thread_func():
-            result = func_test_and_create_config(account, status)
+            result = func_test_and_create_config(account, multiple_status)
             self.master.after(0, _handle_create_config_result, result, create_main_frame)
 
         threading.Thread(target=thread_func).start()

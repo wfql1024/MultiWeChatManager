@@ -9,7 +9,7 @@ from typing import Union, Tuple, List
 import psutil
 from PIL import Image
 
-from functions import func_setting, func_wechat_dll, subfunc_file
+from functions import func_setting, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, image_utils, string_utils
@@ -79,17 +79,14 @@ def get_acc_avatar_from_files(account):
     # 检查是否存在对应account的头像
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
-
     # 如果没有，从网络下载
     url, = subfunc_file.get_acc_details_from_acc_json(account, avatar_url=None)
-    print(f"测试：{url}")
     if url is not None and url.endswith("/0"):
-        success = image_utils.download_image(url, avatar_path)
+        image_utils.download_image(url, avatar_path)
 
     # 第二次检查是否存在对应account的头像
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
-
     # 如果没有，检查default.jpg
     default_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
     if os.path.exists(default_path):
@@ -140,7 +137,7 @@ def get_acc_wrapped_display_name(account) -> str:
     )
 
 
-def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], list]]:
+def get_account_list(multiple_status) -> Union[Tuple[None, None, None], Tuple[list, List[str], list]]:
     """
     获取账号及其登录情况
 
@@ -169,7 +166,7 @@ def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], 
                         wxid_index = path_parts.index(os.path.basename(data_path)) + 1
                         wxid = path_parts[wxid_index]
                         wechat_processes.append((wxid, process_id))
-                        logged_in_wxids.add(wxid)
+                        logged_in_ids.add(wxid)
                         print(f"└———提取到进程{process_id}对应账号{wxid}，已用时：{time.time() - start_time:.4f}秒")
                         break
                     except ValueError:
@@ -187,7 +184,7 @@ def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], 
         return None, None, None
 
     wechat_processes = []
-    logged_in_wxids = set()
+    logged_in_ids = set()
 
     pids = process_utils.get_process_ids_by_name("WeChat.exe")
     print(f"读取到微信所有进程，用时：{time.time() - start_time:.4f} 秒")
@@ -202,17 +199,16 @@ def get_account_list() -> Union[Tuple[None, None, None], Tuple[list, List[str], 
         item for item in os.listdir(data_path)
         if os.path.isdir(os.path.join(data_path, item))
     ) - excluded_folders
-    logged_in = list(logged_in_wxids & folders)
-    not_logged_in = list(folders - logged_in_wxids)
+    logged_in = list(logged_in_ids & folders)
+    not_logged_in = list(folders - logged_in_ids)
 
     print(f"logged_in：{logged_in}")
     print(f"not_logged_in：{not_logged_in}")
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
-    status, _, _ = func_wechat_dll.check_dll("multiple")
     pid_dict = dict(wechat_processes)
-    if status == "已开启":
+    if multiple_status == "已开启":
         for acc in logged_in + not_logged_in:
             print(f"由于是全局多开模式，直接所有has_mutex都为false")
             subfunc_file.update_acc_details_to_acc_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
