@@ -60,8 +60,8 @@ def get_wechat_install_path_from_user_register():
         logger.info(f"通过注册表方式2获取了微信安装地址：{found_path}")
         if found_path:
             return os.path.join(found_path, "WeChat.exe").replace('\\', '/')
-    except WindowsError as e:
-        logger.error(e)
+    except WindowsError as we:
+        logger.error(we)
     return None
 
 
@@ -72,8 +72,8 @@ def get_wechat_data_dir_from_user_register():
         winreg.CloseKey(key)
         value = os.path.join(value, "WeChat Files").replace('\\', '/')
         return value
-    except WindowsError:
-        pass
+    except WindowsError as we:
+        logger.error(we)
     return None
 
 
@@ -101,4 +101,6 @@ def get_wechat_dll_dir_by_memo_maps():
 
 
 if __name__ == '__main__':
-    pass
+    test_path = 'E:data/Tencent/WeChat Files'
+    print(is_valid_wechat_data_path(test_path))
+    print(os.path.abspath(test_path))

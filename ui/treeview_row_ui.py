@@ -271,17 +271,17 @@ class TreeviewRowUI:
             selected_items = self.selected_not_logged_in_items
             selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
             self.selected_not_logged_in_accounts = selected_accounts
-        print(is_logged_in, selected_accounts)
+        # print(is_logged_in, selected_accounts)
 
-    def toggle_top_checkbox(self, event, is_logged_in):
+    def toggle_top_checkbox(self, _event, is_logged_in):
         """
         切换顶部复选框状态，更新子列表
+        :param _event: 触发事件的控件
         :param is_logged_in: 是否登录
-        :param event: 点击复选框
         :return: 阻断继续切换
         """
-        print(event.widget)
-        print(self.logged_in_checkbox)
+        # print(event.widget)
+        # print(self.logged_in_checkbox)
         if is_logged_in == "logged_in":
             checkbox_var = self.logged_in_checkbox_var
             tree = self.logged_in_tree
@@ -364,7 +364,7 @@ class TreeviewRowUI:
                 checkbox_var.set(0)
                 widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
 
-    def on_leave(self, event):
+    def on_leave(self, _event):
         if self.hovered_item is not None:
             widget_utils.remove_a_tag_of_item(self.hovered_item[0], self.hovered_item[1], "hover")
             self.hovered_item = None
@@ -396,7 +396,7 @@ class TreeviewRowUI:
         self.single_click_id = self.master.after(200, lambda: self.toggle_selection(event, is_logged_in))
 
     def toggle_selection(self, event, is_logged_in):
-        print("进入了单击判定")
+        # print("进入了单击判定")
         if is_logged_in == "logged_in":
             tree = self.logged_in_tree
             selected_items = self.selected_logged_in_items
@@ -428,7 +428,7 @@ class TreeviewRowUI:
         if self.single_click_id:
             self.master.after_cancel(self.single_click_id)
             self.single_click_id = None
-        print("进入了双击判定")
+        # print("进入了双击判定")
         if is_logged_in == "logged_in":
             tree = self.logged_in_tree
             selected_items = self.selected_logged_in_items

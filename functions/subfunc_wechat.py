@@ -6,6 +6,7 @@ import win32gui
 from functions import func_setting, subfunc_file
 from resources import Config
 from utils import handle_utils, process_utils, ini_utils, pywinhandle, file_utils
+from utils.logger_utils import mylogger as logger
 
 
 def kill_wechat_multiple_processes():
@@ -133,6 +134,25 @@ def open_wechat(status, has_mutex_dictionary=None):
     return sub_exe_process, sub_exe
 
 
+def get_login_size(status):
+    clear_idle_wnd_and_process()
+    has_mutex_dict = get_mutex_dict()
+    sub_exe_process, sub_exe = open_wechat(status, has_mutex_dict)
+    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
+    if wechat_hwnd:
+        print(f"打开了登录窗口{wechat_hwnd}")
+        if sub_exe_process:
+            sub_exe_process.terminate()
+        time.sleep(2)
+        login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
+        login_wnd = login_wnd_details["window"]
+        login_width = login_wnd_details["width"]
+        login_height = login_wnd_details["height"]
+        logger.info(f"获得了窗口尺寸：{login_width}, {login_height}")
+        login_wnd.close()
+        return login_width, login_height
+
+
 def create_process_without_admin(executable, args=None, creation_flags=process_utils.CREATE_NEW_CONSOLE):
     if file_utils.get_sys_major_version_name() == "win7":
         return process_utils.create_process_for_win7(executable, args, creation_flags)
@@ -145,7 +165,7 @@ def logging_in_listener():
     flag = False
 
     while True:
-        handle = win32gui.FindWindow("WeChatLoginWndForPC", "微信")
+        handle = win32gui.FindWindow("WeChatLoginWndForPC")
         if handle:
             handles.add(handle)
             flag = True

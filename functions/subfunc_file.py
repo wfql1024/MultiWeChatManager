@@ -330,6 +330,8 @@ def get_app_current_version():
 def get_avatar_url_from_acc_info_file(acc_list, data_dir):
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
+        if not os.path.isfile(acc_info_dat_path):
+            continue
         with open(acc_info_dat_path, 'r', encoding="utf-8", errors="ignore") as f:
             acc_info = f.read()
         # 获取文件中的最后三行
@@ -359,6 +361,8 @@ def get_avatar_url_from_acc_info_file(acc_list, data_dir):
 def get_nickname_from_acc_info_file(acc_list, data_dir):
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
+        if not os.path.isfile(acc_info_dat_path):
+            continue
         with open(acc_info_dat_path, 'r', encoding="utf-8", errors="ignore") as f:
             acc_info = f.read()
         # 获取文件中的最后四行

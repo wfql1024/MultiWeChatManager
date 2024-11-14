@@ -382,3 +382,4 @@ class ClassicRowUI:
             ).start()
         except Exception as e:
             logger.error(e)
+

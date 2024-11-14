@@ -8,7 +8,7 @@ import win32com
 import win32com.client
 
 from functions import func_setting, subfunc_wechat, subfunc_file
-from utils import handle_utils, wechat_utils, file_utils
+from utils import handle_utils, wechat_utils
 
 
 class SettingWindow:
@@ -45,7 +45,8 @@ class SettingWindow:
         self.install_path_entry = tk.Entry(master, textvariable=self.install_path_var, state='readonly', width=70)
         self.install_path_entry.grid(row=0, column=1, padx=5, pady=5, sticky="we")
 
-        self.install_get_button = ttk.Button(master, text="获取", command=self.auto_get_wechat_install_path)
+        self.install_get_button = ttk.Button(master, text="获取",
+                                             command=partial(self.load_or_get_wechat_install_path, True))
         self.install_get_button.grid(row=0, column=2, padx=5, pady=5)
 
         self.install_choose_button = ttk.Button(master, text="选择路径", command=self.choose_wechat_install_path)
@@ -59,7 +60,8 @@ class SettingWindow:
         self.data_path_entry = tk.Entry(master, textvariable=self.data_path_var, state='readonly', width=70)
         self.data_path_entry.grid(row=1, column=1, padx=5, pady=5, sticky="we")
 
-        self.data_get_button = ttk.Button(master, text="获取", command=self.auto_get_wechat_data_path)
+        self.data_get_button = ttk.Button(master, text="获取",
+                                          command=partial(self.load_or_get_wechat_data_path, True))
         self.data_get_button.grid(row=1, column=2, padx=5, pady=5)
 
         self.data_choose_button = ttk.Button(master, text="选择路径", command=self.choose_wechat_data_path)
@@ -73,7 +75,8 @@ class SettingWindow:
         self.dll_path_entry = tk.Entry(master, textvariable=self.dll_path_var, state='readonly', width=70)
         self.dll_path_entry.grid(row=2, column=1, padx=5, pady=5, sticky="we")
 
-        self.dll_get_button = ttk.Button(master, text="获取", command=self.auto_get_wechat_dll_dir_path)
+        self.dll_get_button = ttk.Button(master, text="获取",
+                                         command=partial(self.load_or_get_wechat_dll_dir_path, True))
         self.dll_get_button.grid(row=2, column=2, padx=5, pady=5)
 
         self.dll_choose_button = ttk.Button(master, text="选择路径", command=self.choose_wechat_dll_dir_path)
@@ -121,9 +124,9 @@ class SettingWindow:
         master.grid_columnconfigure(1, weight=1)
 
         # 初始获取路径
-        self.auto_get_wechat_install_path()
-        self.auto_get_wechat_data_path()
-        self.auto_get_wechat_dll_dir_path()
+        self.load_or_get_wechat_install_path()
+        self.load_or_get_wechat_data_path()
+        self.load_or_get_wechat_dll_dir_path()
         self.auto_get_cur_wechat_ver()
         self.auto_get_screen_size()
         login_size = subfunc_file.get_login_size_from_setting_ini()
@@ -152,8 +155,8 @@ class SettingWindow:
         subfunc_file.save_wechat_dll_dir_path_to_setting_ini(self.dll_dir_path)
         return True
 
-    def auto_get_wechat_dll_dir_path(self):
-        path = func_setting.get_wechat_dll_dir()
+    def load_or_get_wechat_dll_dir_path(self, click=None):
+        path = func_setting.get_wechat_dll_dir(click)
         if path:
             self.dll_path_var.set(path.replace('\\', '/'))
         else:
@@ -184,8 +187,8 @@ class SettingWindow:
             else:
                 messagebox.showerror("错误", "请选择包含WeChatWin.dll的版本号最新的文件夹")
 
-    def auto_get_wechat_install_path(self):
-        path = func_setting.get_wechat_install_path()
+    def load_or_get_wechat_install_path(self, click=None):
+        path = func_setting.get_wechat_install_path(click)
         if path:
             self.install_path_var.set(path.replace('\\', '/'))
         else:
@@ -203,8 +206,8 @@ class SettingWindow:
             else:
                 messagebox.showerror("错误", "请选择WeChat.exe文件")
 
-    def auto_get_wechat_data_path(self):
-        path = func_setting.get_wechat_data_dir()
+    def load_or_get_wechat_data_path(self, click=None):
+        path = func_setting.get_wechat_data_dir(click)
         if path:
             self.data_path_var.set(path.replace('\\', '/'))
         else:
@@ -237,8 +240,6 @@ class SettingWindow:
 
     def auto_get_cur_wechat_ver(self):
         version = func_setting.get_cur_wechat_ver()
-        if not version and self.install_path:
-            version = file_utils.get_file_version(self.install_path)
         self.version_var.set(version)
 
     def auto_get_screen_size(self):
@@ -249,26 +250,14 @@ class SettingWindow:
         subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
 
     def auto_get_login_size(self, status):
-        subfunc_wechat.clear_idle_wnd_and_process()
-        has_mutex_dict = subfunc_wechat.get_mutex_dict()
-        sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict)
-        wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
-        if wechat_hwnd:
-            print(f"打开了登录窗口{wechat_hwnd}")
-            if sub_exe_process:
-                sub_exe_process.terminate()
-            time.sleep(2)
-            login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
-            login_wnd = login_wnd_details["window"]
-            login_width = login_wnd_details["width"]
-            login_height = login_wnd_details["height"]
-            print(login_width, login_height)
+        result = subfunc_wechat.get_login_size(status)
+        if result:
+            login_width, login_height = result
             if 0.734 < login_width / login_height < 0.740:
                 subfunc_file.save_login_size_to_setting_ini(f"{login_width}*{login_height}")
                 self.login_size_var.set(f"{login_width}*{login_height}")
             else:
                 self.login_size_var.set(f"347*471")
-            login_wnd.close()
 
 
 if __name__ == "__main__":

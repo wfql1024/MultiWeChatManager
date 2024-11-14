@@ -130,14 +130,16 @@ def do_click_in_window(handle, cx, cy):  # 第四种，可后台
     print(f"模拟点击按钮")
 
 
-def find_all_windows_by_class_and_title(class_name, window_title):
+def find_all_windows_by_class_and_title(class_name, window_title=None):
     def enum_windows_callback(hwnd, results):
         # 获取窗口的类名和标题
         if win32gui.IsWindowVisible(hwnd):
             curr_class_name = win32gui.GetClassName(hwnd)
             curr_window_title = win32gui.GetWindowText(hwnd)
-            if curr_class_name == class_name and curr_window_title == window_title:
+            # 仅匹配类名，若window_title不为空则继续匹配标题
+            if curr_class_name == class_name and (window_title is None or curr_window_title == window_title):
                 results.append(hwnd)
+
 
     results = []
     win32gui.EnumWindows(enum_windows_callback, results)

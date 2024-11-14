@@ -17,7 +17,7 @@ from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
 
 from resources.config import Config
-from utils import logger_utils
+from utils.logger_utils import mylogger as logger
 
 IV_SIZE = 16
 HMAC_SHA1_SIZE = 20
@@ -29,12 +29,6 @@ DEFAULT_ITER = 64000
 # 几种内存段可以写入的类型
 MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",
                             0x08: "PAGE_WRITECOPY"}
-
-app_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-app_path = os.path.basename(os.path.abspath(sys.argv[0]))
-log_file = app_path.split('.')[0] + '.log'
-logger = logger_utils.mylogger
-
 
 class MemoryBasicInformation(Structure):
     _fields_ = [
@@ -213,10 +207,6 @@ def decrypt_db_file_by_str_key_res(db_file_path, str_key_res):
     logger.info("正在对数据库解密......")
     print("成功获取key，正在对数据库解密...")
     sqlite_file_header = bytes("SQLite format 3", encoding='ASCII') + bytes(1)  # 文件头
-    key_size = 32
-    default_pagesize = 4096  # 4048数据 + 16IV + 20 HMAC + 12
-    default_iter = 64000
-    # your_key
     str_key = bytes.fromhex(str_key_res.replace(' ', ''))
 
     with open(db_file_path, 'rb') as f:
@@ -224,12 +214,12 @@ def decrypt_db_file_by_str_key_res(db_file_path, str_key_res):
     logger.info(f"数据库文件长度：{len(blist)}")
 
     salt = blist[:16]  # 微信将文件头换成了盐
-    key = hashlib.pbkdf2_hmac('sha1', str_key, salt, default_iter, key_size)  # 获得Key
+    key = hashlib.pbkdf2_hmac('sha1', str_key, salt, DEFAULT_ITER, KEY_SIZE)  # 获得Key
     logger.info(f"str_key={str_key}, salt={salt}, key={key}")
 
-    first = blist[16:default_pagesize]  # 丢掉salt
+    first = blist[16:DEFAULT_PAGESIZE]  # 丢掉salt
     mac_salt = bytes([x ^ 0x3a for x in salt])
-    mac_key = hashlib.pbkdf2_hmac('sha1', key, mac_salt, 2, key_size)
+    mac_key = hashlib.pbkdf2_hmac('sha1', key, mac_salt, 2, KEY_SIZE)
     logger.info(f"key={key}, mac_salt={mac_salt}, mac_key={mac_key}")
 
     hash_mac = hmac.new(mac_key, digestmod='sha1')  # 用第一页的Hash测试一下
@@ -248,7 +238,7 @@ def decrypt_db_file_by_str_key_res(db_file_path, str_key_res):
         raise RuntimeError(f'Wrong Password: {mac_key}')
 
     print("解密成功，数据库写入解密后的内容...")
-    blist = [blist[i:i + default_pagesize] for i in range(default_pagesize, len(blist), default_pagesize)]
+    blist = [blist[i:i + DEFAULT_PAGESIZE] for i in range(DEFAULT_PAGESIZE, len(blist), DEFAULT_PAGESIZE)]
     # print(blist)
 
     new_db_file_path = None

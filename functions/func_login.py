@@ -157,12 +157,12 @@ def auto_login_accounts(accounts, status, callback):
     subfunc_wechat.kill_wechat_multiple_processes()
 
     # 两轮点击所有窗口的登录，防止遗漏
-    handles = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC", "微信")
+    handles = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC")
     for h in handles:
         handle_utils.do_click_in_window(h, int(login_width * 0.5), int(login_height * 0.75))
     for h in handles:
         try:
-            titles = ["进入微信", "进入WeChat"]  # 添加所有需要查找的标题
+            titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
             cx, cy = None, None  # 初始化坐标为 None
             # 依次查找每个标题
             for title in titles:

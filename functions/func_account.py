@@ -150,24 +150,27 @@ def get_account_list(multiple_status) -> Union[Tuple[None, None, None], Tuple[li
         :param process_id: 微信进程id
         :return: 无
         """
+        print("匹配中...")
+        # print(data_path)
         try:
             # 获取指定进程的内存映射文件路径
             for f in psutil.Process(process_id).memory_maps():
                 # print(f)
                 # 将路径中的反斜杠替换为正斜杠
                 normalized_path = f.path.replace('\\', '/')
+                # print(normalized_path)
                 # 检查路径是否以 data_path 开头
                 if normalized_path.startswith(data_path):
                     print(
-                        f"┌———匹配到进程{process_id}使用的符合的文件，待对比，已用时：{time.time() - start_time:.4f}秒")
+                        f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
                     print(f"提取中：{f.path}")
                     path_parts = f.path.split(os.path.sep)
                     try:
-                        wxid_index = path_parts.index(os.path.basename(data_path)) + 1
-                        wxid = path_parts[wxid_index]
-                        wechat_processes.append((wxid, process_id))
-                        logged_in_ids.add(wxid)
-                        print(f"└———提取到进程{process_id}对应账号{wxid}，已用时：{time.time() - start_time:.4f}秒")
+                        wx_id_index = path_parts.index(os.path.basename(data_path)) + 1
+                        wx_id = path_parts[wx_id_index]
+                        wechat_processes.append((wx_id, process_id))
+                        logged_in_ids.add(wx_id)
+                        print(f"└———提取到进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
                         break
                     except ValueError:
                         pass
@@ -224,8 +227,3 @@ def get_account_list(multiple_status) -> Union[Tuple[None, None, None], Tuple[li
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
 
     return logged_in, not_logged_in, wechat_processes
-
-
-
-
-

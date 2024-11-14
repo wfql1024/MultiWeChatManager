@@ -31,11 +31,11 @@ def get_wechat_dll_dir_by_files():
     return file_utils.get_newest_full_version_dir(version_folders)
 
 
-def get_wechat_install_path():
+def get_wechat_install_path(from_setting_window=None):
     """获取微信安装路径"""
     path_finders = [
         wechat_utils.get_wechat_install_path_from_process,
-        subfunc_file.get_wechat_install_path_from_setting_ini,
+        (lambda: None) if from_setting_window else subfunc_file.get_wechat_install_path_from_setting_ini,
         wechat_utils.get_wechat_install_path_from_machine_register,
         wechat_utils.get_wechat_install_path_from_user_register,
         lambda: os.path.join(os.environ.get('ProgramFiles'), 'Tencent', 'WeChat', 'WeChat.exe').replace('\\', '/'),
@@ -43,20 +43,21 @@ def get_wechat_install_path():
     ]
 
     for index, finder in enumerate(path_finders):
-        path = finder()
-        if wechat_utils.is_valid_wechat_install_path(path):
-            subfunc_file.save_wechat_install_path_to_setting_ini(path)
+        found_path = finder()
+        if wechat_utils.is_valid_wechat_install_path(found_path):
+            standardized_path = os.path.abspath(found_path).replace('\\', '/')
+            subfunc_file.save_wechat_install_path_to_setting_ini(standardized_path)
             logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
-            return path
+            return standardized_path
 
     return None
 
 
-def get_wechat_data_dir():
+def get_wechat_data_dir(from_setting_window=None):
     """获取微信数据存储文件夹"""
     # 获取地址的各种方法
     path_finders = [
-        subfunc_file.get_wechat_data_dir_from_setting_ini,
+        (lambda: None) if from_setting_window else subfunc_file.get_wechat_data_dir_from_setting_ini,
         wechat_utils.get_wechat_data_dir_from_user_register,
         lambda: os.path.join(os.path.expanduser('~'), 'Documents', 'WeChat Files').replace('\\', '/'),
         lambda: os.path.join(os.environ.get('APPDATA'), 'Tencent', 'WeChat').replace('\\', '/')
@@ -68,26 +69,28 @@ def get_wechat_data_dir():
         found_path = finder()
         # 对得到地址进行检验，正确则返回并保存
         if wechat_utils.is_valid_wechat_data_path(found_path):
-            subfunc_file.save_wechat_data_path_to_setting_ini(found_path)
+            standardized_path = os.path.abspath(found_path).replace('\\', '/')
+            subfunc_file.save_wechat_data_path_to_setting_ini(standardized_path)
             logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
-            return found_path
+            return standardized_path
 
     return None
 
 
-def get_wechat_dll_dir():
+def get_wechat_dll_dir(from_setting_window=None):
     """获取微信dll所在文件夹"""
     path_finders = [
-        subfunc_file.get_wechat_dll_dir_from_setting_ini,
+        (lambda: None) if from_setting_window else subfunc_file.get_wechat_dll_dir_from_setting_ini,
         wechat_utils.get_wechat_dll_dir_by_memo_maps,
         get_wechat_dll_dir_by_files,
     ]
     for index, finder in enumerate(path_finders):
         found_path = finder()
         if wechat_utils.is_valid_wechat_dll_dir_path(found_path):
-            subfunc_file.save_wechat_dll_dir_path_to_setting_ini(found_path)
+            standardized_path = os.path.abspath(found_path).replace('\\', '/')
+            subfunc_file.save_wechat_dll_dir_path_to_setting_ini(standardized_path)
             logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
-            return found_path
+            return standardized_path
     return None
 
 
