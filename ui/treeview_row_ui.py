@@ -81,7 +81,7 @@ class TreeviewRowUI:
                                          )
             self.config_btn.pack(side=tk.RIGHT, pady=0)
             widget_utils.disable_button_and_add_tip(
-                self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有螺丝符号表示推荐配置的账号")
+                self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有符号表示推荐配置的账号")
 
             self.logged_in_tree = self.create_table("logged_in")
             self.display_table(logged_in_list, "logged_in")
@@ -92,45 +92,46 @@ class TreeviewRowUI:
             self.logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in="logged_in"))
             self.logged_in_tree.bind("<Configure>", self.adjust_columns_on_maximize)
 
-        # 未登录框架=未登录标题+未登录列表
-        self.not_logged_in_frame = ttk.Frame(self.main_frame)
-        self.not_logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=10)
+        if len(not_logged_in_list) != 0:
+            # 未登录框架=未登录标题+未登录列表
+            self.not_logged_in_frame = ttk.Frame(self.main_frame)
+            self.not_logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=10)
 
-        # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
-        self.not_logged_in_title = ttk.Frame(self.not_logged_in_frame)
-        self.not_logged_in_title.pack(side=tk.TOP, fill=tk.X)
+            # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
+            self.not_logged_in_title = ttk.Frame(self.not_logged_in_frame)
+            self.not_logged_in_title.pack(side=tk.TOP, fill=tk.X)
 
-        # 未登录复选框
-        self.not_logged_in_checkbox_var = tk.IntVar(value=0)
-        self.not_logged_in_checkbox = tk.Checkbutton(
-            self.not_logged_in_title,
-            variable=self.not_logged_in_checkbox_var,
-            tristatevalue=-1
-        )
-        self.not_logged_in_checkbox.pack(side=tk.LEFT)
+            # 未登录复选框
+            self.not_logged_in_checkbox_var = tk.IntVar(value=0)
+            self.not_logged_in_checkbox = tk.Checkbutton(
+                self.not_logged_in_title,
+                variable=self.not_logged_in_checkbox_var,
+                tristatevalue=-1
+            )
+            self.not_logged_in_checkbox.pack(side=tk.LEFT)
 
-        # 未登录标签
-        self.not_logged_in_label = ttk.Label(self.not_logged_in_title, text="未登录账号：", font=("", 10, "bold"))
-        self.not_logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            # 未登录标签
+            self.not_logged_in_label = ttk.Label(self.not_logged_in_title, text="未登录账号：", font=("", 10, "bold"))
+            self.not_logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
 
-        # 未登录按钮区域=一键登录
-        self.not_logged_in_bottom_frame = ttk.Frame(self.not_logged_in_title)
-        self.not_logged_in_bottom_frame.pack(side=tk.RIGHT)
+            # 未登录按钮区域=一键登录
+            self.not_logged_in_bottom_frame = ttk.Frame(self.not_logged_in_title)
+            self.not_logged_in_bottom_frame.pack(side=tk.RIGHT)
 
-        # 一键登录
-        self.one_key_auto_login = ttk.Button(self.not_logged_in_bottom_frame, text="一键登录", width=8,
-                                             command=self.auto_login_selected_accounts, style='Custom.TButton')
-        self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
+            # 一键登录
+            self.one_key_auto_login = ttk.Button(self.not_logged_in_bottom_frame, text="一键登录", width=8,
+                                                 command=self.auto_login_selected_accounts, style='Custom.TButton')
+            self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
 
-        # 更新顶部复选框状态
-        self.not_logged_in_tree = self.create_table("not_logged_in")
-        self.display_table(not_logged_in_list, "not_logged_in")
-        self.update_top_title("not_logged_in")
-        self.not_logged_in_tree.bind("<Leave>", partial(self.on_leave))
-        self.not_logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion))
-        self.not_logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in="not_logged_in"))
-        self.not_logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in="not_logged_in"))
-        self.not_logged_in_tree.bind("<Configure>", self.adjust_columns_on_maximize)
+            # 更新顶部复选框状态
+            self.not_logged_in_tree = self.create_table("not_logged_in")
+            self.display_table(not_logged_in_list, "not_logged_in")
+            self.update_top_title("not_logged_in")
+            self.not_logged_in_tree.bind("<Leave>", partial(self.on_leave))
+            self.not_logged_in_tree.bind("<Motion>", partial(self.on_mouse_motion))
+            self.not_logged_in_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in="not_logged_in"))
+            self.not_logged_in_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in="not_logged_in"))
+            self.not_logged_in_tree.bind("<Configure>", self.adjust_columns_on_maximize)
 
     def create_table(self, table_type):
         """定义表格，根据表格类型选择手动或自动登录表格"""
@@ -173,6 +174,7 @@ class TreeviewRowUI:
             tree = self.not_logged_in_tree
         else:
             tree = ttk.Treeview(self.main_frame, show='tree', height=1, style="RowTreeview")
+        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.data_path)
         for account in accounts:
             display_name = " " + func_account.get_acc_origin_display_name(account)
             config_status = func_config.get_config_status_by_account(account, self.data_path)
@@ -192,6 +194,7 @@ class TreeviewRowUI:
             self.photo_images.append(photo)
 
             pid = "⚔" + str(pid) + " " if has_mutex else "" + str(pid) + " "
+            config_status = "❐" + str(config_status) + "" if account == curr_config_acc else "" + str(config_status) + ""
 
             try:
                 tree.insert("", "end", iid=account, image=photo,
@@ -265,7 +268,7 @@ class TreeviewRowUI:
                     self.tooltips, self.config_btn)
             else:
                 widget_utils.disable_button_and_add_tip(
-                    self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有螺丝符号表示推荐配置的账号")
+                    self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有符号表示推荐配置的账号")
         else:
             tree = self.not_logged_in_tree
             selected_items = self.selected_not_logged_in_items

@@ -199,42 +199,43 @@ class ClassicRowUI:
 
             self.update_top_title(True)
 
-        # 未登录框架=未登录标题+未登录列表
-        self.not_logged_in_frame = ttk.Frame(self.main_frame)
-        self.not_logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
+        if len(not_logged_in) != 0:
+            # 未登录框架=未登录标题+未登录列表
+            self.not_logged_in_frame = ttk.Frame(self.main_frame)
+            self.not_logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
 
-        # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
-        self.not_logged_in_title = ttk.Frame(self.not_logged_in_frame)
-        self.not_logged_in_title.pack(side=tk.TOP, fill=tk.X)
+            # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
+            self.not_logged_in_title = ttk.Frame(self.not_logged_in_frame)
+            self.not_logged_in_title.pack(side=tk.TOP, fill=tk.X)
 
-        # 未登录复选框
-        self.not_logged_in_checkbox_var = tk.IntVar(value=0)
-        self.not_logged_in_checkbox = tk.Checkbutton(
-            self.not_logged_in_title,
-            variable=self.not_logged_in_checkbox_var,
-            tristatevalue=-1
-        )
-        self.not_logged_in_checkbox.pack(side=tk.LEFT)
+            # 未登录复选框
+            self.not_logged_in_checkbox_var = tk.IntVar(value=0)
+            self.not_logged_in_checkbox = tk.Checkbutton(
+                self.not_logged_in_title,
+                variable=self.not_logged_in_checkbox_var,
+                tristatevalue=-1
+            )
+            self.not_logged_in_checkbox.pack(side=tk.LEFT)
 
-        # 未登录标签
-        self.not_logged_in_label = ttk.Label(self.not_logged_in_title, text="未登录账号：", font=("", 10, "bold"))
-        self.not_logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            # 未登录标签
+            self.not_logged_in_label = ttk.Label(self.not_logged_in_title, text="未登录账号：", font=("", 10, "bold"))
+            self.not_logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
 
-        # 未登录按钮区域=一键登录
-        self.not_logged_in_bottom_frame = ttk.Frame(self.not_logged_in_title)
-        self.not_logged_in_bottom_frame.pack(side=tk.RIGHT)
+            # 未登录按钮区域=一键登录
+            self.not_logged_in_bottom_frame = ttk.Frame(self.not_logged_in_title)
+            self.not_logged_in_bottom_frame.pack(side=tk.RIGHT)
 
-        # 一键登录
-        self.one_key_auto_login = ttk.Button(self.not_logged_in_bottom_frame, text="一键登录", width=8,
-                                             command=self.auto_login_selected_accounts, style='Custom.TButton')
-        self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
+            # 一键登录
+            self.one_key_auto_login = ttk.Button(self.not_logged_in_bottom_frame, text="一键登录", width=8,
+                                                 command=self.auto_login_selected_accounts, style='Custom.TButton')
+            self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
 
-        # 加载未登录列表
-        for account in not_logged_in:
-            self.add_account_row(self.not_logged_in_frame, account, False)
+            # 加载未登录列表
+            for account in not_logged_in:
+                self.add_account_row(self.not_logged_in_frame, account, False)
 
-        # 更新顶部复选框状态
-        self.update_top_title(False)
+            # 更新顶部复选框状态
+            self.update_top_title(False)
 
     def add_account_row(self, parent_frame, account, is_logged_in):
         """渲染账号所在行"""

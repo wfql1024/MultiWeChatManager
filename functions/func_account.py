@@ -1,4 +1,5 @@
 import base64
+import itertools
 import os
 import subprocess
 import sys
@@ -9,7 +10,7 @@ from typing import Union, Tuple, List
 import psutil
 from PIL import Image
 
-from functions import func_setting, subfunc_file
+from functions import func_setting, subfunc_file, func_config
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, image_utils, string_utils
@@ -137,7 +138,38 @@ def get_acc_wrapped_display_name(account) -> str:
     )
 
 
-def get_account_list(multiple_status) -> Union[Tuple[None, None, None], Tuple[list, List[str], list]]:
+def silent_get_and_config(logged_in, not_logged_in, data_dir, callback):
+    # 悄悄执行检测昵称和头像
+    need_to_notice = False
+    # 1. 获取所有账号节点的url和昵称，将空的账号返回
+    accounts_need_to_get_avatar = []
+    accounts_need_to_get_nickname = []
+    for acc in itertools.chain(logged_in, not_logged_in):
+        avatar_url, nickname = subfunc_file.get_acc_details_from_acc_json(acc, avatar_url=None, nickname=None)
+        if avatar_url is None:
+            accounts_need_to_get_avatar.append(acc)
+        if nickname is None:
+            accounts_need_to_get_nickname.append(acc)
+    # 2. 对待获取url的账号遍历尝试获取
+    if len(accounts_need_to_get_avatar) > 0:
+        subfunc_file.get_avatar_url_from_acc_info_file(accounts_need_to_get_avatar, data_dir)
+        need_to_notice = True
+    # 3. 对待获取昵称的账号尝试遍历获取
+    if len(accounts_need_to_get_nickname) > 0:
+        subfunc_file.get_nickname_from_acc_info_file(accounts_need_to_get_nickname, data_dir)
+        need_to_notice = True
+    # 4. 偷偷创建配置文件
+    curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(data_dir)
+    if func_config.get_config_status_by_account(curr_config_acc, data_dir) == "无配置":
+        func_config.create_config(curr_config_acc)
+        need_to_notice = True
+
+    # 5. 通知
+    if need_to_notice is True:
+        messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")
+        callback()
+
+def get_account_list(multiple_status):
     """
     获取账号及其登录情况
 
@@ -150,7 +182,6 @@ def get_account_list(multiple_status) -> Union[Tuple[None, None, None], Tuple[li
         :param process_id: 微信进程id
         :return: 无
         """
-        print("匹配中...")
         # print(data_path)
         try:
             # 获取指定进程的内存映射文件路径
@@ -161,30 +192,30 @@ def get_account_list(multiple_status) -> Union[Tuple[None, None, None], Tuple[li
                 # print(normalized_path)
                 # 检查路径是否以 data_path 开头
                 if normalized_path.startswith(data_path):
-                    print(
-                        f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
-                    print(f"提取中：{f.path}")
+                    # print(
+                    #     f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
+                    # print(f"提取中：{f.path}")
                     path_parts = f.path.split(os.path.sep)
                     try:
                         wx_id_index = path_parts.index(os.path.basename(data_path)) + 1
                         wx_id = path_parts[wx_id_index]
                         wechat_processes.append((wx_id, process_id))
                         logged_in_ids.add(wx_id)
-                        print(f"└———提取到进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
+                        print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
                         break
                     except ValueError:
                         pass
         except psutil.AccessDenied:
-            print(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
+            logger.error(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
         except psutil.NoSuchProcess:
-            print(f"进程ID为 {process_id} 的进程不存在或已退出。")
+            logger.error(f"进程ID为 {process_id} 的进程不存在或已退出。")
         except Exception as e:
-            print(f"发生意外错误: {e}")
+            logger.error(f"发生意外错误: {e}")
 
     start_time = time.time()
     data_path = func_setting.get_wechat_data_dir()
     if not data_path:
-        return None, None, None
+        return False, "找不到数据存储路径"
 
     wechat_processes = []
     logged_in_ids = set()
@@ -226,4 +257,4 @@ def get_account_list(multiple_status) -> Union[Tuple[None, None, None], Tuple[li
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
 
-    return logged_in, not_logged_in, wechat_processes
+    return True, (logged_in, not_logged_in, wechat_processes)

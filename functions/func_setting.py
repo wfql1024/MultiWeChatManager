@@ -7,7 +7,7 @@ from utils.logger_utils import mylogger as logger
 
 
 def get_wechat_dll_dir_by_files():
-    """通过文件遍历获取dll文件夹"""
+    """通过文件遍历方式获取dll文件夹"""
     install_path = get_wechat_install_path()
     if install_path and install_path != "":
         install_path = os.path.dirname(install_path)

@@ -6,6 +6,8 @@ from ctypes.wintypes import *
 from win32api import *
 from win32process import *
 
+from utils.logger_utils import mylogger as logger
+
 ntdll = WinDLL('ntdll')
 current_process = GetCurrentProcess()
 
@@ -249,6 +251,7 @@ def find_handles(process_ids=None, handle_names=None):
             if not matched:
                 continue
         result.append(dict(process_id=process_id, handle=handle, name=handle_name, type=handle_type))
+        logger.info(str(result))
     return result
 
 
@@ -265,9 +268,10 @@ def close_handles(handles):
             DuplicateHandle(process, handle, 0, 0, 0, DUPLICATE_CLOSE_SOURCE)
         for p in processes.values():
             CloseHandle(p)
-            return True
+            logger.info(f"Closed:{str(processes)}")
+        return True
     except Exception as e:
-        print(e)
+        logger.error(e)
         return False
 
 

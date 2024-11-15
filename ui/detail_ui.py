@@ -100,7 +100,7 @@ class DetailWindow:
         self.load_data_label()
 
     def load_data_label(self):
-        print(f"尝试获取...")
+        print(f"加载数据...")
 
         # 构建头像文件路径
         avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{self.account}", f"{self.account}.jpg")

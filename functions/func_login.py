@@ -45,6 +45,7 @@ def manual_login(status):
 def auto_login_accounts(accounts, status, callback):
     """
     对选择的账号，进行全自动登录
+    :param callback:
     :param accounts: 选择的账号列表
     :param status: 是否全局多开
     :return: 是否成功
@@ -160,6 +161,7 @@ def auto_login_accounts(accounts, status, callback):
     handles = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC")
     for h in handles:
         handle_utils.do_click_in_window(h, int(login_width * 0.5), int(login_height * 0.75))
+        time.sleep(0.2)
     for h in handles:
         try:
             titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题

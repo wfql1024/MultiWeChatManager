@@ -378,6 +378,21 @@ def get_nickname_from_acc_info_file(acc_list, data_dir):
             update_acc_details_to_acc_json(acc, nickname=cleaned_str)
 
 
+def get_curr_wx_id_from_config_file(data_dir):
+    config_data_path = os.path.join(data_dir, 'All Users', 'config', 'config.data')
+    with open(config_data_path, 'r', encoding="utf-8", errors="ignore") as f:
+        acc_info = f.read()
+    # 获取文件中的最后四行
+    str_line = ''.join(acc_info.strip().splitlines()[-4:])
+    wxid_pattern = r'wxid_[a-zA-Z0-9_]+\\config'
+    match = re.search(wxid_pattern, str_line)
+    if match:
+        # 提取 wxid_……
+        matched_str = match.group(0)
+        wx_id = matched_str.split("\\")[0]  # 获取 wxid_...... 部分
+        return wx_id
+
+
 def get_file_with_correct_md5(folders, md5s):
     for folder in folders:
         for root, _, files in os.walk(folder):

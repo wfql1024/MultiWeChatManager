@@ -4,7 +4,6 @@ import re
 import subprocess
 import sys
 import time
-import tkinter as tk
 
 import win32api
 import win32con

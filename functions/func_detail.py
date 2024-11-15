@@ -17,16 +17,14 @@ def fetch_acc_detail_by_pid(pid, account, after):
     :return: 无
     """
     print(f"pid：{pid}，开始找key...")
-    error = wechat_decrypt_utils.decrypt_acc_and_copy_by_pid(pid, account)
-    if error:
+    success, result = wechat_decrypt_utils.decrypt_db_and_return(pid, account)
+    if success is not True:
         print("解密出错...")
-        messagebox.showerror("错误", error)
+        messagebox.showerror("错误", result)
         after()
-        return error
+        return
 
-    print("连接数据库...")
-    user_directory = Config.PROJ_USER_PATH
-    db_file = user_directory + rf"/{account}/edit_{account}_MicroMsg.db"
+    decrypted_mm_db_path = result
 
     data_path = func_setting.get_wechat_data_dir()
     excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF'}
@@ -35,7 +33,13 @@ def fetch_acc_detail_by_pid(pid, account, after):
         if os.path.isdir(os.path.join(data_path, folder))
     ) - excluded_folders
 
-    conn = sqlite3.connect(db_file)
+    print("连接数据库...")
+    if os.path.isfile(decrypted_mm_db_path):
+        conn = sqlite3.connect(decrypted_mm_db_path)
+    else:
+        logger.error("数据库文件不存在")
+        messagebox.showerror("错误", f"数据库文件不存在")
+        return
     try:
         cursor = conn.cursor()
         for folder in folders:
@@ -47,23 +51,23 @@ def fetch_acc_detail_by_pid(pid, account, after):
                 contact_results = cursor.fetchall()
                 if len(contact_results) > 0:
                     user_name, alias, nickname = contact_results[0]
-                    # 处理alias为空的情况
                     subfunc_file.update_acc_details_to_acc_json(user_name, alias=alias or user_name, nickname=nickname)
                 else:
-                    logger.error("该账号未能获取到昵称、微信号")
-                    return
+                    logger.warning(f"账号{folder}未能获取到昵称、微信号")
 
                 cursor.execute(sql_contact_head_img_url)
                 avatar_results = cursor.fetchall()
                 if len(avatar_results) > 0:
                     usr_name, url = avatar_results[0]
+                    origin_url, = subfunc_file.get_acc_details_from_acc_json(usr_name, avatar_url=None)
                     subfunc_file.update_acc_details_to_acc_json(usr_name, avatar_url=url)
                     save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
                     if not os.path.exists(os.path.dirname(save_path)):
                         os.makedirs(os.path.dirname(save_path))
-                    # 下载头像逻辑
+
+                    # 下载头像逻辑：对于非选定的账号，若图像文件不存在或者url更新了，将会下载。对选定账号则一定下载。
                     if usr_name != account:
-                        if not os.path.exists(save_path):
+                        if not os.path.exists(save_path) or origin_url != url:
                             success = image_utils.download_image(url, save_path)
                         else:
                             success = "无需下载"
@@ -72,13 +76,16 @@ def fetch_acc_detail_by_pid(pid, account, after):
                         success = image_utils.download_image(url, save_path)
                     if not success:
                         logger.error("无法下载图像")
+                        subfunc_file.update_acc_details_to_acc_json(usr_name, avatar_url=origin_url)
                 else:
-                    logger.error("该账号未能获取头像url")
-                    return
+                    logger.warning(f"账号{folder}未能获取头像url")
+                    continue
             except Exception as e:
-                print("sql executed have some error", e)
+                logger.error(e)
                 messagebox.showerror("错误", f"数据库执行出错:{e}")
-                return "数据库执行出错"
+                return
     finally:
         conn.close()
+        if os.path.isfile(decrypted_mm_db_path):
+            os.remove(decrypted_mm_db_path)
         after()

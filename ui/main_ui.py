@@ -16,7 +16,7 @@ from tkinter import ttk
 import psutil
 
 from functions import func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file, \
-    func_update
+    func_update, func_config
 from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
@@ -417,23 +417,19 @@ class MainWindow:
         try:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
-                result = func_account.get_account_list(self.multiple_status)
-                self.master.after(0, self.create_account_list_ui, result)
+                success, result = func_account.get_account_list(self.multiple_status)
+                self.master.after(0, self.create_account_list_ui, success, result)
 
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
 
-    def create_account_list_ui(self, result):
+    def create_account_list_ui(self, success, result):
         """渲染主界面账号列表"""
-        print(f"渲染账号列表.........................................................")
-        logged_in, not_logged_in, wechat_processes = result
-
         # 清除所有子部件
         for widget in self.main_frame.winfo_children():
             widget.destroy()
-
-        if logged_in is None or not_logged_in is None or wechat_processes is None:
+        if success is not True:
             error_label = ttk.Label(self.main_frame, text="无法获取账户列表，请检查路径设置", foreground="red")
             error_label.pack(pady=20)
             self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
@@ -441,6 +437,9 @@ class MainWindow:
             self.settings_button.pack()
             self.edit_menu.entryconfig("刷新", state="normal")
             return
+        print(f"渲染账号列表.........................................................")
+
+        logged_in, not_logged_in, wechat_processes = result
 
         # 创建账号列表界面
         if self.chosen_view == "classic":
@@ -464,22 +463,9 @@ class MainWindow:
         event.width = self.canvas.winfo_width()
         self.on_canvas_configure(event)
 
-        # 悄悄执行检测昵称和头像
-        # 1. 获取所有账号节点的url和昵称，将空的账号返回
-        accounts_need_to_get_avatar = []
-        accounts_need_to_get_nickname = []
-        for acc in itertools.chain(logged_in, not_logged_in):
-            avatar_url, nickname = subfunc_file.get_acc_details_from_acc_json(acc, avatar_url=None, nickname=None)
-            if avatar_url is None:
-                accounts_need_to_get_avatar.append(acc)
-            if nickname is None:
-                accounts_need_to_get_nickname.append(acc)
-        # 2. 对待获取url的账号遍历尝试获取
-        if len(accounts_need_to_get_avatar) > 0:
-            subfunc_file.get_avatar_url_from_acc_info_file(accounts_need_to_get_avatar, self.data_dir)
-        # 3. 对待获取昵称的账号尝试遍历获取
-        if len(accounts_need_to_get_nickname) > 0:
-            subfunc_file.get_nickname_from_acc_info_file(accounts_need_to_get_nickname, self.data_dir)
+        func_account.silent_get_and_config(logged_in, not_logged_in, self.data_dir,
+                                           self.create_main_frame_and_menu)
+
 
     def bind_mouse_wheel(self, widget):
         """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
