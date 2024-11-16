@@ -186,3 +186,8 @@ def auto_login_accounts(accounts, status, callback):
         if time.time() > end_time:
             callback()
             return True
+
+
+if __name__ == '__main__':
+    handles = handle_utils.find_all_windows_by_class_and_title("WeChatMainWndForPC")
+    print(handles)

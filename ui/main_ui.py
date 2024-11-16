@@ -20,7 +20,8 @@ from functions import func_setting, func_wechat_dll, func_login, func_file, func
 from resources import Strings
 from resources.config import Config
 from thread_manager import ThreadManager
-from ui import about_ui, setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui
+from ui import about_ui, setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
+    sidebar_ui
 from utils import handle_utils, debug_utils, file_utils, logger_utils, image_utils
 
 logger = logger_utils.mylogger
@@ -92,7 +93,7 @@ class MainWindow:
         self.bottom_frame = ttk.Frame(master, padding="10")
         self.bottom_frame.pack(side=tk.BOTTOM)
         self.manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
-                                              command=self.manual_login_account, style='Custom.TButton')
+                                              command=self.test, style='Custom.TButton')
         self.manual_login_button.pack(side=tk.LEFT)
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
@@ -597,6 +598,13 @@ class MainWindow:
         self.thread_manager.manual_login_account_thread(func_login.manual_login, self.multiple_status,
                                                         self.create_main_frame_and_menu,
                                                         partial(handle_utils.bring_window_to_front, window_class=self))
+
+    def test(self):
+        # 清除窗口中的所有控件
+        for widget in self.master.winfo_children():
+            widget.destroy()
+
+        sidebar_ui.SidebarUI(self.master)
 
     def open_debug_window(self):
         """打开调试窗口，显示所有输出日志"""

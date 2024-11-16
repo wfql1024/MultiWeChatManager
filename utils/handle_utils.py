@@ -138,8 +138,6 @@ def find_all_windows_by_class_and_title(class_name, window_title=None):
             # 仅匹配类名，若window_title不为空则继续匹配标题
             if curr_class_name == class_name and (window_title is None or curr_window_title == window_title):
                 results.append(hwnd)
-
-
     results = []
     win32gui.EnumWindows(enum_windows_callback, results)
     return results
@@ -398,29 +396,32 @@ def embed_window_into_right_panel(right_panel_hwnd, target_hwnd):
 
 # 示例用法
 if __name__ == "__main__":
-    # 创建框架窗口
-    frame_hwnd = create_frame_window("我的框架窗口", 1124, 868)
+    import tkinter as tk
+    import pystray
+    from tkinter import ttk
+    from PIL import Image
+    from resources import Config
 
-    # 创建左侧面板，宽度固定为75
-    panel_hwnd = create_left_panel(frame_hwnd, 75)
+    root = tk.Tk()
+    root.overrideredirect(True)  # 隐藏标题栏
 
-    # 创建右侧主窗口，用于嵌入微信
-    right_panel_hwnd = create_right_panel(frame_hwnd, 75, 1024, 768)
 
-    # 获取微信窗口句柄
-    hwnd = win32gui.FindWindow("WeChatMainWndForPC", None)
-    if hwnd:
-        # 最大化微信窗口并嵌入到右侧主窗口中
-        win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
-        embed_window_into_right_panel(right_panel_hwnd, hwnd)
-    # create_button_in_window(hwnd, -32, -87, 100, 100)
-    # win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
-    # time.sleep(2)
-    # win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-    # time.sleep(2)
-    # win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
-    # time.sleep(2)
-    # win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-    # time.sleep(2)
-    # win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
-    # user32.SetForegroundWindow(hwnd)
+    def exit_action(icon, item):
+        icon.stop()
+
+
+    def show_window(icon, item):
+        root.update_idletasks()
+        root.deiconify()
+
+
+    def hide_window(icon, item):
+        root.withdraw()
+
+
+    image = Image.open(Config.PROJ_ICO_PATH)  # 使用自定义图标
+    icon = pystray.Icon("name", image, "Title")
+    icon.run()
+
+
+
