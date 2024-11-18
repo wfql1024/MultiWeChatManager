@@ -7,6 +7,7 @@ from tkinter import messagebox
 from functions import func_setting, subfunc_wechat
 from utils import handle_utils
 from utils.handle_utils import close_window_by_name
+from utils.logger_utils import mylogger as logger
 
 
 def get_config_status_by_account(account, data_path) -> str:
@@ -74,23 +75,19 @@ def create_config(account):
     try:
         if os.path.exists(dest_path):
             os.remove(dest_path)
-
         shutil.copy2(source_path, dest_path, follow_symlinks=False)
         close_window_by_name("WeChatLoginWndForPC")
-
         messagebox.showinfo("成功", f"配置文件已生成：{dest_filename}")
-
-        return True
-
     except Exception as e:
+        logger.error(e)
         messagebox.showerror("错误", f"生成配置文件时发生错误：{str(e)}")
-        return False
 
 
-def test(account, multiple_status):
+def test(m_class, account, multiple_status):
     """
     尝试打开微信，让用户判断是否是对应的账号，根据用户结果去创建配置或结束
     :param account: 账号
+    :param m_class: 主窗口类
     :param multiple_status: 是否全局多开状态
     :return: 是否对应
     """
@@ -108,10 +105,9 @@ def test(account, multiple_status):
                 sub_exe_process.terminate()
             time.sleep(2)
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
-                return create_config(account)
+                create_config(account)
             else:
                 close_window_by_name("WeChatLoginWndForPC")
-                return False
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
-    return False
+    m_class.master.after(0, m_class.create_main_frame_and_menu)

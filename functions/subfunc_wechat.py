@@ -1,3 +1,6 @@
+import ctypes
+import os
+import subprocess
 import time
 
 import psutil
@@ -106,27 +109,15 @@ def open_wechat(status, has_mutex_dictionary=None):
                     handle_utils.do_click_in_window(button_handle, button_cx, button_cy)
         # ————————————————————————————————handle————————————————————————————————
         elif sub_exe == "handle":
-            success_lists = handle_utils.close_mutex_of_pids()
+            success_lists = handle_utils.close_mutex_of_pids_by_handle()
             if success_lists:
                 # 更新 has_mutex 为 False 并保存
                 print(f"成功关闭{success_lists}：{time.time() - start_time:.4f}秒")
 
             # 所有操作完成后，执行创建进程的操作
             create_process_without_admin(wechat_path, None)
-        # ————————————————————————————————python————————————————————————————————
-        elif sub_exe == "python":
-            # for pid, has_mutex in has_mutex_dictionary.items():
-            #     success = pywinhandle.close_handles(
-            #         pywinhandle.find_handles(
-            #             [pid],
-            #             ['_WeChat_App_Instance_Identity_Mutex_Name']
-            #         )
-            #     )
-            #     if success:
-            #         # 更新 has_mutex 为 False 并保存
-            #         print(f"成功关闭：{time.time() - start_time:.4f}秒")
-            #     else:
-            #         print(f"关闭互斥体失败，PID: {pid}")
+        # ————————————————————————————————python[强力]————————————————————————————————
+        elif sub_exe == "python[S]":
             pids = process_utils.get_process_ids_by_name("WeChat.exe")
             success = pywinhandle.close_handles(
                 pywinhandle.find_handles(
@@ -141,6 +132,22 @@ def open_wechat(status, has_mutex_dictionary=None):
                 print(f"关闭互斥体失败: {str(pids)}")
 
             # 所有操作完成后，执行创建进程的操作
+            create_process_without_admin(wechat_path, None)
+        # ————————————————————————————————python————————————————————————————————
+        elif sub_exe == "python":
+            if len(has_mutex_dictionary) > 0:
+                pids, values = zip(*has_mutex_dictionary.items())
+                success = pywinhandle.close_handles(
+                    pywinhandle.find_handles(
+                        pids,
+                        ['_WeChat_App_Instance_Identity_Mutex_Name']
+                    )
+                )
+                if success:
+                    # 更新 has_mutex 为 False 并保存
+                    print(f"成功关闭：{time.time() - start_time:.4f}秒")
+                else:
+                    print(f"关闭互斥体失败，PID: {str(pids)}")
             create_process_without_admin(wechat_path, None)
 
     return sub_exe_process, sub_exe
@@ -169,7 +176,14 @@ def create_process_without_admin(executable, args=None, creation_flags=process_u
     if file_utils.get_sys_major_version_name() == "win7":
         return process_utils.create_process_for_win7(executable, args, creation_flags)
     else:
-        return process_utils.create_process_with_medium_il(executable, args, creation_flags)
+        # return process_utils.create_process_with_medium_il(executable, args, creation_flags)
+        shell32 = ctypes.windll.shell32
+        SW_SHOWNORMAL = 1  # 正常显示窗口
+
+        result = shell32.ShellExecuteW(None, "open", executable, None, None, SW_SHOWNORMAL)
+        if result <= 32:
+            raise Exception(f"ShellExecute failed, error code: {result}")
+        print("程序已以普通用户权限启动。")
 
 
 def logging_in_listener():

@@ -43,6 +43,7 @@ def main():
     parser = argparse.ArgumentParser(description="Process command line flags.")
     # 添加 --debug 和 -d 选项
     parser.add_argument('--debug', '-d', action='store_true', help="Enable debug mode.")
+    parser.add_argument('--new', '-n', action='store_true', help="Enable new mode.")
     # 解析命令行参数
     args, unknown = parser.parse_known_args()
     # 检查是否有 --debug 或 -d 参数
@@ -55,7 +56,7 @@ def main():
     MainWindow(
         root,
         loading_window,
-        debug=args.debug
+        args=args
     )
     root.mainloop()
 

@@ -1,9 +1,7 @@
 # main_ui.py
 import glob
-import itertools
 import os
 import queue
-import re
 import sys
 import threading
 import time
@@ -15,14 +13,12 @@ from tkinter import ttk
 
 import psutil
 
-from functions import func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file, \
-    func_update, func_config
+from functions import func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file, func_update
 from resources import Strings
 from resources.config import Config
-from thread_manager import ThreadManager
-from ui import about_ui, setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
-    sidebar_ui
-from utils import handle_utils, debug_utils, file_utils, logger_utils, image_utils
+from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
+    sidebar_ui, about_ui
+from utils import handle_utils, debug_utils, file_utils, logger_utils
 
 logger = logger_utils.mylogger
 
@@ -30,7 +26,7 @@ logger = logger_utils.mylogger
 class MainWindow:
     """构建主窗口的类"""
 
-    def __init__(self, master, loading_window, debug=None):
+    def __init__(self, master, loading_window, args=None):
         self.view_options_menu = None
         self.view_var = None
         self.need_to_update = False
@@ -47,7 +43,8 @@ class MainWindow:
         self.logo_click_count = 0
         self.statistic_menu = None
         self.chosen_sub_exe_var = None
-        self.debug = debug
+        self.debug = args.debug
+        self.new = args.new
         self.settings_button = None
         self.sub_executable_menu = None
         self.config_file_menu = None
@@ -69,7 +66,6 @@ class MainWindow:
         self.master = master
         self.reset_timer = self.master.after(0, lambda: setattr(self, 'logo_click_count', 0))
         self.loading_window = loading_window
-        self.thread_manager = ThreadManager(master)
         style = ttk.Style()
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
@@ -93,7 +89,7 @@ class MainWindow:
         self.bottom_frame = ttk.Frame(master, padding="10")
         self.bottom_frame.pack(side=tk.BOTTOM)
         self.manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
-                                              command=self.test, style='Custom.TButton')
+                                              command=self.manual_login_account, style='Custom.TButton')
         self.manual_login_button.pack(side=tk.LEFT)
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
@@ -118,6 +114,8 @@ class MainWindow:
 
         self.logged_in_rows = {}
         self.not_logged_in_rows = {}
+        if self.new is True:
+            self.master.after(3000, self.open_update_log)
 
     def setup_main_window(self):
         """创建主窗口"""
@@ -595,9 +593,15 @@ class MainWindow:
 
     def manual_login_account(self):
         """按钮：手动登录"""
-        self.thread_manager.manual_login_account_thread(func_login.manual_login, self.multiple_status,
-                                                        self.create_main_frame_and_menu,
-                                                        partial(handle_utils.bring_window_to_front, window_class=self))
+        print("手动登录")
+        threading.Thread(
+            target=func_login.manual_login,
+            args=(
+                self,
+                self.multiple_status,
+                partial(handle_utils.bring_window_to_front, window_class=self)
+            )
+        ).start()
 
     def test(self):
         # 清除窗口中的所有控件
@@ -611,3 +615,7 @@ class MainWindow:
         debug_window = tk.Toplevel(self.master)
         debug_ui.DebugWindow(debug_window)
         handle_utils.center_window(debug_window)
+
+
+
+

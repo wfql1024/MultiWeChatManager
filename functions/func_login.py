@@ -8,11 +8,14 @@ import win32gui
 
 from functions import func_config, subfunc_wechat, subfunc_file
 from utils import handle_utils
+from utils.logger_utils import mylogger as logger
 
 
-def manual_login(status):
+def manual_login(m_class, status, window_callback):
     """
     根据状态进行手动登录过程
+    :param m_class:
+    :param window_callback:
     :param status: 状态
     :return: 成功与否
     """
@@ -20,11 +23,13 @@ def manual_login(status):
     start_time = time.time()
     subfunc_wechat.clear_idle_wnd_and_process()
     time.sleep(0.5)
-    subfunc_file.clear_all_wechat_in_acc_json() and subfunc_file.update_all_wechat_in_acc_json()
+    subfunc_file.clear_all_wechat_in_acc_json()
+    subfunc_file.update_all_wechat_in_acc_json()
     has_mutex_dict = subfunc_wechat.get_mutex_dict()
-    print(f"当前模式是：{status}")
+    logger.info(f"当前模式是：{status}")
     sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict)
     wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", 20)
+    success = None
     if wechat_hwnd:
         subfunc_file.set_all_wechat_values_to_false()
         subfunc_file.update_manual_time_statistic(sub_exe, time.time() - start_time)
@@ -32,14 +37,16 @@ def manual_login(status):
         if sub_exe_process:
             sub_exe_process.terminate()
         if handle_utils.wait_for_window_close(wechat_hwnd, timeout=60):
-            print(f"登录窗口已关闭")
-            return True
+            print(f"手动登录成功，正在刷新...")
         else:
             messagebox.showinfo("提示", "登录窗口长时间未操作，即将刷新列表")
-            return True
     else:
-        print(f"打开失败，请重试！")
-        return False
+        logger.warning(f"打开失败，请重试！")
+        messagebox.showerror("错误", "手动登录失败，请重试")
+
+    m_class.master.after(0, m_class.create_main_frame_and_menu)
+    window_callback()
+
 
 
 def auto_login_accounts(accounts, status, callback):
@@ -163,15 +170,14 @@ def auto_login_accounts(accounts, status, callback):
         handle_utils.do_click_in_window(h, int(login_width * 0.5), int(login_height * 0.75))
         time.sleep(0.2)
     for h in handles:
+        titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
         try:
-            titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
-            cx, cy = None, None  # 初始化坐标为 None
             # 依次查找每个标题
             for title in titles:
                 cx, cy = handle_utils.get_center_pos_by_handle_and_title(h, title)
                 if cx is not None and cy is not None:
+                    handle_utils.do_click_in_window(h, int(cx), int(cy))
                     break  # 找到有效坐标后退出循环
-            handle_utils.do_click_in_window(h, int(cx), int(cy))
         except TypeError as e:
             print(e)
             print("没有按钮，应该是点过啦~")
@@ -180,6 +186,7 @@ def auto_login_accounts(accounts, status, callback):
     end_time = time.time() + 30
     while True:
         hs = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC", "微信")
+        print("等待登录完成")
         if len(hs) == 0:
             callback()
             return True
@@ -187,7 +194,7 @@ def auto_login_accounts(accounts, status, callback):
             callback()
             return True
 
-
-if __name__ == '__main__':
-    handles = handle_utils.find_all_windows_by_class_and_title("WeChatMainWndForPC")
-    print(handles)
+#
+# if __name__ == '__main__':
+#     handles = handle_utils.find_all_windows_by_class_and_title("WeChatMainWndForPC")
+#     print(handles)

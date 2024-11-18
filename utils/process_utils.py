@@ -223,10 +223,8 @@ def get_process_ids_by_name(process_name):
 
 def create_process_for_win7(executable, args=None, creation_flags=0):
     command = [executable]  # 添加可执行文件路径到命令列表中
-
     if args:
         command.extend(args)  # 添加额外的参数
-
     # 启动进程，不使用管理员权限
     try:
         process = subprocess.Popen(

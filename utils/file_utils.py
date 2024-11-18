@@ -8,7 +8,7 @@ import datetime as dt
 import win32api
 
 
-def get_recent_folders_from_dir(directory, minutes=30):
+def get_recent_folders_from_dir(directory, minutes=360):
     now = dt.datetime.now()
     some_minutes_ago = now - dt.timedelta(minutes=minutes)
     recent_folders = []

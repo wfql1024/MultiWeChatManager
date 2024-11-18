@@ -148,14 +148,14 @@ class AccountRow:
 
 
 class ClassicRowUI:
-    def __init__(self, main_window, m_master, m_main_frame, result, data_path, multiple_status):
-        self.main_window = main_window
+    def __init__(self, m_class, m_window, m_main_frame, result, data_path, multiple_status):
+        self.m_class = m_class
         self.data_path = data_path
         self.multiple_status = multiple_status
         self.not_logged_in_rows = {}
         self.logged_in_rows = {}
         self.tooltips = {}
-        self.master = m_master
+        self.master = m_window
         self.main_frame = m_main_frame
         self.logged_in_rows.clear()
         self.not_logged_in_rows.clear()
@@ -339,16 +339,11 @@ class ClassicRowUI:
     def open_detail(self, account):
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.master)
-        detail_ui.DetailWindow(detail_window, account, self.main_window.create_main_frame_and_menu)
+        detail_ui.DetailWindow(detail_window, account, self.m_class.create_main_frame_and_menu)
 
-    def create_config(self, account, status):
+    def create_config(self, account, multiple_status):
         """按钮：创建或重新配置"""
-        self.main_window.thread_manager.create_config_thread(
-            account,
-            func_config.test,
-            status,
-            self.main_window.create_main_frame_and_menu
-        )
+        threading.Thread(target=func_config.test, args=(self.m_class, account, multiple_status)).start()
 
     def auto_login_account(self, account):
         """按钮：自动登录某个账号"""
@@ -356,7 +351,7 @@ class ClassicRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=([account], self.multiple_status, self.main_window.create_main_frame_and_menu)
+                args=([account], self.multiple_status, self.m_class.create_main_frame_and_menu)
             ).start()
         except Exception as e:
             logger.error(e)
@@ -368,7 +363,7 @@ class ClassicRowUI:
             for account, row in self.logged_in_rows.items() if row.checkbox_var.get()
         ]
         try:
-            func_account.to_quit_selected_accounts(accounts, self.main_window.create_main_frame_and_menu)
+            func_account.to_quit_selected_accounts(accounts, self.m_class.create_main_frame_and_menu)
         except Exception as e:
             logger.error(e)
 
@@ -379,7 +374,7 @@ class ClassicRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.main_window.create_main_frame_and_menu)
+                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu)
             ).start()
         except Exception as e:
             logger.error(e)

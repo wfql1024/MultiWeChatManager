@@ -20,7 +20,7 @@ def try_convert(value):
 
 
 class TreeviewRowUI:
-    def __init__(self, main_window, m_master, m_main_frame, result, data_path, multiple_status):
+    def __init__(self, m_class, m_master, m_main_frame, result, data_path, multiple_status):
         self.acc_index = None
         self.hovered_item = None
         self.single_click_id = None
@@ -31,7 +31,7 @@ class TreeviewRowUI:
         self.logged_in_tree = None
         self.selected_not_logged_in_items = []
         self.selected_logged_in_items = []
-        self.main_window = main_window
+        self.m_class = m_class
         self.data_path = data_path
         self.multiple_status = multiple_status
         self.tooltips = {}
@@ -465,18 +465,13 @@ class TreeviewRowUI:
     def open_detail(self, account):
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.master)
-        detail_ui.DetailWindow(detail_window, account, self.main_window.create_main_frame_and_menu)
+        detail_ui.DetailWindow(detail_window, account, self.m_class.create_main_frame_and_menu)
         handle_utils.center_window(detail_window)
 
     def create_config(self, multiple_status):
         """按钮：创建或重新配置"""
         accounts = self.selected_logged_in_items
-        self.main_window.thread_manager.create_config_thread(
-            accounts[0],
-            func_config.test,
-            multiple_status,
-            self.main_window.create_main_frame_and_menu
-        )
+        threading.Thread(target=func_config.test, args=(self.m_class, accounts[0], multiple_status)).start()
 
     def quit_selected_accounts(self):
         """退出所选账号"""
@@ -495,7 +490,7 @@ class TreeviewRowUI:
                 quited_accounts = func_account.quit_accounts(accounts)
                 quited_accounts_str = "\n".join(quited_accounts)
                 messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
-                self.main_window.create_main_frame_and_menu()
+                self.m_class.create_main_frame_and_menu()
             except Exception as e:
                 logger.error(e)
 
@@ -506,7 +501,7 @@ class TreeviewRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.main_window.create_main_frame_and_menu)
+                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu)
             ).start()
         except Exception as e:
             logger.error(e)
@@ -517,7 +512,7 @@ class TreeviewRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.main_window.create_main_frame_and_menu)
+                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu)
             ).start()
         except Exception as e:
             logger.error(e)
