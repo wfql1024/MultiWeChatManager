@@ -1,11 +1,13 @@
+import datetime as dt
 import hashlib
 import os
 import platform
 import re
-import datetime as dt
-# from datetime import datetime
 
 import win32api
+
+
+# from datetime import datetime
 
 
 def get_recent_folders_from_dir(directory, minutes=360):

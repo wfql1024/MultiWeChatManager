@@ -1,6 +1,5 @@
 import configparser
 import os
-import sys
 
 from utils import logger_utils
 

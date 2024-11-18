@@ -5,7 +5,6 @@ import subprocess
 import sys
 import time
 from tkinter import messagebox
-from typing import Union, Tuple, List
 
 import psutil
 from PIL import Image
@@ -168,6 +167,7 @@ def silent_get_and_config(logged_in, not_logged_in, data_dir, callback):
     if need_to_notice is True:
         messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")
         callback()
+
 
 def get_account_list(multiple_status):
     """

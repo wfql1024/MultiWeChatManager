@@ -1,5 +1,4 @@
 import re
-import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk, filedialog, messagebox
@@ -8,7 +7,7 @@ import win32com
 import win32com.client
 
 from functions import func_setting, subfunc_wechat, subfunc_file
-from utils import handle_utils, wechat_utils
+from utils import wechat_utils
 
 
 class SettingWindow:

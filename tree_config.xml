@@ -1,5 +1,5 @@
 <config>
-  <!--  扫描  -->
+    <!--  扫描  -->
     <!--  忽略.开头的文件夹  -->
     <ignore_dot_dir>true</ignore_dot_dir>
     <!--  忽略.开头的文件  -->
@@ -10,7 +10,7 @@
     <ignore_dir_list>__pycache__,user_files,dist</ignore_dir_list>
     <!--  忽略文件  -->
     <ignore_file>false</ignore_file>
-  <!--  预览  -->
+    <!--  预览  -->
     <!--  输出格式: text或markdown  -->
     <output_type>text</output_type>
     <!--  最短桥梁长度  -->
@@ -20,7 +20,7 @@
     <!--  始终显示桥梁  -->
     <always_show_bridge>false</always_show_bridge>
     <!--  注释前缀  -->
-    <comment_prefix> # </comment_prefix>
-  <!--  TreeInfoTip配置文件位置  -->
+    <comment_prefix>#</comment_prefix>
+    <!--  TreeInfoTip配置文件位置  -->
     <tree_info_tip_xml>DirectoryV3.xml</tree_info_tip_xml>
 </config>

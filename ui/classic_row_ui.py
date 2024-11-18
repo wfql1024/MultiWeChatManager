@@ -1,15 +1,14 @@
 import threading
-
-from PIL import ImageTk
-from utils import string_utils, widget_utils
 import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk
 
+from PIL import ImageTk
+
 from functions import func_config, func_login, func_account, subfunc_file
 from ui import detail_ui
-
+from utils import string_utils, widget_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -17,6 +16,7 @@ class AccountRow:
     """
     为每一个账号创建其行布局的类
     """
+
     def __init__(self, parent_frame, account, data_path, status, is_logged_in, callbacks,
                  update_top_checkbox_callback):
         self.data_path = data_path
@@ -148,14 +148,14 @@ class AccountRow:
 
 
 class ClassicRowUI:
-    def __init__(self, m_class, m_window, m_main_frame, result, data_path, multiple_status):
+    def __init__(self, m_class, root, m_main_frame, result, data_path, multiple_status):
         self.m_class = m_class
         self.data_path = data_path
         self.multiple_status = multiple_status
         self.not_logged_in_rows = {}
         self.logged_in_rows = {}
         self.tooltips = {}
-        self.master = m_window
+        self.root = root
         self.main_frame = m_main_frame
         self.logged_in_rows.clear()
         self.not_logged_in_rows.clear()
@@ -338,7 +338,7 @@ class ClassicRowUI:
 
     def open_detail(self, account):
         """打开详情窗口"""
-        detail_window = tk.Toplevel(self.master)
+        detail_window = tk.Toplevel(self.root)
         detail_ui.DetailWindow(detail_window, account, self.m_class.create_main_frame_and_menu)
 
     def create_config(self, account, multiple_status):
@@ -347,7 +347,7 @@ class ClassicRowUI:
 
     def auto_login_account(self, account):
         """按钮：自动登录某个账号"""
-        self.master.iconify()  # 最小化主窗口
+        self.root.iconify()  # 最小化主窗口
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
@@ -370,7 +370,7 @@ class ClassicRowUI:
     def auto_login_selected_accounts(self):
         """登录所选账号"""
         accounts = [account for account, row in self.not_logged_in_rows.items() if row.checkbox_var.get()]
-        self.master.iconify()  # 最小化主窗口
+        self.root.iconify()  # 最小化主窗口
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
@@ -378,4 +378,3 @@ class ClassicRowUI:
             ).start()
         except Exception as e:
             logger.error(e)
-

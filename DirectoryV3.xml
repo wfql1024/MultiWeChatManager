@@ -1,20 +1,21 @@
-<?xml version="1.0" encoding="UTF-8"?> 
+<?xml version="1.0" encoding="UTF-8"?>
 <trees>
- <tree path="/Demo" title="与项目相关的独立示例代码，可以探索下"/>
- <tree path="/external_res" title="引用到的外部资源"/>
- <tree path="/functions" title="功能层代码，实现项目中的具体功能"/>
- <tree path="/resources" title="项目代码资源"/>
- <tree path="/ui" title="界面层代码，实现界面创建和更新"/>
- <tree path="/utils" title="工具类代码，可移植到其他项目中使用"/>
- <tree path="/version_config.json" title="旧的版本适配表，只在发布过的2.3.3.333可以使用，现在代码已经不使用" extension="" presentableText="" tooltipTitle="" icon=""
-       textColor="" backgroundColor=""/>
- <tree path="/version.txt" title="打包程序的文件版本等信息说明"/>
- <tree path="/main.py" title="入口，管理员身份及程序参数解析" extension=""
-       presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
- <tree path="/thread_manager.py" title="线程管理器，项目中线程操作统一写在这里"/>
- <tree path="/build.bat" title="打包命令，控制台直接使用可以打包项目"/>
- <tree path="/user_files" title="项目生成的文件夹，无代码"/>
- <tree path="/version_adaptation.json" title="版本适配表，在这里更新微信新版本的偏移地址"/>
+    <tree path="/Demo" title="与项目相关的独立示例代码，可以探索下"/>
+    <tree path="/external_res" title="引用到的外部资源"/>
+    <tree path="/functions" title="功能层代码，实现项目中的具体功能"/>
+    <tree path="/resources" title="项目代码资源"/>
+    <tree path="/ui" title="界面层代码，实现界面创建和更新"/>
+    <tree path="/utils" title="工具类代码，可移植到其他项目中使用"/>
+    <tree path="/version_config.json" title="旧的版本适配表，只在发布过的2.3.3.333可以使用，现在代码已经不使用"
+          extension="" presentableText="" tooltipTitle="" icon=""
+          textColor="" backgroundColor=""/>
+    <tree path="/version.txt" title="打包程序的文件版本等信息说明"/>
+    <tree path="/main.py" title="入口，管理员身份及程序参数解析" extension=""
+          presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
+    <tree path="/thread_manager.py" title="线程管理器，项目中线程操作统一写在这里"/>
+    <tree path="/build.bat" title="打包命令，控制台直接使用可以打包项目"/>
+    <tree path="/user_files" title="项目生成的文件夹，无代码"/>
+    <tree path="/version_adaptation.json" title="版本适配表，在这里更新微信新版本的偏移地址"/>
     <tree path="/functions/subfunc_file.py" title="subfunc为介于工具类和功能直接实现类的子功能类" extension=""
           presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
 </trees>

@@ -32,7 +32,7 @@ class MainWindow:
         self.need_to_update = False
         self.chosen_view = None
         self.classic_view_menu = None
-        self.unlock_revoke = subfunc_file.get_enable_new_func_from_ini() == "true"
+        self.enable_new_func = func_setting.fetch_setting_or_set_default("enable_new_func") == "true"
         self.current_full_version = subfunc_file.get_app_current_version()
         self.is_tree_view = None
         self.tree_view_menu = None
@@ -397,7 +397,7 @@ class MainWindow:
         self.help_menu.add_command(label=about_text, command=partial(self.open_about, self.need_to_update))
 
         # ————————————————————————————作者标签————————————————————————————
-        if self.unlock_revoke is True:
+        if self.enable_new_func is True:
             self.menu_bar.add_command(label=Strings.ENABLED_NEW_FUNC)
             self.menu_bar.entryconfigure(Strings.ENABLED_NEW_FUNC, state="disabled")
         else:
@@ -409,7 +409,7 @@ class MainWindow:
         print(f"刷新.........................................................")
         # 菜单也刷新
         print(f"加载菜单栏.........................................................")
-        self.unlock_revoke = subfunc_file.get_enable_new_func_from_ini() == "true"
+        self.enable_new_func = func_setting.fetch_setting_or_set_default("enable_new_func") == "true"
         self.current_full_version = subfunc_file.get_app_current_version()
         self.create_menu_bar()
 
@@ -471,7 +471,6 @@ class MainWindow:
 
         func_account.silent_get_and_config(logged_in, not_logged_in, self.data_dir,
                                            self.create_main_frame_and_menu)
-
 
     def bind_mouse_wheel(self, widget):
         """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
@@ -588,12 +587,12 @@ class MainWindow:
         print("触发了点击")
         self.logo_click_count += 1
         if self.logo_click_count == 3:
-            self.enable_new_func()
+            self.to_enable_new_func()
             self.logo_click_count = 0  # 重置计数器
         else:
             self.reset_timer = self.master.after(1000, lambda: setattr(self, 'logo_click_count', 0))  # 1秒后重置
 
-    def enable_new_func(self):
+    def to_enable_new_func(self):
         subfunc_file.set_enable_new_func_in_ini("true")
         messagebox.showinfo("发现彩蛋", "解锁新菜单，快去看看吧！")
         self.create_main_frame_and_menu()
@@ -622,7 +621,3 @@ class MainWindow:
         debug_window = tk.Toplevel(self.master)
         debug_ui.DebugWindow(debug_window)
         handle_utils.center_window(debug_window)
-
-
-
-

@@ -1,21 +1,16 @@
 # about_ui.py
-import os
 import re
-import sys
-import tempfile
-import threading
 import tkinter as tk
+import webbrowser
 from functools import partial
 from tkinter import ttk, messagebox
-import webbrowser
 
-import requests
 from PIL import Image, ImageTk
 
 from functions import func_update, subfunc_file
 from resources import Config, Strings
 from ui import update_log_ui
-from utils import file_utils, handle_utils
+from utils import handle_utils
 
 
 def add_hyperlink_events(text_widget, text_content):

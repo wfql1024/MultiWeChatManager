@@ -110,4 +110,4 @@ def test(m_class, account, multiple_status):
                 close_window_by_name("WeChatLoginWndForPC")
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
-    m_class.master.after(0, m_class.create_main_frame_and_menu)
+    m_class.root.after(0, m_class.create_main_frame_and_menu)

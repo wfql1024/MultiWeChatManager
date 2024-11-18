@@ -1,5 +1,6 @@
 # func_setting.py
 import os
+
 from functions import subfunc_file
 from resources import Config
 from utils import ini_utils, wechat_utils, file_utils

@@ -1,10 +1,11 @@
-import tkinter as tk
-from tkinter import messagebox, ttk
-import win32gui
-import win32con
 import ctypes
 import threading
 import time
+import tkinter as tk
+from tkinter import messagebox, ttk
+
+import win32con
+import win32gui
 
 
 class SidebarUI:

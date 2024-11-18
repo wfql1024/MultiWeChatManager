@@ -9,7 +9,6 @@ import requests
 
 from resources import Config, Strings
 from utils import json_utils, ini_utils, file_utils, image_utils
-
 from utils.logger_utils import mylogger as logger
 
 
@@ -38,9 +37,22 @@ def save_login_size_to_setting_ini(value):
                                          Config.INI_KEY_LOGIN_SIZE, value)
 
 
+def save_sort_order_to_setting_ini(order):
+    col, asc = order["login"]
+    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+                                  Config.INI_KEY["login_col_to_sort"], col)
+    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+                                  Config.INI_KEY["login_sort_asc"], asc)
+    col, asc = order["logout"]
+    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+                                  Config.INI_KEY["logout_col_to_sort"], col)
+    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+                                  Config.INI_KEY["logout_sort_asc"], asc)
+
+
 def set_enable_new_func_in_ini(value):
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                         Config.INI_KEY_ENABLE_NEW_FUNC, value)
+                                         Config.INI_KEY["enable_new_func"], value)
 
 
 def get_wechat_install_path_from_setting_ini():
@@ -76,15 +88,6 @@ def get_login_size_from_setting_ini():
         Config.SETTING_INI_PATH,
         Config.INI_SECTION,
         Config.INI_KEY_LOGIN_SIZE
-    )
-
-
-def get_enable_new_func_from_ini():
-    return ini_utils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_ENABLE_NEW_FUNC,
-        default_value="false"
     )
 
 

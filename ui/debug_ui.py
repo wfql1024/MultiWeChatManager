@@ -100,7 +100,8 @@ class DebugWindow:
 
         logs = sys.stdout.get_logs()
         for log in logs:
-            if len(log['output_prefix']) < self.min_indent_scale.get() or len(log['output_prefix']) > self.max_indent_scale.get():
+            if len(log['output_prefix']) < self.min_indent_scale.get() or len(
+                    log['output_prefix']) > self.max_indent_scale.get():
                 continue
             # 调用栈前缀
             if self.indent_var.get() and self.callstack_var.get():

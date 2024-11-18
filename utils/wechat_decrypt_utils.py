@@ -64,6 +64,7 @@ DEFAULT_ITER = 64000
 MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",
                             0x08: "PAGE_WRITECOPY"}
 
+
 class MemoryBasicInformation(Structure):
     _fields_ = [
         ("BaseAddress", ctypes.c_void_p),

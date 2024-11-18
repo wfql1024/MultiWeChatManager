@@ -422,14 +422,34 @@
         ]
       },
       "logs": {
-        "新增": ["测试在线升级"]
+        "新增": [
+          "测试在线升级"
+        ]
       }
     },
     "v2.5.0.411.Alpha": {
       "pkgs": {
-        "win7": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win10": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win11": [{ "url": "", "md5": "", "sha-256": "" }],
+        "win7": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win10": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win11": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
         "default": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
@@ -439,15 +459,37 @@
         ]
       },
       "logs": {
-        "适配": ["适配win7系统"],
-        "优化": ["为了适配win7，降低python版本：3.12->3.7，由此安装包体积大幅缩减"]
+        "适配": [
+          "适配win7系统"
+        ],
+        "优化": [
+          "为了适配win7，降低python版本：3.12->3.7，由此安装包体积大幅缩减"
+        ]
       }
     },
     "v2.4.0.365.Alpha": {
       "pkgs": {
-        "win7": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win10": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win11": [{ "url": "", "md5": "", "sha-256": "" }],
+        "win7": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win10": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win11": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
         "default": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
@@ -457,14 +499,34 @@
         ]
       },
       "logs": {
-        "新增": ["新增防撤回"]
+        "新增": [
+          "新增防撤回"
+        ]
       }
     },
     "v2.3.3.333.Beta": {
       "pkgs": {
-        "win7": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win10": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win11": [{ "url": "", "md5": "", "sha-256": "" }],
+        "win7": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win10": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win11": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
         "default": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
@@ -492,9 +554,27 @@
     },
     "v2.0.8.208.Beta": {
       "pkgs": {
-        "win7": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win10": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win11": [{ "url": "", "md5": "", "sha-256": "" }],
+        "win7": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win10": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win11": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
         "default": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
@@ -512,14 +592,34 @@
           "优化微信新版本的适配，目前支持微信 3.9.11.25、3.9.12.9、3.9.12.11 多开",
           "优化获取登录窗口尺寸的逻辑"
         ],
-        "新增": ["新增打赏（你懂的~）"]
+        "新增": [
+          "新增打赏（你懂的~）"
+        ]
       }
     },
     "v2.0.0.200.Beta": {
       "pkgs": {
-        "win7": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win10": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win11": [{ "url": "", "md5": "", "sha-256": "" }],
+        "win7": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win10": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win11": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
         "default": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
@@ -540,9 +640,27 @@
     },
     "v1.0.79.100.Beta": {
       "pkgs": {
-        "win7": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win10": [{ "url": "", "md5": "", "sha-256": "" }],
-        "win11": [{ "url": "", "md5": "", "sha-256": "" }],
+        "win7": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win10": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
+        "win11": [
+          {
+            "url": "",
+            "md5": "",
+            "sha-256": ""
+          }
+        ],
         "default": [
           {
             "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",

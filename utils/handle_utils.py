@@ -18,14 +18,11 @@ from pywinauto.controls.hwndwrapper import HwndWrapper
 from pywinauto import Application
 
 
-
-
-
 def bring_window_to_front(window_class):
-    window_class.master.after(200, lambda: window_class.master.lift())
-    window_class.master.after(300, lambda: window_class.master.attributes('-topmost', True))
-    window_class.master.after(400, lambda: window_class.master.attributes('-topmost', False))
-    window_class.master.after(500, lambda: window_class.master.focus_force())
+    window_class.root.after(200, lambda: window_class.root.lift())
+    window_class.root.after(300, lambda: window_class.root.attributes('-topmost', True))
+    window_class.root.after(400, lambda: window_class.root.attributes('-topmost', False))
+    window_class.root.after(500, lambda: window_class.root.focus_force())
 
 
 def close_mutex_of_pids_by_handle():
@@ -138,6 +135,7 @@ def find_all_windows_by_class_and_title(class_name, window_title=None):
             # 仅匹配类名，若window_title不为空则继续匹配标题
             if curr_class_name == class_name and (window_title is None or curr_window_title == window_title):
                 results.append(hwnd)
+
     results = []
     win32gui.EnumWindows(enum_windows_callback, results)
     return results
@@ -393,7 +391,6 @@ def embed_window_into_right_panel(right_panel_hwnd, target_hwnd):
         win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW  # 显示窗口
     )
 
-
 # 示例用法
 # if __name__ == "__main__":
 #     import tkinter as tk
@@ -422,6 +419,3 @@ def embed_window_into_right_panel(right_panel_hwnd, target_hwnd):
 #     image = Image.open(Config.PROJ_ICO_PATH)  # 使用自定义图标
 #     icon = pystray.Icon("name", image, "Title")
 #     icon.run()
-
-
-
