@@ -40,8 +40,8 @@ class LoggerUtils:
             'log_format': '%(levelname)s - %(asctime)s - %(filename)s[line:%(lineno)d] - %(message)s'
         }
 
-        logger = logging.getLogger('mylogger')
-        logger.setLevel(logging.DEBUG)
+        mylogger = logging.getLogger('mylogger')
+        mylogger.setLevel(logging.DEBUG)
         fh_log_format = logging.Formatter(default_formats["log_format"])
         ch_log_format = colorlog.ColoredFormatter(default_formats["color_format"], log_colors=log_colors_config)
 
@@ -49,14 +49,14 @@ class LoggerUtils:
         log_fh = logging.FileHandler(file)
         log_fh.setLevel(logging.DEBUG)
         log_fh.setFormatter(fh_log_format)
-        logger.addHandler(log_fh)
+        mylogger.addHandler(log_fh)
         # 创建控制台处理器
         log_ch = logging.StreamHandler()
         log_ch.setFormatter(ch_log_format)
         log_ch.setLevel(logging.DEBUG)
-        logger.addHandler(log_ch)
+        mylogger.addHandler(log_ch)
 
-        return logger
+        return mylogger
 
 
 app_path = os.path.basename(os.path.abspath(sys.argv[0]))

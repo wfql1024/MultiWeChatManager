@@ -347,6 +347,13 @@ class MainWindow:
                 variable=self.chosen_sub_exe_var,
                 command=partial(func_setting.toggle_sub_executable, 'python', self.delayed_initialization)
             )
+            # 添加 强力Python 的单选按钮
+            self.sub_executable_menu.add_radiobutton(
+                label='python[S]',
+                value='python[S]',
+                variable=self.chosen_sub_exe_var,
+                command=partial(func_setting.toggle_sub_executable, 'python[S]', self.delayed_initialization)
+            )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
             # 添加 Handle 的单选按钮
             self.sub_executable_menu.add_radiobutton(
