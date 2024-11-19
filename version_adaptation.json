@@ -340,6 +340,46 @@
         }
     },
     "update": {
+        "v2.9.1.698-Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                        "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                        "md5": "19758698771099dfdf57d4230217d30b",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                        "md5": "19758698771099dfdf57d4230217d30b",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                        "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增新增自动配置未配置的账号"
+                ],
+                "修复": [
+                    "修复列表视图下配置失败等的问题"
+                ]
+            }
+        },
         "v2.8.7.668-Alpha": {
             "pkgs": {
                 "win7": [
