@@ -52,10 +52,8 @@ def main():
     else:
         print("当前是普通模式")
     root = tk.Tk()
-    loading_window = LoadingWindow(root)
     MainWindow(
         root,
-        loading_window,
         args=args
     )
     root.mainloop()

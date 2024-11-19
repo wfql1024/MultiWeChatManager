@@ -185,7 +185,7 @@ def auto_login_accounts(accounts, status, callback):
     end_time = time.time() + 30
     while True:
         hs = handle_utils.find_all_windows_by_class_and_title("WeChatLoginWndForPC", "微信")
-        print("等待登录完成")
+        # print("等待登录完成")
         if len(hs) == 0:
             callback()
             return True

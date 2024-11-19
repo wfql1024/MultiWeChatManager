@@ -16,7 +16,6 @@ class UpdateLogWindow:
     def __init__(self, master, old_versions, new_versions=None):
         self.master = master
         master.title("版本日志" if not new_versions else "发现新版本")
-
         window_width = 600
         window_height = 500
         screen_width = master.winfo_screenwidth()
@@ -167,7 +166,6 @@ class UpdateLogWindow:
         y = (screen_height - window_height) // 2
         download_window.geometry(f"{window_width}x{window_height}+{x}+{y}")
         download_window.resizable(False, False)
-        handle_utils.center_window(download_window)
         download_window.grab_set()
 
         progress_var = tk.StringVar(value="开始下载...")

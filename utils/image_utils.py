@@ -63,7 +63,7 @@ def download_image(img_url, path):
         logger.info(f"图像已成功保存到 {path}")
         return True
     except requests.RequestException as re:
-        print(f"下载图像时出错: {re}")
+        logger.error(f"下载图像时出错: {re}")
         return False
 
 

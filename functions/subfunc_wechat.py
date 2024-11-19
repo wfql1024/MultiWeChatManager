@@ -116,17 +116,18 @@ def open_wechat(status, has_mutex_dictionary=None):
         # ————————————————————————————————python[强力]————————————————————————————————
         elif sub_exe == "python[S]":
             pids = process_utils.get_process_ids_by_name("WeChat.exe")
-            success = pywinhandle.close_handles(
-                pywinhandle.find_handles(
-                    pids,
-                    ['_WeChat_App_Instance_Identity_Mutex_Name']
+            if len(pids) > 0:
+                success = pywinhandle.close_handles(
+                    pywinhandle.find_handles(
+                        pids,
+                        ['_WeChat_App_Instance_Identity_Mutex_Name']
+                    )
                 )
-            )
-            if success:
-                # 更新 has_mutex 为 False 并保存
-                print(f"成功关闭：{time.time() - start_time:.4f}秒")
-            else:
-                print(f"关闭互斥体失败: {str(pids)}")
+                if success:
+                    # 更新 has_mutex 为 False 并保存
+                    print(f"成功关闭：{time.time() - start_time:.4f}秒")
+                else:
+                    print(f"关闭互斥体失败: {str(pids)}")
 
             # 所有操作完成后，执行创建进程的操作
             create_process_without_admin(wechat_path, None)
@@ -144,7 +145,7 @@ def open_wechat(status, has_mutex_dictionary=None):
                     # 更新 has_mutex 为 False 并保存
                     print(f"成功关闭：{time.time() - start_time:.4f}秒")
                 else:
-                    print(f"关闭互斥体失败，PID: {str(pids)}")
+                    print(f"关闭互斥体失败: {str(pids)}")
             create_process_without_admin(wechat_path, None)
 
     return sub_exe_process, sub_exe

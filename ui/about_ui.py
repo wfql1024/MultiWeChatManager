@@ -212,7 +212,6 @@ class AboutWindow:
             if len(new_versions) != 0:
                 update_log_window = tk.Toplevel(self.master)
                 update_log_ui.UpdateLogWindow(update_log_window, old_versions, new_versions)
-                handle_utils.center_window(update_log_window)
             else:
                 messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
                 return True

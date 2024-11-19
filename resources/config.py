@@ -4,7 +4,7 @@ current_file_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 class Config:
-    VER_STATUS = 'Alpha'
+    VER_STATUS = 'Beta'
 
     INI_SECTION = 'default'
     INI_KEY_INSTALL_PATH = 'install_path'

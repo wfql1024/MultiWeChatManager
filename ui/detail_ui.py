@@ -12,32 +12,20 @@ from PIL import Image, ImageTk
 from functions import func_detail, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
-from utils import string_utils, widget_utils
+from utils import string_utils, widget_utils, handle_utils
 
 
 class DetailWindow:
     def __init__(self, master, account, update_callback):
         self.master = master
+        self.master.withdraw()
         self.account = account
         self.update_callback = update_callback
         self.tooltips = {}  # 初始化 tooltip 属性
 
         master.title(f"属性 - {self.account}")
 
-        window_width = 265
-        window_height = 345
-        screen_width = master.winfo_screenwidth()
-        screen_height = master.winfo_screenheight()
-        x = (screen_width - window_width) // 2
-        y = (screen_height - window_height) // 2
-
-        master.geometry(f"{window_width}x{window_height}+{x}+{y}")
-
-        master.overrideredirect(True)
-        master.overrideredirect(False)
         master.attributes('-toolwindow', True)
-
-        master.grab_set()
 
         frame = ttk.Frame(master, padding="12")
         frame.pack(fill=tk.BOTH, expand=True)
@@ -98,6 +86,10 @@ class DetailWindow:
         print(f"加载控件完成")
 
         self.load_data_label()
+
+        handle_utils.center_window(self.master, 265, 345)
+        self.master.deiconify()
+        master.grab_set()
 
     def load_data_label(self):
         print(f"加载数据...")

@@ -17,7 +17,7 @@ from functions import func_setting, func_wechat_dll, func_login, func_file, func
 from resources import Strings
 from resources.config import Config
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
-    sidebar_ui, about_ui
+    sidebar_ui, about_ui, loading_ui
 from utils import handle_utils, debug_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
@@ -25,7 +25,12 @@ from utils.logger_utils import mylogger as logger
 class MainWindow:
     """构建主窗口的类"""
 
-    def __init__(self, root, loading_window, args=None):
+    def __init__(self, root, args=None):
+        self.root = root
+        self.loading_window = tk.Toplevel(self.root)
+        self.loading_class = loading_ui.LoadingWindow(self.loading_window)
+        self.root.withdraw()  # 初始化时隐藏主窗口
+        self.root.after(1500, self.load_on_startup)
         self.view_options_menu = None
         self.view_var = None
         self.need_to_update = False
@@ -62,19 +67,16 @@ class MainWindow:
         self.settings_menu = None
         self.edit_menu = None
         self.menu_bar = None
-        self.root = root
         self.reset_timer = self.root.after(0, lambda: setattr(self, 'logo_click_count', 0))
-        self.loading_window = loading_window
         subfunc_file.merge_refresh_nodes()
         style = ttk.Style()
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
-        self.window_width = 560
-        self.window_height = 600
-
-        self.root.withdraw()  # 初始化时隐藏主窗口
-        self.setup_main_window()
-        self.root.after(300, self.delayed_initialization)
+        self.root.title("微信多开管理器")
+        self.root.iconbitmap(Config.PROJ_ICO_PATH)
+        self.window_width = 500
+        self.window_height = 660
+        print(f"初始化检查.........................................................")
 
         # 创建状态栏
         self.create_status_bar()
@@ -117,11 +119,6 @@ class MainWindow:
         if self.new is True:
             self.root.after(3000, self.open_update_log)
 
-    def setup_main_window(self):
-        """创建主窗口"""
-        self.root.title("微信多开管理器")
-        self.root.iconbitmap(Config.PROJ_ICO_PATH)
-
     def create_status_bar(self):
         """创建状态栏"""
         print(f"加载状态栏.........................................................")
@@ -148,20 +145,34 @@ class MainWindow:
         # 每 1 毫秒检查一次队列
         self.root.after(1, self.update_status)
 
-    def delayed_initialization(self):
-        """延迟加载，等待路径检查"""
-        print(f"初始化检查.........................................................")
+    def load_on_startup(self):
+        """启动时检查载入"""
+        print(f"重新检查...")
+        def func_thread():
+            self.check_and_init()
+            if hasattr(self, 'loading_class') and self.loading_class:
+                print("主程序关闭等待窗口")
+                self.loading_class.destroy()
+                self.loading_class = None
+            # 设置主窗口位置
+            screen_width = self.root.winfo_screenwidth()
+            screen_height = self.root.winfo_screenheight()
+            x = (screen_width - self.window_width) // 2
+            y = int((screen_height - 50 - self.window_height - 60) // 2)
+            self.root.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
+            self.root.deiconify()
         try:
             # 线程启动获取登录情况和渲染列表
-            def thread_func():
-                result = self.check_and_init()
-                self.root.after(600, self.finalize_initialization)
-                if result is False:
-                    self.root.after(0, self.show_setting_error)
-                else:
-                    self.root.after(0, self.create_main_frame_and_menu)
+            threading.Thread(target=func_thread).start()
+        except Exception as e:
+            logger.error(e)
 
-            threading.Thread(target=thread_func).start()
+    def check_and_init_thread(self):
+        """更改设置后重新检查载入"""
+        print(f"重新检查...")
+        try:
+            # 线程启动获取登录情况和渲染列表
+            threading.Thread(target=self.check_and_init).start()
         except Exception as e:
             logger.error(e)
 
@@ -185,6 +196,7 @@ class MainWindow:
                     self.need_to_update = True
 
         if not install_path or not data_path or not dll_dir_path:
+            self.root.after(0, self.show_setting_error)
             return False
         else:
             self.install_path = install_path
@@ -197,6 +209,7 @@ class MainWindow:
                 screen_height = self.root.winfo_screenheight()
                 # 保存屏幕尺寸
                 subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
+            self.root.after(0, self.create_main_frame_and_menu)
             return True
 
     def show_setting_error(self):
@@ -209,11 +222,13 @@ class MainWindow:
                                           command=self.open_settings, style='Custom.TButton')
         self.settings_button.pack()
 
-    def finalize_initialization(self):
+    def center_main_window(self):
         """路径检查完毕后进入，销毁等待窗口，居中显示主窗口"""
-        if hasattr(self, 'loading_window') and self.loading_window:
-            self.loading_window.destroy()
-            self.loading_window = None
+        if hasattr(self, 'loading_class') and self.loading_class:
+            print("主程序关闭等待窗口")
+            self.loading_class.destroy()
+            self.loading_class = None
+        self.root.deiconify()
 
         # 设置主窗口位置
         screen_width = self.root.winfo_screenwidth()
@@ -222,7 +237,6 @@ class MainWindow:
         y = int((screen_height - 50 - self.window_height - 60) // 2)
         self.root.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
 
-        self.root.deiconify()
 
     def create_menu_bar(self):
         """创建菜单栏"""
@@ -345,14 +359,14 @@ class MainWindow:
                 label='python',
                 value='python',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'python', self.delayed_initialization)
+                command=partial(func_setting.toggle_sub_executable, 'python', self.check_and_init_thread)
             )
             # 添加 强力Python 的单选按钮
             self.sub_executable_menu.add_radiobutton(
                 label='python[S]',
                 value='python[S]',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'python[S]', self.delayed_initialization)
+                command=partial(func_setting.toggle_sub_executable, 'python[S]', self.check_and_init_thread)
             )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
             # 添加 Handle 的单选按钮
@@ -360,7 +374,7 @@ class MainWindow:
                 label='handle',
                 value='handle',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'handle', self.delayed_initialization)
+                command=partial(func_setting.toggle_sub_executable, 'handle', self.check_and_init_thread)
             )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
             # 动态添加外部子程序
@@ -373,10 +387,10 @@ class MainWindow:
                     label=right_part,
                     value=file_name,
                     variable=self.chosen_sub_exe_var,
-                    command=partial(func_setting.toggle_sub_executable, file_name, self.delayed_initialization)
+                    command=partial(func_setting.toggle_sub_executable, file_name, self.check_and_init_thread)
                 )
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.delayed_initialization))
+        self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.check_and_init_thread))
 
         # ————————————————————————————帮助菜单————————————————————————————
         # 检查版本表是否当天已更新
@@ -522,15 +536,15 @@ class MainWindow:
 
     def change_classic_view(self):
         self.root.unbind("<Configure>")
-        func_setting.toggle_view("classic", self.delayed_initialization)
+        func_setting.toggle_view("classic", self.check_and_init_thread)
 
     def change_tree_view(self):
-        func_setting.toggle_view("tree", self.delayed_initialization)
+        func_setting.toggle_view("tree", self.check_and_init_thread)
 
     def open_settings(self):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
-        setting_ui.SettingWindow(settings_window, self.multiple_status, self.delayed_initialization)
+        setting_ui.SettingWindow(settings_window, self.multiple_status, self.check_and_init_thread)
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
@@ -571,14 +585,12 @@ class MainWindow:
         """打开支持窗口"""
         rewards_window = tk.Toplevel(self.root)
         rewards_ui.RewardsWindow(rewards_window, Config.REWARDS_PNG_PATH)
-        handle_utils.center_window(rewards_window)
 
     def open_update_log(self):
         """打开版本日志窗口"""
         new_versions, old_versions = func_update.split_vers_by_cur_from_local(self.current_full_version)
         update_log_window = tk.Toplevel(self.root)
         update_log_ui.UpdateLogWindow(update_log_window, old_versions)
-        handle_utils.center_window(update_log_window)
 
     def open_about(self, need_to_update):
         """打开关于窗口"""
@@ -607,7 +619,7 @@ class MainWindow:
             args=(
                 self,
                 self.multiple_status,
-                partial(handle_utils.bring_window_to_front, window_class=self)
+                partial(handle_utils.bring_window_to_front, window_class=self, root=self.root)
             )
         ).start()
 
@@ -622,5 +634,4 @@ class MainWindow:
         """打开调试窗口，显示所有输出日志"""
         debug_window = tk.Toplevel(self.root)
         debug_ui.DebugWindow(debug_window)
-        handle_utils.center_window(debug_window)
 

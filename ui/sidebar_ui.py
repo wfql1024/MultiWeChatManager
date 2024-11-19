@@ -48,8 +48,8 @@ class SidebarUI:
         self.monitor_thread.start()
 
         self.ensure_taskbar_visibility()
-        self.nested_window_drag_thread = threading.Thread(target=self.monitor_nested_window_drag, daemon=True)
-        self.nested_window_drag_thread.start()
+        # self.nested_window_drag_thread = threading.Thread(target=self.monitor_nested_window_drag, daemon=True)
+        # self.nested_window_drag_thread.start()
 
     def ensure_taskbar_visibility(self):
         """

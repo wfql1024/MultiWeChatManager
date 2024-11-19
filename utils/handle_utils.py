@@ -11,6 +11,7 @@ import win32gui
 
 from resources import Config
 from utils import process_utils
+from utils.logger_utils import mylogger as logger
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
@@ -18,11 +19,11 @@ from pywinauto.controls.hwndwrapper import HwndWrapper
 from pywinauto import Application
 
 
-def bring_window_to_front(window_class):
-    window_class.root.after(200, lambda: window_class.root.lift())
-    window_class.root.after(300, lambda: window_class.root.attributes('-topmost', True))
-    window_class.root.after(400, lambda: window_class.root.attributes('-topmost', False))
-    window_class.root.after(500, lambda: window_class.root.focus_force())
+def bring_window_to_front(window_class, root):
+    root.after(200, lambda: root.lift())
+    root.after(300, lambda: root.attributes('-topmost', True))
+    root.after(400, lambda: root.attributes('-topmost', False))
+    root.after(500, lambda: root.focus_force())
 
 
 def close_mutex_of_pids_by_handle():
@@ -196,10 +197,11 @@ def wait_for_window_close(hwnd, timeout=30):
     return False
 
 
-def center_window(window):
-    window.update_idletasks()
-    width = window.winfo_width()
-    height = window.winfo_height()
+def center_window(window, width=None, height=None):
+    if width is None:
+        width = window.winfo_width()
+    if height is None:
+        height = window.winfo_height()
     x = (window.winfo_screenwidth() // 2) - (width // 2)
     y = int(window.winfo_screenheight() // 2.15) - int(height // 2.15)
     window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
@@ -213,31 +215,34 @@ def close_window_by_name(window_name):
 
 def get_center_pos_by_handle_and_title(handle, title, control_type="Button"):
     """获取指定控件中点的相对位置"""
-    # 连接到应用程序窗口
-    app = Application(backend="uia").connect(handle=handle)
-    # 获取主窗口对象
-    main_window = app.window(handle=handle)
-    # 查找 "进入微信" 按钮
-    wechat_button = main_window.child_window(title=title, control_type=control_type)
-    if wechat_button.exists():
-        # 获取主窗口的矩形区域（绝对位置）
-        main_window_rect = main_window.rectangle()
+    try:
+        # 连接到应用程序窗口
+        app = Application(backend="uia").connect(handle=handle)
+        # 获取主窗口对象
+        main_window = app.window(handle=handle)
+        # 查找 "进入微信" 按钮
+        wechat_button = main_window.child_window(title=title, control_type=control_type)
+        if wechat_button.exists():
+            # 获取主窗口的矩形区域（绝对位置）
+            main_window_rect = main_window.rectangle()
 
-        # 获取按钮的矩形区域（绝对位置）
-        button_rect = wechat_button.rectangle()
+            # 获取按钮的矩形区域（绝对位置）
+            button_rect = wechat_button.rectangle()
 
-        # 计算按钮相对于主窗口的相对位置
-        relative_x = button_rect.left - main_window_rect.left
-        relative_y = button_rect.top - main_window_rect.top
-        relative_center_x = button_rect.mid_point().x - main_window_rect.left
-        relative_center_y = button_rect.mid_point().y - main_window_rect.top
+            # 计算按钮相对于主窗口的相对位置
+            relative_x = button_rect.left - main_window_rect.left
+            relative_y = button_rect.top - main_window_rect.top
+            relative_center_x = button_rect.mid_point().x - main_window_rect.left
+            relative_center_y = button_rect.mid_point().y - main_window_rect.top
 
-        print(f"相对于主窗口的左上角位置: ({relative_x}, {relative_y})")
-        print(f"相对于主窗口的中心位置: ({relative_center_x}, {relative_center_y})")
-        return relative_center_x, relative_center_y
-    else:
-        print(f"Button '{title}' not found!")
-        return None, None
+            print(f"相对于主窗口的左上角位置: ({relative_x}, {relative_y})")
+            print(f"相对于主窗口的中心位置: ({relative_center_x}, {relative_center_y})")
+            return relative_center_x, relative_center_y
+        else:
+            print(f"Button '{title}' not found!")
+            return None, None
+    except Exception as ex:
+        logger.error(ex)
 
 
 def create_button_in_window(hwnd, x, y, width, height, button_text="Click Me"):

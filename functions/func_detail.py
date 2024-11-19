@@ -70,14 +70,11 @@ def fetch_acc_detail_by_pid(pid, account, after):
                             success = image_utils.download_image(url, save_path)
                         else:
                             success = "无需下载"
-                            logger.info("该账号无需下载")
+                            logger.info(f"{folder}无需下载")
                     else:
                         success = image_utils.download_image(url, save_path)
                     if success is True:
                         subfunc_file.update_acc_details_to_acc_json(usr_name, avatar_url=url)
-                    else:
-                        logger.error("无法下载图像")
-
                 else:
                     logger.warning(f"账号{folder}未能获取头像url")
                     continue

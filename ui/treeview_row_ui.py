@@ -25,12 +25,12 @@ class TreeviewRowUI:
         self.hovered_item = None
         self.single_click_id = None
         self.photo_images = []
-        self.selected_not_logged_in_accounts = None
-        self.selected_logged_in_accounts = None
+        self.selected_logout_accounts = None
+        self.selected_login_accounts = None
         self.logout_tree = None
         self.login_tree = None
-        self.selected_not_logged_in_items = []
-        self.selected_logged_in_items = []
+        self.selected_logout_items = []
+        self.selected_login_items = []
         self.m_class = m_class
         self.data_path = data_path
         self.multiple_status = multiple_status
@@ -289,9 +289,9 @@ class TreeviewRowUI:
         # 获取选中行的“英语”列数据
         if is_logged_in == "logged_in":
             tree = self.login_tree
-            selected_items = self.selected_logged_in_items
+            selected_items = self.selected_login_items
             selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
-            self.selected_logged_in_accounts = selected_accounts
+            self.selected_login_accounts = selected_accounts
             if len(selected_accounts) == 1:
                 widget_utils.enable_button_and_unbind_tip(
                     self.tooltips, self.config_btn)
@@ -300,9 +300,9 @@ class TreeviewRowUI:
                     self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有符号表示推荐配置的账号")
         else:
             tree = self.logout_tree
-            selected_items = self.selected_not_logged_in_items
-            selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
-            self.selected_not_logged_in_accounts = selected_accounts
+            selected_items = self.selected_logout_items
+            selected_accounts = [tree.item(i, "values")[self.acc_index] for i in selected_items]
+            self.selected_logout_accounts = selected_accounts
 
     def toggle_top_checkbox(self, _event, is_logged_in):
         """
@@ -316,13 +316,13 @@ class TreeviewRowUI:
         if is_logged_in == "logged_in":
             checkbox_var = self.logged_in_checkbox_var
             tree = self.login_tree
-            selected_items = self.selected_logged_in_items
+            selected_items = self.selected_login_items
             button = self.one_key_quit
             tip = "请选择要退出的账号"
         else:
             checkbox_var = self.not_logged_in_checkbox_var
             tree = self.logout_tree
-            selected_items = self.selected_not_logged_in_items
+            selected_items = self.selected_logout_items
             button = self.one_key_auto_login
             tip = "请选择要登录的账号"
         checkbox_var.set(not checkbox_var.get())
@@ -354,7 +354,7 @@ class TreeviewRowUI:
         if is_logged_in == "logged_in":
             all_rows = [item for item in self.login_tree.get_children()
                         if "disabled" not in self.login_tree.item(item, "tags")]
-            selected_rows = self.selected_logged_in_items
+            selected_rows = self.selected_login_items
             checkbox = self.logged_in_checkbox
             title = self.logged_in_title
             checkbox_var = self.logged_in_checkbox_var
@@ -363,7 +363,7 @@ class TreeviewRowUI:
         else:
             all_rows = [item for item in self.logout_tree.get_children()
                         if "disabled" not in self.logout_tree.item(item, "tags")]
-            selected_rows = self.selected_not_logged_in_items
+            selected_rows = self.selected_logout_items
             checkbox = self.not_logged_in_checkbox
             title = self.not_logged_in_title
             checkbox_var = self.not_logged_in_checkbox_var
@@ -430,10 +430,10 @@ class TreeviewRowUI:
         # print("进入了单击判定")
         if is_logged_in == "logged_in":
             tree = self.login_tree
-            selected_items = self.selected_logged_in_items
+            selected_items = self.selected_login_items
         elif is_logged_in == "not_logged_in":
             tree = self.logout_tree
-            selected_items = self.selected_not_logged_in_items
+            selected_items = self.selected_logout_items
         else:
             tree = None
             selected_items = []
@@ -462,11 +462,11 @@ class TreeviewRowUI:
         # print("进入了双击判定")
         if is_logged_in == "logged_in":
             tree = self.login_tree
-            selected_items = self.selected_logged_in_items
+            selected_items = self.selected_login_items
             callback = self.quit_selected_accounts
         elif is_logged_in == "not_logged_in":
             tree = self.logout_tree
-            selected_items = self.selected_not_logged_in_items
+            selected_items = self.selected_logout_items
             callback = self.auto_login_selected_acc
         else:
             tree = event.widget
@@ -494,17 +494,16 @@ class TreeviewRowUI:
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.root)
         detail_ui.DetailWindow(detail_window, account, self.m_class.create_main_frame_and_menu)
-        handle_utils.center_window(detail_window)
 
     def create_config(self, multiple_status):
         """按钮：创建或重新配置"""
-        accounts = self.selected_logged_in_items
+        accounts = self.selected_login_items
         threading.Thread(target=func_config.test, args=(self.m_class, accounts[0], multiple_status)).start()
 
     def quit_selected_accounts(self):
         """退出所选账号"""
         # messagebox.showinfo("待修复", "测试中发现重大bug，先不给点，略~")
-        accounts = self.selected_logged_in_items
+        accounts = self.selected_login_items
         accounts_to_quit = []
         for account in accounts:
             pid, = subfunc_file.get_acc_details_from_acc_json(account, pid=None)
@@ -524,7 +523,7 @@ class TreeviewRowUI:
 
     def auto_login_selected_accounts(self):
         """登录所选账号"""
-        accounts = self.selected_not_logged_in_items
+        accounts = self.selected_logout_items
         self.root.iconify()  # 最小化主窗口
         try:
             threading.Thread(
@@ -536,7 +535,7 @@ class TreeviewRowUI:
 
     def auto_login_selected_acc(self):
         """登录所选账号"""
-        accounts = self.selected_not_logged_in_items
+        accounts = self.selected_logout_items
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
