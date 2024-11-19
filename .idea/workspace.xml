@@ -4,33 +4,25 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="增加python强力模式，速度会慢点，适合python模式打不开窗口的时候使用">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="优化代码，添加记住排序的功能">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DirectoryV3.xml" beforeDir="false" afterPath="$PROJECT_DIR$/DirectoryV3.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.bat" beforeDir="false" afterPath="$PROJECT_DIR$/build.bat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_account.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_account.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/func_detail.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_detail.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_login.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_setting.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_setting.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/subfunc_wechat.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_wechat.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tree_config.xml" beforeDir="false" afterPath="$PROJECT_DIR$/tree_config.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/about_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/about_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/classic_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/classic_row_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/debug_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/debug_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/setting_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/setting_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/sidebar_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/sidebar_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/statistic_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/statistic_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/treeview_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/treeview_row_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/handle_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/handle_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/image_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/image_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/ini_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/ini_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/logger_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/logger_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/wechat_decrypt_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/wechat_decrypt_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/json_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/json_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/version_adaptation.json" beforeDir="false" afterPath="$PROJECT_DIR$/version_adaptation.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/version_config.json" beforeDir="false" afterPath="$PROJECT_DIR$/version_config.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -427,15 +419,7 @@
       <workItem from="1731665865261" duration="23792000" />
       <workItem from="1731751110554" duration="1790000" />
       <workItem from="1731763707553" duration="44646000" />
-      <workItem from="1731919193143" duration="15630000" />
-    </task>
-    <task id="LOCAL-00086" summary="写好了获取新版本逻辑">
-      <option name="closed" value="true" />
-      <created>1729091342772</created>
-      <option name="number" value="00086" />
-      <option name="presentableId" value="LOCAL-00086" />
-      <option name="project" value="LOCAL" />
-      <updated>1729091342772</updated>
+      <workItem from="1731919193143" duration="35333000" />
     </task>
     <task id="LOCAL-00087" summary="写好了获取新版本逻辑">
       <option name="closed" value="true" />
@@ -821,7 +805,15 @@
       <option name="project" value="LOCAL" />
       <updated>1731923092428</updated>
     </task>
-    <option name="localTasksCounter" value="135" />
+    <task id="LOCAL-00135" summary="优化代码，添加记住排序的功能">
+      <option name="closed" value="true" />
+      <created>1731940684259</created>
+      <option name="number" value="00135" />
+      <option name="presentableId" value="LOCAL-00135" />
+      <option name="project" value="LOCAL" />
+      <updated>1731940684259</updated>
+    </task>
+    <option name="localTasksCounter" value="136" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -886,7 +878,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="测试" />
     <MESSAGE value="分离主界面文件，为写新界面做准备" />
     <MESSAGE value="基本做好了新界面" />
     <MESSAGE value="优化新界面交互逻辑" />
@@ -911,11 +902,12 @@
     <MESSAGE value="尝试一下侧栏界面" />
     <MESSAGE value="优化升级过程，优化线程代码结构" />
     <MESSAGE value="增加python强力模式，速度会慢点，适合python模式打不开窗口的时候使用" />
-    <option name="LAST_COMMIT_MESSAGE" value="增加python强力模式，速度会慢点，适合python模式打不开窗口的时候使用" />
+    <MESSAGE value="优化代码，添加记住排序的功能" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化代码，添加记住排序的功能" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_multiple.coverage" NAME="wechat_multiple Coverage Results" MODIFIED="1726457491071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/mutex" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1731933455694" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1731990000227" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_wechat_dll.coverage" NAME="func_wechat_dll Coverage Results" MODIFIED="1727833508675" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$string_utils.coverage" NAME="string_utils Coverage Results" MODIFIED="1730228524453" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$statistic_ui.coverage" NAME="statistic_ui Coverage Results" MODIFIED="1727180206705" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />

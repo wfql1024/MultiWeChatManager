@@ -215,13 +215,10 @@ def get_center_pos_by_handle_and_title(handle, title, control_type="Button"):
     """获取指定控件中点的相对位置"""
     # 连接到应用程序窗口
     app = Application(backend="uia").connect(handle=handle)
-
     # 获取主窗口对象
     main_window = app.window(handle=handle)
-
     # 查找 "进入微信" 按钮
     wechat_button = main_window.child_window(title=title, control_type=control_type)
-
     if wechat_button.exists():
         # 获取主窗口的矩形区域（绝对位置）
         main_window_rect = main_window.rectangle()

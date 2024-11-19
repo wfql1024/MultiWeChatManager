@@ -60,7 +60,6 @@ def fetch_acc_detail_by_pid(pid, account, after):
                 if len(avatar_results) > 0:
                     usr_name, url = avatar_results[0]
                     origin_url, = subfunc_file.get_acc_details_from_acc_json(usr_name, avatar_url=None)
-                    subfunc_file.update_acc_details_to_acc_json(usr_name, avatar_url=url)
                     save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
                     if not os.path.exists(os.path.dirname(save_path)):
                         os.makedirs(os.path.dirname(save_path))
@@ -74,9 +73,11 @@ def fetch_acc_detail_by_pid(pid, account, after):
                             logger.info("该账号无需下载")
                     else:
                         success = image_utils.download_image(url, save_path)
-                    if not success:
+                    if success is True:
+                        subfunc_file.update_acc_details_to_acc_json(usr_name, avatar_url=url)
+                    else:
                         logger.error("无法下载图像")
-                        subfunc_file.update_acc_details_to_acc_json(usr_name, avatar_url=origin_url)
+
                 else:
                     logger.warning(f"账号{folder}未能获取头像url")
                     continue

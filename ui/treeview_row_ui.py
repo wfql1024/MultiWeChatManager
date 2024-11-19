@@ -41,8 +41,8 @@ class TreeviewRowUI:
         # 加载列表排序设置
         login_col_to_sort = func_setting.fetch_setting_or_set_default("login_col_to_sort")
         logout_col_to_sort = func_setting.fetch_setting_or_set_default("logout_col_to_sort")
-        login_sort_asc = func_setting.fetch_setting_or_set_default("login_sort_asc")
-        logout_sort_asc = func_setting.fetch_setting_or_set_default("logout_sort_asc")
+        login_sort_asc = "false" if func_setting.fetch_setting_or_set_default("login_sort_asc") == "true" else "true"
+        logout_sort_asc = "false" if func_setting.fetch_setting_or_set_default("logout_sort_asc") == "true" else "true"
         self.sort_order = {
             "login": (login_col_to_sort, login_sort_asc),
             "logout": (logout_col_to_sort, logout_sort_asc)
@@ -241,9 +241,16 @@ class TreeviewRowUI:
                 tree.column(col, width=width)  # 设置合适的宽度
 
     def sort_column(self, tree, col, table_type):
+        # print("排序...")
         # 获取当前表格数据的 values、text、image 和 tags
         items = [
-            (tree.item(i)["values"], tree.item(i)["text"], tree.item(i)["image"], tree.item(i)["tags"])
+            {
+                "values": tree.item(i)["values"],
+                "text": tree.item(i)["text"],
+                "image": tree.item(i)["image"],
+                "tags": tree.item(i)["tags"],
+                "iid": i  # 包括 iid
+            }
             for i in tree.get_children()
         ]
 
@@ -253,7 +260,7 @@ class TreeviewRowUI:
 
         # 按列排序
         items.sort(
-            key=lambda x: (try_convert(x[0][list(tree["columns"]).index(col)])),
+            key=lambda x: (try_convert(x["values"][list(tree["columns"]).index(col)])),
             reverse=is_ascending
         )
 
@@ -261,8 +268,15 @@ class TreeviewRowUI:
         for i in tree.get_children():
             tree.delete(i)
         for item in items:
-            tree.insert("", "end", text=item[1], image=item[2], values=item[0],
-                        tags=item[3])  # 保留 #0 列的 text、image 和 tags 信息
+            tree.insert(
+                "",  # 父节点为空，表示插入到根节点
+                "end",  # 插入位置
+                iid=item["iid"],  # 使用字典中的 iid
+                text=item["text"],  # #0 列的文本
+                image=item["image"],  # 图像对象
+                values=item["values"],  # 列数据
+                tags=item["tags"]  # 标签
+            )
 
         # 根据排序后的行数调整 Treeview 的高度
         tree.configure(height=len(items))

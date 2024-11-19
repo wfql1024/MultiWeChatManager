@@ -10,7 +10,7 @@ import win32api
 # from datetime import datetime
 
 
-def get_recent_folders_from_dir(directory, minutes=360):
+def get_recent_folders_from_dir(directory, minutes=720):
     now = dt.datetime.now()
     some_minutes_ago = now - dt.timedelta(minutes=minutes)
     recent_folders = []
@@ -124,6 +124,6 @@ def get_sys_major_version_name():
         return "default"
 
 
-if __name__ == '__main__':
-    md5 = calculate_md5(r'E:\Now\Desktop\MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip')
-    print(md5)
+# if __name__ == '__main__':
+#     md5 = calculate_md5(r'E:\Now\Desktop\MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip')
+#     print(md5)

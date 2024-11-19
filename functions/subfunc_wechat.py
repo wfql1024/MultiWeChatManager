@@ -1,4 +1,3 @@
-import ctypes
 import time
 
 import psutil
@@ -174,14 +173,7 @@ def create_process_without_admin(executable, args=None, creation_flags=process_u
     if file_utils.get_sys_major_version_name() == "win7":
         return process_utils.create_process_for_win7(executable, args, creation_flags)
     else:
-        # return process_utils.create_process_with_medium_il(executable, args, creation_flags)
-        shell32 = ctypes.windll.shell32
-        SW_SHOWNORMAL = 1  # 正常显示窗口
-
-        result = shell32.ShellExecuteW(None, "open", executable, None, None, SW_SHOWNORMAL)
-        if result <= 32:
-            raise Exception(f"ShellExecute failed, error code: {result}")
-        print("程序已以普通用户权限启动。")
+        return process_utils.create_process_with_medium_il(executable, args, creation_flags)
 
 
 def logging_in_listener():

@@ -151,18 +151,20 @@ def silent_get_and_config(logged_in, not_logged_in, data_dir, callback):
             accounts_need_to_get_nickname.append(acc)
     # 2. 对待获取url的账号遍历尝试获取
     if len(accounts_need_to_get_avatar) > 0:
-        subfunc_file.get_avatar_url_from_acc_info_file(accounts_need_to_get_avatar, data_dir)
-        need_to_notice = True
+        changed = subfunc_file.get_avatar_url_from_acc_info_file(accounts_need_to_get_avatar, data_dir)
+        if changed is True:
+            need_to_notice = True
     # 3. 对待获取昵称的账号尝试遍历获取
     if len(accounts_need_to_get_nickname) > 0:
-        subfunc_file.get_nickname_from_acc_info_file(accounts_need_to_get_nickname, data_dir)
-        need_to_notice = True
+        changed = subfunc_file.get_nickname_from_acc_info_file(accounts_need_to_get_nickname, data_dir)
+        if changed is True:
+            need_to_notice = True
     # 4. 偷偷创建配置文件
     curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(data_dir)
     if func_config.get_config_status_by_account(curr_config_acc, data_dir) == "无配置":
-        func_config.create_config(curr_config_acc)
-        need_to_notice = True
-
+        changed = func_config.create_config(curr_config_acc)
+        if changed is True:
+            need_to_notice = True
     # 5. 通知
     if need_to_notice is True:
         messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")
@@ -172,8 +174,6 @@ def silent_get_and_config(logged_in, not_logged_in, data_dir, callback):
 def get_account_list(multiple_status):
     """
     获取账号及其登录情况
-
-    :Returns: ["已登录账号"]，["未登录账号"]，[("已登录进程", int(账号))]
     """
 
     def update_acc_list_by_pid(process_id: int):

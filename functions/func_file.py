@@ -90,9 +90,6 @@ def open_dll_dir_path():
     """打开注册表所在文件夹，并将光标移动到文件"""
     dll_dir_path = func_setting.get_wechat_dll_dir()
     if os.path.exists(dll_dir_path):
-        # 获取文件夹路径
-        folder_path = os.path.dirname(dll_dir_path)
-
         # 打开文件夹
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.CurrentDirectory = dll_dir_path
@@ -152,8 +149,7 @@ def create_lnk_for_account(account, multiple_status):
         return False
     avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
     if not os.path.exists(avatar_path):
-        messagebox.showerror("错误", "您尚未获取头像，不能够创建快捷启动！")
-        return False
+        avatar_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
 
     # 构建源文件和目标文件路径
     source_file = os.path.join(data_path, "All Users", "config", f"{account}.data").replace('/', '\\')
@@ -215,19 +211,19 @@ def create_lnk_for_account(account, multiple_status):
     shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
 
     # 图标文件路径
-    base_dir = os.path.dirname(avatar_path)
+    acc_dir = os.path.join(Config.PROJ_USER_PATH, f"{account}")
     exe_name = os.path.splitext(os.path.basename(exe_path))[0]
 
     # 步骤1：提取图标为图片
-    extracted_exe_png_path = os.path.join(base_dir, f"{exe_name}_extracted.png")
+    extracted_exe_png_path = os.path.join(acc_dir, f"{exe_name}_extracted.png")
     image_utils.extract_icon_to_png(exe_path, extracted_exe_png_path)
 
     # 步骤2：合成图片
-    ico_jpg_path = os.path.join(base_dir, f"{account}_{exe_name}.png")
+    ico_jpg_path = os.path.join(acc_dir, f"{account}_{exe_name}.png")
     image_utils.add_diminished_se_corner_mark_to_image(avatar_path, extracted_exe_png_path, ico_jpg_path)
 
     # 步骤3：对图片转格式
-    ico_path = os.path.join(base_dir, f"{account}_{exe_name}.ico")
+    ico_path = os.path.join(acc_dir, f"{account}_{exe_name}.ico")
     image_utils.png_to_ico(ico_jpg_path, ico_path)
 
     # 清理临时文件

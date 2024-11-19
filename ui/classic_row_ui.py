@@ -118,10 +118,10 @@ class AccountRow:
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
 
-    def toggle_checkbox(self, event):
+    def toggle_checkbox(self, _event):
         """
         切换复选框状态
-        :param event: 点击复选框
+        :param _event: 点击复选框
         :return: 阻断继续切换
         """
         self.checkbox_var.set(not self.checkbox_var.get())
@@ -262,11 +262,11 @@ class ClassicRowUI:
             else:
                 self.not_logged_in_rows[account] = row
 
-    def toggle_top_checkbox(self, event, is_logged_in):
+    def toggle_top_checkbox(self, _event, is_logged_in):
         """
         切换顶部复选框状态，更新子列表
         :param is_logged_in: 是否登录
-        :param event: 点击复选框
+        :param _event: 点击复选框
         :return: 阻断继续切换
         """
         if is_logged_in:

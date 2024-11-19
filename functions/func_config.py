@@ -63,7 +63,7 @@ def create_config(account):
     :return: 是否创建成功
     """
     data_path = func_setting.get_wechat_data_dir()
-    if not data_path:
+    if data_path is None:
         messagebox.showerror("错误", "无法获取WeChat数据路径")
         return False
 
@@ -78,9 +78,11 @@ def create_config(account):
         shutil.copy2(source_path, dest_path, follow_symlinks=False)
         close_window_by_name("WeChatLoginWndForPC")
         messagebox.showinfo("成功", f"配置文件已生成：{dest_filename}")
+        return True
     except Exception as e:
         logger.error(e)
         messagebox.showerror("错误", f"生成配置文件时发生错误：{str(e)}")
+        return False
 
 
 def test(m_class, account, multiple_status):

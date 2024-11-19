@@ -18,15 +18,14 @@ from resources import Strings
 from resources.config import Config
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui
-from utils import handle_utils, debug_utils, file_utils, logger_utils
-
-logger = logger_utils.mylogger
+from utils import handle_utils, debug_utils, file_utils
+from utils.logger_utils import mylogger as logger
 
 
 class MainWindow:
     """构建主窗口的类"""
 
-    def __init__(self, master, loading_window, args=None):
+    def __init__(self, root, loading_window, args=None):
         self.view_options_menu = None
         self.view_var = None
         self.need_to_update = False
@@ -63,18 +62,19 @@ class MainWindow:
         self.settings_menu = None
         self.edit_menu = None
         self.menu_bar = None
-        self.master = master
-        self.reset_timer = self.master.after(0, lambda: setattr(self, 'logo_click_count', 0))
+        self.root = root
+        self.reset_timer = self.root.after(0, lambda: setattr(self, 'logo_click_count', 0))
         self.loading_window = loading_window
+        subfunc_file.merge_refresh_nodes()
         style = ttk.Style()
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
 
-        self.window_width = 480
+        self.window_width = 560
         self.window_height = 600
 
-        self.master.withdraw()  # 初始化时隐藏主窗口
+        self.root.withdraw()  # 初始化时隐藏主窗口
         self.setup_main_window()
-        self.master.after(300, self.delayed_initialization)
+        self.root.after(300, self.delayed_initialization)
 
         # 创建状态栏
         self.create_status_bar()
@@ -86,16 +86,16 @@ class MainWindow:
         self.update_status()
 
         # 底部框架=手动登录
-        self.bottom_frame = ttk.Frame(master, padding="10")
+        self.bottom_frame = ttk.Frame(root, padding="10")
         self.bottom_frame.pack(side=tk.BOTTOM)
         self.manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
                                               command=self.manual_login_account, style='Custom.TButton')
         self.manual_login_button.pack(side=tk.LEFT)
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
-        self.scrollbar_frame = tk.Frame(master)
+        self.scrollbar_frame = tk.Frame(root)
         self.scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        self.canvas = tk.Canvas(master, highlightthickness=0)
+        self.canvas = tk.Canvas(root, highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
 
         # 创建滚动条
@@ -115,18 +115,18 @@ class MainWindow:
         self.logged_in_rows = {}
         self.not_logged_in_rows = {}
         if self.new is True:
-            self.master.after(3000, self.open_update_log)
+            self.root.after(3000, self.open_update_log)
 
     def setup_main_window(self):
         """创建主窗口"""
-        self.master.title("微信多开管理器")
-        self.master.iconbitmap(Config.PROJ_ICO_PATH)
+        self.root.title("微信多开管理器")
+        self.root.iconbitmap(Config.PROJ_ICO_PATH)
 
     def create_status_bar(self):
         """创建状态栏"""
         print(f"加载状态栏.........................................................")
         self.status_var = tk.StringVar()
-        self.status_bar = tk.Label(self.master, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
+        self.status_bar = tk.Label(self.root, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
                                    height=1)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         # 绑定点击事件
@@ -146,7 +146,7 @@ class MainWindow:
             print(e)
             pass
         # 每 1 毫秒检查一次队列
-        self.master.after(1, self.update_status)
+        self.root.after(1, self.update_status)
 
     def delayed_initialization(self):
         """延迟加载，等待路径检查"""
@@ -155,11 +155,11 @@ class MainWindow:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
                 result = self.check_and_init()
-                self.master.after(600, self.finalize_initialization)
+                self.root.after(600, self.finalize_initialization)
                 if result is False:
-                    self.master.after(0, self.show_setting_error)
+                    self.root.after(0, self.show_setting_error)
                 else:
-                    self.master.after(0, self.create_main_frame_and_menu)
+                    self.root.after(0, self.create_main_frame_and_menu)
 
             threading.Thread(target=thread_func).start()
         except Exception as e:
@@ -193,8 +193,8 @@ class MainWindow:
             screen_size = subfunc_file.get_screen_size_from_setting_ini()
             if not screen_size or screen_size == "":
                 # 获取屏幕和登录窗口尺寸
-                screen_width = self.master.winfo_screenwidth()
-                screen_height = self.master.winfo_screenheight()
+                screen_width = self.root.winfo_screenwidth()
+                screen_height = self.root.winfo_screenheight()
                 # 保存屏幕尺寸
                 subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
             return True
@@ -216,18 +216,18 @@ class MainWindow:
             self.loading_window = None
 
         # 设置主窗口位置
-        screen_width = self.master.winfo_screenwidth()
-        screen_height = self.master.winfo_screenheight()
+        screen_width = self.root.winfo_screenwidth()
+        screen_height = self.root.winfo_screenheight()
         x = (screen_width - self.window_width) // 2
         y = int((screen_height - 50 - self.window_height - 60) // 2)
-        self.master.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
+        self.root.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
 
-        self.master.deiconify()
+        self.root.deiconify()
 
     def create_menu_bar(self):
         """创建菜单栏"""
-        self.menu_bar = tk.Menu(self.master)
-        self.master.config(menu=self.menu_bar)
+        self.menu_bar = tk.Menu(self.root)
+        self.root.config(menu=self.menu_bar)
 
         # ————————————————————————————文件菜单————————————————————————————
         self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
@@ -311,7 +311,7 @@ class MainWindow:
             self.revoke_err = tk.Menu(self.settings_menu, tearoff=0)
             self.settings_menu.add_cascade(label="防撤回   错误!", menu=self.revoke_err, foreground="red")
             self.revoke_err.add_command(label=f"[点击复制]{self.revoke_status}", foreground="red",
-                                        command=lambda: self.master.clipboard_append(self.revoke_status))
+                                        command=lambda: self.root.clipboard_append(self.revoke_status))
         else:
             self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}",
                                            command=partial(self.toggle_patch_mode, mode="revoke"))
@@ -324,7 +324,7 @@ class MainWindow:
             self.multiple_err = tk.Menu(self.settings_menu, tearoff=0)
             self.settings_menu.add_cascade(label="全局多开 错误!", menu=self.multiple_err, foreground="red")
             self.multiple_err.add_command(label=f"[点击复制]{self.multiple_status}", foreground="red",
-                                          command=lambda: self.master.clipboard_append(self.multiple_status))
+                                          command=lambda: self.root.clipboard_append(self.multiple_status))
         else:
             self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}",
                                            command=partial(self.toggle_patch_mode, mode="multiple"))
@@ -424,7 +424,7 @@ class MainWindow:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
                 success, result = func_account.get_account_list(self.multiple_status)
-                self.master.after(0, self.create_account_list_ui, success, result)
+                self.root.after(0, self.create_account_list_ui, success, result)
 
             threading.Thread(target=thread_func).start()
         except Exception as e:
@@ -450,14 +450,14 @@ class MainWindow:
         # 创建账号列表界面
         if self.chosen_view == "classic":
             classic_row_ui.ClassicRowUI(
-                self, self.master, self.main_frame, result, self.data_dir, self.multiple_status)
+                self, self.root, self.main_frame, result, self.data_dir, self.multiple_status)
         elif self.chosen_view == "tree":
             treeview_row_ui.TreeviewRowUI(
-                self, self.master, self.main_frame, result, self.data_dir, self.multiple_status)
+                self, self.root, self.main_frame, result, self.data_dir, self.multiple_status)
         else:
             pass
 
-        subfunc_file.update_refresh_time_statistic(str(len(logged_in)), time.time() - self.start_time)
+        subfunc_file.update_refresh_time_statistic(self.chosen_view, str(len(logged_in)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
@@ -517,11 +517,11 @@ class MainWindow:
 
     def open_statistic(self):
         """打开统计窗口"""
-        statistic_window = tk.Toplevel(self.master)
+        statistic_window = tk.Toplevel(self.root)
         statistic_ui.StatisticWindow(statistic_window)
 
     def change_classic_view(self):
-        self.master.unbind("<Configure>")
+        self.root.unbind("<Configure>")
         func_setting.toggle_view("classic", self.delayed_initialization)
 
     def change_tree_view(self):
@@ -529,7 +529,7 @@ class MainWindow:
 
     def open_settings(self):
         """打开设置窗口"""
-        settings_window = tk.Toplevel(self.master)
+        settings_window = tk.Toplevel(self.root)
         setting_ui.SettingWindow(settings_window, self.multiple_status, self.delayed_initialization)
 
     def toggle_patch_mode(self, mode):
@@ -540,15 +540,17 @@ class MainWindow:
             mode_text = "防撤回"
         else:
             return
-        logged_in, _, _ = func_account.get_account_list(self.multiple_status)
-        if logged_in:
-            answer = messagebox.askokcancel(
-                "警告",
-                "检测到正在使用微信。切换模式需要修改 WechatWin.dll 文件，请先手动退出所有微信后再进行，否则将会强制关闭微信进程。"
-            )
-            if not answer:
-                self.create_menu_bar()
-                return
+        success, result = func_account.get_account_list(self.multiple_status)
+        if success is True:
+            logged_in, _, _ = result
+            if len(logged_in) > 0:
+                answer = messagebox.askokcancel(
+                    "警告",
+                    "检测到正在使用微信。切换模式需要修改 WechatWin.dll 文件，请先手动退出所有微信后再进行，否则将会强制关闭微信进程。"
+                )
+                if not answer:
+                    self.create_menu_bar()
+                    return
 
         try:
             result = func_wechat_dll.switch_dll(mode)  # 执行切换操作
@@ -567,20 +569,20 @@ class MainWindow:
 
     def open_rewards(self):
         """打开支持窗口"""
-        rewards_window = tk.Toplevel(self.master)
+        rewards_window = tk.Toplevel(self.root)
         rewards_ui.RewardsWindow(rewards_window, Config.REWARDS_PNG_PATH)
         handle_utils.center_window(rewards_window)
 
     def open_update_log(self):
         """打开版本日志窗口"""
         new_versions, old_versions = func_update.split_vers_by_cur_from_local(self.current_full_version)
-        update_log_window = tk.Toplevel(self.master)
+        update_log_window = tk.Toplevel(self.root)
         update_log_ui.UpdateLogWindow(update_log_window, old_versions)
         handle_utils.center_window(update_log_window)
 
     def open_about(self, need_to_update):
         """打开关于窗口"""
-        about_window = tk.Toplevel(self.master)
+        about_window = tk.Toplevel(self.root)
         about_ui.AboutWindow(about_window, need_to_update)
 
     def logo_on_click(self):
@@ -590,7 +592,7 @@ class MainWindow:
             self.to_enable_new_func()
             self.logo_click_count = 0  # 重置计数器
         else:
-            self.reset_timer = self.master.after(1000, lambda: setattr(self, 'logo_click_count', 0))  # 1秒后重置
+            self.reset_timer = self.root.after(1000, lambda: setattr(self, 'logo_click_count', 0))  # 1秒后重置
 
     def to_enable_new_func(self):
         subfunc_file.set_enable_new_func_in_ini("true")
@@ -611,13 +613,14 @@ class MainWindow:
 
     def test(self):
         # 清除窗口中的所有控件
-        for widget in self.master.winfo_children():
+        for widget in self.root.winfo_children():
             widget.destroy()
 
-        sidebar_ui.SidebarUI(self.master)
+        sidebar_ui.SidebarUI(self.root)
 
     def open_debug_window(self):
         """打开调试窗口，显示所有输出日志"""
-        debug_window = tk.Toplevel(self.master)
+        debug_window = tk.Toplevel(self.root)
         debug_ui.DebugWindow(debug_window)
         handle_utils.center_window(debug_window)
+

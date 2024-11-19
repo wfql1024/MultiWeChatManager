@@ -91,16 +91,21 @@ def get_login_size_from_setting_ini():
     )
 
 
-def update_acc_details_to_acc_json(account, **kwargs) -> None:
+def update_acc_details_to_acc_json(account, **kwargs):
     """更新账户信息到 JSON"""
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-    if account not in account_data:
-        account_data[account] = {}
-    # 遍历 kwargs 中的所有参数，并更新到 account_data 中
-    for key, value in kwargs.items():
-        account_data[account][key] = value
-        # logger.info(f"在json更新[{account}][{key}]:{string_utils.clean_display_name(str(value))}")
-    json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+    try:
+        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+        if account not in account_data:
+            account_data[account] = {}
+        # 遍历 kwargs 中的所有参数，并更新到 account_data 中
+        for key, value in kwargs.items():
+            account_data[account][key] = value
+            # logger.info(f"在json更新[{account}][{key}]:{string_utils.clean_display_name(str(value))}")
+        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+        return True
+    except Exception as e:
+        logger.error(e)
+        return False
 
 
 def get_acc_details_from_acc_json(account: str, **kwargs) -> Tuple[Any, ...]:
@@ -262,19 +267,21 @@ def update_auto_time_statistic(sub_exe, time_spent, index):
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
-def update_refresh_time_statistic(acc_count, time_spent):
+def update_refresh_time_statistic(view, acc_count, time_spent):
     """更新刷新时间统计"""
     if time_spent > 2:
         return
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
     if "refresh" not in data:
         data["refresh"] = {}
-    if acc_count not in data["refresh"]:
-        data["refresh"][acc_count] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+    if view not in data["refresh"]:
+        data["refresh"][view] = {}
+    if acc_count not in data["refresh"][view]:
+        data["refresh"][view][acc_count] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
 
     # 获取当前最小、最大值，次数，平均用时
     current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    data["refresh"][acc_count].split(","))
+                                                    data["refresh"][view][acc_count].split(","))
 
     # 更新最小和最大值
     new_min = min(current_min or math.inf, time_spent)
@@ -284,7 +291,7 @@ def update_refresh_time_statistic(acc_count, time_spent):
     new_count = count + 1
     new_avg_time = (avg_time * count + time_spent) / new_count
 
-    data["refresh"][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    data["refresh"][view][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
@@ -331,6 +338,7 @@ def get_app_current_version():
 
 
 def get_avatar_url_from_acc_info_file(acc_list, data_dir):
+    changed = False
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
         if not os.path.isfile(acc_info_dat_path):
@@ -355,13 +363,18 @@ def get_avatar_url_from_acc_info_file(acc_list, data_dir):
         if matched_url and matched_url.endswith('/132'):
             matched_url = matched_url.rstrip('/132') + '/0'
         if matched_url:
-            update_acc_details_to_acc_json(acc, avatar_url=matched_url)
             avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{acc}", f"{acc}.jpg")
-            image_utils.download_image(matched_url, avatar_path)
             logger.info(f"{acc}: {matched_url}")
+            success = image_utils.download_image(matched_url, avatar_path)
+            if success is True:
+                update_acc_details_to_acc_json(acc, avatar_url=matched_url)
+                changed = True
+    return changed
+
 
 
 def get_nickname_from_acc_info_file(acc_list, data_dir):
+    changed = False
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
         if not os.path.isfile(acc_info_dat_path):
@@ -378,7 +391,11 @@ def get_nickname_from_acc_info_file(acc_list, data_dir):
             cleaned_str = re.sub(r'[0-9a-fA-F]{32}.*', '', matched_str)
             cleaned_str = re.sub(r'\x1A.*?\x12', '', cleaned_str)
             cleaned_str = re.sub(r'[^\x20-\x7E\xC0-\xFF\u4e00-\u9fa5]+', '', cleaned_str)
-            update_acc_details_to_acc_json(acc, nickname=cleaned_str)
+            success = update_acc_details_to_acc_json(acc, nickname=cleaned_str)
+            if success is True:
+                changed = True
+    return changed
+
 
 
 def get_curr_wx_id_from_config_file(data_dir):
@@ -409,3 +426,39 @@ def get_file_with_correct_md5(folders, md5s):
                 except Exception as e:
                     logger.error(e)
     return None  # 如果没有找到匹配项则返回 None
+
+
+def merge_refresh_nodes():
+    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    # 确保 refresh 节点存在
+    if "refresh" not in data or not isinstance(data["refresh"], dict):
+        return data
+
+    refresh_data = data["refresh"]
+
+    # 初始化 classic 和 tree，如果不存在则创建
+    refresh_data.setdefault("classic", {})
+    refresh_data.setdefault("tree", {})
+
+    # 遍历 refresh 中的所有节点
+    for key, value in list(refresh_data.items()):
+        # 跳过 classic 和 tree 节点
+        if key in ("classic", "tree"):
+            continue
+
+        # 将当前节点合并到 classic
+        if isinstance(value, str):  # 如果是字符串
+            refresh_data["classic"][key] = value
+        elif isinstance(value, dict):  # 如果是字典
+            refresh_data["classic"].update(value)
+
+        # 将当前节s点合并到 tree
+        if isinstance(value, str):  # 如果是字符串
+            refresh_data["tree"][key] = value
+        elif isinstance(value, dict):  # 如果是字典
+            refresh_data["tree"].update(value)
+
+        # 删除原始节点
+        del refresh_data[key]
+    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    return data

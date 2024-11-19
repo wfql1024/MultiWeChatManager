@@ -1,42 +1,42 @@
 {
-  "3.9.11.25": {
-    "STABLE": {
-      "alias": "稳定模式",
-      "pattern": "0F84BD000000FF15F4246501"
+    "3.9.11.25": {
+        "STABLE": {
+            "alias": "稳定模式",
+            "pattern": "0F84BD000000FF15F4246501"
+        },
+        "PATCH": {
+            "alias": "补丁模式",
+            "pattern": "E9BE00000000FF15F4246501"
+        }
     },
-    "PATCH": {
-      "alias": "补丁模式",
-      "pattern": "E9BE00000000FF15F4246501"
-    }
-  },
-  "3.9.12.9": {
-    "STABLE": {
-      "alias": "稳定模式",
-      "pattern": "0F84BD000000FF1524656501"
+    "3.9.12.9": {
+        "STABLE": {
+            "alias": "稳定模式",
+            "pattern": "0F84BD000000FF1524656501"
+        },
+        "PATCH": {
+            "alias": "补丁模式",
+            "pattern": "E9BE00000000FF1524656501"
+        }
     },
-    "PATCH": {
-      "alias": "补丁模式",
-      "pattern": "E9BE00000000FF1524656501"
-    }
-  },
-  "3.9.12.11": {
-    "STABLE": {
-      "alias": "稳定模式",
-      "pattern": "0F84BD000000FF15845F6501"
+    "3.9.12.11": {
+        "STABLE": {
+            "alias": "稳定模式",
+            "pattern": "0F84BD000000FF15845F6501"
+        },
+        "PATCH": {
+            "alias": "补丁模式",
+            "pattern": "E9BE00000000FF15845F6501"
+        }
     },
-    "PATCH": {
-      "alias": "补丁模式",
-      "pattern": "E9BE00000000FF15845F6501"
+    "3.9.12.15": {
+        "STABLE": {
+            "alias": "稳定模式",
+            "pattern": "0F84BD000000FF15A4646501"
+        },
+        "PATCH": {
+            "alias": "补丁模式",
+            "pattern": "E9BE00000000FF15A4646501"
+        }
     }
-  },
-  "3.9.12.15": {
-    "STABLE": {
-      "alias": "稳定模式",
-      "pattern": "0F84BD000000FF15A4646501"
-    },
-    "PATCH": {
-      "alias": "补丁模式",
-      "pattern": "E9BE00000000FF15A4646501"
-    }
-  }
 }

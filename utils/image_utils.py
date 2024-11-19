@@ -70,7 +70,7 @@ def download_image(img_url, path):
 def png_to_ico(png_path, ico_path):
     """将png文件转格式为ico文件"""
     img = Image.open(png_path)
-    img.save(ico_path, format='ICO', sizes=[(img.width, img.height)])
+    img.save(ico_path, format='ICO', sizes=[(132, 132)])
 
 
 def extract_icon_to_png(exe_path, output_png_path=None):
@@ -89,11 +89,11 @@ def extract_icon_to_png(exe_path, output_png_path=None):
     hdc.SelectObject(hbmp)
     hdc.DrawIcon((0, 0), large[0])
 
-    bmpstr = hbmp.GetBitmapBits(True)
+    bmp_str = hbmp.GetBitmapBits(True)
     icon = Image.frombuffer(
         'RGBA',
         (ico_x, ico_y),
-        bmpstr, 'raw', 'BGRA', 0, 1
+        bmp_str, 'raw', 'BGRA', 0, 1
     )
 
     win32gui.DestroyIcon(large[0])
