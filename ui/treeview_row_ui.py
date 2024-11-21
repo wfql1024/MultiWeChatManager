@@ -7,7 +7,6 @@ from PIL import ImageTk, Image
 
 from functions import func_config, func_login, func_account, subfunc_file, func_setting
 from ui import detail_ui
-from utils import handle_utils
 from utils import widget_utils, string_utils
 from utils.logger_utils import mylogger as logger
 
@@ -49,45 +48,45 @@ class TreeviewRowUI:
         }  # 控制排序顺序
 
         # 构建列表
-        logged_in_list, not_logged_in_list, wechat_processes = result
+        logins, logouts, wechat_processes = result
         # 调整行高
         style = ttk.Style()
         style.configure("RowTreeview", background="#FFFFFF", foreground="black", rowheight=50,
                         selectmode="none", borderwidth=20)
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
 
-        if len(logged_in_list) != 0:
+        if len(logins) != 0:
             # 已登录框架=已登录标题+已登录列表
-            self.logged_in_frame = ttk.Frame(self.main_frame)
-            self.logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=(10, 0))
+            self.login_frame = ttk.Frame(self.main_frame)
+            self.login_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=(10, 0))
 
             # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
-            self.logged_in_title = ttk.Frame(self.logged_in_frame)
-            self.logged_in_title.pack(side=tk.TOP, fill=tk.X)
+            self.login_title = ttk.Frame(self.login_frame)
+            self.login_title.pack(side=tk.TOP, fill=tk.X)
 
             # 已登录复选框
-            self.logged_in_checkbox_var = tk.IntVar(value=0)
-            self.logged_in_checkbox = tk.Checkbutton(
-                self.logged_in_title,
-                variable=self.logged_in_checkbox_var,
+            self.login_checkbox_var = tk.IntVar(value=0)
+            self.login_checkbox = tk.Checkbutton(
+                self.login_title,
+                variable=self.login_checkbox_var,
                 tristatevalue=-1
             )
-            self.logged_in_checkbox.pack(side=tk.LEFT)
+            self.login_checkbox.pack(side=tk.LEFT)
 
             # 已登录标签
-            self.logged_in_label = ttk.Label(self.logged_in_title, text="已登录账号：", font=("", 10, "bold"))
-            self.logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            self.login_label = ttk.Label(self.login_title, text="已登录账号：", font=("", 10, "bold"))
+            self.login_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
 
             # 已登录按钮区域=一键退出
-            self.logged_in_button_frame = ttk.Frame(self.logged_in_title)
-            self.logged_in_button_frame.pack(side=tk.RIGHT)
+            self.login_button_frame = ttk.Frame(self.login_title)
+            self.login_button_frame.pack(side=tk.RIGHT)
 
             # 一键退出
-            self.one_key_quit = ttk.Button(self.logged_in_button_frame, text="一键退出", width=8,
+            self.one_key_quit = ttk.Button(self.login_button_frame, text="一键退出", width=8,
                                            command=self.quit_selected_accounts, style='Custom.TButton')
             self.one_key_quit.pack(side=tk.RIGHT, pady=0)
             # 配置
-            self.config_btn = ttk.Button(self.logged_in_button_frame, text="❐配 置", width=8, style='Custom.TButton',
+            self.config_btn = ttk.Button(self.login_button_frame, text="❐配 置", width=8, style='Custom.TButton',
                                          command=partial(self.create_config, multiple_status=self.multiple_status)
                                          )
             self.config_btn.pack(side=tk.RIGHT, pady=0)
@@ -95,39 +94,39 @@ class TreeviewRowUI:
                 self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有符号表示推荐配置的账号")
 
             self.login_tree = self.create_table("login")
-            self.display_table(logged_in_list, "logged_in")
-            self.update_top_title("logged_in")
+            self.display_table(logins, "login")
+            self.update_top_title("login")
             self.login_tree.bind("<Leave>", partial(self.on_leave))
             self.login_tree.bind("<Motion>", partial(self.on_mouse_motion))
-            self.login_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in="logged_in"))
-            self.login_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in="logged_in"))
+            self.login_tree.bind("<Button-1>", partial(self.on_single_click, login_status="login"))
+            self.login_tree.bind("<Double-1>", partial(self.double_selection, login_status="login"))
             self.login_tree.bind("<Configure>", self.adjust_columns_on_maximize)
             self.sort_column(self.login_tree, login_col_to_sort, "login")
 
-        if len(not_logged_in_list) != 0:
+        if len(logouts) != 0:
             # 未登录框架=未登录标题+未登录列表
-            self.not_logged_in_frame = ttk.Frame(self.main_frame)
-            self.not_logged_in_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=10)
+            self.logout_frame = ttk.Frame(self.main_frame)
+            self.logout_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=10)
 
             # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
-            self.not_logged_in_title = ttk.Frame(self.not_logged_in_frame)
-            self.not_logged_in_title.pack(side=tk.TOP, fill=tk.X)
+            self.logout_title = ttk.Frame(self.logout_frame)
+            self.logout_title.pack(side=tk.TOP, fill=tk.X)
 
             # 未登录复选框
-            self.not_logged_in_checkbox_var = tk.IntVar(value=0)
-            self.not_logged_in_checkbox = tk.Checkbutton(
-                self.not_logged_in_title,
-                variable=self.not_logged_in_checkbox_var,
+            self.logout_checkbox_var = tk.IntVar(value=0)
+            self.logout_checkbox = tk.Checkbutton(
+                self.logout_title,
+                variable=self.logout_checkbox_var,
                 tristatevalue=-1
             )
-            self.not_logged_in_checkbox.pack(side=tk.LEFT)
+            self.logout_checkbox.pack(side=tk.LEFT)
 
             # 未登录标签
-            self.not_logged_in_label = ttk.Label(self.not_logged_in_title, text="未登录账号：", font=("", 10, "bold"))
-            self.not_logged_in_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            self.logout_label = ttk.Label(self.logout_title, text="未登录账号：", font=("", 10, "bold"))
+            self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
 
             # 未登录按钮区域=一键登录
-            self.logout_button_frame = ttk.Frame(self.not_logged_in_title)
+            self.logout_button_frame = ttk.Frame(self.logout_title)
             self.logout_button_frame.pack(side=tk.RIGHT)
 
             # 一键登录
@@ -137,12 +136,12 @@ class TreeviewRowUI:
 
             # 更新顶部复选框状态
             self.logout_tree = self.create_table("logout")
-            self.display_table(not_logged_in_list, "not_logged_in")
-            self.update_top_title("not_logged_in")
+            self.display_table(logouts, "logout")
+            self.update_top_title("logout")
             self.logout_tree.bind("<Leave>", partial(self.on_leave))
             self.logout_tree.bind("<Motion>", partial(self.on_mouse_motion))
-            self.logout_tree.bind("<Button-1>", partial(self.on_single_click, is_logged_in="not_logged_in"))
-            self.logout_tree.bind("<Double-1>", partial(self.double_selection, is_logged_in="not_logged_in"))
+            self.logout_tree.bind("<Button-1>", partial(self.on_single_click, login_status="logout"))
+            self.logout_tree.bind("<Double-1>", partial(self.double_selection, login_status="logout"))
             self.logout_tree.bind("<Configure>", self.adjust_columns_on_maximize)
             self.sort_column(self.logout_tree, logout_col_to_sort, "logout")
 
@@ -180,10 +179,10 @@ class TreeviewRowUI:
 
         return tree
 
-    def display_table(self, accounts, is_logged_in):
-        if is_logged_in == "logged_in":
+    def display_table(self, accounts, login_status):
+        if login_status == "login":
             tree = self.login_tree
-        elif is_logged_in == "not_logged_in":
+        elif login_status == "logout":
             tree = self.logout_tree
         else:
             tree = ttk.Treeview(self.main_frame, show='tree', height=1, style="RowTreeview")
@@ -221,7 +220,7 @@ class TreeviewRowUI:
                             values=(cleaned_display_name, config_status,
                                     pid, account, alias, cleaned_nickname))
 
-            if config_status == "无配置" and is_logged_in == "not_logged_in":
+            if config_status == "无配置" and login_status == "logout":
                 widget_utils.add_a_tag_to_item(self.logout_tree, account, "disabled")
 
         tree.config(height=len(accounts))
@@ -285,13 +284,14 @@ class TreeviewRowUI:
         self.sort_order[table_type] = col, "false" if asc_str == "true" else "true"
         subfunc_file.save_sort_order_to_setting_ini(self.sort_order)
 
-    def update_selected_display(self, is_logged_in):
+    def update_selected_display(self, login_status):
         # 获取选中行的“英语”列数据
-        if is_logged_in == "logged_in":
+        if login_status == "login":
             tree = self.login_tree
             selected_items = self.selected_login_items
             selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
             self.selected_login_accounts = selected_accounts
+            # 配置只能是某1个账号
             if len(selected_accounts) == 1:
                 widget_utils.enable_button_and_unbind_tip(
                     self.tooltips, self.config_btn)
@@ -304,23 +304,23 @@ class TreeviewRowUI:
             selected_accounts = [tree.item(i, "values")[self.acc_index] for i in selected_items]
             self.selected_logout_accounts = selected_accounts
 
-    def toggle_top_checkbox(self, _event, is_logged_in):
+    def toggle_top_checkbox(self, _event, login_status):
         """
         切换顶部复选框状态，更新子列表
         :param _event: 触发事件的控件
-        :param is_logged_in: 是否登录
+        :param login_status: 是否登录
         :return: 阻断继续切换
         """
         # print(event.widget)
-        # print(self.logged_in_checkbox)
-        if is_logged_in == "logged_in":
-            checkbox_var = self.logged_in_checkbox_var
+        # print(self.login_checkbox)
+        if login_status == "login":
+            checkbox_var = self.login_checkbox_var
             tree = self.login_tree
             selected_items = self.selected_login_items
             button = self.one_key_quit
             tip = "请选择要退出的账号"
         else:
-            checkbox_var = self.not_logged_in_checkbox_var
+            checkbox_var = self.logout_checkbox_var
             tree = self.logout_tree
             selected_items = self.selected_logout_items
             button = self.one_key_auto_login
@@ -342,31 +342,31 @@ class TreeviewRowUI:
             for item_id in tree.get_children():
                 if "disabled" not in tree.item(item_id, "tags"):
                     widget_utils.remove_a_tag_of_item(tree, item_id, "selected")
-        self.update_selected_display(is_logged_in)  # 更新显示
+        self.update_selected_display(login_status)  # 更新显示
         return "break"
 
-    def update_top_title(self, is_logged_in):
+    def update_top_title(self, login_status):
         """根据AccountRow实例的复选框状态更新顶行复选框状态"""
         # toggle方法
-        toggle = partial(self.toggle_top_checkbox, is_logged_in=is_logged_in)
+        toggle = partial(self.toggle_top_checkbox, login_status=login_status)
 
         # 判断是要更新哪一个顶行
-        if is_logged_in == "logged_in":
+        if login_status == "login":
             all_rows = [item for item in self.login_tree.get_children()
                         if "disabled" not in self.login_tree.item(item, "tags")]
             selected_rows = self.selected_login_items
-            checkbox = self.logged_in_checkbox
-            title = self.logged_in_title
-            checkbox_var = self.logged_in_checkbox_var
+            checkbox = self.login_checkbox
+            title = self.login_title
+            checkbox_var = self.login_checkbox_var
             button = self.one_key_quit
             tip = "请选择要退出的账号"
         else:
             all_rows = [item for item in self.logout_tree.get_children()
                         if "disabled" not in self.logout_tree.item(item, "tags")]
             selected_rows = self.selected_logout_items
-            checkbox = self.not_logged_in_checkbox
-            title = self.not_logged_in_title
-            checkbox_var = self.not_logged_in_checkbox_var
+            checkbox = self.logout_checkbox
+            title = self.logout_title
+            checkbox_var = self.logout_checkbox_var
             button = self.one_key_auto_login
             tip = "请选择要登录的账号"
 
@@ -418,20 +418,20 @@ class TreeviewRowUI:
             # 更新当前悬停行
             self.hovered_item = (tree, item)
 
-    def on_single_click(self, event, is_logged_in):
+    def on_single_click(self, event, login_status):
         """处理单击事件，并在检测到双击时取消"""
         # 取消之前的单击延时处理（如果有）
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
         # 设置一个延时，若在此期间未检测到双击，则处理单击事件
-        self.single_click_id = self.root.after(200, lambda: self.toggle_selection(event, is_logged_in))
+        self.single_click_id = self.root.after(200, lambda: self.toggle_selection(event, login_status))
 
-    def toggle_selection(self, event, is_logged_in):
+    def toggle_selection(self, event, login_status):
         # print("进入了单击判定")
-        if is_logged_in == "logged_in":
+        if login_status == "login":
             tree = self.login_tree
             selected_items = self.selected_login_items
-        elif is_logged_in == "not_logged_in":
+        elif login_status == "logout":
             tree = self.logout_tree
             selected_items = self.selected_logout_items
         else:
@@ -452,19 +452,19 @@ class TreeviewRowUI:
                 else:
                     selected_items.append(item_id)
                     widget_utils.add_a_tag_to_item(tree, item_id, "selected")
-                self.update_selected_display(is_logged_in)  # 实时更新选中行显示
-                self.update_top_title(is_logged_in)
+                self.update_selected_display(login_status)  # 实时更新选中行显示
+                self.update_top_title(login_status)
 
-    def double_selection(self, event, is_logged_in):
+    def double_selection(self, event, login_status):
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
             self.single_click_id = None
         # print("进入了双击判定")
-        if is_logged_in == "logged_in":
+        if login_status == "login":
             tree = self.login_tree
             selected_items = self.selected_login_items
             callback = self.quit_selected_accounts
-        elif is_logged_in == "not_logged_in":
+        elif login_status == "logout":
             tree = self.logout_tree
             selected_items = self.selected_logout_items
             callback = self.auto_login_selected_acc
@@ -486,8 +486,8 @@ class TreeviewRowUI:
                     widget_utils.remove_a_tag_of_item(tree, i, "selected")
                 selected_items.append(item_id)
                 widget_utils.add_a_tag_to_item(tree, item_id, "selected")
-                self.update_selected_display(is_logged_in)  # 实时更新选中行显示
-                self.update_top_title(is_logged_in)
+                self.update_selected_display(login_status)  # 实时更新选中行显示
+                self.update_top_title(login_status)
                 callback()
 
     def open_detail(self, account):

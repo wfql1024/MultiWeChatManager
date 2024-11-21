@@ -243,8 +243,8 @@ def get_account_list(multiple_status):
     # 更新数据
     pid_dict = dict(wechat_processes)
     if multiple_status == "已开启":
+        print(f"由于是全局多开模式，直接所有has_mutex都为false")
         for acc in logged_in + not_logged_in:
-            print(f"由于是全局多开模式，直接所有has_mutex都为false")
             subfunc_file.update_acc_details_to_acc_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
     else:
         for acc in logged_in + not_logged_in:
@@ -256,5 +256,4 @@ def get_account_list(multiple_status):
         subfunc_file.update_has_mutex_from_all_wechat()
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
-
     return True, (logged_in, not_logged_in, wechat_processes)

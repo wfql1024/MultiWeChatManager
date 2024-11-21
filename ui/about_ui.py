@@ -206,6 +206,7 @@ class AboutWindow:
         scrollbar.config(command=reference_text.yview)
 
     def check_for_updates(self, current_full_version):
+        subfunc_file.fetch_config_data_from_remote()
         result = func_update.split_vers_by_cur_from_local(current_full_version)
         if result:
             new_versions, old_versions = result

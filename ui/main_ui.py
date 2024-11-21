@@ -35,11 +35,8 @@ class MainWindow:
         self.view_var = None
         self.need_to_update = False
         self.chosen_view = None
-        self.classic_view_menu = None
         self.enable_new_func = func_setting.fetch_setting_or_set_default("enable_new_func") == "true"
         self.current_full_version = subfunc_file.get_app_current_version()
-        self.is_tree_view = None
-        self.tree_view_menu = None
         self.view_menu = None
         self.revoke_err = None
         self.multiple_err = None
@@ -62,12 +59,12 @@ class MainWindow:
         self.start_time = None
         self.status_bar = None
         self.status_var = None
-        self.mode_menu = None
         self.main_frame = None
         self.settings_menu = None
         self.edit_menu = None
         self.menu_bar = None
         self.reset_timer = self.root.after(0, lambda: setattr(self, 'logo_click_count', 0))
+
         subfunc_file.merge_refresh_nodes()
         style = ttk.Style()
         style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
@@ -113,9 +110,6 @@ class MainWindow:
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
         self.show_setting_error()
-
-        self.logged_in_rows = {}
-        self.not_logged_in_rows = {}
         if self.new is True:
             self.root.after(3000, self.open_update_log)
 
