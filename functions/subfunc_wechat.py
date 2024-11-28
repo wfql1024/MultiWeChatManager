@@ -5,7 +5,7 @@ import win32gui
 
 from functions import func_setting, subfunc_file
 from resources import Config
-from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, file_utils
+from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, file_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -25,7 +25,7 @@ def kill_wechat_multiple_processes():
 
 def clear_idle_wnd_and_process():
     """清理闲置的登录窗口和多开器子窗口"""
-    hwnd_utils.close_all_wnd_by_class(
+    hwnd_utils.close_all_wnd_by_classes(
         [
             "WTWindow",
             "WeChatLoginWndForPC",
@@ -106,7 +106,7 @@ def open_wechat(status, has_mutex_dictionary=None):
                     hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
         # ————————————————————————————————handle————————————————————————————————
         elif sub_exe == "handle":
-            success_lists = hwnd_utils.close_mutex_of_pids_by_handle()
+            success_lists = handle_utils.close_mutex_of_pids_by_handle()
             if success_lists:
                 # 更新 has_mutex 为 False 并保存
                 print(f"成功关闭{success_lists}：{time.time() - start_time:.4f}秒")

@@ -1,9 +1,7 @@
-import ctypes
 import os
 import re
 import subprocess
 import time
-from ctypes import wintypes
 
 from resources import Config
 from utils import process_utils

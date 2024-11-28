@@ -12,7 +12,7 @@ from PIL import Image
 from functions import func_setting, subfunc_file, func_config
 from resources.config import Config
 from resources.strings import Strings
-from utils import process_utils, image_utils, string_utils
+from utils import process_utils, image_utils, string_utils, hwnd_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -72,7 +72,6 @@ def get_acc_avatar_from_files(account):
     :param account: 原始微信号
     :return: 头像文件 -> ImageFile
     """
-
     # 构建头像文件路径
     avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
 
@@ -137,13 +136,13 @@ def get_acc_wrapped_display_name(account) -> str:
     )
 
 
-def silent_get_and_config(logged_in, not_logged_in, data_dir, callback):
+def silent_get_and_config(login, logout, data_dir, callback):
     # 悄悄执行检测昵称和头像
     need_to_notice = False
     # 1. 获取所有账号节点的url和昵称，将空的账号返回
     accounts_need_to_get_avatar = []
     accounts_need_to_get_nickname = []
-    for acc in itertools.chain(logged_in, not_logged_in):
+    for acc in itertools.chain(login, logout):
         avatar_url, nickname = subfunc_file.get_acc_details_from_acc_json(acc, avatar_url=None, nickname=None)
         if avatar_url is None:
             accounts_need_to_get_avatar.append(acc)
@@ -233,21 +232,21 @@ def get_account_list(multiple_status):
         item for item in os.listdir(data_path)
         if os.path.isdir(os.path.join(data_path, item))
     ) - excluded_folders
-    logged_in = list(logged_in_ids & folders)
-    not_logged_in = list(folders - logged_in_ids)
+    login = list(logged_in_ids & folders)
+    logout = list(folders - logged_in_ids)
 
-    print(f"logged_in：{logged_in}")
-    print(f"not_logged_in：{not_logged_in}")
+    print(f"login：{login}")
+    print(f"logout：{logout}")
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
     pid_dict = dict(wechat_processes)
     if multiple_status == "已开启":
         print(f"由于是全局多开模式，直接所有has_mutex都为false")
-        for acc in logged_in + not_logged_in:
+        for acc in login + logout:
             subfunc_file.update_acc_details_to_acc_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
     else:
-        for acc in logged_in + not_logged_in:
+        for acc in login + logout:
             pid = pid_dict.get(acc, None)
             if pid is None:
                 subfunc_file.update_acc_details_to_acc_json(acc, has_mutex=None)
@@ -256,4 +255,15 @@ def get_account_list(multiple_status):
         subfunc_file.update_has_mutex_from_all_wechat()
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
-    return True, (logged_in, not_logged_in, wechat_processes)
+    return True, (login, logout, wechat_processes)
+
+
+def get_main_hwnd_of_accounts(acc_list):
+    target_class = "WeChatMainWndForPC"
+    for acc in acc_list:
+        pid, = subfunc_file.get_acc_details_from_acc_json(acc, pid=None)
+        hwnd_list = hwnd_utils.find_hwnd_by_pid_and_class(pid, target_class)
+        if len(hwnd_list) == 1:
+            hwnd = hwnd_list[0]
+            subfunc_file.update_acc_details_to_acc_json(acc, main_hwnd=hwnd)
+

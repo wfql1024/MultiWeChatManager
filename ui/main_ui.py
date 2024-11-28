@@ -18,7 +18,7 @@ from resources import Strings
 from resources.config import Config
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui, loading_ui
-from utils import hwnd_utils, debug_utils, file_utils, handle_utils
+from utils import hwnd_utils, debug_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -453,7 +453,7 @@ class MainWindow:
             return
         print(f"渲染账号列表.........................................................")
 
-        logged_in, not_logged_in, wechat_processes = result
+        login, logout, wechat_processes = result
 
         # 创建账号列表界面
         if self.chosen_view == "classic":
@@ -465,7 +465,7 @@ class MainWindow:
         else:
             pass
 
-        subfunc_file.update_refresh_time_statistic(self.chosen_view, str(len(logged_in)), time.time() - self.start_time)
+        subfunc_file.update_refresh_time_statistic(self.chosen_view, str(len(login)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
@@ -477,7 +477,11 @@ class MainWindow:
         event.width = self.canvas.winfo_width()
         self.on_canvas_configure(event)
 
-        func_account.silent_get_and_config(logged_in, not_logged_in, self.data_dir,
+        # 获取已登录的窗口hwnd
+        func_account.get_main_hwnd_of_accounts(login)
+
+        # 进行静默获取头像及配置
+        func_account.silent_get_and_config(login, logout, self.data_dir,
                                            self.create_main_frame_and_menu)
 
     def bind_mouse_wheel(self, widget):

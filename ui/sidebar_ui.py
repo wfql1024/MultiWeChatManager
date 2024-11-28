@@ -4,9 +4,157 @@ import time
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+import win32api
 import win32con
 import win32gui
 
+def create_button_in_wnd(hwnd, x, y, width, height, button_text="Click Me"):
+    # 加载kernel32.dll，用于获取模块句柄
+    kernel32 = ctypes.windll.kernel32
+
+    # 定义按钮ID
+    BUTTON_ID = 1001
+
+    # 获取当前模块句柄
+    h_instance = kernel32.GetModuleHandleW(None)
+
+    # 创建一个按钮控件，放置在指定的窗口位置
+    h_button = win32gui.CreateWindowEx(
+        0,  # 无扩展样式
+        "Button",  # 控件类型为按钮
+        button_text,  # 按钮上的文字
+        win32con.WS_VISIBLE | win32con.WS_CHILD | win32con.BS_DEFPUSHBUTTON,  # 控件样式：可见、子窗口、默认按钮样式
+        x,  # X坐标
+        y,  # Y坐标
+        width,  # 宽度
+        height,  # 高度
+        hwnd,  # 父窗口句柄
+        BUTTON_ID,  # 控件ID
+        h_instance,  # 应用程序实例句柄
+        None  # 无额外参数
+    )
+
+    # 检查按钮是否创建成功
+    if not h_button:
+        print("按钮创建失败")
+    else:
+        print("按钮创建成功")
+        return h_button
+
+
+def create_frame_wnd(title, width, height):
+    """
+    创建一个框架窗口
+    """
+    wc = win32gui.WNDCLASS()
+    wc.lpfnWndProc = win32gui.DefWindowProc  # 默认窗口过程
+    wc.lpszClassName = 'MyFrameWindow'
+    wc.hInstance = win32api.GetModuleHandle(None)
+    wc.hCursor = win32gui.LoadCursor(0, win32con.IDC_ARROW)
+    wc.hbrBackground = win32gui.GetStockObject(win32con.WHITE_BRUSH)
+
+    class_atom = win32gui.RegisterClass(wc)
+
+    hwnd = win32gui.CreateWindow(
+        class_atom,  # 窗口类名
+        title,  # 窗口标题
+        win32con.WS_OVERLAPPEDWINDOW,  # 窗口样式
+        100,  # X 坐标
+        100,  # Y 坐标
+        width,  # 窗口宽度
+        height,  # 窗口高度
+        0,  # 父窗口句柄
+        0,  # 菜单句柄
+        wc.hInstance,  # 实例句柄
+        None  # 额外参数
+    )
+
+    win32gui.ShowWindow(hwnd, win32con.SW_SHOW)
+    return hwnd
+
+
+def create_left_panel(frame_hwnd, width):
+    """
+    创建左侧面板，宽度固定为 75
+    """
+    wc = win32gui.WNDCLASS()
+    wc.lpfnWndProc = win32gui.DefWindowProc
+    wc.lpszClassName = 'LeftPanel'
+    wc.hInstance = win32api.GetModuleHandle(None)
+    wc.hCursor = win32gui.LoadCursor(0, win32con.IDC_ARROW)
+    wc.hbrBackground = win32gui.GetStockObject(win32con.LTGRAY_BRUSH)
+
+    class_atom = win32gui.RegisterClass(wc)
+
+    panel_hwnd = win32gui.CreateWindow(
+        class_atom,  # 窗口类名
+        "",  # 窗口标题
+        win32con.WS_CHILD | win32con.WS_VISIBLE,  # 窗口样式
+        0,  # X 坐标（左侧靠齐）
+        0,  # Y 坐标
+        width,  # 面板宽度
+        win32gui.GetClientRect(frame_hwnd)[3],  # 面板高度与父窗口一样
+        frame_hwnd,  # 父窗口句柄
+        0,  # 菜单句柄
+        wc.hInstance,  # 实例句柄
+        None  # 额外参数
+    )
+
+    win32gui.ShowWindow(panel_hwnd, win32con.SW_SHOW)
+    return panel_hwnd
+
+
+def create_right_panel(frame_hwnd, x, width, height):
+    """
+    创建右侧主窗口，位置从 x = 75 开始
+    """
+    wc = win32gui.WNDCLASS()
+    wc.lpfnWndProc = win32gui.DefWindowProc
+    wc.lpszClassName = 'RightPanel'
+    wc.hInstance = win32api.GetModuleHandle(None)
+    wc.hCursor = win32gui.LoadCursor(0, win32con.IDC_ARROW)
+    wc.hbrBackground = win32gui.GetStockObject(win32con.WHITE_BRUSH)
+
+    class_atom = win32gui.RegisterClass(wc)
+
+    right_panel_hwnd = win32gui.CreateWindow(
+        class_atom,  # 窗口类名
+        "",  # 窗口标题
+        win32con.WS_CHILD | win32con.WS_VISIBLE,  # 窗口样式
+        x,  # X 坐标（右侧靠齐）
+        0,  # Y 坐标
+        width,  # 右侧主窗口的宽度
+        height,  # 右侧主窗口的高度
+        frame_hwnd,  # 父窗口句柄
+        0,  # 菜单句柄
+        wc.hInstance,  # 实例句柄
+        None  # 额外参数
+    )
+
+    win32gui.ShowWindow(right_panel_hwnd, win32con.SW_SHOW)
+    return right_panel_hwnd
+
+
+def embed_wnd_into_right_panel(right_panel_hwnd, target_hwnd):
+    """
+    将微信窗口嵌入到右侧主窗口中，并最大化
+    """
+    # 设置微信窗口的父窗口为右侧主窗口
+    ctypes.windll.user32.SetParent(target_hwnd, right_panel_hwnd)
+
+    # 获取右侧主窗口的大小
+    right_rect = win32gui.GetClientRect(right_panel_hwnd)
+
+    # 设置微信窗口的位置和大小
+    win32gui.SetWindowPos(
+        target_hwnd,  # 目标窗口句柄
+        None,  # 不改变 Z 顺序
+        0,  # X 坐标
+        0,  # Y 坐标
+        right_rect[2],  # 宽度为右侧主窗口的宽度
+        right_rect[3],  # 高度为右侧主窗口的高度
+        win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW  # 显示窗口
+    )
 
 class SidebarUI:
     def __init__(self, root):
