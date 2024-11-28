@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 from functions import func_update, subfunc_file
 from resources import Config, Strings
 from ui import update_log_ui
-from utils import handle_utils
+from utils import hwnd_utils
 
 
 def add_hyperlink_events(text_widget, text_content):

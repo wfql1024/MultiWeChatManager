@@ -12,7 +12,7 @@ from PIL import Image, ImageTk
 from functions import func_detail, subfunc_file
 from resources.config import Config
 from resources.strings import Strings
-from utils import string_utils, widget_utils, handle_utils
+from utils import string_utils, widget_utils, hwnd_utils
 
 
 class DetailWindow:
@@ -87,7 +87,7 @@ class DetailWindow:
 
         self.load_data_label()
 
-        handle_utils.center_window(self.master, 265, 345)
+        handle_utils.center_wnd(self.master, 265, 345)
         self.master.deiconify()
         master.grab_set()
 

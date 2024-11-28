@@ -9,7 +9,7 @@ from tkinter import messagebox, ttk
 
 from functions import func_update, subfunc_file
 from resources import Config
-from utils import handle_utils, file_utils
+from utils import hwnd_utils, file_utils
 
 
 class UpdateLogWindow:

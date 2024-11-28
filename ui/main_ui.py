@@ -18,7 +18,7 @@ from resources import Strings
 from resources.config import Config
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui, loading_ui
-from utils import handle_utils, debug_utils, file_utils
+from utils import hwnd_utils, debug_utils, file_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -613,7 +613,7 @@ class MainWindow:
             args=(
                 self,
                 self.multiple_status,
-                partial(handle_utils.bring_window_to_front, window_class=self, root=self.root)
+                partial(hwnd_utils.bring_wnd_to_front, window_class=self, root=self.root)
             )
         ).start()
 

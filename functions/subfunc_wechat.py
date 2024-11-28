@@ -5,7 +5,7 @@ import win32gui
 
 from functions import func_setting, subfunc_file
 from resources import Config
-from utils import handle_utils, process_utils, ini_utils, pywinhandle, file_utils
+from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, file_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -25,7 +25,7 @@ def kill_wechat_multiple_processes():
 
 def clear_idle_wnd_and_process():
     """清理闲置的登录窗口和多开器子窗口"""
-    handle_utils.close_windows_by_class(
+    hwnd_utils.close_all_wnd_by_class(
         [
             "WTWindow",
             "WeChatLoginWndForPC",
@@ -94,19 +94,19 @@ def open_wechat(status, has_mutex_dictionary=None):
             sub_exe_process = create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{sub_exe}"
             )
-            sub_exe_hwnd = handle_utils.wait_for_window_open("WTWindow", 8)
+            sub_exe_hwnd = hwnd_utils.wait_for_wnd_open("WTWindow", 8)
             if sub_exe_hwnd:
-                button_handle = handle_utils.get_all_child_handles(
+                button_handle = hwnd_utils.get_all_child_hwnd(
                     sub_exe_hwnd
                 )[1]
                 if button_handle:
-                    button_details = handle_utils.get_window_details_from_hwnd(button_handle)
+                    button_details = hwnd_utils.get_wnd_details_from_hwnd(button_handle)
                     button_cx = int(button_details["width"] / 2)
                     button_cy = int(button_details["height"] / 2)
-                    handle_utils.do_click_in_window(button_handle, button_cx, button_cy)
+                    hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
         # ————————————————————————————————handle————————————————————————————————
         elif sub_exe == "handle":
-            success_lists = handle_utils.close_mutex_of_pids_by_handle()
+            success_lists = hwnd_utils.close_mutex_of_pids_by_handle()
             if success_lists:
                 # 更新 has_mutex 为 False 并保存
                 print(f"成功关闭{success_lists}：{time.time() - start_time:.4f}秒")
@@ -155,13 +155,13 @@ def get_login_size(status):
     clear_idle_wnd_and_process()
     has_mutex_dict = get_mutex_dict()
     sub_exe_process, sub_exe = open_wechat(status, has_mutex_dict)
-    wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
+    wechat_hwnd = hwnd_utils.wait_for_wnd_open("WeChatLoginWndForPC", timeout=8)
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
         time.sleep(2)
-        login_wnd_details = handle_utils.get_window_details_from_hwnd(wechat_hwnd)
+        login_wnd_details = hwnd_utils.get_wnd_details_from_hwnd(wechat_hwnd)
         login_wnd = login_wnd_details["window"]
         login_width = login_wnd_details["width"]
         login_height = login_wnd_details["height"]
@@ -189,10 +189,10 @@ def logging_in_listener():
         print(f"当前有微信窗口：{handles}")
         for handle in list(handles):
             if win32gui.IsWindow(handle):
-                wechat_wnd_details = handle_utils.get_window_details_from_hwnd(handle)
+                wechat_wnd_details = hwnd_utils.get_wnd_details_from_hwnd(handle)
                 wechat_width = wechat_wnd_details["width"]
                 wechat_height = wechat_wnd_details["height"]
-                handle_utils.do_click_in_window(handle, int(wechat_width * 0.5), int(wechat_height * 0.75))
+                hwnd_utils.do_click_in_wnd(handle, int(wechat_width * 0.5), int(wechat_height * 0.75))
             else:
                 handles.remove(handle)
 

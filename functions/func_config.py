@@ -5,8 +5,8 @@ from datetime import datetime
 from tkinter import messagebox
 
 from functions import func_setting, subfunc_wechat
-from utils import handle_utils
-from utils.handle_utils import close_window_by_name
+from utils import hwnd_utils
+from utils.hwnd_utils import close_wnd_by_name
 from utils.logger_utils import mylogger as logger
 
 
@@ -76,7 +76,7 @@ def create_config(account):
         if os.path.exists(dest_path):
             os.remove(dest_path)
         shutil.copy2(source_path, dest_path, follow_symlinks=False)
-        close_window_by_name("WeChatLoginWndForPC")
+        close_wnd_by_name("WeChatLoginWndForPC")
         messagebox.showinfo("成功", f"配置文件已生成：{dest_filename}")
         return True
     except Exception as e:
@@ -101,7 +101,7 @@ def test(m_class, account, multiple_status):
         time.sleep(0.5)
         has_mutex_dict = subfunc_wechat.get_mutex_dict()
         sub_exe_process, _ = subfunc_wechat.open_wechat(multiple_status, has_mutex_dict)
-        wechat_hwnd = handle_utils.wait_for_window_open("WeChatLoginWndForPC", timeout=8)
+        wechat_hwnd = hwnd_utils.wait_for_wnd_open("WeChatLoginWndForPC", timeout=8)
         if wechat_hwnd:
             if sub_exe_process:
                 sub_exe_process.terminate()
@@ -109,7 +109,7 @@ def test(m_class, account, multiple_status):
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
                 create_config(account)
             else:
-                close_window_by_name("WeChatLoginWndForPC")
+                close_wnd_by_name("WeChatLoginWndForPC")
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
     m_class.root.after(0, m_class.create_main_frame_and_menu)
