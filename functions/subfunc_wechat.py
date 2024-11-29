@@ -1,3 +1,4 @@
+import os
 import time
 
 import psutil
@@ -117,7 +118,7 @@ def open_wechat(status, has_mutex_dictionary=None):
                     hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
         # ————————————————————————————————handle————————————————————————————————
         elif sub_exe == "handle":
-            success_lists = handle_utils.close_mutex_of_pids_by_handle()
+            success_lists = handle_utils.close_all_old_wechat_mutex_by_handle(Config.HANDLE_EXE_PATH)
             if success_lists:
                 # 更新 has_mutex 为 False 并保存
                 print(f"成功关闭{success_lists}：{time.time() - start_time:.4f}秒")

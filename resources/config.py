@@ -39,6 +39,7 @@ class Config:
     PROJ_EXTERNAL_RES_PATH = fr'{PROJ_PATH}\external_res'
     PROJ_USER_PATH = fr'{PROJ_PATH}\user_files'
 
+    HANDLE_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\handle.exe'
     VERSION_FILE = fr'{PROJ_PATH}\version.txt'
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\SunnyMultiWxMng.ico'
     REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\Rewards.png'
