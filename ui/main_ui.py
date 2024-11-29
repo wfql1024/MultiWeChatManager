@@ -26,6 +26,7 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, root, args=None):
+        self.program_file_menu = None
         self.root = root
         self.loading_window = tk.Toplevel(self.root)
         self.loading_class = loading_ui.LoadingWindow(self.loading_window)
@@ -112,6 +113,7 @@ class MainWindow:
         self.show_setting_error()
         if self.new is True:
             self.root.after(3000, self.open_update_log)
+            self.root.after(3000, partial(func_file.mov_backup, new=self.new))
 
     def create_status_bar(self):
         """创建状态栏"""
@@ -257,6 +259,18 @@ class MainWindow:
             self.config_file_menu.add_command(label="清除",
                                               command=partial(func_file.clear_config_file,
                                                               self.create_main_frame_and_menu))
+        # >配置文件
+        self.program_file_menu = tk.Menu(self.file_menu, tearoff=0)
+        if not self.data_dir:
+            self.file_menu.add_command(label="程序目录  未获取")
+            self.file_menu.entryconfig(f"程序目录  未获取", state="disable")
+        else:
+            self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
+            self.program_file_menu.add_command(label="打开", command=func_file.open_program_file)
+            self.program_file_menu.add_command(label="清除",
+                                              command=partial(func_file.mov_backup,
+                                                              self.create_main_frame_and_menu))
+
         # >统计数据
         self.statistic_menu = tk.Menu(self.file_menu, tearoff=0)
         self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
@@ -458,10 +472,10 @@ class MainWindow:
         # 创建账号列表界面
         if self.chosen_view == "classic":
             classic_row_ui.ClassicRowUI(
-                self, self.root, self.main_frame, result, self.data_dir, self.multiple_status)
+                self.root, self, self.main_frame, result, self.data_dir, self.multiple_status)
         elif self.chosen_view == "tree":
             treeview_row_ui.TreeviewRowUI(
-                self, self.root, self.main_frame, result, self.data_dir, self.multiple_status)
+                self.root, self, self.main_frame, result, self.data_dir, self.multiple_status)
         else:
             pass
 

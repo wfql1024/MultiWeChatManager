@@ -5,12 +5,21 @@ import win32gui
 
 from functions import func_setting, subfunc_file
 from resources import Config
-from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, file_utils, handle_utils
+from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, file_utils, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
+
+
+def switch_to_wechat_account(window, account):
+    hwnd_utils.bring_wnd_to_left(window)
+    classes = ["WeChatMainWndForPC"]
+    hwnd_utils.hide_all_wnd_by_classes(classes)
+    main_hwnd, = subfunc_file.get_acc_details_from_acc_json(account, main_hwnd=None)
+    hwnd_utils.restore_window(main_hwnd)
 
 
 def kill_wechat_multiple_processes():
     """清理多开器的进程"""
+    print("清理多余多开器窗口...")
     # 遍历所有的进程
     for proc in psutil.process_iter(['pid', 'name']):
         try:
@@ -19,12 +28,13 @@ def kill_wechat_multiple_processes():
                 proc.kill()
                 print(f"Killed process tree for {proc.name()} (PID: {proc.pid})")
 
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            pass
+        except Exception as e:
+            logger.error(e)
 
 
 def clear_idle_wnd_and_process():
     """清理闲置的登录窗口和多开器子窗口"""
+    print("清理多余登录窗口...")
     hwnd_utils.close_all_wnd_by_classes(
         [
             "WTWindow",
@@ -37,6 +47,7 @@ def clear_idle_wnd_and_process():
 
 def get_mutex_dict():
     """拿到当前时间下系统中所有微信进程的互斥体情况"""
+    print("获取互斥体情况...")
     pids = process_utils.get_process_ids_by_name("WeChat.exe")
     has_mutex_dict = dict()
     for pid in pids:
@@ -171,7 +182,7 @@ def get_login_size(status):
 
 
 def create_process_without_admin(executable, args=None, creation_flags=process_utils.CREATE_NEW_CONSOLE):
-    if file_utils.get_sys_major_version_name() == "win7":
+    if sys_utils.get_sys_major_version_name() == "win7":
         return process_utils.create_process_for_win7(executable, args, creation_flags)
     else:
         return process_utils.create_process_with_medium_il(executable, args, creation_flags)

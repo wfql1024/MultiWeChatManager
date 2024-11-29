@@ -87,7 +87,7 @@ class DetailWindow:
 
         self.load_data_label()
 
-        hwnd_utils.center_wnd(self.master, 265, 345)
+        hwnd_utils.bring_wnd_to_center(self.master, 265, 345)
         self.master.deiconify()
         master.grab_set()
 

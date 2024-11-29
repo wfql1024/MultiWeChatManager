@@ -130,6 +130,7 @@ def clear_all_wechat_in_acc_json():
     清空登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
     """
+    print("清理互斥体记录...")
     # 加载当前账户数据
     account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
 
@@ -149,6 +150,7 @@ def update_all_wechat_in_acc_json():
     清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
     """
+    print("构建互斥体记录...")
     # 加载当前账户数据
     account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
 
@@ -338,9 +340,11 @@ def get_app_current_version():
 
 
 def get_avatar_url_from_acc_info_file(acc_list, data_dir):
+    # TODO: 只获取最后三行可能有bug...
     changed = False
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
+        print(acc_info_dat_path)
         if not os.path.isfile(acc_info_dat_path):
             continue
         with open(acc_info_dat_path, 'r', encoding="utf-8", errors="ignore") as f:

@@ -11,6 +11,7 @@ from win32com.client import Dispatch
 from functions import func_setting
 from resources import Config
 from utils import image_utils
+from utils.logger_utils import mylogger as logger
 
 
 def open_user_file():
@@ -68,6 +69,53 @@ def clear_config_file(after):
                 except Exception as e:
                     print(f"无法删除 {file_path}: {e}")
             after()
+
+
+def open_program_file():
+    if getattr(sys, 'frozen', False):  # 打包环境
+        executable_path = sys.executable
+        # 打开文件夹
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shell.CurrentDirectory = executable_path
+        shell.Run(f'explorer /select,"WeChatWin.dll"')
+    else:
+        messagebox.showinfo("提醒", "请从打包环境中使用此功能")
+        return
+
+
+def mov_backup(new=None):
+    if getattr(sys, 'frozen', False):  # 打包环境
+        executable_dir = os.path.basename(sys.executable)
+    else:
+        messagebox.showinfo("提醒", "请从打包环境中使用此功能")
+        return
+    answer = None
+    if new is None:
+        answer = messagebox.askokcancel(
+            "确认清除",
+            "是否删除旧版备份？\n（可从回收站中恢复）"
+        )
+    elif new is True:
+        answer = messagebox.askokcancel(
+            "确认清除",
+            "已更新最新版，是否删除旧版备份？\n（可从回收站中恢复）"
+        )
+
+    if answer:
+        # 移动文件夹到回收站
+        for item in os.listdir(executable_dir):
+            try:
+                item_path = os.path.join(executable_dir, item)
+                if os.path.isdir(item_path) and item.startswith("[") and item.endswith("]"):
+                    dir_path = os.path.join(executable_dir, item)
+                    # 将文件夹移动到回收站
+                    try:
+                        shutil.move(dir_path, "C:\\$Recycle.Bin")
+                        print(f"已移动到回收站: {dir_path}")
+                    except Exception as e:
+                        print(f"无法移动 {dir_path} 到回收站: {e}")
+            except Exception as e:
+                logger.error(e)
 
 
 def clear_statistic_data(after):

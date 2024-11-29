@@ -56,7 +56,6 @@ def auto_login_accounts(accounts, status, callback):
     :param status: 是否全局多开
     :return: 是否成功
     """
-
     def get_wnd_positions(n):
         # 实际的间隔设置
         actual_gap_width = int((screen_width - n * login_width) / (n + 1))

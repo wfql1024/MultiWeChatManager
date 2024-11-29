@@ -9,7 +9,7 @@ from tkinter import messagebox, ttk
 
 from functions import func_update, subfunc_file
 from resources import Config
-from utils import hwnd_utils, file_utils
+from utils import hwnd_utils, file_utils, sys_utils
 
 
 class UpdateLogWindow:
@@ -68,7 +68,7 @@ class UpdateLogWindow:
             try:
                 newest_version = file_utils.get_newest_full_version(new_versions)
                 print(newest_version)
-                curr_sys_ver_name = file_utils.get_sys_major_version_name()
+                curr_sys_ver_name = sys_utils.get_sys_major_version_name()
                 curr_sys_newest_ver_dicts = config_data["update"][newest_version]["pkgs"][curr_sys_ver_name]
                 bottom_frame = ttk.Frame(main_frame)
                 bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)

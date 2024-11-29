@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_login, func_account, subfunc_file, func_setting
+from functions import func_config, func_login, func_account, subfunc_file, func_setting, subfunc_wechat
 from ui import detail_ui
 from utils import widget_utils, string_utils
 from utils.logger_utils import mylogger as logger
@@ -19,7 +19,7 @@ def try_convert(value):
 
 
 class TreeviewRowUI:
-    def __init__(self, m_class, root, m_main_frame, result, data_path, multiple_status):
+    def __init__(self, root, m_class, m_main_frame, result, data_path, multiple_status):
         self.acc_index = None
         self.hovered_item = None
         self.single_click_id = None
@@ -441,8 +441,6 @@ class TreeviewRowUI:
         if len(item_id) == 0:
             return
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            # print("测试", len(tree.identify_row(event.y)))
-            # 弹出提示窗口
             self.open_detail(tree.item(item_id, "values")[self.acc_index])
         else:
             if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发
@@ -476,9 +474,7 @@ class TreeviewRowUI:
         if len(item_id) == 0:
             return
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            # print("测试", len(tree.identify_row(event.y)))
-            # 弹出提示窗口
-            self.open_detail(tree.item(item_id, "values")[self.acc_index])
+            subfunc_wechat.switch_to_wechat_account(self.root, tree.item(item_id, "values")[self.acc_index])
         else:
             if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发
                 selected_items.clear()
@@ -502,7 +498,6 @@ class TreeviewRowUI:
 
     def quit_selected_accounts(self):
         """退出所选账号"""
-        # messagebox.showinfo("待修复", "测试中发现重大bug，先不给点，略~")
         accounts = self.selected_login_items
         accounts_to_quit = []
         for account in accounts:

@@ -6,7 +6,7 @@ from tkinter import ttk
 
 from PIL import ImageTk
 
-from functions import func_config, func_login, func_account, subfunc_file
+from functions import func_config, func_login, func_account, subfunc_file, subfunc_wechat
 from ui import detail_ui
 from utils import string_utils, widget_utils
 from utils.logger_utils import mylogger as logger
@@ -16,11 +16,13 @@ class AccountRow:
     """
     为每一个账号创建其行布局的类
     """
-
-    def __init__(self, parent_frame, account, data_path, status, login_status, callbacks,
-                 update_top_checkbox_callback):
+    def __init__(self, root, m_class, parent_frame, account, data_path,
+                 multiple_status, login_status, update_top_checkbox_callback):
+        self.root = root
+        self.m_class = m_class
+        self.single_click_id = None
         self.data_path = data_path
-        self.status = status
+        self.multiple_status = multiple_status
         self.start_time = time.time()
         self.tooltips = {}
         self.toggle_avatar_label = None
@@ -88,7 +90,7 @@ class AccountRow:
                 text=self.config_button_text,
                 style='Custom.TButton',
                 width=8,
-                command=lambda: callbacks['config'](account, self.status)
+                command=partial(self.create_config, account, self.multiple_status)
             )
             self.config_button.pack(side=tk.RIGHT, padx=0)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
@@ -97,7 +99,7 @@ class AccountRow:
         else:
             # 登录按钮
             self.login_button = ttk.Button(self.button_frame, text="自动登录", style='Custom.TButton', width=8,
-                                           command=lambda: callbacks['login'](account))
+                                           command=partial(self.auto_login_account, account))
             self.login_button.pack(side=tk.RIGHT, padx=0)
 
             if config_status == "无配置":
@@ -114,7 +116,8 @@ class AccountRow:
         # print(f"加载配置/登录区域用时{time.time() - self.start_time:.4f}秒")
 
         # 头像绑定详情事件
-        self.avatar_label.bind("<Button-1>", lambda event: callbacks['detail'](account))
+        self.avatar_label.bind("<Button-1>", lambda event: self.on_single_click(account))
+        self.avatar_label.bind("<Double-1>", lambda event: self.double_selection(account))
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
 
@@ -146,9 +149,43 @@ class AccountRow:
             avatar_label = ttk.Label(self.row_frame, width=10)
         return avatar_label
 
+    def on_single_click(self, account):
+        """处理单击事件，并在检测到双击时取消"""
+        # 取消之前的单击延时处理（如果有）
+        if self.single_click_id:
+            self.root.after_cancel(self.single_click_id)
+        # 设置一个延时，若在此期间未检测到双击，则处理单击事件
+        self.single_click_id = self.root.after(200, lambda: self.open_detail(account))
+
+    def double_selection(self, account):
+        if self.single_click_id:
+            self.root.after_cancel(self.single_click_id)
+            self.single_click_id = None
+        subfunc_wechat.switch_to_wechat_account(self.root, account)
+
+    def open_detail(self, account):
+        """打开详情窗口"""
+        detail_window = tk.Toplevel(self.root)
+        detail_ui.DetailWindow(detail_window, account, self.m_class.create_main_frame_and_menu)
+
+    def create_config(self, account, multiple_status):
+        """按钮：创建或重新配置"""
+        threading.Thread(target=func_config.test, args=(self.m_class, account, multiple_status)).start()
+
+    def auto_login_account(self, account):
+        """按钮：自动登录某个账号"""
+        self.root.iconify()  # 最小化主窗口
+        try:
+            threading.Thread(
+                target=func_login.auto_login_accounts,
+                args=([account], self.multiple_status, self.m_class.create_main_frame_and_menu)
+            ).start()
+        except Exception as e:
+            logger.error(e)
+
 
 class ClassicRowUI:
-    def __init__(self, m_class, root, m_main_frame, result, data_path, multiple_status):
+    def __init__(self, root, m_class, m_main_frame, result, data_path, multiple_status):
         self.m_class = m_class
         self.data_path = data_path
         self.multiple_status = multiple_status
@@ -241,16 +278,9 @@ class ClassicRowUI:
         print(f"渲染{account}.........................................................")
         config_status = func_config.get_config_status_by_account(account, self.data_path)
 
-        callbacks = {
-            'detail': self.open_detail,
-            'config': self.create_config,
-            'login': self.auto_login_account
-        }
-
         # 创建列表实例
-        row = AccountRow(parent_frame, account, self.data_path, self.multiple_status, login_status,
-                         callbacks,
-                         self.update_top_title)
+        row = AccountRow(self.root, self.m_class, parent_frame, account, self.data_path,
+                         self.multiple_status, login_status, self.update_top_title)
 
         # 将已登录、未登录但已配置实例存入字典
         if login_status == "login":
@@ -334,26 +364,6 @@ class ClassicRowUI:
             else:
                 checkbox_var.set(0)
                 widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
-
-    def open_detail(self, account):
-        """打开详情窗口"""
-        detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(detail_window, account, self.m_class.create_main_frame_and_menu)
-
-    def create_config(self, account, multiple_status):
-        """按钮：创建或重新配置"""
-        threading.Thread(target=func_config.test, args=(self.m_class, account, multiple_status)).start()
-
-    def auto_login_account(self, account):
-        """按钮：自动登录某个账号"""
-        self.root.iconify()  # 最小化主窗口
-        try:
-            threading.Thread(
-                target=func_login.auto_login_accounts,
-                args=([account], self.multiple_status, self.m_class.create_main_frame_and_menu)
-            ).start()
-        except Exception as e:
-            logger.error(e)
 
     def one_click_to_quit(self):
         """退出所选账号"""

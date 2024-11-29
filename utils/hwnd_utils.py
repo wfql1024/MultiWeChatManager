@@ -2,12 +2,10 @@ import ctypes
 import sys
 import time
 from ctypes import wintypes
-
 import win32api
 import win32con
 import win32gui
 from utils.logger_utils import mylogger as logger
-
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
 from pywinauto.controls.hwndwrapper import HwndWrapper
@@ -19,14 +17,100 @@ EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPAR
 GetClassName = ctypes.windll.user32.GetClassNameW
 GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
 
+# 定义常量：窗口显示状态
+SW_HIDE = 0  # 隐藏窗口
+SW_SHOWNORMAL = 1  # 恢复窗口（普通显示）
+SW_SHOWMINIMIZED = 2  # 最小化窗口
+SW_SHOWMAXIMIZED = 3  # 最大化窗口
 
-def center_wnd(window, width=None, height=None):
+# 加载 user32.dll 动态库
+user32 = ctypes.WinDLL("user32", use_last_error=True)
+
+# 定义 Windows API 函数
+FindWindow = user32.FindWindowW
+FindWindow.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
+FindWindow.restype = wintypes.HWND
+
+ShowWindow = user32.ShowWindow
+ShowWindow.argtypes = [wintypes.HWND, wintypes.INT]
+ShowWindow.restype = wintypes.BOOL
+
+IsWindowVisible = user32.IsWindowVisible
+IsWindowVisible.argtypes = [wintypes.HWND]
+IsWindowVisible.restype = wintypes.BOOL
+
+
+# 定义辅助函数
+def get_window_handle(window_title):
+    """
+    根据窗口标题查找窗口句柄。
+    :param window_title: 窗口标题
+    :return: 窗口句柄 (HWND)
+    """
+    hwnd = FindWindow(None, window_title)
+    if hwnd == 0:
+        raise ValueError(f"窗口 '{window_title}' 未找到。")
+    return hwnd
+
+
+def minimize_window(hwnd):
+    """
+    最小化窗口。
+    :param hwnd: 窗口句柄
+    """
+    ShowWindow(hwnd, SW_SHOWMINIMIZED)
+
+
+def maximize_window(hwnd):
+    """
+    最大化窗口。
+    :param hwnd: 窗口句柄
+    """
+    ShowWindow(hwnd, SW_SHOWMAXIMIZED)
+
+
+def restore_window(hwnd):
+    """
+    恢复窗口。
+    :param hwnd: 窗口句柄
+    """
+    ShowWindow(hwnd, SW_SHOWNORMAL)
+
+
+def hide_window(hwnd):
+    """
+    隐藏窗口。
+    :param hwnd: 窗口句柄
+    """
+    ShowWindow(hwnd, SW_HIDE)
+
+
+def is_window_visible(hwnd):
+    """
+    检查窗口是否可见。
+    :param hwnd: 窗口句柄
+    :return: True/False
+    """
+    return bool(IsWindowVisible(hwnd))
+
+
+def bring_wnd_to_center(window, width=None, height=None):
     if width is None:
         width = window.winfo_width()
     if height is None:
         height = window.winfo_height()
     x = (window.winfo_screenwidth() // 2) - (width // 2)
     y = int(window.winfo_screenheight() // 2.15) - int(height // 2.15)
+    window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+
+
+def bring_wnd_to_left(window, width=None, height=None):
+    if width is None:
+        width = window.winfo_width()
+    if height is None:
+        height = window.winfo_height()
+    x = 0
+    y = window.winfo_y()
     window.geometry('{}x{}+{}+{}'.format(width, height, x, y))
 
 
@@ -181,6 +265,22 @@ def close_wnd_by_name(window_name):
         win32gui.PostMessage(login_window, win32con.WM_CLOSE, 0, 0)
 
 
+def hide_all_wnd_by_classes(class_names):
+    """
+    根据窗口类名隐藏所有匹配的窗口
+    :param class_names: 窗口类名列表
+    :return: 无
+    """
+    for class_name in class_names:
+        try:
+            hwnd = win32gui.FindWindow(class_name, None)
+            if hwnd:
+                win32gui.ShowWindow(hwnd, win32con.SW_HIDE)  # 隐藏窗口
+                time.sleep(0.1)  # 短暂延时避免过快查找
+        except Exception as ex:
+            logger.error(ex)
+
+
 def close_all_wnd_by_classes(class_names):
     """
     根据窗口类名关闭所有匹配的窗口
@@ -188,13 +288,16 @@ def close_all_wnd_by_classes(class_names):
     :return: 无
     """
     for class_name in class_names:
-        while True:
-            hwnd = win32gui.FindWindow(class_name, None)
-            if hwnd:
-                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-                time.sleep(0.5)  # 等待窗口关闭
-            else:
-                break
+        try:
+            while True:
+                hwnd = win32gui.FindWindow(class_name, None)
+                if hwnd:
+                    win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                    time.sleep(0.5)  # 等待窗口关闭
+                else:
+                    break
+        except Exception as ex:
+            logger.error(ex)
 
 
 def wait_for_wnd_close(hwnd, timeout=30):
@@ -211,6 +314,7 @@ if __name__ == '__main__':
     pid = 20468  # 替换为目标进程的 PID
     target_class = "WeChatMainWndForPC"  # 替换为目标窗口类名
     hwnd = find_hwnd_by_pid_and_class(pid, target_class)
+    hide_all_wnd_by_classes([target_class])
     print("Found HWNDs:", hwnd)
 # 示例用法
 # if __name__ == "__main__":

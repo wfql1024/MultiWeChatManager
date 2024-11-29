@@ -1,7 +1,6 @@
 import datetime as dt
 import hashlib
 import os
-import platform
 import re
 
 import win32api
@@ -106,22 +105,6 @@ def get_sorted_full_versions(versions):
     sorted_versions = sorted(versions, key=extract_version, reverse=True)
     # 返回按版本号排序的文件夹列表
     return sorted_versions
-
-
-def get_sys_major_version_name():
-    major_version = platform.release()
-    if major_version == "7":
-        print("当前系统是 Windows 7")
-        return "win7"
-    elif major_version == "10":
-        print("当前系统是 Windows 10")
-        return "win10"
-    elif major_version == "11":
-        print("当前系统是 Windows 11")
-        return "win11"
-    else:
-        print("当前不是 Windows 7、10 或 11")
-        return "default"
 
 
 # if __name__ == '__main__':
