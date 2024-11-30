@@ -3,7 +3,6 @@ import ctypes
 import os
 import sys
 import tkinter as tk
-from ctypes import wintypes
 
 from ui.main_ui import MainWindow
 
@@ -52,10 +51,10 @@ def main():
         print("当前是普通模式")
     root = tk.Tk()
     # 告诉操作系统使用程序自身的dpi适配
-    # ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    ctypes.windll.shcore.SetProcessDpiAwareness(1)
     # 获取屏幕的缩放因子
-    ScaleFactor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
-    print(ScaleFactor)
+    scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
+    print(scale_factor)
     # 设置程序缩放
     root.tk.call('tk', 'scaling', 5 / 3)
     MainWindow(

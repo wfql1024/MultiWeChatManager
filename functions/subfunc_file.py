@@ -340,7 +340,6 @@ def get_app_current_version():
 
 
 def get_avatar_url_from_acc_info_file(acc_list, data_dir):
-    # TODO: 只获取最后三行可能有bug...
     changed = False
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
@@ -350,7 +349,7 @@ def get_avatar_url_from_acc_info_file(acc_list, data_dir):
         with open(acc_info_dat_path, 'r', encoding="utf-8", errors="ignore") as f:
             acc_info = f.read()
         # 获取文件中的最后三行
-        info_line = '\n'.join(acc_info.strip().splitlines()[-3:])
+        info_line = '\n'.join(acc_info.strip().splitlines())
         # 定义正则表达式来匹配 https 开头并以 /0 或 /132 结尾的 URL
         url_patterns = [r'https://[^\s]*?/0', r'https://[^\s]*?/132']
         # 使用正则表达式查找匹配的 URL
@@ -386,7 +385,7 @@ def get_nickname_from_acc_info_file(acc_list, data_dir):
         with open(acc_info_dat_path, 'r', encoding="utf-8", errors="ignore") as f:
             acc_info = f.read()
         # 获取文件中的最后四行
-        str_line = ''.join(acc_info.strip().splitlines()[-4:])
+        str_line = ''.join(acc_info.strip().splitlines())
         # print(f"最后四行：{str_line}")
         nickname_str_pattern = rf'{acc}(.*?)https://'
         match = re.search(nickname_str_pattern, str_line)

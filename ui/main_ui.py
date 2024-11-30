@@ -92,10 +92,22 @@ class MainWindow:
                                               command=self.manual_login_account, style='Custom.TButton')
         self.manual_login_button.pack(side=tk.LEFT)
 
+        tab_control = ttk.Notebook(self.root)
+
+        # Settings Tab
+        self.settings_tab = ttk.Frame(tab_control)
+        tab_control.add(self.settings_tab, text='经典微信')
+
+        # Allocation Tab (Placeholder)
+        self.allocation_tab = ttk.Frame(tab_control)
+        tab_control.add(self.allocation_tab, text='微信4.0')
+
+        tab_control.pack(expand=1, fill='both')
+
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
-        self.scrollbar_frame = tk.Frame(root)
+        self.scrollbar_frame = tk.Frame(self.settings_tab)
         self.scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        self.canvas = tk.Canvas(root, highlightthickness=0)
+        self.canvas = tk.Canvas(self.settings_tab, highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
 
         # 创建滚动条
@@ -111,9 +123,10 @@ class MainWindow:
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
         self.show_setting_error()
+
         if self.new is True:
             self.root.after(3000, self.open_update_log)
-            self.root.after(3000, partial(func_file.mov_backup, new=self.new))
+            self.root.after(3000, lambda: func_file.mov_backup(new=self.new))
 
     def create_status_bar(self):
         """创建状态栏"""
@@ -268,8 +281,7 @@ class MainWindow:
             self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
             self.program_file_menu.add_command(label="打开", command=func_file.open_program_file)
             self.program_file_menu.add_command(label="清除",
-                                              command=partial(func_file.mov_backup,
-                                                              self.create_main_frame_and_menu))
+                                              command=partial(func_file.mov_backup))
 
         # >统计数据
         self.statistic_menu = tk.Menu(self.file_menu, tearoff=0)
@@ -279,7 +291,7 @@ class MainWindow:
                                         command=partial(func_file.clear_statistic_data,
                                                         self.create_main_frame_and_menu))
         # -打开主dll所在文件夹
-        self.file_menu.add_command(label="查看DLL", command=func_file.open_dll_dir_path)
+        self.file_menu.add_command(label="查看DLL", command=func_file.open_dll_dir)
         # -创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=func_file.create_app_lnk)
         # -创建快捷启动

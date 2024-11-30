@@ -137,19 +137,20 @@ def get_acc_wrapped_display_name(account) -> str:
 
 
 def silent_get_and_config(login, logout, data_dir, callback):
+    # TODO: 不能只检测末尾几行
     # 悄悄执行检测昵称和头像
     need_to_notice = False
     # 1. 获取所有账号节点的url和昵称，将空的账号返回
     accounts_need_to_get_avatar = []
     accounts_need_to_get_nickname = []
-    print(login, logout)
+    # print(login, logout)
     for acc in itertools.chain(login, logout):
         avatar_url, nickname = subfunc_file.get_acc_details_from_acc_json(acc, avatar_url=None, nickname=None)
         if avatar_url is None:
             accounts_need_to_get_avatar.append(acc)
         if nickname is None:
             accounts_need_to_get_nickname.append(acc)
-    print(accounts_need_to_get_avatar, accounts_need_to_get_nickname)
+    # print(accounts_need_to_get_avatar, accounts_need_to_get_nickname)
     # 2. 对待获取url的账号遍历尝试获取
     if len(accounts_need_to_get_avatar) > 0:
         changed = subfunc_file.get_avatar_url_from_acc_info_file(accounts_need_to_get_avatar, data_dir)

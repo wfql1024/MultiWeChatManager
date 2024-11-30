@@ -5,7 +5,7 @@ import shutil
 from resources import Config
 import time
 import subprocess
-import process_utils  # 假设这是自定义的模块，提供进程相关功能
+from utils import process_utils
 
 
 def close_handles_by_matches(handle_exe, matches):
@@ -137,8 +137,8 @@ def close_all_old_wechat_mutex_by_handle(handle_exe):
 if __name__ == '__main__':
     close_all_new_weixin_mutex_by_handle(Config.HANDLE_EXE_PATH)
     # 构建源文件和目标文件路径
-    source_dir = r"E:\Now\Desktop\不吃鱼的猫"
-    # source_dir = r"E:\Now\Desktop\极峰创科"
+    # source_dir = r"E:\Now\Desktop\不吃鱼的猫"
+    source_dir = r"E:\Now\Desktop\极峰创科"
     target_dir = r'E:\data\Tencent\xwechat_files\all_users\config'
 
     # 如果目录存在，先删除

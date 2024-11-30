@@ -4,9 +4,52 @@ import os
 import re
 
 import win32api
+import ctypes
+import os
+import sys
 
+# Windows API 常量
+FO_DELETE = 0x03
+FOF_ALLOWUNDO = 0x40
 
-# from datetime import datetime
+# 设置 SHFileOperation 结构
+class SHFileOpStruct(ctypes.Structure):
+    _fields_ = [
+        ("hwnd", ctypes.c_void_p),
+        ("wFunc", ctypes.c_uint),
+        ("pFrom", ctypes.c_wchar_p),
+        ("pTo", ctypes.c_wchar_p),
+        ("fFlags", ctypes.c_uint),
+        ("fAnyOperationsAborted", ctypes.c_bool),
+        ("hNameMappings", ctypes.c_void_p),
+        ("lpszProgressTitle", ctypes.c_wchar_p)
+    ]
+
+def move_to_recycle_bin(file_path):
+    # 确保文件存在
+    if not os.path.exists(file_path):
+        print(f"文件不存在: {file_path}")
+        return False
+
+    # 将文件路径转换为字符串并以 null 结尾
+    file_path = file_path + "\0"
+
+    # 创建 SHFileOpStruct 实例
+    file_op = SHFileOpStruct()
+    file_op.wFunc = FO_DELETE
+    file_op.pFrom = file_path
+    file_op.fFlags = FOF_ALLOWUNDO  # 允许撤销操作（即放入回收站）
+
+    # 调用 Windows API
+    result = ctypes.windll.shell32.SHFileOperationW(ctypes.byref(file_op))
+
+    # 返回操作是否成功
+    if result == 0:
+        print(f"文件已成功移动到回收站: {file_path}")
+        return True
+    else:
+        print(f"文件移动失败，错误代码: {result}")
+        return False
 
 
 def get_recent_folders_from_dir(directory, minutes=720):
@@ -107,6 +150,7 @@ def get_sorted_full_versions(versions):
     return sorted_versions
 
 
-# if __name__ == '__main__':
-#     md5 = calculate_md5(r'E:\Now\Desktop\MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip')
-#     print(md5)
+if __name__ == '__main__':
+    # 测试
+    file_to_delete = r"E:\Now\Desktop\微信多开管理器_调试版.lnk"
+    move_to_recycle_bin(file_to_delete)

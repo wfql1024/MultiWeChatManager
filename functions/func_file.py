@@ -10,7 +10,7 @@ from win32com.client import Dispatch
 
 from functions import func_setting
 from resources import Config
-from utils import image_utils
+from utils import image_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -76,8 +76,8 @@ def open_program_file():
         executable_path = sys.executable
         # 打开文件夹
         shell = win32com.client.Dispatch("WScript.Shell")
-        shell.CurrentDirectory = executable_path
-        shell.Run(f'explorer /select,"WeChatWin.dll"')
+        shell.CurrentDirectory = os.path.dirname(executable_path)
+        shell.Run(f'explorer /select,"{os.path.basename(executable_path)}"')
     else:
         messagebox.showinfo("提醒", "请从打包环境中使用此功能")
         return
@@ -85,7 +85,7 @@ def open_program_file():
 
 def mov_backup(new=None):
     if getattr(sys, 'frozen', False):  # 打包环境
-        executable_dir = os.path.basename(sys.executable)
+        executable_dir = os.path.dirname(sys.executable)
     else:
         messagebox.showinfo("提醒", "请从打包环境中使用此功能")
         return
@@ -108,14 +108,14 @@ def mov_backup(new=None):
                 item_path = os.path.join(executable_dir, item)
                 if os.path.isdir(item_path) and item.startswith("[") and item.endswith("]"):
                     dir_path = os.path.join(executable_dir, item)
-                    # 将文件夹移动到回收站
-                    try:
-                        shutil.move(dir_path, "C:\\$Recycle.Bin")
-                        print(f"已移动到回收站: {dir_path}")
-                    except Exception as e:
-                        print(f"无法移动 {dir_path} 到回收站: {e}")
+                    file_utils.move_to_recycle_bin(dir_path)
             except Exception as e:
                 logger.error(e)
+                messagebox.showerror("错误", f"移动文件夹到回收站时发生错误：\n"
+                                             f"{str(e)}\n将打开程序文件夹")
+                open_program_file()
+        messagebox.showinfo("成功", "已成功移动到回收站！")
+
 
 
 def clear_statistic_data(after):
@@ -134,13 +134,13 @@ def clear_statistic_data(after):
         after()
 
 
-def open_dll_dir_path():
+def open_dll_dir():
     """打开注册表所在文件夹，并将光标移动到文件"""
-    dll_dir_path = func_setting.get_wechat_dll_dir()
-    if os.path.exists(dll_dir_path):
+    dll_dir = func_setting.get_wechat_dll_dir()
+    if os.path.exists(dll_dir):
         # 打开文件夹
         shell = win32com.client.Dispatch("WScript.Shell")
-        shell.CurrentDirectory = dll_dir_path
+        shell.CurrentDirectory = dll_dir
         shell.Run(f'explorer /select,"WeChatWin.dll"')
 
 
@@ -375,3 +375,11 @@ def reset(after):
             messagebox.showinfo("拒绝访问", "请确保微信已全部退出。")
     else:
         messagebox.showinfo("操作取消", "重置操作已取消。")
+
+if __name__ == '__main__':
+    pass
+#     executable_path = r"D:\SpaceDev\MyProj\MultiWeChatManager\dist\微信多开管理器\微信多开管理器.exe"
+#     # 打开文件夹
+#     shell = win32com.client.Dispatch("WScript.Shell")
+#     shell.CurrentDirectory = os.path.dirname(executable_path)
+#     shell.Run(f'explorer /select,"{os.path.basename(executable_path)}"')
