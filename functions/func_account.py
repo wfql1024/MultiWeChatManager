@@ -10,6 +10,7 @@ import psutil
 from PIL import Image
 
 from functions import func_setting, subfunc_file, func_config
+from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, image_utils, string_utils, hwnd_utils
@@ -104,7 +105,7 @@ def get_acc_avatar_from_files(account):
         print("图像文件读取失败:", e)
     except Exception as e:
         print("所有方法都失败，创建空白头像:", e)
-        return Image.new('RGB', (44, 44), color='white')
+        return Image.new('RGB', Constants.BLANK_AVT_SIZE, color='white')
 
 
 def get_acc_origin_display_name(account) -> str:
@@ -137,7 +138,6 @@ def get_acc_wrapped_display_name(account) -> str:
 
 
 def silent_get_and_config(login, logout, data_dir, callback):
-    # TODO: 不能只检测末尾几行
     # 悄悄执行检测昵称和头像
     need_to_notice = False
     # 1. 获取所有账号节点的url和昵称，将空的账号返回

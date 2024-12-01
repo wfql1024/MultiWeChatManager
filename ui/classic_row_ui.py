@@ -7,6 +7,7 @@ from tkinter import ttk
 from PIL import ImageTk
 
 from functions import func_config, func_login, func_account, subfunc_file, subfunc_wechat
+from resources import Constants
 from ui import detail_ui
 from utils import string_utils, widget_utils
 from utils.logger_utils import mylogger as logger
@@ -29,13 +30,11 @@ class AccountRow:
         self.size = None
         self.update_top_checkbox_callback = update_top_checkbox_callback
         self.login_status = login_status
-        style = ttk.Style()
-        style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
         # print(f"初始化用时{time.time() - self.start_time:.4f}秒")
 
         # 行框架=复选框+头像标签+账号标签+按钮区域+配置标签
         self.row_frame = ttk.Frame(parent_frame)
-        self.row_frame.pack(fill=tk.X, pady=2)
+        self.row_frame.pack(fill=tk.X, pady=Constants.CLZ_ROW_FRM_PAD_Y)
 
         # 复选框
         self.checkbox_var = tk.BooleanVar(value=False)
@@ -59,7 +58,7 @@ class AccountRow:
                 self.account_label = ttk.Label(self.row_frame, text=wrapped_display_name, style="Mutex.TLabel")
             else:
                 self.account_label = ttk.Label(self.row_frame, text=wrapped_display_name)
-            self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
+            self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=Constants.CLZ_ROW_LBL_PAD_X)
         except Exception as e:
             logger.warning(e)
             # 清理 display_name
@@ -68,7 +67,7 @@ class AccountRow:
                 self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name, style="Mutex.TLabel")
             else:
                 self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name)
-            self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=(0, 10))
+            self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=Constants.CLZ_ROW_LBL_PAD_X)
 
         # print(f"加载账号显示区域用时{time.time() - self.start_time:.4f}秒")
 
@@ -79,28 +78,26 @@ class AccountRow:
         # 配置标签
         config_status = func_config.get_config_status_by_account(account, self.data_path)
         self.config_status_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
-        self.config_status_label.pack(side=tk.RIGHT, padx=5, fill=tk.X, expand=True)
+        self.config_status_label.pack(side=tk.RIGHT, padx=Constants.CLZ_CFG_LBL_PAD_X,
+                                      fill=tk.X, expand=True)
 
         # 登录/配置按钮
         if login_status == "login":
             # 配置按钮
             self.config_button_text = "重新配置" if config_status != "无配置" else "添加配置"
             self.config_button = ttk.Button(
-                self.button_frame,
-                text=self.config_button_text,
-                style='Custom.TButton',
-                width=8,
+                self.button_frame, text=self.config_button_text, style='Custom.TButton',
                 command=partial(self.create_config, account, self.multiple_status)
             )
-            self.config_button.pack(side=tk.RIGHT, padx=0)
+            self.config_button.pack(side=tk.RIGHT)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
             for child in self.row_frame.winfo_children():
                 child.bind("<Button-1>", self.toggle_checkbox, add="+")
         else:
             # 登录按钮
-            self.login_button = ttk.Button(self.button_frame, text="自动登录", style='Custom.TButton', width=8,
+            self.login_button = ttk.Button(self.button_frame, text="自动登录", style='Custom.TButton',
                                            command=partial(self.auto_login_account, account))
-            self.login_button.pack(side=tk.RIGHT, padx=0)
+            self.login_button.pack(side=tk.RIGHT)
 
             if config_status == "无配置":
                 # 无配置禁用按钮且置底
@@ -139,15 +136,15 @@ class AccountRow:
         """
         try:
             img = func_account.get_acc_avatar_from_files(account)
-            img = img.resize((44, 44))
+            img = img.resize(Constants.CLZ_AVT_LBL_SIZE)
             photo = ImageTk.PhotoImage(img)
             avatar_label = ttk.Label(self.row_frame, image=photo)
             avatar_label.image = photo  # 保持对图像的引用
+            return avatar_label
         except Exception as e:
             print(f"Error creating avatar label: {e}")
-            # 如果加载失败，使用一个空白标签
-            avatar_label = ttk.Label(self.row_frame, width=10)
-        return avatar_label
+            # # 如果加载失败，使用一个空白标签
+            # avatar_label = ttk.Label(self.row_frame, width=10)
 
     def on_single_click(self, account):
         """处理单击事件，并在检测到双击时取消"""
@@ -201,7 +198,8 @@ class ClassicRowUI:
         if len(login) != 0:
             # 已登录框架=已登录标题+已登录列表
             self.login_frame = ttk.Frame(self.main_frame)
-            self.login_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
+            self.login_frame.pack(side=tk.TOP, fill=tk.X,
+                                  padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
 
             # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
             self.login_title = ttk.Frame(self.login_frame)
@@ -217,17 +215,18 @@ class ClassicRowUI:
             self.login_checkbox.pack(side=tk.LEFT)
 
             # 已登录标签
-            self.login_label = ttk.Label(self.login_title, text="已登录账号：", font=("", 10, "bold"))
-            self.login_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            self.login_label = ttk.Label(self.login_title, text="已登录账号：",
+                                         font=("", Constants.LOG_IO_LBL_FONTSIZE, "bold"))
+            self.login_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 已登录按钮区域=一键退出
             self.login_btn_frame = ttk.Frame(self.login_title)
             self.login_btn_frame.pack(side=tk.RIGHT)
 
             # 一键退出
-            self.one_key_quit = ttk.Button(self.login_btn_frame, text="一键退出", width=8,
+            self.one_key_quit = ttk.Button(self.login_btn_frame, text="一键退出",
                                            command=self.one_click_to_quit, style='Custom.TButton')
-            self.one_key_quit.pack(side=tk.RIGHT, pady=0)
+            self.one_key_quit.pack(side=tk.RIGHT)
 
             # 加载已登录列表
             for account in login:
@@ -238,7 +237,7 @@ class ClassicRowUI:
         if len(logout) != 0:
             # 未登录框架=未登录标题+未登录列表
             self.logout_frame = ttk.Frame(self.main_frame)
-            self.logout_frame.pack(side=tk.TOP, fill=tk.X, pady=15, padx=10)
+            self.logout_frame.pack(side=tk.TOP, fill=tk.X, pady=Constants.LOG_IO_FRM_PAD_Y, padx=Constants.LOG_IO_FRM_PAD_X)
 
             # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
             self.logout_title = ttk.Frame(self.logout_frame)
@@ -254,17 +253,18 @@ class ClassicRowUI:
             self.logout_checkbox.pack(side=tk.LEFT)
 
             # 未登录标签
-            self.logout_label = ttk.Label(self.logout_title, text="未登录账号：", font=("", 10, "bold"))
-            self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            self.logout_label = ttk.Label(self.logout_title, text="未登录账号：",
+                                          font=("", Constants.LOG_IO_LBL_FONTSIZE, "bold"))
+            self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 未登录按钮区域=一键登录
             self.logout_bottom_frame = ttk.Frame(self.logout_title)
             self.logout_bottom_frame.pack(side=tk.RIGHT)
 
             # 一键登录
-            self.one_key_auto_login = ttk.Button(self.logout_bottom_frame, text="一键登录", width=8,
+            self.one_key_auto_login = ttk.Button(self.logout_bottom_frame, text="一键登录",
                                                  command=self.auto_login_selected_accounts, style='Custom.TButton')
-            self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
+            self.one_key_auto_login.pack(side=tk.RIGHT)
 
             # 加载未登录列表
             for account in logout:

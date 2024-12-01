@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox
 from PIL import ImageTk, Image
 
 from functions import func_config, func_login, func_account, subfunc_file, func_setting, subfunc_wechat
+from resources import Constants
 from ui import detail_ui
 from utils import widget_utils, string_utils
 from utils.logger_utils import mylogger as logger
@@ -51,14 +52,15 @@ class TreeviewRowUI:
         logins, logouts, wechat_processes = result
         # 调整行高
         style = ttk.Style()
-        style.configure("RowTreeview", background="#FFFFFF", foreground="black", rowheight=50,
-                        selectmode="none", borderwidth=20)
+        style.configure("RowTreeview", background="#FFFFFF", foreground="black",
+                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="none")
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
 
         if len(logins) != 0:
             # 已登录框架=已登录标题+已登录列表
             self.login_frame = ttk.Frame(self.main_frame)
-            self.login_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=(10, 0))
+            self.login_frame.pack(side=tk.TOP, fill=tk.X,
+                                  padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
 
             # 已登录标题=已登录复选框+已登录标签+已登录按钮区域
             self.login_title = ttk.Frame(self.login_frame)
@@ -74,22 +76,23 @@ class TreeviewRowUI:
             self.login_checkbox.pack(side=tk.LEFT)
 
             # 已登录标签
-            self.login_label = ttk.Label(self.login_title, text="已登录账号：", font=("", 10, "bold"))
-            self.login_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            self.login_label = ttk.Label(self.login_title, text="已登录账号：",
+                                         font=("", Constants.LOG_IO_LBL_FONTSIZE, "bold"))
+            self.login_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 已登录按钮区域=一键退出
             self.login_button_frame = ttk.Frame(self.login_title)
             self.login_button_frame.pack(side=tk.RIGHT)
 
             # 一键退出
-            self.one_key_quit = ttk.Button(self.login_button_frame, text="一键退出", width=8,
+            self.one_key_quit = ttk.Button(self.login_button_frame, text="一键退出",
                                            command=self.quit_selected_accounts, style='Custom.TButton')
-            self.one_key_quit.pack(side=tk.RIGHT, pady=0)
+            self.one_key_quit.pack(side=tk.RIGHT)
             # 配置
-            self.config_btn = ttk.Button(self.login_button_frame, text="❐配 置", width=8, style='Custom.TButton',
+            self.config_btn = ttk.Button(self.login_button_frame, text="❐配 置", style='Custom.TButton',
                                          command=partial(self.create_config, multiple_status=self.multiple_status)
                                          )
-            self.config_btn.pack(side=tk.RIGHT, pady=0)
+            self.config_btn.pack(side=tk.RIGHT)
             widget_utils.disable_button_and_add_tip(
                 self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有符号表示推荐配置的账号")
 
@@ -106,7 +109,8 @@ class TreeviewRowUI:
         if len(logouts) != 0:
             # 未登录框架=未登录标题+未登录列表
             self.logout_frame = ttk.Frame(self.main_frame)
-            self.logout_frame.pack(side=tk.TOP, fill=tk.X, pady=5, padx=10)
+            self.logout_frame.pack(side=tk.TOP, fill=tk.X,
+                                  padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
 
             # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
             self.logout_title = ttk.Frame(self.logout_frame)
@@ -122,17 +126,18 @@ class TreeviewRowUI:
             self.logout_checkbox.pack(side=tk.LEFT)
 
             # 未登录标签
-            self.logout_label = ttk.Label(self.logout_title, text="未登录账号：", font=("", 10, "bold"))
-            self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=10)
+            self.logout_label = ttk.Label(self.logout_title, text="未登录账号：",
+                                         font=("", Constants.LOG_IO_LBL_FONTSIZE, "bold"))
+            self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 未登录按钮区域=一键登录
             self.logout_button_frame = ttk.Frame(self.logout_title)
             self.logout_button_frame.pack(side=tk.RIGHT)
 
             # 一键登录
-            self.one_key_auto_login = ttk.Button(self.logout_button_frame, text="一键登录", width=8,
+            self.one_key_auto_login = ttk.Button(self.logout_button_frame, text="一键登录",
                                                  command=self.auto_login_selected_accounts, style='Custom.TButton')
-            self.one_key_auto_login.pack(side=tk.RIGHT, pady=0)
+            self.one_key_auto_login.pack(side=tk.RIGHT)
 
             # 更新顶部复选框状态
             self.logout_tree = self.create_table("logout")
@@ -160,14 +165,18 @@ class TreeviewRowUI:
             tree.column(col, anchor='center')  # 设置列宽
 
         # 特定列的宽度和样式设置
-        tree.column("#0", minwidth=64, width=64, stretch=tk.NO)
-        tree.column("pid", minwidth=80, width=80, anchor='e', stretch=tk.NO)
-        tree.column("配置", minwidth=144, width=144, anchor='center', stretch=tk.NO)
-        tree.column(" ", minwidth=140, width=10, anchor='w')
+        tree.column("#0", minwidth=Constants.TREE_ID_MIN_WIDTH,
+                    width=Constants.TREE_ID_WIDTH, stretch=tk.NO)
+        tree.column("pid", minwidth=Constants.TREE_PID_MIN_WIDTH,
+                    width=Constants.TREE_PID_WIDTH, anchor='e', stretch=tk.NO)
+        tree.column("配置", minwidth=Constants.TREE_CFG_MIN_WIDTH,
+                    width=Constants.TREE_CFG_WIDTH, anchor='center', stretch=tk.NO)
+        tree.column(" ", minwidth=Constants.TREE_DSP_MIN_WIDTH,
+                    width=Constants.TREE_DSP_WIDTH, anchor='w')
         tree.column("原始微信号", anchor='center')
         tree.column("当前微信号", anchor='center')
 
-        tree.pack(fill=tk.X, expand=True, padx=(10, 0), pady=(0, 10))
+        tree.pack(fill=tk.X, expand=True, padx=(10, 0))
 
         selected_bg = "#B2E0F7"
         hover_bg = "#E5F5FD"
@@ -200,7 +209,7 @@ class TreeviewRowUI:
             )
 
             img = func_account.get_acc_avatar_from_files(account)
-            img = img.resize((44, 44), Image.Resampling.NEAREST)
+            img = img.resize(Constants.TREE_AVT_LBL_SIZE, Image.Resampling.NEAREST)
             photo = ImageTk.PhotoImage(img)
 
             self.photo_images.append(photo)

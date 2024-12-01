@@ -14,12 +14,11 @@ from tkinter import ttk
 import psutil
 
 from functions import func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file, func_update
-from resources import Strings
-from resources.config import Config
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui, loading_ui
 from utils import hwnd_utils, debug_utils, file_utils
 from utils.logger_utils import mylogger as logger
+from resources import Strings, Config, Constants
 
 
 class MainWindow:
@@ -68,12 +67,11 @@ class MainWindow:
 
         subfunc_file.merge_refresh_nodes()
         style = ttk.Style()
-        style.configure('Custom.TButton', padding=(5, 5))  # 水平方向20像素，垂直方向10像素的内边距
+        style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD, width=Constants.CUS_BTN_WIDTH)  # 水平方向20像素，垂直方向10像素的内边距
 
         self.root.title("微信多开管理器")
         self.root.iconbitmap(Config.PROJ_ICO_PATH)
-        self.window_width = 500
-        self.window_height = 660
+        self.window_width, self.window_height = Constants.PROJ_WND_SIZE
         print(f"初始化检查.........................................................")
 
         # 创建状态栏
@@ -86,9 +84,9 @@ class MainWindow:
         self.update_status()
 
         # 底部框架=手动登录
-        self.bottom_frame = ttk.Frame(root, padding="10")
+        self.bottom_frame = ttk.Frame(root, padding=Constants.BTN_FRAME_PAD)
         self.bottom_frame.pack(side=tk.BOTTOM)
-        self.manual_login_button = ttk.Button(self.bottom_frame, text="手动登录", width=8,
+        self.manual_login_button = ttk.Button(self.bottom_frame, text="手动登录",
                                               command=self.manual_login_account, style='Custom.TButton')
         self.manual_login_button.pack(side=tk.LEFT)
 
@@ -102,7 +100,7 @@ class MainWindow:
         self.allocation_tab = ttk.Frame(tab_control)
         tab_control.add(self.allocation_tab, text='微信4.0')
 
-        tab_control.pack(expand=1, fill='both')
+        tab_control.pack(expand=True, fill='both')
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
         self.scrollbar_frame = tk.Frame(self.settings_tab)
@@ -116,7 +114,7 @@ class MainWindow:
         # 创建一个Frame在Canvas中
         self.main_frame = ttk.Frame(self.canvas)
         # 将main_frame放置到Canvas的窗口中，并禁用Canvas的宽高跟随调整
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
+        self.canvas_window = self.canvas.create_window(Constants.CANVAS_START_POS, window=self.main_frame, anchor="nw")
         # 将滚动条连接到Canvas
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         # 配置Canvas的滚动区域
@@ -124,6 +122,7 @@ class MainWindow:
 
         self.show_setting_error()
 
+        # 初次使用
         if self.new is True:
             self.root.after(3000, self.open_update_log)
             self.root.after(3000, lambda: func_file.mov_backup(new=self.new))
@@ -132,8 +131,8 @@ class MainWindow:
         """创建状态栏"""
         print(f"加载状态栏.........................................................")
         self.status_var = tk.StringVar()
-        self.status_bar = tk.Label(self.root, textvariable=self.status_var, bd=1, relief=tk.SUNKEN, anchor=tk.W,
-                                   height=1)
+        self.status_bar = tk.Label(self.root, textvariable=self.status_var, bd=Constants.STATUS_BAR_BD,
+                                   relief=tk.SUNKEN, anchor=tk.W, height=Constants.STATUS_BAR_HEIGHT)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         # 绑定点击事件
         if self.debug:
@@ -164,11 +163,7 @@ class MainWindow:
                 self.loading_class.destroy()
                 self.loading_class = None
             # 设置主窗口位置
-            screen_width = self.root.winfo_screenwidth()
-            screen_height = self.root.winfo_screenheight()
-            x = (screen_width - self.window_width) // 2
-            y = int((screen_height - 50 - self.window_height - 60) // 2)
-            self.root.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
+            hwnd_utils.bring_wnd_to_center(self.root, self.window_width, self.window_height)
             self.root.deiconify()
         try:
             # 线程启动获取登录情况和渲染列表
@@ -226,26 +221,10 @@ class MainWindow:
         for widget in self.main_frame.winfo_children():
             widget.destroy()
         error_label = ttk.Label(self.main_frame, text="路径设置错误，请点击按钮修改", foreground="red")
-        error_label.pack(pady=20)
-        self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
+        error_label.pack(padx=Constants.ERR_LBL_PAD_X, pady=Constants.ERR_LBL_PAD_Y)
+        self.settings_button = ttk.Button(self.main_frame, text="设置",
                                           command=self.open_settings, style='Custom.TButton')
         self.settings_button.pack()
-
-    def center_main_window(self):
-        """路径检查完毕后进入，销毁等待窗口，居中显示主窗口"""
-        if hasattr(self, 'loading_class') and self.loading_class:
-            print("主程序关闭等待窗口")
-            self.loading_class.destroy()
-            self.loading_class = None
-        self.root.deiconify()
-
-        # 设置主窗口位置
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        x = (screen_width - self.window_width) // 2
-        y = int((screen_height - 50 - self.window_height - 60) // 2)
-        self.root.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
-
 
     def create_menu_bar(self):
         """创建菜单栏"""
@@ -253,16 +232,16 @@ class MainWindow:
         self.root.config(menu=self.menu_bar)
 
         # ————————————————————————————文件菜单————————————————————————————
-        self.file_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.file_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="文件", menu=self.file_menu)
         # >用户文件
-        self.user_file_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.user_file_menu = tk.Menu(self.file_menu, tearoff=False)
         self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
         self.user_file_menu.add_command(label="打开", command=func_file.open_user_file)
         self.user_file_menu.add_command(label="清除",
                                         command=partial(func_file.clear_user_file, self.create_main_frame_and_menu))
         # >配置文件
-        self.config_file_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.config_file_menu = tk.Menu(self.file_menu, tearoff=False)
         if not self.data_dir:
             self.file_menu.add_command(label="配置文件  未获取")
             self.file_menu.entryconfig(f"配置文件  未获取", state="disable")
@@ -273,7 +252,7 @@ class MainWindow:
                                               command=partial(func_file.clear_config_file,
                                                               self.create_main_frame_and_menu))
         # >配置文件
-        self.program_file_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.program_file_menu = tk.Menu(self.file_menu, tearoff=False)
         if not self.data_dir:
             self.file_menu.add_command(label="程序目录  未获取")
             self.file_menu.entryconfig(f"程序目录  未获取", state="disable")
@@ -284,7 +263,7 @@ class MainWindow:
                                               command=partial(func_file.mov_backup))
 
         # >统计数据
-        self.statistic_menu = tk.Menu(self.file_menu, tearoff=0)
+        self.statistic_menu = tk.Menu(self.file_menu, tearoff=False)
         self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
         self.statistic_menu.add_command(label="查看", command=self.open_statistic)
         self.statistic_menu.add_command(label="清除",
@@ -299,14 +278,14 @@ class MainWindow:
             func_file.create_multiple_lnk, self.multiple_status, self.create_main_frame_and_menu))
 
         # ————————————————————————————编辑菜单————————————————————————————
-        self.edit_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
         # -刷新
         self.edit_menu.add_command(label="刷新", command=self.create_main_frame_and_menu)
 
         # ————————————————————————————视图菜单————————————————————————————
         self.chosen_view = func_setting.fetch_setting_or_set_default("view")
-        self.view_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.view_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="视图", menu=self.view_menu)
 
         # 添加单选框选项
@@ -317,7 +296,7 @@ class MainWindow:
                                        command=self.change_tree_view)
         self.view_menu.add_separator()  # ————————————————分割线————————————————
         # 显示当前选择的视图
-        self.view_options_menu = tk.Menu(self.view_menu, tearoff=0)
+        self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
         if self.chosen_view == "classic":
             # 添加经典视图的菜单项
@@ -327,7 +306,7 @@ class MainWindow:
             pass
 
         # ————————————————————————————设置菜单————————————————————————————
-        self.settings_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.settings_menu = tk.Menu(self.menu_bar, tearoff=False)
         # -应用设置
         login_size = subfunc_file.get_login_size_from_setting_ini()
         if not login_size or login_size == "" or login_size == "None":
@@ -342,7 +321,7 @@ class MainWindow:
         if self.revoke_status == "不可用":
             self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}", state="disabled")
         elif self.revoke_status.startswith("错误"):
-            self.revoke_err = tk.Menu(self.settings_menu, tearoff=0)
+            self.revoke_err = tk.Menu(self.settings_menu, tearoff=False)
             self.settings_menu.add_cascade(label="防撤回   错误!", menu=self.revoke_err, foreground="red")
             self.revoke_err.add_command(label=f"[点击复制]{self.revoke_status}", foreground="red",
                                         command=lambda: self.root.clipboard_append(self.revoke_status))
@@ -355,7 +334,7 @@ class MainWindow:
         if self.multiple_status == "不可用":
             self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}", state="disabled")
         elif self.multiple_status.startswith("错误"):
-            self.multiple_err = tk.Menu(self.settings_menu, tearoff=0)
+            self.multiple_err = tk.Menu(self.settings_menu, tearoff=False)
             self.settings_menu.add_cascade(label="全局多开 错误!", menu=self.multiple_err, foreground="red")
             self.multiple_err.add_command(label=f"[点击复制]{self.multiple_status}", foreground="red",
                                           command=lambda: self.root.clipboard_append(self.multiple_status))
@@ -369,7 +348,7 @@ class MainWindow:
             self.settings_menu.add_command(label="子程序   不需要")
             self.settings_menu.entryconfig("子程序   不需要", state="disable")
         else:
-            self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=0)
+            self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=False)
             # 获取已选择的子程序（假设 func_setting.fetch_sub_exe() 返回 'python', 'handle' 或其他值）
             chosen_sub_exe = func_setting.fetch_setting_or_set_default("sub_exe")
             self.chosen_sub_exe_var.set(chosen_sub_exe)  # 设置初始选中的子程序
@@ -422,7 +401,7 @@ class MainWindow:
         if self.need_to_update is True:
             help_text = "✨帮助"
             about_text = "✨关于"
-        self.help_menu = tk.Menu(self.menu_bar, tearoff=0)
+        self.help_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label=help_text, menu=self.help_menu)
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
@@ -471,8 +450,8 @@ class MainWindow:
             widget.destroy()
         if success is not True:
             error_label = ttk.Label(self.main_frame, text="无法获取账户列表，请检查路径设置", foreground="red")
-            error_label.pack(pady=20)
-            self.settings_button = ttk.Button(self.main_frame, text="设置", width=8,
+            error_label.pack(pady=Constants.ERR_LBL_PAD)
+            self.settings_button = ttk.Button(self.main_frame, text="设置",
                                               command=self.open_settings, style='Custom.TButton')
             self.settings_button.pack()
             self.edit_menu.entryconfig("刷新", state="normal")
