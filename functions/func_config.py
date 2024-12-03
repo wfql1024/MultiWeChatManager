@@ -4,9 +4,8 @@ import time
 from datetime import datetime
 from tkinter import messagebox
 
-from functions import func_setting, subfunc_wechat
+from functions import func_setting, subfunc_wechat, subfunc_file
 from utils import hwnd_utils
-from utils.hwnd_utils import close_wnd_by_name
 from utils.logger_utils import mylogger as logger
 
 
@@ -35,7 +34,7 @@ def use_config(account):
     :param account: 账号
     :return: 是否成功应用配置
     """
-    data_path = func_setting.get_wechat_data_dir()
+    data_path = func_setting.get_sw_data_dir()
     if not data_path:
         messagebox.showerror("错误", "无法获取WeChat数据路径")
         return False
@@ -56,13 +55,15 @@ def use_config(account):
     return True
 
 
-def create_config(account):
+def create_config(account, sw="WeChat"):
     """
     创建账号的登录配置文件
+    :param sw: 选择软件
     :param account: 账号
     :return: 是否创建成功
     """
-    data_path = func_setting.get_wechat_data_dir()
+    data_path = func_setting.get_sw_data_dir(sw)
+    login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(sw, login_wnd_class=None)
     if data_path is None:
         messagebox.showerror("错误", "无法获取WeChat数据路径")
         return False
@@ -76,7 +77,7 @@ def create_config(account):
         if os.path.exists(dest_path):
             os.remove(dest_path)
         shutil.copy2(source_path, dest_path, follow_symlinks=False)
-        close_wnd_by_name("WeChatLoginWndForPC")
+        hwnd_utils.close_wnd_by_name(login_wnd_class)
         messagebox.showinfo("成功", f"配置文件已生成：{dest_filename}")
         return True
     except Exception as e:
@@ -85,7 +86,7 @@ def create_config(account):
         return False
 
 
-def test(m_class, account, multiple_status):
+def test(m_class, account, multiple_status, tab="WeChat"):
     """
     尝试打开微信，让用户判断是否是对应的账号，根据用户结果去创建配置或结束
     :param account: 账号
@@ -97,11 +98,14 @@ def test(m_class, account, multiple_status):
             "确认",
             "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
     ):
-        subfunc_wechat.clear_idle_wnd_and_process()
+        redundant_wnd_classes, = subfunc_file.get_details_from_remote_setting_json(tab, redundant_wnd_class=None)
+        hwnd_utils.close_all_wnd_by_classes(redundant_wnd_classes)
+        subfunc_wechat.kill_wechat_multiple_processes(tab)
         time.sleep(0.5)
-        has_mutex_dict = subfunc_wechat.get_mutex_dict()
-        sub_exe_process, _ = subfunc_wechat.open_wechat(multiple_status, has_mutex_dict)
-        wechat_hwnd = hwnd_utils.wait_for_wnd_open("WeChatLoginWndForPC", timeout=8)
+        has_mutex_dict = subfunc_wechat.get_mutex_dict(tab)
+        sub_exe_process, _ = subfunc_wechat.open_wechat(multiple_status, has_mutex_dict, tab)
+        login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(tab, login_wnd_class=None)
+        wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, timeout=8)
         if wechat_hwnd:
             if sub_exe_process:
                 sub_exe_process.terminate()
@@ -109,7 +113,7 @@ def test(m_class, account, multiple_status):
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
                 create_config(account)
             else:
-                close_wnd_by_name("WeChatLoginWndForPC")
+                hwnd_utils.close_wnd_by_name(login_wnd_class)
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
     m_class.root.after(0, m_class.create_main_frame_and_menu)

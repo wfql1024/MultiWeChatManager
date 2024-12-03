@@ -12,68 +12,71 @@ from utils import json_utils, ini_utils, file_utils, image_utils
 from utils.logger_utils import mylogger as logger
 
 
-def save_wechat_install_path_to_setting_ini(value):
-    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+def save_sw_install_path_to_setting_ini(value, sw="WeChat"):
+    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                          Config.INI_KEY_INSTALL_PATH, value)
 
 
-def save_wechat_data_path_to_setting_ini(value):
-    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+def save_sw_data_dir_to_setting_ini(value, sw="WeChat"):
+    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                          Config.INI_KEY_DATA_PATH, value)
 
 
-def save_wechat_dll_dir_path_to_setting_ini(value):
-    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+def save_sw_dll_dir_to_setting_ini(value, sw="WeChat"):
+    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                          Config.INI_KEY_DLL_DIR_PATH, value)
 
 
 def save_screen_size_to_setting_ini(value):
-    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
                                          Config.INI_KEY_SCREEN_SIZE, value)
 
 
-def save_login_size_to_setting_ini(value):
-    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+def save_sw_login_size_to_setting_ini(value, sw="WeChat"):
+    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                          Config.INI_KEY_LOGIN_SIZE, value)
 
 
-def save_sort_order_to_setting_ini(order):
+def save_sw_sort_order_to_setting_ini(order, sw="WeChat"):
     col, asc = order["login"]
-    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                   Config.INI_KEY["login_col_to_sort"], col)
-    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                   Config.INI_KEY["login_sort_asc"], asc)
     col, asc = order["logout"]
-    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                   Config.INI_KEY["logout_col_to_sort"], col)
-    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                   Config.INI_KEY["logout_sort_asc"], asc)
 
 
 def set_enable_new_func_in_ini(value):
-    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
+    return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
                                          Config.INI_KEY["enable_new_func"], value)
 
 
-def get_wechat_install_path_from_setting_ini():
-    return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                          Config.INI_KEY_INSTALL_PATH)
+def get_sw_install_path_from_setting_ini(sw="WeChat"):
+    return [ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
+                                          Config.INI_KEY_INSTALL_PATH)]
 
 
-def get_wechat_data_dir_from_setting_ini():
-    return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                          Config.INI_KEY_DATA_PATH)
+def get_sw_data_dir_from_setting_ini(sw="WeChat"):
+    # print(sw)
+    results = [ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
+                                              Config.INI_KEY_DATA_PATH)]
+    # print(results)
+    return results
 
 
-def get_wechat_dll_dir_from_setting_ini():
-    return ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_SECTION,
-                                          Config.INI_KEY_DLL_DIR_PATH)
+def get_sw_dll_dir_from_setting_ini(sw="WeChat"):
+    return [ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
+                                          Config.INI_KEY_DLL_DIR_PATH)]
 
 
 def get_screen_size_from_setting_ini():
     result = ini_utils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
+        Config.INI_GLOBAL_SECTION,
         Config.INI_KEY_SCREEN_SIZE
     )
     if not result or result == "":
@@ -83,40 +86,43 @@ def get_screen_size_from_setting_ini():
         return int(screen_width), int(screen_height)
 
 
-def get_login_size_from_setting_ini():
+def get_sw_login_size_from_setting_ini(sw="WeChat"):
     return ini_utils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
-        Config.INI_SECTION,
-        Config.INI_KEY_LOGIN_SIZE
+        sw,
+        Config.INI_KEY['login_size']
     )
 
 
-def update_acc_details_to_acc_json(account, **kwargs):
+def update_acc_details_to_json_by_tab(tab, account, **kwargs):
     """更新账户信息到 JSON"""
     try:
-        account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-        if account not in account_data:
-            account_data[account] = {}
+        data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        if tab not in data:
+            data[tab] = {}
+        tab_info = data.get(tab, {})
+        if account not in tab_info:
+            tab_info[account] = {}
         # 遍历 kwargs 中的所有参数，并更新到 account_data 中
         for key, value in kwargs.items():
-            account_data[account][key] = value
+            tab_info[account][key] = value
             # logger.info(f"在json更新[{account}][{key}]:{string_utils.clean_display_name(str(value))}")
-        json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+        json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
         return True
     except Exception as e:
         logger.error(e)
         return False
 
-
-def get_acc_details_from_acc_json(account: str, **kwargs) -> Tuple[Any, ...]:
+def get_acc_details_from_json_by_tab(tab, account: str, **kwargs) -> Tuple[Any, ...]:
     """
     根据用户输入的变量名，获取对应的账户信息
+    :param tab: 选择软件标签
     :param account: 账户名
     :param kwargs: 需要获取的变量名及其默认值（如 note="", nickname=None）
     :return: 包含所请求数据的元组
     """
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-    account_info = account_data.get(account, {})
+    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    account_info = data.get(tab, {}).get(account, {})
     result = tuple()
     for key, default in kwargs.items():
         value = account_info.get(key, default)
@@ -124,107 +130,121 @@ def get_acc_details_from_acc_json(account: str, **kwargs) -> Tuple[Any, ...]:
         # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
     return result
 
+def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
+    """"""
+    data = json_utils.load_json_data(Config.REMOTE_SETTING_JSON_PATH)
+    info = data.get(tab, {})
+    result = tuple()
+    for key, default in kwargs.items():
+        value = info.get(key, default)
+        result += (value,)
+        # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
+    return result
 
-def clear_all_wechat_in_acc_json():
+def clear_all_wechat_in_acc_json(sw="WeChat"):
     """
     清空登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
     """
     print("清理互斥体记录...")
     # 加载当前账户数据
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-
+    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    tab_info = data.get(sw, {})
     # 检查 all_wechat 节点是否存在
-    if "all_wechat" in account_data:
+    if "all_wechat" in tab_info:
         # 清除 all_wechat 中的所有字段
-        account_data["all_wechat"].clear()
-        print("all_wechat 节点的所有字段已清空")
+        tab_info["all_wechat"].clear()
+        # print(tab_info["all_wechat"])
+        # print("all_wechat 节点的所有字段已清空")
 
     # 保存更新后的数据
-    json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+    json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
     return True
 
 
-def update_all_wechat_in_acc_json():
+def update_all_wechat_in_acc_json(tab="WeChat"):
     """
     清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
     """
     print("构建互斥体记录...")
     # 加载当前账户数据
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-
+    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    tab_info = data.get(tab, {})
     # 初始化 all_wechat 为空字典
     all_wechat = {}
 
     # 遍历所有的账户
-    for account, details in account_data.items():
+    for account, details in tab_info.items():
         pid = details.get("pid")
         # 检查 pid 是否为整数
         if isinstance(pid, int):
             has_mutex = details.get("has_mutex", False)
             all_wechat[str(pid)] = has_mutex
+            # print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
 
     # 更新 all_wechat 到 JSON 文件
-    update_acc_details_to_acc_json("all_wechat", **all_wechat)
+    update_acc_details_to_json_by_tab(tab, "all_wechat", **all_wechat)
     return True
 
 
-def set_all_wechat_values_to_false():
+def set_all_wechat_values_to_false(tab="WeChat"):
     """
     将所有微信进程all_wechat中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
     （因为登录好一个窗口，说明之前所有的微信都没有互斥体了）
     :return: 是否成功
     """
     # 加载当前账户数据
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
+    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
 
+    tab_info = data.get(tab, {})
     # 获取 all_wechat 节点，如果不存在就创建一个空的
-    all_wechat = account_data.get("all_wechat", {})
+    all_wechat = tab_info.get("all_wechat", {})
 
     # 将所有字段的值设置为 False
     for pid in all_wechat:
         all_wechat[pid] = False
 
     # 保存更新后的数据
-    json_utils.save_json_data(Config.ACC_DATA_JSON_PATH, account_data)
+    json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
     return True
 
 
-def update_has_mutex_from_all_wechat():
+def update_has_mutex_from_all_wechat(tab="WeChat"):
     """
     将json中登录列表all_wechat结点中的情况加载回所有已登录账号，适合刷新结束时使用
     :return: 是否成功
     """
-    account_data = json_utils.load_json_data(Config.ACC_DATA_JSON_PATH)
-    if "all_wechat" not in account_data:
-        account_data["all_wechat"] = {}
-    for account, details in account_data.items():
+    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    tab_info = data.get(tab, {})
+    if "all_wechat" not in tab_info:
+        tab_info["all_wechat"] = {}
+    for account, details in tab_info.items():
         if account == "all_wechat":
             continue
         pid = details.get("pid", None)
         if pid and pid is not None:
-            has_mutex = account_data["all_wechat"].get(f"{pid}", True)
-            update_acc_details_to_acc_json(account, has_mutex=has_mutex)
-
+            has_mutex = tab_info["all_wechat"].get(f"{pid}", True)
+            update_acc_details_to_json_by_tab(tab, account, has_mutex=has_mutex)
     return True
 
 
 # 更新手动模式的函数
-def update_manual_time_statistic(sub_exe, time_spent):
+def update_manual_time_statistic(sub_exe, time_spent, tab="WeChat"):
     """更新手动登录统计数据到json"""
-    if sub_exe.startswith("WeChatMultiple"):
+    if sub_exe.startswith(f"{tab}Multiple"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
 
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    if "manual" not in data:
-        data["manual"] = {}
-    if sub_exe not in data["manual"]:
-        data["manual"][sub_exe] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+    tab_info = data.get(sub_exe, {})
+    if "manual" not in tab_info:
+        tab_info["manual"] = {}
+    if sub_exe not in tab_info["manual"]:
+        tab_info["manual"][sub_exe] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
 
     # 获取当前最小、最大值，次数，平均用时
     current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    data["manual"][sub_exe].split(","))
+                                                    tab_info["manual"][sub_exe].split(","))
 
     # 更新最小和最大值
     new_min = min(current_min or math.inf, time_spent)
@@ -234,28 +254,29 @@ def update_manual_time_statistic(sub_exe, time_spent):
     new_count = count + 1
     new_avg_time = (avg_time * count + time_spent) / new_count
 
-    data["manual"][sub_exe] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    tab_info["manual"][sub_exe] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
-def update_auto_time_statistic(sub_exe, time_spent, index):
+def update_auto_time_statistic(sub_exe, time_spent, index, tab="WeChat"):
     """更新自动登录统计数据到json"""
-    if sub_exe.startswith("WeChatMultiple"):
+    if sub_exe.startswith(f"{tab}Multiple"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
 
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    if "auto" not in data:
-        data["auto"] = {}
-    if sub_exe not in data["auto"]:
-        data["auto"][sub_exe] = {}
+    tab_info = data.get(sub_exe, {})
+    if "auto" not in tab_info:
+        tab_info["auto"] = {}
+    if sub_exe not in tab_info["auto"]:
+        tab_info["auto"][sub_exe] = {}
 
     # 检查该行是否存在
-    if str(index) not in data["auto"][sub_exe]:
-        data["auto"][sub_exe][str(index)] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+    if str(index) not in tab_info["auto"][sub_exe]:
+        tab_info["auto"][sub_exe][str(index)] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
 
     # 获取当前最小、最大值，次数，平均用时
     current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    data["auto"][sub_exe][str(index)].split(","))
+                                                    tab_info["auto"][sub_exe][str(index)].split(","))
 
     # 更新最小和最大值
     new_min = min(current_min or math.inf, time_spent)
@@ -265,25 +286,26 @@ def update_auto_time_statistic(sub_exe, time_spent, index):
     new_count = count + 1
     new_avg_time = (avg_time * count + time_spent) / new_count
 
-    data["auto"][sub_exe][str(index)] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    tab_info["auto"][sub_exe][str(index)] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
-def update_refresh_time_statistic(view, acc_count, time_spent):
+def update_refresh_time_statistic(view, acc_count, time_spent, tab="WeChat"):
     """更新刷新时间统计"""
     if time_spent > 2:
         return
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    if "refresh" not in data:
-        data["refresh"] = {}
-    if view not in data["refresh"]:
-        data["refresh"][view] = {}
-    if acc_count not in data["refresh"][view]:
-        data["refresh"][view][acc_count] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
+    tab_info = data.get(tab, {})
+    if "refresh" not in tab_info:
+        tab_info["refresh"] = {}
+    if view not in tab_info["refresh"]:
+        tab_info["refresh"][view] = {}
+    if acc_count not in tab_info["refresh"][view]:
+        tab_info["refresh"][view][acc_count] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
 
     # 获取当前最小、最大值，次数，平均用时
     current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    data["refresh"][view][acc_count].split(","))
+                                                    tab_info["refresh"][view][acc_count].split(","))
 
     # 更新最小和最大值
     new_min = min(current_min or math.inf, time_spent)
@@ -293,7 +315,7 @@ def update_refresh_time_statistic(view, acc_count, time_spent):
     new_count = count + 1
     new_avg_time = (avg_time * count + time_spent) / new_count
 
-    data["refresh"][view][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    tab_info["refresh"][view][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
@@ -370,7 +392,7 @@ def get_avatar_url_from_acc_info_file(acc_list, data_dir):
             logger.info(f"{acc}: {matched_url}")
             success = image_utils.download_image(matched_url, avatar_path)
             if success is True:
-                update_acc_details_to_acc_json(acc, avatar_url=matched_url)
+                update_acc_details_to_json_by_tab("WeChat", acc, avatar_url=matched_url)
                 changed = True
     return changed
 
@@ -394,7 +416,7 @@ def get_nickname_from_acc_info_file(acc_list, data_dir):
             cleaned_str = re.sub(r'[0-9a-fA-F]{32}.*', '', matched_str)
             cleaned_str = re.sub(r'\x1A.*?\x12', '', cleaned_str)
             cleaned_str = re.sub(r'[^\x20-\x7E\xC0-\xFF\u4e00-\u9fa5]+', '', cleaned_str)
-            success = update_acc_details_to_acc_json(acc, nickname=cleaned_str)
+            success = update_acc_details_to_json_by_tab("WeChat", acc, nickname=cleaned_str)
             if success is True:
                 changed = True
     return changed
@@ -455,7 +477,7 @@ def merge_refresh_nodes():
         elif isinstance(value, dict):  # 如果是字典
             refresh_data["classic"].update(value)
 
-        # 将当前节s点合并到 tree
+        # 将当前节点合并到 tree
         if isinstance(value, str):  # 如果是字符串
             refresh_data["tree"][key] = value
         elif isinstance(value, dict):  # 如果是字典
@@ -465,3 +487,10 @@ def merge_refresh_nodes():
         del refresh_data[key]
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
     return data
+
+def move_data_to_wechat():
+    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    wechat_data = {
+        "WeChat": data
+    }
+    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, wechat_data)

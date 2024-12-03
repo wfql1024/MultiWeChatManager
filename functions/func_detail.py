@@ -26,7 +26,7 @@ def fetch_acc_detail_by_pid(pid, account, after):
 
     decrypted_mm_db_path = result
 
-    data_path = func_setting.get_wechat_data_dir()
+    data_path = func_setting.get_sw_data_dir()
     excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF'}
     folders = set(
         folder for folder in os.listdir(data_path)
@@ -51,7 +51,7 @@ def fetch_acc_detail_by_pid(pid, account, after):
                 contact_results = cursor.fetchall()
                 if len(contact_results) > 0:
                     user_name, alias, nickname = contact_results[0]
-                    subfunc_file.update_acc_details_to_acc_json(user_name, alias=alias or user_name, nickname=nickname)
+                    subfunc_file.update_acc_details_to_json_by_tab("WeChat", user_name, alias=alias or user_name, nickname=nickname)
                 else:
                     logger.warning(f"账号{folder}未能获取到昵称、微信号")
 
@@ -59,7 +59,7 @@ def fetch_acc_detail_by_pid(pid, account, after):
                 avatar_results = cursor.fetchall()
                 if len(avatar_results) > 0:
                     usr_name, url = avatar_results[0]
-                    origin_url, = subfunc_file.get_acc_details_from_acc_json(usr_name, avatar_url=None)
+                    origin_url, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", usr_name, avatar_url=None)
                     save_path = os.path.join(Config.PROJ_USER_PATH, f"{usr_name}", f"{usr_name}.jpg").replace('\\', '/')
                     if not os.path.exists(os.path.dirname(save_path)):
                         os.makedirs(os.path.dirname(save_path))
@@ -74,7 +74,7 @@ def fetch_acc_detail_by_pid(pid, account, after):
                     else:
                         success = image_utils.download_image(url, save_path)
                     if success is True:
-                        subfunc_file.update_acc_details_to_acc_json(usr_name, avatar_url=url)
+                        subfunc_file.update_acc_details_to_json_by_tab("WeChat", usr_name, avatar_url=url)
                 else:
                     logger.warning(f"账号{folder}未能获取头像url")
                     continue

@@ -20,7 +20,8 @@ def try_convert(value):
 
 
 class TreeviewRowUI:
-    def __init__(self, root, m_class, m_main_frame, result, data_path, multiple_status):
+    def __init__(self, root, m_class, m_main_frame, result, data_path, multiple_status, sw="WeChat"):
+        self.chosen_tab = sw
         self.acc_index = None
         self.hovered_item = None
         self.single_click_id = None
@@ -39,10 +40,14 @@ class TreeviewRowUI:
         self.main_frame = m_main_frame
 
         # 加载列表排序设置
-        login_col_to_sort = func_setting.fetch_setting_or_set_default("login_col_to_sort")
-        logout_col_to_sort = func_setting.fetch_setting_or_set_default("logout_col_to_sort")
-        login_sort_asc = "false" if func_setting.fetch_setting_or_set_default("login_sort_asc") == "true" else "true"
-        logout_sort_asc = "false" if func_setting.fetch_setting_or_set_default("logout_sort_asc") == "true" else "true"
+        login_col_to_sort = func_setting.fetch_sw_setting_or_set_default("login_col_to_sort", self.chosen_tab)
+        logout_col_to_sort = func_setting.fetch_sw_setting_or_set_default("logout_col_to_sort", self.chosen_tab)
+        login_sort_asc = "false" \
+            if func_setting.fetch_sw_setting_or_set_default("login_sort_asc", self.chosen_tab) == "true" \
+            else "true"
+        logout_sort_asc = "false" \
+            if func_setting.fetch_sw_setting_or_set_default("logout_sort_asc", self.chosen_tab) == "true" \
+            else "true"
         self.sort_order = {
             "login": (login_col_to_sort, login_sort_asc),
             "logout": (logout_col_to_sort, logout_sort_asc)
@@ -77,7 +82,7 @@ class TreeviewRowUI:
 
             # 已登录标签
             self.login_label = ttk.Label(self.login_title, text="已登录账号：",
-                                         font=("", Constants.LOG_IO_LBL_FONTSIZE, "bold"))
+                                         style='FirstTitle.TLabel')
             self.login_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 已登录按钮区域=一键退出
@@ -127,7 +132,7 @@ class TreeviewRowUI:
 
             # 未登录标签
             self.logout_label = ttk.Label(self.logout_title, text="未登录账号：",
-                                         font=("", Constants.LOG_IO_LBL_FONTSIZE, "bold"))
+                                         style='FirstTitle.TLabel')
             self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 未登录按钮区域=一键登录
@@ -199,7 +204,8 @@ class TreeviewRowUI:
         for account in accounts:
             display_name = " " + func_account.get_acc_origin_display_name(account)
             config_status = func_config.get_config_status_by_account(account, self.data_path)
-            avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_acc_details_from_acc_json(
+            avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_acc_details_from_json_by_tab(
+                self.chosen_tab,
                 account,
                 avatar_url=None,
                 alias="请获取数据",
@@ -291,7 +297,7 @@ class TreeviewRowUI:
 
         # 切换排序顺序
         self.sort_order[table_type] = col, "false" if asc_str == "true" else "true"
-        subfunc_file.save_sort_order_to_setting_ini(self.sort_order)
+        subfunc_file.save_sw_sort_order_to_setting_ini(self.sort_order)
 
     def update_selected_display(self, login_status):
         # 获取选中行的“英语”列数据
@@ -503,14 +509,15 @@ class TreeviewRowUI:
     def create_config(self, multiple_status):
         """按钮：创建或重新配置"""
         accounts = self.selected_login_items
-        threading.Thread(target=func_config.test, args=(self.m_class, accounts[0], multiple_status)).start()
+        threading.Thread(target=func_config.test,
+                         args=(self.m_class, accounts[0], multiple_status, self.chosen_tab)).start()
 
     def quit_selected_accounts(self):
         """退出所选账号"""
         accounts = self.selected_login_items
         accounts_to_quit = []
         for account in accounts:
-            pid, = subfunc_file.get_acc_details_from_acc_json(account, pid=None)
+            pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, pid=None)
             display_name = func_account.get_acc_origin_display_name(account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
             accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")

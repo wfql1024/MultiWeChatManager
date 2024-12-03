@@ -41,7 +41,7 @@ def clear_user_file(after):
 
 def open_config_file():
     """打开配置文件夹"""
-    data_path = func_setting.get_wechat_data_dir()
+    data_path = func_setting.get_sw_data_dir()
     if os.path.exists(data_path):
         config_path = os.path.join(data_path, "All Users", "config")
         if os.path.exists(config_path):
@@ -55,7 +55,7 @@ def clear_config_file(after):
         "该操作将会清空登录配置文件，请确认是否需要清除？"
     )
     if confirm:
-        data_path = func_setting.get_wechat_data_dir()
+        data_path = func_setting.get_sw_data_dir()
         config_path = os.path.join(data_path, "All Users", "config")
         # 获取所有 `.data` 文件，除了 `config.data`
         data_files = glob.glob(os.path.join(config_path, "*.data"))
@@ -136,7 +136,7 @@ def clear_statistic_data(after):
 
 def open_dll_dir():
     """打开注册表所在文件夹，并将光标移动到文件"""
-    dll_dir = func_setting.get_wechat_dll_dir()
+    dll_dir = func_setting.get_sw_dll_dir()
     if os.path.exists(dll_dir):
         # 打开文件夹
         shell = win32com.client.Dispatch("WScript.Shell")
@@ -191,8 +191,8 @@ def create_lnk_for_account(account, multiple_status):
     :return: 是否成功
     """
     # 确保可以创建快捷启动
-    data_path = func_setting.get_wechat_data_dir()
-    wechat_path = func_setting.get_wechat_install_path()
+    data_path = func_setting.get_sw_data_dir()
+    wechat_path = func_setting.get_sw_install_path()
     if not data_path:
         return False
     avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
@@ -299,7 +299,7 @@ def create_multiple_lnk(status, after):
         获取已经配置的账号列表
         :return: 已经配置的账号列表
         """
-        target_path = os.path.join(func_setting.get_wechat_data_dir(), 'All Users', 'config')
+        target_path = os.path.join(func_setting.get_sw_data_dir(), 'All Users', 'config')
         all_configs = []
         # 遍历目标目录中的所有文件
         for file_name in os.listdir(target_path):
@@ -340,7 +340,7 @@ def reset(after):
         "该操作需要关闭所有微信进程，将清空除配置文件外的所有文件及设置，请确认是否需要重置？"
     )
     directory_path = Config.PROJ_USER_PATH
-    dll_dir_path = func_setting.get_wechat_dll_dir()
+    dll_dir_path = func_setting.get_sw_dll_dir()
     if confirm:
         try:
             # 恢复原始的dll

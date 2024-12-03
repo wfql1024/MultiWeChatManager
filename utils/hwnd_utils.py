@@ -210,6 +210,7 @@ def get_wnd_details_from_hwnd(hwnd):
         # print(f"{w.handle}")
         return {
             "window": w,
+            "class": win32gui.GetClassName(w.handle),
             "handle": w.handle,
             "title": w.window_text(),
             "top": w.rectangle().top,
@@ -287,6 +288,10 @@ def close_all_wnd_by_classes(class_names):
     :param class_names: 窗口类名列表
     :return: 无
     """
+    if class_names is None:
+        return
+    if len(class_names) == 0:
+        return
     for class_name in class_names:
         try:
             while True:

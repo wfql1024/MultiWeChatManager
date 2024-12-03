@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+from http.server import executable
 
 from resources import Config
 import time
@@ -109,29 +110,31 @@ def close_all_new_weixin_mutex_by_handle(handle_exe):
     return successful_closes
 
 
-def close_all_old_wechat_mutex_by_handle(handle_exe):
+def close_all_old_wechat_mutex_by_handle(handle_exe, sw, dict_list):
     """
     通过微信进程id查找互斥体并关闭
     :return: 是否成功
     """
-    print(f"进入了关闭互斥体的方法...")
-    # 定义句柄名称
-    handle_name = "_WeChat_App_Instance_Identity_Mutex_Name"
-    start_time = time.time()
+    success_lists = []
+    for item in dict_list:
+        handle_name, regex = item.get("handle_name"), item.get("regex")
+        print(handle_name, regex)
+        print(f"进入了关闭互斥体的方法...")
+        start_time = time.time()
 
-    # 获取句柄信息
-    handle_info = subprocess.check_output([handle_exe, '-a', '-p', f"WeChat", handle_name]).decode()
-    print(f"完成获取句柄信息：{handle_info}")
-    print(f"{time.time() - start_time}")
+        # 获取句柄信息
+        handle_info = subprocess.check_output([handle_exe, '-a', '-p', sw, handle_name]).decode()
+        print(f"完成获取句柄信息：{handle_info}")
+        print(f"{time.time() - start_time}")
 
-    # 匹配所有 PID 和句柄信息
-    matches = re.findall(r"pid:\s*(\d+).*?(\w+):\s*\\Sessions", handle_info)
-    if matches:
-        print(f"找到互斥体：{matches}")
-        return close_handles_by_matches(Config.HANDLE_EXE_PATH, matches)
-    else:
-        print(f"没有找到任何互斥体")
-        return []
+        # 匹配所有 PID 和句柄信息
+        matches = re.findall(regex, handle_info)
+        if matches:
+            print(f"找到互斥体：{matches}")
+            success_lists.append(close_handles_by_matches(Config.HANDLE_EXE_PATH, matches))
+        else:
+            print(f"没有找到任何互斥体")
+    return success_lists
 
 
 if __name__ == '__main__':

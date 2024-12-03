@@ -1,3 +1,4 @@
+import time
 import tkinter as tk
 
 
@@ -25,6 +26,46 @@ class Tooltip:
         if self.tooltip:
             self.tooltip.destroy()
             self.tooltip = None
+
+
+def auto_scroll_text(text_widget, root, gap=50, scroll_distance=0.005):
+    """每秒滚动一行"""
+    # 获取当前视图的最大滚动位置（即文本框的底部）
+    top_pos = text_widget.yview()[0]  # 获取当前视图的顶部位置
+    bottom_pos = text_widget.yview()[1]  # 获取当前视图的底部位置
+    max_pos = 1.0  # 最大位置，即文本框的底部
+
+    pause = 0  # 暂停时间，单位为毫秒
+    if bottom_pos >= max_pos:
+        scroll_distance = -abs(scroll_distance)
+        pause = 1000
+    elif top_pos <= 0:
+        scroll_distance = abs(scroll_distance)
+        pause = 1000
+    # 计算目标位置并限制在 [0, 1] 范围内
+    target_pos = top_pos + scroll_distance
+    # target_pos = min(max(0, target_pos), 1)  # 确保目标位置不会超出范围
+    print(target_pos)
+    text_widget.yview_moveto(target_pos)  # 滚动到目标位置
+    scroll_task = root.after(gap + pause, auto_scroll_text, text_widget, root, gap, scroll_distance)
+    return scroll_task
+
+
+def insert_two_lines(text_widget, line_list):
+    """在Text中插入每行两个元素，并且居中显示"""
+    for i in range(0, len(line_list), 2):  # 每两个元素作为一对
+        left_text = line_list[i]
+        right_text = line_list[i + 1] if i + 1 < len(line_list) else ""
+
+        # 插入内容到Text
+        text_widget.insert(tk.END, left_text)
+
+        # 为右边部分添加标签，设置右对齐
+        text_widget.insert(tk.END, " " * 10)  # 可以通过控制空格数来控制两个部分之间的间距
+        text_widget.insert(tk.END, right_text + "\n")  # 插入右边部分
+
+    # 更新Text视图
+    text_widget.see(tk.END)  # 确保插入的文本可以显示在视图中
 
 
 def disable_button_and_add_tip(tooltips, button, text):

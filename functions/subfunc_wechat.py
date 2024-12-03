@@ -1,4 +1,3 @@
-import os
 import time
 
 import psutil
@@ -6,7 +5,7 @@ import win32gui
 
 from functions import func_setting, subfunc_file
 from resources import Config
-from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, file_utils, handle_utils, sys_utils
+from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -14,79 +13,67 @@ def switch_to_wechat_account(window, account):
     hwnd_utils.bring_wnd_to_left(window)
     classes = ["WeChatMainWndForPC"]
     hwnd_utils.hide_all_wnd_by_classes(classes)
-    main_hwnd, = subfunc_file.get_acc_details_from_acc_json(account, main_hwnd=None)
+    main_hwnd, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, main_hwnd=None)
     hwnd_utils.restore_window(main_hwnd)
 
 
-def kill_wechat_multiple_processes():
+def kill_wechat_multiple_processes(sw="WeChat"):
     """清理多开器的进程"""
     print("清理多余多开器窗口...")
     # 遍历所有的进程
     for proc in psutil.process_iter(['pid', 'name']):
         try:
             # 检查进程名是否以"WeChatMultiple_"开头
-            if proc.name() and proc.name().startswith('WeChatMultiple_'):
+            if proc.name() and proc.name().startswith(f'{sw}WeChatMultiple_'):
                 proc.kill()
                 print(f"Killed process tree for {proc.name()} (PID: {proc.pid})")
 
         except Exception as e:
             logger.error(e)
 
-
-def clear_idle_wnd_and_process():
-    """清理闲置的登录窗口和多开器子窗口"""
-    print("清理多余登录窗口...")
-    hwnd_utils.close_all_wnd_by_classes(
-        [
-            "WTWindow",
-            "WeChatLoginWndForPC",
-            "WindowsForms10.Window.8.app.0.141b42a_r13_ad1"
-        ]
-    )
-    kill_wechat_multiple_processes()
-
-
-def get_mutex_dict():
+def get_mutex_dict(sw="WeChat"):
     """拿到当前时间下系统中所有微信进程的互斥体情况"""
     print("获取互斥体情况...")
-    pids = process_utils.get_process_ids_by_name("WeChat.exe")
+    executable = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+    pids = process_utils.get_process_ids_by_name(executable)
     has_mutex_dict = dict()
     for pid in pids:
         # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
-        has_mutex, = subfunc_file.get_acc_details_from_acc_json("all_wechat", **{f"{pid}": True})
+        has_mutex, = subfunc_file.get_acc_details_from_json_by_tab(sw, "all_wechat", **{f"{pid}": True})
         if has_mutex:
-            subfunc_file.update_acc_details_to_acc_json("all_wechat", **{f"{pid}": True})
+            subfunc_file.update_acc_details_to_json_by_tab(sw, "all_wechat", **{f"{pid}": True})
             has_mutex_dict.update({pid: has_mutex})
     return has_mutex_dict
 
-
-def open_wechat(status, has_mutex_dictionary=None):
+def open_wechat(status, has_mutex_dictionary=None, sw="WeChat"):
     """
     根据状态以不同方式打开微信
+    :param sw: 选择软件标签
     :param status: 状态
     :param has_mutex_dictionary: 有互斥体账号的列表
     :return: 微信窗口句柄
     """
-
+    # print(f"传入{sw}")
     if has_mutex_dictionary is None:
         has_mutex_dictionary = dict()
     print(f"进入了打开微信的方法...")
     start_time = time.time()
     sub_exe_process = None
-    sub_exe = "全局多开"
-    wechat_path = func_setting.get_wechat_install_path()
+    wechat_path = func_setting.get_sw_install_path(sw=sw)
+    executable = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
     if not wechat_path:
         return None
 
     if status == "已开启":
         print(f"当前是全局多开模式")
+        sub_exe = "全局多开"
         create_process_without_admin(wechat_path)
         time.sleep(0.1)
     else:
         # 获取当前选择的多开子程序
         sub_exe = ini_utils.get_setting_from_ini(
             Config.SETTING_INI_PATH,
-            Config.INI_SECTION,
+            sw,
             Config.INI_KEY_SUB_EXE,
         )
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
@@ -118,16 +105,20 @@ def open_wechat(status, has_mutex_dictionary=None):
                     hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
         # ————————————————————————————————handle————————————————————————————————
         elif sub_exe == "handle":
-            success_lists = handle_utils.close_all_old_wechat_mutex_by_handle(Config.HANDLE_EXE_PATH)
+            executable, handle_regex_list = subfunc_file.get_details_from_remote_setting_json(
+                sw, executable=None, handle_regex_list=None)
+            success_lists = handle_utils.close_all_old_wechat_mutex_by_handle(
+                Config.HANDLE_EXE_PATH, executable, handle_regex_list)
             if success_lists:
                 # 更新 has_mutex 为 False 并保存
                 print(f"成功关闭{success_lists}：{time.time() - start_time:.4f}秒")
 
             # 所有操作完成后，执行创建进程的操作
+            print(f"打开：{wechat_path}")
             create_process_without_admin(wechat_path, None)
         # ————————————————————————————————python[强力]————————————————————————————————
         elif sub_exe == "python[S]":
-            pids = process_utils.get_process_ids_by_name("WeChat.exe")
+            pids = process_utils.get_process_ids_by_name(executable)
             if len(pids) > 0:
                 success = pywinhandle.close_handles(
                     pywinhandle.find_handles(
@@ -163,11 +154,16 @@ def open_wechat(status, has_mutex_dictionary=None):
     return sub_exe_process, sub_exe
 
 
-def get_login_size(status):
-    clear_idle_wnd_and_process()
-    has_mutex_dict = get_mutex_dict()
-    sub_exe_process, sub_exe = open_wechat(status, has_mutex_dict)
-    wechat_hwnd = hwnd_utils.wait_for_wnd_open("WeChatLoginWndForPC", timeout=8)
+def get_login_size(tab, status):
+    redundant_wnd_list, login_wnd_class = subfunc_file.get_details_from_remote_setting_json(
+        tab, redundant_wnd_class=None, login_wnd_class=None)
+    print(login_wnd_class)
+    hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
+
+    kill_wechat_multiple_processes()
+    has_mutex_dict = get_mutex_dict(tab)
+    sub_exe_process, sub_exe = open_wechat(status, has_mutex_dict, sw=tab)
+    wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, timeout=8)
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:

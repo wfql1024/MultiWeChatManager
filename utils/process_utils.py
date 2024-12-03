@@ -64,6 +64,26 @@ GetWindowThreadProcessId.restype = DWORD
 GetWindowThreadProcessId.argtypes = [HANDLE, ctypes.POINTER(DWORD)]
 
 
+def remove_child_pids(pids):
+    """从 pids 列表中删除所有子进程 PID，并跳过删除后的 PID"""
+    # 获取所有进程信息
+    all_processes = {p.pid: p for p in psutil.process_iter(['pid', 'name'])}
+
+    i = 0
+    while i < len(pids):
+        pid = pids[i]
+        if pid in all_processes:
+            process = all_processes[pid]
+            children = process.children()  # 获取当前进程的所有子进程
+
+            # 遍历子进程，删除 pids 中存在的 PID
+            for child in children:
+                if child.pid in pids:
+                    pids.remove(child.pid)  # 删除子进程 PID
+        i += 1
+
+    return pids
+
 def is_process_admin(pid):
     try:
         process = psutil.Process(pid)

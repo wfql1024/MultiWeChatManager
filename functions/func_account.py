@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import time
+from sys import executable
 from tkinter import messagebox
 
 import psutil
@@ -20,7 +21,7 @@ from utils.logger_utils import mylogger as logger
 def to_quit_selected_accounts(accounts_selected, callback):
     accounts_to_quit = []
     for acc in accounts_selected:
-        pid, = subfunc_file.get_acc_details_from_acc_json(acc, pid=None)
+        pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", acc, pid=None)
         display_name = get_acc_origin_display_name(acc)
         cleaned_display_name = string_utils.clean_display_name(display_name)
         accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
@@ -40,7 +41,7 @@ def quit_accounts(accounts):
     quited_accounts = []
     for account in accounts:
         try:
-            pid, = subfunc_file.get_acc_details_from_acc_json(account, pid=None)
+            pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, pid=None)
             display_name = get_acc_origin_display_name(account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
             process = psutil.Process(pid)
@@ -80,7 +81,7 @@ def get_acc_avatar_from_files(account):
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
     # 如果没有，从网络下载
-    url, = subfunc_file.get_acc_details_from_acc_json(account, avatar_url=None)
+    url, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, avatar_url=None)
     if url is not None and url.endswith("/0"):
         image_utils.download_image(url, avatar_path)
 
@@ -117,7 +118,7 @@ def get_acc_origin_display_name(account) -> str:
     # 依次查找 note, nickname, alias，找到第一个不为 None 的值
     display_name = account  # 默认值为 account
     for key in ("note", "nickname", "alias"):
-        value = subfunc_file.get_acc_details_from_acc_json(account, **{key: None})[0]
+        value = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, **{key: None})[0]
         if value is not None:
             display_name = value
             break
@@ -145,7 +146,7 @@ def silent_get_and_config(login, logout, data_dir, callback):
     accounts_need_to_get_nickname = []
     # print(login, logout)
     for acc in itertools.chain(login, logout):
-        avatar_url, nickname = subfunc_file.get_acc_details_from_acc_json(acc, avatar_url=None, nickname=None)
+        avatar_url, nickname = subfunc_file.get_acc_details_from_json_by_tab("WeChat", acc, avatar_url=None, nickname=None)
         if avatar_url is None:
             accounts_need_to_get_avatar.append(acc)
         if nickname is None:
@@ -173,7 +174,7 @@ def silent_get_and_config(login, logout, data_dir, callback):
         callback()
 
 
-def get_account_list(multiple_status):
+def get_account_list(multiple_status, sw="WeChat"):
     """
     获取账号及其登录情况
     """
@@ -186,9 +187,10 @@ def get_account_list(multiple_status):
         """
         # print(data_path)
         try:
+            # print(pid, "的孩子：", psutil.Process(process_id).children())
             # 获取指定进程的内存映射文件路径
             for f in psutil.Process(process_id).memory_maps():
-                # print(f)
+                # print(process_id, f)
                 # 将路径中的反斜杠替换为正斜杠
                 normalized_path = f.path.replace('\\', '/')
                 # print(normalized_path)
@@ -201,10 +203,32 @@ def get_account_list(multiple_status):
                     try:
                         wx_id_index = path_parts.index(os.path.basename(data_path)) + 1
                         wx_id = path_parts[wx_id_index]
-                        wechat_processes.append((wx_id, process_id))
-                        logged_in_ids.add(wx_id)
-                        print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
-                        break
+                        if wx_id not in ["all_users"]:
+                            wechat_processes.append((wx_id, process_id))
+                            logged_in_ids.add(wx_id)
+                            print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
+                            return
+                    except ValueError:
+                        pass
+            for f in psutil.Process(process_id).open_files():
+                # print(process_id, f)
+                # 将路径中的反斜杠替换为正斜杠
+                normalized_path = f.path.replace('\\', '/')
+                # print(normalized_path)
+                # 检查路径是否以 data_path 开头
+                if normalized_path.startswith(data_path):
+                    # print(
+                    #     f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
+                    # print(f"提取中：{f.path}")
+                    path_parts = f.path.split(os.path.sep)
+                    try:
+                        wx_id_index = path_parts.index(os.path.basename(data_path)) + 1
+                        wx_id = path_parts[wx_id_index]
+                        if wx_id not in ["all_users"]:
+                            wechat_processes.append((wx_id, process_id))
+                            logged_in_ids.add(wx_id)
+                            print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
+                            return
                     except ValueError:
                         pass
         except psutil.AccessDenied:
@@ -215,22 +239,27 @@ def get_account_list(multiple_status):
             logger.error(f"发生意外错误: {e}")
 
     start_time = time.time()
-    data_path = func_setting.get_wechat_data_dir()
+    data_path = func_setting.get_sw_data_dir(sw=sw)
     if not data_path:
         return False, "找不到数据存储路径"
 
     wechat_processes = []
     logged_in_ids = set()
 
-    pids = process_utils.get_process_ids_by_name("WeChat.exe")
+    exe, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+    pids = process_utils.get_process_ids_by_name(exe)
+    pids = process_utils.remove_child_pids(pids)
     print(f"读取到微信所有进程，用时：{time.time() - start_time:.4f} 秒")
     if len(pids) != 0:
         for pid in pids:
             update_acc_list_by_pid(pid)
     print(f"完成判断进程对应账号，用时：{time.time() - start_time:.4f} 秒")
 
+    # print(wechat_processes)
+    # print(logged_in_ids)
+
     # 获取文件夹并分类
-    excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF'}
+    excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF', 'all_users'}
     folders = set(
         item for item in os.listdir(data_path)
         if os.path.isdir(os.path.join(data_path, item))
@@ -247,15 +276,15 @@ def get_account_list(multiple_status):
     if multiple_status == "已开启":
         print(f"由于是全局多开模式，直接所有has_mutex都为false")
         for acc in login + logout:
-            subfunc_file.update_acc_details_to_acc_json(acc, pid=pid_dict.get(acc, None), has_mutex=False)
+            subfunc_file.update_acc_details_to_json_by_tab(sw, acc, pid=pid_dict.get(acc, None), has_mutex=False)
     else:
         for acc in login + logout:
             pid = pid_dict.get(acc, None)
             if pid is None:
-                subfunc_file.update_acc_details_to_acc_json(acc, has_mutex=None)
-            subfunc_file.update_acc_details_to_acc_json(acc, pid=pid_dict.get(acc, None))
+                subfunc_file.update_acc_details_to_json_by_tab(sw, acc, has_mutex=None)
+            subfunc_file.update_acc_details_to_json_by_tab(sw, acc, pid=pid_dict.get(acc, None))
         # 更新json表中各微信进程的互斥体情况
-        subfunc_file.update_has_mutex_from_all_wechat()
+        subfunc_file.update_has_mutex_from_all_wechat(sw)
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
     return True, (login, logout, wechat_processes)
@@ -264,9 +293,9 @@ def get_account_list(multiple_status):
 def get_main_hwnd_of_accounts(acc_list):
     target_class = "WeChatMainWndForPC"
     for acc in acc_list:
-        pid, = subfunc_file.get_acc_details_from_acc_json(acc, pid=None)
+        pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", acc, pid=None)
         hwnd_list = hwnd_utils.find_hwnd_by_pid_and_class(pid, target_class)
         if len(hwnd_list) == 1:
             hwnd = hwnd_list[0]
-            subfunc_file.update_acc_details_to_acc_json(acc, main_hwnd=hwnd)
+            subfunc_file.update_acc_details_to_json_by_tab("WeChat", acc, main_hwnd=hwnd)
 

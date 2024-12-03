@@ -63,6 +63,31 @@ def download_image(img_url, path):
         logger.info(f"图像已成功保存到 {path}")
         return True
     except requests.RequestException as re:
+        return download_origin_image(img_url, path)
+
+
+def download_origin_image(img_url, path):
+    """
+    将网址中的图像保存到路径上
+    :param img_url: 网址
+    :param path: 路径
+    :return: 是否成功
+    """
+    try:
+        response = requests.get(img_url, stream=True)
+        response.raise_for_status()  # 确保请求成功
+
+        acc_dir = os.path.dirname(path)
+        if not os.path.exists(acc_dir):
+            os.makedirs(acc_dir)
+
+        with open(path, 'wb') as file:
+            for chunk in response.iter_content(chunk_size=8192):
+                file.write(chunk)
+
+        logger.info(f"图像已成功保存到 {path}")
+        return True
+    except requests.RequestException as re:
         logger.error(f"下载图像时出错: {re}")
         return False
 

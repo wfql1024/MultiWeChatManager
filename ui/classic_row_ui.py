@@ -4,7 +4,7 @@ import tkinter as tk
 from functools import partial
 from tkinter import ttk
 
-from PIL import ImageTk
+from PIL import ImageTk, Image
 
 from functions import func_config, func_login, func_account, subfunc_file, subfunc_wechat
 from resources import Constants
@@ -18,7 +18,8 @@ class AccountRow:
     为每一个账号创建其行布局的类
     """
     def __init__(self, root, m_class, parent_frame, account, data_path,
-                 multiple_status, login_status, update_top_checkbox_callback):
+                 multiple_status, login_status, update_top_checkbox_callback, sw="WeChat"):
+        self.chosen_tab = sw
         self.root = root
         self.m_class = m_class
         self.single_click_id = None
@@ -50,7 +51,7 @@ class AccountRow:
 
         # 账号标签
         wrapped_display_name = func_account.get_acc_wrapped_display_name(account)
-        has_mutex, = subfunc_file.get_acc_details_from_acc_json(account, has_mutex=None)
+        has_mutex, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, has_mutex=None)
         style = ttk.Style()
         style.configure("Mutex.TLabel", foreground="red")
         try:
@@ -139,12 +140,14 @@ class AccountRow:
             img = img.resize(Constants.CLZ_AVT_LBL_SIZE)
             photo = ImageTk.PhotoImage(img)
             avatar_label = ttk.Label(self.row_frame, image=photo)
-            avatar_label.image = photo  # 保持对图像的引用
-            return avatar_label
+
         except Exception as e:
             print(f"Error creating avatar label: {e}")
-            # # 如果加载失败，使用一个空白标签
-            # avatar_label = ttk.Label(self.row_frame, width=10)
+            # 如果加载失败，使用一个空白标签
+            photo = ImageTk.PhotoImage(image=Image.new('RGB', Constants.BLANK_AVT_SIZE, color='white'))
+            avatar_label = ttk.Label(self.row_frame, image=photo)
+        avatar_label.image = photo  # 保持对图像的引用
+        return avatar_label
 
     def on_single_click(self, account):
         """处理单击事件，并在检测到双击时取消"""
@@ -167,7 +170,8 @@ class AccountRow:
 
     def create_config(self, account, multiple_status):
         """按钮：创建或重新配置"""
-        threading.Thread(target=func_config.test, args=(self.m_class, account, multiple_status)).start()
+        threading.Thread(target=func_config.test,
+                         args=(self.m_class, account, multiple_status, self.chosen_tab)).start()
 
     def auto_login_account(self, account):
         """按钮：自动登录某个账号"""
@@ -182,7 +186,8 @@ class AccountRow:
 
 
 class ClassicRowUI:
-    def __init__(self, root, m_class, m_main_frame, result, data_path, multiple_status):
+    def __init__(self, root, m_class, m_main_frame, result, data_path, multiple_status, sw="WeChat"):
+        self.chosen_tab = sw
         self.m_class = m_class
         self.data_path = data_path
         self.multiple_status = multiple_status
@@ -216,7 +221,7 @@ class ClassicRowUI:
 
             # 已登录标签
             self.login_label = ttk.Label(self.login_title, text="已登录账号：",
-                                         font=("", Constants.LOG_IO_LBL_FONTSIZE, "bold"))
+                                         style='FirstTitle.TLabel')
             self.login_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 已登录按钮区域=一键退出
@@ -254,7 +259,7 @@ class ClassicRowUI:
 
             # 未登录标签
             self.logout_label = ttk.Label(self.logout_title, text="未登录账号：",
-                                          font=("", Constants.LOG_IO_LBL_FONTSIZE, "bold"))
+                                          style='FirstTitle.TLabel')
             self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 未登录按钮区域=一键登录
@@ -280,7 +285,7 @@ class ClassicRowUI:
 
         # 创建列表实例
         row = AccountRow(self.root, self.m_class, parent_frame, account, self.data_path,
-                         self.multiple_status, login_status, self.update_top_title)
+                         self.multiple_status, login_status, self.update_top_title, self.chosen_tab)
 
         # 将已登录、未登录但已配置实例存入字典
         if login_status == "login":

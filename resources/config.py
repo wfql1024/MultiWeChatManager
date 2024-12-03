@@ -1,12 +1,16 @@
+import ctypes
 import os
 
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
+SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)  # 获取屏幕缩放因子
 
 
 class Config:
     VER_STATUS = 'Beta'
 
-    INI_SECTION = 'default'
+    INI_GLOBAL_SECTION = 'global'
+
+
     INI_KEY_INSTALL_PATH = 'install_path'
     INI_KEY_DATA_PATH = 'data_path'
     INI_KEY_DLL_DIR_PATH = 'dll_dir_path'
@@ -23,16 +27,32 @@ class Config:
         "logout_col_to_sort": "logout_col_to_sort",
         "login_sort_asc": "login_sort_asc",
         "logout_sort_asc": "logout_sort_asc",
+        "tab": "tab",
+        "login_size": "login_size",
     }
 
     INI_DEFAULT_VALUE = {
         "sub_exe": "python",
-        "view": "tree",
         "enable_new_func": "true",
-        "login_col_to_sort": "配置",
-        "logout_col_to_sort": "配置",
-        "login_sort_asc": "true",
-        "logout_sort_asc": "true",
+        "tab": "WeChat",
+        "WeChat":{
+            "view": "tree",
+            "login_col_to_sort": "配置",
+            "logout_col_to_sort": "配置",
+            "login_sort_asc": "true",
+            "logout_sort_asc": "true",
+            "login_size": f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
+            "sub_exe": "python",
+        },
+        "Weixin": {
+            "view": "tree",
+            "login_col_to_sort": "配置",
+            "logout_col_to_sort": "配置",
+            "login_sort_asc": "true",
+            "logout_sort_asc": "true",
+            "login_size": f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
+            "sub_exe": "handle",
+        },
     }
 
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))
@@ -44,6 +64,8 @@ class Config:
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\SunnyMultiWxMng.ico'
     REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\Rewards.png'
     STATISTIC_JSON_PATH = fr'{PROJ_USER_PATH}\statistics.json'
-    ACC_DATA_JSON_PATH = fr'{PROJ_USER_PATH}\account_data.json'
+    TAB_ACC_JSON_PATH = fr'{PROJ_USER_PATH}\tab_acc_data.json'
     SETTING_INI_PATH = fr'{PROJ_USER_PATH}\setting.ini'
     VER_ADAPTATION_JSON_PATH = fr'{PROJ_USER_PATH}\version_adaptation.json'
+    REMOTE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}\remote_setting.json'
+    LOCAL_SETTING_YML_PATH = fr'{PROJ_USER_PATH}\local_setting.yml'
