@@ -13,9 +13,9 @@ from resources import Config
 from utils import file_utils
 
 
-def check_dll(mode):
+def check_dll(mode, sw="WeChat"):
     """检查当前的dll状态，判断是否为全局多开或者不可用"""
-    dll_dir = func_setting.get_sw_dll_dir()
+    dll_dir = func_setting.get_sw_dll_dir(sw)
     dll_path = os.path.join(dll_dir, "WeChatWin.dll")
     cur_wechat_ver = func_setting.get_sw_cur_ver(sw="WeChat")
 
@@ -72,7 +72,7 @@ def check_dll(mode):
         return f"错误：{str(e)}", None, None
 
 
-def switch_dll(mode):
+def switch_dll(mode, sw="WeChat"):
     """切换全局多开状态"""
     # 尝试终止微信进程
     wechat_processes = []
@@ -103,7 +103,7 @@ def switch_dll(mode):
             return False
 
     # 获取 DLL 路径
-    dll_dir_path = func_setting.get_sw_dll_dir()
+    dll_dir_path = func_setting.get_sw_dll_dir(sw)
     # 获取桌面路径
     desktop_path = winshell.desktop()
     # 定义目标路径和文件名

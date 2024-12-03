@@ -1,6 +1,8 @@
 import os
 import shutil
 import time
+
+from functions import subfunc_file
 from resources import Config
 from unittest import TestCase
 from utils import handle_utils
@@ -10,21 +12,27 @@ import tkinter.font as tkFont
 
 class Test(TestCase):
     def test_multi_new_weixin(self):
-        handle_utils.close_all_new_weixin_mutex_by_handle(Config.HANDLE_EXE_PATH)
+        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+            "Weixin", redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
+        # 关闭配置文件锁
+        handle_utils.close_sw_mutex_by_handle(
+            Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
         # 构建源文件和目标文件路径
-        # source_dir = r"E:\Now\Desktop\不吃鱼的猫"
-        source_dir = r"E:\Now\Desktop\极峰创科"
-        target_dir = r'E:\data\Tencent\xwechat_files\all_users\config'
-
-        # 如果目录存在，先删除
-        if os.path.exists(target_dir):
-            shutil.rmtree(target_dir)
-
-        time.sleep(1)
+        # source_dir1 = r"E:\Now\Desktop\不吃鱼的猫\global_config".replace('\\', '/')
+        # source_dir2 = r"E:\Now\Desktop\不吃鱼的猫\global_config.crc".replace('\\', '/')
+        source_dir1 = r"E:\Now\Desktop\极峰创科\global_config".replace('\\', '/')
+        source_dir2 = r"E:\Now\Desktop\极峰创科\global_config.crc".replace('\\', '/')
+        target_dir1 = r'E:\data\Tencent\xwechat_files\all_users\config\global_config'.replace('\\', '/')
+        target_dir2 = r'E:\data\Tencent\xwechat_files\all_users\config\global_config.crc'.replace('\\', '/')
 
         # 复制配置文件
         try:
-            shutil.copytree(source_dir, target_dir)
+            os.remove(target_dir1)
+            os.remove(target_dir2)
+            # shutil.rmtree(r'E:\data\Tencent\xwechat_files\all_users\config')
+            # os.makedirs(r'E:\data\Tencent\xwechat_files\all_users\config')
+            shutil.copy2(source_dir1, target_dir1)
+            shutil.copy2(source_dir2, target_dir2)
         except Exception as e:
             print(f"复制配置文件失败: {e}")
 

@@ -138,7 +138,7 @@ def get_acc_wrapped_display_name(account) -> str:
     )
 
 
-def silent_get_and_config(login, logout, data_dir, callback):
+def silent_get_and_config(login, logout, data_dir, callback, sw):
     # 悄悄执行检测昵称和头像
     need_to_notice = False
     # 1. 获取所有账号节点的url和昵称，将空的账号返回
@@ -146,7 +146,7 @@ def silent_get_and_config(login, logout, data_dir, callback):
     accounts_need_to_get_nickname = []
     # print(login, logout)
     for acc in itertools.chain(login, logout):
-        avatar_url, nickname = subfunc_file.get_acc_details_from_json_by_tab("WeChat", acc, avatar_url=None, nickname=None)
+        avatar_url, nickname = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, avatar_url=None, nickname=None)
         if avatar_url is None:
             accounts_need_to_get_avatar.append(acc)
         if nickname is None:
@@ -163,11 +163,12 @@ def silent_get_and_config(login, logout, data_dir, callback):
         if changed is True:
             need_to_notice = True
     # 4. 偷偷创建配置文件
-    curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(data_dir)
-    if func_config.get_config_status_by_account(curr_config_acc, data_dir) == "无配置":
-        changed = func_config.create_config(curr_config_acc)
-        if changed is True:
-            need_to_notice = True
+    curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(data_dir, sw)
+    if curr_config_acc is not None:
+        if func_config.get_config_status_by_account(curr_config_acc, data_dir, sw) == "无配置":
+            changed = func_config.create_config(curr_config_acc)
+            if changed is True:
+                need_to_notice = True
     # 5. 通知
     if need_to_notice is True:
         messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")

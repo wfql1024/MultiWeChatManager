@@ -108,7 +108,7 @@ class SettingWindow:
         self.login_size_entry.grid(row=5, column=1, padx=5, pady=5, sticky="we")
 
         self.login_size_get_button = ttk.Button(wnd, text="获取",
-                                                command=partial(self.get_login_size, self.status))
+                                                command=partial(self.to_get_login_size, self.status))
         self.login_size_get_button.grid(row=5, column=2, padx=5, pady=5)
 
         # 修改确定按钮，从第4行到第6行
@@ -151,7 +151,7 @@ class SettingWindow:
         return True
 
     def load_or_get_sw_dll_dir(self, click=False, sw="WeChat"):
-        path = func_setting.get_sw_dll_dir(click, sw)
+        path = func_setting.get_sw_dll_dir(sw, click)
         if path:
             self.dll_path_var.set(path.replace('\\', '/'))
         else:
@@ -184,7 +184,7 @@ class SettingWindow:
 
     def load_or_get_sw_inst_path(self, click=False, sw="WeChat"):
         # print(sw)
-        path = func_setting.get_sw_install_path(click, sw)
+        path = func_setting.get_sw_install_path(sw, click)
         if path:
             self.install_path_var.set(path.replace('\\', '/'))
         else:
@@ -203,7 +203,7 @@ class SettingWindow:
                 messagebox.showerror("错误", "请选择WeChat.exe文件")
 
     def load_or_get_sw_data_path(self, click=False, sw="WeChat"):
-        path = func_setting.get_sw_data_dir(click, sw)
+        path = func_setting.get_sw_data_dir(sw, click)
         if path:
             self.data_path_var.set(path.replace('\\', '/'))
         else:
@@ -246,7 +246,7 @@ class SettingWindow:
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
         subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
 
-    def get_login_size(self, status):
+    def to_get_login_size(self, status):
         tab = func_setting.fetch_global_setting_or_set_default('tab')
         result = subfunc_wechat.get_login_size(tab, status)
         if result:

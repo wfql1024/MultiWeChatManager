@@ -39,6 +39,7 @@ class TreeviewRowUI:
         self.root = root
         self.main_frame = m_main_frame
 
+        print(self.chosen_tab)
         # 加载列表排序设置
         login_col_to_sort = func_setting.fetch_sw_setting_or_set_default("login_col_to_sort", self.chosen_tab)
         logout_col_to_sort = func_setting.fetch_sw_setting_or_set_default("logout_col_to_sort", self.chosen_tab)
@@ -200,10 +201,10 @@ class TreeviewRowUI:
             tree = self.logout_tree
         else:
             tree = ttk.Treeview(self.main_frame, show='tree', height=1, style="RowTreeview")
-        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.data_path)
+        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.data_path, self.chosen_tab)
         for account in accounts:
             display_name = " " + func_account.get_acc_origin_display_name(account)
-            config_status = func_config.get_config_status_by_account(account, self.data_path)
+            config_status = func_config.get_config_status_by_account(account, self.data_path, self.chosen_tab)
             avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_acc_details_from_json_by_tab(
                 self.chosen_tab,
                 account,
@@ -539,7 +540,7 @@ class TreeviewRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu)
+                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu, self.chosen_tab)
             ).start()
         except Exception as e:
             logger.error(e)
@@ -550,7 +551,7 @@ class TreeviewRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu)
+                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu, self.chosen_tab)
             ).start()
         except Exception as e:
             logger.error(e)

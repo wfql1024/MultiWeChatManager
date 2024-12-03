@@ -7,7 +7,8 @@ import win32con
 import win32gui
 
 from functions import func_config, subfunc_wechat, subfunc_file
-from utils import hwnd_utils
+from resources import Config
+from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -22,7 +23,11 @@ def manual_login(m_class, tab, status, window_callback):
     """
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
     start_time = time.time()
-    redundant_wnd_list, = subfunc_file.get_details_from_remote_setting_json(tab, redundant_wnd_class=None)
+    redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+        tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
+    # 关闭配置文件锁
+    handle_utils.close_sw_mutex_by_handle(
+        Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
     subfunc_wechat.kill_wechat_multiple_processes(tab)
     time.sleep(0.5)
@@ -31,9 +36,9 @@ def manual_login(m_class, tab, status, window_callback):
     has_mutex_dict = subfunc_wechat.get_mutex_dict(tab)
     logger.info(f"当前模式是：{status}")
     sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict, tab)
-    wechat_hwnd = hwnd_utils.wait_for_wnd_open("WeChatLoginWndForPC", 20)
+    wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 20)
     if wechat_hwnd:
-        subfunc_file.set_all_wechat_values_to_false()
+        subfunc_file.set_all_wechat_values_to_false(tab)
         subfunc_file.update_manual_time_statistic(sub_exe, time.time() - start_time)
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
@@ -75,15 +80,17 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
     if len(accounts) == 0:
         return False
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
-    redundant_wnd_list, = subfunc_file.get_details_from_remote_setting_json(tab, redundant_wnd_class=None)
+    redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
+        subfunc_file.get_details_from_remote_setting_json(
+        tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
-    subfunc_wechat.kill_wechat_multiple_processes()
+    subfunc_wechat.kill_wechat_multiple_processes(tab)
     time.sleep(0.5)
-    subfunc_file.clear_all_wechat_in_acc_json("WeChat")
-    subfunc_file.update_all_wechat_in_acc_json()
+    subfunc_file.clear_all_wechat_in_acc_json(tab)
+    subfunc_file.update_all_wechat_in_acc_json(tab)
 
     # 检测尺寸设置是否完整
-    login_size = subfunc_file.get_sw_login_size_from_setting_ini()
+    login_size = subfunc_file.get_sw_login_size_from_setting_ini(tab)
     if not login_size or login_size == "":
         messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
         return False
@@ -113,25 +120,32 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
         print(f"可以一行显示")
         get_wnd_positions(count)
 
+    # 开始遍历登录账号过程
     start_time = time.time()
     # 使用一个set存储不重复的handle
     wechat_handles = set()
-    # 遍历登录账号
     for j in range(count):
+        # 关闭配置文件锁
+        handle_utils.close_sw_mutex_by_handle(
+            Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
+
+
         # 读取配置
-        result = func_config.use_config(accounts[j])
+        result = func_config.use_config(accounts[j], tab)
         if result:
             print(f"{accounts[j]}:复制配置文件成功")
         else:
             print(f"{accounts[j]}:复制配置文件失败")
             break
 
+        # 打开微信
         has_mutex_dict = subfunc_wechat.get_mutex_dict(tab)
-        sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict)
+        sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict, tab)
+
         # 等待打开窗口
         end_time = time.time() + 20
         while True:
-            wechat_hwnd = hwnd_utils.wait_for_wnd_open("WeChatLoginWndForPC", 1)
+            wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 1)
             if wechat_hwnd is not None and wechat_hwnd not in wechat_handles:
                 # 确保打开了新的微信登录窗口
                 wechat_handles.add(wechat_hwnd)
@@ -144,11 +158,11 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
                 print(f"超时！换下一个账号")
                 break
 
+        # 安排窗口位置
         # 横坐标算出完美的平均位置
         new_left = positions[j % max_column][0]
         # 纵坐标由居中位置稍向上偏移，然后每轮完一行，位置向下移动一个登录窗口宽度的距离
         new_top = positions[j % max_column][1] - int(login_width / 2) + int(j / max_column) * login_width
-
         # 只调整窗口的位置，不改变大小
         try:
             win32gui.SetWindowPos(
@@ -163,13 +177,15 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
         except Exception as e:
             print(e)
 
+        # 统计时间
         subfunc_file.update_auto_time_statistic(sub_exe, time.time() - start_time, j + 1)
 
+    # 循环登录完成
     # 如果有，关掉多余的多开器
     subfunc_wechat.kill_wechat_multiple_processes()
 
     # 两轮点击所有窗口的登录，防止遗漏
-    handles = hwnd_utils.find_all_wnd_by_class_and_title("WeChatLoginWndForPC")
+    handles = hwnd_utils.find_all_wnd_by_class_and_title(login_wnd_class)
     for h in handles:
         hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
         time.sleep(0.2)
@@ -189,7 +205,7 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
     # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
     end_time = time.time() + 30
     while True:
-        hs = hwnd_utils.find_all_wnd_by_class_and_title("WeChatLoginWndForPC", "微信")
+        hs = hwnd_utils.find_all_wnd_by_class_and_title(login_wnd_class)
         # print("等待登录完成")
         if len(hs) == 0:
             callback()
@@ -197,8 +213,3 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
         if time.time() > end_time:
             callback()
             return True
-
-#
-# if __name__ == '__main__':
-#     handles = hwnd_utils.find_all_windows_by_class_and_title("WeChatMainWndForPC")
-#     print(handles)

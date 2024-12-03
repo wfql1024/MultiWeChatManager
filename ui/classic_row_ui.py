@@ -17,13 +17,14 @@ class AccountRow:
     """
     为每一个账号创建其行布局的类
     """
-    def __init__(self, root, m_class, parent_frame, account, data_path,
+    def __init__(self, root, m_class, parent_frame, account, data_path, config_status,
                  multiple_status, login_status, update_top_checkbox_callback, sw="WeChat"):
         self.chosen_tab = sw
         self.root = root
         self.m_class = m_class
         self.single_click_id = None
         self.data_path = data_path
+        self.config_status = config_status
         self.multiple_status = multiple_status
         self.start_time = time.time()
         self.tooltips = {}
@@ -77,15 +78,14 @@ class AccountRow:
         self.button_frame.pack(side=tk.RIGHT)
 
         # 配置标签
-        config_status = func_config.get_config_status_by_account(account, self.data_path)
-        self.config_status_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
+        self.config_status_label = ttk.Label(self.row_frame, text=self.config_status, anchor='e')
         self.config_status_label.pack(side=tk.RIGHT, padx=Constants.CLZ_CFG_LBL_PAD_X,
                                       fill=tk.X, expand=True)
 
         # 登录/配置按钮
         if login_status == "login":
             # 配置按钮
-            self.config_button_text = "重新配置" if config_status != "无配置" else "添加配置"
+            self.config_button_text = "重新配置" if self.config_status != "无配置" else "添加配置"
             self.config_button = ttk.Button(
                 self.button_frame, text=self.config_button_text, style='Custom.TButton',
                 command=partial(self.create_config, account, self.multiple_status)
@@ -100,7 +100,7 @@ class AccountRow:
                                            command=partial(self.auto_login_account, account))
             self.login_button.pack(side=tk.RIGHT)
 
-            if config_status == "无配置":
+            if self.config_status == "无配置":
                 # 无配置禁用按钮且置底
                 widget_utils.disable_button_and_add_tip(self.tooltips, self.login_button, "请先手动登录后配置")
                 self.checkbox.config(state='disabled')
@@ -179,7 +179,7 @@ class AccountRow:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=([account], self.multiple_status, self.m_class.create_main_frame_and_menu)
+                args=([account], self.multiple_status, self.m_class.create_main_frame_and_menu, self.chosen_tab)
             ).start()
         except Exception as e:
             logger.error(e)
@@ -281,10 +281,10 @@ class ClassicRowUI:
     def add_account_row(self, parent_frame, account, login_status):
         """渲染账号所在行"""
         print(f"渲染{account}.........................................................")
-        config_status = func_config.get_config_status_by_account(account, self.data_path)
+        config_status = func_config.get_config_status_by_account(account, self.data_path, self.chosen_tab)
 
         # 创建列表实例
-        row = AccountRow(self.root, self.m_class, parent_frame, account, self.data_path,
+        row = AccountRow(self.root, self.m_class, parent_frame, account, self.data_path, config_status,
                          self.multiple_status, login_status, self.update_top_title, self.chosen_tab)
 
         # 将已登录、未登录但已配置实例存入字典
@@ -388,7 +388,7 @@ class ClassicRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu)
+                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu, self.chosen_tab)
             ).start()
         except Exception as e:
             logger.error(e)

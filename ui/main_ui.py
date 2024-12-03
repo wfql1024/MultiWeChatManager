@@ -48,7 +48,7 @@ class MainWindow:
         self.tab_mng = None
         self.tab_control = None
         self.tab_dict = None
-        self.chosen_tab = None
+        self.chosen_tab = func_setting.fetch_global_setting_or_set_default("tab")
         self.tab_frame = None
         self.chosen_sub_exe = None
         self.program_file_menu = None
@@ -80,7 +80,7 @@ class MainWindow:
         self.file_menu = None
         self.help_menu = None
         self.multiple_status = None
-        self.last_version_path = None
+        self.dll_dir = None
         self.data_dir = None
         self.install_path = None
         self.start_time = None
@@ -233,9 +233,9 @@ class MainWindow:
             os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
             print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
 
-        install_path = func_setting.get_sw_install_path()
-        data_path = func_setting.get_sw_data_dir()
-        dll_dir_path = func_setting.get_sw_dll_dir()
+        install_path = func_setting.get_sw_install_path(self.chosen_tab)
+        data_path = func_setting.get_sw_data_dir(self.chosen_tab)
+        dll_dir = func_setting.get_sw_dll_dir(self.chosen_tab)
         self.chosen_sub_exe = func_setting.fetch_sw_setting_or_set_default("sub_exe")
         self.chosen_view = func_setting.fetch_sw_setting_or_set_default("view")
         func_setting.fetch_sw_setting_or_set_default("login_size")
@@ -246,13 +246,13 @@ class MainWindow:
                 if len(new_versions) != 0:
                     self.need_to_update = True
 
-        if not install_path or not data_path or not dll_dir_path:
+        if not install_path or not data_path or not dll_dir:
             self.root.after(0, self.show_setting_error)
             return False
         else:
             self.install_path = install_path
             self.data_dir = data_path
-            self.last_version_path = dll_dir_path
+            self.dll_dir = dll_dir
             screen_size = subfunc_file.get_screen_size_from_setting_ini()
             if not screen_size or screen_size == "":
                 # 获取屏幕和登录窗口尺寸
@@ -280,6 +280,9 @@ class MainWindow:
         # print(self.tab_dict)
         self.tab_frame = self.tab_dict[self.chosen_tab]['frame']
         # print(f"切换后：{self.tab_frame}")
+        self.data_dir = func_setting.get_sw_data_dir(self.chosen_tab)
+        self.install_path = func_setting.get_sw_install_path(self.chosen_tab)
+        self.dll_dir = func_setting.get_sw_dll_dir(self.chosen_tab)
 
     def create_root_menu_bar(self):
         """创建菜单栏"""
@@ -588,7 +591,7 @@ class MainWindow:
 
         # 进行静默获取头像及配置
         func_account.silent_get_and_config(login, logout, self.data_dir,
-                                           self.create_main_frame_and_menu)
+                                           self.create_main_frame_and_menu, self.chosen_tab)
 
     def bind_mouse_wheel(self, widget):
         """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
@@ -622,16 +625,18 @@ class MainWindow:
 
     def on_canvas_configure(self, event):
         """动态调整canvas中窗口的宽度，并根据父子间高度关系进行滚轮事件绑定与解绑"""
-        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        width = event.width
-        self.canvas.itemconfig(self.canvas_window, width=width)
-
-        if self.main_frame.winfo_height() > self.canvas.winfo_height():
-            self.bind_mouse_wheel(self.canvas)
-            self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
-        else:
-            self.unbind_mouse_wheel(self.canvas)
-            self.scrollbar.pack_forget()
+        try:
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            width = event.width
+            self.canvas.itemconfig(tagOrId=self.canvas_window, width=width)
+            if self.main_frame.winfo_height() > self.canvas.winfo_height():
+                self.bind_mouse_wheel(self.canvas)
+                self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
+            else:
+                self.unbind_mouse_wheel(self.canvas)
+                self.scrollbar.pack_forget()
+        except Exception as e:
+            logger.error(e)
 
     def on_tab_change(self, _event):
         """处理选项卡变化事件"""

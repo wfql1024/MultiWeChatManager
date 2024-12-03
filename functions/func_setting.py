@@ -11,7 +11,7 @@ def get_sw_dll_dir_by_files(sw="WeChat"):
     """通过文件遍历方式获取dll文件夹"""
     dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, dll_dir_check_suffix=None, executable=None)
-    install_path = get_sw_install_path()
+    install_path = get_sw_install_path(sw)
     if install_path and install_path != "":
         install_dir = os.path.dirname(install_path)
     else:
@@ -35,7 +35,7 @@ def get_sw_dll_dir_by_files(sw="WeChat"):
     return [file_utils.get_newest_full_version_dir(version_folders)]
 
 
-def get_sw_install_path(from_setting_window=False, sw="WeChat"):
+def get_sw_install_path(sw, from_setting_window=False):
     """获取微信安装路径"""
     path_finders = [
         wechat_utils.get_sw_install_path_from_process,
@@ -59,7 +59,7 @@ def get_sw_install_path(from_setting_window=False, sw="WeChat"):
     return None
 
 
-def get_sw_data_dir(from_setting_window=False, sw="WeChat"):
+def get_sw_data_dir(sw, from_setting_window=False):
     """获取微信数据存储文件夹"""
     # 获取地址的各种方法
     path_finders = [
@@ -86,7 +86,7 @@ def get_sw_data_dir(from_setting_window=False, sw="WeChat"):
     return None
 
 
-def get_sw_dll_dir(from_setting_window=False, sw="WeChat"):
+def get_sw_dll_dir(sw, from_setting_window=False):
     """获取微信dll所在文件夹"""
     path_finders = [
         None if from_setting_window else subfunc_file.get_sw_dll_dir_from_setting_ini,
