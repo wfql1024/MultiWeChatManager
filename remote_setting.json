@@ -9,6 +9,387 @@
                 "text": "微信4.0",
                 "frame": ""
             }
+        },
+        "update": {
+            "v2.9.1.698-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                            "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                            "md5": "19758698771099dfdf57d4230217d30b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                            "md5": "19758698771099dfdf57d4230217d30b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                            "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增新增自动配置未配置的账号"
+                    ],
+                    "修复": [
+                        "修复列表视图下配置失败等的问题"
+                    ]
+                }
+            },
+            "v2.8.7.668-Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "ad73222d3069e2a60c9aad3318012110",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "75e7cb3e7610df3c911a0bd520bb0397",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "75e7cb3e7610df3c911a0bd520bb0397",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "ad73222d3069e2a60c9aad3318012110",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增“列表”视图",
+                        "新增“在线升级”功能",
+                        "新增自动静默获取头像昵称的功能"
+                    ],
+                    "修复": [
+                        "修复Python模式下多开微信失败的问题",
+                        "修复某些表情符号溢出无法显示的问题",
+                        "修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题"
+                    ],
+                    "优化": [
+                        "防撤回功能已默认显示",
+                        "优化按钮点击逻辑",
+                        "优化日志显示",
+                        "优化在线升级，避免重复下载"
+                    ]
+                }
+            },
+            "v2.6.0.420-test": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "测试在线升级"
+                    ]
+                }
+            },
+            "v2.5.0.411.Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "适配": [
+                        "适配win7系统"
+                    ],
+                    "优化": [
+                        "为了适配win7，降低python版本：3.12->3.7，由此安装包体积大幅缩减"
+                    ]
+                }
+            },
+            "v2.4.0.365.Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增防撤回"
+                    ]
+                }
+            },
+            "v2.3.3.333.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增调试窗口",
+                        "新增原生多开（加入互斥体概念，可在主界面和账号详情中查看是否含有互斥体）",
+                        "新增统计面板，可以用来统计对比各个多开器的性能"
+                    ],
+                    "修复": [
+                        "修复设置界面仍会出现的打不开选择文件夹的问题",
+                        "修复获取dll文件夹和版本号的逻辑会因为用户文件结构不同而可能出现错误的问题",
+                        "修复多选登录可能出现窗口错位的问题（延长了等待新登录窗口的时间）"
+                    ],
+                    "优化": [
+                        "优化微信更新适配全局多开的方式，由源码修改改为从网站获取",
+                        "优化常规模式和调试模式的实现方式，由两个程序改为快捷方式是否携带“--debug”参数来区分模式"
+                    ]
+                }
+            },
+            "v2.0.8.208.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "修复": [
+                        "修复初次使用时未获取到路径无处设置的问题",
+                        "修复无法拖动文件发送到微信的问题"
+                    ],
+                    "优化": [
+                        "优化微信新版本的适配，目前支持微信 3.9.11.25、3.9.12.9、3.9.12.11 多开",
+                        "优化获取登录窗口尺寸的逻辑"
+                    ],
+                    "新增": [
+                        "新增打赏（你懂的~）"
+                    ]
+                }
+            },
+            "v2.0.0.200.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增全局多开模式和多种子多开器",
+                        "新增多选自动登录",
+                        "新增状态栏",
+                        "新增快捷启动",
+                        "新的UI界面，新增头像、昵称等详情显示"
+                    ]
+                }
+            },
+            "v1.0.79.100.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增全局多开模式和多种子多开器",
+                        "新增多选自动登录",
+                        "新增状态栏",
+                        "新增快捷启动",
+                        "新的UI界面，新增头像、昵称等详情显示"
+                    ]
+                }
+            }
         }
     },
     "WeChat": {
