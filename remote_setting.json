@@ -1,4 +1,16 @@
 {
+    "global": {
+        "all_sw": {
+            "WeChat": {
+                "text": "微信",
+                "frame": ""
+            },
+            "Weixin": {
+                "text": "微信4.0",
+                "frame": ""
+            }
+        }
+    },
     "WeChat": {
         "multiple": {
             "3.9.10.19": {
