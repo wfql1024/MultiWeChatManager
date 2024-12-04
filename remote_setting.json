@@ -368,6 +368,34 @@
         "config_file_list": ["config.data"]
     },
     "Weixin": {
+        "multiple": {
+            "4.0.1.11": {
+                "STABLE": {
+                    "alias": "原版",
+                    "changes": "----------------????????--------",
+                    "pattern": "41B9FFFFFFFFFF15BB2AD00685C0750F"
+                },
+                "PATCH": {
+                    "alias": "补丁",
+                    "changes": "----------------------------EB--",
+                    "pattern": "41B9FFFFFFFFFF15BB2AD00685C0EB0F"
+                }
+            }
+        },
+        "revoke": {
+            "4.0.1.11": {
+                "STABLE": {
+                    "alias": "原版",
+                    "changes": "------------------------------??????",
+                    "pattern": "752148B87265766F6B656D734889057441AF"
+                },
+                "PATCH": {
+                    "alias": "补丁",
+                    "changes": "EB----------------------------------",
+                    "pattern": "EB2148B87265766F6B656D734889057441AF"
+                }
+            }
+        },
         "redundant_wnd_class": [
             "Qt51514QWindowIcon"
         ],
