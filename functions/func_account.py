@@ -206,7 +206,7 @@ def get_account_list(multiple_status, sw="WeChat"):
                     try:
                         wx_id_index = path_parts.index(os.path.basename(data_path)) + 1
                         wx_id = path_parts[wx_id_index]
-                        if wx_id not in ["all_users"]:
+                        if wx_id not in {"all_users"}:
                             wechat_processes.append((wx_id, process_id))
                             logged_in_ids.add(wx_id)
                             print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
@@ -242,14 +242,18 @@ def get_account_list(multiple_status, sw="WeChat"):
             logger.error(f"发生意外错误: {e}")
 
     start_time = time.time()
-    data_path = func_setting.get_sw_data_dir(sw=sw)
+    data_path = func_setting.get_sw_data_dir(sw)
     if not data_path:
         return False, "找不到数据存储路径"
 
     wechat_processes = []
     logged_in_ids = set()
 
-    exe, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+    exe, excluded_dir_list = subfunc_file.get_details_from_remote_setting_json(
+        sw, executable=None, excluded_dir_list=None)
+    if exe is None or excluded_dir_list is None:
+        messagebox.showerror("错误", f"{sw}平台未适配")
+        return False, "该平台未适配"
     pids = process_utils.get_process_ids_by_name(exe)
     pids = process_utils.remove_child_pids(pids)
     print(f"读取到微信所有进程，用时：{time.time() - start_time:.4f} 秒")
@@ -262,11 +266,10 @@ def get_account_list(multiple_status, sw="WeChat"):
     # print(logged_in_ids)
 
     # 获取文件夹并分类
-    excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF', 'all_users'}
     folders = set(
         item for item in os.listdir(data_path)
         if os.path.isdir(os.path.join(data_path, item))
-    ) - excluded_folders
+    ) - excluded_dir_list
     login = list(logged_in_ids & folders)
     logout = list(folders - logged_in_ids)
 

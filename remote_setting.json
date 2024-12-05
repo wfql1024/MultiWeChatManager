@@ -758,7 +758,10 @@
         ],
         "login_wnd_class": "WeChatLoginWndForPC",
         "config_path_suffix": "All Users/config",
-        "config_file_list": ["config.data"]
+        "config_file_list": ["config.data"],
+        "excluded_dir_list": [
+            "All Users", "Applet", "Plugins", "WMPF", "all_users"
+        ]
     },
     "Weixin": {
         "multiple": {

@@ -4,25 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="测试新的配置文件">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="多平台共用已完成基本框架">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/func_account.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_account.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_login.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_update.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_update.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_wechat_dll.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_sw_dll.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_wechat.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_wechat.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/remote_setting.json" beforeDir="false" afterPath="$PROJECT_DIR$/remote_setting.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/strings.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/strings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/about_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/about_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/classic_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/classic_row_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/statistic_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/statistic_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/treeview_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/treeview_row_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/update_log_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/update_log_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/wechat_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/wechat_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -541,15 +527,7 @@
       <workItem from="1732979105037" duration="5138000" />
       <workItem from="1733044606804" duration="101038000" />
       <workItem from="1733229720507" duration="26624000" />
-      <workItem from="1733271182642" duration="37425000" />
-    </task>
-    <task id="LOCAL-00105" summary="修复新视图头像加载、字符溢出、解密获取等bug">
-      <option name="closed" value="true" />
-      <created>1730413238403</created>
-      <option name="number" value="00105" />
-      <option name="presentableId" value="LOCAL-00105" />
-      <option name="project" value="LOCAL" />
-      <updated>1730413238403</updated>
+      <workItem from="1733271182642" duration="38107000" />
     </task>
     <task id="LOCAL-00106" summary="在线升级核心流程完成">
       <option name="closed" value="true" />
@@ -935,7 +913,15 @@
       <option name="project" value="LOCAL" />
       <updated>1733327098861</updated>
     </task>
-    <option name="localTasksCounter" value="154" />
+    <task id="LOCAL-00154" summary="多平台共用已完成基本框架">
+      <option name="closed" value="true" />
+      <created>1733412250943</created>
+      <option name="number" value="00154" />
+      <option name="presentableId" value="LOCAL-00154" />
+      <option name="project" value="LOCAL" />
+      <updated>1733412250943</updated>
+    </task>
+    <option name="localTasksCounter" value="155" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1000,7 +986,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="在线升级功能优化：检测最近是否已经下载过，修复用户关闭窗口导致出现错误的问题" />
     <MESSAGE value="添加3.9.12.19适配" />
     <MESSAGE value="修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题" />
     <MESSAGE value="更新版本适配" />
@@ -1025,7 +1010,8 @@
     <MESSAGE value="适配高分屏，新增微信4.0管理" />
     <MESSAGE value="4.0可以多选登录了" />
     <MESSAGE value="测试新的配置文件" />
-    <option name="LAST_COMMIT_MESSAGE" value="测试新的配置文件" />
+    <MESSAGE value="多平台共用已完成基本框架" />
+    <option name="LAST_COMMIT_MESSAGE" value="多平台共用已完成基本框架" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_multiple.coverage" NAME="wechat_multiple Coverage Results" MODIFIED="1726457491071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/mutex" />

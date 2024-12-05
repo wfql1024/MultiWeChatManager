@@ -131,7 +131,12 @@ def get_acc_details_from_json_by_tab(tab, account: str, **kwargs) -> Tuple[Any, 
     return result
 
 def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
-    """"""
+    """
+    从远程设置json中获取数据
+    :param tab: 选择的软件标签
+    :param kwargs: 传入要获取的参数及其默认值
+    :return:
+    """
     data = json_utils.load_json_data(Config.REMOTE_SETTING_JSON_PATH)
     info = data.get(tab, {})
     result = tuple()
