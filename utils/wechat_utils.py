@@ -23,8 +23,8 @@ def is_valid_sw_data_dir(path, sw="WeChat") -> bool:
     suffix, = subfunc_file.get_details_from_remote_setting_json(sw, data_dir_check_suffix=None)
     config_data_path = os.path.join(path, suffix).replace('\\', '/')
     # print("检查路径", config_data_path)
-    # print(os.path.isfile(config_data_path))
-    return os.path.isfile(config_data_path)
+    # print(os.path.exists(config_data_path))
+    return os.path.exists(config_data_path)
 
 
 def is_valid_sw_dll_dir(path, sw="WeChat") -> bool:

@@ -39,7 +39,7 @@ class TreeviewRowUI:
         self.root = root
         self.main_frame = m_main_frame
 
-        print(self.chosen_tab)
+        # print(self.chosen_tab)
         # 加载列表排序设置
         login_col_to_sort = func_setting.fetch_sw_setting_or_set_default("login_col_to_sort", self.chosen_tab)
         logout_col_to_sort = func_setting.fetch_sw_setting_or_set_default("logout_col_to_sort", self.chosen_tab)
@@ -215,7 +215,7 @@ class TreeviewRowUI:
                 has_mutex=None
             )
 
-            img = func_account.get_acc_avatar_from_files(account)
+            img = func_account.get_acc_avatar_from_files(account, self.chosen_tab)
             img = img.resize(Constants.TREE_AVT_LBL_SIZE, Image.Resampling.NEAREST)
             photo = ImageTk.PhotoImage(img)
 
@@ -526,7 +526,7 @@ class TreeviewRowUI:
         if messagebox.askokcancel("提示",
                                   f"确认退登：\n{accounts_to_quit_str}？"):
             try:
-                quited_accounts = func_account.quit_accounts(accounts)
+                quited_accounts = func_account.quit_accounts(accounts, self.chosen_tab)
                 quited_accounts_str = "\n".join(quited_accounts)
                 messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
                 self.m_class.create_main_frame_and_menu()

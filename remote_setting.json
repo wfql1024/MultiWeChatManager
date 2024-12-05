@@ -741,7 +741,7 @@
         "executable": "WeChat.exe",
         "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
         "data_dir_guess_suffix": "Tencent\\WeChat",
-        "data_dir_check_suffix": "All Users/config/config.data",
+        "data_dir_check_suffix": "All Users",
         "dll_dir_check_suffix": "WeChatWin.dll",
         "patch_dll": "WeChatWin.dll",
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",

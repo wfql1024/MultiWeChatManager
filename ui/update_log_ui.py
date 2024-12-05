@@ -9,7 +9,7 @@ from tkinter import messagebox, ttk
 
 from functions import func_update, subfunc_file
 from resources import Config
-from utils import hwnd_utils, file_utils, sys_utils
+from utils import file_utils, sys_utils
 
 
 class UpdateLogWindow:
@@ -38,19 +38,20 @@ class UpdateLogWindow:
 
         print("显示更新日志")
 
-        if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
-            config_data = subfunc_file.fetch_config_data_from_remote()
+        if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
+            data = subfunc_file.fetch_config_data_from_remote()
         else:
             print("本地版本对照表存在，读取中...")
             try:
-                with open(Config.VER_ADAPTATION_JSON_PATH, 'r', encoding='utf-8') as f:
-                    config_data = json.load(f)
+                with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
             except Exception as e:
                 print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
-                config_data = subfunc_file.fetch_config_data_from_remote()
-                print(f"从云端下载了文件：{config_data}")
+                data = subfunc_file.fetch_config_data_from_remote()
+                print(f"从云端下载了文件。")
                 raise RuntimeError("本地 JSON 文件读取失败")
 
+        global_info = data["global"]
         # 创建一个用于放置滚动文本框的框架
         log_frame = ttk.Frame(main_frame)
         log_frame.pack(pady=(5, 0), fill=tk.BOTH, expand=True)
@@ -69,7 +70,7 @@ class UpdateLogWindow:
                 newest_version = file_utils.get_newest_full_version(new_versions)
                 print(newest_version)
                 curr_sys_ver_name = sys_utils.get_sys_major_version_name()
-                curr_sys_newest_ver_dicts = config_data["update"][newest_version]["pkgs"][curr_sys_ver_name]
+                curr_sys_newest_ver_dicts = global_info["update"][newest_version]["pkgs"][curr_sys_ver_name]
                 bottom_frame = ttk.Frame(main_frame)
                 bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)
                 cancel_button = ttk.Button(bottom_frame, text="以后再说",
@@ -91,7 +92,7 @@ class UpdateLogWindow:
                     self.log_text.insert(tk.END, v + "：\n")
 
                     # 遍历每个分类（如"新增"、"修复"、"优化"等）
-                    for category, logs in config_data["update"][v]["logs"].items():
+                    for category, logs in global_info["update"][v]["logs"].items():
                         self.log_text.insert(tk.END, f"#{category}：\n")
                         for log in logs:
                             self.log_text.insert(tk.END, f"-{log}\n")  # 在日志前添加适当的缩进
@@ -107,7 +108,7 @@ class UpdateLogWindow:
                 self.log_text.insert(tk.END, v + "：\n")
 
                 # 遍历每个分类（如"新增"、"修复"、"优化"等）
-                for category, logs in config_data["update"][v]["logs"].items():
+                for category, logs in global_info["update"][v]["logs"].items():
                     self.log_text.insert(tk.END, f"#{category}：\n")
                     for log in logs:
                         self.log_text.insert(tk.END, f"-{log}\n")  # 在日志前添加适当的缩进

@@ -1,4 +1,3 @@
-import itertools
 import time
 
 import psutil
@@ -25,7 +24,7 @@ def kill_wechat_multiple_processes(sw="WeChat"):
     for proc in psutil.process_iter(['pid', 'name']):
         try:
             # 检查进程名是否以"WeChatMultiple_"开头
-            if proc.name() and proc.name().startswith(f'{sw}WeChatMultiple_'):
+            if proc.name() and proc.name().startswith(f'{sw}Multiple_'):
                 proc.kill()
                 print(f"Killed process tree for {proc.name()} (PID: {proc.pid})")
 
@@ -164,7 +163,7 @@ def get_login_size(tab, status):
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
-    kill_wechat_multiple_processes()
+    kill_wechat_multiple_processes(tab)
     has_mutex_dict = get_mutex_dict(tab)
     sub_exe_process, sub_exe = open_wechat(status, has_mutex_dict, sw=tab)
     wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, timeout=8)

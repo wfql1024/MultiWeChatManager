@@ -11,22 +11,23 @@ import requests
 from functions import subfunc_file
 from resources import Config
 from utils import file_utils
+from utils.logger_utils import mylogger as logger
 
 
 def split_vers_by_cur_from_local(current_ver):
     try:
-        with open(Config.VER_ADAPTATION_JSON_PATH, 'r', encoding='utf-8') as f:
+        with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
             config_data = json.load(f)
         if not config_data:
             print("没有数据")
-            return "错误：没有数据"
+            return False, "错误：没有数据"
         else:
             # 获取 update 节点的所有版本
-            all_versions = list(config_data["update"].keys())
+            all_versions = list(config_data["global"]["update"].keys())
             # 对版本号进行排序
             sorted_versions = file_utils.get_sorted_full_versions(all_versions)
             if len(sorted_versions) == 0:
-                return [], []
+                return False, "版本列表为空"
             # 遍历 sorted_versions，通过 file_utils.get_newest_full_version 比较
             for i, version in enumerate(sorted_versions):
                 if file_utils.get_newest_full_version([current_ver, version]) == current_ver:
@@ -38,11 +39,11 @@ def split_vers_by_cur_from_local(current_ver):
                 # 如果没有找到比 current_ver 小或等于的版本，所有都更高
                 higher_versions = sorted_versions
                 lower_or_equal_versions = []
-            return higher_versions, lower_or_equal_versions
+            return True, (higher_versions, lower_or_equal_versions)
 
     except Exception as e:
-        print(f"发生错误：{str(e)}")
-        return "错误：无法获取版本信息"
+        logger.error(e)
+        return False, "错误：无法获取版本信息"
 
 
 def download_files(ver_dicts, download_dir, progress_callback, on_complete_callback, status):

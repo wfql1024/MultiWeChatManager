@@ -216,6 +216,8 @@ def update_has_mutex_from_all_wechat(tab="WeChat"):
     :return: 是否成功
     """
     data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    if tab not in data:
+        data[tab] = {}
     tab_info = data.get(tab, {})
     if "all_wechat" not in tab_info:
         tab_info["all_wechat"] = {}
@@ -236,7 +238,9 @@ def update_manual_time_statistic(sub_exe, time_spent, tab="WeChat"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
 
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    tab_info = data.get(sub_exe, {})
+    if tab not in data:
+        data[tab] = {}
+    tab_info = data.get(tab, {})
     if "manual" not in tab_info:
         tab_info["manual"] = {}
     if sub_exe not in tab_info["manual"]:
@@ -260,11 +264,14 @@ def update_manual_time_statistic(sub_exe, time_spent, tab="WeChat"):
 
 def update_auto_time_statistic(sub_exe, time_spent, index, tab="WeChat"):
     """更新自动登录统计数据到json"""
+    print("更新自动登录统计数据到json")
     if sub_exe.startswith(f"{tab}Multiple"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
 
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    tab_info = data.get(sub_exe, {})
+    if tab not in data:
+        data[tab] = {}
+    tab_info = data.get(tab, {})
     if "auto" not in tab_info:
         tab_info["auto"] = {}
     if sub_exe not in tab_info["auto"]:
@@ -287,6 +294,7 @@ def update_auto_time_statistic(sub_exe, time_spent, index, tab="WeChat"):
     new_avg_time = (avg_time * count + time_spent) / new_count
 
     tab_info["auto"][sub_exe][str(index)] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
+    print(tab_info)
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
@@ -295,6 +303,8 @@ def update_refresh_time_statistic(view, acc_count, time_spent, tab="WeChat"):
     if time_spent > 2:
         return
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    if tab not in data:
+        data[tab] = {}
     tab_info = data.get(tab, {})
     if "refresh" not in tab_info:
         tab_info["refresh"] = {}
@@ -322,14 +332,38 @@ def update_refresh_time_statistic(view, acc_count, time_spent, tab="WeChat"):
 def fetch_config_data_from_remote():
     """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
     print(f"正从远程源下载...")
-    urls = [Strings.VER_ADAPTATION_JSON_GITEE, Strings.VER_ADAPTATION_JSON_GITHUB]
+    urls = [Strings.REMOTE_SETTING_JSON_GITEE, Strings.REMOTE_SETTING_JSON_GITHUB]
 
     for url in urls:
         print(f"正在尝试从此处下载: {url}...")
         try:
             response = requests.get(url, timeout=2)
             if response.status_code == 200:
-                with open(Config.VER_ADAPTATION_JSON_PATH, 'w', encoding='utf-8') as config_file:
+                with open(Config.REMOTE_SETTING_JSON_PATH, 'w', encoding='utf-8') as config_file:
+                    config_file.write(response.text)  # 将下载的 JSON 保存到文件
+                print(f"成功从 {url} 获取并保存 JSON 文件")
+                return json.loads(response.text)  # 返回加载的 JSON 数据
+            else:
+                print(f"获取失败: {response.status_code}，尝试下一个源...")
+        except requests.exceptions.Timeout:
+            print(f"请求 {url} 超时，尝试下一个源...")
+        except Exception as e:
+            print(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
+
+    raise RuntimeError("所有源获取配置数据失败")
+
+
+def fetch_ver_adaptation_from_remote():
+    """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
+    print(f"正从远程源下载...")
+    urls = [Strings.REMOTE_SETTING_JSON_GITEE, Strings.REMOTE_SETTING_JSON_GITHUB]
+
+    for url in urls:
+        print(f"正在尝试从此处下载: {url}...")
+        try:
+            response = requests.get(url, timeout=2)
+            if response.status_code == 200:
+                with open(Config.REMOTE_SETTING_JSON_PATH, 'w', encoding='utf-8') as config_file:
                     config_file.write(response.text)  # 将下载的 JSON 保存到文件
                 print(f"成功从 {url} 获取并保存 JSON 文件")
                 return json.loads(response.text)  # 返回加载的 JSON 数据
@@ -361,8 +395,9 @@ def get_app_current_version():
     return f"v{version_number}-{Config.VER_STATUS}"
 
 
-def get_avatar_url_from_acc_info_file(acc_list, data_dir):
+def get_avatar_url_from_acc_info_file(sw, acc_list, data_dir):
     changed = False
+
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
         # print(acc_info_dat_path)
@@ -370,7 +405,7 @@ def get_avatar_url_from_acc_info_file(acc_list, data_dir):
             continue
         with open(acc_info_dat_path, 'r', encoding="utf-8", errors="ignore") as f:
             acc_info = f.read()
-        # 获取文件中的最后三行
+        # 获取文件内容，去掉多余的换行符
         info_line = '\n'.join(acc_info.strip().splitlines())
         # 定义正则表达式来匹配 https 开头并以 /0 或 /132 结尾的 URL
         url_patterns = [r'https://[^\s]*?/0', r'https://[^\s]*?/132']
@@ -388,11 +423,11 @@ def get_avatar_url_from_acc_info_file(acc_list, data_dir):
         if matched_url and matched_url.endswith('/132'):
             matched_url = matched_url.rstrip('/132') + '/0'
         if matched_url:
-            avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{acc}", f"{acc}.jpg")
+            avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
             logger.info(f"{acc}: {matched_url}")
             success = image_utils.download_image(matched_url, avatar_path)
             if success is True:
-                update_acc_details_to_json_by_tab("WeChat", acc, avatar_url=matched_url)
+                update_acc_details_to_json_by_tab(sw, acc, avatar_url=matched_url)
                 changed = True
     return changed
 
@@ -406,7 +441,7 @@ def get_nickname_from_acc_info_file(acc_list, data_dir):
             continue
         with open(acc_info_dat_path, 'r', encoding="utf-8", errors="ignore") as f:
             acc_info = f.read()
-        # 获取文件中的最后四行
+        # 获取文件
         str_line = ''.join(acc_info.strip().splitlines())
         # print(f"最后四行：{str_line}")
         nickname_str_pattern = rf'{acc}(.*?)https://'
@@ -498,7 +533,11 @@ def merge_refresh_nodes():
 
 def move_data_to_wechat():
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    wechat_data = {
-        "WeChat": data
-    }
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, wechat_data)
+
+    # 检查是否已有 "WeChat" 节点
+    if "WeChat" not in data:
+        wechat_data = {
+            "WeChat": data
+        }
+        json_utils.save_json_data(Config.STATISTIC_JSON_PATH, wechat_data)
+

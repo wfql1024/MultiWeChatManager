@@ -14,14 +14,15 @@ def try_convert(value):
 
 
 class StatisticWindow:
-    def __init__(self, master):
+    def __init__(self, master, sw="WeChat"):
+        self.sw = sw
         self.refresh_mode_combobox = None
         self.refresh_tree = None
         self.manual_tree = None
         self.auto_tree = None
         self.auto_count_combobox = None
         self.master = master
-        self.master.title("统计数据")
+        self.master.title(f"{sw}统计数据")
         self.master.attributes('-toolwindow', True)
         self.window_width = 420
         self.window_height = 540
@@ -167,8 +168,11 @@ class StatisticWindow:
 
     def display_table(self):
         data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+        if self.sw not in data:
+            data[self.sw] = {}
+        tab_info = data.get(self.sw, {})
         # 添加手动统计数据
-        manual_data = data.get("manual", {}).items()
+        manual_data = tab_info.get("manual", {}).items()
         for mode, stats in manual_data:
             min_time, count, avg_time, max_time = stats.split(",")
             self.manual_tree.insert("", "end",
@@ -177,7 +181,7 @@ class StatisticWindow:
         self.manual_tree.config(height=len(manual_data) + 1)
 
         # 更新下拉框选项
-        auto_data = data.get("auto", {})
+        auto_data = tab_info.get("auto", {})
         index_values = set()  # 使用集合去重
         for mode, times_dict in auto_data.items():
             index_values.update(times_dict.keys())  # 添加索引值
@@ -189,7 +193,7 @@ class StatisticWindow:
             self.update_auto_table_from_selection(self.auto_count_combobox.get())
 
         # 更新下拉框选项
-        refresh_data = data.get("refresh", {})
+        refresh_data = tab_info.get("refresh", {})
         view_values = set()  # 使用集合去重
         for mode, times_dict in refresh_data.items():
             print(f"mode={mode}")
@@ -208,7 +212,7 @@ class StatisticWindow:
         # 清空之前的数据
         for item in self.auto_tree.get_children():
             self.auto_tree.delete(item)
-        auto_data = data.get("auto", {}).items()
+        auto_data = data.get(self.sw, {}).get("auto", {}).items()
         i = 0
         for mode, times_dict in auto_data:
             if selected_index in times_dict:  # 仅显示选中的index
@@ -226,7 +230,7 @@ class StatisticWindow:
         # 清空之前的数据
         for item in self.refresh_tree.get_children():
             self.refresh_tree.delete(item)
-        refresh_data = data.get("refresh", {}).get(selected_view, {}).items()
+        refresh_data = data.get(self.sw, {}).get("refresh", {}).get(selected_view, {}).items()
         try:
             for acc_count, stats in refresh_data:
                 min_time, count, avg_time, max_time = stats.split(",")

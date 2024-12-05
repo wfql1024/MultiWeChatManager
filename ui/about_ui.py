@@ -220,8 +220,8 @@ class AboutWindow:
 
     def check_for_updates(self, current_full_version):
         subfunc_file.fetch_config_data_from_remote()
-        result = func_update.split_vers_by_cur_from_local(current_full_version)
-        if result:
+        success, result = func_update.split_vers_by_cur_from_local(current_full_version)
+        if success is True:
             new_versions, old_versions = result
             if len(new_versions) != 0:
                 update_log_window = tk.Toplevel(self.wnd)
@@ -230,7 +230,7 @@ class AboutWindow:
                 messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
                 return True
         else:
-            messagebox.showinfo("错误", f"获取失败。")
+            messagebox.showinfo("错误", result)
             return False
 
 

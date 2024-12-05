@@ -1,4 +1,5 @@
 # func_login.py
+import threading
 import time
 import tkinter as tk
 from tkinter import messagebox
@@ -39,7 +40,7 @@ def manual_login(m_class, tab, status, window_callback):
     wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 20)
     if wechat_hwnd:
         subfunc_file.set_all_wechat_values_to_false(tab)
-        subfunc_file.update_manual_time_statistic(sub_exe, time.time() - start_time)
+        subfunc_file.update_manual_time_statistic(sub_exe, time.time() - start_time, tab)
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
@@ -152,7 +153,8 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
                 if sub_exe_process:
                     sub_exe_process.terminate()
                 print(f"打开窗口成功：{wechat_hwnd}")
-                subfunc_file.set_all_wechat_values_to_false()
+                subfunc_file.set_all_wechat_values_to_false(tab)
+                subfunc_file.update_has_mutex_from_all_wechat(tab)
                 break
             if time.time() > end_time:
                 print(f"超时！换下一个账号")
@@ -178,29 +180,37 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
             print(e)
 
         # 统计时间
-        subfunc_file.update_auto_time_statistic(sub_exe, time.time() - start_time, j + 1)
+        subfunc_file.update_auto_time_statistic(sub_exe, time.time() - start_time, j + 1, tab)
 
     # 循环登录完成
     # 如果有，关掉多余的多开器
-    subfunc_wechat.kill_wechat_multiple_processes()
+    subfunc_wechat.kill_wechat_multiple_processes(tab)
 
-    # 两轮点击所有窗口的登录，防止遗漏
-    handles = hwnd_utils.find_all_wnd_by_class_and_title(login_wnd_class)
-    for h in handles:
-        hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
-        time.sleep(0.2)
-    for h in handles:
-        titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
-        try:
-            # 依次查找每个标题
-            for title in titles:
-                cx, cy = hwnd_utils.get_center_pos_by_hwnd_and_title(h, title)
-                if cx is not None and cy is not None:
-                    hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
-                    break  # 找到有效坐标后退出循环
-        except TypeError as e:
-            print(e)
-            print("没有按钮，应该是点过啦~")
+    def func():
+        # 两轮点击所有窗口的登录，防止遗漏
+        handles = hwnd_utils.find_all_wnd_by_class_and_title(login_wnd_class)
+        time.sleep(2.5)
+        for h in handles:
+            hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
+            time.sleep(0.5)
+        time.sleep(2.5)
+        for h in handles:
+            hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
+            time.sleep(0.2)
+        for h in handles:
+            titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
+            try:
+                # 依次查找每个标题
+                for title in titles:
+                    cx, cy = hwnd_utils.get_center_pos_by_hwnd_and_title(h, title)
+                    if cx is not None and cy is not None:
+                        hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
+                        break  # 找到有效坐标后退出循环
+            except TypeError as te:
+                print(te)
+                print("没有按钮，应该是点过啦~")
+    threading.Thread(target=func).start()
+
 
     # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
     end_time = time.time() + 30

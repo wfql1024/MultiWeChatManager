@@ -18,10 +18,10 @@ from utils import process_utils, image_utils, string_utils, hwnd_utils
 from utils.logger_utils import mylogger as logger
 
 
-def to_quit_selected_accounts(accounts_selected, callback):
+def to_quit_selected_accounts(accounts_selected, callback, sw):
     accounts_to_quit = []
     for acc in accounts_selected:
-        pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", acc, pid=None)
+        pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, pid=None)
         display_name = get_acc_origin_display_name(acc)
         cleaned_display_name = string_utils.clean_display_name(display_name)
         accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
@@ -29,7 +29,7 @@ def to_quit_selected_accounts(accounts_selected, callback):
     if messagebox.askokcancel("提示",
                               f"确认退登：\n{accounts_to_quit_str}？"):
         try:
-            quited_accounts = quit_accounts(accounts_selected)
+            quited_accounts = quit_accounts(accounts_selected, sw)
             quited_accounts_str = "\n".join(quited_accounts)
             messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
             callback()
@@ -37,15 +37,16 @@ def to_quit_selected_accounts(accounts_selected, callback):
             logger.error(e)
 
 
-def quit_accounts(accounts):
+def quit_accounts(accounts, sw):
     quited_accounts = []
     for account in accounts:
         try:
-            pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, pid=None)
+            pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, pid=None)
             display_name = get_acc_origin_display_name(account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
+            executable_name, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, executable=None)
             process = psutil.Process(pid)
-            if process_utils.process_exists(pid) and process.name() == "WeChat.exe":
+            if process_utils.process_exists(pid) and process.name() == executable_name:
                 startupinfo = None
                 if sys.platform == 'win32':
                     startupinfo = subprocess.STARTUPINFO()
@@ -68,20 +69,21 @@ def quit_accounts(accounts):
     return quited_accounts
 
 
-def get_acc_avatar_from_files(account):
+def get_acc_avatar_from_files(account, sw):
     """
     从本地缓存或json文件中的url地址获取头像，失败则默认头像
+    :param sw: 选择的软件标签
     :param account: 原始微信号
     :return: 头像文件 -> ImageFile
     """
     # 构建头像文件路径
-    avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
+    avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
 
     # 检查是否存在对应account的头像
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
     # 如果没有，从网络下载
-    url, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, avatar_url=None)
+    url, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, avatar_url=None)
     if url is not None and url.endswith("/0"):
         image_utils.download_image(url, avatar_path)
 
@@ -154,7 +156,7 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
     # print(accounts_need_to_get_avatar, accounts_need_to_get_nickname)
     # 2. 对待获取url的账号遍历尝试获取
     if len(accounts_need_to_get_avatar) > 0:
-        changed = subfunc_file.get_avatar_url_from_acc_info_file(accounts_need_to_get_avatar, data_dir)
+        changed = subfunc_file.get_avatar_url_from_acc_info_file(sw, accounts_need_to_get_avatar, data_dir)
         if changed is True:
             need_to_notice = True
     # 3. 对待获取昵称的账号尝试遍历获取

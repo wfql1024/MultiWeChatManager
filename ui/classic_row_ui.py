@@ -136,7 +136,7 @@ class AccountRow:
         :return: 头像标签 -> Label
         """
         try:
-            img = func_account.get_acc_avatar_from_files(account)
+            img = func_account.get_acc_avatar_from_files(account, self.chosen_tab)
             img = img.resize(Constants.CLZ_AVT_LBL_SIZE)
             photo = ImageTk.PhotoImage(img)
             avatar_label = ttk.Label(self.row_frame, image=photo)
@@ -377,7 +377,7 @@ class ClassicRowUI:
             for account, row in self.login_rows.items() if row.checkbox_var.get()
         ]
         try:
-            func_account.to_quit_selected_accounts(accounts, self.m_class.create_main_frame_and_menu)
+            func_account.to_quit_selected_accounts(accounts, self.m_class.create_main_frame_and_menu, self.chosen_tab)
         except Exception as e:
             logger.error(e)
 

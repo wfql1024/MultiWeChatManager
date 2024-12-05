@@ -1,5 +1,6 @@
 # main_ui.py
 import glob
+import json
 import os
 import queue
 import sys
@@ -14,7 +15,7 @@ import yaml
 
 import psutil
 
-from functions import func_setting, func_wechat_dll, func_login, func_file, func_account, subfunc_file, func_update
+from functions import func_setting, func_sw_dll, func_login, func_file, func_account, subfunc_file, func_update
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui, loading_ui
 from utils import hwnd_utils, debug_utils, file_utils
@@ -42,6 +43,7 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, root, args=None):
+        self.error_frame = None
         self.scrollbar = None
         self.canvas_window = None
         self.canvas = None
@@ -118,8 +120,14 @@ class MainWindow:
         # 定期检查队列中的消息
         self.update_status()
 
+        # 本地配置不存在的话从远端拉取
+        if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
+            config_data = subfunc_file.fetch_config_data_from_remote()
+        else:
+            with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
         # 创建选项卡
-        self.create_tab()
+        self.create_tab(config_data)
 
         # 初次使用
         if self.new is True:
@@ -152,24 +160,30 @@ class MainWindow:
         # 每 1 毫秒检查一次队列
         self.root.after(1, self.update_status)
 
-    def create_tab(self):
+    def create_tab(self, config_data):
         self.tab_control = ttk.Notebook(self.root)
 
-        self.tab_mng = ttk.Frame(self.tab_control)
-        self.tab_control.add(self.tab_mng, text='管理')
+        # self.tab_mng = ttk.Frame(self.tab_control)
+        # self.tab_control.add(self.tab_mng, text='管理')
+        # # 读取YML文件并解析
+        # data = read_yaml(Config.LOCAL_SETTING_YML_PATH)
+        # # 创建Treeview控件
+        # tree = ttk.Treeview(self.tab_mng, columns=("name", "value"), show="headings")
+        # tree.pack(expand=True, fill=tk.BOTH)
+        # # 定义列标题
+        # tree.heading("name", text="Name")
+        # tree.heading("value", text="Value")
+        # # 填充树数据
+        # insert_tree_data(tree, data)
 
         self.chosen_tab = func_setting.fetch_global_setting_or_set_default("tab")
+        # 本地配置出错的话从远端拉取
+        try:
+            self.tab_dict = config_data["global"]["all_sw"]
+        except KeyError:
+            config_data = subfunc_file.fetch_config_data_from_remote()
+            self.tab_dict = config_data["global"]["all_sw"]
 
-        self.tab_dict = {
-            "WeChat": {
-                "text": '微信',
-                "frame": ''
-            },
-            "Weixin": {
-                "text": '微信4.0',
-                "frame": ''
-            }
-        }
         for item in self.tab_dict.keys():
             self.tab_dict[item]['frame'] = ttk.Frame(self.tab_control)
             self.tab_dict[item]['frame'].var = item
@@ -178,20 +192,6 @@ class MainWindow:
         self.tab_control.select(self.tab_dict[self.chosen_tab]['frame'])
         self.tab_control.bind('<<NotebookTabChanged>>', self.on_tab_change)
         self.tab_control.pack(expand=True, fill='both')
-
-        # 读取YML文件并解析
-        data = read_yaml(Config.LOCAL_SETTING_YML_PATH)
-
-        # 创建Treeview控件
-        tree = ttk.Treeview(self.tab_mng, columns=("name", "value"), show="headings")
-        tree.pack(expand=True, fill=tk.BOTH)
-
-        # 定义列标题
-        tree.heading("name", text="Name")
-        tree.heading("value", text="Value")
-
-        # 填充树数据
-        insert_tree_data(tree, data)
 
 
 
@@ -227,6 +227,10 @@ class MainWindow:
     def check_and_init(self):
         """检查和初始化"""
         print(f"初始化检查.........................................................")
+
+        if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
+            subfunc_file.fetch_config_data_from_remote()
+
         self.select_current_tab()
         # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
         if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
@@ -236,17 +240,19 @@ class MainWindow:
         install_path = func_setting.get_sw_install_path(self.chosen_tab)
         data_path = func_setting.get_sw_data_dir(self.chosen_tab)
         dll_dir = func_setting.get_sw_dll_dir(self.chosen_tab)
-        self.chosen_sub_exe = func_setting.fetch_sw_setting_or_set_default("sub_exe")
-        self.chosen_view = func_setting.fetch_sw_setting_or_set_default("view")
-        func_setting.fetch_sw_setting_or_set_default("login_size")
-        if os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
-            result = func_update.split_vers_by_cur_from_local(self.current_full_version)
-            if result:
+        self.chosen_sub_exe = func_setting.fetch_sw_setting_or_set_default("sub_exe", self.chosen_tab)
+        self.chosen_view = func_setting.fetch_sw_setting_or_set_default("view", self.chosen_tab)
+        func_setting.fetch_sw_setting_or_set_default("login_size", self.chosen_tab)
+
+        if os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
+            success, result = func_update.split_vers_by_cur_from_local(self.current_full_version)
+            if success is True:
                 new_versions, old_versions = result
                 if len(new_versions) != 0:
                     self.need_to_update = True
 
         if not install_path or not data_path or not dll_dir:
+            print(install_path, data_path, dll_dir, "路径设置错误，请点击按钮修改")
             self.root.after(0, self.show_setting_error)
             return False
         else:
@@ -265,13 +271,20 @@ class MainWindow:
 
     def show_setting_error(self):
         """路径错误提醒"""
+        print(self.chosen_tab)
         if self.main_frame is not None:
             for widget in self.main_frame.winfo_children():
                 widget.destroy()
-        error_label = ttk.Label(self.main_frame, text="路径设置错误，请点击按钮修改", foreground="red")
+        if self.error_frame is not None:
+            for widget in self.error_frame.winfo_children():
+                widget.destroy()
+        print(self.tab_frame)
+        self.error_frame = ttk.Frame(self.tab_frame)
+        self.error_frame.pack(expand=True, fill=tk.BOTH)
+        error_label = ttk.Label(self.error_frame, text="路径设置错误，请点击按钮修改", foreground="red")
         error_label.pack(padx=Constants.ERR_LBL_PAD_X, pady=Constants.ERR_LBL_PAD_Y)
-        self.settings_button = ttk.Button(self.main_frame, text="设置",
-                                          command=self.open_settings, style='Custom.TButton')
+        self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
+                                          command=partial(self.open_settings, self.chosen_tab))
         self.settings_button.pack()
 
     def select_current_tab(self):
@@ -286,7 +299,7 @@ class MainWindow:
 
     def create_root_menu_bar(self):
         """创建菜单栏"""
-        self.chosen_tab = func_setting.fetch_global_setting_or_set_default("tab")
+        # self.chosen_tab = func_setting.fetch_global_setting_or_set_default("tab")
         if hasattr(self, 'menu_bar'):
             # 清空现有菜单栏
             setattr(self, 'menu_bar', None)
@@ -313,9 +326,9 @@ class MainWindow:
             self.file_menu.entryconfig(f"配置文件  未获取", state="disable")
         else:
             self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
-            self.config_file_menu.add_command(label="打开", command=func_file.open_config_file)
+            self.config_file_menu.add_command(label="打开", command=partial(func_file.open_config_file, self.chosen_tab))
             self.config_file_menu.add_command(label="清除",
-                                              command=partial(func_file.clear_config_file,
+                                              command=partial(func_file.clear_config_file, self.chosen_tab,
                                                               self.create_main_frame_and_menu))
         # >程序目录
         self.program_file_menu = tk.Menu(self.file_menu, tearoff=False)
@@ -336,12 +349,13 @@ class MainWindow:
                                         command=partial(func_file.clear_statistic_data,
                                                         self.create_main_frame_and_menu))
         # -打开主dll所在文件夹
-        self.file_menu.add_command(label="查看DLL", command=func_file.open_dll_dir)
+        self.file_menu.add_command(label="查看DLL", command=partial(func_file.open_dll_dir, self.chosen_tab))
         # -创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=func_file.create_app_lnk)
         # -创建快捷启动
         self.file_menu.add_command(label="创建快捷启动", command=partial(
-            func_file.create_multiple_lnk, self.multiple_status, self.create_main_frame_and_menu))
+            func_file.create_multiple_lnk,
+            self.chosen_tab, self.multiple_status, self.create_main_frame_and_menu))
 
         # ————————————————————————————编辑菜单————————————————————————————
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
@@ -385,7 +399,7 @@ class MainWindow:
                                            command=partial(self.open_settings, self.chosen_tab))
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         # -防撤回
-        self.revoke_status, _, _ = func_wechat_dll.check_dll("revoke")
+        self.revoke_status, _, _ = func_sw_dll.check_dll("revoke", self.chosen_tab)
         if self.revoke_status == "不可用":
             self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}", state="disabled")
         elif self.revoke_status.startswith("错误"):
@@ -398,7 +412,7 @@ class MainWindow:
                                            command=partial(self.toggle_patch_mode, mode="revoke"))
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         # -全局多开
-        self.multiple_status, _, _ = func_wechat_dll.check_dll("multiple")
+        self.multiple_status, _, _ = func_sw_dll.check_dll("multiple", self.chosen_tab)
         if self.multiple_status == "不可用":
             self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}", state="disabled")
         elif self.multiple_status.startswith("错误"):
@@ -446,7 +460,7 @@ class MainWindow:
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
             # 动态添加外部子程序
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
-            exe_files = glob.glob(os.path.join(external_res_path, "WeChatMultiple_*.exe"))
+            exe_files = glob.glob(os.path.join(external_res_path, f"{self.chosen_tab}Multiple_*.exe"))
             for exe_file in exe_files:
                 file_name = os.path.basename(exe_file)
                 right_part = file_name.split('_', 1)[1].rsplit('.exe', 1)[0]
@@ -461,8 +475,8 @@ class MainWindow:
 
         # ————————————————————————————帮助菜单————————————————————————————
         # 检查版本表是否当天已更新
-        if (not os.path.exists(Config.VER_ADAPTATION_JSON_PATH) or
-                not file_utils.is_latest_file(Config.VER_ADAPTATION_JSON_PATH)):
+        if (not os.path.exists(Config.REMOTE_SETTING_JSON_PATH) or
+                not file_utils.is_latest_file(Config.REMOTE_SETTING_JSON_PATH)):
             subfunc_file.fetch_config_data_from_remote()
         help_text = "帮助"
         about_text = "关于"
@@ -555,8 +569,8 @@ class MainWindow:
         if success is not True:
             error_label = ttk.Label(self.main_frame, text="无法获取账户列表，请检查路径设置", foreground="red")
             error_label.pack(pady=Constants.ERR_LBL_PAD_Y)
-            self.settings_button = ttk.Button(self.main_frame, text="设置",
-                                              command=self.open_settings, style='Custom.TButton')
+            self.settings_button = ttk.Button(self.main_frame, text="设置", style='Custom.TButton',
+                                              command=partial(self.open_settings, self.chosen_tab))
             self.settings_button.pack()
             self.edit_menu.entryconfig("刷新", state="normal")
             return
@@ -574,7 +588,8 @@ class MainWindow:
         else:
             pass
 
-        subfunc_file.update_refresh_time_statistic(self.chosen_view, str(len(login)), time.time() - self.start_time)
+        subfunc_file.update_refresh_time_statistic(
+            self.chosen_view, str(len(login)), time.time() - self.start_time, self.chosen_tab)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
@@ -652,7 +667,7 @@ class MainWindow:
     def open_statistic(self):
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.root)
-        statistic_ui.StatisticWindow(statistic_window)
+        statistic_ui.StatisticWindow(statistic_window, self.chosen_tab)
 
     def change_classic_view(self):
         self.root.unbind("<Configure>")
@@ -674,7 +689,7 @@ class MainWindow:
             mode_text = "防撤回"
         else:
             return
-        success, result = func_account.get_account_list(self.multiple_status)
+        success, result = func_account.get_account_list(self.multiple_status, self.chosen_tab)
         if success is True:
             logged_in, _, _ = result
             if len(logged_in) > 0:
@@ -687,7 +702,7 @@ class MainWindow:
                     return
 
         try:
-            result = func_wechat_dll.switch_dll(mode)  # 执行切换操作
+            result = func_sw_dll.switch_dll(mode, self.chosen_tab)  # 执行切换操作
             if result is True:
                 messagebox.showinfo("提示", f"成功开启:{mode_text}")
             elif result is False:
@@ -708,9 +723,13 @@ class MainWindow:
 
     def open_update_log(self):
         """打开版本日志窗口"""
-        new_versions, old_versions = func_update.split_vers_by_cur_from_local(self.current_full_version)
-        update_log_window = tk.Toplevel(self.root)
-        update_log_ui.UpdateLogWindow(update_log_window, old_versions)
+        success, result = func_update.split_vers_by_cur_from_local(self.current_full_version)
+        if success is True:
+            new_versions, old_versions = result
+            update_log_window = tk.Toplevel(self.root)
+            update_log_ui.UpdateLogWindow(update_log_window, old_versions)
+        else:
+            messagebox.showerror("错误", result)
 
     def open_about(self, need_to_update):
         """打开关于窗口"""

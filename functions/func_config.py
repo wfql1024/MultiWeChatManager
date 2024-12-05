@@ -2,7 +2,6 @@ import os
 import shutil
 import time
 from datetime import datetime
-from sys import executable
 from tkinter import messagebox
 
 from functions import func_setting, subfunc_wechat, subfunc_file
@@ -19,7 +18,7 @@ def get_config_status_by_account(account, data_path, sw="WeChat") -> str:
     :param account: 账号
     :return: 配置状态
     """
-    print(sw, data_path, account)
+    # print(sw, data_path, account)
     if not data_path:
         return "无法获取配置路径"
     config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
@@ -27,12 +26,8 @@ def get_config_status_by_account(account, data_path, sw="WeChat") -> str:
     if len(config_files) == 0 or config_files is None:
         return "无法获取配置路径"
     file = config_files[0]
-    file_suffix = os.path.splitext(file)
-    if len(file_suffix) != 1:
-        file_suffix = file_suffix[1]
-    else:
-        file_suffix = ""
-    dest_filename = f"{account}{file_suffix}"
+    file_suffix = file.split(".")[-1]
+    dest_filename = f"{account}.{file_suffix}"
     acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), dest_filename)
                            .replace("\\", "/"))
     if os.path.exists(acc_cfg_path):
@@ -78,24 +73,21 @@ def use_config(account, sw="WeChat"):
                 return False
         else:
             logger.error(f"配置文件不存在：{config_path}")
-            messagebox.showerror("错误", f"配置文件不存在：{config_path}")
-            return False
+            # messagebox.showerror("错误", f"配置文件不存在：{config_path}")
+            # return False
 
     # 拷贝新的配置文件
     for item in config_files:
-        # print(account, item)
         # 拼接出源配置路径
         config_path = os.path.join(str(data_path), str(config_path_suffix), str(item)).replace("\\", "/")
         # 提取源配置文件的后缀
-        file_suffix = os.path.splitext(config_path)
-        if len(file_suffix) != 1:
-            file_suffix = file_suffix[1]
-        else:
-            file_suffix = ""
+        file_suffix = item.split(".")[-1]
 
-        dest_filename = f"{account}{file_suffix}"
+        dest_filename = f"{account}.{file_suffix}"
         acc_config_path = (os.path.join(str(data_path), str(config_path_suffix), dest_filename)
                            .replace("\\", "/"))
+
+        # print(item, file_suffix, dest_filename, acc_config_path)
 
         if os.path.isfile(acc_config_path):
             try:

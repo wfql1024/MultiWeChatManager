@@ -15,20 +15,21 @@ from utils import file_utils
 
 def check_dll(mode, sw="WeChat"):
     """检查当前的dll状态，判断是否为全局多开或者不可用"""
-    dll_dir = func_setting.get_sw_dll_dir(sw)
-    dll_path = os.path.join(dll_dir, "WeChatWin.dll")
-    cur_wechat_ver = func_setting.get_sw_cur_ver(sw="WeChat")
+    patch_dll, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll="WeChatWin.dll")
+    dll_dir = func_setting.get_sw_dll_dir(sw).replace("\\", "/")
+    dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
+    cur_wechat_ver = func_setting.get_sw_cur_ver(sw)
 
     try:
         with open(dll_path, 'rb') as f:
             dll_content = f.read()
 
-        if not os.path.exists(Config.VER_ADAPTATION_JSON_PATH):
+        if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
             config_data = subfunc_file.fetch_config_data_from_remote()
         else:
             print("本地版本对照表存在，读取中...")
             try:
-                with open(Config.VER_ADAPTATION_JSON_PATH, 'r', encoding='utf-8') as f:
+                with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
                     config_data = json.load(f)
             except Exception as e:
                 print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
@@ -39,8 +40,8 @@ def check_dll(mode, sw="WeChat"):
         if not config_data:
             return "错误：没有数据", None, None
 
-        result1 = config_data[mode][cur_wechat_ver]["STABLE"]["pattern"]
-        result2 = config_data[mode][cur_wechat_ver]["PATCH"]["pattern"]
+        result1 = config_data[sw][mode][cur_wechat_ver]["STABLE"]["pattern"]
+        result2 = config_data[sw][mode][cur_wechat_ver]["PATCH"]["pattern"]
 
         pattern1_hex_list = result1.split(',')
         pattern2_hex_list = result2.split(',')
@@ -61,23 +62,32 @@ def check_dll(mode, sw="WeChat"):
 
         return "不可用", None, None
 
+
+
     except PermissionError as pe:
+        subfunc_file.fetch_config_data_from_remote()
         return f"错误：权限不足，无法检查 DLL 文件。{pe}", None, None
     except FileNotFoundError as fe:
+        subfunc_file.fetch_config_data_from_remote()
         return f"错误：未找到文件，请检查路径。{fe}", None, None
     except KeyError as ke:
         subfunc_file.fetch_config_data_from_remote()
         return f"错误，未找到该版本的适配：{ke}", None, None
     except (TimeoutError, RuntimeError, Exception) as e:
+        subfunc_file.fetch_config_data_from_remote()
         return f"错误：{str(e)}", None, None
 
 
 def switch_dll(mode, sw="WeChat"):
     """切换全局多开状态"""
+    patch_dll, executable = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None, executable=None)
+    if patch_dll is None or executable is None:
+        messagebox.showerror("错误", "该版本暂无适配")
+        return False
     # 尝试终止微信进程
     wechat_processes = []
     for proc in psutil.process_iter(['pid', 'name']):
-        if proc.name().lower() == 'wechat.exe':
+        if proc.name().lower() == executable:
             wechat_processes.append(proc)
 
     if wechat_processes:
@@ -107,9 +117,9 @@ def switch_dll(mode, sw="WeChat"):
     # 获取桌面路径
     desktop_path = winshell.desktop()
     # 定义目标路径和文件名
-    dll_path = os.path.join(dll_dir_path, "WeChatWin.dll")
-    bak_path = os.path.join(dll_dir_path, "WeChatWin_bak.dll")
-    bak_desktop_path = os.path.join(desktop_path, "WeChatWin_bak.dll")
+    dll_path = os.path.join(dll_dir_path, patch_dll)
+    bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
+    bak_desktop_path = os.path.join(desktop_path, f"{patch_dll}.bak")
     not_same_version = True
     if os.path.exists(bak_path):
         not_same_version = file_utils.get_file_version(bak_path) != file_utils.get_file_version(dll_path)
@@ -119,7 +129,7 @@ def switch_dll(mode, sw="WeChat"):
             result = None
             mmap_file = mmap.mmap(f.fileno(), 0)
 
-            current_mode, stable_pattern, patch_pattern = check_dll(mode)
+            current_mode, stable_pattern, patch_pattern = check_dll(mode, sw)
 
             if current_mode == "已开启":
                 print(f"当前：{mode}已开启")
