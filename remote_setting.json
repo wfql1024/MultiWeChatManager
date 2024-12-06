@@ -822,8 +822,6 @@
         "main_wnd_class": "Qt51514QWindowIcon",
         "config_path_suffix": "all_users",
         "config_file_list": ["config"],
-        "excluded_dir_list": [
-            "All Users", "Applet", "Plugins", "WMPF", "all_users"
-        ]
+        "excluded_dir_list": ["All Users", "Applet", "Plugins", "WMPF", "all_users"]
     }
 }
