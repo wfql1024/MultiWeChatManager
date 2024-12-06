@@ -161,7 +161,7 @@ class AccountRow:
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
             self.single_click_id = None
-        subfunc_wechat.switch_to_wechat_account(self.root, account)
+        subfunc_wechat.switch_to_sw_account_wnd(self.chosen_tab, account, self.root)
 
     def open_detail(self, account):
         """打开详情窗口"""

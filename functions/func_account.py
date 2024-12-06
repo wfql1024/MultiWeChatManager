@@ -4,7 +4,6 @@ import os
 import subprocess
 import sys
 import time
-from sys import executable
 from tkinter import messagebox
 
 import psutil
@@ -177,7 +176,7 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
         callback()
 
 
-def get_account_list(multiple_status, sw="WeChat"):
+def get_account_list(multiple_status, sw):
     """
     获取账号及其登录情况
     """
@@ -206,7 +205,7 @@ def get_account_list(multiple_status, sw="WeChat"):
                     try:
                         wx_id_index = path_parts.index(os.path.basename(data_path)) + 1
                         wx_id = path_parts[wx_id_index]
-                        if wx_id not in {"all_users"}:
+                        if wx_id not in excluded_dir_list:
                             wechat_processes.append((wx_id, process_id))
                             logged_in_ids.add(wx_id)
                             print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
@@ -269,7 +268,7 @@ def get_account_list(multiple_status, sw="WeChat"):
     folders = set(
         item for item in os.listdir(data_path)
         if os.path.isdir(os.path.join(data_path, item))
-    ) - excluded_dir_list
+    ) - set(excluded_dir_list)
     login = list(logged_in_ids & folders)
     logout = list(folders - logged_in_ids)
 
@@ -296,12 +295,16 @@ def get_account_list(multiple_status, sw="WeChat"):
     return True, (login, logout, wechat_processes)
 
 
-def get_main_hwnd_of_accounts(acc_list):
-    target_class = "WeChatMainWndForPC"
+def get_main_hwnd_of_accounts(acc_list, sw):
+    target_class, = subfunc_file.get_details_from_remote_setting_json(sw, main_wnd_class=None)
+    if target_class is None:
+        messagebox.showerror("错误", f"{sw}平台未适配")
+        return False
     for acc in acc_list:
-        pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", acc, pid=None)
+        pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, pid=None)
         hwnd_list = hwnd_utils.find_hwnd_by_pid_and_class(pid, target_class)
-        if len(hwnd_list) == 1:
+        print(pid, hwnd_list)
+        if len(hwnd_list) >= 1:
             hwnd = hwnd_list[0]
-            subfunc_file.update_acc_details_to_json_by_tab("WeChat", acc, main_hwnd=hwnd)
+            subfunc_file.update_acc_details_to_json_by_tab(sw, acc, main_hwnd=hwnd)
 

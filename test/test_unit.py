@@ -12,7 +12,7 @@ class Test(TestCase):
         self.hwnd = hwnd_utils.get_window_handle("微信（测试版）")
         print(self.hwnd)
     def test_get_wnd_details_from_hwnd(self):
-        details = hwnd_utils.get_wnd_details_from_hwnd(8784736)
+        details = hwnd_utils.get_wnd_details_from_hwnd(10100452)
         print(details['class'])
     def test_get_sw_data_dir(self):
         print(func_setting.get_sw_data_dir(sw="Weixin"))

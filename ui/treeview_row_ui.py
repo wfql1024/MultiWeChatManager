@@ -490,7 +490,8 @@ class TreeviewRowUI:
         if len(item_id) == 0:
             return
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            subfunc_wechat.switch_to_wechat_account(self.root, tree.item(item_id, "values")[self.acc_index])
+            subfunc_wechat.switch_to_sw_account_wnd(
+                self.chosen_tab, tree.item(item_id, "values")[self.acc_index], self.root)
         else:
             if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发
                 selected_items.clear()

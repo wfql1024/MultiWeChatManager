@@ -602,7 +602,7 @@ class MainWindow:
         self.on_canvas_configure(event)
 
         # 获取已登录的窗口hwnd
-        func_account.get_main_hwnd_of_accounts(login)
+        func_account.get_main_hwnd_of_accounts(login, self.chosen_tab)
 
         # 进行静默获取头像及配置
         func_account.silent_get_and_config(login, logout, self.data_dir,

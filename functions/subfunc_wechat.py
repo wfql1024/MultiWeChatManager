@@ -9,11 +9,13 @@ from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, handle_util
 from utils.logger_utils import mylogger as logger
 
 
-def switch_to_wechat_account(window, account):
-    hwnd_utils.bring_wnd_to_left(window)
-    classes = ["WeChatMainWndForPC"]
+def switch_to_sw_account_wnd(sw, acc, program_wnd):
+    hwnd_utils.bring_wnd_to_left(program_wnd)
+    main_wnd_class, = subfunc_file.get_details_from_remote_setting_json(
+        sw, main_wnd_class=None)
+    classes = [main_wnd_class]
     hwnd_utils.hide_all_wnd_by_classes(classes)
-    main_hwnd, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, main_hwnd=None)
+    main_hwnd, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, main_hwnd=None)
     hwnd_utils.restore_window(main_hwnd)
 
 
