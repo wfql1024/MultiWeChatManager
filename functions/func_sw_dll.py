@@ -27,7 +27,7 @@ def check_dll(mode, sw="WeChat"):
         if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
             config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
         else:
-            print("本地版本对照表存在，读取中...")
+            # print("本地版本对照表存在，读取中...")
             try:
                 with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
                     config_data = json.load(f)

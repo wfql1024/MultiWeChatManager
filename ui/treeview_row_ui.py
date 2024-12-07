@@ -527,7 +527,7 @@ class TreeviewRowUI:
         if messagebox.askokcancel("提示",
                                   f"确认退登：\n{accounts_to_quit_str}？"):
             try:
-                quited_accounts = func_account.quit_accounts(accounts, self.chosen_tab)
+                quited_accounts = func_account.quit_accounts(self.chosen_tab, accounts)
                 quited_accounts_str = "\n".join(quited_accounts)
                 messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
                 self.m_class.create_main_frame_and_menu()

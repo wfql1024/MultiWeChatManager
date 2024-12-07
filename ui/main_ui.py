@@ -300,6 +300,9 @@ class MainWindow:
         self.data_dir = func_setting.get_sw_data_dir(self.chosen_tab)
         self.install_path = func_setting.get_sw_install_path(self.chosen_tab)
         self.dll_dir = func_setting.get_sw_dll_dir(self.chosen_tab)
+        # 若标签页为空则创建
+        if len(self.tab_frame.winfo_children()) == 0:
+            self.create_main_frame_and_menu()
 
     def create_root_menu_bar(self):
         """创建菜单栏"""
@@ -392,7 +395,8 @@ class MainWindow:
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=False)
         # -应用设置
-        login_size = subfunc_file.get_sw_login_size_from_setting_ini()
+        func_setting.fetch_sw_setting_or_set_default("login_size", self.chosen_tab)
+        login_size = subfunc_file.get_sw_login_size_from_setting_ini(self.chosen_tab)
         if not login_size or login_size == "" or login_size == "None":
             self.menu_bar.add_cascade(label="⚠️设置", menu=self.settings_menu)
             self.settings_menu.add_command(label="⚠️应用设置", foreground='red',
@@ -510,7 +514,7 @@ class MainWindow:
         print(f"加载菜单栏.........................................................")
         self.enable_new_func = func_setting.fetch_global_setting_or_set_default("enable_new_func") == "true"
         self.current_full_version = subfunc_file.get_app_current_version()
-        self.select_current_tab()
+        # self.select_current_tab()
         self.create_root_menu_bar()
         for widget in self.tab_frame.winfo_children():
             widget.destroy()
@@ -661,7 +665,6 @@ class MainWindow:
         """处理选项卡变化事件"""
         selected_frame = self.tab_control.nametowidget(self.tab_control.select())  # 获取当前选中的Frame
         selected_tab = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
-
         if selected_tab:
             print(f"当前选项卡: {selected_tab}")
             func_setting.toggle_tab(selected_tab)

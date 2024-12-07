@@ -33,22 +33,17 @@
 #   hmac_salt  ————>  hmac_key    ————>      Correct √    <——————|——————  HMAC        |
 #                                                                └————————————————————*
 # -------------------------------------------------------------------------------
-import binascii
+
 import ctypes
 import hashlib
 import hmac
 import os
 import re
-import shutil
+
 import struct
 import subprocess
-import time
-from pathlib import Path
 
-import psutil
-import pymem
-from Crypto.Cipher import AES
-from Demos.getfilever import str_info
+from pathlib import Path
 from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
 
@@ -68,28 +63,29 @@ class WeixinDecryptImpl(DecryptInterface):
     # 第一步：找key
     def get_acc_str_key_by_pid(self, pid):
         print("正在获取key...")
-        dump_exe = Config.WECHAT_DUMP_EXE_PATH
-        info = subprocess.check_output([dump_exe, '-p', f"{pid}", '-r']).decode()
-        key_pattern = r"key:\s*([a-fA-F0-9]+)"
-        match = re.search(key_pattern, info)
-        str_key = None
-        if match:
-            str_key = match.group(1)
-            print(f"Extracted key: {str_key}")
-        else:
-            print("Key not found.")
+        str_key = 'this is a hypothetical key'
+        # dump_exe = Config.WECHAT_DUMP_EXE_PATH
+        # info = subprocess.check_output([dump_exe, '-p', f"{pid}", '-r']).decode()
+        # key_pattern = r"key:\s*([a-fA-F0-9]+)"
+        # match = re.search(key_pattern, info)
+        # if match:
+        #     str_key = match.group(1)
+        #     print(f"Extracted key: {str_key}")
+        # else:
+        #     print("Key not found.")
+
         return True, str_key
 
     # 第二步：拷贝数据库
     def copy_origin_db_to_proj(self, pid, account):
         print("查找所需数据库文件...")
-        pm = pymem.Pymem()
-        pm.open_process_from_id(pid)
-        p = psutil.Process(pid)
-        target_dbs = [f.path for f in p.open_files() if f.path[-10:] == 'contact.db']
-        logger.info(f"找到数据库文件：{target_dbs}")
-        if len(target_dbs) < 1:
-            return False, "没有找到db文件！"
+        # pm = pymem.Pymem()
+        # pm.open_process_from_id(pid)
+        # p = psutil.Process(pid)
+        # target_dbs = [f.path for f in p.open_files() if f.path[-10:] == 'contact.db']
+        # logger.info(f"找到数据库文件：{target_dbs}")
+        # if len(target_dbs) < 1:
+        #     return False, "没有找到db文件！"
         # 将数据库文件拷贝到项目
         usr_dir = Config.PROJ_USER_PATH
         origin_db_path = usr_dir + rf"\Weixin\{account}\contact.db"

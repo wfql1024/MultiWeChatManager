@@ -7,6 +7,20 @@ from utils import ini_utils, wechat_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
 
+def get_sw_data_dir_from_other_sw(sw="WeChat"):
+    """通过其他软件的方式获取微信数据文件夹"""
+    data_dir_name, = subfunc_file.get_details_from_remote_setting_json(
+        sw, data_dir_name=None)
+    if data_dir_name is None or data_dir_name == "":
+        return []
+    if sw == "Weixin":
+        old_path = get_sw_data_dir(sw="WeChat")
+        if old_path and old_path!= "":
+            return [os.path.join(os.path.dirname(old_path), data_dir_name).replace('\\', '/')]
+        else:
+            return []
+
+
 def get_sw_dll_dir_by_files(sw="WeChat"):
     """通过文件遍历方式获取dll文件夹"""
     dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
@@ -66,6 +80,7 @@ def get_sw_data_dir(sw, from_setting_window=False):
         None if from_setting_window else subfunc_file.get_sw_data_dir_from_setting_ini,
         wechat_utils.get_sw_data_dir_from_user_register,
         wechat_utils.get_sw_data_dir_by_guess,
+        get_sw_data_dir_from_other_sw,
     ]
 
     # 尝试各种方法
@@ -139,7 +154,7 @@ def fetch_global_setting_or_set_default(setting_key):
         value = Config.INI_DEFAULT_VALUE[setting_key]
     return value
 
-def fetch_sw_setting_or_set_default(setting_key, sw="WeChat"):
+def fetch_sw_setting_or_set_default(setting_key, sw):
     """
     获取配置项，若没有则添加默认
     :return: 已选择的子程序
@@ -149,7 +164,7 @@ def fetch_sw_setting_or_set_default(setting_key, sw="WeChat"):
         sw,
         Config.INI_KEY[setting_key],
     )
-    if not value or value == "":
+    if not value or value == "" or value == "None":
         ini_utils.save_setting_to_ini(
             Config.SETTING_INI_PATH,
             sw,

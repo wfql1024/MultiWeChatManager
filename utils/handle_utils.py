@@ -1,7 +1,4 @@
-import os
 import re
-import shutil
-from http.server import executable
 
 from resources import Config
 import time

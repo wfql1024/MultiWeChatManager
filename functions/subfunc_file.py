@@ -397,7 +397,7 @@ def get_app_current_version():
     return f"v{version_number}-{Config.VER_STATUS}"
 
 
-def get_avatar_url_from_acc_info_file(sw, acc_list, data_dir):
+def get_avatar_url_from_file(sw, acc_list, data_dir):
     changed = False
 
     for acc in acc_list:
@@ -436,7 +436,69 @@ def get_avatar_url_from_acc_info_file(sw, acc_list, data_dir):
 
 
 
-def get_nickname_from_acc_info_file(sw, acc_list, data_dir):
+def get_avatar_url_from_other_sw(now_sw, now_acc_list):
+    print("尝试用窃取法获取头像")
+    changed = False
+    all_sw, = get_details_from_remote_setting_json("global", all_sw=None)
+    print(all_sw)
+
+    # 对所有其他软件进行遍历
+    for other_sw in all_sw:
+        print(other_sw, now_sw)
+        # 平台相同，跳过
+        if other_sw == now_sw:
+            continue
+
+        other_sw_cut, = get_details_from_remote_setting_json(
+            other_sw, cut_to_compatible_id=None)
+        if other_sw_cut is None:
+            # 没有适配，跳过
+            logger.warning(f"没有{other_sw}对应的适配")
+            continue
+        other_sw_left_cut = other_sw_cut[0]
+        other_sw_right_cut = (-other_sw_cut[1]) if other_sw_cut[1]!= 0 else None
+        # print(other_sw_left_cut, other_sw_right_cut)
+
+        now_sw_cut, = get_details_from_remote_setting_json(
+            now_sw, cut_to_compatible_id=None)
+        if now_sw_cut is None:
+            # 没有适配，跳过
+            logger.warning(f"没有{other_sw}对应的适配")
+            continue
+        now_sw_left_cut = now_sw_cut[0]
+        now_sw_right_cut = (-now_sw_cut[1]) if now_sw_cut[1]!= 0 else None
+        # print(now_sw_left_cut, now_sw_right_cut)
+
+        # 加载其他平台的账号列表
+        data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        other_acc_list = data.get(other_sw, {})
+        for now_acc in now_acc_list:
+            # 对账号进行裁剪
+            now_sw_been_cut_acc = now_acc[now_sw_left_cut:now_sw_right_cut]
+
+            # 遍历其他平台的账号
+            for other_acc in other_acc_list:
+                # 对账号进行裁剪
+                other_sw_been_cut_acc = other_acc[other_sw_left_cut:other_sw_right_cut]
+                # print(item)
+
+                # 裁剪后是一致的账号，才进行后续操作
+                if now_sw_been_cut_acc == other_sw_been_cut_acc:
+                    # 分别获取两个平台的头像url
+                    now_sw_avatar_url, = get_acc_details_from_json_by_tab(now_sw, now_acc, avatar_url=None)
+                    other_sw_avatar_url, = get_acc_details_from_json_by_tab(other_sw, other_acc, avatar_url=None)
+                    if other_sw_avatar_url is not None and now_sw_avatar_url is None:
+                        # 只有当前平台没有头像url，且另一个平台有头像url，则进行偷取和下载
+                        avatar_path = os.path.join(Config.PROJ_USER_PATH, now_sw, f"{now_acc}", f"{now_acc}.jpg")
+                        logger.info(f"{now_acc}: {other_sw_avatar_url}")
+                        success = image_utils.download_image(other_sw_avatar_url, avatar_path)
+                        if success is True:
+                            update_acc_details_to_json_by_tab(now_sw, now_acc, avatar_url=other_sw_avatar_url)
+                            changed = True
+    return changed
+
+
+def get_nickname_from_file(sw, acc_list, data_dir):
     changed = False
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
@@ -459,6 +521,63 @@ def get_nickname_from_acc_info_file(sw, acc_list, data_dir):
                 changed = True
     return changed
 
+
+def get_nickname_from_other_sw(now_sw, now_acc_list):
+    print("尝试用窃取法获取昵称")
+    changed = False
+    all_sw, = get_details_from_remote_setting_json("global", all_sw=None)
+    print(all_sw)
+
+    # 对所有其他软件进行遍历
+    for other_sw in all_sw:
+        print(other_sw, now_sw)
+        # 平台相同，跳过
+        if other_sw == now_sw:
+            continue
+
+        other_sw_cut, = get_details_from_remote_setting_json(
+            other_sw, cut_to_compatible_id=None)
+        if other_sw_cut is None:
+            # 没有适配，跳过
+            logger.warning(f"没有{other_sw}对应的适配")
+            continue
+        other_sw_left_cut = other_sw_cut[0]
+        other_sw_right_cut = (-other_sw_cut[1]) if other_sw_cut[1] != 0 else None
+        # print(other_sw_left_cut, other_sw_right_cut)
+
+        now_sw_cut, = get_details_from_remote_setting_json(
+            now_sw, cut_to_compatible_id=None)
+        if now_sw_cut is None:
+            # 没有适配，跳过
+            logger.warning(f"没有{other_sw}对应的适配")
+            continue
+        now_sw_left_cut = now_sw_cut[0]
+        now_sw_right_cut = (-now_sw_cut[1]) if now_sw_cut[1] != 0 else None
+        # print(now_sw_left_cut, now_sw_right_cut)
+
+        # 加载其他平台的账号列表
+        data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        other_acc_list = data.get(other_sw, {})
+        for now_acc in now_acc_list:
+            # 对账号进行裁剪
+            now_sw_been_cut_acc = now_acc[now_sw_left_cut:now_sw_right_cut]
+
+            # 遍历其他平台的账号
+            for other_acc in other_acc_list:
+                # 对账号进行裁剪
+                other_sw_been_cut_acc = other_acc[other_sw_left_cut:other_sw_right_cut]
+                # print(item)
+
+                # 裁剪后是一致的账号，才进行后续操作
+                if now_sw_been_cut_acc == other_sw_been_cut_acc:
+                    # 分别获取两个平台的昵称
+                    now_sw_nickname, = get_acc_details_from_json_by_tab(now_sw, now_acc, nickname=None)
+                    other_sw_nickname, = get_acc_details_from_json_by_tab(other_sw, other_acc, nickname=None)
+                    if other_sw_nickname is not None and now_sw_nickname is None:
+                        # 只有当前平台没有昵称，且另一个平台有昵称，则进行偷取和上传
+                        update_acc_details_to_json_by_tab(now_sw, now_acc, nickname=other_sw_nickname)
+                        changed = True
+    return changed
 
 
 def get_curr_wx_id_from_config_file(data_dir, sw):

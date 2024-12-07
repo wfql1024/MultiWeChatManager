@@ -122,6 +122,7 @@ def get_sw_data_dir_by_guess(sw="WeChat"):
     ]
     return guess_paths
 
+
 def get_sw_dll_dir_by_memo_maps(sw="WeChat"):
     dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, dll_dir_check_suffix=None, executable=None)

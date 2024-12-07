@@ -103,8 +103,8 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
                 continue
     finally:
         conn.close()
-        if os.path.isfile(decrypted_mm_db_path):
-            os.remove(decrypted_mm_db_path)
+        # if os.path.isfile(decrypted_mm_db_path):
+        #     os.remove(decrypted_mm_db_path)
         after()
 
 

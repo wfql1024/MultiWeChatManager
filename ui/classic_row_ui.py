@@ -377,7 +377,7 @@ class ClassicRowUI:
             for account, row in self.login_rows.items() if row.checkbox_var.get()
         ]
         try:
-            func_account.to_quit_selected_accounts(accounts, self.m_class.create_main_frame_and_menu, self.chosen_tab)
+            func_account.to_quit_selected_accounts(self.chosen_tab, accounts, self.m_class.create_main_frame_and_menu)
         except Exception as e:
             logger.error(e)
 

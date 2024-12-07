@@ -17,7 +17,7 @@ from utils import process_utils, image_utils, string_utils, hwnd_utils
 from utils.logger_utils import mylogger as logger
 
 
-def to_quit_selected_accounts(accounts_selected, callback, sw):
+def to_quit_selected_accounts(sw, accounts_selected, callback):
     accounts_to_quit = []
     for acc in accounts_selected:
         pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, pid=None)
@@ -28,7 +28,7 @@ def to_quit_selected_accounts(accounts_selected, callback, sw):
     if messagebox.askokcancel("提示",
                               f"确认退登：\n{accounts_to_quit_str}？"):
         try:
-            quited_accounts = quit_accounts(accounts_selected, sw)
+            quited_accounts = quit_accounts(sw, accounts_selected)
             quited_accounts_str = "\n".join(quited_accounts)
             messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
             callback()
@@ -36,7 +36,7 @@ def to_quit_selected_accounts(accounts_selected, callback, sw):
             logger.error(e)
 
 
-def quit_accounts(accounts, sw):
+def quit_accounts(sw, accounts):
     quited_accounts = []
     for account in accounts:
         try:
@@ -113,6 +113,7 @@ def get_acc_avatar_from_files(account, sw):
 def get_acc_origin_display_name(sw, account) -> str:
     """
     获取账号的展示名
+    :param sw: 选择的软件标签
     :param account: 微信账号
     :return: 展示在界面的名字
     """
@@ -130,6 +131,7 @@ def get_acc_origin_display_name(sw, account) -> str:
 def get_acc_wrapped_display_name(sw, account) -> str:
     """
     获取账号的展示名
+    :param sw: 选择的软件标签
     :param account: 微信账号
     :return: 展示在界面的折叠好的名字
     """
@@ -139,9 +141,35 @@ def get_acc_wrapped_display_name(sw, account) -> str:
     )
 
 
+def silent_get_avatar_url(sw, acc_list, data_dir):
+    """
+    悄悄获取账号的头像url
+    :param sw: 选择的软件标签
+    :param acc_list: 微信账号
+    :param data_dir: 数据目录
+    :return: 无
+    """
+    changed1 = subfunc_file.get_avatar_url_from_file(sw, acc_list, data_dir)
+    changed2 = subfunc_file.get_avatar_url_from_other_sw(sw, acc_list)
+    return changed1 or changed2
+
+def silent_get_nickname(sw, acc_list, data_dir):
+    """
+    悄悄获取账号的头像url
+    :param sw: 选择的软件标签
+    :param acc_list: 微信账号
+    :param data_dir: 数据目录
+    :return: 无
+    """
+    changed1 = subfunc_file.get_nickname_from_file(sw, acc_list, data_dir)
+    changed2 = subfunc_file.get_nickname_from_other_sw(sw, acc_list)
+    return changed1 or changed2
+
+
 def silent_get_and_config(login, logout, data_dir, callback, sw):
     # 悄悄执行检测昵称和头像
     need_to_notice = False
+
     # 1. 获取所有账号节点的url和昵称，将空的账号返回
     accounts_need_to_get_avatar = []
     accounts_need_to_get_nickname = []
@@ -153,16 +181,19 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
         if nickname is None:
             accounts_need_to_get_nickname.append(acc)
     # print(accounts_need_to_get_avatar, accounts_need_to_get_nickname)
+
     # 2. 对待获取url的账号遍历尝试获取
     if len(accounts_need_to_get_avatar) > 0:
-        changed = subfunc_file.get_avatar_url_from_acc_info_file(sw, accounts_need_to_get_avatar, data_dir)
+        changed = silent_get_avatar_url(sw, accounts_need_to_get_avatar, data_dir)
         if changed is True:
             need_to_notice = True
+
     # 3. 对待获取昵称的账号尝试遍历获取
     if len(accounts_need_to_get_nickname) > 0:
-        changed = subfunc_file.get_nickname_from_acc_info_file(sw, accounts_need_to_get_nickname, data_dir)
+        changed = silent_get_nickname(sw, accounts_need_to_get_nickname, data_dir)
         if changed is True:
             need_to_notice = True
+
     # 4. 偷偷创建配置文件
     curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(data_dir, sw)
     if curr_config_acc is not None:
@@ -170,6 +201,7 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
             changed = func_config.create_config(curr_config_acc)
             if changed is True:
                 need_to_notice = True
+
     # 5. 通知
     if need_to_notice is True:
         messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")
