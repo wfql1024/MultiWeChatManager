@@ -16,8 +16,9 @@ from utils import string_utils, widget_utils, hwnd_utils
 
 
 class DetailWindow:
-    def __init__(self, master, account, update_callback):
+    def __init__(self, master, chosen_tab, account, update_callback):
         self.master = master
+        self.chosen_tab = chosen_tab
         self.master.withdraw()
         self.account = account
         self.update_callback = update_callback
@@ -95,7 +96,7 @@ class DetailWindow:
         print(f"加载数据...")
 
         # 构建头像文件路径
-        avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{self.account}", f"{self.account}.jpg")
+        avatar_path = os.path.join(Config.PROJ_USER_PATH, self.chosen_tab, f"{self.account}", f"{self.account}.jpg")
         print(f"加载对应头像...")
 
         # 加载头像
@@ -112,7 +113,7 @@ class DetailWindow:
             print(f"默认头像已保存到 {default_path}")
             avatar_path = default_path
         avatar_url, alias, nickname, pid = subfunc_file.get_acc_details_from_json_by_tab(
-            "WeChat",
+            self.chosen_tab,
             self.account,
             avatar_url=None,
             alias="请获取数据",
@@ -130,9 +131,9 @@ class DetailWindow:
         if not pid:
             widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
             self.pid_label.config(text=f"PID: 未登录")
-            subfunc_file.update_acc_details_to_json_by_tab("WeChat", self.account, has_mutex=True)
+            subfunc_file.update_acc_details_to_json_by_tab(self.chosen_tab, self.account, has_mutex=True)
         else:
-            has_mutex, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", self.account, has_mutex=True)
+            has_mutex, = subfunc_file.get_acc_details_from_json_by_tab(self.chosen_tab, self.account, has_mutex=True)
             if has_mutex:
                 self.pid_label.config(text=f"PID: {pid}\n(有互斥体)")
             else:
@@ -163,8 +164,7 @@ class DetailWindow:
             self.avatar_label.config(text="无头像")
 
     def fetch_data(self):
-
-        pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", self.account, pid=None)
+        pid, = subfunc_file.get_acc_details_from_json_by_tab(self.chosen_tab, self.account, pid=None)
         if not pid:
             widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
             messagebox.showinfo("提示", "未检测到该账号登录")
@@ -178,7 +178,7 @@ class DetailWindow:
             return
 
         # 线程启动获取详情
-        threading.Thread(target=func_detail.fetch_acc_detail_by_pid, args=(pid, self.account, self.after_fetch)).start()
+        threading.Thread(target=func_detail.fetch_acc_detail_by_pid, args=(self.chosen_tab, pid, self.account, self.after_fetch)).start()
         widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, text="获取中...")
 
     def after_fetch(self):
@@ -188,8 +188,8 @@ class DetailWindow:
     def save_note(self):
         new_note = self.note_var.get().strip()
         if new_note == "":
-            subfunc_file.update_acc_details_to_json_by_tab("WeChat", self.account, note=None)
+            subfunc_file.update_acc_details_to_json_by_tab(self.chosen_tab, self.account, note=None)
         else:
-            subfunc_file.update_acc_details_to_json_by_tab("WeChat", self.account, note=new_note)
+            subfunc_file.update_acc_details_to_json_by_tab(self.chosen_tab, self.account, note=new_note)
         self.update_callback()
         self.master.destroy()

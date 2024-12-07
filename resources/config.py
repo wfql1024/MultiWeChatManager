@@ -60,6 +60,7 @@ class Config:
     PROJ_USER_PATH = fr'{PROJ_PATH}\user_files'
 
     HANDLE_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\handle.exe'
+    WECHAT_DUMP_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\wechat-dump-rs.exe'
     VERSION_FILE = fr'{PROJ_PATH}\version.txt'
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\SunnyMultiWxMng.ico'
     REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}\Rewards.png'

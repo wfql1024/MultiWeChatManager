@@ -21,7 +21,7 @@ def to_quit_selected_accounts(accounts_selected, callback, sw):
     accounts_to_quit = []
     for acc in accounts_selected:
         pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, pid=None)
-        display_name = get_acc_origin_display_name(acc)
+        display_name = get_acc_origin_display_name(sw, acc)
         cleaned_display_name = string_utils.clean_display_name(display_name)
         accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
     accounts_to_quit_str = "\n".join(accounts_to_quit)
@@ -41,7 +41,7 @@ def quit_accounts(accounts, sw):
     for account in accounts:
         try:
             pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, pid=None)
-            display_name = get_acc_origin_display_name(account)
+            display_name = get_acc_origin_display_name(sw, account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
             executable_name, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, executable=None)
             process = psutil.Process(pid)
@@ -110,7 +110,7 @@ def get_acc_avatar_from_files(account, sw):
         return Image.new('RGB', Constants.BLANK_AVT_SIZE, color='white')
 
 
-def get_acc_origin_display_name(account) -> str:
+def get_acc_origin_display_name(sw, account) -> str:
     """
     获取账号的展示名
     :param account: 微信账号
@@ -119,7 +119,7 @@ def get_acc_origin_display_name(account) -> str:
     # 依次查找 note, nickname, alias，找到第一个不为 None 的值
     display_name = account  # 默认值为 account
     for key in ("note", "nickname", "alias"):
-        value = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, **{key: None})[0]
+        value = subfunc_file.get_acc_details_from_json_by_tab(sw, account, **{key: None})[0]
         if value is not None:
             display_name = value
             break
@@ -127,14 +127,14 @@ def get_acc_origin_display_name(account) -> str:
     return display_name
 
 
-def get_acc_wrapped_display_name(account) -> str:
+def get_acc_wrapped_display_name(sw, account) -> str:
     """
     获取账号的展示名
     :param account: 微信账号
     :return: 展示在界面的折叠好的名字
     """
     return string_utils.balanced_wrap_text(
-        get_acc_origin_display_name(account),
+        get_acc_origin_display_name(sw, account),
         10
     )
 
@@ -160,7 +160,7 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
             need_to_notice = True
     # 3. 对待获取昵称的账号尝试遍历获取
     if len(accounts_need_to_get_nickname) > 0:
-        changed = subfunc_file.get_nickname_from_acc_info_file(accounts_need_to_get_nickname, data_dir)
+        changed = subfunc_file.get_nickname_from_acc_info_file(sw, accounts_need_to_get_nickname, data_dir)
         if changed is True:
             need_to_notice = True
     # 4. 偷偷创建配置文件

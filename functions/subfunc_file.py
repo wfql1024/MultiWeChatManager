@@ -431,11 +431,12 @@ def get_avatar_url_from_acc_info_file(sw, acc_list, data_dir):
             if success is True:
                 update_acc_details_to_json_by_tab(sw, acc, avatar_url=matched_url)
                 changed = True
+
     return changed
 
 
 
-def get_nickname_from_acc_info_file(acc_list, data_dir):
+def get_nickname_from_acc_info_file(sw, acc_list, data_dir):
     changed = False
     for acc in acc_list:
         acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
@@ -453,7 +454,7 @@ def get_nickname_from_acc_info_file(acc_list, data_dir):
             cleaned_str = re.sub(r'[0-9a-fA-F]{32}.*', '', matched_str)
             cleaned_str = re.sub(r'\x1A.*?\x12', '', cleaned_str)
             cleaned_str = re.sub(r'[^\x20-\x7E\xC0-\xFF\u4e00-\u9fa5]+', '', cleaned_str)
-            success = update_acc_details_to_json_by_tab("WeChat", acc, nickname=cleaned_str)
+            success = update_acc_details_to_json_by_tab(sw, acc, nickname=cleaned_str)
             if success is True:
                 changed = True
     return changed

@@ -203,7 +203,7 @@ class TreeviewRowUI:
             tree = ttk.Treeview(self.main_frame, show='tree', height=1, style="RowTreeview")
         curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.data_path, self.chosen_tab)
         for account in accounts:
-            display_name = " " + func_account.get_acc_origin_display_name(account)
+            display_name = " " + func_account.get_acc_origin_display_name(self.chosen_tab, account)
             config_status = func_config.get_config_status_by_account(account, self.data_path, self.chosen_tab)
             avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_acc_details_from_json_by_tab(
                 self.chosen_tab,
@@ -506,7 +506,7 @@ class TreeviewRowUI:
     def open_detail(self, account):
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(detail_window, account, self.m_class.create_main_frame_and_menu)
+        detail_ui.DetailWindow(detail_window, self.chosen_tab, account, self.m_class.create_main_frame_and_menu)
 
     def create_config(self, multiple_status):
         """按钮：创建或重新配置"""
@@ -520,7 +520,7 @@ class TreeviewRowUI:
         accounts_to_quit = []
         for account in accounts:
             pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, pid=None)
-            display_name = func_account.get_acc_origin_display_name(account)
+            display_name = func_account.get_acc_origin_display_name(self.chosen_tab, account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
             accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
         accounts_to_quit_str = "\n".join(accounts_to_quit)

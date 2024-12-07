@@ -51,7 +51,7 @@ class AccountRow:
         # print(f"加载头像区域用时{time.time() - self.start_time:.4f}秒")
 
         # 账号标签
-        wrapped_display_name = func_account.get_acc_wrapped_display_name(account)
+        wrapped_display_name = func_account.get_acc_wrapped_display_name(self.chosen_tab, account)
         has_mutex, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, has_mutex=None)
         style = ttk.Style()
         style.configure("Mutex.TLabel", foreground="red")
@@ -166,7 +166,7 @@ class AccountRow:
     def open_detail(self, account):
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(detail_window, account, self.m_class.create_main_frame_and_menu)
+        detail_ui.DetailWindow(detail_window, self.chosen_tab, account, self.m_class.create_main_frame_and_menu)
 
     def create_config(self, account, multiple_status):
         """按钮：创建或重新配置"""
