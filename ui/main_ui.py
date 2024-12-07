@@ -122,10 +122,14 @@ class MainWindow:
 
         # 本地配置不存在的话从远端拉取
         if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
-            config_data = subfunc_file.fetch_config_data_from_remote()
+            config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
         else:
-            with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
-                config_data = json.load(f)
+            try:
+                with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
+                    config_data = json.load(f)
+            except Exception as e:
+                logger.error(e)
+                config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
         # 创建选项卡
         self.create_tab(config_data)
 
@@ -181,7 +185,7 @@ class MainWindow:
         try:
             self.tab_dict = config_data["global"]["all_sw"]
         except KeyError:
-            config_data = subfunc_file.fetch_config_data_from_remote()
+            config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
             self.tab_dict = config_data["global"]["all_sw"]
 
         for item in self.tab_dict.keys():
@@ -229,7 +233,7 @@ class MainWindow:
         print(f"初始化检查.........................................................")
 
         if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
-            subfunc_file.fetch_config_data_from_remote()
+            subfunc_file.fetch_and_decrypt_config_data_from_remote()
 
         self.select_current_tab()
         # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
@@ -477,7 +481,7 @@ class MainWindow:
         # 检查版本表是否当天已更新
         if (not os.path.exists(Config.REMOTE_SETTING_JSON_PATH) or
                 not file_utils.is_latest_file(Config.REMOTE_SETTING_JSON_PATH)):
-            subfunc_file.fetch_config_data_from_remote()
+            subfunc_file.fetch_and_decrypt_config_data_from_remote()
         help_text = "帮助"
         about_text = "关于"
         if self.need_to_update is True:

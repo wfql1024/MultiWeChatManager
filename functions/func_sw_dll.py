@@ -25,7 +25,7 @@ def check_dll(mode, sw="WeChat"):
             dll_content = f.read()
 
         if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
-            config_data = subfunc_file.fetch_config_data_from_remote()
+            config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
         else:
             print("本地版本对照表存在，读取中...")
             try:
@@ -33,7 +33,7 @@ def check_dll(mode, sw="WeChat"):
                     config_data = json.load(f)
             except Exception as e:
                 print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
-                config_data = subfunc_file.fetch_config_data_from_remote()
+                config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
                 print(f"从云端下载了文件：{config_data}")
                 raise RuntimeError("本地 JSON 文件读取失败")
 
@@ -65,16 +65,16 @@ def check_dll(mode, sw="WeChat"):
 
 
     except PermissionError as pe:
-        subfunc_file.fetch_config_data_from_remote()
+        subfunc_file.fetch_and_decrypt_config_data_from_remote()
         return f"错误：权限不足，无法检查 DLL 文件。{pe}", None, None
     except FileNotFoundError as fe:
-        subfunc_file.fetch_config_data_from_remote()
+        subfunc_file.fetch_and_decrypt_config_data_from_remote()
         return f"错误：未找到文件，请检查路径。{fe}", None, None
     except KeyError as ke:
-        subfunc_file.fetch_config_data_from_remote()
+        subfunc_file.fetch_and_decrypt_config_data_from_remote()
         return f"错误，未找到该版本的适配：{ke}", None, None
     except (TimeoutError, RuntimeError, Exception) as e:
-        subfunc_file.fetch_config_data_from_remote()
+        subfunc_file.fetch_and_decrypt_config_data_from_remote()
         return f"错误：{str(e)}", None, None
 
 

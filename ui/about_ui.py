@@ -219,7 +219,7 @@ class AboutWindow:
         self.sponsor_scroll_task = widget_utils.auto_scroll_text(sponsor_text, self.root)
 
     def check_for_updates(self, current_full_version):
-        subfunc_file.fetch_config_data_from_remote()
+        subfunc_file.fetch_and_decrypt_config_data_from_remote()
         success, result = func_update.split_vers_by_cur_from_local(current_full_version)
         if success is True:
             new_versions, old_versions = result

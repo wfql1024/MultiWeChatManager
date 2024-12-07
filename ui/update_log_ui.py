@@ -39,7 +39,7 @@ class UpdateLogWindow:
         print("显示更新日志")
 
         if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
-            data = subfunc_file.fetch_config_data_from_remote()
+            data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
         else:
             print("本地版本对照表存在，读取中...")
             try:
@@ -47,7 +47,7 @@ class UpdateLogWindow:
                     data = json.load(f)
             except Exception as e:
                 print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
-                data = subfunc_file.fetch_config_data_from_remote()
+                data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
                 print(f"从云端下载了文件。")
                 raise RuntimeError("本地 JSON 文件读取失败")
 

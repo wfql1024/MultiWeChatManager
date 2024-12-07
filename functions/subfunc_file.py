@@ -1,15 +1,35 @@
+import base64
 import json
 import math
 import os
 import re
 import sys
 from typing import Tuple, Any
-
 import requests
+from Crypto.Cipher import AES
 
 from resources import Config, Strings
 from utils import json_utils, ini_utils, file_utils, image_utils
 from utils.logger_utils import mylogger as logger
+from Crypto.Util.Padding import unpad
+
+def decrypt_response(response_text):
+    # 分割加密数据和密钥
+    encrypted_data, key = response_text.rsplit(' ', 1)
+
+    # 解码 Base64 数据
+    encrypted_data = base64.b64decode(encrypted_data)
+    aes_key = key.ljust(16)[:16].encode()  # 确保密钥长度
+
+    # 提取 iv 和密文
+    iv = encrypted_data[:16]
+    ciphertext = encrypted_data[16:]
+
+    # 解密
+    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+    plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
+
+    return plaintext.decode()
 
 
 def save_sw_install_path_to_setting_ini(value, sw="WeChat"):
@@ -334,7 +354,7 @@ def update_refresh_time_statistic(view, acc_count, time_spent, tab="WeChat"):
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
-def fetch_config_data_from_remote():
+def fetch_and_decrypt_config_data_from_remote():
     """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
     print(f"正从远程源下载...")
     urls = [Strings.REMOTE_SETTING_JSON_GITEE, Strings.REMOTE_SETTING_JSON_GITHUB]
@@ -345,33 +365,10 @@ def fetch_config_data_from_remote():
             response = requests.get(url, timeout=2)
             if response.status_code == 200:
                 with open(Config.REMOTE_SETTING_JSON_PATH, 'w', encoding='utf-8') as config_file:
-                    config_file.write(response.text)  # 将下载的 JSON 保存到文件
+                    decrypted_data = decrypt_response(response.text)
+                    config_file.write(decrypted_data)  # 将下载的 JSON 保存到文件
                 print(f"成功从 {url} 获取并保存 JSON 文件")
-                return json.loads(response.text)  # 返回加载的 JSON 数据
-            else:
-                print(f"获取失败: {response.status_code}，尝试下一个源...")
-        except requests.exceptions.Timeout:
-            print(f"请求 {url} 超时，尝试下一个源...")
-        except Exception as e:
-            print(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
-
-    raise RuntimeError("所有源获取配置数据失败")
-
-
-def fetch_ver_adaptation_from_remote():
-    """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
-    print(f"正从远程源下载...")
-    urls = [Strings.REMOTE_SETTING_JSON_GITEE, Strings.REMOTE_SETTING_JSON_GITHUB]
-
-    for url in urls:
-        print(f"正在尝试从此处下载: {url}...")
-        try:
-            response = requests.get(url, timeout=2)
-            if response.status_code == 200:
-                with open(Config.REMOTE_SETTING_JSON_PATH, 'w', encoding='utf-8') as config_file:
-                    config_file.write(response.text)  # 将下载的 JSON 保存到文件
-                print(f"成功从 {url} 获取并保存 JSON 文件")
-                return json.loads(response.text)  # 返回加载的 JSON 数据
+                return json.loads(decrypted_data)  # 返回加载的 JSON 数据
             else:
                 print(f"获取失败: {response.status_code}，尝试下一个源...")
         except requests.exceptions.Timeout:
