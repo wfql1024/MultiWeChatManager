@@ -8,28 +8,26 @@ from functools import partial
 from tkinter import messagebox, ttk
 
 from functions import func_update, subfunc_file
-from resources import Config
-from utils import file_utils, sys_utils
+from resources import Config, Constants
+from utils import file_utils, sys_utils, hwnd_utils
 
 
 class UpdateLogWindow:
-    def __init__(self, master, old_versions, new_versions=None):
-        self.master = master
-        master.title("版本日志" if not new_versions else "发现新版本")
-        window_width = 600
-        window_height = 500
-        screen_width = master.winfo_screenwidth()
-        screen_height = master.winfo_screenheight()
-        x = (screen_width - window_width) // 2
-        y = (screen_height - window_height) // 2
-        master.geometry(f"{window_width}x{window_height}+{x}+{y}")
+    def __init__(self, root, parent, wnd, old_versions, new_versions=None):
+        self.root = root
+        self.parent = parent
+        self.wnd = wnd
+        self.wnd.title("版本日志" if not new_versions else "发现新版本")
+        self.width, self.height = Constants.UPDATE_LOG_WND_SIZE
+        hwnd_utils.bring_wnd_to_center(self.wnd, self.width, self.height)
         # 禁用窗口大小调整、移除其余无用按钮、置顶
-        master.resizable(False, False)
+        self.wnd.resizable(False, False)
         # 移除窗口装饰并设置为工具窗口
-        master.attributes('-toolwindow', True)
-        master.grab_set()
+        self.wnd.attributes('-toolwindow', True)
+        self.wnd.grab_set()
+        self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
 
-        main_frame = ttk.Frame(master, padding="5")
+        main_frame = ttk.Frame(self.wnd, padding="5")
         main_frame.pack(fill="both", expand=True)
 
         # 更新日志(标题)
@@ -61,7 +59,7 @@ class UpdateLogWindow:
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         # 创建不可编辑且可滚动的文本框
-        self.log_text = tk.Text(log_frame, wrap=tk.WORD, font=("", 10), height=6, bg=master.cget("bg"),
+        self.log_text = tk.Text(log_frame, wrap=tk.WORD, font=("", 10), height=6, bg=self.wnd.cget("bg"),
                                 yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
 
         # 需要显示新版本
@@ -74,7 +72,7 @@ class UpdateLogWindow:
                 bottom_frame = ttk.Frame(main_frame)
                 bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)
                 cancel_button = ttk.Button(bottom_frame, text="以后再说",
-                                           command=lambda: self.master.destroy())
+                                           command=lambda: self.root.destroy())
                 cancel_button.pack(side=tk.RIGHT)
                 download_button = ttk.Button(bottom_frame, text="下载新版",
                                              command=partial(self.show_download_window,
@@ -125,13 +123,17 @@ class UpdateLogWindow:
         # 配置滚动条
         scrollbar.config(command=self.log_text.yview)
 
+    def on_close(self):
+        self.root.destroy()
+        self.parent.grab_set()
+
     def show_download_window(self, ver_dicts, download_dir=None):
         def update_progress(idx, total_files, downloaded, total_length):
             try:
                 percentage = (downloaded / total_length) * 100 if total_length else 0
                 progress_var.set(f"下载文件 {idx + 1}/{total_files}: {percentage:.2f}% 完成")
                 progress_bar['value'] = percentage
-                self.master.update_idletasks()
+                self.root.update_idletasks()
             except Exception as e:
                 print(e)
 
@@ -156,7 +158,7 @@ class UpdateLogWindow:
         status = {"stop": False}  # 定义状态字典
 
         # 创建窗口、设置进度条等 UI 元素
-        download_window = tk.Toplevel(self.master)
+        download_window = tk.Toplevel(self.root)
         download_window.title("下载更新")
         window_width = 300
         window_height = 135
@@ -188,7 +190,7 @@ class UpdateLogWindow:
             progress_var.set(f"您近期已经完成下载！")
             progress_bar['value'] = 100
             close_and_update_btn.config(state="normal")
-            self.master.update_idletasks()
+            self.root.update_idletasks()
         else:
             print("没有找到匹配的文件")
             # 开始下载文件（多线程）

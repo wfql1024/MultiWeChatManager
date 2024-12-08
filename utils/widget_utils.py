@@ -1,4 +1,3 @@
-import time
 import tkinter as tk
 
 
@@ -10,7 +9,7 @@ class Tooltip:
         self.widget.bind("<Enter>", self.show)
         self.widget.bind("<Leave>", self.hide)
 
-    def show(self, event=None):
+    def show(self, _event=None):
         x, y, _, _ = self.widget.bbox("insert")
         x += self.widget.winfo_rootx() + 25
         y += self.widget.winfo_rooty() - 25
@@ -22,33 +21,45 @@ class Tooltip:
         label = tk.Label(self.tooltip, text=self.text, background="#ffffe0", relief="solid", borderwidth=1)
         label.pack()
 
-    def hide(self, event=None):
+    def hide(self, _event=None):
         if self.tooltip:
             self.tooltip.destroy()
             self.tooltip = None
 
 
-def auto_scroll_text(text_widget, root, gap=50, scroll_distance=0.005):
-    """每秒滚动一行"""
+def auto_scroll_text(tasks, direction_key, text_widget, root, gap=50, scroll_distance=0.005):
+    """每秒滚动一行，保持滚动方向一致"""
     # 获取当前视图的最大滚动位置（即文本框的底部）
-    top_pos = text_widget.yview()[0]  # 获取当前视图的顶部位置
-    bottom_pos = text_widget.yview()[1]  # 获取当前视图的底部位置
-    max_pos = 1.0  # 最大位置，即文本框的底部
+    top_pos = text_widget.yview()[0]
+    bottom_pos = text_widget.yview()[1]
+    max_pos = 1.0
 
-    pause = 0  # 暂停时间，单位为毫秒
+    # 确保方向状态从外部获取
+    direction = getattr(direction_key, "value", 1)  # 默认向下
+    # print(direction)
+
+    pause = 0
     if bottom_pos >= max_pos:
-        scroll_distance = -abs(scroll_distance)
+        direction = -1  # 改为向上
         pause = 1000
     elif top_pos <= 0:
-        scroll_distance = abs(scroll_distance)
+        direction = 1  # 改为向下
         pause = 1000
-    # 计算目标位置并限制在 [0, 1] 范围内
-    target_pos = top_pos + scroll_distance
-    # target_pos = min(max(0, target_pos), 1)  # 确保目标位置不会超出范围
-    print(target_pos)
-    text_widget.yview_moveto(target_pos)  # 滚动到目标位置
-    scroll_task = root.after(gap + pause, auto_scroll_text, text_widget, root, gap, scroll_distance)
-    return scroll_task
+
+    # 更新滚动方向到外部变量
+    setattr(direction_key, "value", direction)
+
+    # 根据方向计算目标位置
+    target_pos = top_pos + scroll_distance * direction
+    text_widget.yview_moveto(target_pos)
+
+    # 添加任务并返回
+    scroll_task = root.after(
+        gap + pause,
+        lambda: auto_scroll_text(tasks, direction_key, text_widget, root, gap, scroll_distance)
+    )
+    tasks.append(scroll_task)
+
 
 
 def insert_two_lines(text_widget, line_list):

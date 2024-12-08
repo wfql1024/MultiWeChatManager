@@ -13,6 +13,11 @@ from ui import update_log_ui
 from utils import hwnd_utils, widget_utils
 
 
+class Direction:
+    def __init__(self, initial=1):
+        self.value = initial
+
+
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
     urls = re.findall(r'(https?://\S+)', text_content)  # 使用正则表达式提取URL
@@ -49,6 +54,7 @@ class AboutWindow:
         self.wnd.title("关于")
         self.width, self.height = Constants.ABOUT_WND_SIZE
         hwnd_utils.bring_wnd_to_center(self.wnd, self.width, self.height)
+        self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # 禁用窗口大小调整
         self.wnd.resizable(False, False)
@@ -123,11 +129,12 @@ class AboutWindow:
         thanks_label.pack(anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
         thanks_frame = ttk.Frame(content_frame)
         thanks_frame.pack(fill=tk.X)
-        row = 0
         for idx, (person, info) in enumerate(Strings.THANKS.items()):
             link = ttk.Label(thanks_frame, text=info.get('text', None),
                              style="Link.TLabel", cursor="hand2")
-            link.grid(row=row, column=idx, sticky="w", padx=Constants.ABOUT_GRID_PAD_X)
+            row = idx // 6
+            column = idx % 6
+            link.grid(row=row, column=column, sticky="w", padx=Constants.ABOUT_GRID_PAD_X)
             # 绑定点击事件
             link.bind(
                 "<Button-1>",
@@ -147,9 +154,11 @@ class AboutWindow:
         update_text = "检查更新"
         if need_to_update:
             update_text = "✨检查更新"
+
         bottom_frame = ttk.Frame(content_frame)
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X,
                           padx=Constants.ABOUT_BTM_FRM_PAD_X, pady=Constants.ABOUT_BTM_FRM_PAD_Y)
+
         disclaimer_frame = ttk.Frame(bottom_frame)
         disclaimer_frame.pack(side=tk.LEFT)
         update_button = ttk.Button(bottom_frame, text=update_text, style='Custom.TButton',
@@ -172,13 +181,13 @@ class AboutWindow:
 
         # 技术参考
         reference_label = ttk.Label(content_frame, text="技术参考", style='SecondTitle.TLabel')
-        reference_label.pack(anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
+        reference_label.pack(side=tk.TOP, anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
         reference_frame = ttk.Frame(content_frame)
-        reference_frame.pack(fill=tk.BOTH, expand=True)
+        reference_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         reference_scrollbar = tk.Scrollbar(reference_frame)
         reference_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         reference_text = tk.Text(reference_frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
-                                 height=8, bg=wnd.cget("bg"),
+                                 height=12, bg=wnd.cget("bg"),
                                  yscrollcommand=reference_scrollbar.set, bd=0, highlightthickness=0)
 
         reference_text.insert(tk.END, '\n')
@@ -189,17 +198,37 @@ class AboutWindow:
         reference_text.config(state=tk.DISABLED)
         reference_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=Constants.ABOUT_GRID_PAD_X)
         reference_scrollbar.config(command=reference_text.yview)
-        self.reference_scroll_task = widget_utils.auto_scroll_text(reference_text, self.root)
+        # 创建方向对象
+        self.reference_scroll_direction = Direction(1)  # 初始方向为向下
+        self.reference_scroll_tasks = []
+        # 启动滚动任务
+        widget_utils.auto_scroll_text(
+            self.reference_scroll_tasks, self.reference_scroll_direction, reference_text, self.root
+        )
+        # 鼠标进入控件时取消所有任务
+        reference_text.bind(
+            "<Enter>",
+            lambda event: [
+                self.root.after_cancel(task) for task in self.reference_scroll_tasks
+            ] and self.reference_scroll_tasks.clear()
+        )
+        # 鼠标离开控件时继续滚动，保留当前方向
+        reference_text.bind(
+            "<Leave>",
+            lambda event: widget_utils.auto_scroll_text(
+                self.reference_scroll_tasks, self.reference_scroll_direction, reference_text, self.root
+            )
+        )
 
         # 赞助
         sponsor_label = ttk.Label(content_frame, text="赞助", style='SecondTitle.TLabel')
-        sponsor_label.pack(anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
         sponsor_frame = ttk.Frame(content_frame)
-        sponsor_frame.pack(fill=tk.BOTH, expand=True)
+        sponsor_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        sponsor_label.pack(side=tk.BOTTOM, anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
         sponsor_scrollbar = tk.Scrollbar(sponsor_frame)
         sponsor_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         sponsor_text = tk.Text(sponsor_frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
-                                 height=3, bg=wnd.cget("bg"), foreground='grey',
+                                 height=5, bg=wnd.cget("bg"), foreground='grey',
                                  yscrollcommand=sponsor_scrollbar.set, bd=0, highlightthickness=0)
 
         sponsor_list = Strings.SPONSOR_TEXT
@@ -216,7 +245,28 @@ class AboutWindow:
         sponsor_text.config(state=tk.DISABLED)
         sponsor_text.pack(side=tk.LEFT, fill=tk.X, expand=False, padx=Constants.ABOUT_GRID_PAD_X)
         sponsor_scrollbar.config(command=sponsor_text.yview)
-        self.sponsor_scroll_task = widget_utils.auto_scroll_text(sponsor_text, self.root)
+        # 创建方向对象
+        self.sponsor_scroll_direction = Direction(1)  # 初始方向为向下
+        self.sponsor_scroll_tasks = []
+        # 启动滚动任务
+        widget_utils.auto_scroll_text(
+            self.sponsor_scroll_tasks, self.sponsor_scroll_direction, sponsor_text, self.root
+        )
+        # 鼠标进入控件时取消所有任务
+        sponsor_text.bind(
+            "<Enter>",
+            lambda event: [
+                self.root.after_cancel(task) for task in self.sponsor_scroll_tasks
+            ]
+        )
+        # 鼠标离开控件时继续滚动，保留当前方向
+        sponsor_text.bind(
+            "<Leave>",
+            lambda event: widget_utils.auto_scroll_text(
+                self.sponsor_scroll_tasks, self.sponsor_scroll_direction, sponsor_text, self.root
+            )
+        )
+
 
     def check_for_updates(self, current_full_version):
         subfunc_file.fetch_and_decrypt_config_data_from_remote()
@@ -225,13 +275,28 @@ class AboutWindow:
             new_versions, old_versions = result
             if len(new_versions) != 0:
                 update_log_window = tk.Toplevel(self.wnd)
-                update_log_ui.UpdateLogWindow(update_log_window, old_versions, new_versions)
+                update_log_ui.UpdateLogWindow(self.root, self.wnd, update_log_window, old_versions, new_versions)
             else:
                 messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
                 return True
         else:
             messagebox.showinfo("错误", result)
             return False
+
+    def on_close(self):
+        """窗口关闭时执行的操作"""
+        for task in self.reference_scroll_tasks:
+            try:
+                self.root.after_cancel(task)  # 取消滚动任务
+            except Exception as e:
+                print(f"Error cancelling task: {e}")
+
+        for task in self.sponsor_scroll_tasks:
+            try:
+                self.root.after_cancel(task)  # 取消滚动任务
+            except Exception as e:
+                print(f"Error cancelling task: {e}")
+        self.wnd.destroy()  # 关闭窗口
 
 
 if __name__ == '__main__':
