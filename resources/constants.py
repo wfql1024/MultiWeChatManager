@@ -8,7 +8,7 @@ class Constants:
     PROJ_WND_SIZE = (int(400 * SCALE_FACTOR), int(550 * SCALE_FACTOR))  # 程序窗口尺寸
     ABOUT_WND_SIZE = (int(500 * SCALE_FACTOR), int(500 * SCALE_FACTOR))  # 关于窗口尺寸
     SETTING_WND_SIZE = (int(600 * SCALE_FACTOR), int(200 * SCALE_FACTOR))  # 设置窗口尺寸
-    UPDATE_LOG_WND_SIZE = (int(480 * SCALE_FACTOR), int(100 * SCALE_FACTOR))  # 更新日志窗口尺寸
+    UPDATE_LOG_WND_SIZE = (int(480 * SCALE_FACTOR), int(400 * SCALE_FACTOR))  # 更新日志窗口尺寸
 
     CANVAS_START_POS = (int(12 * SCALE_FACTOR), int(0 * SCALE_FACTOR))  # 画布起始位置
     ERR_LBL_PAD_X = int(20 * SCALE_FACTOR)  # 错误标签内边距

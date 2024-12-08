@@ -296,7 +296,10 @@ class AboutWindow:
                 self.root.after_cancel(task)  # 取消滚动任务
             except Exception as e:
                 print(f"Error cancelling task: {e}")
+
         self.wnd.destroy()  # 关闭窗口
+        if self.parent != self.root:
+            self.parent.grab_set()  # 恢复父窗口的焦点
 
 
 if __name__ == '__main__':

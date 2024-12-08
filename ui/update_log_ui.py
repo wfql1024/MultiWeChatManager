@@ -124,8 +124,9 @@ class UpdateLogWindow:
         scrollbar.config(command=self.log_text.yview)
 
     def on_close(self):
-        self.root.destroy()
-        self.parent.grab_set()
+        self.wnd.destroy()
+        if self.parent != self.root:
+            self.parent.grab_set()
 
     def show_download_window(self, ver_dicts, download_dir=None):
         def update_progress(idx, total_files, downloaded, total_length):

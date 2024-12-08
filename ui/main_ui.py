@@ -734,7 +734,7 @@ class MainWindow:
         if success is True:
             new_versions, old_versions = result
             update_log_window = tk.Toplevel(self.root)
-            update_log_ui.UpdateLogWindow(update_log_window, old_versions)
+            update_log_ui.UpdateLogWindow(self.root, self.root, update_log_window, old_versions)
         else:
             messagebox.showerror("错误", result)
 
