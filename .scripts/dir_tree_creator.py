@@ -37,7 +37,7 @@ def traverse_directory(path, level=0, **kwargs):
     ignore_dir_list = kwargs.get('ignore_dir_list', '').split(',')
     ignore_file = kwargs.get('ignore_file', False)
     comment_prefix = kwargs.get('comment_prefix', ' ')
-    tree_info_tip_xml = kwargs.get('tree_info_tip_xml', 'DirectoryV3.xml')
+    tree_info_tip_xml = kwargs.get('tree_info_tip_xml', '../DirectoryV3.xml')
     tree_info_tip_xml_path = os.path.join(base_dir, tree_info_tip_xml)
 
     for item in os.listdir(path):
@@ -76,7 +76,7 @@ def traverse_directory(path, level=0, **kwargs):
 
 
 def main():
-    config = load_config('tree_config.xml')
+    config = load_config('dir_tree_config.xml')
     least_indent_length = config.get('least_indent_length', '2')  # 默认值为字符串'2'
     connection_symbol = config.get('connection_symbol', '-')
     always_show_bridge = config.get('always_show_bridge', 'true').lower() == 'true'
@@ -104,7 +104,7 @@ def main():
                         max_length - len(formatted_output[i][0]) + least_indent_length) + formatted_output[i][1]
             dir_tree.append(dir_tree_lines)
     # Write to tree.txt
-    with open('tree.txt', 'w', encoding='utf-8') as f:
+    with open('../dir_tree.txt', 'w', encoding='utf-8') as f:
         f.write('\n'.join(dir_tree))
 
 
