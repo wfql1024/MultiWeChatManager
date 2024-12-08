@@ -7,7 +7,6 @@ from functions import func_setting, subfunc_file
 from resources.config import Config
 from utils import image_utils
 from utils.logger_utils import mylogger as logger
-from decrypt import interface
 
 
 def fetch_acc_detail_by_pid(sw, pid, account, after):
@@ -144,12 +143,12 @@ def decrypt_db_and_return(sw, pid, account):
     success, result = decrypt_impl.copy_origin_db_to_proj(pid, account)
     if success is not True:
         return False, result
-    mm_db_path = result
-    print(f"成功将数据库拷贝到项目：{mm_db_path}")
+    db_path = result
+    print(f"成功将数据库拷贝到项目：{db_path}")
 
     # 第三阶段：解密
     try:
-        success, result = decrypt_impl.decrypt_db_file_by_str_key(pid, mm_db_path, str_key)
+        success, result = decrypt_impl.decrypt_db_file_by_str_key(pid, db_path, str_key)
     except Exception as e:
         logger.error(e)
         return False, e

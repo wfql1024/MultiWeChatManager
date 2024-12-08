@@ -10,25 +10,29 @@ import psutil
 from PIL import Image, ImageTk
 
 from functions import func_detail, subfunc_file
+from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
 from utils import string_utils, widget_utils, hwnd_utils
 
 
 class DetailWindow:
-    def __init__(self, master, chosen_tab, account, update_callback):
-        self.master = master
+    def __init__(self, root, parent, wnd, chosen_tab,
+                 account, update_callback):
+        self.root = root
+        self.parent = parent
+        self.wnd = wnd
         self.chosen_tab = chosen_tab
-        self.master.withdraw()
+        self.wnd.withdraw()
         self.account = account
         self.update_callback = update_callback
         self.tooltips = {}  # 初始化 tooltip 属性
 
-        master.title(f"属性 - {self.account}")
+        wnd.title(f"属性 - {self.account}")
 
-        master.attributes('-toolwindow', True)
+        wnd.attributes('-toolwindow', True)
 
-        frame = ttk.Frame(master, padding="12")
+        frame = ttk.Frame(wnd, padding="12")
         frame.pack(fill=tk.BOTH, expand=True)
 
         # 头像
@@ -88,9 +92,10 @@ class DetailWindow:
 
         self.load_data_label()
 
-        hwnd_utils.bring_wnd_to_center(self.master, 265, 345)
-        self.master.deiconify()
-        master.grab_set()
+        wnd_width, wnd_height = Constants.DETAIL_WND_SIZE
+        hwnd_utils.bring_wnd_to_center(self.wnd, wnd_width, wnd_height)
+        self.wnd.deiconify()
+        wnd.grab_set()
 
     def load_data_label(self):
         print(f"加载数据...")
@@ -178,7 +183,8 @@ class DetailWindow:
             return
 
         # 线程启动获取详情
-        threading.Thread(target=func_detail.fetch_acc_detail_by_pid, args=(self.chosen_tab, pid, self.account, self.after_fetch)).start()
+        threading.Thread(target=func_detail.fetch_acc_detail_by_pid,
+                         args=(self.chosen_tab, pid, self.account, self.after_fetch)).start()
         widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, text="获取中...")
 
     def after_fetch(self):
@@ -192,4 +198,4 @@ class DetailWindow:
         else:
             subfunc_file.update_acc_details_to_json_by_tab(self.chosen_tab, self.account, note=new_note)
         self.update_callback()
-        self.master.destroy()
+        self.wnd.destroy()

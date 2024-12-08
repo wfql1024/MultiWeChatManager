@@ -4,31 +4,27 @@ from tkinter import ttk
 
 from PIL import Image, ImageTk
 
+from utils import hwnd_utils
+
 
 class RewardsWindow:
-    def __init__(self, master, image_path):
-        self.master = master
-        master.title("我来赏你！")
+    def __init__(self, root, parent, wnd, image_path):
+        self.root = root
+        self.parent = parent
+        self.wnd = wnd
+        self.wnd.title("我来赏你！")
 
         # 加载图片
         img = Image.open(image_path)
-        img_width, img_height = img.size  # 获取图片的宽和高
-
         # 设置窗口大小为图片的大小
-        screen_width = master.winfo_screenwidth()
-        screen_height = master.winfo_screenheight()
-        x = (screen_width - img_width) // 2
-        y = (screen_height - img_height) // 2
-
-        master.geometry(f"{img_width}x{img_height}+{x}+{y}")
+        img_width, img_height = img.size  # 获取图片的宽和高
+        hwnd_utils.bring_wnd_to_center(self.wnd, img_width, img_height)
 
         # 移除窗口装饰并设置为工具窗口
-        master.overrideredirect(True)
-        master.overrideredirect(False)
-        master.attributes('-toolwindow', True)
+        wnd.attributes('-toolwindow', True)
 
         # 创建Frame并填充
-        frame = ttk.Frame(master)
+        frame = ttk.Frame(wnd)
         frame.pack(fill=tk.BOTH, expand=True)
 
         # 调用方法在frame中显示图片
@@ -47,7 +43,8 @@ class RewardsWindow:
 
 # 创建Tkinter应用窗口
 if __name__ == "__main__":
-    root = tk.Tk()
-    image_path = 'path_to_your_image.png'  # 替换为你的图片路径
-    app = RewardsWindow(root, image_path)
-    root.mainloop()
+    # root = tk.Tk()
+    # img_path = 'path_to_your_image.png'  # 替换为你的图片路径
+    # app = RewardsWindow(root, root, root, img_path)
+    # root.mainloop()
+    pass

@@ -6,9 +6,13 @@ class Constants:
     SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)  # 获取屏幕缩放因子
 
     PROJ_WND_SIZE = (int(400 * SCALE_FACTOR), int(550 * SCALE_FACTOR))  # 程序窗口尺寸
-    ABOUT_WND_SIZE = (int(500 * SCALE_FACTOR), int(500 * SCALE_FACTOR))  # 关于窗口尺寸
+    LOADING_WND_SIZE = (int(240 * SCALE_FACTOR), int(80 * SCALE_FACTOR))  # 登录窗口尺寸
     SETTING_WND_SIZE = (int(600 * SCALE_FACTOR), int(200 * SCALE_FACTOR))  # 设置窗口尺寸
     UPDATE_LOG_WND_SIZE = (int(480 * SCALE_FACTOR), int(400 * SCALE_FACTOR))  # 更新日志窗口尺寸
+    ABOUT_WND_SIZE = (int(500 * SCALE_FACTOR), int(500 * SCALE_FACTOR))  # 关于窗口尺寸
+    DEBUG_WND_SIZE = (int(560 * SCALE_FACTOR), int(432 * SCALE_FACTOR))  # 调试窗口尺寸
+    DETAIL_WND_SIZE = (int(240 * SCALE_FACTOR), int(240 * SCALE_FACTOR))  # 详情窗口尺寸
+    STATISTIC_WND_SIZE = (int(336 * SCALE_FACTOR), int(432 * SCALE_FACTOR))  # 统计窗口尺寸
 
     CANVAS_START_POS = (int(12 * SCALE_FACTOR), int(0 * SCALE_FACTOR))  # 画布起始位置
     ERR_LBL_PAD_X = int(20 * SCALE_FACTOR)  # 错误标签内边距

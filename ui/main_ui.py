@@ -207,7 +207,7 @@ class MainWindow:
             self.check_and_init()
             if hasattr(self, 'loading_class') and self.loading_class:
                 print("主程序关闭等待窗口")
-                self.loading_class.destroy()
+                self.loading_class.auto_close()
                 self.loading_class = None
             # 设置主窗口位置
             hwnd_utils.bring_wnd_to_center(self.root, self.window_width, self.window_height)
@@ -270,7 +270,7 @@ class MainWindow:
                 screen_height = self.root.winfo_screenheight()
                 # 保存屏幕尺寸
                 subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
-            self.root.after(0, self.create_main_frame_and_menu)
+            # self.root.after(0, self.create_main_frame_and_menu)
             return True
 
     def show_setting_error(self):
@@ -726,7 +726,7 @@ class MainWindow:
     def open_rewards(self):
         """打开支持窗口"""
         rewards_window = tk.Toplevel(self.root)
-        rewards_ui.RewardsWindow(rewards_window, Config.REWARDS_PNG_PATH)
+        rewards_ui.RewardsWindow(self.root, self.root, rewards_window, Config.REWARDS_PNG_PATH)
 
     def open_update_log(self):
         """打开版本日志窗口"""

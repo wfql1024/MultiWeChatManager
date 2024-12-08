@@ -3,17 +3,21 @@ import tkinter as tk
 from tkinter import scrolledtext
 from tkinter.font import Font
 
-from utils import debug_utils
+from resources import Constants
+from utils import debug_utils, hwnd_utils
 
 
 class DebugWindow:
-    def __init__(self, master):
-        self.master = master
-        master.title("调试窗口")
-        master.geometry("700x540")
+    def __init__(self, wnd):
+        self.wnd = wnd
+        wnd.title("调试窗口")
+        wnd.geometry("700x540")
+
+        wnd_width, wnd_height = Constants.DEBUG_WND_SIZE
+        hwnd_utils.bring_wnd_to_center(self.wnd, wnd_width, wnd_height)
 
         # 创建工具栏
-        self.toolbar = tk.Frame(master)
+        self.toolbar = tk.Frame(wnd)
         self.toolbar.pack(side=tk.TOP, fill=tk.X)
 
         # 刷新按钮
@@ -59,7 +63,7 @@ class DebugWindow:
         self.simplify_checkbox.pack(side=tk.LEFT, padx=2, pady=2)
 
         # 创建带滚动条的文本框
-        self.text_area = scrolledtext.ScrolledText(master, wrap=tk.NONE)
+        self.text_area = scrolledtext.ScrolledText(wnd, wrap=tk.NONE)
         self.text_area.pack(fill=tk.BOTH, expand=True)
         self.text_area.tag_configure("unimportant", foreground="grey")
 

@@ -166,7 +166,8 @@ class AccountRow:
     def open_detail(self, account):
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(detail_window, self.chosen_tab, account, self.m_class.create_main_frame_and_menu)
+        detail_ui.DetailWindow(self.root, self.root, detail_window, self.chosen_tab,
+                               account, self.m_class.create_main_frame_and_menu)
 
     def create_config(self, account, multiple_status):
         """按钮：创建或重新配置"""

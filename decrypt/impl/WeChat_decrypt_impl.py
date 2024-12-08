@@ -40,18 +40,18 @@ import hmac
 import os
 import shutil
 import struct
+import tempfile
 import time
+import uuid
 from pathlib import Path
 
 import psutil
 import pymem
 from Crypto.Cipher import AES
-from Demos.desktopmanager import origin_desktop
 from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
 
 from decrypt.interface import DecryptInterface
-from resources import Config
 from utils.logger_utils import mylogger as logger
 
 
@@ -169,17 +169,18 @@ class WeChatDecryptImpl(DecryptInterface):
         pm = pymem.Pymem()
         pm.open_process_from_id(pid)
         p = psutil.Process(pid)
-        target_dbs = [f.path for f in p.open_files() if f.path[-11:] == 'MicroMsg.db']
-        logger.info(f"找到MicroMsg：{target_dbs}")
-        if len(target_dbs) < 1:
+        db_to_copy = [f.path for f in p.open_files() if f.path[-11:] == 'MicroMsg.db']
+        logger.info(f"找到MicroMsg：{db_to_copy}")
+        if len(db_to_copy) < 1:
             return False, "没有找到db文件！"
         # 将数据库文件拷贝到项目
-        user_dir = Config.PROJ_USER_PATH
-        origin_db_path = user_dir + rf"\WeChat\{account}\MicroMsg.db"
+        # user_dir = Config.PROJ_USER_PATH
+        temp_dir = tempfile.gettempdir()
+        origin_db_path = os.path.join(tempfile.mkdtemp(dir=temp_dir), f"{uuid.uuid4().hex}.db")
         if not os.path.exists(os.path.dirname(origin_db_path)):
             os.makedirs(os.path.dirname(origin_db_path))
         try:
-            shutil.copyfile(target_dbs[0], origin_db_path)
+            shutil.copyfile(db_to_copy[0], origin_db_path)
         except Exception as e:
             logger.error(e)
             return False, e

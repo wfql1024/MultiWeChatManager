@@ -1,8 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 
-from resources import Config
-from utils import json_utils
+from resources import Config, Constants
+from utils import json_utils, hwnd_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -14,32 +14,28 @@ def try_convert(value):
 
 
 class StatisticWindow:
-    def __init__(self, master, sw="WeChat"):
+    def __init__(self, wnd, sw):
         self.sw = sw
         self.refresh_mode_combobox = None
         self.refresh_tree = None
         self.manual_tree = None
         self.auto_tree = None
         self.auto_count_combobox = None
-        self.master = master
-        self.master.title(f"{sw}统计数据")
-        self.master.attributes('-toolwindow', True)
-        self.window_width = 420
-        self.window_height = 540
+        self.wnd = wnd
+        self.wnd.title(f"{sw}统计数据")
+        self.wnd.attributes('-toolwindow', True)
+        self.window_width, self.window_height = Constants.STATISTIC_WND_SIZE
+        hwnd_utils.bring_wnd_to_center(self.wnd, self.window_width, self.window_height)
+        wnd.grab_set()
+        wnd.update_idletasks()
+
         style = ttk.Style()
         style.configure("Treeview")
-        screen_width = master.winfo_screenwidth()
-        screen_height = master.winfo_screenheight()
-        x = (screen_width - self.window_width) // 2
-        y = (screen_height - self.window_height) // 2
-        master.geometry(f"{self.window_width}x{self.window_height}+{x}+{y}")
-        master.grab_set()
-        master.update_idletasks()
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
-        self.scrollbar_frame = tk.Frame(master)
+        self.scrollbar_frame = tk.Frame(wnd)
         self.scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        self.canvas = tk.Canvas(master, highlightthickness=0)
+        self.canvas = tk.Canvas(wnd, highlightthickness=0)
         self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
 
         # 创建滚动条
@@ -269,5 +265,5 @@ class StatisticWindow:
 # 创建主窗口
 if __name__ == "__main__":
     root = tk.Tk()
-    statistic_window = StatisticWindow(root)
+    statistic_window = StatisticWindow(root, "WeChat")
     root.mainloop()
