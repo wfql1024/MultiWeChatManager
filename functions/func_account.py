@@ -9,7 +9,7 @@ from tkinter import messagebox
 import psutil
 from PIL import Image
 
-from functions import func_setting, subfunc_file, func_config
+from functions import subfunc_file, func_config
 from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
@@ -208,7 +208,7 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
         callback()
 
 
-def get_account_list(multiple_status, sw):
+def get_account_list(sw, data_dir, multiple_status):
     """
     获取账号及其登录情况
     """
@@ -229,13 +229,13 @@ def get_account_list(multiple_status, sw):
                 normalized_path = f.path.replace('\\', '/')
                 # print(normalized_path)
                 # 检查路径是否以 data_path 开头
-                if normalized_path.startswith(data_path):
+                if normalized_path.startswith(data_dir):
                     # print(
                     #     f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
                     # print(f"提取中：{f.path}")
                     path_parts = f.path.split(os.path.sep)
                     try:
-                        wx_id_index = path_parts.index(os.path.basename(data_path)) + 1
+                        wx_id_index = path_parts.index(os.path.basename(data_dir)) + 1
                         wx_id = path_parts[wx_id_index]
                         if wx_id not in excluded_dir_list:
                             wechat_processes.append((wx_id, process_id))
@@ -250,13 +250,13 @@ def get_account_list(multiple_status, sw):
                 normalized_path = f.path.replace('\\', '/')
                 # print(normalized_path)
                 # 检查路径是否以 data_path 开头
-                if normalized_path.startswith(data_path):
+                if normalized_path.startswith(data_dir):
                     # print(
                     #     f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
                     # print(f"提取中：{f.path}")
                     path_parts = f.path.split(os.path.sep)
                     try:
-                        wx_id_index = path_parts.index(os.path.basename(data_path)) + 1
+                        wx_id_index = path_parts.index(os.path.basename(data_dir)) + 1
                         wx_id = path_parts[wx_id_index]
                         if wx_id not in ["all_users"]:
                             wechat_processes.append((wx_id, process_id))
@@ -273,9 +273,6 @@ def get_account_list(multiple_status, sw):
             logger.error(f"发生意外错误: {e}")
 
     start_time = time.time()
-    data_path = func_setting.get_sw_data_dir(sw)
-    if not data_path:
-        return False, "找不到数据存储路径"
 
     wechat_processes = []
     logged_in_ids = set()
@@ -298,8 +295,8 @@ def get_account_list(multiple_status, sw):
 
     # 获取文件夹并分类
     folders = set(
-        item for item in os.listdir(data_path)
-        if os.path.isdir(os.path.join(data_path, item))
+        item for item in os.listdir(data_dir)
+        if os.path.isdir(os.path.join(data_dir, item))
     ) - set(excluded_dir_list)
     login = list(logged_in_ids & folders)
     logout = list(folders - logged_in_ids)
@@ -335,7 +332,7 @@ def get_main_hwnd_of_accounts(acc_list, sw):
     for acc in acc_list:
         pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, pid=None)
         hwnd_list = hwnd_utils.find_hwnd_by_pid_and_class(pid, target_class)
-        print(pid, hwnd_list)
+        # print(pid, hwnd_list)
         if len(hwnd_list) >= 1:
             hwnd = hwnd_list[0]
             subfunc_file.update_acc_details_to_json_by_tab(sw, acc, main_hwnd=hwnd)

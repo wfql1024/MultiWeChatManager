@@ -167,7 +167,7 @@ class AccountRow:
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.root)
         detail_ui.DetailWindow(self.root, self.root, detail_window, self.chosen_tab,
-                               account, self.m_class.create_main_frame_and_menu)
+                               account, self.m_class.refresh_main_frame)
 
     def create_config(self, account, multiple_status):
         """按钮：创建或重新配置"""
@@ -180,7 +180,7 @@ class AccountRow:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=([account], self.multiple_status, self.m_class.create_main_frame_and_menu, self.chosen_tab)
+                args=([account], self.multiple_status, self.m_class.refresh_main_frame, self.chosen_tab)
             ).start()
         except Exception as e:
             logger.error(e)
@@ -378,7 +378,7 @@ class ClassicRowUI:
             for account, row in self.login_rows.items() if row.checkbox_var.get()
         ]
         try:
-            func_account.to_quit_selected_accounts(self.chosen_tab, accounts, self.m_class.create_main_frame_and_menu)
+            func_account.to_quit_selected_accounts(self.chosen_tab, accounts, self.m_class.refresh_main_frame)
         except Exception as e:
             logger.error(e)
 
@@ -389,7 +389,7 @@ class ClassicRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu, self.chosen_tab)
+                args=(accounts, self.multiple_status, self.m_class.refresh_main_frame, self.chosen_tab)
             ).start()
         except Exception as e:
             logger.error(e)

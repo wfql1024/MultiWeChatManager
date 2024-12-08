@@ -204,4 +204,4 @@ def test(m_class, account, multiple_status, tab="WeChat"):
                 hwnd_utils.close_wnd_by_name(login_wnd_class)
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
-    m_class.root.after(0, m_class.create_main_frame_and_menu)
+    m_class.root.after(0, m_class.refresh_main_frame)

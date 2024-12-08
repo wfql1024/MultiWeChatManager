@@ -234,9 +234,9 @@ class SettingWindow:
             else:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
 
-    def get_cur_sw_ver(self, sw="WeChat"):
+    def get_cur_sw_ver(self, sw):
         print("获取版本号")
-        version = func_setting.get_sw_cur_ver(sw)
+        inst_path, version = func_setting.get_sw_inst_path_and_ver(sw)
         self.version_var.set(version)
 
     def get_screen_size(self):

@@ -13,12 +13,10 @@ from resources import Config
 from utils import file_utils
 
 
-def check_dll(mode, sw="WeChat"):
+def check_dll(sw, mode, dll_dir, cur_sw_ver):
     """检查当前的dll状态，判断是否为全局多开或者不可用"""
     patch_dll, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll="WeChatWin.dll")
-    dll_dir = func_setting.get_sw_dll_dir(sw).replace("\\", "/")
     dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-    cur_wechat_ver = func_setting.get_sw_cur_ver(sw)
 
     try:
         with open(dll_path, 'rb') as f:
@@ -40,8 +38,8 @@ def check_dll(mode, sw="WeChat"):
         if not config_data:
             return "错误：没有数据", None, None
 
-        result1 = config_data[sw][mode][cur_wechat_ver]["STABLE"]["pattern"]
-        result2 = config_data[sw][mode][cur_wechat_ver]["PATCH"]["pattern"]
+        result1 = config_data[sw][mode][cur_sw_ver]["STABLE"]["pattern"]
+        result2 = config_data[sw][mode][cur_sw_ver]["PATCH"]["pattern"]
 
         pattern1_hex_list = result1.split(',')
         pattern2_hex_list = result2.split(',')
@@ -78,7 +76,7 @@ def check_dll(mode, sw="WeChat"):
         return f"错误：{str(e)}", None, None
 
 
-def switch_dll(mode, sw="WeChat"):
+def switch_dll(sw, mode, dll_dir, ver):
     """切换全局多开状态"""
     patch_dll, executable = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None, executable=None)
     if patch_dll is None or executable is None:
@@ -112,13 +110,11 @@ def switch_dll(mode, sw="WeChat"):
             print("请手动关闭这些进程后再继续。")
             return False
 
-    # 获取 DLL 路径
-    dll_dir_path = func_setting.get_sw_dll_dir(sw)
     # 获取桌面路径
     desktop_path = winshell.desktop()
     # 定义目标路径和文件名
-    dll_path = os.path.join(dll_dir_path, patch_dll)
-    bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
+    dll_path = os.path.join(dll_dir, patch_dll)
+    bak_path = os.path.join(dll_dir, f"{patch_dll}.bak")
     bak_desktop_path = os.path.join(desktop_path, f"{patch_dll}.bak")
     not_same_version = True
     if os.path.exists(bak_path):
@@ -129,7 +125,7 @@ def switch_dll(mode, sw="WeChat"):
             result = None
             mmap_file = mmap.mmap(f.fileno(), 0)
 
-            current_mode, stable_pattern, patch_pattern = check_dll(mode, sw)
+            current_mode, stable_pattern, patch_pattern = check_dll(sw, mode, dll_dir, ver)
 
             if current_mode == "已开启":
                 print(f"当前：{mode}已开启")

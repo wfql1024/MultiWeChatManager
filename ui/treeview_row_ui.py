@@ -507,7 +507,7 @@ class TreeviewRowUI:
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.root)
         detail_ui.DetailWindow(self.root, self.root, detail_window, self.chosen_tab,
-                               account, self.m_class.create_main_frame_and_menu)
+                               account, self.m_class.refresh_main_frame)
 
     def create_config(self, multiple_status):
         """按钮：创建或重新配置"""
@@ -531,7 +531,7 @@ class TreeviewRowUI:
                 quited_accounts = func_account.quit_accounts(self.chosen_tab, accounts)
                 quited_accounts_str = "\n".join(quited_accounts)
                 messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
-                self.m_class.create_main_frame_and_menu()
+                self.m_class.refresh_main_frame()
             except Exception as e:
                 logger.error(e)
 
@@ -542,7 +542,7 @@ class TreeviewRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu, self.chosen_tab)
+                args=(accounts, self.multiple_status, self.m_class.refresh_main_frame, self.chosen_tab)
             ).start()
         except Exception as e:
             logger.error(e)
@@ -553,7 +553,7 @@ class TreeviewRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.m_class.create_main_frame_and_menu, self.chosen_tab)
+                args=(accounts, self.multiple_status, self.m_class.refresh_main_frame, self.chosen_tab)
             ).start()
         except Exception as e:
             logger.error(e)

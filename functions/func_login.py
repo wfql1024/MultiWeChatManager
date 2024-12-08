@@ -52,7 +52,7 @@ def manual_login(m_class, tab, status, window_callback):
         logger.warning(f"打开失败，请重试！")
         messagebox.showerror("错误", "手动登录失败，请重试")
 
-    m_class.root.after(0, m_class.create_main_frame_and_menu)
+    m_class.root.after(0, m_class.refresh_main_frame)
     window_callback()
 
 

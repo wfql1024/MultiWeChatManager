@@ -51,6 +51,7 @@ def get_sw_dll_dir_by_files(sw="WeChat"):
 
 def get_sw_install_path(sw, from_setting_window=False):
     """获取微信安装路径"""
+    print("获取安装路径...")
     path_finders = [
         wechat_utils.get_sw_install_path_from_process,
         None if from_setting_window else subfunc_file.get_sw_install_path_from_setting_ini,
@@ -75,6 +76,7 @@ def get_sw_install_path(sw, from_setting_window=False):
 
 def get_sw_data_dir(sw, from_setting_window=False):
     """获取微信数据存储文件夹"""
+    print("获取数据目录...")
     # 获取地址的各种方法
     path_finders = [
         None if from_setting_window else subfunc_file.get_sw_data_dir_from_setting_ini,
@@ -103,6 +105,7 @@ def get_sw_data_dir(sw, from_setting_window=False):
 
 def get_sw_dll_dir(sw, from_setting_window=False):
     """获取微信dll所在文件夹"""
+    print("获取dll目录...")
     path_finders = [
         None if from_setting_window else subfunc_file.get_sw_dll_dir_from_setting_ini,
         wechat_utils.get_sw_dll_dir_by_memo_maps,
@@ -123,15 +126,15 @@ def get_sw_dll_dir(sw, from_setting_window=False):
     return None
 
 
-def get_sw_cur_ver(sw="WeChat"):
+def get_sw_inst_path_and_ver(sw):
     """获取当前使用的版本号"""
     # print(sw)
     install_path = get_sw_install_path(sw=sw)
     # print(install_path)
     if install_path is not None:
         if os.path.exists(install_path):
-            return file_utils.get_file_version(install_path)
-        return None
+            return install_path, file_utils.get_file_version(install_path)
+        return None, None
 
 
 def fetch_global_setting_or_set_default(setting_key):
@@ -210,7 +213,7 @@ def toggle_view(view, initialization, sw="WeChat"):
     initialization()
     return True
 
-def toggle_tab(tab):
+def toggle_tab_record(tab):
     """
         切换待刷新的标签
         :param tab: 选择的标签
