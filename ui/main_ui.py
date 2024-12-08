@@ -11,16 +11,16 @@ import webbrowser
 from functools import partial
 from tkinter import messagebox
 from tkinter import ttk
-import yaml
 
 import psutil
+import yaml
 
 from functions import func_setting, func_sw_dll, func_login, func_file, func_account, subfunc_file, func_update
+from resources import Strings, Config, Constants
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui, loading_ui
 from utils import hwnd_utils, debug_utils, file_utils
 from utils.logger_utils import mylogger as logger
-from resources import Strings, Config, Constants
 
 
 def read_yaml(file_path):
@@ -207,6 +207,7 @@ class MainWindow:
 
     def load_on_startup(self):
         """启动时检查载入"""
+
         # print(f"启动自检中...")
 
         def func_thread():

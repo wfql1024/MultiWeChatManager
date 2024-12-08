@@ -139,7 +139,6 @@ def mov_backup(new=None):
         messagebox.showinfo("成功", "已成功移动到回收站！")
 
 
-
 def clear_statistic_data(after):
     """清除统计数据"""
     confirm = messagebox.askokcancel(
@@ -219,7 +218,6 @@ def create_app_lnk():
 
     # 打印假装首次使用版创建成功信息
     print(f"假装首次使用版快捷方式已创建： {new_shortcut_path}")
-
 
 
 def create_lnk_for_account(sw, account, multiple_status):
@@ -382,7 +380,6 @@ def reset(after):
         "该操作需要关闭所有微信进程，将清空除配置文件外的所有文件及设置，请确认是否需要重置？"
     )
 
-
     if confirm:
         try:
             all_sw, = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
@@ -429,6 +426,7 @@ def reset(after):
     else:
         messagebox.showinfo("操作取消", "重置操作已取消。")
 
+
 if __name__ == '__main__':
     # all_sw = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
     # print(all_sw)
@@ -442,5 +440,3 @@ if __name__ == '__main__':
     # for sw in all_sw:
     #     print(sw)
     pass
-
-

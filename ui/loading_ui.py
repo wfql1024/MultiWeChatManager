@@ -1,4 +1,5 @@
 from tkinter import ttk
+
 from resources import Constants
 from utils import hwnd_utils
 

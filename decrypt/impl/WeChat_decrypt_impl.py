@@ -286,6 +286,7 @@ class WeChatDecryptImpl(DecryptInterface):
             logger.error(e)
             return False, e
 
+
 KEY_SIZE = 32
 DEFAULT_PAGESIZE = 4096
 DEFAULT_ITER = 64000

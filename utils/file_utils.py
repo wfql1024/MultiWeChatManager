@@ -1,16 +1,15 @@
+import ctypes
 import datetime as dt
 import hashlib
 import os
 import re
 
 import win32api
-import ctypes
-import os
-import sys
 
 # Windows API 常量
 FO_DELETE = 0x03
 FOF_ALLOWUNDO = 0x40
+
 
 # 设置 SHFileOperation 结构
 class SHFileOpStruct(ctypes.Structure):
@@ -24,6 +23,7 @@ class SHFileOpStruct(ctypes.Structure):
         ("hNameMappings", ctypes.c_void_p),
         ("lpszProgressTitle", ctypes.c_wchar_p)
     ]
+
 
 def move_to_recycle_bin(file_path):
     # 确保文件存在

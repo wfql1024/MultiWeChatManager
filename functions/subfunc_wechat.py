@@ -33,6 +33,7 @@ def kill_wechat_multiple_processes(sw="WeChat"):
         except Exception as e:
             logger.error(e)
 
+
 def get_mutex_dict(sw="WeChat"):
     """拿到当前时间下系统中所有微信进程的互斥体情况"""
     print("获取互斥体情况...")
@@ -46,6 +47,7 @@ def get_mutex_dict(sw="WeChat"):
             subfunc_file.update_acc_details_to_json_by_tab(sw, "all_wechat", **{f"{pid}": True})
             has_mutex_dict.update({pid: has_mutex})
     return has_mutex_dict
+
 
 def open_wechat(status, has_mutex_dictionary=None, sw="WeChat"):
     """

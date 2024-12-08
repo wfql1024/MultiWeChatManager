@@ -6,6 +6,7 @@ import tkinter as tk
 
 from ui.main_ui import MainWindow
 
+
 def elevate():
     if ctypes.windll.shell32.IsUserAnAdmin():
         return True

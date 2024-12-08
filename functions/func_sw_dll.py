@@ -8,7 +8,7 @@ from tkinter import messagebox
 import psutil
 import winshell
 
-from functions import func_setting, subfunc_file
+from functions import subfunc_file
 from resources import Config
 from utils import file_utils
 

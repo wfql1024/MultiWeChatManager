@@ -29,7 +29,7 @@ def get_config_status_by_account(account, data_path, sw="WeChat") -> str:
     file_suffix = file.split(".")[-1]
     dest_filename = f"{account}.{file_suffix}"
     acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), dest_filename)
-                           .replace("\\", "/"))
+                    .replace("\\", "/"))
     if os.path.exists(acc_cfg_path):
         mod_time = os.path.getmtime(acc_cfg_path)
         date = datetime.fromtimestamp(mod_time)

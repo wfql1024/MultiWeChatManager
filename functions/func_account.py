@@ -153,6 +153,7 @@ def silent_get_avatar_url(sw, acc_list, data_dir):
     changed2 = subfunc_file.get_avatar_url_from_other_sw(sw, acc_list)
     return changed1 or changed2
 
+
 def silent_get_nickname(sw, acc_list, data_dir):
     """
     悄悄获取账号的头像url
@@ -336,4 +337,3 @@ def get_main_hwnd_of_accounts(acc_list, sw):
         if len(hwnd_list) >= 1:
             hwnd = hwnd_list[0]
             subfunc_file.update_acc_details_to_json_by_tab(sw, acc, main_hwnd=hwnd)
-

@@ -10,7 +10,6 @@ class Config:
 
     INI_GLOBAL_SECTION = 'global'
 
-
     INI_KEY_INSTALL_PATH = 'install_path'
     INI_KEY_DATA_PATH = 'data_path'
     INI_KEY_DLL_DIR_PATH = 'dll_dir_path'
@@ -35,7 +34,7 @@ class Config:
         "sub_exe": "python",
         "enable_new_func": "true",
         "tab": "WeChat",
-        "WeChat":{
+        "WeChat": {
             "view": "tree",
             "login_col_to_sort": "配置",
             "logout_col_to_sort": "配置",

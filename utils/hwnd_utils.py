@@ -2,10 +2,13 @@ import ctypes
 import sys
 import time
 from ctypes import wintypes
+
 import win32api
 import win32con
 import win32gui
+
 from utils.logger_utils import mylogger as logger
+
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
 from pywinauto.controls.hwndwrapper import HwndWrapper
@@ -313,6 +316,7 @@ def wait_for_wnd_close(hwnd, timeout=30):
             return True
         time.sleep(0.5)
     return False
+
 
 if __name__ == '__main__':
     # 示例使用

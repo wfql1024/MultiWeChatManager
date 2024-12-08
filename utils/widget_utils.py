@@ -61,7 +61,6 @@ def auto_scroll_text(tasks, direction_key, text_widget, root, gap=50, scroll_dis
     tasks.append(scroll_task)
 
 
-
 def insert_two_lines(text_widget, line_list):
     """在Text中插入每行两个元素，并且居中显示"""
     for i in range(0, len(line_list), 2):  # 每两个元素作为一对

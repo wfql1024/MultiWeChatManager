@@ -5,13 +5,15 @@ import os
 import re
 import sys
 from typing import Tuple, Any
+
 import requests
 from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
 
 from resources import Config, Strings
 from utils import json_utils, ini_utils, file_utils, image_utils
 from utils.logger_utils import mylogger as logger
-from Crypto.Util.Padding import unpad
+
 
 def decrypt_response(response_text):
     # 分割加密数据和密钥
@@ -77,7 +79,7 @@ def set_enable_new_func_in_ini(value):
 
 def get_sw_install_path_from_setting_ini(sw="WeChat"):
     return [ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
-                                          Config.INI_KEY_INSTALL_PATH)]
+                                           Config.INI_KEY_INSTALL_PATH)]
 
 
 def get_sw_data_dir_from_setting_ini(sw="WeChat"):
@@ -90,7 +92,7 @@ def get_sw_data_dir_from_setting_ini(sw="WeChat"):
 
 def get_sw_dll_dir_from_setting_ini(sw="WeChat"):
     return [ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
-                                          Config.INI_KEY_DLL_DIR_PATH)]
+                                           Config.INI_KEY_DLL_DIR_PATH)]
 
 
 def get_screen_size_from_setting_ini():
@@ -133,6 +135,7 @@ def update_acc_details_to_json_by_tab(tab, account, **kwargs):
         logger.error(e)
         return False
 
+
 def get_acc_details_from_json_by_tab(tab, account: str, **kwargs) -> Tuple[Any, ...]:
     """
     根据用户输入的变量名，获取对应的账户信息
@@ -150,6 +153,7 @@ def get_acc_details_from_json_by_tab(tab, account: str, **kwargs) -> Tuple[Any, 
         # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
     return result
 
+
 def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
     """
     从远程设置json中获取数据
@@ -165,6 +169,7 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
         result += (value,)
         # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
     return result
+
 
 def clear_all_wechat_in_acc_json(sw="WeChat"):
     """
@@ -435,7 +440,6 @@ def get_avatar_url_from_file(sw, acc_list, data_dir):
     return changed
 
 
-
 def get_avatar_url_from_other_sw(now_sw, now_acc_list):
     print("尝试用窃取法获取头像")
     changed = False
@@ -456,7 +460,7 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
             logger.warning(f"没有{other_sw}对应的适配")
             continue
         other_sw_left_cut = other_sw_cut[0]
-        other_sw_right_cut = (-other_sw_cut[1]) if other_sw_cut[1]!= 0 else None
+        other_sw_right_cut = (-other_sw_cut[1]) if other_sw_cut[1] != 0 else None
         # print(other_sw_left_cut, other_sw_right_cut)
 
         now_sw_cut, = get_details_from_remote_setting_json(
@@ -466,7 +470,7 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
             logger.warning(f"没有{other_sw}对应的适配")
             continue
         now_sw_left_cut = now_sw_cut[0]
-        now_sw_right_cut = (-now_sw_cut[1]) if now_sw_cut[1]!= 0 else None
+        now_sw_right_cut = (-now_sw_cut[1]) if now_sw_cut[1] != 0 else None
         # print(now_sw_left_cut, now_sw_right_cut)
 
         # 加载其他平台的账号列表
@@ -653,6 +657,7 @@ def merge_refresh_nodes():
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
     return data
 
+
 def move_data_to_wechat():
     data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
 
@@ -662,4 +667,3 @@ def move_data_to_wechat():
             "WeChat": data
         }
         json_utils.save_json_data(Config.STATISTIC_JSON_PATH, wechat_data)
-

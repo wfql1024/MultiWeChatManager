@@ -1,8 +1,8 @@
 import re
+import subprocess
+import time
 
 from resources import Config
-import time
-import subprocess
 from utils import process_utils
 
 
@@ -95,14 +95,3 @@ def close_sw_mutex_by_handle(handle_exe, exe, dict_list):
 
 if __name__ == '__main__':
     pass
-
-
-
-
-
-
-
-
-
-
-

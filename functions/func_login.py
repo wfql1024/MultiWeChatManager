@@ -65,6 +65,7 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
     :param status: 是否全局多开
     :return: 是否成功
     """
+
     def get_wnd_positions(n):
         # 实际的间隔设置
         actual_gap_width = int((screen_width - n * login_width) / (n + 1))
@@ -83,7 +84,7 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
         subfunc_file.get_details_from_remote_setting_json(
-        tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
+            tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
     subfunc_wechat.kill_wechat_multiple_processes(tab)
     time.sleep(0.5)
@@ -129,7 +130,6 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
         # 关闭配置文件锁
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-
 
         # 读取配置
         result = func_config.use_config(accounts[j], tab)
@@ -209,8 +209,8 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
             except TypeError as te:
                 print(te)
                 print("没有按钮，应该是点过啦~")
-    threading.Thread(target=func).start()
 
+    threading.Thread(target=func).start()
 
     # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
     end_time = time.time() + 30

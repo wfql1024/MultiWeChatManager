@@ -15,7 +15,7 @@ def get_sw_data_dir_from_other_sw(sw="WeChat"):
         return []
     if sw == "Weixin":
         old_path = get_sw_data_dir(sw="WeChat")
-        if old_path and old_path!= "":
+        if old_path and old_path != "":
             return [os.path.join(os.path.dirname(old_path), data_dir_name).replace('\\', '/')]
         else:
             return []
@@ -157,6 +157,7 @@ def fetch_global_setting_or_set_default(setting_key):
         value = Config.INI_DEFAULT_VALUE[setting_key]
     return value
 
+
 def fetch_sw_setting_or_set_default(setting_key, sw):
     """
     获取配置项，若没有则添加默认
@@ -212,6 +213,7 @@ def toggle_view(view, initialization, sw="WeChat"):
     )
     initialization()
     return True
+
 
 def toggle_tab_record(tab):
     """

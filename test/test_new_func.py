@@ -1,13 +1,9 @@
-import os
-import shutil
-import time
+from unittest import TestCase
 
 from functions import subfunc_file
 from resources import Config
-from unittest import TestCase
 from utils import handle_utils
 from utils.patch_utils import *
-import tkinter.font as tkFont
 
 
 class Test(TestCase):

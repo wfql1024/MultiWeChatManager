@@ -1,7 +1,7 @@
 import os
+import pathlib
 import re
 import shutil
-import pathlib
 
 
 def path(path: str):

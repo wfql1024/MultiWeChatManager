@@ -19,7 +19,8 @@ class Constants:
     ERR_LBL_PAD_Y = int(20 * SCALE_FACTOR)  # 错误标签内边距
     BTN_FRAME_PAD = (int(4 * SCALE_FACTOR), int(4 * SCALE_FACTOR))  # 按钮框架内边距
     CUS_BTN_PAD = (int(4 * SCALE_FACTOR), int(4 * SCALE_FACTOR))  # 普通按钮内边距
-    CUS_BTN_WIDTH = int(10 * ((SCALE_FACTOR - 1) / 2.5 + 1) if SCALE_FACTOR > 1 else (1 - (1 - SCALE_FACTOR) / 2.5))  # 普通按钮宽度
+    CUS_BTN_WIDTH = int(
+        10 * ((SCALE_FACTOR - 1) / 2.5 + 1) if SCALE_FACTOR > 1 else (1 - (1 - SCALE_FACTOR) / 2.5))  # 普通按钮宽度
 
     LOG_IO_LBL_FONTSIZE = 10  # 登录登出表标签字体大小
     LOG_IO_FRM_PAD_X = (int(12 * SCALE_FACTOR), int(0 * SCALE_FACTOR))  # 登录登出表框架左右边距
@@ -57,8 +58,6 @@ class Constants:
     SECOND_TITLE_FONTSIZE = 10  # 标题字体大小
     LINK_FONTSIZE = 9  # 链接字体大小
     LITTLE_FONTSIZE = 8  # 微小字体大小
-
-
 
     STATUS_BAR_BD = 1  # 状态条边框宽度
     STATUS_BAR_HEIGHT = 1  # 状态条高度

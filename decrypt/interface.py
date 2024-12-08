@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 class DecryptInterface(ABC):
     @abstractmethod
     def get_acc_str_key_by_pid(self, pid):
@@ -30,5 +31,3 @@ class DecryptInterface(ABC):
     def get_acc_avatar_from_db(self, cursor, acc):
         """查询数据库获取id和alias"""
         pass
-
-

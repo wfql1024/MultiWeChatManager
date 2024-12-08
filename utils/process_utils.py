@@ -84,6 +84,7 @@ def remove_child_pids(pids):
 
     return pids
 
+
 def is_process_admin(pid):
     try:
         process = psutil.Process(pid)

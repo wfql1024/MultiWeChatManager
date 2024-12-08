@@ -8,6 +8,7 @@ import win32api
 import win32con
 import win32gui
 
+
 def create_button_in_wnd(hwnd, x, y, width, height, button_text="Click Me"):
     # 加载kernel32.dll，用于获取模块句柄
     kernel32 = ctypes.windll.kernel32
@@ -155,6 +156,7 @@ def embed_wnd_into_right_panel(right_panel_hwnd, target_hwnd):
         right_rect[3],  # 高度为右侧主窗口的高度
         win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW  # 显示窗口
     )
+
 
 class SidebarUI:
     def __init__(self, root):

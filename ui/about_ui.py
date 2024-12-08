@@ -142,7 +142,7 @@ class AboutWindow:
                     event,
                     bilibili=info.get('bilibili', None),
                     github=info.get('github', None),
-                    pj=info.get('52pj', None) :
+                    pj=info.get('52pj', None):
                 (
                     open_url(bilibili),
                     open_url(github),
@@ -209,8 +209,8 @@ class AboutWindow:
         reference_text.bind(
             "<Enter>",
             lambda event: [
-                self.root.after_cancel(task) for task in self.reference_scroll_tasks
-            ] and self.reference_scroll_tasks.clear()
+                              self.root.after_cancel(task) for task in self.reference_scroll_tasks
+                          ] and self.reference_scroll_tasks.clear()
         )
         # 鼠标离开控件时继续滚动，保留当前方向
         reference_text.bind(
@@ -228,8 +228,8 @@ class AboutWindow:
         sponsor_scrollbar = tk.Scrollbar(sponsor_frame)
         sponsor_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         sponsor_text = tk.Text(sponsor_frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
-                                 height=5, bg=wnd.cget("bg"), foreground='grey',
-                                 yscrollcommand=sponsor_scrollbar.set, bd=0, highlightthickness=0)
+                               height=5, bg=wnd.cget("bg"), foreground='grey',
+                               yscrollcommand=sponsor_scrollbar.set, bd=0, highlightthickness=0)
 
         sponsor_list = Strings.SPONSOR_TEXT
         sponsor_list_lines = []
@@ -266,7 +266,6 @@ class AboutWindow:
                 self.sponsor_scroll_tasks, self.sponsor_scroll_direction, sponsor_text, self.root
             )
         )
-
 
     def check_for_updates(self, current_full_version):
         subfunc_file.fetch_and_decrypt_config_data_from_remote()

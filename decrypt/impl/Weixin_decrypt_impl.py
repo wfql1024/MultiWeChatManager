@@ -39,17 +39,17 @@ import hashlib
 import hmac
 import os
 import re
-
 import struct
 import subprocess
-
 from pathlib import Path
+
 from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
 
 from decrypt.interface import DecryptInterface
 from resources import Config
 from utils.logger_utils import mylogger as logger
+
 
 class WeixinDecryptImpl(DecryptInterface):
     # IV_SIZE = 16
@@ -116,7 +116,6 @@ class WeixinDecryptImpl(DecryptInterface):
             print("Failed.")
         return True, decrypted_db_path
 
-
     def get_acc_id_and_alias_from_db(self, cursor, acc):
         acc_id = acc[:-5]
         sql = f"SELECT username, alias FROM 'contact' WHERE username = '{acc_id}';"
@@ -152,7 +151,6 @@ class WeixinDecryptImpl(DecryptInterface):
         except Exception as e:
             logger.error(e)
             return False, e
-
 
 
 KEY_SIZE = 32

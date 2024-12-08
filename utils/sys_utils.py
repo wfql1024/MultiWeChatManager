@@ -1,7 +1,7 @@
 import ctypes
 import platform
-from ctypes import wintypes
 import winreg
+from ctypes import wintypes
 
 # 定义常量
 MDT_EFFECTIVE_DPI = 0  # 有效 DPI（当前缩放）
@@ -39,6 +39,7 @@ def get_system_dpi():
     ctypes.windll.user32.ReleaseDC(0, hdc)
     return dpi
 
+
 class LOGFONT(ctypes.Structure):
     _fields_ = [
         ("lfHeight", wintypes.LONG),
@@ -57,9 +58,11 @@ class LOGFONT(ctypes.Structure):
         ("lfFaceName", wintypes.WCHAR * 32),  # 字体名
     ]
 
+
 def get_system_font_size():
     logfont = LOGFONT()
-    result = ctypes.windll.user32.SystemParametersInfoW(SPI_GETICONTITLELOGFONT, ctypes.sizeof(logfont), ctypes.byref(logfont), 0)
+    result = ctypes.windll.user32.SystemParametersInfoW(SPI_GETICONTITLELOGFONT, ctypes.sizeof(logfont),
+                                                        ctypes.byref(logfont), 0)
     if result:
         return abs(logfont.lfHeight)  # 返回字体高度
     return None

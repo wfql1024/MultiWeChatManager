@@ -17,6 +17,7 @@ class AccountRow:
     """
     为每一个账号创建其行布局的类
     """
+
     def __init__(self, root, m_class, parent_frame, account, data_path, config_status,
                  multiple_status, login_status, update_top_checkbox_callback, sw="WeChat"):
         self.chosen_tab = sw
@@ -243,7 +244,8 @@ class ClassicRowUI:
         if len(logout) != 0:
             # 未登录框架=未登录标题+未登录列表
             self.logout_frame = ttk.Frame(self.main_frame)
-            self.logout_frame.pack(side=tk.TOP, fill=tk.X, pady=Constants.LOG_IO_FRM_PAD_Y, padx=Constants.LOG_IO_FRM_PAD_X)
+            self.logout_frame.pack(side=tk.TOP, fill=tk.X, pady=Constants.LOG_IO_FRM_PAD_Y,
+                                   padx=Constants.LOG_IO_FRM_PAD_X)
 
             # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
             self.logout_title = ttk.Frame(self.logout_frame)

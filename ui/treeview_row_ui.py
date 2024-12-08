@@ -116,7 +116,7 @@ class TreeviewRowUI:
             # 未登录框架=未登录标题+未登录列表
             self.logout_frame = ttk.Frame(self.main_frame)
             self.logout_frame.pack(side=tk.TOP, fill=tk.X,
-                                  padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
+                                   padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
 
             # 未登录标题=未登录复选框+未登录标签+未登录按钮区域
             self.logout_title = ttk.Frame(self.logout_frame)
@@ -133,7 +133,7 @@ class TreeviewRowUI:
 
             # 未登录标签
             self.logout_label = ttk.Label(self.logout_title, text="未登录账号：",
-                                         style='FirstTitle.TLabel')
+                                          style='FirstTitle.TLabel')
             self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
             # 未登录按钮区域=一键登录

@@ -155,4 +155,3 @@ def decrypt_db_and_return(sw, pid, account):
 
     if success is True:
         return True, result
-
