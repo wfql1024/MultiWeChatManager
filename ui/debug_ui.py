@@ -1,7 +1,11 @@
+import os
 import sys
 import tkinter as tk
+from datetime import datetime
 from tkinter import scrolledtext
 from tkinter.font import Font
+
+import winshell
 
 from resources import Constants
 from utils import debug_utils, hwnd_utils
@@ -61,6 +65,10 @@ class DebugWindow:
         self.simplify_checkbox = tk.Checkbutton(self.toolbar, text="简化调用栈",
                                                 variable=self.simplify_var, command=self.refresh_text)
         self.simplify_checkbox.pack(side=tk.LEFT, padx=2, pady=2)
+
+        # 打印日志按钮
+        self.print_log_button = tk.Button(self.toolbar, text="生成日志文件", command=self.write_log_to_txt)
+        self.print_log_button.pack(side=tk.LEFT, padx=2, pady=2)
 
         # 创建带滚动条的文本框
         self.text_area = scrolledtext.ScrolledText(wnd, wrap=tk.NONE)
@@ -141,3 +149,24 @@ class DebugWindow:
         self.text_area.yview_moveto(current_scroll_position[0])  # 恢复滚动条位置
 
         self.text_area.config(state=tk.DISABLED)
+
+    def write_log_to_txt(self):
+        # 获取桌面路径
+        desktop = winshell.desktop()
+
+        # 根据当前日期时间生成文件名
+        current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        file_name = f"mwm_log_{current_time}.txt"
+        file_path = os.path.join(desktop, file_name)
+
+        try:
+            # 获取文本框内容
+            content = self.text_area.get("1.0", "end").strip()  # 获取从第一行到末尾的内容，并移除多余空白
+
+            # 写入文件
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+            print(f"日志已成功保存到：{file_path}")
+        except Exception as e:
+            print(f"保存日志时发生错误：{e}")

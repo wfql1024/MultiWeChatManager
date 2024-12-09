@@ -67,7 +67,7 @@ class Constants:
     SETTING_WND_SIZE = (int(600 * SCALE_FACTOR), int(200 * SCALE_FACTOR))  # 设置窗口尺寸
     UPDATE_LOG_WND_SIZE = (int(480 * SCALE_FACTOR), int(400 * SCALE_FACTOR))  # 更新日志窗口尺寸
     ABOUT_WND_SIZE = (int(500 * SCALE_FACTOR), int(500 * SCALE_FACTOR))  # 关于窗口尺寸
-    DEBUG_WND_SIZE = (int(560 * SCALE_FACTOR), int(432 * SCALE_FACTOR))  # 调试窗口尺寸
+    DEBUG_WND_SIZE = (int(800 * SCALE_FACTOR), int(600 * SCALE_FACTOR))  # 调试窗口尺寸
     DETAIL_WND_SIZE = (int(240 * SCALE_FACTOR), int(320 * SCALE_FACTOR))  # 详情窗口尺寸
     STATISTIC_WND_SIZE = (int(336 * SCALE_FACTOR), int(432 * SCALE_FACTOR))  # 统计窗口尺寸
 
