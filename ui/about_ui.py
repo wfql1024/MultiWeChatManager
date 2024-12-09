@@ -151,9 +151,8 @@ class AboutWindow:
             )
 
         # 底部区域=声明+检查更新按钮
-        update_text = "检查更新"
-        if need_to_update:
-            update_text = "✨检查更新"
+        surprise_sign = Strings.SURPRISE_SIGN
+        prefix = surprise_sign if need_to_update is True else ""
 
         bottom_frame = ttk.Frame(content_frame)
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X,
@@ -161,7 +160,7 @@ class AboutWindow:
 
         disclaimer_frame = ttk.Frame(bottom_frame)
         disclaimer_frame.pack(side=tk.LEFT)
-        update_button = ttk.Button(bottom_frame, text=update_text, style='Custom.TButton',
+        update_button = ttk.Button(bottom_frame, text=f"{prefix}检查更新", style='Custom.TButton',
                                    command=partial(self.check_for_updates,
                                                    current_full_version=current_full_version))
         update_button.pack(side=tk.RIGHT)

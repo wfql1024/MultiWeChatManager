@@ -3,6 +3,7 @@ import glob
 import json
 import os
 import queue
+import re
 import sys
 import threading
 import time
@@ -19,6 +20,7 @@ from resources import Strings, Config, Constants
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui, loading_ui
 from utils import hwnd_utils, debug_utils, file_utils
+from utils.file_utils import is_latest_file
 from utils.logger_utils import mylogger as logger
 
 
@@ -425,9 +427,10 @@ class MainWindow:
         # -应用设置
         func_setting.fetch_sw_setting_or_set_default("login_size", self.chosen_tab)
         login_size = subfunc_file.get_sw_login_size_from_setting_ini(self.chosen_tab)
-        if not login_size or login_size == "" or login_size == "None":
-            self.menu_bar.add_cascade(label="⚠️设置", menu=self.settings_menu)
-            self.settings_menu.add_command(label="⚠️应用设置", foreground='red',
+        warning_sign = Strings.WARNING_SIGN
+        if not login_size or not re.match(r"^\d+\*\d+$", login_size):
+            self.menu_bar.add_cascade(label=f"{warning_sign}设置", menu=self.settings_menu)
+            self.settings_menu.add_command(label=f"{warning_sign}应用设置", foreground='red',
                                            command=partial(self.open_settings, self.chosen_tab))
         else:
             self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
@@ -516,18 +519,15 @@ class MainWindow:
         if (not os.path.exists(Config.REMOTE_SETTING_JSON_PATH) or
                 not file_utils.is_latest_file(Config.REMOTE_SETTING_JSON_PATH)):
             subfunc_file.fetch_and_decrypt_config_data_from_remote()
-        help_text = "帮助"
-        about_text = "关于"
-        if self.need_to_update is True:
-            help_text = "✨帮助"
-            about_text = "✨关于"
+        surprise_sign = Strings.SURPRISE_SIGN
+        prefix = surprise_sign if self.need_to_update is True else ""
         self.help_menu = tk.Menu(self.menu_bar, tearoff=False)
-        self.menu_bar.add_cascade(label=help_text, menu=self.help_menu)
+        self.menu_bar.add_cascade(label=f"{prefix}帮助", menu=self.help_menu)
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
         self.help_menu.add_command(label="更新日志", command=self.open_update_log)
-        self.help_menu.add_command(label=about_text, command=partial(self.open_about, self.need_to_update))
+        self.help_menu.add_command(label=f"{prefix}关于", command=partial(self.open_about, self.need_to_update))
 
         # ————————————————————————————作者标签————————————————————————————
         if self.enable_new_func is True:

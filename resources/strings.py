@@ -1,3 +1,8 @@
+import platform
+
+SYS_VER = int(platform.release())
+NEWER_VER = True if SYS_VER >= 10 else False
+
 class Strings:
     REMOTE_SETTING_JSON_GITEE = 'https://gitee.com/wfql1024/MultiWeChatManager/raw/master/remote_setting'
     REMOTE_SETTING_JSON_GITHUB = 'https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/master/remote_setting'
@@ -139,3 +144,7 @@ class Strings:
     VIDEO_TUTORIAL_LINK = "https://www.bilibili.com/video/BV174H1eBE9r"
     NOT_ENABLED_NEW_FUNC = "by 吾峰起浪（狂按）"
     ENABLED_NEW_FUNC = f"by 吾峰起浪"
+
+    WARNING_SIGN = "⚠️" if NEWER_VER else "?!"
+    SURPRISE_SIGN = "✨" if NEWER_VER else "*"
+
