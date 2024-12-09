@@ -10,11 +10,8 @@ PROCESS_PER_MONITOR_DPI_AWARE = 2  # 进程 DPI 感知模式
 # 定义常量
 SPI_GETICONTITLELOGFONT = 0x001F
 
-# 设置 DPI 感知
-ctypes.windll.shcore.SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE)
 
-
-def get_scaling_from_registry():
+def get_win7_scaling_from_registry():
     try:
         with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop") as key:
             log_pixels, _ = winreg.QueryValueEx(key, "LogPixels")
@@ -33,11 +30,15 @@ def get_font_size_from_registry():
         return None
 
 
-def get_system_dpi():
+def get_system_dpi_by_device_caps():
     hdc = ctypes.windll.user32.GetDC(0)  # 获取设备上下文
     dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88)  # LOGPIXELSX = 88
     ctypes.windll.user32.ReleaseDC(0, hdc)
     return dpi
+
+# def get_main_monitor_scale_factor_by_ctypes():
+#     scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
+#     return scale_factor
 
 
 class LOGFONT(ctypes.Structure):
@@ -91,9 +92,12 @@ if __name__ == "__main__":
     font_size = get_system_font_size()
     print(f"系统字体大小: {font_size}")
 
-    dpi = get_system_dpi()
+    dpi = get_system_dpi_by_device_caps()
     scaling_percentage = dpi / 96 * 100  # 96 DPI 是标准 100%
     print(f"当前系统缩放比例: {scaling_percentage}%")
 
-    scaling_percentage = get_scaling_from_registry()
+    # scaling_percentage = get_main_monitor_scale_factor_by_ctypes()
+    # print(f"当前主屏幕缩放比例: {scaling_percentage}%")
+
+    scaling_percentage = get_win7_scaling_from_registry()
     print(f"当前系统缩放比例 (注册表): {scaling_percentage}%")

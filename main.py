@@ -6,6 +6,8 @@ import tkinter as tk
 
 from ui.main_ui import MainWindow
 
+# SCALE_FACTOR = ctypes.windll.shcore.GetScaleFactorForDevice(0)
+
 
 def elevate():
     if ctypes.windll.shell32.IsUserAnAdmin():
@@ -51,13 +53,9 @@ def main():
     else:
         print("当前是普通模式")
     root = tk.Tk()
-    # 告诉操作系统使用程序自身的dpi适配
-    # ctypes.windll.shcore.SetProcessDpiAwareness(1)
-    # 获取屏幕的缩放因子
-    # scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
-    # print(scale_factor)
-    # 设置程序缩放
-    # root.tk.call('tk', 'scaling', 5 / 3)
+    # # 设置程序缩放
+    # SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)
+    # root.tk.call('tk', 'scaling', 96 * SCALE_FACTOR / 100 / 72)
     MainWindow(
         root,
         args=args

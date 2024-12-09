@@ -132,7 +132,7 @@ class TreeviewRowUI:
             self.logout_checkbox.pack(side=tk.LEFT)
 
             # 未登录标签
-            self.logout_label = ttk.Label(self.logout_title, text="未登录账号：",
+            self.logout_label = ttk.Label(self.logout_title, text=f"未登录账号：{Constants.SCALE_FACTOR}",
                                           style='FirstTitle.TLabel')
             self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 
@@ -203,7 +203,7 @@ class TreeviewRowUI:
             tree = ttk.Treeview(self.main_frame, show='tree', height=1, style="RowTreeview")
         curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.data_path, self.chosen_tab)
         for account in accounts:
-            display_name = " " + func_account.get_acc_origin_display_name(self.chosen_tab, account)
+            display_name = "  " + func_account.get_acc_origin_display_name(self.chosen_tab, account)
             config_status = func_config.get_config_status_by_account(account, self.data_path, self.chosen_tab)
             avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_acc_details_from_json_by_tab(
                 self.chosen_tab,

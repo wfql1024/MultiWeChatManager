@@ -1,9 +1,33 @@
 import ctypes
 import os
+import winreg
+
+# 如需使用缩放因子，请直接拷贝以下部分*****************************************************************
+
+# 打包模式：打包win7请用0，打包win10以上请用1
+BUILD_MODE = 1
+
+if BUILD_MODE == 0:
+    # win7下，使用注册表获取缩放因子
+    try:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop") as key:
+            log_pixels, _ = winreg.QueryValueEx(key, "LogPixels")
+            SCALE_FACTOR = log_pixels / 96  # 96 DPI 是标准 100%
+    except FileNotFoundError as e:
+        print(e)
+        SCALE_FACTOR = 1
+elif BUILD_MODE == 1:
+    # win10以上，使用 ctypes 获取缩放因子
+    SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)  # 获取屏幕缩放因子
+    # 获取失败则用原本大小
+else:
+    SCALE_FACTOR = 1
+
+
+# 如需使用缩放因子，请直接拷贝以上部分*****************************************************************
+
 
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
-SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)  # 获取屏幕缩放因子
-
 
 class Config:
     VER_STATUS = 'Beta'

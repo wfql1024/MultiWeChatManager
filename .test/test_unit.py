@@ -1,3 +1,4 @@
+import ctypes
 from unittest import TestCase
 
 import psutil
@@ -34,3 +35,10 @@ class Test(TestCase):
         for pid in pids:
             for f in psutil.Process(pid).memory_maps():
                 print(pid, f)
+
+    def test_get_factor(self):
+        SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)
+        print(SCALE_FACTOR)
+        awareness = ctypes.c_int()
+        ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
+        print(f"DPI Awareness Level: {awareness.value}")

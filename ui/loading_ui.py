@@ -10,9 +10,9 @@ class LoadingWindow:
         self.wnd = wnd
         self.wnd.title("加载中")
         self.label = ttk.Label(self.wnd, text="正在载入，请稍等……")
-        self.label.pack(pady=20)
-        self.progress = ttk.Progressbar(self.wnd, mode="determinate", length=250)
-        self.progress.pack(pady=10)
+        self.label.pack(pady=Constants.LOADING_LBL_PAD_Y)
+        self.progress = ttk.Progressbar(self.wnd, mode="determinate", length=Constants.LOADING_PRG_LEN)
+        self.progress.pack(pady=Constants.LOADING_PRG_PAD_Y)
 
         self.wnd.withdraw()  # 初始时隐藏窗口
         wnd_width, wnd_height = Constants.LOADING_WND_SIZE

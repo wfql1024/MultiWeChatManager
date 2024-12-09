@@ -13,7 +13,6 @@ from tkinter import messagebox
 from tkinter import ttk
 
 import psutil
-import yaml
 
 from functions import func_setting, func_sw_dll, func_login, func_file, func_account, subfunc_file, func_update
 from resources import Strings, Config, Constants
@@ -23,21 +22,21 @@ from utils import hwnd_utils, debug_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
 
-def read_yaml(file_path):
-    """读取YML文件并解析"""
-    with open(file_path, 'r', encoding='utf-8') as file:
-        return yaml.safe_load(file)
-
-
-def insert_tree_data(tree, data):
-    """将YML数据插入到Treeview中"""
-    for top_key, top_value in data.items():
-        # 插入一级节点（如global, WeChat等）
-        top_node = tree.insert("", "end", text=top_key, values=(top_key, ""))
-
-        # 插入二级节点（name 和 value）
-        for sub_key, sub_value in top_value.items():
-            tree.insert(top_node, "end", text=sub_key, values=(sub_value["name"], sub_value["value"]))
+# def read_yaml(file_path):
+#     """读取YML文件并解析"""
+#     with open(file_path, 'r', encoding='utf-8') as file:
+#         return yaml.safe_load(file)
+#
+#
+# def insert_tree_data(tree, data):
+#     """将YML数据插入到Treeview中"""
+#     for top_key, top_value in data.items():
+#         # 插入一级节点（如global, WeChat等）
+#         top_node = tree.insert("", "end", text=top_key, values=(top_key, ""))
+#
+#         # 插入二级节点（name 和 value）
+#         for sub_key, sub_value in top_value.items():
+#             tree.insert(top_node, "end", text=sub_key, values=(sub_value["name"], sub_value["value"]))
 
 
 class MainWindow:
@@ -526,7 +525,8 @@ class MainWindow:
         # 底部框架=手动登录
         bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
         bottom_frame.pack(side=tk.BOTTOM)
-        manual_login_button = ttk.Button(bottom_frame, text="手动登录",
+        manual_login_text = f"手动登录"
+        manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
                                          command=self.manual_login_account, style='Custom.TButton')
         manual_login_button.pack(side=tk.LEFT)
 
