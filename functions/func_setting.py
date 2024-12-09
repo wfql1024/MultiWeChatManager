@@ -1,5 +1,6 @@
 # func_setting.py
 import os
+from tkinter import messagebox, simpledialog
 
 from functions import subfunc_file
 from resources import Config
@@ -134,7 +135,8 @@ def get_sw_inst_path_and_ver(sw):
     if install_path is not None:
         if os.path.exists(install_path):
             return install_path, file_utils.get_file_version(install_path)
-        return None, None
+        return install_path, None
+    return None, None
 
 
 def fetch_global_setting_or_set_default(setting_key):
@@ -147,7 +149,7 @@ def fetch_global_setting_or_set_default(setting_key):
         Config.INI_GLOBAL_SECTION,
         Config.INI_KEY[setting_key],
     )
-    if not value or value == "":
+    if not value or value == "" or value == "None" or value == "none":
         ini_utils.save_setting_to_ini(
             Config.SETTING_INI_PATH,
             Config.INI_GLOBAL_SECTION,
@@ -168,7 +170,7 @@ def fetch_sw_setting_or_set_default(setting_key, sw):
         sw,
         Config.INI_KEY[setting_key],
     )
-    if not value or value == "" or value == "None":
+    if not value or value == "" or value == "None" or value == "none":
         ini_utils.save_setting_to_ini(
             Config.SETTING_INI_PATH,
             sw,
@@ -179,12 +181,12 @@ def fetch_sw_setting_or_set_default(setting_key, sw):
     return value
 
 
-def toggle_sub_executable(file_name, initialization, sw="WeChat"):
+def toggle_sub_executable(file_name, after, sw="WeChat"):
     """
     切换多开子程序，之后进入初始化
     :param sw: 选择软件标签
     :param file_name: 选择的子程序文件名
-    :param initialization: 初始化方法
+    :param after: 初始化方法
     :return: 成功与否
     """
     ini_utils.save_setting_to_ini(
@@ -193,16 +195,16 @@ def toggle_sub_executable(file_name, initialization, sw="WeChat"):
         Config.INI_KEY["sub_exe"],
         file_name
     )
-    initialization()
+    after()
     return True
 
 
-def toggle_view(view, initialization, sw="WeChat"):
+def toggle_view(view, after, sw="WeChat"):
     """
     切换视图，之后进入初始化
     :param sw: 选择软件标签
     :param view: 选择的视图
-    :param initialization: 初始化方法
+    :param after: 初始化方法
     :return: 成功与否
     """
     ini_utils.save_setting_to_ini(
@@ -211,7 +213,7 @@ def toggle_view(view, initialization, sw="WeChat"):
         Config.INI_KEY["view"],
         view
     )
-    initialization()
+    after()
     return True
 
 
@@ -228,5 +230,38 @@ def toggle_tab_record(tab):
         tab
     )
     return True
+
+def set_wnd_scale(after, scale=None):
+    if scale is None:
+        # 创建输入框
+        try:
+            user_input = simpledialog.askstring(
+                title="输入 Scale",
+                prompt="请输入一个 75-500 之间的数字（含边界）："
+            )
+            if user_input is None:  # 用户取消或关闭输入框
+                after()
+                return
+
+            # 尝试将输入转换为整数并验证范围
+            scale = int(user_input)
+            if not (75 <= scale <= 500):
+                raise ValueError("输入值不在 75-500 范围内")
+        except (ValueError, TypeError):
+            messagebox.showerror("错误", "无效输入，操作已取消")
+            after()
+            return
+
+    ini_utils.save_setting_to_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_GLOBAL_SECTION,
+        Config.INI_KEY["scale"],
+        str(scale)
+    )
+    messagebox.showinfo("提示", "修改成功，将在重新启动程序后生效！")
+    after()
+    return
+
+
 # if __name__ == "__main__":
 #     get_wechat_dll_dir_path_by_files()

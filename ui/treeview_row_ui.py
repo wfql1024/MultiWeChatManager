@@ -132,7 +132,7 @@ class TreeviewRowUI:
             self.logout_checkbox.pack(side=tk.LEFT)
 
             # 未登录标签
-            self.logout_label = ttk.Label(self.logout_title, text=f"未登录账号：{Constants.SCALE_FACTOR}",
+            self.logout_label = ttk.Label(self.logout_title, text=f"未登录账号：",
                                           style='FirstTitle.TLabel')
             self.logout_label.pack(side=tk.LEFT, fill=tk.X, anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
 

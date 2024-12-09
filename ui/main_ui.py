@@ -44,6 +44,9 @@ class MainWindow:
 
     def __init__(self, root, args=None):
         # 首先确保有默认的标签
+        self.scale_var = None
+        self.chosen_scale = None
+        self.wnd_scale_menu = None
         self.chosen_tab = func_setting.fetch_global_setting_or_set_default("tab")
         self.enable_new_func = func_setting.fetch_global_setting_or_set_default("enable_new_func") == "true"
         self.current_full_version = subfunc_file.get_app_current_version()
@@ -206,7 +209,6 @@ class MainWindow:
 
     def load_on_startup(self):
         """启动时检查载入"""
-
         # print(f"启动自检中...")
 
         def func_thread():
@@ -279,7 +281,7 @@ class MainWindow:
         self.settings_button.pack()
 
     def reload_thread(self):
-        """更改设置后重新检查载入"""
+        """更改非重要设置后刷新"""
         print(f"改动模式后刷新...")
 
         def reload_func():
@@ -305,6 +307,7 @@ class MainWindow:
         self.create_root_menu_bar()
         # 若标签页为空则创建
         if len(self.tab_frame.winfo_children()) == 0:
+            self.check_and_init()
             self.refresh_main_frame()
 
     def create_root_menu_bar(self):
@@ -344,14 +347,10 @@ class MainWindow:
                                                               self.refresh_main_frame))
         # >程序目录
         self.program_file_menu = tk.Menu(self.file_menu, tearoff=False)
-        if not self.sw_data_dir:
-            self.file_menu.add_command(label="程序目录  未获取")
-            self.file_menu.entryconfig(f"程序目录  未获取", state="disable")
-        else:
-            self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
-            self.program_file_menu.add_command(label="打开", command=func_file.open_program_file)
-            self.program_file_menu.add_command(label="清除",
-                                               command=partial(func_file.mov_backup))
+        self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
+        self.program_file_menu.add_command(label="打开", command=func_file.open_program_file)
+        self.program_file_menu.add_command(label="删除旧版备份",
+                                           command=partial(func_file.mov_backup))
 
         # >统计数据
         self.statistic_menu = tk.Menu(self.file_menu, tearoff=False)
@@ -386,7 +385,7 @@ class MainWindow:
                                        command=self.change_classic_view)
         self.view_menu.add_radiobutton(label="列表", variable=self.view_var, value="tree",
                                        command=self.change_tree_view)
-        self.view_menu.add_separator()  # ————————————————分割线————————————————
+
         # 显示当前选择的视图
         self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
@@ -396,6 +395,30 @@ class MainWindow:
         elif self.chosen_view == "tree":
             # 添加列表视图的菜单项
             pass
+
+        self.view_menu.add_separator()  # ————————————————分割线————————————————
+        self.chosen_scale = func_setting.fetch_global_setting_or_set_default("scale")
+        self.scale_var = tk.StringVar(value=self.chosen_scale)
+        self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
+        self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
+        self.wnd_scale_menu.add_radiobutton(label="跟随系统", variable=self.scale_var, value="auto",
+                                            command=partial(func_setting.set_wnd_scale,
+                                                            self.create_root_menu_bar,"auto"))
+        options = ["100", "125", "150", "175", "200"]
+        for option in options:
+            self.wnd_scale_menu.add_radiobutton(label=f"{option}%", variable=self.scale_var, value=option,
+                                                command=partial(func_setting.set_wnd_scale,
+                                                                self.create_root_menu_bar, option))
+        if self.chosen_scale != "auto" and self.chosen_scale not in options:
+            self.wnd_scale_menu.add_radiobutton(label=f"自定义:{self.chosen_scale}%",
+                                                variable=self.scale_var, value=self.chosen_scale,
+                                                command=partial(func_setting.set_wnd_scale,
+                                                                self.create_root_menu_bar))
+        else:
+            self.wnd_scale_menu.add_radiobutton(label=f"自定义",
+                                                variable=self.scale_var, value="0",
+                                                command=partial(func_setting.set_wnd_scale,
+                                                                self.create_root_menu_bar))
 
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=False)

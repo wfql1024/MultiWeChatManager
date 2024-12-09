@@ -186,10 +186,11 @@ def get_login_size(tab, status):
 
 
 def create_process_without_admin(executable, args=None, creation_flags=process_utils.CREATE_NEW_CONSOLE):
-    if sys_utils.get_sys_major_version_name() == "win7":
-        return process_utils.create_process_for_win7(executable, args, creation_flags)
-    else:
+    if (sys_utils.get_sys_major_version_name() == "win11" or
+            sys_utils.get_sys_major_version_name() == "win10"):
         return process_utils.create_process_with_medium_il(executable, args, creation_flags)
+    else:
+        return process_utils.create_process_for_win7(executable, args, creation_flags)
 
 
 def logging_in_listener():

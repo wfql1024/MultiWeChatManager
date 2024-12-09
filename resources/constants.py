@@ -1,44 +1,62 @@
+import configparser
 import ctypes
+import os
+import platform
 import winreg
 
-
 # 如需使用缩放因子，请直接拷贝以下部分*****************************************************************
+def get_scale_factor():
+    """
+    获取屏幕缩放因子，根据不同系统版本自动选择适配方法：
+    - Windows 7：使用注册表获取缩放因子，精确但仅适用于早期系统。
+    - Windows 10 及以上：使用 ctypes 调用 shcore 获取缩放因子，更准确。
+    - 其他情况：返回默认缩放因子 1。
+    """
+    # 获取用户设置的缩放因子
+    current_file_dir = os.path.dirname(os.path.abspath(__file__))
+    proj_path = os.path.abspath(os.path.join(current_file_dir, '..'))
+    setting_ini_path = fr'{proj_path}\user_files\setting.ini'
+    scale = "auto"
+    if os.path.exists(setting_ini_path):
+        config = configparser.ConfigParser()
+        config.read(setting_ini_path)
+        try:
+            scale = int(config['global']['scale'])
+        except ValueError:
+            scale = "auto"
 
-# 打包模式：打包win7请用0，打包win10以上请用1
-BUILD_MODE = 1
+    # 找不到用户的设置或用户选择auto
+    if scale == "auto":
+        version = int(platform.release())  # 获取 Windows 版本号
+        if version == 7:
+            # Windows 7 下，使用注册表获取缩放因子
+            try:
+                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop") as key:
+                    log_pixels, _ = winreg.QueryValueEx(key, "LogPixels")
+                    return log_pixels / 96  # 96 DPI 是标准 100%
+            except FileNotFoundError as e:
+                print(f"无法从注册表获取缩放因子: {e}")
+                return 1
+        elif version >= 10:
+            # Windows 10 及以上，使用 ctypes 调用 shcore 获取缩放因子
+            try:
+                return float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)
+            except Exception as e:
+                print(f"无法从 shcore 获取缩放因子: {e}")
+                return 1
+        else:
+            # 其他系统返回默认缩放因子
+            return 1
+    else:
+        # 用户选择了具体的缩放因子
+        return int(scale) / 100
 
-if BUILD_MODE == 0:
-    # win7下，使用注册表获取缩放因子
-    try:
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop") as key:
-            log_pixels, _ = winreg.QueryValueEx(key, "LogPixels")
-            SCALE_FACTOR = log_pixels / 96  # 96 DPI 是标准 100%
-    except FileNotFoundError as e:
-        print(e)
-        SCALE_FACTOR = 1
-elif BUILD_MODE == 1:
-    # win10以上，使用 ctypes 获取缩放因子
-    SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)  # 获取屏幕缩放因子
-    # 获取失败则用原本大小
-else:
-    SCALE_FACTOR = 1
-
+# 获取屏幕缩放因子
+SCALE_FACTOR = get_scale_factor()
 # 如需使用缩放因子，请直接拷贝以上部分*****************************************************************
 
 class Constants:
-    if BUILD_MODE == 0:
-        try:
-            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop") as key:
-                log_pixels, _ = winreg.QueryValueEx(key, "LogPixels")
-                SCALE_FACTOR = log_pixels / 96  # 96 DPI 是标准 100%
-        except FileNotFoundError as e:
-            print(e)
-            SCALE_FACTOR = 1
-    elif BUILD_MODE == 1:
-        SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)  # 获取屏幕缩放因子
-    else:
-        SCALE_FACTOR = 1
-
+    SCALE_FACTOR = SCALE_FACTOR
     # 尺寸定义
     LOADING_LBL_PAD_Y = int(16 * SCALE_FACTOR)  # 加载标签上下内边距
     LOADING_PRG_PAD_Y = int(8 * SCALE_FACTOR)  # 加载进度条上下内边距

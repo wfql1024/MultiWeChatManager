@@ -98,7 +98,7 @@ def use_config(account, sw="WeChat"):
                 return False
         elif os.path.isdir(acc_config_path):
             try:
-                shutil.copytree(acc_config_path, config_path, dirs_exist_ok=True)
+                shutil.copytree(acc_config_path, config_path, symlinks=True)
             except Exception as e:
                 logger.error(e)
                 messagebox.showerror("错误", f"复制配置文件时发生错误：{str(e)}")
