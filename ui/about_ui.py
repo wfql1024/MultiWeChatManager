@@ -1,5 +1,4 @@
 # about_ui.py
-import re
 import tkinter as tk
 import webbrowser
 from functools import partial
@@ -16,28 +15,6 @@ from utils import hwnd_utils, widget_utils
 class Direction:
     def __init__(self, initial=1):
         self.value = initial
-
-
-def add_hyperlink_events(text_widget, text_content):
-    """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
-    urls = re.findall(r'(https?://\S+)', text_content)  # 使用正则表达式提取URL
-
-    for url in urls:
-        start_idx = text_widget.search(url, "1.0", tk.END)
-        end_idx = f"{start_idx}+{len(url)}c"
-
-        # 为找到的URL添加标签，并绑定事件
-        text_widget.tag_add(url, start_idx, end_idx)
-        text_widget.tag_config(url, foreground="grey", underline=True)
-
-        # 鼠标点击事件 - 打开链接
-        text_widget.tag_bind(url, "<Button-1>", lambda e, url2open=url: open_url(url2open))
-
-        # 鼠标进入事件 - 改变鼠标形状为手型
-        text_widget.tag_bind(url, "<Enter>", lambda e: text_widget.config(cursor="hand2"))
-
-        # 鼠标离开事件 - 恢复鼠标形状为默认
-        text_widget.tag_bind(url, "<Leave>", lambda e: text_widget.config(cursor=""))
 
 
 def open_url(url):
@@ -57,19 +34,22 @@ class AboutWindow:
         self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # 禁用窗口大小调整
-        self.wnd.resizable(False, False)
+        # self.wnd.resizable(False, False)
 
         # 移除窗口装饰并设置为工具窗口
         self.wnd.attributes('-toolwindow', True)
         self.wnd.grab_set()
 
-        # 图标框架
-        logo_frame = ttk.Frame(self.wnd, padding=Constants.LOGO_FRM_PAD)
-        logo_frame.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
+        self.main_frame = ttk.Frame(self.wnd, padding=Constants.NOR_FRM_PAD)
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # 内容框架
-        content_frame = ttk.Frame(self.wnd, padding=Constants.CONTENT_FRM_PAD)
-        content_frame.pack(fill=tk.BOTH, expand=True, side=tk.RIGHT)
+        # 图标框架（左框架）
+        logo_frame = ttk.Frame(self.main_frame, padding=Constants.NOR_L_FRM_PAD)
+        logo_frame.pack(**Constants.NOR_L_FRM_PACK)
+
+        # 内容框架（右框架）
+        content_frame = ttk.Frame(self.main_frame, padding=Constants.NOR_R_FRM_PAD)
+        content_frame.pack(**Constants.NOR_R_FRM_PACK)
 
         # 加载并调整图标
         try:
@@ -82,59 +62,61 @@ class AboutWindow:
             self.icon_photo = ImageTk.PhotoImage(Image.new('RGB', Constants.BLANK_LOGO_SIZE, color='white'))
         icon_label = ttk.Label(logo_frame, image=self.icon_photo)
         icon_label.image = self.icon_photo
-        icon_label.pack(side=tk.TOP)
+        icon_label.pack(side=tk.TOP, pady=Constants.NOR_T_VER_PAD_Y)
 
         # 标题和版本号框架
-        title_version_frame = ttk.Frame(content_frame)
-        title_version_frame.pack(fill=tk.X, side=tk.TOP, pady=Constants.VER_FRM_PAD_Y)
-
-        current_full_version = subfunc_file.get_app_current_version()
+        title_version_frame = ttk.Frame(content_frame, padding=Constants.NOR_T_FRM_PAD)
+        title_version_frame.pack(**Constants.NOR_T_FRM_PACK)
 
         # 标题和版本号标签
+        current_full_version = subfunc_file.get_app_current_version()
         title_version_label = ttk.Label(
             title_version_frame,
             text=f"微信多开管理器 {current_full_version}",
             style='FirstTitle.TLabel',
         )
-        title_version_label.pack(anchor='w')
+        title_version_label.pack(anchor='sw', **Constants.NOR_B_VER_WGT_PACK, ipady=Constants.NOR_T_VER_IPAD_Y)
 
         # 开发者主页
         author_label = ttk.Label(content_frame, text="by 吾峰起浪", style='SecondTitle.TLabel')
-        author_label.pack(anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
-        author_frame = ttk.Frame(content_frame)
-        author_frame.pack(fill=tk.X)
+        author_label.pack(anchor='sw', side=tk.TOP, fill=tk.X)
+        author_grids = ttk.Frame(content_frame)
+        author_grids.pack(**Constants.NOR_T_FRM_PACK)
         row = 0
         for idx, (text, url) in enumerate(Strings.AUTHOR.items()):
-            link = ttk.Label(author_frame, text=text,
+            link = ttk.Label(author_grids, text=text,
                              style="Link.TLabel", cursor="hand2")
-            link.grid(row=row, column=idx, sticky="w", padx=Constants.ABOUT_GRID_PAD_X)
+            link.grid(row=row, column=idx, sticky="nw", padx=Constants.ABOUT_GRID_PAD_X,
+                      pady=Constants.NOR_T_VER_PAD_Y)
             # 绑定点击事件
             link.bind("<Button-1>", lambda event, url2open=url: open_url(url2open))
 
         # 项目信息
         proj_label = ttk.Label(content_frame, text="项目信息", style='SecondTitle.TLabel')
-        proj_label.pack(anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
-        proj_frame = ttk.Frame(content_frame)
-        proj_frame.pack(fill=tk.X)
+        proj_label.pack(anchor='sw', side=tk.TOP, fill=tk.X)
+        proj_grids = ttk.Frame(content_frame)
+        proj_grids.pack(**Constants.NOR_T_FRM_PACK)
         row = 0
         for idx, (text, url) in enumerate(Strings.PROJ.items()):
-            link = ttk.Label(proj_frame, text=text,
+            link = ttk.Label(proj_grids, text=text,
                              style="Link.TLabel", cursor="hand2")
-            link.grid(row=row, column=idx, sticky="w", padx=Constants.ABOUT_GRID_PAD_X)
+            link.grid(row=row, column=idx, sticky="nw", padx=Constants.ABOUT_GRID_PAD_X,
+                      pady=Constants.NOR_T_VER_PAD_Y)
             # 绑定点击事件
             link.bind("<Button-1>", lambda event, url2open=url: open_url(url2open))
 
         # 鸣谢
         thanks_label = ttk.Label(content_frame, text="鸣谢", style='SecondTitle.TLabel')
-        thanks_label.pack(anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
-        thanks_frame = ttk.Frame(content_frame)
-        thanks_frame.pack(fill=tk.X)
+        thanks_label.pack(anchor='sw', side=tk.TOP, fill=tk.X)
+        thanks_grids = ttk.Frame(content_frame)
+        thanks_grids.pack(**Constants.NOR_T_FRM_PACK)
         for idx, (person, info) in enumerate(Strings.THANKS.items()):
-            link = ttk.Label(thanks_frame, text=info.get('text', None),
+            link = ttk.Label(thanks_grids, text=info.get('text', None),
                              style="Link.TLabel", cursor="hand2")
             row = idx // 6
             column = idx % 6
-            link.grid(row=row, column=column, sticky="w", padx=Constants.ABOUT_GRID_PAD_X)
+            link.grid(row=row, column=column, sticky="nw", padx=Constants.ABOUT_GRID_PAD_X,
+                      pady=Constants.NOR_T_VER_PAD_Y)
             # 绑定点击事件
             link.bind(
                 "<Button-1>",
@@ -160,7 +142,7 @@ class AboutWindow:
 
         disclaimer_frame = ttk.Frame(bottom_frame)
         disclaimer_frame.pack(side=tk.LEFT)
-        update_button = ttk.Button(bottom_frame, text=f"{prefix}检查更新", style='Custom.TButton',
+        update_button = ttk.Button(bottom_frame, text=f"{prefix}检查更新", style='Custom.TButton', padding=0,
                                    command=partial(self.check_for_updates,
                                                    current_full_version=current_full_version))
         update_button.pack(side=tk.RIGHT)
@@ -193,7 +175,7 @@ class AboutWindow:
         reference_text.insert(tk.END, Strings.REFERENCE_TEXT)
         reference_text.insert(tk.END, '\n')
 
-        add_hyperlink_events(reference_text, Strings.REFERENCE_TEXT)
+        widget_utils.add_hyperlink_events(reference_text, Strings.REFERENCE_TEXT)
         reference_text.config(state=tk.DISABLED)
         reference_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=Constants.ABOUT_GRID_PAD_X)
         reference_scrollbar.config(command=reference_text.yview)

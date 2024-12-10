@@ -1,4 +1,6 @@
+import re
 import tkinter as tk
+import webbrowser
 
 
 class Tooltip:
@@ -25,6 +27,33 @@ class Tooltip:
         if self.tooltip:
             self.tooltip.destroy()
             self.tooltip = None
+
+
+def add_hyperlink_events(text_widget, text_content):
+    """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
+
+    def open_url(url_to_open):
+        if url_to_open is None or url_to_open == "":
+            return
+        webbrowser.open_new(url_to_open)
+
+    urls = re.findall(r'(https?://\S+)', text_content)  # 使用正则表达式提取URL
+    for url in urls:
+        start_idx = text_widget.search(url, "1.0", tk.END)
+        end_idx = f"{start_idx}+{len(url)}c"
+
+        # 为找到的URL添加标签，并绑定事件
+        text_widget.tag_add(url, start_idx, end_idx)
+        text_widget.tag_config(url, foreground="grey", underline=True)
+
+        # 鼠标点击事件 - 打开链接
+        text_widget.tag_bind(url, "<Button-1>", lambda e, url2open=url: open_url(url2open))
+
+        # 鼠标进入事件 - 改变鼠标形状为手型
+        text_widget.tag_bind(url, "<Enter>", lambda e: text_widget.config(cursor="hand2"))
+
+        # 鼠标离开事件 - 恢复鼠标形状为默认
+        text_widget.tag_bind(url, "<Leave>", lambda e: text_widget.config(cursor=""))
 
 
 def auto_scroll_text(tasks, direction_key, text_widget, root, gap=50, scroll_distance=0.005):
