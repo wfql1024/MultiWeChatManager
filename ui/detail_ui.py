@@ -28,62 +28,64 @@ class DetailWindow:
         self.update_callback = update_callback
         self.tooltips = {}  # 初始化 tooltip 属性
 
+        # 禁用窗口大小调整
+        self.wnd.resizable(False, False)
+
         wnd.title(f"属性 - {self.account}")
 
         wnd.attributes('-toolwindow', True)
 
-        frame = ttk.Frame(wnd, padding=Constants.NOR_FRM_PAD)
-        frame.pack(fill=tk.BOTH, expand=True)
+        frame = ttk.Frame(wnd, padding=Constants.FRM_PAD)
+        frame.pack(**Constants.FRM_PACK)
 
         # 头像
-        self.top_frame = ttk.Frame(frame)
-        self.top_frame.pack(side=tk.TOP, fill=tk.X)
-        self.avatar_frame = ttk.Frame(self.top_frame)
-        self.avatar_frame.pack(side=tk.LEFT, pady=10, fill=tk.X)
+        self.top_frame = ttk.Frame(frame, padding=Constants.T_FRM_PAD)
+        self.top_frame.pack(**Constants.T_FRM_PACK)
+        self.avatar_frame = ttk.Frame(self.top_frame, padding=Constants.L_FRM_PAD)
+        self.avatar_frame.pack(**Constants.L_FRM_PACK)
         self.avatar_label = ttk.Label(self.avatar_frame)
-        self.avatar_label.pack(side=tk.TOP)
+        self.avatar_label.pack(**Constants.T_WGT_PACK)
         self.avatar_status_label = ttk.Label(self.avatar_frame, text="")
-        self.avatar_status_label.pack(side=tk.BOTTOM)
+        self.avatar_status_label.pack(**Constants.B_WGT_PACK)
 
         # PID
         self.pid_label = ttk.Label(self.top_frame, text="PID: ")
-        self.pid_label.pack(side=tk.LEFT, padx=5, pady=10, anchor="w")
+        self.pid_label.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 原始微信号
         self.origin_id_lbl = ttk.Label(frame, text=f"原id: {self.account}")
-        self.origin_id_lbl.pack(side=tk.TOP, pady=8, anchor="w")
+        self.origin_id_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 当前微信号
         self.cur_id_lbl = ttk.Label(frame, text="现id: ")
-        self.cur_id_lbl.pack(side=tk.TOP, pady=8, anchor="w")
+        self.cur_id_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 昵称
         self.nickname_lbl = ttk.Label(frame, text="昵称: ")
-        self.nickname_lbl.pack(side=tk.TOP, pady=8, anchor="w")
+        self.nickname_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 备注
-        self.note_frame = ttk.Frame(frame)
-        self.note_frame.pack(side=tk.TOP, pady=8, fill=tk.X)
-
-        note_label = ttk.Label(self.note_frame, text="备注：")
-        note_label.pack(side=tk.LEFT, anchor="w")
-
         note, = subfunc_file.get_acc_details_from_json_by_tab(self.sw, self.account, note=None)
         self.note_var = tk.StringVar(value="") if note is None else tk.StringVar(value=note)
-        self.note_entry = ttk.Entry(self.note_frame, textvariable=self.note_var, width=25)
-        self.note_entry.pack(side=tk.LEFT, pady=8, fill=tk.X)
+
+        self.note_frame = ttk.Frame(frame)
+        self.note_frame.pack(anchor="w", **Constants.T_WGT_PACK)
+        note_label = ttk.Label(self.note_frame, text="备注：")
+        note_label.pack(side=tk.LEFT, anchor="w")
+        self.note_entry = ttk.Entry(self.note_frame, textvariable=self.note_var, width=30)
+        self.note_entry.pack(side=tk.LEFT)
 
         # 按钮区域
-        button_frame = ttk.Frame(frame)
-        button_frame.pack(fill=tk.X, side=tk.BOTTOM)
+        button_frame = ttk.Frame(frame, padding=Constants.B_FRM_PAD)
+        button_frame.pack(**Constants.B_FRM_PACK)
 
         ttk.Frame(button_frame).pack(side=tk.LEFT, expand=True)
         ttk.Frame(button_frame).pack(side=tk.RIGHT, expand=True)
 
         self.fetch_button = ttk.Button(button_frame, text="获取", command=self.fetch_data)
-        self.fetch_button.pack(side=tk.LEFT, padx=8)
+        self.fetch_button.pack(**Constants.L_WGT_PACK)
         save_button = ttk.Button(button_frame, text="保存", command=self.save_note)
-        save_button.pack(side=tk.LEFT, padx=8)
+        save_button.pack(**Constants.R_WGT_PACK)
 
 
         ttk.Frame(frame).pack(fill=tk.BOTH, expand=True)
@@ -149,7 +151,7 @@ class DetailWindow:
     def load_avatar(self, avatar_path, avatar_url):
         try:
             img = Image.open(avatar_path)
-            img = img.resize(Constants.DETAIL_AVT_LBL_SIZE, Image.Resampling.LANCZOS)
+            img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.avatar_label.config(image=photo)
             self.avatar_label.image = photo

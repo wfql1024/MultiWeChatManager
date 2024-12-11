@@ -34,22 +34,22 @@ class AboutWindow:
         self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # 禁用窗口大小调整
-        # self.wnd.resizable(False, False)
+        self.wnd.resizable(False, False)
 
         # 移除窗口装饰并设置为工具窗口
         self.wnd.attributes('-toolwindow', True)
         self.wnd.grab_set()
 
-        self.main_frame = ttk.Frame(self.wnd, padding=Constants.NOR_FRM_PAD)
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
+        self.main_frame = ttk.Frame(self.wnd, padding=Constants.FRM_PAD)
+        self.main_frame.pack(**Constants.FRM_PACK)
 
         # 图标框架（左框架）
-        logo_frame = ttk.Frame(self.main_frame, padding=Constants.NOR_L_FRM_PAD)
-        logo_frame.pack(**Constants.NOR_L_FRM_PACK)
+        logo_frame = ttk.Frame(self.main_frame, padding=Constants.L_FRM_PAD)
+        logo_frame.pack(**Constants.L_FRM_PACK)
 
         # 内容框架（右框架）
-        content_frame = ttk.Frame(self.main_frame, padding=Constants.NOR_R_FRM_PAD)
-        content_frame.pack(**Constants.NOR_R_FRM_PACK)
+        content_frame = ttk.Frame(self.main_frame, padding=Constants.R_FRM_PAD)
+        content_frame.pack(**Constants.R_FRM_PACK)
 
         # 加载并调整图标
         try:
@@ -59,14 +59,14 @@ class AboutWindow:
         except Exception as e:
             print(f"无法加载图标图片: {e}")
             # 如果图标加载失败，仍然继续布局
-            self.icon_photo = ImageTk.PhotoImage(Image.new('RGB', Constants.BLANK_LOGO_SIZE, color='white'))
+            self.icon_photo = ImageTk.PhotoImage(Image.new('RGB', Constants.LOGO_SIZE, color='white'))
         icon_label = ttk.Label(logo_frame, image=self.icon_photo)
         icon_label.image = self.icon_photo
-        icon_label.pack(side=tk.TOP, pady=Constants.NOR_T_VER_PAD_Y)
+        icon_label.pack(**Constants.T_WGT_PACK)
 
-        # 标题和版本号框架
-        title_version_frame = ttk.Frame(content_frame, padding=Constants.NOR_T_FRM_PAD)
-        title_version_frame.pack(**Constants.NOR_T_FRM_PACK)
+        # 顶部：标题和版本号框架
+        title_version_frame = ttk.Frame(content_frame)
+        title_version_frame.pack(**Constants.T_FRM_PACK)
 
         # 标题和版本号标签
         current_full_version = subfunc_file.get_app_current_version()
@@ -75,48 +75,45 @@ class AboutWindow:
             text=f"微信多开管理器 {current_full_version}",
             style='FirstTitle.TLabel',
         )
-        title_version_label.pack(anchor='sw', **Constants.NOR_B_VER_WGT_PACK, ipady=Constants.NOR_T_VER_IPAD_Y)
+        title_version_label.pack(anchor='sw', **Constants.T_WGT_PACK, ipady=Constants.IPAD_Y)
 
         # 开发者主页
         author_label = ttk.Label(content_frame, text="by 吾峰起浪", style='SecondTitle.TLabel')
-        author_label.pack(anchor='sw', side=tk.TOP, fill=tk.X)
+        author_label.pack(anchor='sw', **Constants.T_WGT_PACK)
         author_grids = ttk.Frame(content_frame)
-        author_grids.pack(**Constants.NOR_T_FRM_PACK)
+        author_grids.pack(**Constants.T_FRM_PACK)
         row = 0
         for idx, (text, url) in enumerate(Strings.AUTHOR.items()):
             link = ttk.Label(author_grids, text=text,
                              style="Link.TLabel", cursor="hand2")
-            link.grid(row=row, column=idx, sticky="nw", padx=Constants.ABOUT_GRID_PAD_X,
-                      pady=Constants.NOR_T_VER_PAD_Y)
+            link.grid(row=row, column=idx, **Constants.W_GRID_PACK)
             # 绑定点击事件
             link.bind("<Button-1>", lambda event, url2open=url: open_url(url2open))
 
         # 项目信息
         proj_label = ttk.Label(content_frame, text="项目信息", style='SecondTitle.TLabel')
-        proj_label.pack(anchor='sw', side=tk.TOP, fill=tk.X)
+        proj_label.pack(anchor='sw', **Constants.T_WGT_PACK)
         proj_grids = ttk.Frame(content_frame)
-        proj_grids.pack(**Constants.NOR_T_FRM_PACK)
+        proj_grids.pack(**Constants.T_FRM_PACK)
         row = 0
         for idx, (text, url) in enumerate(Strings.PROJ.items()):
             link = ttk.Label(proj_grids, text=text,
                              style="Link.TLabel", cursor="hand2")
-            link.grid(row=row, column=idx, sticky="nw", padx=Constants.ABOUT_GRID_PAD_X,
-                      pady=Constants.NOR_T_VER_PAD_Y)
+            link.grid(row=row, column=idx, **Constants.W_GRID_PACK)
             # 绑定点击事件
             link.bind("<Button-1>", lambda event, url2open=url: open_url(url2open))
 
         # 鸣谢
         thanks_label = ttk.Label(content_frame, text="鸣谢", style='SecondTitle.TLabel')
-        thanks_label.pack(anchor='sw', side=tk.TOP, fill=tk.X)
+        thanks_label.pack(anchor='sw', **Constants.T_WGT_PACK)
         thanks_grids = ttk.Frame(content_frame)
-        thanks_grids.pack(**Constants.NOR_T_FRM_PACK)
+        thanks_grids.pack(**Constants.T_FRM_PACK)
         for idx, (person, info) in enumerate(Strings.THANKS.items()):
             link = ttk.Label(thanks_grids, text=info.get('text', None),
                              style="Link.TLabel", cursor="hand2")
             row = idx // 6
             column = idx % 6
-            link.grid(row=row, column=column, sticky="nw", padx=Constants.ABOUT_GRID_PAD_X,
-                      pady=Constants.NOR_T_VER_PAD_Y)
+            link.grid(row=row, column=column, **Constants.W_GRID_PACK)
             # 绑定点击事件
             link.bind(
                 "<Button-1>",
@@ -132,39 +129,11 @@ class AboutWindow:
                 )
             )
 
-        # 底部区域=声明+检查更新按钮
-        surprise_sign = Strings.SURPRISE_SIGN
-        prefix = surprise_sign if need_to_update is True else ""
-
-        bottom_frame = ttk.Frame(content_frame)
-        bottom_frame.pack(side=tk.BOTTOM, fill=tk.X,
-                          padx=Constants.ABOUT_BTM_FRM_PAD_X, pady=Constants.ABOUT_BTM_FRM_PAD_Y)
-
-        disclaimer_frame = ttk.Frame(bottom_frame)
-        disclaimer_frame.pack(side=tk.LEFT)
-        update_button = ttk.Button(bottom_frame, text=f"{prefix}检查更新", style='Custom.TButton', padding=0,
-                                   command=partial(self.check_for_updates,
-                                                   current_full_version=current_full_version))
-        update_button.pack(side=tk.RIGHT)
-
-        # 免责声明
-        disclaimer_label = ttk.Label(disclaimer_frame, style="RedWarning.TLabel",
-                                     text="仅供学习交流，严禁用于商业用途，请于24小时内删除")
-        disclaimer_label.pack(side=tk.BOTTOM)
-
-        # 版权信息标签
-        copyright_label = ttk.Label(
-            disclaimer_frame,
-            text="Copyright © 2024 吾峰起浪. All rights reserved.",
-            style="LittleText.TLabel",
-        )
-        copyright_label.pack(side=tk.TOP)
-
         # 技术参考
         reference_label = ttk.Label(content_frame, text="技术参考", style='SecondTitle.TLabel')
-        reference_label.pack(side=tk.TOP, anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
+        reference_label.pack(anchor='w', **Constants.T_WGT_PACK)
         reference_frame = ttk.Frame(content_frame)
-        reference_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        reference_frame.pack(**Constants.T_FRM_PACK)
         reference_scrollbar = tk.Scrollbar(reference_frame)
         reference_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         reference_text = tk.Text(reference_frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
@@ -177,7 +146,7 @@ class AboutWindow:
 
         widget_utils.add_hyperlink_events(reference_text, Strings.REFERENCE_TEXT)
         reference_text.config(state=tk.DISABLED)
-        reference_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=Constants.ABOUT_GRID_PAD_X)
+        reference_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=Constants.GRID_PAD)
         reference_scrollbar.config(command=reference_text.yview)
         # 创建方向对象
         self.reference_scroll_direction = Direction(1)  # 初始方向为向下
@@ -204,8 +173,8 @@ class AboutWindow:
         # 赞助
         sponsor_label = ttk.Label(content_frame, text="赞助", style='SecondTitle.TLabel')
         sponsor_frame = ttk.Frame(content_frame)
-        sponsor_frame.pack(side=tk.BOTTOM, fill=tk.X)
-        sponsor_label.pack(side=tk.BOTTOM, anchor='w', pady=Constants.SECOND_TITLE_PAD_Y)
+        sponsor_label.pack(anchor='w', **Constants.T_WGT_PACK)
+        sponsor_frame.pack(**Constants.T_FRM_PACK)
         sponsor_scrollbar = tk.Scrollbar(sponsor_frame)
         sponsor_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         sponsor_text = tk.Text(sponsor_frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
@@ -224,7 +193,7 @@ class AboutWindow:
         sponsor_text.insert(tk.END, '\n'.join(sponsor_list_lines))
         sponsor_text.insert(tk.END, '\n')
         sponsor_text.config(state=tk.DISABLED)
-        sponsor_text.pack(side=tk.LEFT, fill=tk.X, expand=False, padx=Constants.ABOUT_GRID_PAD_X)
+        sponsor_text.pack(side=tk.LEFT, fill=tk.X, expand=False, padx=Constants.GRID_PAD)
         sponsor_scrollbar.config(command=sponsor_text.yview)
         # 创建方向对象
         self.sponsor_scroll_direction = Direction(1)  # 初始方向为向下
@@ -247,6 +216,35 @@ class AboutWindow:
                 self.sponsor_scroll_tasks, self.sponsor_scroll_direction, sponsor_text, self.root
             )
         )
+
+        # 底部区域=声明+检查更新按钮
+        bottom_frame = ttk.Frame(content_frame)
+        bottom_frame.pack(**Constants.B_FRM_PACK)
+
+        surprise_sign = Strings.SURPRISE_SIGN
+        prefix = surprise_sign if need_to_update is True else ""
+
+        # 左边：声明框架
+        disclaimer_frame = ttk.Frame(bottom_frame, padding=Constants.L_FRM_PAD)
+        disclaimer_frame.pack(**Constants.L_FRM_PACK)
+        # 右边：更新按钮
+        update_button = ttk.Button(bottom_frame, text=f"{prefix}检查更新", style='Custom.TButton',
+                                   command=partial(self.check_for_updates,
+                                                   current_full_version=current_full_version))
+        update_button.pack(side=tk.RIGHT)
+
+        # 免责声明
+        disclaimer_label = ttk.Label(disclaimer_frame, style="RedWarning.TLabel",
+                                     text="仅供学习交流，严禁用于商业用途，请于24小时内删除")
+        disclaimer_label.pack(**Constants.B_WGT_PACK)
+
+        # 版权信息标签
+        copyright_label = ttk.Label(
+            disclaimer_frame,
+            text="Copyright © 2024 吾峰起浪. All rights reserved.",
+            style="LittleText.TLabel",
+        )
+        copyright_label.pack(**Constants.T_WGT_PACK)
 
     def check_for_updates(self, current_full_version):
         subfunc_file.fetch_and_decrypt_config_data_from_remote()

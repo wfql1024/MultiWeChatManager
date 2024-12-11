@@ -138,7 +138,7 @@ class AccountRow:
         """
         try:
             img = func_account.get_acc_avatar_from_files(account, self.chosen_tab)
-            img = img.resize(Constants.CLZ_AVT_LBL_SIZE)
+            img = img.resize(Constants.AVT_SIZE)
             photo = ImageTk.PhotoImage(img)
             avatar_label = ttk.Label(self.row_frame, image=photo)
 

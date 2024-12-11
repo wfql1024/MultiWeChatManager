@@ -28,7 +28,8 @@ class Config:
         "logout_sort_asc": "logout_sort_asc",
         "tab": "tab",
         "login_size": "login_size",
-        "scale": "scale"
+        "scale": "scale",
+        "sign_visible": "sign_visible",
     }
 
     INI_DEFAULT_VALUE = {
@@ -36,6 +37,7 @@ class Config:
         "enable_new_func": "true",
         "tab": "WeChat",
         "scale": "auto",
+        "sign_visible": "true",
         "WeChat": {
             "view": "tree",
             "login_col_to_sort": "配置",

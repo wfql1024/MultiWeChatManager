@@ -42,7 +42,7 @@ def save_setting_to_ini(ini_path, section, key, value):
     if section not in config:
         config[section] = {}
 
-    config[section][key] = value
+    config[section][key] = str(value)
 
     # 写入配置文件
     try:

@@ -231,6 +231,20 @@ def toggle_tab_record(tab):
     )
     return True
 
+def toggle_sign_visibility(value, after):
+    """
+    切换签名显示
+    :param value: 值
+    :param after: 后续操作
+    :return: 成功与否
+    """
+    ini_utils.save_setting_to_ini(
+        Config.SETTING_INI_PATH,
+        Config.INI_GLOBAL_SECTION,
+        Config.INI_KEY["sign_visible"],
+        value
+    )
+
 def set_wnd_scale(after, scale=None):
     if scale is None:
         # 创建输入框

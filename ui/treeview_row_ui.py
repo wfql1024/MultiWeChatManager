@@ -216,7 +216,7 @@ class TreeviewRowUI:
             )
 
             img = func_account.get_acc_avatar_from_files(account, self.chosen_tab)
-            img = img.resize(Constants.TREE_AVT_LBL_SIZE, Image.Resampling.LANCZOS)
+            img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
 
             self.photo_images.append(photo)

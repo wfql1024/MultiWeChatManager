@@ -72,9 +72,9 @@ def save_sw_sort_order_to_setting_ini(order, sw="WeChat"):
                                   Config.INI_KEY["logout_sort_asc"], asc)
 
 
-def set_enable_new_func_in_ini(value):
+def set_enable_new_func_in_ini():
     return ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
-                                         Config.INI_KEY["enable_new_func"], value)
+                                         Config.INI_KEY["enable_new_func"], True)
 
 
 def get_sw_install_path_from_setting_ini(sw="WeChat"):

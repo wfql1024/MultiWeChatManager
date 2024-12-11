@@ -177,6 +177,7 @@ def create_app_lnk():
     else:
         exe_path = os.path.abspath(r'./dist/微信多开管理器/微信多开管理器.exe')
 
+    notice = []
     exe_dir = os.path.dirname(exe_path)
     exe_name = os.path.basename(exe_path)
 
@@ -191,9 +192,8 @@ def create_app_lnk():
     shortcut.WorkingDirectory = exe_dir
     shortcut.IconLocation = exe_path
     shortcut.save()
-
     # 打印常规版本创建成功信息
-    print(f"常规版快捷方式已创建： {shortcut_path}")
+    notice.append(f"常规版快捷方式已创建： {shortcut_path}")
 
     # 创建_调试版快捷方式，添加 --debug 参数
     debug_shortcut_path = os.path.join(desktop, f"{shortcut_name}_调试版.lnk")
@@ -203,9 +203,8 @@ def create_app_lnk():
     debug_shortcut.WorkingDirectory = exe_dir
     debug_shortcut.IconLocation = exe_path
     debug_shortcut.save()
-
     # 打印调试版创建成功信息
-    print(f"调试版快捷方式已创建： {debug_shortcut_path}")
+    notice.append(f"调试版快捷方式已创建： {debug_shortcut_path}")
 
     # 创建_假装首次使用版快捷方式，添加 --new 参数
     new_shortcut_path = os.path.join(desktop, f"{shortcut_name}_假装首次使用版.lnk")
@@ -215,9 +214,11 @@ def create_app_lnk():
     new_shortcut.WorkingDirectory = exe_dir
     new_shortcut.IconLocation = exe_path
     new_shortcut.save()
-
     # 打印假装首次使用版创建成功信息
-    print(f"假装首次使用版快捷方式已创建： {new_shortcut_path}")
+    notice.append(f"假装首次使用版快捷方式已创建： {new_shortcut_path}")
+
+    # 打印所有创建成功信息
+    messagebox.showinfo("成功", "\n".join(notice))
 
 
 def create_lnk_for_account(sw, account, multiple_status):

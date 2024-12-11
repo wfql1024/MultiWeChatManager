@@ -31,89 +31,89 @@ class SettingWindow:
 
         # 第一行 - 微信安装路径
         self.install_label = tk.Label(wnd, text="程序路径：")
-        self.install_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.install_label.grid(row=0, column=0, **Constants.W_GRID_PACK)
 
         self.install_path_var = tk.StringVar()
         self.install_path_entry = tk.Entry(wnd, textvariable=self.install_path_var, state='readonly', width=70)
-        self.install_path_entry.grid(row=0, column=1, padx=5, pady=5, sticky="we")
+        self.install_path_entry.grid(row=0, column=1, **Constants.WE_GRID_PACK)
 
         self.install_get_button = ttk.Button(wnd, text="获取",
                                              command=partial(self.load_or_get_sw_inst_path, True, self.tab))
-        self.install_get_button.grid(row=0, column=2, padx=5, pady=5)
+        self.install_get_button.grid(row=0, column=2, **Constants.WE_GRID_PACK)
 
         self.install_choose_button = ttk.Button(wnd, text="选择路径",
                                                 command=partial(self.choose_sw_inst_path, self.tab))
-        self.install_choose_button.grid(row=0, column=3, padx=5, pady=5)
+        self.install_choose_button.grid(row=0, column=3, **Constants.WE_GRID_PACK)
 
         # 第二行 - 微信数据存储路径
         self.data_label = tk.Label(wnd, text="存储路径：")
-        self.data_label.grid(row=1, column=0, padx=5, pady=5, sticky="w")
+        self.data_label.grid(row=1, column=0, **Constants.W_GRID_PACK)
 
         self.data_path_var = tk.StringVar()
         self.data_path_entry = tk.Entry(wnd, textvariable=self.data_path_var, state='readonly', width=70)
-        self.data_path_entry.grid(row=1, column=1, padx=5, pady=5, sticky="we")
+        self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
 
         self.data_get_button = ttk.Button(wnd, text="获取",
                                           command=partial(self.load_or_get_sw_data_path, True, self.tab))
-        self.data_get_button.grid(row=1, column=2, padx=5, pady=5)
+        self.data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
 
         self.data_choose_button = ttk.Button(wnd, text="选择路径",
                                              command=partial(self.choose_sw_data_path, self.tab))
-        self.data_choose_button.grid(row=1, column=3, padx=5, pady=5)
+        self.data_choose_button.grid(row=1, column=3, **Constants.WE_GRID_PACK)
 
         # 新增第三行 - WeChatWin.dll 路径
         self.dll_label = tk.Label(wnd, text="DLL所在路径：")
-        self.dll_label.grid(row=2, column=0, padx=5, pady=5, sticky="w")
+        self.dll_label.grid(row=2, column=0, **Constants.W_GRID_PACK)
 
         self.dll_path_var = tk.StringVar()
         self.dll_path_entry = tk.Entry(wnd, textvariable=self.dll_path_var, state='readonly', width=70)
-        self.dll_path_entry.grid(row=2, column=1, padx=5, pady=5, sticky="we")
+        self.dll_path_entry.grid(row=2, column=1, **Constants.WE_GRID_PACK)
 
         self.dll_get_button = ttk.Button(wnd, text="获取",
                                          command=partial(self.load_or_get_sw_dll_dir, True, self.tab))
-        self.dll_get_button.grid(row=2, column=2, padx=5, pady=5)
+        self.dll_get_button.grid(row=2, column=2, **Constants.WE_GRID_PACK)
 
         self.dll_choose_button = ttk.Button(wnd, text="选择路径",
                                             command=partial(self.choose_sw_dll_dir, self.tab))
-        self.dll_choose_button.grid(row=2, column=3, padx=5, pady=5)
+        self.dll_choose_button.grid(row=2, column=3, **Constants.WE_GRID_PACK)
 
         # 新增第四行 - 当前版本
         self.version_label = tk.Label(wnd, text="应用版本：")
-        self.version_label.grid(row=3, column=0, padx=5, pady=5, sticky="w")
+        self.version_label.grid(row=3, column=0, **Constants.W_GRID_PACK)
 
         self.version_var = tk.StringVar()
         self.version_entry = tk.Entry(wnd, textvariable=self.version_var, state='readonly', width=70)
-        self.version_entry.grid(row=3, column=1, padx=5, pady=5, sticky="we")
+        self.version_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
 
         self.screen_size_get_button = ttk.Button(wnd, text="获取", command=partial(self.get_cur_sw_ver, self.tab))
-        self.screen_size_get_button.grid(row=3, column=2, padx=5, pady=5)
+        self.screen_size_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第五行 - 屏幕大小
         self.screen_size_label = tk.Label(wnd, text="屏幕大小：")
-        self.screen_size_label.grid(row=4, column=0, padx=5, pady=5, sticky="w")
+        self.screen_size_label.grid(row=4, column=0, **Constants.W_GRID_PACK)
 
         self.screen_size_var = tk.StringVar()
         self.screen_size_entry = tk.Entry(wnd, textvariable=self.screen_size_var, state='readonly', width=70)
-        self.screen_size_entry.grid(row=4, column=1, padx=5, pady=5, sticky="we")
+        self.screen_size_entry.grid(row=4, column=1, **Constants.WE_GRID_PACK)
 
         self.screen_size_get_button = ttk.Button(wnd, text="获取", command=self.get_screen_size)
-        self.screen_size_get_button.grid(row=4, column=2, padx=5, pady=5)
+        self.screen_size_get_button.grid(row=4, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第六行 - 登录窗口大小
         self.login_size_label = tk.Label(wnd, text="登录尺寸：")
-        self.login_size_label.grid(row=5, column=0, padx=5, pady=5, sticky="w")
+        self.login_size_label.grid(row=5, column=0, **Constants.W_GRID_PACK)
 
         self.login_size_var = tk.StringVar()
         self.login_size_entry = tk.Entry(wnd, textvariable=self.login_size_var, state='readonly', width=70)
-        self.login_size_entry.grid(row=5, column=1, padx=5, pady=5, sticky="we")
+        self.login_size_entry.grid(row=5, column=1, **Constants.WE_GRID_PACK)
 
         self.login_size_get_button = ttk.Button(wnd, text="获取",
                                                 command=partial(self.to_get_login_size, self.status))
-        self.login_size_get_button.grid(row=5, column=2, padx=5, pady=5)
+        self.login_size_get_button.grid(row=5, column=2, **Constants.WE_GRID_PACK)
 
         # 修改确定按钮，从第4行到第6行
         self.ok_button = ttk.Button(wnd, text="确定", command=self.on_ok)
-        self.ok_button.grid(row=3, column=3, rowspan=3, padx=5, pady=5, sticky="nsew")
+        self.ok_button.grid(row=3, column=3, rowspan=3, **Constants.NEWS_GRID_PACK)
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         wnd.grid_columnconfigure(1, weight=1)

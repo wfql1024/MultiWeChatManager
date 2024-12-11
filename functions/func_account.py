@@ -107,7 +107,7 @@ def get_acc_avatar_from_files(account, sw):
         print("图像文件读取失败:", e)
     except Exception as e:
         print("所有方法都失败，创建空白头像:", e)
-        return Image.new('RGB', Constants.BLANK_AVT_SIZE, color='white')
+        return Image.new('RGB', Constants.AVT_SIZE, color='white')
 
 
 def get_acc_origin_display_name(sw, account) -> str:

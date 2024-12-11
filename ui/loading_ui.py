@@ -9,11 +9,6 @@ class LoadingWindow:
         # print("打开加载窗口")
         self.wnd = wnd
         self.wnd.title("加载中")
-        self.label = ttk.Label(self.wnd, text="正在载入，请稍等……")
-        self.label.pack(pady=Constants.LOADING_LBL_PAD_Y)
-        self.progress = ttk.Progressbar(self.wnd, mode="determinate", length=Constants.LOADING_PRG_LEN)
-        self.progress.pack(pady=Constants.LOADING_PRG_PAD_Y)
-
         self.wnd.withdraw()  # 初始时隐藏窗口
         wnd_width, wnd_height = Constants.LOADING_WND_SIZE
         hwnd_utils.bring_wnd_to_center(self.wnd, wnd_width, wnd_height)
@@ -21,6 +16,12 @@ class LoadingWindow:
         self.wnd.resizable(False, False)
         # print("显示等待窗口")
         self.wnd.deiconify()  # 显示窗口
+
+        self.label = ttk.Label(self.wnd, text="正在载入，请稍等……")
+        self.label.pack(pady=Constants.T_PAD_Y)
+        self.progress = ttk.Progressbar(self.wnd, mode="determinate", length=Constants.LOADING_PRG_LEN)
+        self.progress.pack(pady=Constants.T_PAD_Y)
+
         self.progress.start(15)
 
     def auto_close(self):

@@ -20,7 +20,6 @@ from resources import Strings, Config, Constants
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui, loading_ui
 from utils import hwnd_utils, debug_utils, file_utils
-from utils.file_utils import is_latest_file
 from utils.logger_utils import mylogger as logger
 
 
@@ -46,11 +45,14 @@ class MainWindow:
 
     def __init__(self, root, args=None):
         # 首先确保有默认的标签
+        self.sign_visibility_var = None
+        self.sign_visibility = None
         self.scale_var = None
         self.chosen_scale = None
         self.wnd_scale_menu = None
         self.chosen_tab = func_setting.fetch_global_setting_or_set_default("tab")
-        self.enable_new_func = func_setting.fetch_global_setting_or_set_default("enable_new_func") == "true"
+        self.enable_new_func = \
+            True if func_setting.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
         self.current_full_version = subfunc_file.get_app_current_version()
 
         self.root = root
@@ -274,10 +276,19 @@ class MainWindow:
         if self.error_frame is not None:
             for widget in self.error_frame.winfo_children():
                 widget.destroy()
-        self.error_frame = ttk.Frame(self.tab_frame)
-        self.error_frame.pack(expand=True, fill=tk.BOTH)
-        error_label = ttk.Label(self.error_frame, text="路径设置错误，请点击按钮修改", foreground="red")
-        error_label.pack(padx=Constants.ERR_LBL_PAD_X, pady=Constants.ERR_LBL_PAD_Y)
+        if self.tab_frame is not None:
+            for widget in self.tab_frame.winfo_children():
+                widget.destroy()
+
+        # 选择已经存在的框架进行错误信息显示
+        if self.tab_frame is not None:
+            self.error_frame = ttk.Frame(self.tab_frame, padding=Constants.T_FRM_PAD)
+        elif self.main_frame is not None:
+            self.error_frame = ttk.Frame(self.main_frame, padding=Constants.T_FRM_PAD)
+
+        self.error_frame.pack(**Constants.T_FRM_PACK)
+        error_label = ttk.Label(self.error_frame, text="路径设置错误，请点击按钮修改", foreground="red", anchor=tk.CENTER)
+        error_label.pack(**Constants.T_WGT_PACK)
         self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
                                           command=partial(self.open_settings, self.chosen_tab))
         self.settings_button.pack()
@@ -287,8 +298,8 @@ class MainWindow:
         print(f"改动模式后刷新...")
 
         def reload_func():
-            self.select_current_tab()
-            self.refresh_main_frame()
+            self.root.after(0, self.select_current_tab)
+            self.root.after(0, self.refresh_main_frame)
 
         try:
             # 线程启动获取登录情况和渲染列表
@@ -389,8 +400,14 @@ class MainWindow:
                                        command=self.change_tree_view)
 
         # 显示当前选择的视图
+        self.sign_visibility = \
+            True if func_setting.fetch_global_setting_or_set_default("sign_visible") == "True" else False
+        self.sign_visibility_var = tk.BooleanVar(value=self.sign_visibility)
         self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
+        self.view_options_menu.add_checkbutton(label="显示状态标志", variable=self.sign_visibility_var,
+                                               command=partial(func_setting.toggle_sign_visibility,
+                                                               str(not self.sign_visibility), self.refresh_main_frame))
         if self.chosen_view == "classic":
             # 添加经典视图的菜单项
             pass
@@ -399,13 +416,14 @@ class MainWindow:
             pass
 
         self.view_menu.add_separator()  # ————————————————分割线————————————————
+
         self.chosen_scale = func_setting.fetch_global_setting_or_set_default("scale")
         self.scale_var = tk.StringVar(value=self.chosen_scale)
         self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
         self.wnd_scale_menu.add_radiobutton(label="跟随系统", variable=self.scale_var, value="auto",
                                             command=partial(func_setting.set_wnd_scale,
-                                                            self.create_root_menu_bar,"auto"))
+                                                            self.create_root_menu_bar, "auto"))
         options = ["100", "125", "150", "175", "200"]
         for option in options:
             self.wnd_scale_menu.add_radiobutton(label=f"{option}%", variable=self.scale_var, value=option,
@@ -530,6 +548,8 @@ class MainWindow:
         self.help_menu.add_command(label=f"{prefix}关于", command=partial(self.open_about, self.need_to_update))
 
         # ————————————————————————————作者标签————————————————————————————
+        self.enable_new_func = \
+            True if func_setting.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
         if self.enable_new_func is True:
             self.menu_bar.add_command(label=Strings.ENABLED_NEW_FUNC)
             self.menu_bar.entryconfigure(Strings.ENABLED_NEW_FUNC, state="disabled")
@@ -565,7 +585,7 @@ class MainWindow:
         # 创建一个Frame在Canvas中
         self.main_frame = ttk.Frame(self.canvas)
         # 将main_frame放置到Canvas的窗口中，并禁用Canvas的宽高跟随调整
-        self.canvas_window = self.canvas.create_window(Constants.CANVAS_START_POS, window=self.main_frame, anchor="nw")
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
         # 将滚动条连接到Canvas
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         # 配置Canvas的滚动区域
@@ -776,9 +796,9 @@ class MainWindow:
             self.reset_timer = self.root.after(1000, lambda: setattr(self, 'logo_click_count', 0))  # 1秒后重置
 
     def to_enable_new_func(self):
-        subfunc_file.set_enable_new_func_in_ini("true")
+        subfunc_file.set_enable_new_func_in_ini()
         messagebox.showinfo("发现彩蛋", "解锁新菜单，快去看看吧！")
-        self.refresh_main_frame()
+        self.reload_thread()
 
     def manual_login_account(self):
         """按钮：手动登录"""
