@@ -307,6 +307,7 @@ def get_account_list(sw, data_dir, multiple_status):
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
+    mutex = False
     pid_dict = dict(wechat_processes)
     if multiple_status == "已开启":
         print(f"由于是全局多开模式，直接所有has_mutex都为false")
@@ -319,10 +320,10 @@ def get_account_list(sw, data_dir, multiple_status):
                 subfunc_file.update_acc_details_to_json_by_tab(sw, acc, has_mutex=None)
             subfunc_file.update_acc_details_to_json_by_tab(sw, acc, pid=pid_dict.get(acc, None))
         # 更新json表中各微信进程的互斥体情况
-        subfunc_file.update_has_mutex_from_all_wechat(sw)
+        success, mutex = subfunc_file.update_has_mutex_from_all_wechat(sw)
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
-    return True, (login, logout, wechat_processes)
+    return True, (login, logout, wechat_processes, mutex)
 
 
 def get_main_hwnd_of_accounts(acc_list, sw):

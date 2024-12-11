@@ -147,4 +147,6 @@ class Strings:
 
     WARNING_SIGN = "⚠️" if NEWER_VER else "?!"
     SURPRISE_SIGN = "✨" if NEWER_VER else "*"
+    MUTEX_SIGN = "🔒" if NEWER_VER else "⚔"
+    CFG_SIGN = "📝" if NEWER_VER else "❐"
 

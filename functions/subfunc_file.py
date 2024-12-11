@@ -59,17 +59,16 @@ def save_sw_login_size_to_setting_ini(value, sw="WeChat"):
                                          Config.INI_KEY_LOGIN_SIZE, value)
 
 
-def save_sw_sort_order_to_setting_ini(order, sw="WeChat"):
-    col, asc = order["login"]
+def save_sw_sort_order_to_setting_ini(order, sw):
+    col = order["login"]['col']
+    asc = order["login"]['asc']
     ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
-                                  Config.INI_KEY["login_col_to_sort"], col)
+                                  Config.INI_KEY["login_sort"], f"{col},{asc}")
+    col = order["logout"]['col']
+    asc = order["logout"]['asc']
     ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
-                                  Config.INI_KEY["login_sort_asc"], asc)
-    col, asc = order["logout"]
-    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
-                                  Config.INI_KEY["logout_col_to_sort"], col)
-    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
-                                  Config.INI_KEY["logout_sort_asc"], asc)
+                                  Config.INI_KEY["logout_sort"], f"{col},{asc}")
+
 
 
 def set_enable_new_func_in_ini():
@@ -240,11 +239,12 @@ def set_all_wechat_values_to_false(tab="WeChat"):
     return True
 
 
-def update_has_mutex_from_all_wechat(tab="WeChat"):
+def update_has_mutex_from_all_wechat(tab):
     """
     将json中登录列表all_wechat结点中的情况加载回所有已登录账号，适合刷新结束时使用
     :return: 是否成功
     """
+    mutex = False
     data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
     if tab not in data:
         data[tab] = {}
@@ -257,8 +257,10 @@ def update_has_mutex_from_all_wechat(tab="WeChat"):
         pid = details.get("pid", None)
         if pid and pid is not None:
             has_mutex = tab_info["all_wechat"].get(f"{pid}", True)
+            if has_mutex is True:
+                mutex = True
             update_acc_details_to_json_by_tab(tab, account, has_mutex=has_mutex)
-    return True
+    return True, mutex
 
 
 # 更新手动模式的函数

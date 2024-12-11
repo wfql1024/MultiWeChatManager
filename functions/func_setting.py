@@ -178,6 +178,7 @@ def fetch_sw_setting_or_set_default(setting_key, sw):
             Config.INI_DEFAULT_VALUE[sw][setting_key]
         )
         value = Config.INI_DEFAULT_VALUE[sw][setting_key]
+    # print(f"获取{sw}平台的{setting_key}配置项为{value}")
     return value
 
 
@@ -244,6 +245,7 @@ def toggle_sign_visibility(value, after):
         Config.INI_KEY["sign_visible"],
         value
     )
+    after()
 
 def set_wnd_scale(after, scale=None):
     if scale is None:
