@@ -340,6 +340,47 @@
         }
     },
     "update": {
+        "v2.11.1.911-Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win7_x64_v2.11.1.911-Beta.zip",
+                        "md5": "5fc3a5d0ae5aa72c31a291d9ddae3a22",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win10%20_x64_v2.11.1.911-Beta.zip",
+                        "md5": "3c63cd2d88d247f930bb3e970ec73043",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win10%20_x64_v2.11.1.911-Beta.zip",
+                        "md5": "3c63cd2d88d247f930bb3e970ec73043",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win7_x64_v2.11.1.911-Beta.zip",
+                        "md5": "5fc3a5d0ae5aa72c31a291d9ddae3a22",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增对微信4.0的适配",
+                    "新增高分屏适配"
+                ],
+                "修复": [
+                    "修复若干问题"
+                ]
+            }
+        },
         "v2.9.1.698-Beta": {
             "pkgs": {
                 "win7": [

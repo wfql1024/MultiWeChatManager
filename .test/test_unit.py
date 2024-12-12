@@ -46,3 +46,7 @@ class Test(TestCase):
     def test_get_process_ids_by_name(self):
         pids = process_utils.get_process_ids_by_name("WeChat.exe")
         print(pids)
+
+    def test_lowercase(self):
+        text = "3C63CD2D88D247F930BB3E970EC73043"
+        print(text.lower())
