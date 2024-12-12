@@ -26,20 +26,23 @@ def manual_login(m_class, tab, status, window_callback):
     start_time = time.time()
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
         tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
+    if redundant_wnd_list is None or login_wnd_class is None or cfg_handles is None or executable_name is None:
+        messagebox.showinfo("错误", "尚未适配！")
+        return
     # 关闭配置文件锁
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
-    subfunc_wechat.kill_wechat_multiple_processes(tab)
+    subfunc_wechat.kill_sw_multiple_processes(tab)
     time.sleep(0.5)
-    subfunc_file.clear_all_wechat_in_acc_json(tab)
-    subfunc_file.update_all_wechat_in_acc_json(tab)
+    subfunc_file.clear_all_acc_in_acc_json(tab)
+    subfunc_file.update_all_acc_in_acc_json(tab)
     has_mutex_dict = subfunc_wechat.get_mutex_dict(tab)
     logger.info(f"当前模式是：{status}")
     sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict, tab)
     wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 20)
     if wechat_hwnd:
-        subfunc_file.set_all_wechat_values_to_false(tab)
+        subfunc_file.set_all_acc_values_to_false(tab)
         subfunc_file.update_manual_time_statistic(sub_exe, time.time() - start_time, tab)
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
@@ -56,7 +59,7 @@ def manual_login(m_class, tab, status, window_callback):
     window_callback()
 
 
-def auto_login_accounts(accounts, status, callback, tab="WeChat"):
+def auto_login_accounts(accounts, status, callback, tab):
     """
     对选择的账号，进行全自动登录
     :param tab: 选择的软件标签
@@ -86,10 +89,10 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
         subfunc_file.get_details_from_remote_setting_json(
             tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
-    subfunc_wechat.kill_wechat_multiple_processes(tab)
+    subfunc_wechat.kill_sw_multiple_processes(tab)
     time.sleep(0.5)
-    subfunc_file.clear_all_wechat_in_acc_json(tab)
-    subfunc_file.update_all_wechat_in_acc_json(tab)
+    subfunc_file.clear_all_acc_in_acc_json(tab)
+    subfunc_file.update_all_acc_in_acc_json(tab)
 
     # 检测尺寸设置是否完整
     login_size = subfunc_file.get_sw_login_size_from_setting_ini(tab)
@@ -153,8 +156,8 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
                 if sub_exe_process:
                     sub_exe_process.terminate()
                 print(f"打开窗口成功：{wechat_hwnd}")
-                subfunc_file.set_all_wechat_values_to_false(tab)
-                subfunc_file.update_has_mutex_from_all_wechat(tab)
+                subfunc_file.set_all_acc_values_to_false(tab)
+                subfunc_file.update_has_mutex_from_all_acc(tab)
                 break
             if time.time() > end_time:
                 print(f"超时！换下一个账号")
@@ -184,7 +187,7 @@ def auto_login_accounts(accounts, status, callback, tab="WeChat"):
 
     # 循环登录完成
     # 如果有，关掉多余的多开器
-    subfunc_wechat.kill_wechat_multiple_processes(tab)
+    subfunc_wechat.kill_sw_multiple_processes(tab)
 
     def func():
         # 两轮点击所有窗口的登录，防止遗漏

@@ -43,7 +43,7 @@ def quit_accounts(sw, accounts):
             pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, pid=None)
             display_name = get_acc_origin_display_name(sw, account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
-            executable_name, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, executable=None)
+            executable_name, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
             process = psutil.Process(pid)
             if process_utils.process_exists(pid) and process.name() == executable_name:
                 startupinfo = None
@@ -320,7 +320,7 @@ def get_account_list(sw, data_dir, multiple_status):
                 subfunc_file.update_acc_details_to_json_by_tab(sw, acc, has_mutex=None)
             subfunc_file.update_acc_details_to_json_by_tab(sw, acc, pid=pid_dict.get(acc, None))
         # 更新json表中各微信进程的互斥体情况
-        success, mutex = subfunc_file.update_has_mutex_from_all_wechat(sw)
+        success, mutex = subfunc_file.update_has_mutex_from_all_acc(sw)
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
     return True, (login, logout, wechat_processes, mutex)

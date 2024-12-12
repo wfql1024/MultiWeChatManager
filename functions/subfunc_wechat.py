@@ -19,7 +19,7 @@ def switch_to_sw_account_wnd(sw, acc, program_wnd):
     hwnd_utils.restore_window(main_hwnd)
 
 
-def kill_wechat_multiple_processes(sw="WeChat"):
+def kill_sw_multiple_processes(sw):
     """清理多开器的进程"""
     print("清理多余多开器窗口...")
     # 遍历所有的进程
@@ -32,20 +32,25 @@ def kill_wechat_multiple_processes(sw="WeChat"):
 
         except Exception as e:
             logger.error(e)
+    print(f"清理{sw}Multiple_***子程序完成!")
 
 
-def get_mutex_dict(sw="WeChat"):
+def get_mutex_dict(sw):
     """拿到当前时间下系统中所有微信进程的互斥体情况"""
     print("获取互斥体情况...")
-    executable = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+    executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+    if executable is None:
+        return dict()
     pids = process_utils.get_process_ids_by_name(executable)
+    print(f"获取到的{sw}进程列表：{pids}")
     has_mutex_dict = dict()
     for pid in pids:
         # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
-        has_mutex, = subfunc_file.get_acc_details_from_json_by_tab(sw, "all_wechat", **{f"{pid}": True})
+        has_mutex, = subfunc_file.get_acc_details_from_json_by_tab(sw, "all_acc", **{f"{pid}": True})
         if has_mutex:
-            subfunc_file.update_acc_details_to_json_by_tab(sw, "all_wechat", **{f"{pid}": True})
+            subfunc_file.update_acc_details_to_json_by_tab(sw, "all_acc", **{f"{pid}": True})
             has_mutex_dict.update({pid: has_mutex})
+    print(f"获取互斥体情况完成!互斥体列表：{has_mutex_dict}")
     return has_mutex_dict
 
 
@@ -167,7 +172,7 @@ def get_login_size(tab, status):
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
-    kill_wechat_multiple_processes(tab)
+    kill_sw_multiple_processes(tab)
     has_mutex_dict = get_mutex_dict(tab)
     sub_exe_process, sub_exe = open_wechat(status, has_mutex_dict, sw=tab)
     wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, timeout=8)

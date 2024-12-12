@@ -200,7 +200,7 @@ class ClassicRowUI:
         self.main_frame = m_main_frame
         self.login_rows.clear()
         self.logout_rows.clear()
-        login, logout, wechat_processes = result
+        login, logout, wechat_processes, mutex = result
 
         if len(login) != 0:
             # 已登录框架=已登录标题+已登录列表

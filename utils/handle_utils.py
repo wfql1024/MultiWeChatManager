@@ -1,9 +1,11 @@
+# handle_utils.py
 import re
 import subprocess
 import time
 
 from resources import Config
 from utils import process_utils
+from utils.logger_utils import mylogger as logger
 
 
 def close_handles_by_matches(handle_exe, matches):
@@ -59,6 +61,8 @@ def close_handles_by_matches(handle_exe, matches):
             successful_closes.append((wechat_pid, handle))
         except subprocess.CalledProcessError as e:
             print(f"无法关闭句柄 PID: {wechat_pid}, 错误信息: {e}")
+        except Exception as e:
+            print(f"发生异常: {e}")
 
     print(f"成功关闭的句柄列表: {successful_closes}")
     return successful_closes
@@ -73,23 +77,26 @@ def close_sw_mutex_by_handle(handle_exe, exe, dict_list):
         return []
     success_lists = []
     for item in dict_list:
-        handle_name, regex = item.get("handle_name"), item.get("regex")
-        print(handle_name, regex)
-        print(f"进入了关闭互斥体的方法...")
-        start_time = time.time()
+        try:
+            handle_name, regex = item.get("handle_name"), item.get("regex")
+            print(handle_name, regex)
+            print(f"进入了关闭互斥体的方法...")
+            start_time = time.time()
 
-        # 获取句柄信息
-        handle_info = subprocess.check_output([handle_exe, '-a', '-p', exe, handle_name]).decode()
-        print(f"完成获取句柄信息：{handle_info}")
-        print(f"{time.time() - start_time}")
+            # 获取句柄信息
+            handle_info = subprocess.check_output([handle_exe, '-a', '-p', exe, handle_name]).decode()
+            print(f"完成获取句柄信息：{handle_info}")
+            print(f"{time.time() - start_time}")
 
-        # 匹配所有 PID 和句柄信息
-        matches = re.findall(regex, handle_info)
-        if matches:
-            print(f"找到互斥体：{matches}")
-            success_lists.append(close_handles_by_matches(Config.HANDLE_EXE_PATH, matches))
-        else:
-            print(f"没有找到任何互斥体")
+            # 匹配所有 PID 和句柄信息
+            matches = re.findall(regex, handle_info)
+            if matches:
+                print(f"找到互斥体：{matches}")
+                success_lists.append(close_handles_by_matches(Config.HANDLE_EXE_PATH, matches))
+            else:
+                print(f"没有找到任何互斥体")
+        except Exception as e:
+            logger.error(f"关闭句柄失败：{e}")
     return success_lists
 
 

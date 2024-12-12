@@ -188,7 +188,7 @@ def test(m_class, account, multiple_status, tab="WeChat"):
         hwnd_utils.close_all_wnd_by_classes(redundant_wnd_classes)
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-        subfunc_wechat.kill_wechat_multiple_processes(tab)
+        subfunc_wechat.kill_sw_multiple_processes(tab)
         time.sleep(0.5)
         has_mutex_dict = subfunc_wechat.get_mutex_dict(tab)
         sub_exe_process, _ = subfunc_wechat.open_wechat(multiple_status, has_mutex_dict, tab)

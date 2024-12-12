@@ -469,9 +469,6 @@ class TreeviewRowUI:
     def on_single_click(self, event, login_status):
         """处理单击事件，并在检测到双击时取消"""
         # 取消之前的单击延时处理（如果有）
-        print(event.widget.bind("<Configure>"))
-        print(event.widget.bind("<Button-1>"))
-        print(event.widget)
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
         # 设置一个延时，若在此期间未检测到双击，则处理单击事件

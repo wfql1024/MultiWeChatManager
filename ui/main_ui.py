@@ -67,7 +67,7 @@ class MainWindow:
         self.root.withdraw()  # 初始化时隐藏主窗口
         # 启动自检
         print("稍后自检...")
-        self.root.after(3000, self.load_on_startup)
+        self.root.after(2000, self.load_on_startup)
 
         self.sw_ver = None
         self.error_frame = None
@@ -184,6 +184,11 @@ class MainWindow:
         self.root.after(1, self.update_status)
 
     def create_tab(self, config_data):
+        """
+        创建选项卡
+        :param config_data: 获取的远端数据
+        :return:
+        """
         print("创建选项卡...")
         self.tab_control = ttk.Notebook(self.root)
 
@@ -213,9 +218,7 @@ class MainWindow:
             self.tab_control.add(self.tab_dict[item]['frame'], text=self.tab_dict[item]['text'])
         self.tab_control.select(self.tab_dict[self.sw]['frame'])
         self.tab_control.pack(expand=True, fill='both')
-        # print("绑定前")
-        self.tab_control.bind('<<NotebookTabChanged>>', self.on_tab_change)
-        # print("绑定后")
+        self.on_tab_change(_event=None)
 
     def load_on_startup(self):
         """启动时检查载入"""
@@ -231,6 +234,7 @@ class MainWindow:
             # 设置主窗口位置
             hwnd_utils.bring_wnd_to_center(self.root, self.window_width, self.window_height)
             self.root.deiconify()
+            self.tab_control.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
         try:
             # 线程启动获取登录情况和渲染列表
@@ -315,6 +319,18 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
+    def on_tab_change(self, _event):
+        """处理选项卡变化事件，排除特殊选项卡"""
+        print("切换选项卡响应中...")
+        if self.tab_control.select() == "!disabled":
+            return
+        selected_frame = self.tab_control.nametowidget(self.tab_control.select())  # 获取当前选中的Frame
+        selected_tab = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
+        if selected_tab:
+            func_setting.toggle_tab_record(selected_tab)
+            self.select_current_tab()
+            print(f"当前选项卡: {selected_tab}")
+
     def select_current_tab(self):
         """确认选项卡并简单载入"""
         self.sw = func_setting.fetch_global_setting_or_set_default("tab")
@@ -327,9 +343,8 @@ class MainWindow:
         self.sw_dll_dir = func_setting.get_sw_dll_dir(self.sw)
         # 若标签页为空则创建
         if len(self.tab_frame.winfo_children()) == 0:
-            self.check_and_init()
+            threading.Thread(target=self.check_and_init)
         self.reload_thread()
-
 
     def create_root_menu_bar(self):
         """创建菜单栏"""
@@ -385,9 +400,11 @@ class MainWindow:
         # -创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=func_file.create_app_lnk)
         # -创建快捷启动
-        self.file_menu.add_command(label="创建快捷启动", command=partial(
-            func_file.create_multiple_lnk,
-            self.sw, self.multiple_status, self.refresh_main_frame))
+        quick_start_sp = subfunc_file.get_details_from_remote_setting_json(self.sw, support_quick_start=None)
+        self.file_menu.add_command(label="创建快捷启动",
+                                   command=partial(func_file.create_multiple_lnk,
+                                                   self.sw, self.multiple_status, self.refresh_main_frame),
+                                   state="disabled" if not quick_start_sp is True else "normal")
 
         # ————————————————————————————编辑菜单————————————————————————————
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
@@ -502,19 +519,23 @@ class MainWindow:
             self.chosen_sub_exe = func_setting.fetch_sw_setting_or_set_default("sub_exe", self.sw)
             self.chosen_sub_exe_var.set(self.chosen_sub_exe)  # 设置初始选中的子程序
             self.settings_menu.add_cascade(label="子程序     选择", menu=self.sub_executable_menu)
+            python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
+                self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
             # 添加 Python 的单选按钮
             self.sub_executable_menu.add_radiobutton(
                 label='python',
                 value='python',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'python', self.reload_thread)
+                command=partial(func_setting.toggle_sub_executable, 'python', self.reload_thread),
+                state='disabled' if not python_sp else 'normal'
             )
             # 添加 强力Python 的单选按钮
             self.sub_executable_menu.add_radiobutton(
                 label='python[S]',
                 value='python[S]',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'python[S]', self.reload_thread)
+                command=partial(func_setting.toggle_sub_executable, 'python[S]', self.reload_thread),
+                state='disabled' if not python_s_sp else 'normal'
             )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
             # 添加 Handle 的单选按钮
@@ -522,7 +543,8 @@ class MainWindow:
                 label='handle',
                 value='handle',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'handle', self.reload_thread)
+                command=partial(func_setting.toggle_sub_executable, 'handle', self.reload_thread),
+                state='disabled' if not handle_sp else 'normal'
             )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
             # 动态添加外部子程序
@@ -707,18 +729,6 @@ class MainWindow:
                 self.scrollbar.pack_forget()
         except Exception as e:
             logger.error(e)
-
-    def on_tab_change(self, _event):
-        """处理选项卡变化事件，排除特殊选项卡"""
-        print("切换选项卡响应中...")
-        if self.tab_control.select() == "!disabled":
-            return
-        selected_frame = self.tab_control.nametowidget(self.tab_control.select())  # 获取当前选中的Frame
-        selected_tab = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
-        if selected_tab:
-            func_setting.toggle_tab_record(selected_tab)
-            self.select_current_tab()
-            print(f"当前选项卡: {selected_tab}")
 
     def open_statistic(self):
         """打开统计窗口"""

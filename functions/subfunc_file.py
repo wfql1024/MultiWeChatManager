@@ -143,14 +143,18 @@ def get_acc_details_from_json_by_tab(tab, account: str, **kwargs) -> Tuple[Any, 
     :param kwargs: 需要获取的变量名及其默认值（如 note="", nickname=None）
     :return: 包含所请求数据的元组
     """
-    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
-    account_info = data.get(tab, {}).get(account, {})
-    result = tuple()
-    for key, default in kwargs.items():
-        value = account_info.get(key, default)
-        result += (value,)
-        # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
-    return result
+    try:
+        data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        account_info = data.get(tab, {}).get(account, {})
+        result = tuple()
+        for key, default in kwargs.items():
+            value = account_info.get(key, default)
+            result += (value,)
+            # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
+        return result
+    except Exception as e:
+        logger.error(e)
+        return tuple()
 
 
 def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
@@ -160,17 +164,21 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
     :param kwargs: 传入要获取的参数及其默认值
     :return:
     """
-    data = json_utils.load_json_data(Config.REMOTE_SETTING_JSON_PATH)
-    info = data.get(tab, {})
-    result = tuple()
-    for key, default in kwargs.items():
-        value = info.get(key, default)
-        result += (value,)
-        # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
-    return result
+    try:
+        data = json_utils.load_json_data(Config.REMOTE_SETTING_JSON_PATH)
+        info = data.get(tab, {})
+        result = tuple()
+        for key, default in kwargs.items():
+            value = info.get(key, default)
+            result += (value,)
+            # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
+        return result
+    except Exception as e:
+        logger.error(e)
+        return tuple()
 
 
-def clear_all_wechat_in_acc_json(sw="WeChat"):
+def clear_all_acc_in_acc_json(sw):
     """
     清空登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
@@ -179,19 +187,19 @@ def clear_all_wechat_in_acc_json(sw="WeChat"):
     # 加载当前账户数据
     data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
     tab_info = data.get(sw, {})
-    # 检查 all_wechat 节点是否存在
-    if "all_wechat" in tab_info:
-        # 清除 all_wechat 中的所有字段
-        tab_info["all_wechat"].clear()
-        # print(tab_info["all_wechat"])
-        # print("all_wechat 节点的所有字段已清空")
+    # 检查 all_acc 节点是否存在
+    if "all_acc" in tab_info:
+        # 清除 all_acc 中的所有字段
+        tab_info["all_acc"].clear()
+        # print(tab_info["all_acc"])
+        print("all_acc 节点的所有字段已清空")
 
     # 保存更新后的数据
     json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
     return True
 
 
-def update_all_wechat_in_acc_json(tab="WeChat"):
+def update_all_acc_in_acc_json(tab):
     """
     清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
@@ -210,16 +218,16 @@ def update_all_wechat_in_acc_json(tab="WeChat"):
         if isinstance(pid, int):
             has_mutex = details.get("has_mutex", False)
             all_wechat[str(pid)] = has_mutex
-            # print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
+            print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
 
     # 更新 all_wechat 到 JSON 文件
-    update_acc_details_to_json_by_tab(tab, "all_wechat", **all_wechat)
+    update_acc_details_to_json_by_tab(tab, "all_acc", **all_wechat)
     return True
 
 
-def set_all_wechat_values_to_false(tab="WeChat"):
+def set_all_acc_values_to_false(tab):
     """
-    将所有微信进程all_wechat中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
+    将所有微信进程all_acc中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
     （因为登录好一个窗口，说明之前所有的微信都没有互斥体了）
     :return: 是否成功
     """
@@ -227,19 +235,19 @@ def set_all_wechat_values_to_false(tab="WeChat"):
     data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
 
     tab_info = data.get(tab, {})
-    # 获取 all_wechat 节点，如果不存在就创建一个空的
-    all_wechat = tab_info.get("all_wechat", {})
+    # 获取 all_acc 节点，如果不存在就创建一个空的
+    all_acc = tab_info.get("all_acc", {})
 
     # 将所有字段的值设置为 False
-    for pid in all_wechat:
-        all_wechat[pid] = False
+    for pid in all_acc:
+        all_acc[pid] = False
 
     # 保存更新后的数据
     json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
     return True
 
 
-def update_has_mutex_from_all_wechat(tab):
+def update_has_mutex_from_all_acc(tab):
     """
     将json中登录列表all_wechat结点中的情况加载回所有已登录账号，适合刷新结束时使用
     :return: 是否成功
@@ -249,14 +257,14 @@ def update_has_mutex_from_all_wechat(tab):
     if tab not in data:
         data[tab] = {}
     tab_info = data.get(tab, {})
-    if "all_wechat" not in tab_info:
-        tab_info["all_wechat"] = {}
+    if "all_acc" not in tab_info:
+        tab_info["all_acc"] = {}
     for account, details in tab_info.items():
-        if account == "all_wechat":
+        if account == "all_acc":
             continue
         pid = details.get("pid", None)
         if pid and pid is not None:
-            has_mutex = tab_info["all_wechat"].get(f"{pid}", True)
+            has_mutex = tab_info["all_acc"].get(f"{pid}", True)
             if has_mutex is True:
                 mutex = True
             update_acc_details_to_json_by_tab(tab, account, has_mutex=has_mutex)
@@ -264,7 +272,7 @@ def update_has_mutex_from_all_wechat(tab):
 
 
 # 更新手动模式的函数
-def update_manual_time_statistic(sub_exe, time_spent, tab="WeChat"):
+def update_manual_time_statistic(sub_exe, time_spent, tab):
     """更新手动登录统计数据到json"""
     if sub_exe.startswith(f"{tab}Multiple"):
         sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
@@ -326,7 +334,7 @@ def update_auto_time_statistic(sub_exe, time_spent, index, tab="WeChat"):
     new_avg_time = (avg_time * count + time_spent) / new_count
 
     tab_info["auto"][sub_exe][str(index)] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
-    print(tab_info)
+    # print(tab_info)
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 

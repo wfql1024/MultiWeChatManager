@@ -88,7 +88,7 @@ def get_call_stack(sequence="/", max_depth=100):
     # 从调用方开始，跳过 get_call_stack 本身，回溯至多 max_depth 层
     call_chain = [frame_info.function for frame_info in stack[1:max_depth + 1]]
 
-    # 从前往后，用 '->' 连接方法名
+    # 从前往后连接方法名
     return sequence.join(reversed(call_chain))
 
 

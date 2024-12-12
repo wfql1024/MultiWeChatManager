@@ -1,9 +1,25 @@
+# logger_utils.py
+# 这个是很底层的工具类，不要导入项目其他的模块
+import inspect
 import logging
 import os
 import sys
 
 import colorlog
 
+def get_call_stack(sequence="/", max_depth=100):
+    """
+    获取调用栈，并返回当前方法及往前回溯指定层数的方法名称，按顺序用连接符连接。
+    :param sequence: 连接符
+    :param max_depth: 回溯的层数
+    :return: 调用栈字符串，从前往后按连接符连接的方法名。
+    """
+    # 获取当前的调用栈
+    stack = inspect.stack()
+    # 从调用方开始，跳过 get_call_stack 本身，回溯至多 max_depth 层
+    call_chain = [frame_info.function for frame_info in stack[1:max_depth + 1]]
+    # 从前往后连接方法名
+    return sequence.join(reversed(call_chain))
 
 class LoggerUtils:
     def __init__(self, file):
@@ -20,13 +36,12 @@ class LoggerUtils:
             'ERROR': 'red',
             'CRITICAL': 'bold_red',
         }
-
         default_formats = {
             # 终端输出格式
             'color_format':
-                '%(log_color)s%(levelname)s - %(asctime)s - %(filename)s[line:%(lineno)d] - %(message)s',
+                f'%(log_color)s%(levelname)s - %(asctime)s - %(filename)s[line:%(lineno)d][%(funcName)s] - %(message)s',
             # 日志输出格式
-            'log_format': '%(levelname)s - %(asctime)s - %(filename)s[line:%(lineno)d] - %(message)s'
+            'log_format': '%(levelname)s - %(asctime)s - %(filename)s[line:%(lineno)d][%(funcName)s] - %(message)s'
         }
 
         logger = logging.getLogger('mylogger')
@@ -46,6 +61,8 @@ class LoggerUtils:
         logger.addHandler(log_ch)
 
         return logger
+
+
 
 
 app_path = os.path.basename(os.path.abspath(sys.argv[0]))

@@ -4,6 +4,7 @@ import os
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 from Crypto.Util.Padding import unpad
+from utils.logger_utils import mylogger as logger
 
 
 def decrypt_json_file(input_file, output_file, key):
@@ -38,14 +39,21 @@ def encrypt_json_file(input_file, output_file, key):
 
 
 def load_json_data(account_data_file):
-    if os.path.exists(account_data_file):
-        # print("地址没错")
-        with open(account_data_file, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {}
+    try:
+        if os.path.exists(account_data_file):
+            # print("地址没错")
+            with open(account_data_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        logger.error(e)
+        return {}
 
 
 def save_json_data(account_data_file, account_data):
-    with open(account_data_file, 'w', encoding='utf-8') as f:
-        json_string = json.dumps(account_data, ensure_ascii=False, indent=4)
-        f.write(json_string)
+    try:
+        with open(account_data_file, 'w', encoding='utf-8') as f:
+            json_string = json.dumps(account_data, ensure_ascii=False, indent=4)
+            f.write(json_string)
+    except Exception as e:
+        logger.error(e)

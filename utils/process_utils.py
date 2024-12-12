@@ -220,7 +220,7 @@ def get_process_ids_by_name(process_name):
             ['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/FO', 'CSV', '/NH'],
             startupinfo=startupinfo
         )
-        print(f"{origin_output}")
+        # print(f"{origin_output}")
 
         try:
             output = origin_output.decode('utf-8').strip()
@@ -228,7 +228,7 @@ def get_process_ids_by_name(process_name):
             print(f"解码错误：{e}")
             print(f"{origin_output.decode('GBK').strip()}")
             return []  # 或者根据需求返回其他值或执行其他逻辑
-        # print(f"{debug_utils.get_call_stack_indent()}{output}")
+        print(f"{output}")
 
         # 解析输出并获取进程 ID
         for line in output.split('\n'):

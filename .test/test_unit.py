@@ -42,3 +42,7 @@ class Test(TestCase):
         awareness = ctypes.c_int()
         ctypes.windll.shcore.GetProcessDpiAwareness(0, ctypes.byref(awareness))
         print(f"DPI Awareness Level: {awareness.value}")
+
+    def test_get_process_ids_by_name(self):
+        pids = process_utils.get_process_ids_by_name("WeChat.exe")
+        print(pids)

@@ -303,6 +303,7 @@ def close_all_wnd_by_classes(class_names):
                     win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
                     time.sleep(0.5)  # 等待窗口关闭
                 else:
+                    print(f"已清理所有{class_name}窗口！")
                     break
         except Exception as ex:
             logger.error(ex)
