@@ -400,7 +400,8 @@ class MainWindow:
         # -创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=func_file.create_app_lnk)
         # -创建快捷启动
-        quick_start_sp = subfunc_file.get_details_from_remote_setting_json(self.sw, support_quick_start=None)
+        quick_start_sp, = subfunc_file.get_details_from_remote_setting_json(self.sw, support_quick_start=None)
+        print(f"支持快捷启动：{quick_start_sp}")
         self.file_menu.add_command(label="创建快捷启动",
                                    command=partial(func_file.create_multiple_lnk,
                                                    self.sw, self.multiple_status, self.refresh_main_frame),

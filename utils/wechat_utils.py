@@ -118,7 +118,6 @@ def get_sw_data_dir_by_guess(sw="WeChat"):
         sw, data_dir_name=None, data_dir_guess_suffix=None)
     guess_paths = [
         os.path.join(os.path.expanduser('~'), 'Documents', data_dir_name).replace('\\', '/'),
-        os.path.join(os.environ.get('APPDATA'), data_dir_guess_suffix).replace('\\', '/'),
     ]
     return guess_paths
 
