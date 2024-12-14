@@ -6,20 +6,22 @@ from tkinter import ttk, filedialog, messagebox
 import win32com
 import win32com.client
 
-from functions import func_setting, subfunc_wechat, subfunc_file
+from functions import func_setting, subfunc_sw, subfunc_file
 from resources import Constants
 from utils import wechat_utils, hwnd_utils
+from utils.logger_utils import mylogger as logger
 
 
 class SettingWindow:
-    def __init__(self, wnd, tab, status, on_close_callback=None):
+    def __init__(self, wnd, tab, status, after):
         self.install_path = None
         self.data_path = None
         self.dll_dir_path = None
         self.status = status
+        self.after = after
         self.wnd = wnd
-        self.on_close_callback = on_close_callback
         self.tab = tab
+        self.need_to_clear_acc = False
         wnd.title(f"{tab}设置")
 
         window_width, window_height = Constants.SETTING_WND_SIZE
@@ -118,7 +120,7 @@ class SettingWindow:
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         wnd.grid_columnconfigure(1, weight=1)
 
-        # 初始获取路径
+        # 初始加载已经配置的，或是没有配置的话自动获取
         self.load_or_get_sw_inst_path(click=False, sw=self.tab)
         self.load_or_get_sw_data_path(click=False, sw=self.tab)
         self.load_or_get_sw_dll_dir(click=False, sw=self.tab)
@@ -129,8 +131,10 @@ class SettingWindow:
 
     def on_ok(self):
         if self.validate_paths():
-            if self.on_close_callback:
-                self.on_close_callback()
+            # 检查是否需要清空账号信息
+            if self.need_to_clear_acc:
+                subfunc_file.clear_acc_info_of_sw(self.tab)
+            self.after()
             self.wnd.destroy()
 
     def validate_paths(self):
@@ -204,6 +208,8 @@ class SettingWindow:
 
     def load_or_get_sw_data_path(self, click=False, sw="WeChat"):
         path = func_setting.get_sw_data_dir(sw, click)
+        if click is True:
+            self.need_to_clear_acc = True
         if path:
             self.data_path_var.set(path.replace('\\', '/'))
         else:
@@ -216,8 +222,9 @@ class SettingWindow:
                 path = filedialog.askdirectory()
                 if not path:  # 用户取消选择
                     return
+                self.need_to_clear_acc = True
             except Exception as e:
-                print(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
+                logger.error(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
                 try:
                     # 异常处理部分，使用 `win32com.client`
                     shell = win32com.client.Dispatch("Shell.Application")
@@ -225,8 +232,9 @@ class SettingWindow:
                     if not folder:  # 用户取消选择
                         return
                     path = folder.Self.Path.replace('\\', '/')
+                    self.need_to_clear_acc = True
                 except Exception as e:
-                    print(f"win32com.client 也失败了: {e}")
+                    logger.error(f"win32com.client 也失败了: {e}")
                     return
             if wechat_utils.is_valid_sw_data_dir(path, sw):
                 self.data_path_var.set(path)
@@ -248,14 +256,14 @@ class SettingWindow:
 
     def to_get_login_size(self, status):
         tab = func_setting.fetch_global_setting_or_set_default('tab')
-        result = subfunc_wechat.get_login_size(tab, status)
+        result = subfunc_sw.get_login_size(tab, status)
         if result:
             login_width, login_height = result
             if 0.734 < login_width / login_height < 0.740:
                 subfunc_file.save_sw_login_size_to_setting_ini(f"{login_width}*{login_height}")
                 self.login_size_var.set(f"{login_width}*{login_height}")
             else:
-                self.login_size_var.set(f"347*471")
+                self.login_size_var.set(f"350*475")
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from tkinter import ttk
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_login, func_account, subfunc_file, subfunc_wechat
+from functions import func_config, func_login, func_account, subfunc_file, subfunc_sw
 from resources import Constants
 from ui import detail_ui
 from utils import string_utils, widget_utils
@@ -162,7 +162,7 @@ class AccountRow:
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
             self.single_click_id = None
-        subfunc_wechat.switch_to_sw_account_wnd(self.chosen_tab, account, self.root)
+        subfunc_sw.switch_to_sw_account_wnd(self.chosen_tab, account, self.root)
 
     def open_detail(self, account):
         """打开详情窗口"""

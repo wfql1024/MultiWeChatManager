@@ -198,6 +198,21 @@ def clear_all_acc_in_acc_json(sw):
     json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
     return True
 
+def clear_acc_info_of_sw(sw):
+    """
+    清空登录列表all_wechat结点中，适合登录之前使用
+    :return: 是否成功
+    """
+    print("清理该平台账号记录...")
+    # 加载当前账户数据
+    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    tab_info = data.get(sw, {})
+    # 检查 all_acc 节点是否存在
+    tab_info.clear()
+    # 保存更新后的数据
+    json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
+    return True
+
 
 def update_all_acc_in_acc_json(tab):
     """
@@ -446,7 +461,6 @@ def get_avatar_url_from_file(sw, acc_list, data_dir):
             if success is True:
                 update_acc_details_to_json_by_tab(sw, acc, avatar_url=matched_url)
                 changed = True
-
     return changed
 
 

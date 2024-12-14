@@ -4,7 +4,7 @@ import time
 from datetime import datetime
 from tkinter import messagebox
 
-from functions import func_setting, subfunc_wechat, subfunc_file
+from functions import func_setting, subfunc_sw, subfunc_file
 from resources import Config
 from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
@@ -171,11 +171,11 @@ def create_config(account, sw="WeChat"):
     return True
 
 
-def test(m_class, account, multiple_status, tab="WeChat"):
+def test(root_class, account, multiple_status, tab="WeChat"):
     """
     尝试打开微信，让用户判断是否是对应的账号，根据用户结果去创建配置或结束
     :param account: 账号
-    :param m_class: 主窗口类
+    :param root_class: 主窗口类
     :param multiple_status: 是否全局多开状态
     :return: 是否对应
     """
@@ -188,10 +188,10 @@ def test(m_class, account, multiple_status, tab="WeChat"):
         hwnd_utils.close_all_wnd_by_classes(redundant_wnd_classes)
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-        subfunc_wechat.kill_sw_multiple_processes(tab)
+        subfunc_sw.kill_sw_multiple_processes(tab)
         time.sleep(0.5)
-        has_mutex_dict = subfunc_wechat.get_mutex_dict(tab)
-        sub_exe_process, _ = subfunc_wechat.open_wechat(multiple_status, has_mutex_dict, tab)
+        has_mutex_dict = subfunc_sw.get_mutex_dict(tab)
+        sub_exe_process, _ = subfunc_sw.open_sw(tab, multiple_status, has_mutex_dict)
         login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(tab, login_wnd_class=None)
         wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, timeout=8)
         if wechat_hwnd:
@@ -204,4 +204,4 @@ def test(m_class, account, multiple_status, tab="WeChat"):
                 hwnd_utils.close_wnd_by_name(login_wnd_class)
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
-    m_class.root.after(0, m_class.refresh_main_frame)
+    root_class.root.after(0, root_class.refresh_main_frame)

@@ -7,7 +7,7 @@ from tkinter import messagebox
 import win32con
 import win32gui
 
-from functions import func_config, subfunc_wechat, subfunc_file
+from functions import func_config, subfunc_sw, subfunc_file
 from resources import Config
 from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
@@ -33,13 +33,13 @@ def manual_login(m_class, tab, status, window_callback):
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
-    subfunc_wechat.kill_sw_multiple_processes(tab)
+    subfunc_sw.kill_sw_multiple_processes(tab)
     time.sleep(0.5)
     subfunc_file.clear_all_acc_in_acc_json(tab)
     subfunc_file.update_all_acc_in_acc_json(tab)
-    has_mutex_dict = subfunc_wechat.get_mutex_dict(tab)
+    has_mutex_dict = subfunc_sw.get_mutex_dict(tab)
     logger.info(f"当前模式是：{status}")
-    sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict, tab)
+    sub_exe_process, sub_exe = subfunc_sw.open_sw(tab, status, has_mutex_dict)
     wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 20)
     if wechat_hwnd:
         subfunc_file.set_all_acc_values_to_false(tab)
@@ -89,7 +89,7 @@ def auto_login_accounts(accounts, status, callback, tab):
         subfunc_file.get_details_from_remote_setting_json(
             tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
-    subfunc_wechat.kill_sw_multiple_processes(tab)
+    subfunc_sw.kill_sw_multiple_processes(tab)
     time.sleep(0.5)
     subfunc_file.clear_all_acc_in_acc_json(tab)
     subfunc_file.update_all_acc_in_acc_json(tab)
@@ -143,8 +143,8 @@ def auto_login_accounts(accounts, status, callback, tab):
             break
 
         # 打开微信
-        has_mutex_dict = subfunc_wechat.get_mutex_dict(tab)
-        sub_exe_process, sub_exe = subfunc_wechat.open_wechat(status, has_mutex_dict, tab)
+        has_mutex_dict = subfunc_sw.get_mutex_dict(tab)
+        sub_exe_process, sub_exe = subfunc_sw.open_sw(tab, status, has_mutex_dict)
 
         # 等待打开窗口
         end_time = time.time() + 20
@@ -187,7 +187,7 @@ def auto_login_accounts(accounts, status, callback, tab):
 
     # 循环登录完成
     # 如果有，关掉多余的多开器
-    subfunc_wechat.kill_sw_multiple_processes(tab)
+    subfunc_sw.kill_sw_multiple_processes(tab)
 
     def func():
         # 两轮点击所有窗口的登录，防止遗漏

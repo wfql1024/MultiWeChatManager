@@ -221,10 +221,8 @@ class MainWindow:
         self.on_tab_change(_event=None)
 
     def load_on_startup(self):
-        """启动时检查载入"""
-
+        """启动时关闭等待窗口，并检查配置是否有错误"""
         # print(f"启动自检中...")
-
         def func_thread():
             self.check_and_init()
             if hasattr(self, 'loading_class') and self.loading_class:
@@ -243,7 +241,7 @@ class MainWindow:
             logger.error(e)
 
     def check_and_init(self):
-        """检查和初始化"""
+        """检查是否有配置错误"""
         # print(f"初始化检查.........................................................")
 
         if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
@@ -305,20 +303,6 @@ class MainWindow:
                                           command=partial(self.open_settings, self.sw))
         self.settings_button.pack()
 
-    def reload_thread(self):
-        """更改非重要设置后刷新"""
-        print(f"改动模式后刷新...")
-
-        def reload_func():
-            self.root.after(0, self.create_root_menu_bar)
-            self.root.after(0, self.refresh_main_frame)
-
-        try:
-            # 线程启动获取登录情况和渲染列表
-            threading.Thread(target=reload_func).start()
-        except Exception as e:
-            logger.error(e)
-
     def on_tab_change(self, _event):
         """处理选项卡变化事件，排除特殊选项卡"""
         print("切换选项卡响应中...")
@@ -328,11 +312,11 @@ class MainWindow:
         selected_tab = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
         if selected_tab:
             func_setting.toggle_tab_record(selected_tab)
-            self.select_current_tab()
+            self.recognize_curr_tab_and_refresh()
             print(f"当前选项卡: {selected_tab}")
 
-    def select_current_tab(self):
-        """确认选项卡并简单载入"""
+    def recognize_curr_tab_and_refresh(self):
+        """确认选项卡并载入"""
         self.sw = func_setting.fetch_global_setting_or_set_default("tab")
         # print(f"切换前：{self.tab_frame}")
         # print(self.tab_dict)
@@ -344,7 +328,21 @@ class MainWindow:
         # 若标签页为空则创建
         if len(self.tab_frame.winfo_children()) == 0:
             threading.Thread(target=self.check_and_init)
-        self.reload_thread()
+        self.refresh()
+
+    def refresh(self):
+        """刷新菜单和界面"""
+        print(f"刷新菜单与界面...")
+
+        def reload_func():
+            self.root.after(0, self.create_root_menu_bar)
+            self.root.after(0, self.refresh_main_frame)
+
+        try:
+            # 线程启动获取登录情况和渲染列表
+            threading.Thread(target=reload_func).start()
+        except Exception as e:
+            logger.error(e)
 
     def create_root_menu_bar(self):
         """创建菜单栏"""
@@ -401,17 +399,17 @@ class MainWindow:
         self.file_menu.add_command(label="创建程序快捷方式", command=func_file.create_app_lnk)
         # -创建快捷启动
         quick_start_sp, = subfunc_file.get_details_from_remote_setting_json(self.sw, support_quick_start=None)
-        print(f"支持快捷启动：{quick_start_sp}")
+        # print(f"支持快捷启动：{quick_start_sp}")
         self.file_menu.add_command(label="创建快捷启动",
                                    command=partial(func_file.create_multiple_lnk,
                                                    self.sw, self.multiple_status, self.refresh_main_frame),
-                                   state="disabled" if not quick_start_sp is True else "normal")
+                                   state="normal" if quick_start_sp is True else "disabled")
 
         # ————————————————————————————编辑菜单————————————————————————————
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
         # -刷新
-        self.edit_menu.add_command(label="刷新", command=self.refresh_main_frame)
+        self.edit_menu.add_command(label="刷新", command=self.refresh)
 
         # ————————————————————————————视图菜单————————————————————————————
         self.chosen_view = func_setting.fetch_sw_setting_or_set_default("view", self.sw)
@@ -433,7 +431,7 @@ class MainWindow:
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
         self.view_options_menu.add_checkbutton(label="显示状态标志", variable=self.sign_visibility_var,
                                                command=partial(func_setting.toggle_sign_visibility,
-                                                               not self.sign_visibility, self.reload_thread))
+                                                               not self.sign_visibility, self.refresh))
         if self.chosen_view == "classic":
             # 添加经典视图的菜单项
             pass
@@ -527,7 +525,7 @@ class MainWindow:
                 label='python',
                 value='python',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'python', self.reload_thread),
+                command=partial(func_setting.toggle_sub_executable, 'python', self.refresh),
                 state='disabled' if not python_sp else 'normal'
             )
             # 添加 强力Python 的单选按钮
@@ -535,7 +533,7 @@ class MainWindow:
                 label='python[S]',
                 value='python[S]',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'python[S]', self.reload_thread),
+                command=partial(func_setting.toggle_sub_executable, 'python[S]', self.refresh),
                 state='disabled' if not python_s_sp else 'normal'
             )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
@@ -544,7 +542,7 @@ class MainWindow:
                 label='handle',
                 value='handle',
                 variable=self.chosen_sub_exe_var,
-                command=partial(func_setting.toggle_sub_executable, 'handle', self.reload_thread),
+                command=partial(func_setting.toggle_sub_executable, 'handle', self.refresh),
                 state='disabled' if not handle_sp else 'normal'
             )
             self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
@@ -558,7 +556,7 @@ class MainWindow:
                     label=right_part,
                     value=file_name,
                     variable=self.chosen_sub_exe_var,
-                    command=partial(func_setting.toggle_sub_executable, file_name, self.reload_thread)
+                    command=partial(func_setting.toggle_sub_executable, file_name, self.refresh)
                 )
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.load_on_startup))
@@ -686,6 +684,11 @@ class MainWindow:
         func_account.silent_get_and_config(login, logout, self.sw_data_dir,
                                            self.refresh_main_frame, self.sw)
 
+    def reset_and_refresh(self):
+        """重新配置设置后调用"""
+        self.check_and_init()
+        self.refresh()
+
     def bind_mouse_wheel(self, widget):
         """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
         widget.bind("<MouseWheel>", self.on_mousewheel, add='+')
@@ -738,15 +741,16 @@ class MainWindow:
 
     def change_classic_view(self):
         self.root.unbind("<Configure>")
-        func_setting.toggle_view("classic", self.reload_thread, self.sw)
+        func_setting.toggle_view("classic", self.refresh, self.sw)
 
     def change_tree_view(self):
-        func_setting.toggle_view("tree", self.reload_thread, self.sw)
+        func_setting.toggle_view("tree", self.refresh, self.sw)
 
     def open_settings(self, tab):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
-        setting_ui.SettingWindow(settings_window, tab, self.multiple_status, self.load_on_startup)
+        setting_ui.SettingWindow(settings_window, tab, self.multiple_status,
+                                 self.reset_and_refresh)
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
@@ -765,7 +769,7 @@ class MainWindow:
                     "检测到正在使用微信。切换模式需要修改 WechatWin.dll 文件，请先手动退出所有微信后再进行，否则将会强制关闭微信进程。"
                 )
                 if not answer:
-                    self.select_current_tab()
+                    self.recognize_curr_tab_and_refresh()
                     return
 
         try:
@@ -781,7 +785,7 @@ class MainWindow:
         except Exception as e:
             messagebox.showerror("错误", f"操作失败: {str(e)}")
         finally:
-            self.reload_thread()
+            self.refresh()
 
     def open_rewards(self):
         """打开支持窗口"""
@@ -815,7 +819,7 @@ class MainWindow:
     def to_enable_new_func(self):
         subfunc_file.set_enable_new_func_in_ini()
         messagebox.showinfo("发现彩蛋", "解锁新菜单，快去看看吧！")
-        self.reload_thread()
+        self.refresh()
 
     def manual_login_account(self):
         """按钮：手动登录"""

@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_login, func_account, subfunc_file, func_setting, subfunc_wechat
+from functions import func_config, func_login, func_account, subfunc_file, func_setting, subfunc_sw
 from functions.func_setting import fetch_global_setting_or_set_default
 from resources import Constants, Strings
 from ui import detail_ui
@@ -522,7 +522,7 @@ class TreeviewRowUI:
         if len(item_id) == 0:
             return
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            subfunc_wechat.switch_to_sw_account_wnd(
+            subfunc_sw.switch_to_sw_account_wnd(
                 self.chosen_tab, tree.item(item_id, "values")[self.acc_index], self.root)
         else:
             if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发

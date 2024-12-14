@@ -54,7 +54,7 @@ def get_mutex_dict(sw):
     return has_mutex_dict
 
 
-def open_wechat(status, has_mutex_dictionary=None, sw="WeChat"):
+def open_sw(sw, status, has_mutex_dictionary=None):
     """
     根据状态以不同方式打开微信
     :param sw: 选择软件标签
@@ -174,7 +174,7 @@ def get_login_size(tab, status):
 
     kill_sw_multiple_processes(tab)
     has_mutex_dict = get_mutex_dict(tab)
-    sub_exe_process, sub_exe = open_wechat(status, has_mutex_dict, sw=tab)
+    sub_exe_process, sub_exe = open_sw(tab, status, has_mutex_dict)
     wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, timeout=8)
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")
