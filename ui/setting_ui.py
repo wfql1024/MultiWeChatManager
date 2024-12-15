@@ -40,7 +40,7 @@ class SettingWindow:
         self.install_path_entry.grid(row=0, column=1, **Constants.WE_GRID_PACK)
 
         self.install_get_button = ttk.Button(wnd, text="获取",
-                                             command=partial(self.load_or_get_sw_inst_path, True, self.tab))
+                                             command=partial(self.load_or_get_sw_inst_path, self.tab, True))
         self.install_get_button.grid(row=0, column=2, **Constants.WE_GRID_PACK)
 
         self.install_choose_button = ttk.Button(wnd, text="选择路径",
@@ -56,7 +56,7 @@ class SettingWindow:
         self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
 
         self.data_get_button = ttk.Button(wnd, text="获取",
-                                          command=partial(self.load_or_get_sw_data_path, True, self.tab))
+                                          command=partial(self.load_or_get_sw_data_path, self.tab, True))
         self.data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
 
         self.data_choose_button = ttk.Button(wnd, text="选择路径",
@@ -72,7 +72,7 @@ class SettingWindow:
         self.dll_path_entry.grid(row=2, column=1, **Constants.WE_GRID_PACK)
 
         self.dll_get_button = ttk.Button(wnd, text="获取",
-                                         command=partial(self.load_or_get_sw_dll_dir, True, self.tab))
+                                         command=partial(self.load_or_get_sw_dll_dir, self.tab, True))
         self.dll_get_button.grid(row=2, column=2, **Constants.WE_GRID_PACK)
 
         self.dll_choose_button = ttk.Button(wnd, text="选择路径",
@@ -87,7 +87,8 @@ class SettingWindow:
         self.version_entry = tk.Entry(wnd, textvariable=self.version_var, state='readonly', width=70)
         self.version_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
 
-        self.screen_size_get_button = ttk.Button(wnd, text="获取", command=partial(self.get_cur_sw_ver, self.tab))
+        self.screen_size_get_button = ttk.Button(wnd, text="获取",
+                                                 command=partial(self.get_cur_sw_ver, self.tab, True))
         self.screen_size_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第五行 - 屏幕大小
@@ -121,10 +122,10 @@ class SettingWindow:
         wnd.grid_columnconfigure(1, weight=1)
 
         # 初始加载已经配置的，或是没有配置的话自动获取
-        self.load_or_get_sw_inst_path(click=False, sw=self.tab)
-        self.load_or_get_sw_data_path(click=False, sw=self.tab)
-        self.load_or_get_sw_dll_dir(click=False, sw=self.tab)
-        self.get_cur_sw_ver(sw=self.tab)
+        self.load_or_get_sw_inst_path(self.tab, False)
+        self.load_or_get_sw_data_path(self.tab, False)
+        self.load_or_get_sw_dll_dir(self.tab, False)
+        self.get_cur_sw_ver(self.tab, False)
         self.get_screen_size()
         login_size = subfunc_file.get_sw_login_size_from_setting_ini(sw=self.tab)
         self.login_size_var.set(login_size)
@@ -154,7 +155,7 @@ class SettingWindow:
         subfunc_file.save_sw_dll_dir_to_setting_ini(self.dll_dir_path, sw=self.tab)
         return True
 
-    def load_or_get_sw_dll_dir(self, click=False, sw="WeChat"):
+    def load_or_get_sw_dll_dir(self, sw="WeChat", click=False):
         path = func_setting.get_sw_dll_dir(sw, click)
         if path:
             self.dll_path_var.set(path.replace('\\', '/'))
@@ -186,7 +187,7 @@ class SettingWindow:
             else:
                 messagebox.showerror("错误", "请选择包含WeChatWin.dll的版本号最新的文件夹")
 
-    def load_or_get_sw_inst_path(self, click=False, sw="WeChat"):
+    def load_or_get_sw_inst_path(self, sw="WeChat", click=False):
         # print(sw)
         path = func_setting.get_sw_install_path(sw, click)
         if path:
@@ -206,7 +207,7 @@ class SettingWindow:
             else:
                 messagebox.showerror("错误", "请选择WeChat.exe文件")
 
-    def load_or_get_sw_data_path(self, click=False, sw="WeChat"):
+    def load_or_get_sw_data_path(self, sw="WeChat", click=False):
         path = func_setting.get_sw_data_dir(sw, click)
         if click is True:
             self.need_to_clear_acc = True
@@ -242,9 +243,9 @@ class SettingWindow:
             else:
                 messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
 
-    def get_cur_sw_ver(self, sw):
+    def get_cur_sw_ver(self, sw, click):
         print("获取版本号")
-        inst_path, version = func_setting.get_sw_inst_path_and_ver(sw)
+        inst_path, version = func_setting.get_sw_inst_path_and_ver(sw, click)
         self.version_var.set(version)
 
     def get_screen_size(self):

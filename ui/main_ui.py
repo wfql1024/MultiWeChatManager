@@ -333,6 +333,10 @@ class MainWindow:
     def refresh(self):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
+        # 只读取ini中存储的配置
+        self.sw_data_dir = func_setting.get_sw_data_dir(self.sw, False)
+        self.sw_inst_path, self.sw_ver = func_setting.get_sw_inst_path_and_ver(self.sw, False)
+        self.sw_dll_dir = func_setting.get_sw_dll_dir(self.sw, False)
 
         def reload_func():
             self.root.after(0, self.create_root_menu_bar)
@@ -483,41 +487,40 @@ class MainWindow:
         self.revoke_status, _, _ = func_sw_dll.check_dll(
             self.sw, "revoke", self.sw_dll_dir, self.sw_ver)
         if self.revoke_status == "不可用":
-            self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}", state="disabled")
+            self.settings_menu.add_command(label=f"防撤回      {self.revoke_status}", state="disabled")
         elif self.revoke_status.startswith("错误"):
             self.revoke_err = tk.Menu(self.settings_menu, tearoff=False)
-            self.settings_menu.add_cascade(label="防撤回   错误!", menu=self.revoke_err, foreground="red")
+            self.settings_menu.add_cascade(label="防撤回      错误!", menu=self.revoke_err, foreground="red")
             self.revoke_err.add_command(label=f"[点击复制]{self.revoke_status}", foreground="red",
                                         command=lambda: self.root.clipboard_append(self.revoke_status))
         else:
-            self.settings_menu.add_command(label=f"防撤回   {self.revoke_status}",
+            self.settings_menu.add_command(label=f"防撤回      {self.revoke_status}",
                                            command=partial(self.toggle_patch_mode, mode="revoke"))
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         # -全局多开
         self.multiple_status, _, _ = func_sw_dll.check_dll(
             self.sw, "multiple", self.sw_dll_dir, self.sw_ver)
         if self.multiple_status == "不可用":
-            self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}", state="disabled")
+            self.settings_menu.add_command(label=f"全局多开  {self.multiple_status}", state="disabled")
         elif self.multiple_status.startswith("错误"):
             self.multiple_err = tk.Menu(self.settings_menu, tearoff=False)
-            self.settings_menu.add_cascade(label="全局多开 错误!", menu=self.multiple_err, foreground="red")
+            self.settings_menu.add_cascade(label="全局多开  错误!", menu=self.multiple_err, foreground="red")
             self.multiple_err.add_command(label=f"[点击复制]{self.multiple_status}", foreground="red",
                                           command=lambda: self.root.clipboard_append(self.multiple_status))
         else:
-            self.settings_menu.add_command(label=f"全局多开 {self.multiple_status}",
+            self.settings_menu.add_command(label=f"全局多开  {self.multiple_status}",
                                            command=partial(self.toggle_patch_mode, mode="multiple"))
         # >多开子程序选择
         self.chosen_sub_exe_var = tk.StringVar()  # 用于跟踪当前选中的子程序
         # 检查状态
         if self.multiple_status == "已开启":
-            self.settings_menu.add_command(label="子程序   不需要")
-            self.settings_menu.entryconfig("子程序   不需要", state="disable")
+            self.settings_menu.add_command(label="其余模式", state="disabled")
         else:
             self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=False)
             # 获取已选择的子程序（假设 func_setting.fetch_sub_exe() 返回 'python', 'handle' 或其他值）
             self.chosen_sub_exe = func_setting.fetch_sw_setting_or_set_default("sub_exe", self.sw)
             self.chosen_sub_exe_var.set(self.chosen_sub_exe)  # 设置初始选中的子程序
-            self.settings_menu.add_cascade(label="子程序     选择", menu=self.sub_executable_menu)
+            self.settings_menu.add_cascade(label="其余模式", menu=self.sub_executable_menu)
             python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
                 self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
             # 添加 Python 的单选按钮
@@ -545,19 +548,20 @@ class MainWindow:
                 command=partial(func_setting.toggle_sub_executable, 'handle', self.refresh),
                 state='disabled' if not handle_sp else 'normal'
             )
-            self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
             # 动态添加外部子程序
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
             exe_files = glob.glob(os.path.join(external_res_path, f"{self.sw}Multiple_*.exe"))
-            for exe_file in exe_files:
-                file_name = os.path.basename(exe_file)
-                right_part = file_name.split('_', 1)[1].rsplit('.exe', 1)[0]
-                self.sub_executable_menu.add_radiobutton(
-                    label=right_part,
-                    value=file_name,
-                    variable=self.chosen_sub_exe_var,
-                    command=partial(func_setting.toggle_sub_executable, file_name, self.refresh)
-                )
+            if len(exe_files) != 0:
+                self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
+                for exe_file in exe_files:
+                    file_name = os.path.basename(exe_file)
+                    right_part = file_name.split('_', 1)[1].rsplit('.exe', 1)[0]
+                    self.sub_executable_menu.add_radiobutton(
+                        label=right_part,
+                        value=file_name,
+                        variable=self.chosen_sub_exe_var,
+                        command=partial(func_setting.toggle_sub_executable, file_name, self.refresh)
+                    )
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.load_on_startup))
 

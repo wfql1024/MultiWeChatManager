@@ -6,7 +6,7 @@ from tkinter import ttk
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_login, func_account, subfunc_file, subfunc_sw
+from functions import func_config, func_login, func_account, subfunc_file, subfunc_sw, func_setting
 from resources import Constants
 from ui import detail_ui
 from utils import string_utils, widget_utils
@@ -52,12 +52,13 @@ class AccountRow:
         # print(f"加载头像区域用时{time.time() - self.start_time:.4f}秒")
 
         # 账号标签
+        self.sign_visible: bool = func_setting.fetch_global_setting_or_set_default("sign_visible") == "True"
         wrapped_display_name = func_account.get_acc_wrapped_display_name(self.chosen_tab, account)
         has_mutex, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, has_mutex=None)
         style = ttk.Style()
         style.configure("Mutex.TLabel", foreground="red")
         try:
-            if has_mutex:
+            if has_mutex and self.sign_visible:
                 self.account_label = ttk.Label(self.row_frame, text=wrapped_display_name, style="Mutex.TLabel")
             else:
                 self.account_label = ttk.Label(self.row_frame, text=wrapped_display_name)
@@ -66,7 +67,7 @@ class AccountRow:
             logger.warning(e)
             # 清理 display_name
             cleaned_display_name = string_utils.clean_display_name(wrapped_display_name)
-            if has_mutex:
+            if has_mutex and self.sign_visible:
                 self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name, style="Mutex.TLabel")
             else:
                 self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name)

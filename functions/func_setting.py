@@ -127,10 +127,10 @@ def get_sw_dll_dir(sw, from_setting_window=False):
     return None
 
 
-def get_sw_inst_path_and_ver(sw):
+def get_sw_inst_path_and_ver(sw, from_setting_window=False):
     """获取当前使用的版本号"""
     # print(sw)
-    install_path = get_sw_install_path(sw=sw)
+    install_path = get_sw_install_path(sw, from_setting_window)
     # print(install_path)
     if install_path is not None:
         if os.path.exists(install_path):

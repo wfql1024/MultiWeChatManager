@@ -6,7 +6,6 @@ from tkinter import ttk, messagebox
 from PIL import ImageTk, Image
 
 from functions import func_config, func_login, func_account, subfunc_file, func_setting, subfunc_sw
-from functions.func_setting import fetch_global_setting_or_set_default
 from resources import Constants, Strings
 from ui import detail_ui
 from utils import widget_utils, string_utils
@@ -42,7 +41,7 @@ class TreeviewRowUI:
         self.main_frame = root_main_frame
         self.tree_frame = tk.Frame(self.main_frame)
         self.tree_frame.pack(expand=True, fill=tk.BOTH)
-        self.sign_visible:bool = fetch_global_setting_or_set_default("sign_visible") == "True"
+        self.sign_visible:bool = func_setting.fetch_global_setting_or_set_default("sign_visible") == "True"
 
         # print(self.chosen_tab)
         # 加载列表排序设置
