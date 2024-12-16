@@ -1,3 +1,4 @@
+import subprocess
 import time
 
 import psutil
@@ -90,13 +91,13 @@ def open_sw(sw, status, has_mutex_dictionary=None):
         if multiple_mode == "WeChatMultiple_Anhkgg.exe":
             sub_exe_process = create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{multiple_mode}",
-                creation_flags=process_utils.CREATE_NO_WINDOW
+                creation_flags=subprocess.CREATE_NO_WINDOW
             )
         # ————————————————————————————————WeChatMultiple_wfql.exe————————————————————————————————
         elif multiple_mode == "WeChatMultiple_wfql.exe":
             sub_exe_process = create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{multiple_mode}",
-                creation_flags=process_utils.CREATE_NO_WINDOW
+                creation_flags=subprocess.CREATE_NO_WINDOW
             )
         # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
         elif multiple_mode == "WeChatMultiple_lyie15.exe":
@@ -190,7 +191,7 @@ def get_login_size(tab, status):
         return login_width, login_height
 
 
-def create_process_without_admin(executable, args=None, creation_flags=process_utils.CREATE_NEW_CONSOLE):
+def create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
     if (sys_utils.get_sys_major_version_name() == "win11" or
             sys_utils.get_sys_major_version_name() == "win10"):
         return process_utils.create_process_with_medium_il(executable, args, creation_flags)

@@ -31,12 +31,12 @@ user32 = ctypes.WinDLL('user32', use_last_error=True)
 
 # 常量定义
 CREATE_NO_WINDOW = 0x08000000  # 隐藏窗口
+CREATE_NEW_CONSOLE = 0x00000010
 PROCESS_QUERY_INFORMATION = 0x0400
 TOKEN_DUPLICATE = 0x0002
 TOKEN_ALL_ACCESS = 0xF01FF
 SecurityImpersonation = 2
 TokenPrimary = 1
-CREATE_NEW_CONSOLE = 0x00000010
 
 # 函数声明
 OpenProcess.restype = HANDLE
@@ -262,7 +262,7 @@ def create_process_for_win7(executable, args=None, creation_flags=0):
         return None
 
 
-def create_process_with_medium_il(executable, args=None, creation_flags=CREATE_NEW_CONSOLE):
+def create_process_with_medium_il(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
     """
     以文件管理器的令牌打开可执行文件
     :param executable: 可执行文件

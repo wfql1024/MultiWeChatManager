@@ -84,7 +84,8 @@ def close_sw_mutex_by_handle(handle_exe, exe, dict_list):
             start_time = time.time()
 
             # 获取句柄信息
-            handle_info = subprocess.check_output([handle_exe, '-a', '-p', exe, handle_name]).decode()
+            handle_info = subprocess.check_output([handle_exe, '-a', '-p', exe, handle_name],
+                                                  creationflags=subprocess.CREATE_NO_WINDOW).decode()
             print(f"完成获取句柄信息：{handle_info}")
             print(f"{time.time() - start_time}")
 
