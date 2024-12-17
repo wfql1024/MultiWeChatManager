@@ -8,14 +8,14 @@ from utils import process_utils
 from utils.logger_utils import mylogger as logger
 
 
-def is_valid_sw_install_path(path, sw="WeChat") -> bool:
+def is_valid_sw_install_path(path, sw) -> bool:
     if path and path != "":
         return os.path.exists(path)
     else:
         return False
 
 
-def is_valid_sw_data_dir(path, sw="WeChat") -> bool:
+def is_valid_sw_data_dir(path, sw) -> bool:
     if path is None:
         return False
     if path == "":
@@ -27,7 +27,7 @@ def is_valid_sw_data_dir(path, sw="WeChat") -> bool:
     return os.path.exists(config_data_path)
 
 
-def is_valid_sw_dll_dir(path, sw="WeChat") -> bool:
+def is_valid_sw_dll_dir(path, sw) -> bool:
     if path is None:
         return False
     if path == "":
@@ -36,7 +36,7 @@ def is_valid_sw_dll_dir(path, sw="WeChat") -> bool:
     return os.path.isfile(os.path.join(path, suffix))
 
 
-def get_sw_install_path_from_process(sw="WeChat"):
+def get_sw_install_path_from_process(sw):
     executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
     results = []
     for process in psutil.process_iter(['name', 'exe']):
@@ -48,7 +48,7 @@ def get_sw_install_path_from_process(sw="WeChat"):
     return results
 
 
-def get_sw_install_path_from_machine_register(sw="WeChat"):
+def get_sw_install_path_from_machine_register(sw):
     sub_key, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, mac_reg_sub_key=None, executable=None)
     results = []
@@ -73,7 +73,7 @@ def get_sw_install_path_from_machine_register(sw="WeChat"):
     return results
 
 
-def get_sw_install_path_from_user_register(sw="WeChat"):
+def get_sw_install_path_from_user_register(sw):
     sub_key, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, user_reg_sub_key=None, executable=None)
     results = []
@@ -89,7 +89,7 @@ def get_sw_install_path_from_user_register(sw="WeChat"):
     return results
 
 
-def get_sw_install_path_by_guess(sw="WeChat"):
+def get_sw_install_path_by_guess(sw):
     suffix, = subfunc_file.get_details_from_remote_setting_json(sw, inst_path_guess_suffix=None)
     guess_paths = [
         os.path.join(os.environ.get('ProgramFiles'), suffix).replace('\\', '/'),
@@ -98,7 +98,7 @@ def get_sw_install_path_by_guess(sw="WeChat"):
     return guess_paths
 
 
-def get_sw_data_dir_from_user_register(sw="WeChat"):
+def get_sw_data_dir_from_user_register(sw):
     sub_key, dir_name = subfunc_file.get_details_from_remote_setting_json(
         sw, user_reg_sub_key=None, data_dir_name=None)
     results = []
@@ -113,7 +113,7 @@ def get_sw_data_dir_from_user_register(sw="WeChat"):
     return results
 
 
-def get_sw_data_dir_by_guess(sw="WeChat"):
+def get_sw_data_dir_by_guess(sw):
     data_dir_name, data_dir_guess_suffix = subfunc_file.get_details_from_remote_setting_json(
         sw, data_dir_name=None, data_dir_guess_suffix=None)
     guess_paths = [
@@ -122,7 +122,7 @@ def get_sw_data_dir_by_guess(sw="WeChat"):
     return guess_paths
 
 
-def get_sw_dll_dir_by_memo_maps(sw="WeChat"):
+def get_sw_dll_dir_by_memo_maps(sw):
     dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, dll_dir_check_suffix=None, executable=None)
     results = []
@@ -147,9 +147,3 @@ def get_sw_dll_dir_by_memo_maps(sw="WeChat"):
         except Exception as e:
             logger.error(f"发生意外错误: {e}")
     return results
-
-
-if __name__ == '__main__':
-    test_path = 'E:data/Tencent/WeChat Files'
-    print(is_valid_sw_data_dir(test_path))
-    print(os.path.abspath(test_path))

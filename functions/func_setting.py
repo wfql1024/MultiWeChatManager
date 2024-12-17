@@ -4,7 +4,7 @@ from tkinter import messagebox, simpledialog
 
 from functions import subfunc_file
 from resources import Config
-from utils import ini_utils, wechat_utils, file_utils
+from utils import ini_utils, sw_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -54,11 +54,11 @@ def get_sw_install_path(sw, from_setting_window=False):
     """获取微信安装路径"""
     print("获取安装路径...")
     path_finders = [
-        wechat_utils.get_sw_install_path_from_process,
+        sw_utils.get_sw_install_path_from_process,
         None if from_setting_window else subfunc_file.get_sw_install_path_from_setting_ini,
-        wechat_utils.get_sw_install_path_from_machine_register,
-        wechat_utils.get_sw_install_path_from_user_register,
-        wechat_utils.get_sw_install_path_by_guess,
+        sw_utils.get_sw_install_path_from_machine_register,
+        sw_utils.get_sw_install_path_from_user_register,
+        sw_utils.get_sw_install_path_by_guess,
     ]
 
     for index, finder in enumerate(path_finders):
@@ -67,7 +67,7 @@ def get_sw_install_path(sw, from_setting_window=False):
             if len(path_list) == 0 or path_list is None:
                 continue
             for path in path_list:
-                if wechat_utils.is_valid_sw_install_path(path, sw):
+                if sw_utils.is_valid_sw_install_path(path, sw):
                     standardized_path = os.path.abspath(path).replace('\\', '/')
                     subfunc_file.save_sw_install_path_to_setting_ini(standardized_path, sw)
                     logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
@@ -81,8 +81,8 @@ def get_sw_data_dir(sw, from_setting_window=False):
     # 获取地址的各种方法
     path_finders = [
         None if from_setting_window else subfunc_file.get_sw_data_dir_from_setting_ini,
-        wechat_utils.get_sw_data_dir_from_user_register,
-        wechat_utils.get_sw_data_dir_by_guess,
+        sw_utils.get_sw_data_dir_from_user_register,
+        sw_utils.get_sw_data_dir_by_guess,
         get_sw_data_dir_from_other_sw,
     ]
 
@@ -96,7 +96,7 @@ def get_sw_data_dir(sw, from_setting_window=False):
                 continue
             # 对得到地址进行检验，正确则返回并保存
             for path in path_list:
-                if wechat_utils.is_valid_sw_data_dir(path, sw):
+                if sw_utils.is_valid_sw_data_dir(path, sw):
                     standardized_path = os.path.abspath(path).replace('\\', '/')
                     subfunc_file.save_sw_data_dir_to_setting_ini(standardized_path, sw)
                     logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
@@ -109,7 +109,7 @@ def get_sw_dll_dir(sw, from_setting_window=False):
     print("获取dll目录...")
     path_finders = [
         None if from_setting_window else subfunc_file.get_sw_dll_dir_from_setting_ini,
-        wechat_utils.get_sw_dll_dir_by_memo_maps,
+        sw_utils.get_sw_dll_dir_by_memo_maps,
         get_sw_dll_dir_by_files,
     ]
     for index, finder in enumerate(path_finders):
@@ -119,7 +119,7 @@ def get_sw_dll_dir(sw, from_setting_window=False):
                 continue
             # 对得到地址进行检验，正确则返回并保存
             for path in path_list:
-                if wechat_utils.is_valid_sw_dll_dir(path, sw):
+                if sw_utils.is_valid_sw_dll_dir(path, sw):
                     standardized_path = os.path.abspath(path).replace('\\', '/')
                     subfunc_file.save_sw_dll_dir_to_setting_ini(standardized_path, sw)
                     logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")

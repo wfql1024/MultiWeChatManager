@@ -8,7 +8,7 @@ import win32com.client
 
 from functions import func_setting, subfunc_sw, subfunc_file
 from resources import Constants
-from utils import wechat_utils, hwnd_utils
+from utils import sw_utils, hwnd_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -181,7 +181,7 @@ class SettingWindow:
                 except Exception as e:
                     print(f"win32com.client 也失败了: {e}")
                     return
-            if wechat_utils.is_valid_sw_dll_dir(path, sw):
+            if sw_utils.is_valid_sw_dll_dir(path, sw):
                 self.dll_path_var.set(path)
                 break
             else:
@@ -201,7 +201,7 @@ class SettingWindow:
             if not path:  # 用户取消选择
                 return
             path = path.replace('\\', '/')
-            if wechat_utils.is_valid_sw_install_path(path, sw):
+            if sw_utils.is_valid_sw_install_path(path, sw):
                 self.install_path_var.set(path)
                 break
             else:
@@ -237,7 +237,7 @@ class SettingWindow:
                 except Exception as e:
                     logger.error(f"win32com.client 也失败了: {e}")
                     return
-            if wechat_utils.is_valid_sw_data_dir(path, sw):
+            if sw_utils.is_valid_sw_data_dir(path, sw):
                 self.data_path_var.set(path)
                 break
             else:
