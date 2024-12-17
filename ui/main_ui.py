@@ -224,7 +224,7 @@ class MainWindow:
         """启动时关闭等待窗口，并检查配置是否有错误"""
         # print(f"启动自检中...")
         def func_thread():
-            self.check_and_init()
+            # self.check_and_init()
             if hasattr(self, 'loading_class') and self.loading_class:
                 # print("主程序关闭等待窗口")
                 self.loading_class.auto_close()
@@ -322,9 +322,6 @@ class MainWindow:
         # print(self.tab_dict)
         self.tab_frame = self.tab_dict[self.sw]['frame']
         # print(f"切换后：{self.tab_frame}")
-        self.sw_data_dir = func_setting.get_sw_data_dir(self.sw)
-        self.sw_inst_path, self.sw_ver = func_setting.get_sw_inst_path_and_ver(self.sw)
-        self.sw_dll_dir = func_setting.get_sw_dll_dir(self.sw)
         # 若标签页为空则创建
         if len(self.tab_frame.winfo_children()) == 0:
             threading.Thread(target=self.check_and_init)
