@@ -135,8 +135,8 @@ def auto_login_accounts(accounts, status, callback, tab):
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
         # 读取配置
-        result = func_config.use_config(accounts[j], tab)
-        if result:
+        success, _ = func_config.operate_config('use', tab, accounts[j])
+        if success:
             print(f"{accounts[j]}:复制配置文件成功")
         else:
             print(f"{accounts[j]}:复制配置文件失败")

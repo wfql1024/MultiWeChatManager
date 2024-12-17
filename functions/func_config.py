@@ -38,140 +38,75 @@ def get_config_status_by_account(account, data_path, sw="WeChat") -> str:
         return "无配置"
 
 
-def use_config(account, sw="WeChat"):
+def operate_config(method, sw, account):
     """
-    使用账号对应的登录配置
+    使用use或add操作账号对应的登录配置
+    :param method: 操作方法
     :param sw: 选择的软件标签
     :param account: 账号
-    :return: 是否成功应用配置
+    :return: 是否成功，携带的信息
     """
-    data_path = func_setting.get_sw_data_dir(sw=sw)
+    if method not in ["use", "add"]:
+        logger.error("未知字段：" + method)
+        return False, "未知字段"
+    data_path = func_setting.get_sw_data_dir(sw)
     if not data_path:
-        messagebox.showerror("错误", "无法获取WeChat数据路径")
-        return False
-    config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
+        return False, "无法获取WeChat数据路径"
+    config_path_suffix, cfg_items = subfunc_file.get_details_from_remote_setting_json(
         sw, config_path_suffix=None, config_file_list=None)
 
-    # 移除所有文件
-    for item in config_files:
-        # print(account, item)
+    origin_acc_dict = dict()
+    # 构建相关文件列表
+    for item in cfg_items:
         # 拼接出源配置路径
-        config_path = os.path.join(str(data_path), str(config_path_suffix), str(item)).replace("\\", "/")
-        if os.path.isfile(config_path):
-            try:
-                os.remove(config_path)
-            except Exception as e:
-                logger.error(e)
-                messagebox.showerror("错误", f"复制配置文件时发生错误：{str(e)}")
-                return False
-        elif os.path.isdir(config_path):
-            try:
-                shutil.rmtree(config_path)
-            except Exception as e:
-                logger.error(e)
-                messagebox.showerror("错误", f"复制配置文件时发生错误：{str(e)}")
-                return False
-        else:
-            logger.error(f"配置文件不存在：{config_path}")
-            # messagebox.showerror("错误", f"配置文件不存在：{config_path}")
-            # return False
-
-    # 拷贝新的配置文件
-    for item in config_files:
-        # 拼接出源配置路径
-        config_path = os.path.join(str(data_path), str(config_path_suffix), str(item)).replace("\\", "/")
+        origin_cfg_path = os.path.join(str(data_path), str(config_path_suffix), str(item)).replace("\\", "/")
         # 提取源配置文件的后缀
-        file_suffix = item.split(".")[-1]
+        item_suffix = item.split(".")[-1]
+        acc_cfg_item = f"{account}.{item_suffix}"
+        acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), acc_cfg_item)
+                        .replace("\\", "/"))
+        # 构建配置字典
+        origin_acc_dict.update({origin_cfg_path: acc_cfg_path})
+        print(item, origin_cfg_path, item_suffix, acc_cfg_item, acc_cfg_path, origin_acc_dict)
 
-        dest_filename = f"{account}.{file_suffix}"
-        acc_config_path = (os.path.join(str(data_path), str(config_path_suffix), dest_filename)
-                           .replace("\\", "/"))
+    paths_to_del = list(origin_acc_dict.keys()) if method == "use" else list(origin_acc_dict.values())
 
-        # print(item, file_suffix, dest_filename, acc_config_path)
+    # 移除配置项
+    for p in paths_to_del:
+        try:
+            if os.path.isfile(p):
+                os.remove(p)
+            elif os.path.isdir(p):
+                shutil.rmtree(p)
+            else:
+                logger.error(f"配置项目异常：{p}")
+        except Exception as e:
+            logger.error(e)
+            return False, f"移除配置项目时发生错误：{str(e)}"
 
-        if os.path.isfile(acc_config_path):
-            try:
-                shutil.copy2(acc_config_path, config_path, follow_symlinks=False)
-            except Exception as e:
-                logger.error(e)
-                messagebox.showerror("错误", f"复制配置文件时发生错误：{str(e)}")
-                return False
-        elif os.path.isdir(acc_config_path):
-            try:
-                shutil.copytree(acc_config_path, config_path, symlinks=True)
-            except Exception as e:
-                logger.error(e)
-                messagebox.showerror("错误", f"复制配置文件时发生错误：{str(e)}")
-                return False
-        else:
-            logger.error(f"配置文件不存在：{acc_config_path}")
-            messagebox.showerror("错误", f"配置文件不存在：{acc_config_path}")
-            return False
-    return True
+    success_list = []
+    # 拷贝配置项
+    for origin, acc in origin_acc_dict.items():
+        print(origin, acc)
+        source_path = acc if method == "use" else origin
+        dest_path = origin if method == "use" else acc
 
+        try:
+            if os.path.isfile(source_path):
+                shutil.copy2(source_path, dest_path, follow_symlinks=False)
+                success_list.append(dest_path)
+            elif os.path.isdir(source_path):
+                shutil.copytree(source_path, dest_path, symlinks=True)
+                success_list.append(dest_path)
+            else:
+                logger.error(f"配置项目异常：{origin}-{acc}")
+        except Exception as e:
+            logger.error(e)
+            messagebox.showerror("错误", f"复制配置文件时发生错误：{str(e)}")
+            return False, f"复制配置文件时发生错误：{str(e)}"
+    return True, success_list
 
-def create_config(account, sw="WeChat"):
-    """
-    创建账号的登录配置文件
-    :param sw: 选择软件
-    :param account: 账号
-    :return: 是否创建成功
-    """
-    # print(sw)
-    data_path = func_setting.get_sw_data_dir(sw=sw)
-    # print(data_path)
-    if data_path is None:
-        messagebox.showerror("错误", "无法获取WeChat数据路径")
-        return False
-    login_wnd_class, config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
-        sw, login_wnd_class=None, config_path_suffix=None, config_file_list=None)
-
-    created_list = []
-    for file in config_files:
-        # print(account, file)
-        # 拼接出源配置路径
-        config_path = os.path.join(str(data_path), str(config_path_suffix), str(file)).replace("\\", "/")
-        # 提取源配置文件的后缀
-        file_suffix = os.path.splitext(config_path)
-        if len(file_suffix) != 1:
-            file_suffix = file_suffix[1]
-        else:
-            file_suffix = ""
-
-        dest_filename = f"{account}{file_suffix}"
-        acc_config_path = os.path.join(str(data_path), str(config_path_suffix), dest_filename).replace("\\", "/")
-
-        if os.path.isfile(config_path):
-            try:
-                if os.path.exists(acc_config_path):
-                    os.remove(acc_config_path)
-                shutil.copy2(config_path, acc_config_path, follow_symlinks=False)
-                hwnd_utils.close_wnd_by_name(login_wnd_class)
-                created_list.append(dest_filename)
-            except Exception as e:
-                logger.error(e)
-                messagebox.showerror("错误", f"生成配置文件时发生错误：{str(e)}")
-                return False
-        elif os.path.isdir(config_path):
-            try:
-                if os.path.exists(acc_config_path):
-                    os.remove(acc_config_path)
-                shutil.copytree(config_path, acc_config_path, dirs_exist_ok=True)
-                hwnd_utils.close_wnd_by_name(login_wnd_class)
-                created_list.append(dest_filename)
-            except Exception as e:
-                logger.error(e)
-                return False
-        else:
-            messagebox.showerror("错误", f"配置文件不存在：{config_path}")
-            return False
-
-    created_list_text = "\n".join(created_list)
-    messagebox.showinfo("成功", f"配置文件已生成：\n{created_list_text}")
-    return True
-
-
-def test(root_class, account, multiple_status, tab="WeChat"):
+def test(root_class, account, multiple_status, tab):
     """
     尝试打开微信，让用户判断是否是对应的账号，根据用户结果去创建配置或结束
     :param account: 账号
@@ -199,7 +134,10 @@ def test(root_class, account, multiple_status, tab="WeChat"):
                 sub_exe_process.terminate()
             time.sleep(2)
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
-                create_config(account, tab)
+                success, result = operate_config('add', tab, account)
+                if success is True:
+                    created_list_text = "\n".join(result)
+                    messagebox.showinfo("成功", f"已生成：\n{created_list_text}")
             else:
                 hwnd_utils.close_wnd_by_name(login_wnd_class)
         else:

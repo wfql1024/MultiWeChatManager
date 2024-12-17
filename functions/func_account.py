@@ -199,7 +199,7 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
     curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(data_dir, sw)
     if curr_config_acc is not None:
         if func_config.get_config_status_by_account(curr_config_acc, data_dir, sw) == "无配置":
-            changed = func_config.create_config(curr_config_acc)
+            changed, _ = func_config.operate_config('add', sw, curr_config_acc)
             if changed is True:
                 need_to_notice = True
 
