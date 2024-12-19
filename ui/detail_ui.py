@@ -49,7 +49,7 @@ class DetailWindow:
         self.avatar_status_label.pack(**Constants.B_WGT_PACK)
 
         # PID
-        self.pid_label = ttk.Label(self.top_frame, text="PID: ")
+        self.pid_label = ttk.Label(self.top_frame)
         self.pid_label.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 原始微信号
@@ -57,11 +57,11 @@ class DetailWindow:
         self.origin_id_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 当前微信号
-        self.cur_id_lbl = ttk.Label(frame, text="现id: ")
+        self.cur_id_lbl = ttk.Label(frame)
         self.cur_id_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 昵称
-        self.nickname_lbl = ttk.Label(frame, text="昵称: ")
+        self.nickname_lbl = ttk.Label(frame)
         self.nickname_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 备注
@@ -140,11 +140,12 @@ class DetailWindow:
             self.pid_label.config(text=f"PID: 未登录")
             subfunc_file.update_acc_details_to_json_by_tab(self.sw, self.account, has_mutex=True)
         else:
-            has_mutex, = subfunc_file.get_acc_details_from_json_by_tab(self.sw, self.account, has_mutex=True)
+            has_mutex, main_hwnd = subfunc_file.get_acc_details_from_json_by_tab(
+                self.sw, self.account, has_mutex=True, main_hwnd=None)
             if has_mutex:
-                self.pid_label.config(text=f"PID: {pid}\n(有互斥体)")
+                self.pid_label.config(text=f"PID: {pid}(有互斥体)\nHWND: {main_hwnd}")
             else:
-                self.pid_label.config(text=f"PID: {pid}\n(无互斥体)")
+                self.pid_label.config(text=f"PID: {pid}(无互斥体)\nHWND: {main_hwnd}")
             widget_utils.enable_button_and_unbind_tip(self.tooltips, self.fetch_button)
         print(f"载入数据完成")
 
