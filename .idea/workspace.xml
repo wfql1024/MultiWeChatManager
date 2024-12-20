@@ -4,10 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="有关微信的工具类更名为平台工具类">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/detail_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/detail_ui.py" afterDir="false" />
-    </list>
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="详情界面加入主窗口handle显示" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -562,15 +559,7 @@
       <workItem from="1733974427063" duration="6000" />
       <workItem from="1734003263620" duration="28033000" />
       <workItem from="1734146655658" duration="12375000" />
-      <workItem from="1734224390730" duration="29250000" />
-    </task>
-    <task id="LOCAL-00142" summary="新增获取主窗口hwnd的功能，为后续操控微信窗口建立条件">
-      <option name="closed" value="true" />
-      <created>1732811673160</created>
-      <option name="number" value="00142" />
-      <option name="presentableId" value="LOCAL-00142" />
-      <option name="project" value="LOCAL" />
-      <updated>1732811673160</updated>
+      <workItem from="1734224390730" duration="29915000" />
     </task>
     <task id="LOCAL-00143" summary="开始大屏适配工作，在安装新版后会提醒删除旧版备份">
       <option name="closed" value="true" />
@@ -956,7 +945,15 @@
       <option name="project" value="LOCAL" />
       <updated>1734456688460</updated>
     </task>
-    <option name="localTasksCounter" value="191" />
+    <task id="LOCAL-00191" summary="详情界面加入主窗口handle显示">
+      <option name="closed" value="true" />
+      <created>1734621982644</created>
+      <option name="number" value="00191" />
+      <option name="presentableId" value="LOCAL-00191" />
+      <option name="project" value="LOCAL" />
+      <updated>1734621982644</updated>
+    </task>
+    <option name="localTasksCounter" value="192" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1021,7 +1018,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="远程适配表已加密" />
     <MESSAGE value="完善4.0数据库解密" />
     <MESSAGE value="更新远程适配表测试" />
     <MESSAGE value="4.0适配静默获取" />
@@ -1046,7 +1042,8 @@
     <MESSAGE value="优化载入方式" />
     <MESSAGE value="修复创建配置的bug，优化配置过程" />
     <MESSAGE value="有关微信的工具类更名为平台工具类" />
-    <option name="LAST_COMMIT_MESSAGE" value="有关微信的工具类更名为平台工具类" />
+    <MESSAGE value="详情界面加入主窗口handle显示" />
+    <option name="LAST_COMMIT_MESSAGE" value="详情界面加入主窗口handle显示" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_multiple.coverage" NAME="wechat_multiple Coverage Results" MODIFIED="1726457491071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/mutex" />
