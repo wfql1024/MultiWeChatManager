@@ -1,6 +1,54 @@
 import re
 import tkinter as tk
 import webbrowser
+from functools import partial
+
+
+class UnlimitedClickHandler:
+    def __init__(self, root, widget, *funcs):
+        """
+        初始化 ClickHandler 类，接收 root 和外部提供的点击处理函数。
+
+        :param root: 主窗口对象
+        :param widget: 要绑定事件的 Tkinter 小部件
+        :param funcs: 任意数量的点击事件处理函数，从单击到 n 击
+        """
+        self.root = root
+        self.widget = widget
+        self.funcs = funcs  # 点击事件的处理函数列表，这些都还没有传入event
+        self.click_count = 0  # 记录点击次数
+        self.single_click_id = None
+
+        # 绑定单击事件
+        widget.bind("<Button-1>", self.on_click)
+
+    def on_click(self, event=None):
+        """处理点击事件（单击、双击、三击等）"""
+        self.click_count += 1  # 增加点击次数
+        # print(f"点击了控件：{event.widget}")
+
+        # 取消之前的延时处理（如果有）
+        if self.single_click_id:
+            self.root.after_cancel(self.single_click_id)
+
+        # 设置一个延时，等待是否有更多的点击
+        self.single_click_id = self.root.after(200, self.handle_click, event)
+
+    def handle_click(self, event=None):
+        """根据点击次数调用对应的处理函数"""
+        click_count = self.click_count
+        # print("重置次数")
+        self.click_count = 0
+        if click_count <= len(self.funcs):
+            # 如果点击次数在函数范围内，调用对应的函数
+            print(f"用户{click_count}击")
+            # 使用 partial 创建新的函数并等待延时执行
+            partial(self.funcs[click_count - 1], event=event)()
+        else:
+            # 如果点击次数超出定义的函数范围，调用最后一个函数
+            print(f"用户{click_count}击，实际触发{len(self.funcs)}击")
+            # 使用 partial 创建新的函数并等待延时执行
+            partial(self.funcs[-1], event=event)()
 
 
 class Tooltip:

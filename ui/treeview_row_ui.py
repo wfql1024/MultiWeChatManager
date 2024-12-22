@@ -10,6 +10,7 @@ from resources import Constants, Strings
 from ui import detail_ui
 from utils import widget_utils, string_utils
 from utils.logger_utils import mylogger as logger
+from utils.widget_utils import UnlimitedClickHandler
 
 
 def try_convert(value):
@@ -121,8 +122,13 @@ class TreeviewRowUI:
             self.update_top_title("login")
             self.login_tree.bind("<Leave>", partial(self.on_leave))
             self.login_tree.bind("<Motion>", partial(self.on_mouse_motion))
-            self.login_tree.bind("<Button-1>", partial(self.on_single_click, login_status="login"))
-            self.login_tree.bind("<Double-1>", partial(self.double_selection, login_status="login"))
+
+            UnlimitedClickHandler(
+                self.root,
+                self.login_tree,
+                partial(self.toggle_selection, "login"),
+                partial(self.double_selection, "login")
+            )
 
             self.sort_order["login"]["asc"] = not login_sort_asc
             self.sort_column(self.login_tree, login_col_to_sort, "login")
@@ -166,8 +172,14 @@ class TreeviewRowUI:
             self.update_top_title("logout")
             self.logout_tree.bind("<Leave>", partial(self.on_leave))
             self.logout_tree.bind("<Motion>", partial(self.on_mouse_motion))
-            self.logout_tree.bind("<Button-1>", partial(self.on_single_click, login_status="logout"))
-            self.logout_tree.bind("<Double-1>", partial(self.double_selection, login_status="logout"))
+
+            UnlimitedClickHandler(
+                self.root,
+                self.logout_tree,
+                partial(self.toggle_selection, "logout"),
+                partial(self.double_selection, "logout")
+            )
+
             self.sort_order["logout"]["asc"] = not login_sort_asc
             self.sort_column(self.logout_tree, logout_col_to_sort, "logout")
 
@@ -473,7 +485,7 @@ class TreeviewRowUI:
         # 设置一个延时，若在此期间未检测到双击，则处理单击事件
         self.single_click_id = self.root.after(200, lambda: self.toggle_selection(event, login_status))
 
-    def toggle_selection(self, event, login_status):
+    def toggle_selection(self, login_status, event=None):
         # print("进入了单击判定")
         if login_status == "login":
             tree = self.login_tree
@@ -500,7 +512,7 @@ class TreeviewRowUI:
                 self.update_selected_display(login_status)  # 实时更新选中行显示
                 self.update_top_title(login_status)
 
-    def double_selection(self, event, login_status):
+    def double_selection(self, login_status, event=None):
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
             self.single_click_id = None

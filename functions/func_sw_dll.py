@@ -1,4 +1,3 @@
-import json
 import mmap
 import os
 import shutil
@@ -9,7 +8,6 @@ import psutil
 import winshell
 
 from functions import subfunc_file
-from resources import Config
 from utils import file_utils
 
 
@@ -22,18 +20,7 @@ def check_dll(sw, mode, dll_dir, cur_sw_ver):
         with open(dll_path, 'rb') as f:
             dll_content = f.read()
 
-        if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
-            config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
-        else:
-            # print("本地版本对照表存在，读取中...")
-            try:
-                with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
-                    config_data = json.load(f)
-            except Exception as e:
-                print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
-                config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
-                print(f"从云端下载了文件：{config_data}")
-                raise RuntimeError("本地 JSON 文件读取失败")
+        config_data = subfunc_file.try_get_local_cfg()
 
         if not config_data:
             return "错误：没有数据", None, None
@@ -57,24 +44,18 @@ def check_dll(sw, mode, dll_dir, cur_sw_ver):
                 return "已开启", pattern1, pattern2
             elif has_pattern1 and has_pattern2:
                 return "错误，匹配到多条", None, None
-
         return "不可用", None, None
-
-
-
-    except PermissionError as pe:
-        subfunc_file.fetch_and_decrypt_config_data_from_remote()
-        return f"错误：权限不足，无法检查 DLL 文件。{pe}", None, None
-    except FileNotFoundError as fe:
-        subfunc_file.fetch_and_decrypt_config_data_from_remote()
-        return f"错误：未找到文件，请检查路径。{fe}", None, None
-    except KeyError as ke:
-        subfunc_file.fetch_and_decrypt_config_data_from_remote()
-        return f"错误，未找到该版本的适配：{ke}", None, None
-    except (TimeoutError, RuntimeError, Exception) as e:
-        subfunc_file.fetch_and_decrypt_config_data_from_remote()
-        return f"错误：{str(e)}", None, None
-
+    except (PermissionError, FileNotFoundError, KeyError, TimeoutError, RuntimeError, Exception) as e:
+        subfunc_file.force_fetch_remote_encrypted_cfg()
+        error_msg = {
+            PermissionError: "权限不足，无法检查 DLL 文件。",
+            FileNotFoundError: "未找到文件，请检查路径。",
+            KeyError: "未找到该版本的适配：",
+            TimeoutError: "请求超时。",
+            RuntimeError: "运行时错误。",
+            Exception: "发生错误。"
+        }.get(type(e), "发生未知错误。")
+        return f"错误：{error_msg}{str(e)}", None, None
 
 def switch_dll(sw, mode, dll_dir, ver):
     """切换全局多开状态"""

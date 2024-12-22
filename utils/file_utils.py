@@ -74,14 +74,13 @@ def calculate_md5(file_path, chunk_size=4096):
     return md5.hexdigest()
 
 
-def is_latest_file(file_path):
+def is_latest_file_by_day(file_path):
     # 获取文件的修改时间（时间戳）
     modification_time = os.path.getmtime(file_path)
     # 转换为日期格式
     modification_date = dt.datetime.fromtimestamp(modification_time).date()
     # 获取今天的日期
     today = dt.datetime.now().date()
-
     return modification_date >= today
 
 

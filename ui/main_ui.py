@@ -1,6 +1,5 @@
 # main_ui.py
 import glob
-import json
 import os
 import queue
 import re
@@ -19,7 +18,7 @@ from functions import func_setting, func_sw_dll, func_login, func_file, func_acc
 from resources import Strings, Config, Constants
 from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
     sidebar_ui, about_ui, loading_ui
-from utils import hwnd_utils, debug_utils, file_utils
+from utils import hwnd_utils, debug_utils, widget_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -45,6 +44,7 @@ class MainWindow:
 
     def __init__(self, root, args=None):
         # 首先确保有默认的标签
+        self.login_size = None
         self.tree_ui = None
         self.tree_uis = {
             "WeChat": None,
@@ -109,8 +109,6 @@ class MainWindow:
         self.settings_menu = None
         self.edit_menu = None
         self.menu_bar = None
-        self.logo_click_count = 0
-        self.reset_timer = self.root.after(0, lambda: setattr(self, 'logo_click_count', 0))
 
         # 版本更新，统计表结构更新，需升级
         subfunc_file.merge_refresh_nodes()
@@ -139,18 +137,8 @@ class MainWindow:
         # 定期检查队列中的消息
         self.update_status()
 
-        # 本地配置不存在的话从远端拉取
-        if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
-            config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
-        else:
-            try:
-                with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
-                    config_data = json.load(f)
-            except Exception as e1:
-                logger.error(e1)
-                config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
         # 创建选项卡
-        self.create_tab(config_data)
+        self.create_tab()
 
         # 初次使用
         if self.new is True:
@@ -183,12 +171,8 @@ class MainWindow:
         # 每 1 毫秒检查一次队列
         self.root.after(1, self.update_status)
 
-    def create_tab(self, config_data):
-        """
-        创建选项卡
-        :param config_data: 获取的远端数据
-        :return:
-        """
+    def create_tab(self):
+        """创建选项卡"""
         print("创建选项卡...")
         self.tab_control = ttk.Notebook(self.root)
 
@@ -207,10 +191,10 @@ class MainWindow:
 
         # 本地配置出错的话从远端拉取
         try:
+            config_data = subfunc_file.try_get_local_cfg()
             self.tab_dict = config_data["global"]["all_sw"]
-        except KeyError:
-            config_data = subfunc_file.fetch_and_decrypt_config_data_from_remote()
-            self.tab_dict = config_data["global"]["all_sw"]
+        except Exception as e:
+            logger.error(e)
 
         for item in self.tab_dict.keys():
             self.tab_dict[item]['frame'] = ttk.Frame(self.tab_control)
@@ -242,10 +226,8 @@ class MainWindow:
 
     def check_and_init(self):
         """检查是否有配置错误"""
-        # print(f"初始化检查.........................................................")
-
-        if not os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
-            subfunc_file.fetch_and_decrypt_config_data_from_remote()
+        # print(f"初始化检查...")
+        subfunc_file.try_get_local_cfg()
 
         # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
         if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
@@ -261,7 +243,7 @@ class MainWindow:
 
         self.chosen_sub_exe = func_setting.fetch_sw_setting_or_set_default("sub_exe", self.sw)
         self.chosen_view = func_setting.fetch_sw_setting_or_set_default("view", self.sw)
-        func_setting.fetch_sw_setting_or_set_default("login_size", self.sw)
+        self.login_size = func_setting.fetch_sw_setting_or_set_default("login_size", self.sw)
 
         if self.sw_inst_path is None or self.sw_data_dir is None or self.sw_dll_dir is None:
             print("路径设置错误，请点击按钮修改")
@@ -564,9 +546,7 @@ class MainWindow:
 
         # ————————————————————————————帮助菜单————————————————————————————
         # 检查版本表是否当天已更新
-        if (not os.path.exists(Config.REMOTE_SETTING_JSON_PATH) or
-                not file_utils.is_latest_file(Config.REMOTE_SETTING_JSON_PATH)):
-            subfunc_file.fetch_and_decrypt_config_data_from_remote()
+        subfunc_file.try_get_local_cfg()
         surprise_sign = Strings.SURPRISE_SIGN
         prefix = surprise_sign if self.need_to_update is True else ""
         self.help_menu = tk.Menu(self.menu_bar, tearoff=False)
@@ -585,7 +565,14 @@ class MainWindow:
             self.menu_bar.entryconfigure(Strings.ENABLED_NEW_FUNC, state="disabled")
         else:
             self.menu_bar.add_command(label=Strings.NOT_ENABLED_NEW_FUNC)
-            self.menu_bar.entryconfigure(Strings.NOT_ENABLED_NEW_FUNC, command=self.logo_on_click)
+            handler = widget_utils.UnlimitedClickHandler(
+                self.root,
+                self.menu_bar,
+                lambda *args, **kwargs: None,  # 第一次点击，不执行任何操作
+                lambda *args, **kwargs: None,  # 第二次点击，不执行任何操作
+                partial(self.to_enable_new_func)  # 第三次点击，执行 to_enable_new_func
+            )
+            self.menu_bar.entryconfigure(Strings.NOT_ENABLED_NEW_FUNC, command=handler.on_click)
 
     def refresh_main_frame(self):
         """加载或刷新主界面"""
@@ -808,16 +795,9 @@ class MainWindow:
         about_wnd = tk.Toplevel(self.root)
         about_ui.AboutWindow(self.root, self.root, about_wnd, need_to_update)
 
-    def logo_on_click(self):
-        print("触发了点击")
-        self.logo_click_count += 1
-        if self.logo_click_count == 3:
-            self.to_enable_new_func()
-            self.logo_click_count = 0  # 重置计数器
-        else:
-            self.reset_timer = self.root.after(1000, lambda: setattr(self, 'logo_click_count', 0))  # 1秒后重置
-
-    def to_enable_new_func(self):
+    def to_enable_new_func(self, event=None):
+        if event is None:
+            pass
         subfunc_file.set_enable_new_func_in_ini()
         messagebox.showinfo("发现彩蛋", "解锁新菜单，快去看看吧！")
         self.refresh()

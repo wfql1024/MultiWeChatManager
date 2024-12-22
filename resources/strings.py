@@ -142,6 +142,7 @@ class Strings:
     }
 
     VIDEO_TUTORIAL_LINK = "https://www.bilibili.com/video/BV174H1eBE9r"
+
     NOT_ENABLED_NEW_FUNC = "by 吾峰起浪（狂按）"
     ENABLED_NEW_FUNC = f"by 吾峰起浪"
 

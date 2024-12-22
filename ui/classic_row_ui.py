@@ -116,8 +116,12 @@ class AccountRow:
         # print(f"加载配置/登录区域用时{time.time() - self.start_time:.4f}秒")
 
         # 头像绑定详情事件
-        self.avatar_label.bind("<Button-1>", lambda event: self.on_single_click(account))
-        self.avatar_label.bind("<Double-1>", lambda event: self.double_selection(account))
+        widget_utils.UnlimitedClickHandler(
+            self.root,
+            self.avatar_label,
+            partial(self.open_detail, account),
+            partial(subfunc_sw.switch_to_sw_account_wnd, self.chosen_tab, account, self.root)
+        )
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
 
@@ -146,27 +150,15 @@ class AccountRow:
         except Exception as e:
             print(f"Error creating avatar label: {e}")
             # 如果加载失败，使用一个空白标签
-            photo = ImageTk.PhotoImage(image=Image.new('RGB', Constants.BLANK_AVT_SIZE, color='white'))
+            photo = ImageTk.PhotoImage(image=Image.new('RGB', Constants.AVT_SIZE, color='white'))
             avatar_label = ttk.Label(self.row_frame, image=photo)
         avatar_label.image = photo  # 保持对图像的引用
         return avatar_label
 
-    def on_single_click(self, account):
-        """处理单击事件，并在检测到双击时取消"""
-        # 取消之前的单击延时处理（如果有）
-        if self.single_click_id:
-            self.root.after_cancel(self.single_click_id)
-        # 设置一个延时，若在此期间未检测到双击，则处理单击事件
-        self.single_click_id = self.root.after(200, lambda: self.open_detail(account))
-
-    def double_selection(self, account):
-        if self.single_click_id:
-            self.root.after_cancel(self.single_click_id)
-            self.single_click_id = None
-        subfunc_sw.switch_to_sw_account_wnd(self.chosen_tab, account, self.root)
-
-    def open_detail(self, account):
+    def open_detail(self, account, event=None):
         """打开详情窗口"""
+        if event is None:
+            pass
         detail_window = tk.Toplevel(self.root)
         detail_ui.DetailWindow(self.root, self.root, detail_window, self.chosen_tab,
                                account, self.m_class.refresh_main_frame)

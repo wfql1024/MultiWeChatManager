@@ -383,8 +383,27 @@ def update_refresh_time_statistic(view, acc_count, time_spent, tab="WeChat"):
     tab_info["refresh"][view][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
+def try_get_local_cfg():
+    """
+    尝试从本地获取配置数据，优先从本地获取，成功后停止；失败会从网络下载远程配置
+    :return:
+    """
+    if not (os.path.exists(Config.REMOTE_SETTING_JSON_PATH)
+            and file_utils.is_latest_file_by_day(Config.REMOTE_SETTING_JSON_PATH)):
+        config_data = force_fetch_remote_encrypted_cfg()
+    else:
+        # print("本地版本对照表存在，读取中...")
+        try:
+            with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
+                config_data = json.load(f)
+        except Exception as e:
+            print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
+            config_data = force_fetch_remote_encrypted_cfg()
+            print(f"从云端下载了文件：{config_data}")
+            raise RuntimeError("本地 JSON 文件读取失败")
+    return config_data
 
-def fetch_and_decrypt_config_data_from_remote():
+def force_fetch_remote_encrypted_cfg():
     """尝试从多个源获取配置数据，优先从 GITEE 获取，成功后停止"""
     print(f"正从远程源下载...")
     urls = [Strings.REMOTE_SETTING_JSON_GITEE, Strings.REMOTE_SETTING_JSON_GITHUB]
@@ -402,9 +421,9 @@ def fetch_and_decrypt_config_data_from_remote():
             else:
                 print(f"获取失败: {response.status_code}，尝试下一个源...")
         except requests.exceptions.Timeout:
-            print(f"请求 {url} 超时，尝试下一个源...")
+            logger.warning(f"请求 {url} 超时，尝试下一个源...")
         except Exception as e:
-            print(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
+            logger.error(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
 
     raise RuntimeError("所有源获取配置数据失败")
 

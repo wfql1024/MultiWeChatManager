@@ -247,7 +247,7 @@ class AboutWindow:
         copyright_label.pack(**Constants.T_WGT_PACK)
 
     def check_for_updates(self, current_full_version):
-        subfunc_file.fetch_and_decrypt_config_data_from_remote()
+        subfunc_file.force_fetch_remote_encrypted_cfg()
         success, result = func_update.split_vers_by_cur_from_local(current_full_version)
         if success is True:
             new_versions, old_versions = result
