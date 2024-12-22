@@ -4,7 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="win7旗舰版测试" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="win7旗舰版测试">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/func_sw_dll.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_sw_dll.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/strings.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/strings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/about_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/about_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/update_log_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/update_log_ui.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -63,94 +71,94 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Python tests.Python tests for test_new_func.Test.test_get_font.executor": "Run",
-    "Python tests.Python tests for test_new_func.Test.test_multi_new_weixin.executor": "Run",
-    "Python tests.Python tests for test_unit.Test.test_close_sw_mutex_by_handle.executor": "Run",
-    "Python tests.Python tests for test_unit.Test.test_get_factor.executor": "Run",
-    "Python tests.Python tests for test_unit.Test.test_get_process_ids_by_name.executor": "Run",
-    "Python tests.Python tests for test_unit.Test.test_get_sw_data_dir.executor": "Run",
-    "Python tests.Python tests for test_unit.Test.test_get_wnd_details_from_hwnd.executor": "Run",
-    "Python tests.Python tests for test_unit.Test.test_lowercase.executor": "Run",
-    "Python tests.Python tests for test_unit.Test.test_wait_for_wnd_open.executor": "Run",
-    "Python.Createlnk.executor": "Run",
-    "Python.Main.executor": "Run",
-    "Python.MultiWeChatManager.executor": "Run",
-    "Python.[debug]MWM.executor": "Run",
-    "Python.about_ui.executor": "Run",
-    "Python.color_log.executor": "Run",
-    "Python.control_by_handle.executor": "Run",
-    "Python.control_in_background.executor": "Run",
-    "Python.create_dir_tree.executor": "Run",
-    "Python.decrypt_data.executor": "Run",
-    "Python.detail_ui.executor": "Run",
-    "Python.dir_tree_creator.executor": "Run",
-    "Python.embed_wechat.executor": "Run",
-    "Python.encrypt_data.executor": "Run",
-    "Python.file_utils.executor": "Run",
-    "Python.func_account.executor": "Run",
-    "Python.func_account_list.executor": "Run",
-    "Python.func_config.executor": "Run",
-    "Python.func_database.executor": "Run",
-    "Python.func_decrypt.executor": "Run",
-    "Python.func_detail.executor": "Run",
-    "Python.func_file.executor": "Run",
-    "Python.func_login.executor": "Run",
-    "Python.func_path.executor": "Run",
-    "Python.func_setting.executor": "Run",
-    "Python.func_update.executor": "Run",
-    "Python.func_wechat_dll.executor": "Run",
-    "Python.get_path_of_data.executor": "Run",
-    "Python.get_path_of_wechat.executor": "Run",
-    "Python.get_wechat_mutex_handle.executor": "Run",
-    "Python.github_download.executor": "Run",
-    "Python.handle_utils.executor": "Run",
-    "Python.hwnd.executor": "Run",
-    "Python.hwnd_utils.executor": "Run",
-    "Python.json_utils.executor": "Run",
-    "Python.logger_utils.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.mainTest.executor": "Run",
-    "Python.main_ui.executor": "Run",
-    "Python.modify_wechat_dll.executor": "Run",
-    "Python.more_open.executor": "Run",
-    "Python.path_setting_ui.executor": "Run",
-    "Python.process_utils.executor": "Run",
-    "Python.pywinhandle.executor": "Run",
-    "Python.rewards_ui.executor": "Run",
-    "Python.search_wechat_key.executor": "Run",
-    "Python.setting_ui.executor": "Run",
-    "Python.sidebar_ui.executor": "Run",
-    "Python.statistic_ui.executor": "Run",
-    "Python.string_utils.executor": "Run",
-    "Python.strings.executor": "Run",
-    "Python.sys_utils.executor": "Run",
-    "Python.test_high_dpi.executor": "Run",
-    "Python.thread_manager.executor": "Run",
-    "Python.treeview.executor": "Run",
-    "Python.treeview_row_ui.executor": "Run",
-    "Python.update_log_ui.executor": "Run",
-    "Python.update_program.executor": "Run",
-    "Python.version_config.executor": "Run",
-    "Python.wechat_config.executor": "Run",
-    "Python.wechat_decrypt_utils.executor": "Run",
-    "Python.wechat_multiple.executor": "Run",
-    "Python.wechat_utils.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "com.codeium.enabled": "true",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "D:/SpaceDev/MyProj/MultiWeChatManager",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.intentionPowerPack",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python tests.Python tests for test_new_func.Test.test_get_font.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_new_func.Test.test_multi_new_weixin.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_unit.Test.test_close_sw_mutex_by_handle.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_unit.Test.test_get_factor.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_unit.Test.test_get_process_ids_by_name.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_unit.Test.test_get_sw_data_dir.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_unit.Test.test_get_wnd_details_from_hwnd.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_unit.Test.test_lowercase.executor&quot;: &quot;Run&quot;,
+    &quot;Python tests.Python tests for test_unit.Test.test_wait_for_wnd_open.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Createlnk.executor&quot;: &quot;Run&quot;,
+    &quot;Python.Main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.MultiWeChatManager.executor&quot;: &quot;Run&quot;,
+    &quot;Python.[debug]MWM.executor&quot;: &quot;Run&quot;,
+    &quot;Python.about_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.color_log.executor&quot;: &quot;Run&quot;,
+    &quot;Python.control_by_handle.executor&quot;: &quot;Run&quot;,
+    &quot;Python.control_in_background.executor&quot;: &quot;Run&quot;,
+    &quot;Python.create_dir_tree.executor&quot;: &quot;Run&quot;,
+    &quot;Python.decrypt_data.executor&quot;: &quot;Run&quot;,
+    &quot;Python.detail_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.dir_tree_creator.executor&quot;: &quot;Run&quot;,
+    &quot;Python.embed_wechat.executor&quot;: &quot;Run&quot;,
+    &quot;Python.encrypt_data.executor&quot;: &quot;Run&quot;,
+    &quot;Python.file_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_account.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_account_list.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_config.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_database.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_decrypt.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_detail.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_file.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_login.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_path.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_setting.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_update.executor&quot;: &quot;Run&quot;,
+    &quot;Python.func_wechat_dll.executor&quot;: &quot;Run&quot;,
+    &quot;Python.get_path_of_data.executor&quot;: &quot;Run&quot;,
+    &quot;Python.get_path_of_wechat.executor&quot;: &quot;Run&quot;,
+    &quot;Python.get_wechat_mutex_handle.executor&quot;: &quot;Run&quot;,
+    &quot;Python.github_download.executor&quot;: &quot;Run&quot;,
+    &quot;Python.handle_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.hwnd.executor&quot;: &quot;Run&quot;,
+    &quot;Python.hwnd_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.json_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.logger_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.mainTest.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.modify_wechat_dll.executor&quot;: &quot;Run&quot;,
+    &quot;Python.more_open.executor&quot;: &quot;Run&quot;,
+    &quot;Python.path_setting_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.process_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.pywinhandle.executor&quot;: &quot;Run&quot;,
+    &quot;Python.rewards_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.search_wechat_key.executor&quot;: &quot;Run&quot;,
+    &quot;Python.setting_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.sidebar_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.statistic_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.string_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.strings.executor&quot;: &quot;Run&quot;,
+    &quot;Python.sys_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test_high_dpi.executor&quot;: &quot;Run&quot;,
+    &quot;Python.thread_manager.executor&quot;: &quot;Run&quot;,
+    &quot;Python.treeview.executor&quot;: &quot;Run&quot;,
+    &quot;Python.treeview_row_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.update_log_ui.executor&quot;: &quot;Run&quot;,
+    &quot;Python.update_program.executor&quot;: &quot;Run&quot;,
+    &quot;Python.version_config.executor&quot;: &quot;Run&quot;,
+    &quot;Python.wechat_config.executor&quot;: &quot;Run&quot;,
+    &quot;Python.wechat_decrypt_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.wechat_multiple.executor&quot;: &quot;Run&quot;,
+    &quot;Python.wechat_utils.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/SpaceDev/MyProj/MultiWeChatManager&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.intentionPowerPack&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager" />
@@ -559,15 +567,8 @@
       <workItem from="1733974427063" duration="6000" />
       <workItem from="1734003263620" duration="28033000" />
       <workItem from="1734146655658" duration="12375000" />
-      <workItem from="1734224390730" duration="31164000" />
-    </task>
-    <task id="LOCAL-00144" summary="尝试搞4.0多开">
-      <option name="closed" value="true" />
-      <created>1732901787588</created>
-      <option name="number" value="00144" />
-      <option name="presentableId" value="LOCAL-00144" />
-      <option name="project" value="LOCAL" />
-      <updated>1732901787589</updated>
+      <workItem from="1734224390730" duration="31189000" />
+      <workItem from="1734866305331" duration="3443000" />
     </task>
     <task id="LOCAL-00145" summary="完善升级后提醒删除旧版备份的功能">
       <option name="closed" value="true" />
@@ -953,7 +954,15 @@
       <option name="project" value="LOCAL" />
       <updated>1734709936842</updated>
     </task>
-    <option name="localTasksCounter" value="193" />
+    <task id="LOCAL-00193" summary="win7旗舰版测试">
+      <option name="closed" value="true" />
+      <created>1734796284787</created>
+      <option name="number" value="00193" />
+      <option name="presentableId" value="LOCAL-00193" />
+      <option name="project" value="LOCAL" />
+      <updated>1734796284787</updated>
+    </task>
+    <option name="localTasksCounter" value="194" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1047,7 +1056,7 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_multiple.coverage" NAME="wechat_multiple Coverage Results" MODIFIED="1726457491071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/mutex" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1734709898107" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1734866381806" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$hwnd_utils.coverage" NAME="hwnd_utils Coverage Results" MODIFIED="1732812542774" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_wechat_dll.coverage" NAME="func_wechat_dll Coverage Results" MODIFIED="1727833508675" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
