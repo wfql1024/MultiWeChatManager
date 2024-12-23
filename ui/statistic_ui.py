@@ -14,7 +14,7 @@ def try_convert(value):
 
 
 class StatisticWindow:
-    def __init__(self, wnd, sw):
+    def __init__(self, wnd, sw, view):
         self.sw = sw
         self.refresh_mode_combobox = None
         self.refresh_tree = None
@@ -23,6 +23,7 @@ class StatisticWindow:
         self.auto_count_combobox = None
         self.wnd = wnd
         self.wnd.title(f"{sw}统计数据")
+        self.view = view
         self.wnd.attributes('-toolwindow', True)
         self.window_width, self.window_height = Constants.STATISTIC_WND_SIZE
         hwnd_utils.bring_wnd_to_center(self.wnd, self.window_width, self.window_height)
@@ -50,7 +51,17 @@ class StatisticWindow:
         # 配置Canvas的滚动区域
         self.canvas.bind('<Configure>', self.on_canvas_configure)
 
-        self.sort_order = {"manual": True, "auto": True, "refresh": True}  # 控制排序顺序
+        self.tree_dict = {
+            "manual": {
+                "sort": False
+            },
+            "auto": {
+                "sort": False
+            },
+            "refresh": {
+                "sort": False
+            }
+        }
 
         self.create_manual_table()
         self.create_auto_table()
@@ -112,10 +123,11 @@ class StatisticWindow:
                                         show='headings', height=1)
         for col in columns:
             self.manual_tree.heading(col, text=col,
-                                     command=lambda c=col: self.sort_column(self.manual_tree, c, "manual"))
+                                     command=lambda c=col: self.sort_column("manual", c))
             self.manual_tree.column(col, anchor='center' if col == "模式" else 'e', width=100)  # 设置列宽
 
         self.manual_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
+        self.tree_dict["manual"]["tree"] = self.manual_tree
 
     def create_auto_table(self):
         """定义自动登录表格"""
@@ -134,10 +146,12 @@ class StatisticWindow:
         self.auto_tree = ttk.Treeview(self.main_frame, columns=columns,
                                       show='headings', height=1)
         for col in columns:
-            self.auto_tree.heading(col, text=col, command=lambda c=col: self.sort_column(self.auto_tree, c, "auto"))
+            self.auto_tree.heading(col, text=col,
+                                   command=lambda c=col: self.sort_column("auto", c))
             self.auto_tree.column(col, anchor='center' if col == "模式" else 'e', width=100)  # 设置列宽
 
         self.auto_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
+        self.tree_dict["auto"]["tree"] = self.auto_tree
 
     def create_refresh_table(self):
         """定义刷新表格"""
@@ -157,10 +171,12 @@ class StatisticWindow:
                                          show='headings', height=1)
         for col in columns:
             self.refresh_tree.heading(col, text=col,
-                                      command=lambda c=col: self.sort_column(self.refresh_tree, c, "refresh"))
+                                      command=lambda c=col: self.sort_column("refresh", c))
             self.refresh_tree.column(col, anchor='center' if col == "账号数" else 'e', width=100)  # 设置列宽
 
         self.refresh_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
+        self.refresh_tree.var = "refresh"
+        self.tree_dict["refresh"]["tree"] = self.refresh_tree
 
     def display_table(self):
         data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
@@ -199,8 +215,14 @@ class StatisticWindow:
         self.refresh_mode_combobox['values'] = sorted_view_values  # 设置为排序后的列表
         # 添加刷新统计数据
         if self.refresh_mode_combobox['values']:  # 确保下拉框有值
-            self.refresh_mode_combobox.current(0)  # 默认选择第一个
+            if self.view in self.refresh_mode_combobox['values']:
+                self.refresh_mode_combobox.current(sorted_view_values.index(self.view))  # 选择当前的视图
+            else:
+                self.refresh_mode_combobox.current(0)  # 默认选择第一个
             self.update_refresh_table_from_selection(self.refresh_mode_combobox.get())
+
+        for t in self.tree_dict.keys():
+            self.sort_column(t, "平均时间")
 
     def update_auto_table_from_selection(self, selected_index):
         """根据下拉框的选择，更新对应的表数据"""
@@ -247,23 +269,25 @@ class StatisticWindow:
         selected_view = event.widget.get()  # 获取选中的index
         self.update_refresh_table_from_selection(selected_view)
 
-    def sort_column(self, tree, col, table_type):
+    def sort_column(self, tree_type, col):
+        tree = self.tree_dict[tree_type]['tree']
         items = [(tree.item(i)["values"], i) for i in tree.get_children()]
-        is_ascending = self.sort_order[table_type]
+        is_ascending = self.tree_dict[tree_type]['sort']
+        need_to_reverse = is_ascending
         items.sort(key=lambda x: (try_convert(x[0][list(tree["columns"]).index(col)])
                                   if col not in ["模式"] else x[0][list(tree["columns"]).index(col)]),
-                   reverse=not is_ascending)
+                   reverse=need_to_reverse)
         # 清空表格并重新插入排序后的数据
         for i in tree.get_children():
             tree.delete(i)
         for item in items:
             tree.insert("", "end", values=item[0])
         tree.configure(height=len(items) + 1)
-        self.sort_order[table_type] = not is_ascending  # 切换排序顺序
+        self.tree_dict[tree_type]['sort'] = not is_ascending  # 切换排序顺序
 
 
 # 创建主窗口
 if __name__ == "__main__":
     root = tk.Tk()
-    statistic_window = StatisticWindow(root, "WeChat")
+    statistic_window = StatisticWindow(root, "WeChat", 'tree')
     root.mainloop()

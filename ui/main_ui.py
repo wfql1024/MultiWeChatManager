@@ -725,7 +725,7 @@ class MainWindow:
     def open_statistic(self):
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.root)
-        statistic_ui.StatisticWindow(statistic_window, self.sw)
+        statistic_ui.StatisticWindow(statistic_window, self.sw, self.chosen_view)
 
     def change_classic_view(self):
         self.root.unbind("<Configure>")
