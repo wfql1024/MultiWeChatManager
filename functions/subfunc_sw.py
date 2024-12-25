@@ -16,7 +16,7 @@ def switch_to_sw_account_wnd(sw, acc, program_wnd, event=None):
         sw, main_wnd_class=None)
     classes = [main_wnd_class]
     hwnd_utils.hide_all_wnd_by_classes(classes)
-    main_hwnd, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, main_hwnd=None)
+    main_hwnd, = subfunc_file.get_sw_acc_details_from_json(sw, acc, main_hwnd=None)
     hwnd_utils.restore_window(main_hwnd)
 
 
@@ -47,9 +47,9 @@ def get_mutex_dict(sw):
     has_mutex_dict = dict()
     for pid in pids:
         # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
-        has_mutex, = subfunc_file.get_acc_details_from_json_by_tab(sw, "all_acc", **{f"{pid}": True})
+        has_mutex, = subfunc_file.get_sw_acc_details_from_json(sw, "all_acc", **{f"{pid}": True})
         if has_mutex:
-            subfunc_file.update_acc_details_to_json_by_tab(sw, "all_acc", **{f"{pid}": True})
+            subfunc_file.update_sw_acc_details_to_json(sw, "all_acc", **{f"{pid}": True})
             has_mutex_dict.update({pid: has_mutex})
     print(f"获取互斥体情况完成!互斥体列表：{has_mutex_dict}")
     return has_mutex_dict
@@ -82,11 +82,7 @@ def open_sw(sw, status, has_mutex_dictionary=None):
         time.sleep(0.1)
     else:
         # 获取当前选择的多开子程序
-        multiple_mode = ini_utils.get_setting_from_ini(
-            Config.SETTING_INI_PATH,
-            sw,
-            Config.INI_KEY_SUB_EXE,
-        )
+        multiple_mode = subfunc_file.fetch_sw_setting_or_set_default(sw, 'sub_exe')
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if multiple_mode == "WeChatMultiple_Anhkgg.exe":
             sub_exe_process = create_process_without_admin(

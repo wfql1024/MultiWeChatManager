@@ -20,7 +20,7 @@ from utils.logger_utils import mylogger as logger
 def to_quit_selected_accounts(sw, accounts_selected, callback):
     accounts_to_quit = []
     for acc in accounts_selected:
-        pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, pid=None)
+        pid, = subfunc_file.get_sw_acc_details_from_json(sw, acc, pid=None)
         display_name = get_acc_origin_display_name(sw, acc)
         cleaned_display_name = string_utils.clean_display_name(display_name)
         accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
@@ -40,7 +40,7 @@ def quit_accounts(sw, accounts):
     quited_accounts = []
     for account in accounts:
         try:
-            pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, pid=None)
+            pid, = subfunc_file.get_sw_acc_details_from_json(sw, account, pid=None)
             display_name = get_acc_origin_display_name(sw, account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
             executable_name, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
@@ -82,7 +82,7 @@ def get_acc_avatar_from_files(account, sw):
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
     # 如果没有，从网络下载
-    url, = subfunc_file.get_acc_details_from_json_by_tab(sw, account, avatar_url=None)
+    url, = subfunc_file.get_sw_acc_details_from_json(sw, account, avatar_url=None)
     if url is not None and url.endswith("/0"):
         image_utils.download_image(url, avatar_path)
 
@@ -120,7 +120,7 @@ def get_acc_origin_display_name(sw, account) -> str:
     # 依次查找 note, nickname, alias，找到第一个不为 None 的值
     display_name = account  # 默认值为 account
     for key in ("note", "nickname", "alias"):
-        value = subfunc_file.get_acc_details_from_json_by_tab(sw, account, **{key: None})[0]
+        value = subfunc_file.get_sw_acc_details_from_json(sw, account, **{key: None})[0]
         if value is not None:
             display_name = value
             break
@@ -176,7 +176,7 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
     accounts_need_to_get_nickname = []
     # print(login, logout)
     for acc in itertools.chain(login, logout):
-        avatar_url, nickname = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, avatar_url=None, nickname=None)
+        avatar_url, nickname = subfunc_file.get_sw_acc_details_from_json(sw, acc, avatar_url=None, nickname=None)
         if avatar_url is None:
             accounts_need_to_get_avatar.append(acc)
         if nickname is None:
@@ -209,11 +209,10 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
         callback()
 
 
-def get_account_list(sw, data_dir, multiple_status):
+def get_sw_acc_list(sw, data_dir, multiple_status):
     """
     获取账号及其登录情况
     """
-
     def update_acc_list_by_pid(process_id: int):
         """
         为存在的微信进程匹配出对应的账号，并更新[已登录账号]和[(已登录进程,账号)]
@@ -239,7 +238,7 @@ def get_account_list(sw, data_dir, multiple_status):
                         wx_id_index = path_parts.index(os.path.basename(data_dir)) + 1
                         wx_id = path_parts[wx_id_index]
                         if wx_id not in excluded_dir_list:
-                            wechat_processes.append((wx_id, process_id))
+                            proc_dict.append((wx_id, process_id))
                             logged_in_ids.add(wx_id)
                             print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
                             return
@@ -260,7 +259,7 @@ def get_account_list(sw, data_dir, multiple_status):
                         wx_id_index = path_parts.index(os.path.basename(data_dir)) + 1
                         wx_id = path_parts[wx_id_index]
                         if wx_id not in ["all_users"]:
-                            wechat_processes.append((wx_id, process_id))
+                            proc_dict.append((wx_id, process_id))
                             logged_in_ids.add(wx_id)
                             print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
                             return
@@ -275,7 +274,7 @@ def get_account_list(sw, data_dir, multiple_status):
 
     start_time = time.time()
 
-    wechat_processes = []
+    proc_dict = []
     logged_in_ids = set()
 
     exe, excluded_dir_list = subfunc_file.get_details_from_remote_setting_json(
@@ -291,7 +290,7 @@ def get_account_list(sw, data_dir, multiple_status):
             update_acc_list_by_pid(pid)
     print(f"完成判断进程对应账号，用时：{time.time() - start_time:.4f} 秒")
 
-    # print(wechat_processes)
+    # print(proc_dict)
     # print(logged_in_ids)
 
     # 获取文件夹并分类
@@ -307,23 +306,27 @@ def get_account_list(sw, data_dir, multiple_status):
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
-    mutex = False
-    pid_dict = dict(wechat_processes)
+    has_mutex = False
+    pid_dict = dict(proc_dict)
     if multiple_status == "已开启":
         print(f"由于是全局多开模式，直接所有has_mutex都为false")
         for acc in login + logout:
-            subfunc_file.update_acc_details_to_json_by_tab(sw, acc, pid=pid_dict.get(acc, None), has_mutex=False)
+            subfunc_file.update_sw_acc_details_to_json(sw, acc, pid=pid_dict.get(acc, None), has_mutex=False)
     else:
         for acc in login + logout:
             pid = pid_dict.get(acc, None)
             if pid is None:
-                subfunc_file.update_acc_details_to_json_by_tab(sw, acc, has_mutex=None)
-            subfunc_file.update_acc_details_to_json_by_tab(sw, acc, pid=pid_dict.get(acc, None))
+                subfunc_file.update_sw_acc_details_to_json(sw, acc, has_mutex=None)
+            subfunc_file.update_sw_acc_details_to_json(sw, acc, pid=pid_dict.get(acc, None))
         # 更新json表中各微信进程的互斥体情况
-        success, mutex = subfunc_file.update_has_mutex_from_all_acc(sw)
+        success, has_mutex = subfunc_file.update_has_mutex_from_all_acc(sw)
 
     print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
-    return True, (login, logout, wechat_processes, mutex)
+    acc_list_dict = {
+        "login": login,
+        "logout": logout
+    }
+    return True, (acc_list_dict, proc_dict, has_mutex)
 
 
 def get_main_hwnd_of_accounts(acc_list, sw):
@@ -332,9 +335,9 @@ def get_main_hwnd_of_accounts(acc_list, sw):
         messagebox.showerror("错误", f"{sw}平台未适配")
         return False
     for acc in acc_list:
-        pid, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, pid=None)
+        pid, = subfunc_file.get_sw_acc_details_from_json(sw, acc, pid=None)
         hwnd_list = hwnd_utils.find_hwnd_by_pid_and_class(pid, target_class)
         # print(pid, hwnd_list)
         if len(hwnd_list) >= 1:
             hwnd = hwnd_list[0]
-            subfunc_file.update_acc_details_to_json_by_tab(sw, acc, main_hwnd=hwnd)
+            subfunc_file.update_sw_acc_details_to_json(sw, acc, main_hwnd=hwnd)

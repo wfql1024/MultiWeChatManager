@@ -5,7 +5,7 @@ from tkinter import ttk, messagebox
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_login, func_account, subfunc_file, func_setting, subfunc_sw
+from functions import func_config, func_login, func_account, subfunc_file, subfunc_sw
 from resources import Constants, Strings
 from ui import detail_ui
 from utils import widget_utils, string_utils
@@ -23,7 +23,7 @@ def try_convert(value):
 class TreeviewRowUI:
     def __init__(self, root, root_class, root_main_frame, result, data_path, multiple_status, sw):
         self.login_trees = None
-        self.chosen_tab = sw
+        self.sw = sw
         self.acc_index = None
         self.hovered_item = None
         self.single_click_id = None
@@ -42,32 +42,12 @@ class TreeviewRowUI:
         self.main_frame = root_main_frame
         self.tree_frame = tk.Frame(self.main_frame)
         self.tree_frame.pack(expand=True, fill=tk.BOTH)
-        self.sign_visible:bool = func_setting.fetch_global_setting_or_set_default("sign_visible") == "True"
-
-        # print(self.chosen_tab)
-        # 加载列表排序设置
-        login_sort = func_setting.fetch_sw_setting_or_set_default(
-            "login_sort", self.chosen_tab)
-        logout_sort = func_setting.fetch_sw_setting_or_set_default(
-            "logout_sort", self.chosen_tab)
-        login_col_to_sort, sort1 = login_sort.split(",")
-        logout_col_to_sort, sort2 = logout_sort.split(",")
-        login_sort_asc:bool = sort1 == "True"
-        logout_sort_asc:bool = sort2 == "True"
-        self.sort_order = {
-            "login": {
-                "col": login_col_to_sort,
-                "asc": login_sort_asc
-            },
-            "logout": {
-                "col": logout_col_to_sort,
-                "asc": logout_sort_asc
-            }
-        }  # 控制排序顺序
-        # print(self.sort_order)
+        self.sign_visible:bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
 
         # 构建列表
-        logins, logouts, wechat_processes, _ = result
+        acc_list_dict, wechat_processes, _ = result
+        logins = acc_list_dict["login"]
+        logouts = acc_list_dict["logout"]
         # 调整行高
         style = ttk.Style()
         style.configure("RowTreeview", background="#FFFFFF", foreground="black",
@@ -130,8 +110,7 @@ class TreeviewRowUI:
                 partial(self.double_selection, "login")
             )
 
-            self.sort_order["login"]["asc"] = not login_sort_asc
-            self.sort_column(self.login_tree, login_col_to_sort, "login")
+            self.apply_or_switch_col_order(self.login_tree, "login")
 
         if len(logouts) != 0:
             # 未登录框架=未登录标题+未登录列表
@@ -180,8 +159,7 @@ class TreeviewRowUI:
                 partial(self.double_selection, "logout")
             )
 
-            self.sort_order["logout"]["asc"] = not login_sort_asc
-            self.sort_column(self.logout_tree, logout_col_to_sort, "logout")
+            self.apply_or_switch_col_order(self.logout_tree, "logout")
 
     def create_table(self, table_type):
         """定义表格，根据表格类型选择手动或自动登录表格"""
@@ -193,7 +171,7 @@ class TreeviewRowUI:
         for col in columns:
             tree.heading(
                 col, text=col,
-                command=lambda c=col: self.sort_column(tree, c, table_type)
+                command=lambda c=col: self.apply_or_switch_col_order(tree, c, table_type)
             )
             tree.column(col, anchor='center')  # 设置列宽
 
@@ -230,12 +208,12 @@ class TreeviewRowUI:
             tree = self.logout_tree
         else:
             tree = ttk.Treeview(self.tree_frame, show='tree', height=1, style="RowTreeview")
-        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.data_path, self.chosen_tab)
+        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.data_path, self.sw)
         for account in accounts:
-            display_name = "  " + func_account.get_acc_origin_display_name(self.chosen_tab, account)
-            config_status = func_config.get_config_status_by_account(account, self.data_path, self.chosen_tab)
-            avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_acc_details_from_json_by_tab(
-                self.chosen_tab,
+            display_name = "  " + func_account.get_acc_origin_display_name(self.sw, account)
+            config_status = func_config.get_config_status_by_account(account, self.data_path, self.sw)
+            avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_sw_acc_details_from_json(
+                self.sw,
                 account,
                 avatar_url=None,
                 alias="请获取数据",
@@ -244,7 +222,7 @@ class TreeviewRowUI:
                 has_mutex=None
             )
 
-            img = func_account.get_acc_avatar_from_files(account, self.chosen_tab)
+            img = func_account.get_acc_avatar_from_files(account, self.sw)
             img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
 
@@ -290,8 +268,20 @@ class TreeviewRowUI:
             for col in columns_to_hide:
                 tree.column(col, width=width)  # 设置合适的宽度
 
-    def sort_column(self, tree, col, login_status):
-        # print("排序...")
+    def apply_or_switch_col_order(self, tree, login_status, col=None):
+        # 加载列表排序设置
+        sort_str = subfunc_file.fetch_sw_setting_or_set_default(self.sw, f"{login_status}_sort")
+        tmp_col, sort = sort_str.split(",")
+        is_asc: bool = sort == "True"
+
+        if col is not None:
+            print("切换列表排序...")
+            need_switch = True
+        else:
+            print("应用列表排序...")
+            need_switch = False
+            col = tmp_col
+
         # 获取当前表格数据的 values、text、image 和 tags
         # print(tree)
         # print(tree.winfo_parent())
@@ -307,10 +297,8 @@ class TreeviewRowUI:
             for i in tree.get_children()
         ]
 
-        # 获取排序顺序
-        is_asc = self.sort_order[login_status]['asc']
         # 当前是否要调成倒序，其和当前顺序的真值是一样的
-        need_to_desc:bool = is_asc
+        need_to_desc:bool = is_asc if need_switch else not is_asc
 
         # print(f"当前的顺序是：{is_asc}, 是否调整为倒序：{need_to_desc}")
 
@@ -337,10 +325,9 @@ class TreeviewRowUI:
         # 根据排序后的行数调整 Treeview 的高度
         tree.configure(height=len(items))
 
-        # 切换排序顺序
-        self.sort_order[login_status]['col'] = col
-        self.sort_order[login_status]['asc'] = not is_asc
-        subfunc_file.save_sw_sort_order_to_setting_ini(self.sort_order, self.chosen_tab)
+        # 判断是否切换排序顺序，并保存
+        now_asc = not is_asc if need_switch else is_asc
+        subfunc_file.save_sw_setting(self.sw, f'{login_status}_sort', f"{col},{now_asc}")
 
     def update_selected_display(self, login_status):
         # 获取选中行的“英语”列数据
@@ -534,7 +521,7 @@ class TreeviewRowUI:
             return
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
             subfunc_sw.switch_to_sw_account_wnd(
-                self.chosen_tab, tree.item(item_id, "values")[self.acc_index], self.root)
+                self.sw, tree.item(item_id, "values")[self.acc_index], self.root)
         else:
             if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发
                 selected_items.clear()
@@ -549,29 +536,29 @@ class TreeviewRowUI:
     def open_detail(self, account):
         """打开详情窗口"""
         detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(self.root, self.root, detail_window, self.chosen_tab,
+        detail_ui.DetailWindow(self.root, self.root, detail_window, self.sw,
                                account, self.root_class.refresh_main_frame)
 
     def create_config(self, multiple_status):
         """按钮：创建或重新配置"""
         accounts = self.selected_login_items
         threading.Thread(target=func_config.test,
-                         args=(self.root_class, accounts[0], multiple_status, self.chosen_tab)).start()
+                         args=(self.root_class, accounts[0], multiple_status, self.sw)).start()
 
     def quit_selected_accounts(self):
         """退出所选账号"""
         accounts = self.selected_login_items
         accounts_to_quit = []
         for account in accounts:
-            pid, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, pid=None)
-            display_name = func_account.get_acc_origin_display_name(self.chosen_tab, account)
+            pid, = subfunc_file.get_sw_acc_details_from_json("WeChat", account, pid=None)
+            display_name = func_account.get_acc_origin_display_name(self.sw, account)
             cleaned_display_name = string_utils.clean_display_name(display_name)
             accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
         accounts_to_quit_str = "\n".join(accounts_to_quit)
         if messagebox.askokcancel("提示",
                                   f"确认退登：\n{accounts_to_quit_str}？"):
             try:
-                quited_accounts = func_account.quit_accounts(self.chosen_tab, accounts)
+                quited_accounts = func_account.quit_accounts(self.sw, accounts)
                 quited_accounts_str = "\n".join(quited_accounts)
                 messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
                 self.root_class.refresh_main_frame()
@@ -585,7 +572,7 @@ class TreeviewRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.root_class.refresh_main_frame, self.chosen_tab)
+                args=(accounts, self.multiple_status, self.root_class.refresh_main_frame, self.sw)
             ).start()
         except Exception as e:
             logger.error(e)
@@ -596,7 +583,7 @@ class TreeviewRowUI:
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.root_class.refresh_main_frame, self.chosen_tab)
+                args=(accounts, self.multiple_status, self.root_class.refresh_main_frame, self.sw)
             ).start()
         except Exception as e:
             logger.error(e)

@@ -43,7 +43,7 @@ def manual_login(m_class, tab, status, window_callback):
     wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 20)
     if wechat_hwnd:
         subfunc_file.set_all_acc_values_to_false(tab)
-        subfunc_file.update_manual_time_statistic(sub_exe, time.time() - start_time, tab)
+        subfunc_file.update_statistic_data(tab, 'manual', '_', sub_exe, time.time() - start_time)
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
@@ -59,10 +59,10 @@ def manual_login(m_class, tab, status, window_callback):
     window_callback()
 
 
-def auto_login_accounts(accounts, status, callback, tab):
+def auto_login_accounts(accounts, status, callback, sw):
     """
     对选择的账号，进行全自动登录
-    :param tab: 选择的软件标签
+    :param sw: 选择的软件标签
     :param callback:
     :param accounts: 选择的账号列表
     :param status: 是否全局多开
@@ -87,15 +87,15 @@ def auto_login_accounts(accounts, status, callback, tab):
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
         subfunc_file.get_details_from_remote_setting_json(
-            tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
+            sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
-    subfunc_sw.kill_sw_multiple_processes(tab)
+    subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
-    subfunc_file.clear_all_acc_in_acc_json(tab)
-    subfunc_file.update_all_acc_in_acc_json(tab)
+    subfunc_file.clear_all_acc_in_acc_json(sw)
+    subfunc_file.update_all_acc_in_acc_json(sw)
 
     # 检测尺寸设置是否完整
-    login_size = subfunc_file.get_sw_login_size_from_setting_ini(tab)
+    login_size = subfunc_file.fetch_sw_setting_or_set_default(sw, "login_size")
     if not login_size or login_size == "":
         messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
         return False
@@ -110,7 +110,8 @@ def auto_login_accounts(accounts, status, callback, tab):
     screen_width = int(tk.Tk().winfo_screenwidth())
     screen_height = int(tk.Tk().winfo_screenheight())
     if not screen_height or not screen_width:
-        screen_width, screen_height = subfunc_file.get_screen_size_from_setting_ini()
+        size = subfunc_file.fetch_global_setting_or_set_default("screen_size").split('*')
+        screen_width, screen_height = int(size[0]), int(size[1])
     # 计算一行最多可以显示多少个
     max_column = int(screen_width / login_width)
 
@@ -125,6 +126,10 @@ def auto_login_accounts(accounts, status, callback, tab):
         print(f"可以一行显示")
         get_wnd_positions(count)
 
+    if status == "已开启":
+        multiple_mode = "全局多开"
+    else:
+        multiple_mode = subfunc_file.fetch_sw_setting_or_set_default(sw, 'sub_exe')
     # 开始遍历登录账号过程
     start_time = time.time()
     # 使用一个set存储不重复的handle
@@ -135,7 +140,7 @@ def auto_login_accounts(accounts, status, callback, tab):
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
         # 读取配置
-        success, _ = func_config.operate_config('use', tab, accounts[j])
+        success, _ = func_config.operate_config('use', sw, accounts[j])
         if success:
             print(f"{accounts[j]}:复制配置文件成功")
         else:
@@ -143,8 +148,8 @@ def auto_login_accounts(accounts, status, callback, tab):
             break
 
         # 打开微信
-        has_mutex_dict = subfunc_sw.get_mutex_dict(tab)
-        sub_exe_process, sub_exe = subfunc_sw.open_sw(tab, status, has_mutex_dict)
+        has_mutex_dict = subfunc_sw.get_mutex_dict(sw)
+        sub_exe_process, sub_exe = subfunc_sw.open_sw(sw, status, has_mutex_dict)
 
         # 等待打开窗口
         end_time = time.time() + 20
@@ -156,8 +161,8 @@ def auto_login_accounts(accounts, status, callback, tab):
                 if sub_exe_process:
                     sub_exe_process.terminate()
                 print(f"打开窗口成功：{wechat_hwnd}")
-                subfunc_file.set_all_acc_values_to_false(tab)
-                subfunc_file.update_has_mutex_from_all_acc(tab)
+                subfunc_file.set_all_acc_values_to_false(sw)
+                subfunc_file.update_has_mutex_from_all_acc(sw)
                 break
             if time.time() > end_time:
                 print(f"超时！换下一个账号")
@@ -183,11 +188,13 @@ def auto_login_accounts(accounts, status, callback, tab):
             print(e)
 
         # 统计时间
-        subfunc_file.update_auto_time_statistic(sub_exe, time.time() - start_time, j + 1, tab)
+        subfunc_file.update_statistic_data(sw, 'auto', str(j + 1), sub_exe, time.time() - start_time)
+    subfunc_file.update_statistic_data(sw, 'auto', 'avg', multiple_mode,
+                                       (time.time() - start_time) / count)
 
     # 循环登录完成
     # 如果有，关掉多余的多开器
-    subfunc_sw.kill_sw_multiple_processes(tab)
+    subfunc_sw.kill_sw_multiple_processes(sw)
 
     def func():
         # 两轮点击所有窗口的登录，防止遗漏

@@ -2,10 +2,26 @@ import argparse
 import ctypes
 import os
 import sys
+import threading
 import tkinter as tk
 
 from ui.main_ui import MainWindow
+from pynput import keyboard
+import pygetwindow as gw
 
+def on_press(key):
+    try:
+        if key == keyboard.Key.esc:
+            current_window = gw.getActiveWindow()
+            if current_window and "微信（测试版）" in current_window.title:
+                current_window.minimize()
+    except AttributeError:
+        pass
+
+def start_keyboard_listener():
+    """启动键盘监听器"""
+    with keyboard.Listener(on_press=on_press) as listener:
+        listener.join()
 # SCALE_FACTOR = ctypes.windll.shcore.GetScaleFactorForDevice(0)
 
 
@@ -39,6 +55,9 @@ def main():
     os.environ['http_proxy'] = ''
     os.environ['https_proxy'] = ''
     os.environ['no_proxy'] = '*'
+    # 启动键盘监听器线程
+    keyboard_thread = threading.Thread(target=start_keyboard_listener, daemon=True)
+    keyboard_thread.start()
     print("管理员身份" if ctypes.windll.shell32.IsUserAnAdmin() == 1 else "非管理员身份")
     # 创建参数解析器
     parser = argparse.ArgumentParser(description="Process command line flags.")

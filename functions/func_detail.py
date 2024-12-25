@@ -61,7 +61,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
                 continue
             if len(result) > 0:
                 user_name, alias = result[0]
-                subfunc_file.update_acc_details_to_json_by_tab(sw, acc, alias=alias or user_name)
+                subfunc_file.update_sw_acc_details_to_json(sw, acc, alias=alias or user_name)
             else:
                 logger.warning(f"账号{acc}未能获取到微信号")
 
@@ -71,7 +71,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
                 continue
             if len(result) > 0:
                 user_name, nickname = result[0]
-                subfunc_file.update_acc_details_to_json_by_tab(sw, acc, nickname=nickname)
+                subfunc_file.update_sw_acc_details_to_json(sw, acc, nickname=nickname)
             else:
                 logger.warning(f"账号{acc}未能获取到昵称")
 
@@ -81,7 +81,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
                 continue
             if len(result) > 0:
                 usr_name, url = result[0]
-                origin_url, = subfunc_file.get_acc_details_from_json_by_tab(sw, acc, avatar_url=None)
+                origin_url, = subfunc_file.get_sw_acc_details_from_json(sw, acc, avatar_url=None)
                 save_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg").replace('\\', '/')
                 if not os.path.exists(os.path.dirname(save_path)):
                     os.makedirs(os.path.dirname(save_path))
@@ -96,7 +96,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
                 else:
                     success = image_utils.download_image(url, save_path)
                 if success is True:
-                    subfunc_file.update_acc_details_to_json_by_tab(sw, acc, avatar_url=url)
+                    subfunc_file.update_sw_acc_details_to_json(sw, acc, avatar_url=url)
             else:
                 logger.warning(f"账号{acc}未能获取头像url")
                 continue

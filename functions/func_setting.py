@@ -63,13 +63,16 @@ def get_sw_install_path(sw, from_setting_window=False):
 
     for index, finder in enumerate(path_finders):
         if finder is not None:
-            path_list = finder(sw)
-            if len(path_list) == 0 or path_list is None:
+            paths = finder(sw)
+            if paths is None:
+                continue
+            path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
+            if len(path_list) == 0:
                 continue
             for path in path_list:
                 if sw_utils.is_valid_sw_install_path(path, sw):
                     standardized_path = os.path.abspath(path).replace('\\', '/')
-                    subfunc_file.save_sw_install_path_to_setting_ini(standardized_path, sw)
+                    subfunc_file.save_sw_setting(sw, 'inst_path', standardized_path)
                     logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
                     return standardized_path
     return None
@@ -90,15 +93,17 @@ def get_sw_data_dir(sw, from_setting_window=False):
     for index, finder in enumerate(path_finders):
 
         if finder is not None:
-            path_list = finder(sw=sw)
-            # print(f"执行了当前方法：{finder.__name__}")
-            if len(path_list) == 0 or path_list is None:
+            paths = finder(sw)
+            if paths is None:
+                continue
+            path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
+            if len(path_list) == 0:
                 continue
             # 对得到地址进行检验，正确则返回并保存
             for path in path_list:
                 if sw_utils.is_valid_sw_data_dir(path, sw):
                     standardized_path = os.path.abspath(path).replace('\\', '/')
-                    subfunc_file.save_sw_data_dir_to_setting_ini(standardized_path, sw)
+                    subfunc_file.save_sw_setting(sw, 'data_dir', standardized_path)
                     logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
                     return standardized_path
     return None
@@ -114,14 +119,17 @@ def get_sw_dll_dir(sw, from_setting_window=False):
     ]
     for index, finder in enumerate(path_finders):
         if finder is not None:
-            path_list = finder(sw)
-            if len(path_list) == 0 or path_list is None:
+            paths = finder(sw)
+            if paths is None:
+                continue
+            path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
+            if len(path_list) == 0:
                 continue
             # 对得到地址进行检验，正确则返回并保存
             for path in path_list:
                 if sw_utils.is_valid_sw_dll_dir(path, sw):
                     standardized_path = os.path.abspath(path).replace('\\', '/')
-                    subfunc_file.save_sw_dll_dir_to_setting_ini(standardized_path, sw)
+                    subfunc_file.save_sw_setting(sw, 'dll_dir', standardized_path)
                     logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
                     return standardized_path
     return None
@@ -137,49 +145,6 @@ def get_sw_inst_path_and_ver(sw, from_setting_window=False):
             return install_path, file_utils.get_file_version(install_path)
         return install_path, None
     return None, None
-
-
-def fetch_global_setting_or_set_default(setting_key):
-    """
-    获取配置项，若没有则添加默认
-    :return: 已选择的子程序
-    """
-    value = ini_utils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_GLOBAL_SECTION,
-        Config.INI_KEY[setting_key],
-    )
-    if not value or value == "" or value == "None" or value == "none":
-        ini_utils.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_GLOBAL_SECTION,
-            Config.INI_KEY[setting_key],
-            Config.INI_DEFAULT_VALUE[setting_key]
-        )
-        value = Config.INI_DEFAULT_VALUE[setting_key]
-    return value
-
-
-def fetch_sw_setting_or_set_default(setting_key, sw):
-    """
-    获取配置项，若没有则添加默认
-    :return: 已选择的子程序
-    """
-    value = ini_utils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        sw,
-        Config.INI_KEY[setting_key],
-    )
-    if not value or value == "" or value == "None" or value == "none":
-        ini_utils.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            sw,
-            Config.INI_KEY[setting_key],
-            Config.INI_DEFAULT_VALUE[sw][setting_key]
-        )
-        value = Config.INI_DEFAULT_VALUE[sw][setting_key]
-    # print(f"获取{sw}平台的{setting_key}配置项为{value}")
-    return value
 
 
 def toggle_sub_executable(file_name, after, sw="WeChat"):
@@ -279,5 +244,6 @@ def set_wnd_scale(after, scale=None):
     return
 
 
-# if __name__ == "__main__":
-#     get_wechat_dll_dir_path_by_files()
+if __name__ == "__main__":
+    path_lsit = list(None or [])
+    print(path_lsit)

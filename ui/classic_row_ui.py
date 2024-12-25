@@ -6,7 +6,7 @@ from tkinter import ttk
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_login, func_account, subfunc_file, subfunc_sw, func_setting
+from functions import func_config, func_login, func_account, subfunc_file, subfunc_sw
 from resources import Constants
 from ui import detail_ui
 from utils import string_utils, widget_utils
@@ -52,9 +52,9 @@ class AccountRow:
         # print(f"加载头像区域用时{time.time() - self.start_time:.4f}秒")
 
         # 账号标签
-        self.sign_visible: bool = func_setting.fetch_global_setting_or_set_default("sign_visible") == "True"
+        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
         wrapped_display_name = func_account.get_acc_wrapped_display_name(self.chosen_tab, account)
-        has_mutex, = subfunc_file.get_acc_details_from_json_by_tab("WeChat", account, has_mutex=None)
+        has_mutex, = subfunc_file.get_sw_acc_details_from_json("WeChat", account, has_mutex=None)
         style = ttk.Style()
         style.configure("Mutex.TLabel", foreground="red")
         try:
@@ -193,9 +193,13 @@ class ClassicRowUI:
         self.main_frame = m_main_frame
         self.login_rows.clear()
         self.logout_rows.clear()
-        login, logout, wechat_processes, mutex = result
+        acc_list_dict, wechat_processes, mutex = result
+        # 已登录列表
+        logins = acc_list_dict.get("login")
+        # 未登录列表
+        logouts = acc_list_dict.get("logout")
 
-        if len(login) != 0:
+        if len(logins) != 0:
             # 已登录框架=已登录标题+已登录列表
             self.login_frame = ttk.Frame(self.main_frame)
             self.login_frame.pack(side=tk.TOP, fill=tk.X,
@@ -229,12 +233,12 @@ class ClassicRowUI:
             self.one_key_quit.pack(side=tk.RIGHT)
 
             # 加载已登录列表
-            for account in login:
+            for account in logins:
                 self.add_account_row(self.login_frame, account, "login")
 
             self.update_top_title("login")
 
-        if len(logout) != 0:
+        if len(logouts) != 0:
             # 未登录框架=未登录标题+未登录列表
             self.logout_frame = ttk.Frame(self.main_frame)
             self.logout_frame.pack(side=tk.TOP, fill=tk.X, pady=Constants.LOG_IO_FRM_PAD_Y,
@@ -268,7 +272,7 @@ class ClassicRowUI:
             self.one_key_auto_login.pack(side=tk.RIGHT)
 
             # 加载未登录列表
-            for account in logout:
+            for account in logouts:
                 self.add_account_row(self.logout_frame, account, "logout")
 
             # 更新顶部复选框状态

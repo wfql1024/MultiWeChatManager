@@ -14,13 +14,13 @@ from utils.logger_utils import mylogger as logger
 
 class SettingWindow:
     def __init__(self, wnd, tab, status, after):
-        self.install_path = None
-        self.data_path = None
-        self.dll_dir_path = None
+        self.inst_path = None
+        self.data_dir = None
+        self.dll_dir = None
         self.status = status
         self.after = after
         self.wnd = wnd
-        self.tab = tab
+        self.sw = tab
         self.need_to_clear_acc = False
         wnd.title(f"{tab}设置")
 
@@ -40,11 +40,11 @@ class SettingWindow:
         self.install_path_entry.grid(row=0, column=1, **Constants.WE_GRID_PACK)
 
         self.install_get_button = ttk.Button(wnd, text="获取",
-                                             command=partial(self.load_or_get_sw_inst_path, self.tab, True))
+                                             command=partial(self.load_or_get_sw_inst_path, self.sw, True))
         self.install_get_button.grid(row=0, column=2, **Constants.WE_GRID_PACK)
 
         self.install_choose_button = ttk.Button(wnd, text="选择路径",
-                                                command=partial(self.choose_sw_inst_path, self.tab))
+                                                command=partial(self.choose_sw_inst_path, self.sw))
         self.install_choose_button.grid(row=0, column=3, **Constants.WE_GRID_PACK)
 
         # 第二行 - 微信数据存储路径
@@ -56,11 +56,11 @@ class SettingWindow:
         self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
 
         self.data_get_button = ttk.Button(wnd, text="获取",
-                                          command=partial(self.load_or_get_sw_data_path, self.tab, True))
+                                          command=partial(self.load_or_get_sw_data_path, self.sw, True))
         self.data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
 
         self.data_choose_button = ttk.Button(wnd, text="选择路径",
-                                             command=partial(self.choose_sw_data_path, self.tab))
+                                             command=partial(self.choose_sw_data_path, self.sw))
         self.data_choose_button.grid(row=1, column=3, **Constants.WE_GRID_PACK)
 
         # 新增第三行 - WeChatWin.dll 路径
@@ -72,11 +72,11 @@ class SettingWindow:
         self.dll_path_entry.grid(row=2, column=1, **Constants.WE_GRID_PACK)
 
         self.dll_get_button = ttk.Button(wnd, text="获取",
-                                         command=partial(self.load_or_get_sw_dll_dir, self.tab, True))
+                                         command=partial(self.load_or_get_sw_dll_dir, self.sw, True))
         self.dll_get_button.grid(row=2, column=2, **Constants.WE_GRID_PACK)
 
         self.dll_choose_button = ttk.Button(wnd, text="选择路径",
-                                            command=partial(self.choose_sw_dll_dir, self.tab))
+                                            command=partial(self.choose_sw_dll_dir, self.sw))
         self.dll_choose_button.grid(row=2, column=3, **Constants.WE_GRID_PACK)
 
         # 新增第四行 - 当前版本
@@ -88,7 +88,7 @@ class SettingWindow:
         self.version_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
 
         self.screen_size_get_button = ttk.Button(wnd, text="获取",
-                                                 command=partial(self.get_cur_sw_ver, self.tab, True))
+                                                 command=partial(self.get_cur_sw_ver, self.sw, True))
         self.screen_size_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第五行 - 屏幕大小
@@ -122,37 +122,37 @@ class SettingWindow:
         wnd.grid_columnconfigure(1, weight=1)
 
         # 初始加载已经配置的，或是没有配置的话自动获取
-        self.load_or_get_sw_inst_path(self.tab, False)
-        self.load_or_get_sw_data_path(self.tab, False)
-        self.load_or_get_sw_dll_dir(self.tab, False)
-        self.get_cur_sw_ver(self.tab, False)
+        self.load_or_get_sw_inst_path(self.sw, False)
+        self.load_or_get_sw_data_path(self.sw, False)
+        self.load_or_get_sw_dll_dir(self.sw, False)
+        self.get_cur_sw_ver(self.sw, False)
         self.get_screen_size()
-        login_size = subfunc_file.get_sw_login_size_from_setting_ini(sw=self.tab)
+        login_size = subfunc_file.fetch_sw_setting_or_set_default(self.sw, 'login_size')
         self.login_size_var.set(login_size)
 
     def on_ok(self):
         if self.validate_paths():
             # 检查是否需要清空账号信息
             if self.need_to_clear_acc:
-                subfunc_file.clear_acc_info_of_sw(self.tab)
+                subfunc_file.clear_acc_info_of_sw(self.sw)
             self.after()
             self.wnd.destroy()
 
     def validate_paths(self):
-        self.install_path = self.install_path_var.get()
-        self.data_path = self.data_path_var.get()
-        self.dll_dir_path = self.dll_path_var.get()
+        self.inst_path = self.install_path_var.get()
+        self.data_dir = self.data_path_var.get()
+        self.dll_dir = self.dll_path_var.get()
 
-        if "获取失败" in self.install_path or "获取失败" in self.data_path or "获取失败" in self.dll_dir_path:
+        if "获取失败" in self.inst_path or "获取失败" in self.data_dir or "获取失败" in self.dll_dir:
             messagebox.showerror("错误", "请确保所有路径都已正确设置")
             return False
         elif not bool(re.match(r'^\d+\*\d+$', self.login_size_var.get())):
             messagebox.showerror("错误", f"请确保填入的尺寸符合\"整数*整数\"的形式")
             return False
-        subfunc_file.save_sw_login_size_to_setting_ini(f"{self.login_size_var.get()}", sw=self.tab)
-        subfunc_file.save_sw_install_path_to_setting_ini(self.install_path, sw=self.tab)
-        subfunc_file.save_sw_data_dir_to_setting_ini(self.data_path, sw=self.tab)
-        subfunc_file.save_sw_dll_dir_to_setting_ini(self.dll_dir_path, sw=self.tab)
+        subfunc_file.save_sw_setting(self.sw, 'login_size', f"{self.login_size_var.get()}")
+        subfunc_file.save_sw_setting(self.sw, 'inst_path', self.inst_path)
+        subfunc_file.save_sw_setting(self.sw, 'data_dir', self.data_dir)
+        subfunc_file.save_sw_setting(self.sw, 'dll_dir', self.dll_dir)
         return True
 
     def load_or_get_sw_dll_dir(self, sw="WeChat", click=False):
@@ -253,15 +253,14 @@ class SettingWindow:
         screen_width = self.wnd.winfo_screenwidth()
         screen_height = self.wnd.winfo_screenheight()
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
+        subfunc_file.save_global_setting('screen_size', f"{screen_width}*{screen_height}")
 
     def to_get_login_size(self, status):
-        tab = func_setting.fetch_global_setting_or_set_default('tab')
-        result = subfunc_sw.get_login_size(tab, status)
+        result = subfunc_sw.get_login_size(self.sw, status)
         if result:
             login_width, login_height = result
             if 0.734 < login_width / login_height < 0.740:
-                subfunc_file.save_sw_login_size_to_setting_ini(f"{login_width}*{login_height}")
+                subfunc_file.save_sw_setting(self.sw, 'login_size', f"{login_width}*{login_height}")
                 self.login_size_var.set(f"{login_width}*{login_height}")
             else:
                 self.login_size_var.set(f"350*475")

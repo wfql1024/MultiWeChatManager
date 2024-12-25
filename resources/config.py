@@ -16,9 +16,13 @@ class Config:
     INI_KEY_SCREEN_SIZE = 'screen_size'
     INI_KEY_LOGIN_SIZE = 'login_size'
     INI_KEY_SUB_EXE = 'sub_executable'
-    INI_KEY_ENABLE_NEW_FUNC = 'enable_new_func'
 
     INI_KEY = {
+        "inst_path": "install_path",
+        "data_dir": "data_dir",
+        "dll_dir": "dll_dir",
+        "screen_size": "screen_size",
+
         "sub_exe": "sub_executable",
         "view": "view",
         "enable_new_func": "enable_new_func",
@@ -31,7 +35,8 @@ class Config:
     }
 
     INI_DEFAULT_VALUE = {
-        "sub_exe": "python",
+        "screen_size": f"1920*1080",
+
         "enable_new_func": "True",
         "tab": "WeChat",
         "scale": "auto",

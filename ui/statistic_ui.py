@@ -183,34 +183,38 @@ class StatisticWindow:
         if self.sw not in data:
             data[self.sw] = {}
         tab_info = data.get(self.sw, {})
+
         # 添加手动统计数据
-        manual_data = tab_info.get("manual", {}).items()
-        for mode, stats in manual_data:
+        manual_data = tab_info.get("manual", {}).get("_", {})
+        for mode, stats in manual_data.items():
             min_time, count, avg_time, max_time = stats.split(",")
             self.manual_tree.insert("", "end",
                                     values=(mode, min_time.replace("inf", "null"),
                                             int(float(count)), avg_time, max_time))
-        self.manual_tree.config(height=len(manual_data) + 1)
+        self.manual_tree.config(height=len(manual_data.items()) + 1)
 
         # 更新下拉框选项
         auto_data = tab_info.get("auto", {})
         index_values = set()  # 使用集合去重
-        for mode, times_dict in auto_data.items():
-            index_values.update(times_dict.keys())  # 添加索引值
+        for mode, _ in auto_data.items():
+            if mode == 'avg':
+                continue
+            index_values.add(mode)  # 添加索引值
         sorted_index_values = sorted(map(int, index_values))  # 将字符串转为整数后排序
-        self.auto_count_combobox['values'] = sorted_index_values  # 设置为排序后的列表
+        self.auto_count_combobox['values'] = ['avg'] + sorted_index_values  # 设置为排序后的列表
         # 添加自动统计数据
         if self.auto_count_combobox['values']:  # 确保下拉框有值
             self.auto_count_combobox.current(0)  # 默认选择第一个
-            self.update_auto_table_from_selection(self.auto_count_combobox.get())
+            # self.update_auto_table_from_selection(self.auto_count_combobox.get())
+            self.update_table_from_selection('auto', self.auto_count_combobox.get())
 
         # 更新下拉框选项
         refresh_data = tab_info.get("refresh", {})
         view_values = set()  # 使用集合去重
-        for mode, times_dict in refresh_data.items():
-            print(f"mode={mode}")
+        for mode, _ in refresh_data.items():
+            # print(f"mode={mode}")
             view_values.add(mode)  # 添加索引值
-        print(view_values)
+        # print(view_values)
         sorted_view_values = sorted(map(str, view_values))  # 字符串排序
         self.refresh_mode_combobox['values'] = sorted_view_values  # 设置为排序后的列表
         # 添加刷新统计数据
@@ -219,7 +223,8 @@ class StatisticWindow:
                 self.refresh_mode_combobox.current(sorted_view_values.index(self.view))  # 选择当前的视图
             else:
                 self.refresh_mode_combobox.current(0)  # 默认选择第一个
-            self.update_refresh_table_from_selection(self.refresh_mode_combobox.get())
+            # self.update_refresh_table_from_selection(self.refresh_mode_combobox.get())
+            self.update_table_from_selection('refresh', self.refresh_mode_combobox.get())
 
         for t in self.tree_dict.keys():
             self.sort_column(t, "平均时间")
@@ -259,15 +264,33 @@ class StatisticWindow:
         except Exception as e:
             logger.error(e)
 
+    def update_table_from_selection(self, mode, selected):
+        """根据下拉框的选择，更新对应的表数据"""
+        data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+        tree = self.tree_dict[mode]['tree']
+        # 清空之前的数据
+        for item in tree.get_children():
+            tree.delete(item)
+        refresh_data = data.get(self.sw, {}).get(mode, {}).get(selected, {}).items()
+        try:
+            for acc_count, stats in refresh_data:
+                min_time, count, avg_time, max_time = stats.split(",")
+                tree.insert("", "end",
+                                         values=(acc_count, min_time.replace("inf", "null"),
+                                                 int(float(count)), avg_time, max_time))
+            tree.config(height=len(refresh_data) + 1)
+        except Exception as e:
+            logger.error(e)
+
     def on_selected_auto(self, event):
         """选中下拉框中的数值时"""
         selected_index = event.widget.get()  # 获取选中的index
-        self.update_auto_table_from_selection(selected_index)
+        self.update_table_from_selection('auto', selected_index)
 
     def on_selected_refresh(self, event):
         """选中下拉框中的数值时"""
         selected_view = event.widget.get()  # 获取选中的index
-        self.update_refresh_table_from_selection(selected_view)
+        self.update_table_from_selection("refresh", selected_view)
 
     def sort_column(self, tree_type, col):
         tree = self.tree_dict[tree_type]['tree']

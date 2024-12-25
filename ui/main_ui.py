@@ -56,9 +56,9 @@ class MainWindow:
         self.scale_var = None
         self.chosen_scale = None
         self.wnd_scale_menu = None
-        self.sw = func_setting.fetch_global_setting_or_set_default("tab")
+        self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
         self.enable_new_func = \
-            True if func_setting.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
+            True if subfunc_file.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
         self.current_full_version = subfunc_file.get_app_current_version()
 
         self.root = root
@@ -113,6 +113,8 @@ class MainWindow:
         # 版本更新，统计表结构更新，需升级
         subfunc_file.merge_refresh_nodes()
         subfunc_file.move_data_to_wechat()
+        subfunc_file.swap_cnt_and_mode_levels_in_auto()
+        subfunc_file.downgrade_item_lvl_under_manual()
 
         style = ttk.Style()
         style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
@@ -200,6 +202,7 @@ class MainWindow:
             self.tab_dict[item]['frame'] = ttk.Frame(self.tab_control)
             self.tab_dict[item]['frame'].var = item
             self.tab_control.add(self.tab_dict[item]['frame'], text=self.tab_dict[item]['text'])
+            print(self.tab_dict)
         self.tab_control.select(self.tab_dict[self.sw]['frame'])
         self.tab_control.pack(expand=True, fill='both')
         self.on_tab_change(_event=None)
@@ -241,22 +244,22 @@ class MainWindow:
                 if len(new_versions) != 0:
                     self.need_to_update = True
 
-        self.chosen_sub_exe = func_setting.fetch_sw_setting_or_set_default("sub_exe", self.sw)
-        self.chosen_view = func_setting.fetch_sw_setting_or_set_default("view", self.sw)
-        self.login_size = func_setting.fetch_sw_setting_or_set_default("login_size", self.sw)
+        self.chosen_sub_exe = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "sub_exe")
+        self.chosen_view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
+        self.login_size = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "login_size")
 
         if self.sw_inst_path is None or self.sw_data_dir is None or self.sw_dll_dir is None:
             print("路径设置错误，请点击按钮修改")
             self.root.after(0, self.show_setting_error)
             return False
         else:
-            screen_size = subfunc_file.get_screen_size_from_setting_ini()
+            screen_size = subfunc_file.fetch_global_setting_or_set_default('screen_size')
             if not screen_size or screen_size == "":
                 # 获取屏幕和登录窗口尺寸
                 screen_width = self.root.winfo_screenwidth()
                 screen_height = self.root.winfo_screenheight()
                 # 保存屏幕尺寸
-                subfunc_file.save_screen_size_to_setting_ini(f"{screen_width}*{screen_height}")
+                subfunc_file.save_global_setting('screen_size', f"{screen_width}*{screen_height}")
             return True
 
     def show_setting_error(self):
@@ -299,7 +302,7 @@ class MainWindow:
 
     def recognize_curr_tab_and_refresh(self):
         """确认选项卡并载入"""
-        self.sw = func_setting.fetch_global_setting_or_set_default("tab")
+        self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
         # print(f"切换前：{self.tab_frame}")
         # print(self.tab_dict)
         self.tab_frame = self.tab_dict[self.sw]['frame']
@@ -330,7 +333,6 @@ class MainWindow:
     def create_root_menu_bar(self):
         """创建菜单栏"""
         print("创建菜单栏...")
-        # self.chosen_tab = func_setting.fetch_global_setting_or_set_default("tab")
         if hasattr(self, 'menu_bar'):
             # 清空现有菜单栏
             setattr(self, 'menu_bar', None)
@@ -395,7 +397,7 @@ class MainWindow:
         self.edit_menu.add_command(label="刷新", command=self.refresh)
 
         # ————————————————————————————视图菜单————————————————————————————
-        self.chosen_view = func_setting.fetch_sw_setting_or_set_default("view", self.sw)
+        self.chosen_view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
         self.view_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="视图", menu=self.view_menu)
 
@@ -408,7 +410,7 @@ class MainWindow:
 
         # 显示当前选择的视图
         self.sign_visibility = \
-            True if func_setting.fetch_global_setting_or_set_default("sign_visible") == "True" else False
+            True if subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True" else False
         self.sign_visibility_var = tk.BooleanVar(value=self.sign_visibility)
         self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
@@ -424,7 +426,7 @@ class MainWindow:
 
         self.view_menu.add_separator()  # ————————————————分割线————————————————
 
-        self.chosen_scale = func_setting.fetch_global_setting_or_set_default("scale")
+        self.chosen_scale = subfunc_file.fetch_global_setting_or_set_default("scale")
         self.scale_var = tk.StringVar(value=self.chosen_scale)
         self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
@@ -450,8 +452,8 @@ class MainWindow:
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=False)
         # -应用设置
-        func_setting.fetch_sw_setting_or_set_default("login_size", self.sw)
-        login_size = subfunc_file.get_sw_login_size_from_setting_ini(self.sw)
+        login_size = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "login_size")
+        # print(f"登录窗口大小：{login_size}")
         warning_sign = Strings.WARNING_SIGN
         if not login_size or not re.match(r"^\d+\*\d+$", login_size):
             self.menu_bar.add_cascade(label=f"{warning_sign}设置", menu=self.settings_menu)
@@ -497,7 +499,7 @@ class MainWindow:
         else:
             self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=False)
             # 获取已选择的子程序（假设 func_setting.fetch_sub_exe() 返回 'python', 'handle' 或其他值）
-            self.chosen_sub_exe = func_setting.fetch_sw_setting_or_set_default("sub_exe", self.sw)
+            self.chosen_sub_exe = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "sub_exe")
             self.chosen_sub_exe_var.set(self.chosen_sub_exe)  # 设置初始选中的子程序
             self.settings_menu.add_cascade(label="其余模式", menu=self.sub_executable_menu)
             python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
@@ -559,7 +561,7 @@ class MainWindow:
 
         # ————————————————————————————作者标签————————————————————————————
         self.enable_new_func = \
-            True if func_setting.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
+            True if subfunc_file.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
         if self.enable_new_func is True:
             self.menu_bar.add_command(label=Strings.ENABLED_NEW_FUNC)
             self.menu_bar.entryconfigure(Strings.ENABLED_NEW_FUNC, state="disabled")
@@ -593,7 +595,7 @@ class MainWindow:
         try:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
-                success, result = func_account.get_account_list(
+                success, result = func_account.get_sw_acc_list(
                     self.sw, self.sw_data_dir, self.multiple_status)
                 self.root.after(0, self.create_account_list_ui, success, result)
 
@@ -613,7 +615,9 @@ class MainWindow:
             return
         print(f"渲染账号列表.........................................................")
 
-        login, logout, wechat_processes, mutex = result
+        acc_list_dict, _, mutex = result
+        login = acc_list_dict["login"]
+        logout = acc_list_dict["logout"]
 
         # 底部框架=手动登录
         bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
@@ -652,8 +656,8 @@ class MainWindow:
         else:
             pass
 
-        subfunc_file.update_refresh_time_statistic(
-            self.chosen_view, str(len(login)), time.time() - self.start_time, self.sw)
+        subfunc_file.update_statistic_data(
+            self.sw, 'refresh', self.chosen_view, str(len(login)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
@@ -748,10 +752,11 @@ class MainWindow:
             mode_text = "防撤回"
         else:
             return
-        success, result = func_account.get_account_list(self.sw, self.sw_data_dir, self.multiple_status)
+        success, result = func_account.get_sw_acc_list(self.sw, self.sw_data_dir, self.multiple_status)
         if success is True:
-            logged_in, _, _, _ = result
-            if len(logged_in) > 0:
+            acc_list_dict, _, _ = result
+            login = acc_list_dict["login"]
+            if len(login) > 0:
                 answer = messagebox.askokcancel(
                     "警告",
                     "检测到正在使用微信。切换模式需要修改 WechatWin.dll 文件，请先手动退出所有微信后再进行，否则将会强制关闭微信进程。"
@@ -798,7 +803,7 @@ class MainWindow:
     def to_enable_new_func(self, event=None):
         if event is None:
             pass
-        subfunc_file.set_enable_new_func_in_ini()
+        subfunc_file.save_global_setting('enable_new_func', True)
         messagebox.showinfo("发现彩蛋", "解锁新菜单，快去看看吧！")
         self.refresh()
 
