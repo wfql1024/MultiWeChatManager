@@ -8,7 +8,7 @@ from utils import ini_utils, sw_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
 
-def get_sw_data_dir_from_other_sw(sw="WeChat"):
+def get_sw_data_dir_from_other_sw(sw:str) -> list:
     """通过其他软件的方式获取微信数据文件夹"""
     data_dir_name, = subfunc_file.get_details_from_remote_setting_json(
         sw, data_dir_name=None)
@@ -22,7 +22,7 @@ def get_sw_data_dir_from_other_sw(sw="WeChat"):
             return []
 
 
-def get_sw_dll_dir_by_files(sw="WeChat"):
+def get_sw_dll_dir_by_files(sw:str) -> list:
     """通过文件遍历方式获取dll文件夹"""
     dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, dll_dir_check_suffix=None, executable=None)
@@ -50,12 +50,12 @@ def get_sw_dll_dir_by_files(sw="WeChat"):
     return [file_utils.get_newest_full_version_dir(version_folders)]
 
 
-def get_sw_install_path(sw, from_setting_window=False):
+def get_sw_install_path(sw:str, from_setting_window=False):
     """获取微信安装路径"""
     print("获取安装路径...")
     path_finders = [
         sw_utils.get_sw_install_path_from_process,
-        None if from_setting_window else subfunc_file.get_sw_install_path_from_setting_ini,
+        (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_install_path_from_setting_ini,
         sw_utils.get_sw_install_path_from_machine_register,
         sw_utils.get_sw_install_path_from_user_register,
         sw_utils.get_sw_install_path_by_guess,
@@ -64,8 +64,6 @@ def get_sw_install_path(sw, from_setting_window=False):
     for index, finder in enumerate(path_finders):
         if finder is not None:
             paths = finder(sw)
-            if paths is None:
-                continue
             path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
             if len(path_list) == 0:
                 continue
@@ -78,12 +76,12 @@ def get_sw_install_path(sw, from_setting_window=False):
     return None
 
 
-def get_sw_data_dir(sw, from_setting_window=False):
+def get_sw_data_dir(sw:str, from_setting_window=False):
     """获取微信数据存储文件夹"""
     print("获取数据目录...")
     # 获取地址的各种方法
     path_finders = [
-        None if from_setting_window else subfunc_file.get_sw_data_dir_from_setting_ini,
+        (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_data_dir_from_setting_ini,
         sw_utils.get_sw_data_dir_from_user_register,
         sw_utils.get_sw_data_dir_by_guess,
         get_sw_data_dir_from_other_sw,
@@ -94,8 +92,6 @@ def get_sw_data_dir(sw, from_setting_window=False):
 
         if finder is not None:
             paths = finder(sw)
-            if paths is None:
-                continue
             path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
             if len(path_list) == 0:
                 continue
@@ -109,19 +105,17 @@ def get_sw_data_dir(sw, from_setting_window=False):
     return None
 
 
-def get_sw_dll_dir(sw, from_setting_window=False):
+def get_sw_dll_dir(sw:str, from_setting_window=False):
     """获取微信dll所在文件夹"""
     print("获取dll目录...")
     path_finders = [
-        None if from_setting_window else subfunc_file.get_sw_dll_dir_from_setting_ini,
+        (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_dll_dir_from_setting_ini,
         sw_utils.get_sw_dll_dir_by_memo_maps,
         get_sw_dll_dir_by_files,
     ]
     for index, finder in enumerate(path_finders):
         if finder is not None:
             paths = finder(sw)
-            if paths is None:
-                continue
             path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
             if len(path_list) == 0:
                 continue
@@ -135,7 +129,7 @@ def get_sw_dll_dir(sw, from_setting_window=False):
     return None
 
 
-def get_sw_inst_path_and_ver(sw, from_setting_window=False):
+def get_sw_inst_path_and_ver(sw:str, from_setting_window=False):
     """获取当前使用的版本号"""
     # print(sw)
     install_path = get_sw_install_path(sw, from_setting_window)
@@ -245,5 +239,4 @@ def set_wnd_scale(after, scale=None):
 
 
 if __name__ == "__main__":
-    path_lsit = list(None or [])
-    print(path_lsit)
+    pass

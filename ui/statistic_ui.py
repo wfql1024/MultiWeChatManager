@@ -229,41 +229,6 @@ class StatisticWindow:
         for t in self.tree_dict.keys():
             self.sort_column(t, "平均时间")
 
-    def update_auto_table_from_selection(self, selected_index):
-        """根据下拉框的选择，更新对应的表数据"""
-        data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-        # 清空之前的数据
-        for item in self.auto_tree.get_children():
-            self.auto_tree.delete(item)
-        auto_data = data.get(self.sw, {}).get("auto", {}).items()
-        i = 0
-        for mode, times_dict in auto_data:
-            if selected_index in times_dict:  # 仅显示选中的index
-                stats = times_dict[selected_index]
-                min_time, count, avg_time, max_time = stats.split(",")
-                self.auto_tree.insert("", "end",
-                                      values=(mode, min_time.replace("inf", "null"),
-                                              int(float(count)), avg_time, max_time))
-                i += 1
-        self.auto_tree.config(height=i + 1)
-
-    def update_refresh_table_from_selection(self, selected_view):
-        """根据下拉框的选择，更新对应的表数据"""
-        data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-        # 清空之前的数据
-        for item in self.refresh_tree.get_children():
-            self.refresh_tree.delete(item)
-        refresh_data = data.get(self.sw, {}).get("refresh", {}).get(selected_view, {}).items()
-        try:
-            for acc_count, stats in refresh_data:
-                min_time, count, avg_time, max_time = stats.split(",")
-                self.refresh_tree.insert("", "end",
-                                         values=(acc_count, min_time.replace("inf", "null"),
-                                                 int(float(count)), avg_time, max_time))
-            self.refresh_tree.config(height=len(refresh_data) + 1)
-        except Exception as e:
-            logger.error(e)
-
     def update_table_from_selection(self, mode, selected):
         """根据下拉框的选择，更新对应的表数据"""
         data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)

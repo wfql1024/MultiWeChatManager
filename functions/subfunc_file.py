@@ -116,19 +116,19 @@ def save_global_setting(key, value):
                                   Config.INI_KEY[key], value)
 
 
-def get_sw_install_path_from_setting_ini(sw) -> list:
+def get_sw_install_path_from_setting_ini(sw:str) -> list:
     path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
                                           Config.INI_KEY['inst_path'])
     return [path] if path is not None else []
 
 
-def get_sw_data_dir_from_setting_ini(sw) -> list:
+def get_sw_data_dir_from_setting_ini(sw:str) -> list:
     path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
                                           Config.INI_KEY['data_dir'])
     return [path] if path is not None else []
 
 
-def get_sw_dll_dir_from_setting_ini(sw) -> list:
+def get_sw_dll_dir_from_setting_ini(sw:str) -> list:
     path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
                                           Config.INI_KEY['dll_dir'])
     return [path] if path is not None else []
@@ -539,103 +539,6 @@ def update_has_mutex_from_all_acc(tab):
 
 
 """统计数据相关"""
-
-
-def update_manual_time_statistic(sub_exe, time_spent, tab):
-    """更新手动登录统计数据到json"""
-    if sub_exe.startswith(f"{tab}Multiple"):
-        sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
-
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    if tab not in data:
-        data[tab] = {}
-    tab_info = data.get(tab, {})
-    if "manual" not in tab_info:
-        tab_info["manual"] = {}
-    if sub_exe not in tab_info["manual"]:
-        tab_info["manual"][sub_exe] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
-
-    # 获取当前最小、最大值，次数，平均用时
-    current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    tab_info["manual"][sub_exe].split(","))
-
-    # 更新最小和最大值
-    new_min = min(current_min or math.inf, time_spent)
-    new_max = max(current_max or 0, time_spent)
-
-    # 更新次数和平均用时
-    new_count = count + 1
-    new_avg_time = (avg_time * count + time_spent) / new_count
-
-    tab_info["manual"][sub_exe] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
-
-
-def update_auto_time_statistic(sub_exe, time_spent, index, tab="WeChat"):
-    """更新自动登录统计数据到json"""
-    print("更新自动登录统计数据到json")
-    if sub_exe.startswith(f"{tab}Multiple"):
-        sub_exe = sub_exe.split('_', 1)[1].rsplit('.exe', 1)[0]
-
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    if tab not in data:
-        data[tab] = {}
-    tab_info = data.get(tab, {})
-    if "auto" not in tab_info:
-        tab_info["auto"] = {}
-    if sub_exe not in tab_info["auto"]:
-        tab_info["auto"][sub_exe] = {}
-
-    # 检查该行是否存在
-    if str(index) not in tab_info["auto"][sub_exe]:
-        tab_info["auto"][sub_exe][str(index)] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
-
-    # 获取当前最小、最大值，次数，平均用时
-    current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    tab_info["auto"][sub_exe][str(index)].split(","))
-
-    # 更新最小和最大值
-    new_min = min(current_min or math.inf, time_spent)
-    new_max = max(current_max or 0, time_spent)
-
-    # 更新次数和平均用时
-    new_count = count + 1
-    new_avg_time = (avg_time * count + time_spent) / new_count
-
-    tab_info["auto"][sub_exe][str(index)] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
-    # print(tab_info)
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
-
-
-def update_refresh_time_statistic(view, acc_count, time_spent, tab="WeChat"):
-    """更新刷新时间统计"""
-    if time_spent > 2:
-        return
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
-    if tab not in data:
-        data[tab] = {}
-    tab_info = data.get(tab, {})
-    if "refresh" not in tab_info:
-        tab_info["refresh"] = {}
-    if view not in tab_info["refresh"]:
-        tab_info["refresh"][view] = {}
-    if acc_count not in tab_info["refresh"][view]:
-        tab_info["refresh"][view][acc_count] = f"{math.inf},0,0,0"  # 初始化为“最短时间, (次数, 平均用时), 最长时间”
-
-    # 获取当前最小、最大值，次数，平均用时
-    current_min, count, avg_time, current_max = map(lambda x: float(x) if x != "null" else 0,
-                                                    tab_info["refresh"][view][acc_count].split(","))
-
-    # 更新最小和最大值
-    new_min = min(current_min or math.inf, time_spent)
-    new_max = max(current_max or 0, time_spent)
-
-    # 更新次数和平均用时
-    new_count = count + 1
-    new_avg_time = (avg_time * count + time_spent) / new_count
-
-    tab_info["refresh"][view][acc_count] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
 def update_statistic_data(sw, mode, main_key, sub_key, time_spent):

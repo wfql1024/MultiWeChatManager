@@ -36,7 +36,7 @@ def is_valid_sw_dll_dir(path, sw) -> bool:
     return os.path.isfile(os.path.join(path, suffix))
 
 
-def get_sw_install_path_from_process(sw):
+def get_sw_install_path_from_process(sw:str) -> list:
     executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
     results = []
     for process in psutil.process_iter(['name', 'exe']):
@@ -48,7 +48,7 @@ def get_sw_install_path_from_process(sw):
     return results
 
 
-def get_sw_install_path_from_machine_register(sw):
+def get_sw_install_path_from_machine_register(sw:str) -> list:
     sub_key, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, mac_reg_sub_key=None, executable=None)
     results = []
@@ -73,7 +73,7 @@ def get_sw_install_path_from_machine_register(sw):
     return results
 
 
-def get_sw_install_path_from_user_register(sw):
+def get_sw_install_path_from_user_register(sw:str) -> list:
     sub_key, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, user_reg_sub_key=None, executable=None)
     results = []
@@ -89,7 +89,7 @@ def get_sw_install_path_from_user_register(sw):
     return results
 
 
-def get_sw_install_path_by_guess(sw):
+def get_sw_install_path_by_guess(sw:str) -> list:
     suffix, = subfunc_file.get_details_from_remote_setting_json(sw, inst_path_guess_suffix=None)
     guess_paths = [
         os.path.join(os.environ.get('ProgramFiles'), suffix).replace('\\', '/'),
@@ -98,7 +98,7 @@ def get_sw_install_path_by_guess(sw):
     return guess_paths
 
 
-def get_sw_data_dir_from_user_register(sw):
+def get_sw_data_dir_from_user_register(sw:str) -> list:
     sub_key, dir_name = subfunc_file.get_details_from_remote_setting_json(
         sw, user_reg_sub_key=None, data_dir_name=None)
     results = []
@@ -113,7 +113,7 @@ def get_sw_data_dir_from_user_register(sw):
     return results
 
 
-def get_sw_data_dir_by_guess(sw):
+def get_sw_data_dir_by_guess(sw:str) -> list:
     data_dir_name, data_dir_guess_suffix = subfunc_file.get_details_from_remote_setting_json(
         sw, data_dir_name=None, data_dir_guess_suffix=None)
     guess_paths = [
@@ -122,7 +122,7 @@ def get_sw_data_dir_by_guess(sw):
     return guess_paths
 
 
-def get_sw_dll_dir_by_memo_maps(sw):
+def get_sw_dll_dir_by_memo_maps(sw:str) -> list:
     dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, dll_dir_check_suffix=None, executable=None)
     results = []
