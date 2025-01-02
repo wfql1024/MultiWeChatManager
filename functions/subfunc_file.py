@@ -106,14 +106,18 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
 """本地设置"""
 
 
-def save_sw_setting(sw, key, value):
+def save_sw_setting(sw, key, value, after=None):
     ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                   Config.INI_KEY[key], value)
+    if after is not None:
+        after()
 
 
-def save_global_setting(key, value):
+def save_global_setting(key, value, after=None):
     ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
                                   Config.INI_KEY[key], value)
+    if after is not None:
+        after()
 
 
 def get_sw_install_path_from_setting_ini(sw:str) -> list:

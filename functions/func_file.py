@@ -363,9 +363,8 @@ def create_multiple_lnk(sw, status, after):
         # 对每一个账号进行创建
         result = create_lnk_for_account(sw, account, status)
         if result is False:
-            after()
-            return False
-
+            continue
+    after()
     return True
 
 
@@ -429,15 +428,4 @@ def reset(after):
 
 
 if __name__ == '__main__':
-    # all_sw = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
-    # print(all_sw)
-    #     executable_path = r"D:\SpaceDev\MyProj\MultiWeChatManager\dist\微信多开管理器\微信多开管理器.exe"
-    #     # 打开文件夹
-    #     shell = win32com.client.Dispatch("WScript.Shell")
-    #     shell.CurrentDirectory = os.path.dirname(executable_path)
-    #     shell.Run(f'explorer /select,"{os.path.basename(executable_path)}"')
-    # all_sw, = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
-    # print(all_sw)
-    # for sw in all_sw:
-    #     print(sw)
     pass

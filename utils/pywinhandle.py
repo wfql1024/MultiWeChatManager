@@ -134,11 +134,12 @@ class OBJECT_TYPE_INFORMATION(Structure):
 
 
 def query_system_handle_information():
-    current_length = 0x10000
+    current_length = 0x1000000
     while True:
-        if current_length > 0x4000000:
-            return
-
+        # 添加了限制会容易找不到
+        # if current_length > 0x4000000:
+        #     return
+        start_time = time.time()
         class SYSTEM_HANDLE_INFORMATION_EX(Structure):
             _fields_ = [
                 ('HandleCount', ULONG_PTR),
@@ -150,10 +151,11 @@ def query_system_handle_information():
         return_length = c_ulong(current_length)
         status = ntdll.NtQuerySystemInformation(SystemExtendedHandleInformation, byref(buf), return_length,
                                                 byref(return_length))
+        print(f"{current_length}:{time.time() - start_time}")
         if status == STATUS_SUCCESS:
             return buf
         elif status == STATUS_INFO_LENGTH_MISMATCH:
-            current_length *= 8
+            current_length *= 4
             continue
         else:
             return None
@@ -277,7 +279,8 @@ def close_handles(handles):
 
 if __name__ == '__main__':
     start_time = time.time()
-    handles = find_handles(process_ids=[876], handle_names=['_WeChat_App_Instance_Identity_Mutex_Name'])
-    print(handles)
-    # close_handles(handles)
+    print(query_system_handle_information())
+    # handles = find_handles(process_ids=[63552], handle_names=['_WeChat_App_Instance_Identity_Mutex_Name'])
+    # print(handles)
+    # # close_handles(handles)
     print(time.time() - start_time)

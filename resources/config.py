@@ -10,37 +10,32 @@ class Config:
 
     INI_GLOBAL_SECTION = 'global'
 
-    INI_KEY_INSTALL_PATH = 'install_path'
-    INI_KEY_DATA_PATH = 'data_path'
-    INI_KEY_DLL_DIR_PATH = 'dll_dir_path'
-    INI_KEY_SCREEN_SIZE = 'screen_size'
-    INI_KEY_LOGIN_SIZE = 'login_size'
-    INI_KEY_SUB_EXE = 'sub_executable'
-
     INI_KEY = {
         "inst_path": "install_path",
         "data_dir": "data_dir",
         "dll_dir": "dll_dir",
         "screen_size": "screen_size",
-
-        "sub_exe": "sub_executable",
-        "view": "view",
+        "hide_wnd": "hide_wnd",
         "enable_new_func": "enable_new_func",
-        "login_sort": "login_sort",
-        "logout_sort": "logout_sort",
         "tab": "tab",
-        "login_size": "login_size",
         "scale": "scale",
         "sign_visible": "sign_visible",
+
+        "view": "view",
+        "login_sort": "login_sort",
+        "logout_sort": "logout_sort",
+        "login_size": "login_size",
+        "sub_exe": "sub_executable",
     }
 
     INI_DEFAULT_VALUE = {
         "screen_size": f"1920*1080",
-
+        "hide_wnd": "True",
         "enable_new_func": "True",
         "tab": "WeChat",
         "scale": "auto",
         "sign_visible": "True",
+
         "WeChat": {
             "view": "tree",
             "login_sort": "配置,True",

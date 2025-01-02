@@ -11,7 +11,7 @@ import pygetwindow as gw
 
 def on_press(key):
     try:
-        if key == keyboard.Key.esc:
+        if key == keyboard.Key.tab:
             current_window = gw.getActiveWindow()
             if current_window and "微信（测试版）" in current_window.title:
                 current_window.minimize()
@@ -55,9 +55,9 @@ def main():
     os.environ['http_proxy'] = ''
     os.environ['https_proxy'] = ''
     os.environ['no_proxy'] = '*'
-    # 启动键盘监听器线程
-    keyboard_thread = threading.Thread(target=start_keyboard_listener, daemon=True)
-    keyboard_thread.start()
+    # # 启动键盘监听器线程
+    # keyboard_thread = threading.Thread(target=start_keyboard_listener, daemon=True)
+    # keyboard_thread.start()
     print("管理员身份" if ctypes.windll.shell32.IsUserAnAdmin() == 1 else "非管理员身份")
     # 创建参数解析器
     parser = argparse.ArgumentParser(description="Process command line flags.")

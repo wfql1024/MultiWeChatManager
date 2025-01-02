@@ -13,19 +13,19 @@ from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
-def manual_login(m_class, tab, status, window_callback):
+def manual_login(r_class, sw, status, window_callback):
     """
     根据状态进行手动登录过程
-    :param tab: 选择的软件标签
-    :param m_class:
-    :param window_callback:
+    :param sw: 选择的软件标签
+    :param r_class: 主窗口类
+    :param window_callback: 窗口方法
     :param status: 状态
     :return: 成功与否
     """
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
     start_time = time.time()
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
-        tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
+        sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
     if redundant_wnd_list is None or login_wnd_class is None or cfg_handles is None or executable_name is None:
         messagebox.showinfo("错误", "尚未适配！")
         return
@@ -33,17 +33,17 @@ def manual_login(m_class, tab, status, window_callback):
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
     hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
-    subfunc_sw.kill_sw_multiple_processes(tab)
+    subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
-    subfunc_file.clear_all_acc_in_acc_json(tab)
-    subfunc_file.update_all_acc_in_acc_json(tab)
-    has_mutex_dict = subfunc_sw.get_mutex_dict(tab)
+    subfunc_file.clear_all_acc_in_acc_json(sw)
+    subfunc_file.update_all_acc_in_acc_json(sw)
+    has_mutex_dict = subfunc_sw.get_mutex_dict(sw)
     logger.info(f"当前模式是：{status}")
-    sub_exe_process, sub_exe = subfunc_sw.open_sw(tab, status, has_mutex_dict)
+    sub_exe_process, sub_exe = subfunc_sw.open_sw(sw, status, has_mutex_dict)
     wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 20)
     if wechat_hwnd:
-        subfunc_file.set_all_acc_values_to_false(tab)
-        subfunc_file.update_statistic_data(tab, 'manual', '_', sub_exe, time.time() - start_time)
+        subfunc_file.set_all_acc_values_to_false(sw)
+        subfunc_file.update_statistic_data(sw, 'manual', '_', sub_exe, time.time() - start_time)
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
@@ -55,7 +55,8 @@ def manual_login(m_class, tab, status, window_callback):
         logger.warning(f"打开失败，请重试！")
         messagebox.showerror("错误", "手动登录失败，请重试")
 
-    m_class.root.after(0, m_class.refresh_main_frame)
+    # 刷新菜单和窗口前置
+    r_class.root.after(0, r_class.refresh_main_frame)
     window_callback()
 
 

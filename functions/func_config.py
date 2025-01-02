@@ -10,7 +10,7 @@ from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
-def get_config_status_by_account(account, data_path, sw="WeChat") -> str:
+def get_config_status_by_account(account, data_path, sw) -> str:
     """
     通过账号的配置状态
     :param sw: 选择的软件标签
@@ -20,7 +20,7 @@ def get_config_status_by_account(account, data_path, sw="WeChat") -> str:
     """
     # print(sw, data_path, account)
     if not data_path:
-        return "无法获取配置路径"
+        return "无配置路径"
     config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
         sw, config_path_suffix=None, config_file_list=None)
     if len(config_files) == 0 or config_files is None:

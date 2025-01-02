@@ -142,6 +142,7 @@ def open_sw(sw, status, has_mutex_dictionary=None):
         # ————————————————————————————————python————————————————————————————————
         elif multiple_mode == "python":
             if len(has_mutex_dictionary) > 0:
+                print(has_mutex_dictionary)
                 pids, values = zip(*has_mutex_dictionary.items())
                 success = pywinhandle.close_handles(
                     pywinhandle.find_handles(

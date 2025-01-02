@@ -1,11 +1,10 @@
-import threading
 import tkinter as tk
 from functools import partial
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_login, func_account, subfunc_file, subfunc_sw
+from functions import func_config, func_account, subfunc_file, subfunc_sw
 from resources import Constants, Strings
 from ui import detail_ui
 from utils import widget_utils, string_utils
@@ -22,24 +21,27 @@ def try_convert(value):
 
 class TreeviewRowUI:
     def __init__(self, root, root_class, root_main_frame, result, data_path, multiple_status, sw):
-        self.login_trees = None
         self.sw = sw
         self.acc_index = None
         self.hovered_item = None
-        self.single_click_id = None
         self.photo_images = []
-        self.selected_logout_accounts = None
-        self.selected_login_accounts = None
+        self.selected_accounts = {
+            "login": [],
+            "logout": []
+        }
+        self.selected_items = {
+            "login": [],
+            "logout": []
+        }
         self.logout_tree = None
         self.login_tree = None
-        self.selected_logout_items = []
-        self.selected_login_items = []
         self.root_class = root_class
         self.data_path = data_path
-        self.multiple_status = multiple_status
         self.tooltips = {}
         self.root = root
         self.main_frame = root_main_frame
+
+        # 构建ui
         self.tree_frame = tk.Frame(self.main_frame)
         self.tree_frame.pack(expand=True, fill=tk.BOTH)
         self.sign_visible:bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
@@ -83,13 +85,17 @@ class TreeviewRowUI:
             self.login_button_frame.pack(side=tk.RIGHT)
 
             # 一键退出
-            self.one_key_quit = ttk.Button(self.login_button_frame, text="一键退出",
-                                           command=self.quit_selected_accounts, style='Custom.TButton')
+            self.one_key_quit = ttk.Button(
+                self.login_button_frame, text="一键退出", style='Custom.TButton',
+                command=lambda: func_account.to_quit_selected_accounts(
+                    self.sw, self.selected_accounts["login"], self.root_class.refresh_main_frame
+                ))
             self.one_key_quit.pack(side=tk.RIGHT)
             # 配置
-            self.config_btn = ttk.Button(self.login_button_frame, text="❐配 置", style='Custom.TButton',
-                                         command=partial(self.create_config, multiple_status=self.multiple_status)
-                                         )
+            self.config_btn = ttk.Button(
+                self.login_button_frame, text="❐配 置", style='Custom.TButton',
+                command=lambda: self.root_class.to_create_config(self.selected_accounts["login"][0])
+            )
             self.config_btn.pack(side=tk.RIGHT)
             widget_utils.disable_button_and_add_tip(
                 self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有符号表示推荐配置的账号")
@@ -141,8 +147,10 @@ class TreeviewRowUI:
             self.logout_button_frame.pack(side=tk.RIGHT)
 
             # 一键登录
-            self.one_key_auto_login = ttk.Button(self.logout_button_frame, text="一键登录",
-                                                 command=self.auto_login_selected_accounts, style='Custom.TButton')
+            self.one_key_auto_login = ttk.Button(
+                self.logout_button_frame, text="一键登录", style='Custom.TButton',
+                command=lambda: self.root_class.to_auto_login(self.selected_items["logout"])
+            )
             self.one_key_auto_login.pack(side=tk.RIGHT)
 
             # 更新顶部复选框状态
@@ -275,10 +283,10 @@ class TreeviewRowUI:
         is_asc: bool = sort == "True"
 
         if col is not None:
-            print("切换列表排序...")
+            print("切换列排序...")
             need_switch = True
         else:
-            print("应用列表排序...")
+            print("应用列排序...")
             need_switch = False
             col = tmp_col
 
@@ -329,13 +337,13 @@ class TreeviewRowUI:
         now_asc = not is_asc if need_switch else is_asc
         subfunc_file.save_sw_setting(self.sw, f'{login_status}_sort', f"{col},{now_asc}")
 
-    def update_selected_display(self, login_status):
+    def get_selected_accounts(self, login_status):
         # 获取选中行的“英语”列数据
         if login_status == "login":
             tree = self.login_tree
-            selected_items = self.selected_login_items
+            selected_items = self.selected_items["login"]
             selected_accounts = [tree.item(item, "values")[self.acc_index] for item in selected_items]
-            self.selected_login_accounts = selected_accounts
+            self.selected_accounts["login"] = selected_accounts
             # 配置只能是某1个账号
             if len(selected_accounts) == 1:
                 widget_utils.enable_button_and_unbind_tip(
@@ -345,9 +353,9 @@ class TreeviewRowUI:
                     self.tooltips, self.config_btn, "请选择一个账号进行配置，配置前有符号表示推荐配置的账号")
         else:
             tree = self.logout_tree
-            selected_items = self.selected_logout_items
+            selected_items = self.selected_items["logout"]
             selected_accounts = [tree.item(i, "values")[self.acc_index] for i in selected_items]
-            self.selected_logout_accounts = selected_accounts
+            self.selected_accounts["logout"] = selected_accounts
 
     def toggle_top_checkbox(self, _event, login_status):
         """
@@ -361,13 +369,13 @@ class TreeviewRowUI:
         if login_status == "login":
             checkbox_var = self.login_checkbox_var
             tree = self.login_tree
-            selected_items = self.selected_login_items
+            selected_items = self.selected_items["login"]
             button = self.one_key_quit
             tip = "请选择要退出的账号"
         else:
             checkbox_var = self.logout_checkbox_var
             tree = self.logout_tree
-            selected_items = self.selected_logout_items
+            selected_items = self.selected_items["logout"]
             button = self.one_key_auto_login
             tip = "请选择要登录的账号"
         checkbox_var.set(not checkbox_var.get())
@@ -387,7 +395,7 @@ class TreeviewRowUI:
             for item_id in tree.get_children():
                 if "disabled" not in tree.item(item_id, "tags"):
                     widget_utils.remove_a_tag_of_item(tree, item_id, "selected")
-        self.update_selected_display(login_status)  # 更新显示
+        self.get_selected_accounts(login_status)  # 更新显示
         return "break"
 
     def update_top_title(self, login_status):
@@ -399,7 +407,7 @@ class TreeviewRowUI:
         if login_status == "login":
             all_rows = [item for item in self.login_tree.get_children()
                         if "disabled" not in self.login_tree.item(item, "tags")]
-            selected_rows = self.selected_login_items
+            selected_rows = self.selected_items["login"]
             checkbox = self.login_checkbox
             title = self.login_title
             checkbox_var = self.login_checkbox_var
@@ -408,7 +416,7 @@ class TreeviewRowUI:
         else:
             all_rows = [item for item in self.logout_tree.get_children()
                         if "disabled" not in self.logout_tree.item(item, "tags")]
-            selected_rows = self.selected_logout_items
+            selected_rows = self.selected_items["logout"]
             checkbox = self.logout_checkbox
             title = self.logout_title
             checkbox_var = self.logout_checkbox_var
@@ -463,23 +471,14 @@ class TreeviewRowUI:
             # 更新当前悬停行
             self.hovered_item = (tree, item)
 
-
-    def on_single_click(self, event, login_status):
-        """处理单击事件，并在检测到双击时取消"""
-        # 取消之前的单击延时处理（如果有）
-        if self.single_click_id:
-            self.root.after_cancel(self.single_click_id)
-        # 设置一个延时，若在此期间未检测到双击，则处理单击事件
-        self.single_click_id = self.root.after(200, lambda: self.toggle_selection(event, login_status))
-
     def toggle_selection(self, login_status, event=None):
         # print("进入了单击判定")
         if login_status == "login":
             tree = self.login_tree
-            selected_items = self.selected_login_items
+            selected_items = self.selected_items["login"]
         elif login_status == "logout":
             tree = self.logout_tree
-            selected_items = self.selected_logout_items
+            selected_items = self.selected_items["logout"]
         else:
             tree = None
             selected_items = []
@@ -496,22 +495,20 @@ class TreeviewRowUI:
                 else:
                     selected_items.append(item_id)
                     widget_utils.add_a_tag_to_item(tree, item_id, "selected")
-                self.update_selected_display(login_status)  # 实时更新选中行显示
+                self.get_selected_accounts(login_status)  # 实时更新选中行显示
                 self.update_top_title(login_status)
 
     def double_selection(self, login_status, event=None):
-        if self.single_click_id:
-            self.root.after_cancel(self.single_click_id)
-            self.single_click_id = None
-        # print("进入了双击判定")
         if login_status == "login":
             tree = self.login_tree
-            selected_items = self.selected_login_items
-            callback = self.quit_selected_accounts
+            selected_items = self.selected_items["login"]
+            callback = lambda: func_account.to_quit_selected_accounts(
+                    self.sw, self.selected_accounts["login"], self.root_class.refresh_main_frame
+                )
         elif login_status == "logout":
             tree = self.logout_tree
-            selected_items = self.selected_logout_items
-            callback = self.auto_login_selected_acc
+            selected_items = self.selected_items["logout"]
+            callback = lambda: self.root_class.to_auto_login(self.selected_accounts["logout"])
         else:
             tree = event.widget
             selected_items = []
@@ -529,7 +526,7 @@ class TreeviewRowUI:
                     widget_utils.remove_a_tag_of_item(tree, i, "selected")
                 selected_items.append(item_id)
                 widget_utils.add_a_tag_to_item(tree, item_id, "selected")
-                self.update_selected_display(login_status)  # 实时更新选中行显示
+                self.get_selected_accounts(login_status)  # 实时更新选中行显示
                 self.update_top_title(login_status)
                 callback()
 
@@ -538,52 +535,3 @@ class TreeviewRowUI:
         detail_window = tk.Toplevel(self.root)
         detail_ui.DetailWindow(self.root, self.root, detail_window, self.sw,
                                account, self.root_class.refresh_main_frame)
-
-    def create_config(self, multiple_status):
-        """按钮：创建或重新配置"""
-        accounts = self.selected_login_items
-        threading.Thread(target=func_config.test,
-                         args=(self.root_class, accounts[0], multiple_status, self.sw)).start()
-
-    def quit_selected_accounts(self):
-        """退出所选账号"""
-        accounts = self.selected_login_items
-        accounts_to_quit = []
-        for account in accounts:
-            pid, = subfunc_file.get_sw_acc_details_from_json("WeChat", account, pid=None)
-            display_name = func_account.get_acc_origin_display_name(self.sw, account)
-            cleaned_display_name = string_utils.clean_display_name(display_name)
-            accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
-        accounts_to_quit_str = "\n".join(accounts_to_quit)
-        if messagebox.askokcancel("提示",
-                                  f"确认退登：\n{accounts_to_quit_str}？"):
-            try:
-                quited_accounts = func_account.quit_accounts(self.sw, accounts)
-                quited_accounts_str = "\n".join(quited_accounts)
-                messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
-                self.root_class.refresh_main_frame()
-            except Exception as e:
-                logger.error(e)
-
-    def auto_login_selected_accounts(self):
-        """登录所选账号"""
-        accounts = self.selected_logout_items
-        self.root.iconify()  # 最小化主窗口
-        try:
-            threading.Thread(
-                target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.root_class.refresh_main_frame, self.sw)
-            ).start()
-        except Exception as e:
-            logger.error(e)
-
-    def auto_login_selected_acc(self):
-        """登录所选账号"""
-        accounts = self.selected_logout_items
-        try:
-            threading.Thread(
-                target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.root_class.refresh_main_frame, self.sw)
-            ).start()
-        except Exception as e:
-            logger.error(e)

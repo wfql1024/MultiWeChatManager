@@ -1,4 +1,3 @@
-import threading
 import time
 import tkinter as tk
 from functools import partial
@@ -6,7 +5,7 @@ from tkinter import ttk
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_login, func_account, subfunc_file, subfunc_sw
+from functions import func_config, func_account, subfunc_file, subfunc_sw
 from resources import Constants
 from ui import detail_ui
 from utils import string_utils, widget_utils
@@ -18,19 +17,14 @@ class AccountRow:
     为每一个账号创建其行布局的类
     """
 
-    def __init__(self, root, m_class, parent_frame, account, data_path, config_status,
-                 multiple_status, login_status, update_top_checkbox_callback, sw="WeChat"):
-        self.chosen_tab = sw
+    def __init__(self, root, m_class, parent_frame, account, config_status,
+                 login_status, update_top_checkbox_callback, sw):
+        self.sw = sw
         self.root = root
         self.m_class = m_class
-        self.single_click_id = None
-        self.data_path = data_path
         self.config_status = config_status
-        self.multiple_status = multiple_status
         self.start_time = time.time()
         self.tooltips = {}
-        self.toggle_avatar_label = None
-        self.size = None
         self.update_top_checkbox_callback = update_top_checkbox_callback
         self.login_status = login_status
         # print(f"初始化用时{time.time() - self.start_time:.4f}秒")
@@ -53,7 +47,7 @@ class AccountRow:
 
         # 账号标签
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
-        wrapped_display_name = func_account.get_acc_wrapped_display_name(self.chosen_tab, account)
+        wrapped_display_name = func_account.get_acc_wrapped_display_name(self.sw, account)
         has_mutex, = subfunc_file.get_sw_acc_details_from_json("WeChat", account, has_mutex=None)
         style = ttk.Style()
         style.configure("Mutex.TLabel", foreground="red")
@@ -90,7 +84,7 @@ class AccountRow:
             self.config_button_text = "重新配置" if self.config_status != "无配置" else "添加配置"
             self.config_button = ttk.Button(
                 self.button_frame, text=self.config_button_text, style='Custom.TButton',
-                command=partial(self.create_config, account, self.multiple_status)
+                command=partial(self.m_class.to_create_config, account)
             )
             self.config_button.pack(side=tk.RIGHT)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
@@ -98,8 +92,9 @@ class AccountRow:
                 child.bind("<Button-1>", self.toggle_checkbox, add="+")
         else:
             # 登录按钮
-            self.login_button = ttk.Button(self.button_frame, text="自动登录", style='Custom.TButton',
-                                           command=partial(self.auto_login_account, account))
+            self.login_button = ttk.Button(
+                self.button_frame, text="自动登录", style='Custom.TButton',
+                command=lambda: self.m_class.to_auto_login([account]))
             self.login_button.pack(side=tk.RIGHT)
 
             if self.config_status == "无配置":
@@ -120,7 +115,7 @@ class AccountRow:
             self.root,
             self.avatar_label,
             partial(self.open_detail, account),
-            partial(subfunc_sw.switch_to_sw_account_wnd, self.chosen_tab, account, self.root)
+            partial(subfunc_sw.switch_to_sw_account_wnd, self.sw, account, self.root)
         )
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
@@ -142,7 +137,7 @@ class AccountRow:
         :return: 头像标签 -> Label
         """
         try:
-            img = func_account.get_acc_avatar_from_files(account, self.chosen_tab)
+            img = func_account.get_acc_avatar_from_files(account, self.sw)
             img = img.resize(Constants.AVT_SIZE)
             photo = ImageTk.PhotoImage(img)
             avatar_label = ttk.Label(self.row_frame, image=photo)
@@ -160,39 +155,23 @@ class AccountRow:
         if event is None:
             pass
         detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(self.root, self.root, detail_window, self.chosen_tab,
+        detail_ui.DetailWindow(self.root, self.root, detail_window, self.sw,
                                account, self.m_class.refresh_main_frame)
-
-    def create_config(self, account, multiple_status):
-        """按钮：创建或重新配置"""
-        threading.Thread(target=func_config.test,
-                         args=(self.m_class, account, multiple_status, self.chosen_tab)).start()
-
-    def auto_login_account(self, account):
-        """按钮：自动登录某个账号"""
-        self.root.iconify()  # 最小化主窗口
-        try:
-            threading.Thread(
-                target=func_login.auto_login_accounts,
-                args=([account], self.multiple_status, self.m_class.refresh_main_frame, self.chosen_tab)
-            ).start()
-        except Exception as e:
-            logger.error(e)
 
 
 class ClassicRowUI:
-    def __init__(self, root, m_class, m_main_frame, result, data_path, multiple_status, sw="WeChat"):
-        self.chosen_tab = sw
-        self.m_class = m_class
+    def __init__(self, root, r_class, m_main_frame, result, data_path, multiple_status, sw="WeChat"):
+        self.sw = sw
+        self.r_class = r_class
         self.data_path = data_path
         self.multiple_status = multiple_status
-        self.logout_rows = {}
-        self.login_rows = {}
+        self.rows = {
+            "login": {},
+            "logout": {}
+        }
         self.tooltips = {}
         self.root = root
         self.main_frame = m_main_frame
-        self.login_rows.clear()
-        self.logout_rows.clear()
         acc_list_dict, wechat_processes, mutex = result
         # 已登录列表
         logins = acc_list_dict.get("login")
@@ -228,8 +207,12 @@ class ClassicRowUI:
             self.login_btn_frame.pack(side=tk.RIGHT)
 
             # 一键退出
-            self.one_key_quit = ttk.Button(self.login_btn_frame, text="一键退出",
-                                           command=self.one_click_to_quit, style='Custom.TButton')
+            self.one_key_quit = ttk.Button(
+                self.login_btn_frame, text="一键退出", style='Custom.TButton',
+                command=lambda: func_account.to_quit_selected_accounts(
+                    self.sw, self.get_selected_accounts("login"), self.r_class.refresh_main_frame
+                )
+            )
             self.one_key_quit.pack(side=tk.RIGHT)
 
             # 加载已登录列表
@@ -267,8 +250,10 @@ class ClassicRowUI:
             self.logout_bottom_frame.pack(side=tk.RIGHT)
 
             # 一键登录
-            self.one_key_auto_login = ttk.Button(self.logout_bottom_frame, text="一键登录",
-                                                 command=self.auto_login_selected_accounts, style='Custom.TButton')
+            self.one_key_auto_login = ttk.Button(
+                self.logout_bottom_frame, text="一键登录", style='Custom.TButton',
+                command = lambda: self.r_class.to_auto_login(self.get_selected_accounts("logout")),
+            )
             self.one_key_auto_login.pack(side=tk.RIGHT)
 
             # 加载未登录列表
@@ -281,20 +266,20 @@ class ClassicRowUI:
     def add_account_row(self, parent_frame, account, login_status):
         """渲染账号所在行"""
         print(f"渲染{account}.........................................................")
-        config_status = func_config.get_config_status_by_account(account, self.data_path, self.chosen_tab)
+        config_status = func_config.get_config_status_by_account(account, self.data_path, self.sw)
 
         # 创建列表实例
-        row = AccountRow(self.root, self.m_class, parent_frame, account, self.data_path, config_status,
-                         self.multiple_status, login_status, self.update_top_title, self.chosen_tab)
+        row = AccountRow(self.root, self.r_class, parent_frame, account, config_status,
+                         login_status, self.update_top_title, self.sw)
 
         # 将已登录、未登录但已配置实例存入字典
         if login_status == "login":
-            self.login_rows[account] = row
+            self.rows[login_status][account] = row
         elif login_status == "logout":
             if config_status == "无配置":
                 pass
             else:
-                self.logout_rows[account] = row
+                self.rows[login_status][account] = row
 
     def toggle_top_checkbox(self, _event, login_status):
         """
@@ -305,12 +290,12 @@ class ClassicRowUI:
         """
         if login_status == "login":
             checkbox_var = self.login_checkbox_var
-            rows = self.login_rows
+            rows = self.rows[login_status]
             button = self.one_key_quit
             tip = "请选择要退出的账号"
         else:
             checkbox_var = self.logout_checkbox_var
-            rows = self.logout_rows
+            rows = self.rows[login_status]
             button = self.one_key_auto_login
             tip = "请选择要登录的账号"
         checkbox_var.set(not checkbox_var.get())
@@ -330,14 +315,21 @@ class ClassicRowUI:
 
         # 判断是要更新哪一个顶行
         if login_status == "login":
-            all_rows = list(self.login_rows.values())
+            all_rows = list(self.rows[login_status].values())
             checkbox = self.login_checkbox
             title = self.login_title
             checkbox_var = self.login_checkbox_var
             button = self.one_key_quit
             tip = "请选择要退出的账号"
+        elif login_status == "logout":
+            all_rows = list(self.rows[login_status].values())
+            checkbox = self.logout_checkbox
+            title = self.logout_title
+            checkbox_var = self.logout_checkbox_var
+            button = self.one_key_auto_login
+            tip = "请选择要登录的账号"
         else:
-            all_rows = list(self.logout_rows.values())
+            all_rows = list(self.rows[login_status].values())
             checkbox = self.logout_checkbox
             title = self.logout_title
             checkbox_var = self.logout_checkbox_var
@@ -370,25 +362,8 @@ class ClassicRowUI:
                 checkbox_var.set(0)
                 widget_utils.disable_button_and_add_tip(self.tooltips, button, tip)
 
-    def one_click_to_quit(self):
-        """退出所选账号"""
-        accounts = [
-            account
-            for account, row in self.login_rows.items() if row.checkbox_var.get()
-        ]
-        try:
-            func_account.to_quit_selected_accounts(self.chosen_tab, accounts, self.m_class.refresh_main_frame)
-        except Exception as e:
-            logger.error(e)
-
-    def auto_login_selected_accounts(self):
-        """登录所选账号"""
-        accounts = [account for account, row in self.logout_rows.items() if row.checkbox_var.get()]
-        self.root.iconify()  # 最小化主窗口
-        try:
-            threading.Thread(
-                target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.m_class.refresh_main_frame, self.chosen_tab)
-            ).start()
-        except Exception as e:
-            logger.error(e)
+    def get_selected_accounts(self, login_status):
+        """获取已登录列表"""
+        accounts = [account for account, row in self.rows[login_status].items() if row.checkbox_var.get()]
+        print(accounts)
+        return accounts
