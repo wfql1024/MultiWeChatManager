@@ -1,25 +1,20 @@
 # main_ui.py
-import glob
 import os
 import queue
-import re
 import sys
 import threading
 import time
 import tkinter as tk
-import webbrowser
 from functools import partial
 from tkinter import messagebox
 from tkinter import ttk
 
-import psutil
+from typing import Dict, Union
 
-from functions import func_setting, func_sw_dll, func_login, func_file, func_account, subfunc_file, func_update, \
-    func_config
+from functions import func_setting, func_login, func_file, func_account, subfunc_file, func_update, func_config
 from resources import Strings, Config, Constants
-from ui import setting_ui, rewards_ui, debug_ui, statistic_ui, update_log_ui, classic_row_ui, treeview_row_ui, \
-    sidebar_ui, about_ui, loading_ui
-from utils import hwnd_utils, debug_utils, widget_utils
+from ui import setting_ui, debug_ui, update_log_ui, classic_row_ui, treeview_row_ui, loading_ui, detail_ui, menu_ui
+from utils import hwnd_utils, debug_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -42,28 +37,49 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, root, args=None):
-        # 首先确保有默认的标签
-        self.need_hide_wnd = None
-        self.sign_visibility_var = None
-        self.view_var = None
-        self.need_hide_wnd_var = None
-        self.chosen_sub_exe_var = None
-        self.login_menu = None
-        self.login_size = None
-        self.tree_ui = None
+        self.root_menu = None
+        
+        self.states: Dict[str, Union[str, None]] = {
+            "multiple": None,
+            "revoke": None,
+        }        
+        self.sw_info: Dict[str, Union[str, None]] = {
+            "data_dir": None,
+            "inst_path": None,
+            "ver": None,
+            "dll_dir": None,
+            "login_size": None,
+            "view": None,
+        }
         self.tree_uis = {
             "WeChat": None,
-            "Weixin": None
+            "Weixin": None,
         }
-        self.classic_ui = None
-        self.sign_visibility = None
-        self.scale_var = None
-        self.chosen_scale = None
-        self.wnd_scale_menu = None
+        self.classic_uis = {
+            "WeChat": None,
+            "Weixin": None,
+        }
+        self.settings_values: Dict[str, Union[str, None, bool]] = {
+            "sign_vis": None,
+            "hide_wnd": None,
+            "new_func": None,
+            "scale": None,
+            "rest_mode": None,
+        }
+        self.settings_variables: Dict[str, Union[tk.BooleanVar, tk.StringVar, None]] = {
+            "sign_vis": None,
+            "hide_wnd": None,
+            "new_func": None,
+            "scale": None,
+            "rest_mode": None,
+        }
+        self.app_info: Dict[str, Union[str, bool, None]] = {
+            "curr_full_ver": None,
+            "need_update": False,
+        }
+        
         self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
-        self.enable_new_func = \
-            True if subfunc_file.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
-        self.current_full_version = subfunc_file.get_app_current_version()
+        self.app_info["curr_full_ver"] = subfunc_file.get_app_current_version()
 
         self.root = root
         self.loading_window = tk.Toplevel(self.root)
@@ -73,44 +89,21 @@ class MainWindow:
         print("稍后自检...")
         self.root.after(2000, self.load_on_startup)
 
-        self.sw_ver = None
         self.error_frame = None
         self.scrollbar = None
         self.canvas_window = None
         self.canvas = None
-        self.tab_mng = None
         self.tab_control = None
         self.tab_dict = None
         self.tab_frame = None
-        self.chosen_sub_exe = None
-        self.program_file_menu = None
-        self.view_options_menu = None
-        self.need_to_update = False
         self.chosen_view = None
-        self.view_menu = None
-        self.revoke_err = None
-        self.multiple_err = None
-        self.revoke_status = None
-        self.statistic_menu = None
         self.debug = args.debug
         self.new = args.new
         self.settings_button = None
-        self.sub_executable_menu = None
-        self.config_file_menu = None
-        self.user_file_menu = None
-        self.file_menu = None
-        self.help_menu = None
-        self.multiple_status = None
-        self.sw_dll_dir = None
-        self.sw_data_dir = None
-        self.sw_inst_path = None
         self.start_time = None
         self.status_bar = None
-        self.status_var = None
+        self.statusbar_output_var = None
         self.main_frame = None
-        self.settings_menu = None
-        self.edit_menu = None
-        self.menu_bar = None
 
         # 版本更新，统计表结构更新，需升级
         subfunc_file.merge_refresh_nodes()
@@ -118,6 +111,7 @@ class MainWindow:
         subfunc_file.swap_cnt_and_mode_levels_in_auto()
         subfunc_file.downgrade_item_lvl_under_manual()
 
+        # style管理
         style = ttk.Style()
         style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
                         width=Constants.CUS_BTN_WIDTH)  # 水平方向20像素，垂直方向10像素的内边距
@@ -128,18 +122,16 @@ class MainWindow:
         style.configure("RedWarning.TLabel", foreground="red", font=("", Constants.LITTLE_FONTSIZE))
         style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
 
+        # 主窗口属性
         self.root.title("微信多开管理器")
         self.root.iconbitmap(Config.PROJ_ICO_PATH)
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE
 
         # 创建状态栏
         self.create_status_bar()
-        # 创建消息队列
-        self.message_queue = queue.Queue()
-        # 重定向 stdout
-        sys.stdout = debug_utils.RedirectText(self.status_var, self.message_queue, self.debug)
-        # 定期检查队列中的消息
-        self.update_status()
+        self.message_queue = queue.Queue()  # 创建消息队列
+        sys.stdout = debug_utils.RedirectText(self.statusbar_output_var, self.message_queue, self.debug)  # 重定向 stdout
+        self.update_status()  # 定期检查队列中的消息
 
         # 创建选项卡
         self.create_tab()
@@ -152,8 +144,8 @@ class MainWindow:
     def create_status_bar(self):
         """创建状态栏"""
         print(f"加载状态栏...")
-        self.status_var = tk.StringVar()
-        self.status_bar = tk.Label(self.root, textvariable=self.status_var, bd=Constants.STATUS_BAR_BD,
+        self.statusbar_output_var = tk.StringVar()
+        self.status_bar = tk.Label(self.root, textvariable=self.statusbar_output_var, bd=Constants.STATUS_BAR_BD,
                                    relief=tk.SUNKEN, anchor=tk.W, height=Constants.STATUS_BAR_HEIGHT)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         # 绑定点击事件
@@ -166,7 +158,7 @@ class MainWindow:
             # 从队列中获取消息并更新状态栏
             message = self.message_queue.get_nowait()
             if message.strip():  # 如果消息不为空，更新状态栏
-                self.status_var.set(message)
+                self.statusbar_output_var.set(message)
         except queue.Empty:
             pass
         except Exception as e:
@@ -241,17 +233,15 @@ class MainWindow:
             print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
 
         if os.path.exists(Config.REMOTE_SETTING_JSON_PATH):
-            success, result = func_update.split_vers_by_cur_from_local(self.current_full_version)
+            success, result = func_update.split_vers_by_cur_from_local(self.app_info["curr_full_ver"])
             if success is True:
                 new_versions, old_versions = result
                 if len(new_versions) != 0:
-                    self.need_to_update = True
+                    self.app_info["need_update"] = True
 
-        self.chosen_sub_exe = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "sub_exe")
         self.chosen_view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
-        self.login_size = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "login_size")
 
-        if self.sw_inst_path is None or self.sw_data_dir is None or self.sw_dll_dir is None:
+        if self.sw_info["inst_path"] is None or self.sw_info["data_dir"] is None or self.sw_info["dll_dir"] is None:
             print("路径设置错误，请点击按钮修改")
             self.root.after(0, self.show_setting_error)
             return False
@@ -312,19 +302,22 @@ class MainWindow:
         # print(f"切换后：{self.tab_frame}")
         # 若标签页为空则创建
         if len(self.tab_frame.winfo_children()) == 0:
-            threading.Thread(target=self.check_and_init)
+            threading.Thread(target=self.check_and_init).start()
         self.refresh()
 
     def refresh(self):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         # 只读取ini中存储的配置
-        self.sw_data_dir = func_setting.get_sw_data_dir(self.sw, False)
-        self.sw_inst_path, self.sw_ver = func_setting.get_sw_inst_path_and_ver(self.sw, False)
-        self.sw_dll_dir = func_setting.get_sw_dll_dir(self.sw, False)
+        self.sw_info["data_dir"] = func_setting.get_sw_data_dir(self.sw, False)
+        self.sw_info["inst_path"], self.sw_info["ver"] = func_setting.get_sw_inst_path_and_ver(self.sw, False)
+        self.sw_info["dll_dir"] = func_setting.get_sw_dll_dir(self.sw, False)
 
         def reload_func():
-            self.root.after(0, self.create_root_menu_bar)
+            self.root_menu = menu_ui.MenuUI(
+                self.root, self, self.sw, self.app_info, self.sw_info,
+                self.states, self.settings_values, self.settings_variables)
+            self.root.after(0, self.root_menu.create_root_menu_bar)
             self.root.after(0, self.refresh_main_frame)
 
         try:
@@ -333,281 +326,17 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
-    def create_root_menu_bar(self):
-        """创建菜单栏"""
-        print("创建菜单栏...")
-        if hasattr(self, 'menu_bar'):
-            # 清空现有菜单栏
-            setattr(self, 'menu_bar', None)
-        else:
-            self.menu_bar = tk.Menu(self.root)
-            self.root.config(menu=self.menu_bar)
-
-        self.menu_bar = tk.Menu(self.root)
-        self.root.config(menu=self.menu_bar)
-
-        # ————————————————————————————文件菜单————————————————————————————
-        self.file_menu = tk.Menu(self.menu_bar, tearoff=False)
-        self.menu_bar.add_cascade(label="文件", menu=self.file_menu)
-        # >用户文件
-        self.user_file_menu = tk.Menu(self.file_menu, tearoff=False)
-        self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
-        self.user_file_menu.add_command(label="打开", command=func_file.open_user_file)
-        self.user_file_menu.add_command(label="清除",
-                                        command=partial(func_file.clear_user_file, self.refresh))
-        # >配置文件
-        self.config_file_menu = tk.Menu(self.file_menu, tearoff=False)
-        if not self.sw_data_dir:
-            self.file_menu.add_command(label="配置文件  未获取")
-            self.file_menu.entryconfig(f"配置文件  未获取", state="disable")
-        else:
-            self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
-            self.config_file_menu.add_command(label="打开",
-                                              command=partial(func_file.open_config_file, self.sw))
-            self.config_file_menu.add_command(label="清除",
-                                              command=partial(func_file.clear_config_file, self.sw,
-                                                              self.refresh))
-        # >程序目录
-        self.program_file_menu = tk.Menu(self.file_menu, tearoff=False)
-        self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
-        self.program_file_menu.add_command(label="打开", command=func_file.open_program_file)
-        self.program_file_menu.add_command(label="删除旧版备份",
-                                           command=partial(func_file.mov_backup))
-
-        # >统计数据
-        self.statistic_menu = tk.Menu(self.file_menu, tearoff=False)
-        self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
-        self.statistic_menu.add_command(label="查看", command=self.open_statistic)
-        self.statistic_menu.add_command(label="清除",
-                                        command=partial(func_file.clear_statistic_data,
-                                                        self.create_root_menu_bar))
-        # -打开主dll所在文件夹
-        self.file_menu.add_command(label="查看DLL", command=partial(func_file.open_dll_dir, self.sw))
-        # -创建软件快捷方式
-        self.file_menu.add_command(label="创建程序快捷方式", command=func_file.create_app_lnk)
-        # -创建快捷启动
-        quick_start_sp, = subfunc_file.get_details_from_remote_setting_json(self.sw, support_quick_start=None)
-        # print(f"支持快捷启动：{quick_start_sp}")
-        self.file_menu.add_command(label="创建快捷启动",
-                                   command=partial(func_file.create_multiple_lnk,
-                                                   self.sw, self.multiple_status, self.create_root_menu_bar),
-                                   state="normal" if quick_start_sp is True else "disabled")
-
-        # ————————————————————————————编辑菜单————————————————————————————
-        self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
-        self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
-        # -刷新
-        self.edit_menu.add_command(label="刷新", command=self.refresh)
-
-        # ————————————————————————————视图菜单————————————————————————————
-        self.chosen_view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
-        self.view_menu = tk.Menu(self.menu_bar, tearoff=False)
-        self.menu_bar.add_cascade(label="视图", menu=self.view_menu)
-
-        # 添加单选框选项
-        self.view_var = tk.StringVar(value=self.chosen_view)
-        self.view_menu.add_radiobutton(label="经典", variable=self.view_var, value="classic",
-                                       command=self.change_classic_view)
-        self.view_menu.add_radiobutton(label="列表", variable=self.view_var, value="tree",
-                                       command=self.change_tree_view)
-
-        # 显示当前选择的视图
-        self.sign_visibility = \
-            True if subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True" else False
-        self.sign_visibility_var = tk.BooleanVar(value=self.sign_visibility)
-        self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
-        self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
-        self.view_options_menu.add_checkbutton(
-            label="显示状态标志", variable=self.sign_visibility_var,
-            command=partial(subfunc_file.save_global_setting,
-                            "sign_visible", not self.sign_visibility, self.refresh)
-        )
-        if self.chosen_view == "classic":
-            # 添加经典视图的菜单项
-            pass
-        elif self.chosen_view == "tree":
-            # 添加列表视图的菜单项
-            pass
-
-        self.view_menu.add_separator()  # ————————————————分割线————————————————
-
-        self.chosen_scale = subfunc_file.fetch_global_setting_or_set_default("scale")
-        self.scale_var = tk.StringVar(value=self.chosen_scale)
-        self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
-        self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
-        self.wnd_scale_menu.add_radiobutton(label="跟随系统", variable=self.scale_var, value="auto",
-                                            command=partial(func_setting.set_wnd_scale,
-                                                            self.create_root_menu_bar, "auto"))
-        options = ["100", "125", "150", "175", "200"]
-        for option in options:
-            self.wnd_scale_menu.add_radiobutton(label=f"{option}%", variable=self.scale_var, value=option,
-                                                command=partial(func_setting.set_wnd_scale,
-                                                                self.create_root_menu_bar, option))
-        if self.chosen_scale != "auto" and self.chosen_scale not in options:
-            self.wnd_scale_menu.add_radiobutton(label=f"自定义:{self.chosen_scale}%",
-                                                variable=self.scale_var, value=self.chosen_scale,
-                                                command=partial(func_setting.set_wnd_scale,
-                                                                self.create_root_menu_bar))
-        else:
-            self.wnd_scale_menu.add_radiobutton(label=f"自定义",
-                                                variable=self.scale_var, value="0",
-                                                command=partial(func_setting.set_wnd_scale,
-                                                                self.create_root_menu_bar))
-
-        # ————————————————————————————设置菜单————————————————————————————
-        self.settings_menu = tk.Menu(self.menu_bar, tearoff=False)
-        # -应用设置
-        login_size = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "login_size")
-        # print(f"登录窗口大小：{login_size}")
-        warning_sign = Strings.WARNING_SIGN
-        if not login_size or not re.match(r"^\d+\*\d+$", login_size):
-            self.menu_bar.add_cascade(label=f"{warning_sign}设置", menu=self.settings_menu)
-            self.settings_menu.add_command(label=f"{warning_sign}应用设置", foreground='red',
-                                           command=partial(self.open_settings, self.sw))
-        else:
-            self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
-            self.settings_menu.add_command(label="应用设置",
-                                           command=partial(self.open_settings, self.sw))
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        # -防撤回
-        self.revoke_status, _, _ = func_sw_dll.check_dll(
-            self.sw, "revoke", self.sw_dll_dir, self.sw_ver)
-        if self.revoke_status == "不可用":
-            self.settings_menu.add_command(label=f"防撤回      {self.revoke_status}", state="disabled")
-        elif self.revoke_status.startswith("错误"):
-            self.revoke_err = tk.Menu(self.settings_menu, tearoff=False)
-            self.settings_menu.add_cascade(label="防撤回      错误!", menu=self.revoke_err, foreground="red")
-            self.revoke_err.add_command(label=f"[点击复制]{self.revoke_status}", foreground="red",
-                                        command=lambda: self.root.clipboard_append(self.revoke_status))
-        else:
-            self.settings_menu.add_command(label=f"防撤回      {self.revoke_status}",
-                                           command=partial(self.toggle_patch_mode, mode="revoke"))
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        # -全局多开
-        self.multiple_status, _, _ = func_sw_dll.check_dll(
-            self.sw, "multiple", self.sw_dll_dir, self.sw_ver)
-        if self.multiple_status == "不可用":
-            self.settings_menu.add_command(label=f"全局多开  {self.multiple_status}", state="disabled")
-        elif self.multiple_status.startswith("错误"):
-            self.multiple_err = tk.Menu(self.settings_menu, tearoff=False)
-            self.settings_menu.add_cascade(label="全局多开  错误!", menu=self.multiple_err, foreground="red")
-            self.multiple_err.add_command(label=f"[点击复制]{self.multiple_status}", foreground="red",
-                                          command=lambda: self.root.clipboard_append(self.multiple_status))
-        else:
-            self.settings_menu.add_command(label=f"全局多开  {self.multiple_status}",
-                                           command=partial(self.toggle_patch_mode, mode="multiple"))
-        # >多开子程序选择
-        self.chosen_sub_exe_var = tk.StringVar()  # 用于跟踪当前选中的子程序
-        # 检查状态
-        if self.multiple_status == "已开启":
-            self.settings_menu.add_command(label="其余模式", state="disabled")
-        else:
-            self.sub_executable_menu = tk.Menu(self.settings_menu, tearoff=False)
-            self.settings_menu.add_cascade(label="其余模式", menu=self.sub_executable_menu)
-            # 获取已选择的子程序（假设 func_setting.fetch_sub_exe() 返回 'python', 'handle' 或其他值）
-            self.chosen_sub_exe = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "sub_exe")
-            self.chosen_sub_exe_var.set(self.chosen_sub_exe)  # 设置初始选中的子程序
-            python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
-                self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
-            # 添加 Python 的单选按钮
-            self.sub_executable_menu.add_radiobutton(
-                label='python',
-                value='python',
-                variable=self.chosen_sub_exe_var,
-                command=partial(subfunc_file.save_sw_setting,
-                                self.sw, "sub_exe", "python", self.create_root_menu_bar),
-                state='disabled' if not python_sp else 'normal'
-            )
-            # 添加 强力Python 的单选按钮
-            self.sub_executable_menu.add_radiobutton(
-                label='python[S]',
-                value='python[S]',
-                variable=self.chosen_sub_exe_var,
-                command=partial(subfunc_file.save_sw_setting,
-                                self.sw, "sub_exe", "python[S]", self.create_root_menu_bar),
-                state='disabled' if not python_s_sp else 'normal'
-            )
-            self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
-            # 添加 Handle 的单选按钮
-            self.sub_executable_menu.add_radiobutton(
-                label='handle',
-                value='handle',
-                variable=self.chosen_sub_exe_var,
-                command=partial(subfunc_file.save_sw_setting,
-                                self.sw, "sub_exe", "handle", self.create_root_menu_bar),
-                state='disabled' if not handle_sp else 'normal'
-            )
-            # 动态添加外部子程序
-            external_res_path = Config.PROJ_EXTERNAL_RES_PATH
-            exe_files = glob.glob(os.path.join(external_res_path, f"{self.sw}Multiple_*.exe"))
-            if len(exe_files) != 0:
-                self.sub_executable_menu.add_separator()  # ————————————————分割线————————————————
-                for exe_file in exe_files:
-                    exe_name = os.path.basename(exe_file)
-                    right_part = exe_name.split('_', 1)[1].rsplit('.exe', 1)[0]
-                    self.sub_executable_menu.add_radiobutton(
-                        label=right_part,
-                        value=exe_name,
-                        variable=self.chosen_sub_exe_var,
-                        command=partial(subfunc_file.save_sw_setting,
-                                        self.sw, "sub_exe", exe_name, self.create_root_menu_bar),
-                    )
-
-        # >登录选项
-        self.need_hide_wnd = \
-            True if subfunc_file.fetch_global_setting_or_set_default("hide_wnd") == "True" else False
-        self.need_hide_wnd_var = tk.BooleanVar(value=self.need_hide_wnd)
-        self.login_menu = tk.Menu(self.settings_menu, tearoff=False)
-        self.settings_menu.add_cascade(label="登录选项", menu=self.login_menu)
-        self.login_menu.add_checkbutton(label="一键登录时隐藏窗口", variable=self.need_hide_wnd_var,
-                                        command=partial(subfunc_file.save_global_setting,
-                                                        "hide_wnd", not self.need_hide_wnd))
-
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.load_on_startup))
-
-        # ————————————————————————————帮助菜单————————————————————————————
-        # 检查版本表是否当天已更新
-        subfunc_file.try_get_local_cfg()
-        surprise_sign = Strings.SURPRISE_SIGN
-        prefix = surprise_sign if self.need_to_update is True else ""
-        self.help_menu = tk.Menu(self.menu_bar, tearoff=False)
-        self.menu_bar.add_cascade(label=f"{prefix}帮助", menu=self.help_menu)
-        self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
-        self.help_menu.add_command(label="视频教程",
-                                   command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
-        self.help_menu.add_command(label="更新日志", command=self.open_update_log)
-        self.help_menu.add_command(label=f"{prefix}关于", command=partial(self.open_about, self.need_to_update))
-
-        # ————————————————————————————作者标签————————————————————————————
-        self.enable_new_func = \
-            True if subfunc_file.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
-        if self.enable_new_func is True:
-            self.menu_bar.add_command(label=Strings.ENABLED_NEW_FUNC)
-            self.menu_bar.entryconfigure(Strings.ENABLED_NEW_FUNC, state="disabled")
-        else:
-            self.menu_bar.add_command(label=Strings.NOT_ENABLED_NEW_FUNC)
-            handler = widget_utils.UnlimitedClickHandler(
-                self.root,
-                self.menu_bar,
-                lambda *args, **kwargs: None,  # 第一次点击，不执行任何操作
-                lambda *args, **kwargs: None,  # 第二次点击，不执行任何操作
-                partial(self.to_enable_new_func)  # 第三次点击，执行 to_enable_new_func
-            )
-            self.menu_bar.entryconfigure(Strings.NOT_ENABLED_NEW_FUNC, command=handler.on_click)
-
     def refresh_main_frame(self):
         """加载或刷新主界面"""
-        print(f"刷新...")
+        print(f"刷新主界面...")
         # 菜单刷新
-        self.current_full_version = subfunc_file.get_app_current_version()
         for widget in self.tab_frame.winfo_children():
             widget.destroy()
 
         # 主界面刷新
         print(f"加载主界面.........................................................")
         self.start_time = time.time()
-        self.edit_menu.entryconfig("刷新", state="disabled")
+        self.root_menu.edit_menu.entryconfig("刷新", state="disabled")
         print(f"初始化，已用时：{time.time() - self.start_time:.4f}秒")
 
         # 使用ThreadManager异步获取账户列表
@@ -616,7 +345,7 @@ class MainWindow:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
                 success, result = func_account.get_sw_acc_list(
-                    self.sw, self.sw_data_dir, self.multiple_status)
+                    self.sw, self.sw_info["data_dir"], self.states["multiple"])
                 self.root.after(0, self.create_account_list_ui, success, result)
 
             threading.Thread(target=thread_func).start()
@@ -631,8 +360,9 @@ class MainWindow:
             self.settings_button = ttk.Button(self.main_frame, text="设置", style='Custom.TButton',
                                               command=partial(self.open_settings, self.sw))
             self.settings_button.pack()
-            self.edit_menu.entryconfig("刷新", state="normal")
+            self.root_menu.edit_menu.entryconfig("刷新", state="normal")
             return
+
         print(f"渲染账号列表.........................................................")
 
         acc_list_dict, _, mutex = result
@@ -642,7 +372,7 @@ class MainWindow:
         # 底部框架=手动登录
         bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
         bottom_frame.pack(side=tk.BOTTOM)
-        prefix = Strings.MUTEX_SIGN if mutex is True and self.sign_visibility else ""
+        prefix = Strings.MUTEX_SIGN if mutex is True and self.settings_values["sign_vis"] else ""
         manual_login_text = f"{prefix}手动登录"
         manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
                                          command=self.to_manual_login, style='Custom.TButton')
@@ -655,6 +385,7 @@ class MainWindow:
         self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
 
         # 创建滚动条
+        print("创建滚动条...")
         self.scrollbar = ttk.Scrollbar(scrollbar_frame, orient="vertical", command=self.canvas.yview)
         self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
         # 创建一个Frame在Canvas中
@@ -668,11 +399,11 @@ class MainWindow:
 
         # 创建账号列表界面
         if self.chosen_view == "classic":
-            self.classic_ui = classic_row_ui.ClassicRowUI(
-                self.root, self, self.main_frame, result, self.sw_data_dir, self.multiple_status, self.sw)
+            self.classic_uis[self.sw] = classic_row_ui.ClassicRowUI(
+                self.root, self, self.main_frame, result, self.sw_info["data_dir"], self.sw)
         elif self.chosen_view == "tree":
             self.tree_uis[self.sw] = treeview_row_ui.TreeviewRowUI(
-                self.root, self, self.main_frame, result, self.sw_data_dir, self.multiple_status, self.sw)
+                self.root, self, self.main_frame, result, self.sw_info["data_dir"], self.sw)
         else:
             pass
 
@@ -681,7 +412,7 @@ class MainWindow:
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
-        self.edit_menu.entryconfig("刷新", state="normal")
+        self.root_menu.edit_menu.entryconfig("刷新", state="normal")
 
         # 加载完成后更新一下界面并且触发事件以此更新绑定
         self.canvas.update_idletasks()
@@ -693,7 +424,7 @@ class MainWindow:
         func_account.get_main_hwnd_of_accounts(login, self.sw)
 
         # 进行静默获取头像及配置
-        func_account.silent_get_and_config(login, logout, self.sw_data_dir,
+        func_account.silent_get_and_config(login, logout, self.sw_info["data_dir"],
                                            self.refresh_main_frame, self.sw)
 
     def reset_and_refresh(self):
@@ -746,70 +477,15 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
-    def open_statistic(self):
-        """打开统计窗口"""
-        statistic_window = tk.Toplevel(self.root)
-        statistic_ui.StatisticWindow(statistic_window, self.sw, self.chosen_view)
-
-    def change_classic_view(self):
-        self.root.unbind("<Configure>")
-        subfunc_file.save_sw_setting(self.sw, "view", "classic", self.refresh)
-        # func_setting.toggle_view("classic", self.refresh, self.sw)
-
-    def change_tree_view(self):
-        subfunc_file.save_sw_setting(self.sw, "view", "tree", self.refresh)
-        # func_setting.toggle_view("tree", self.refresh, self.sw)
-
     def open_settings(self, tab):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
-        setting_ui.SettingWindow(settings_window, tab, self.multiple_status,
+        setting_ui.SettingWindow(settings_window, tab, self.states["multiple"],
                                  self.reset_and_refresh)
-
-    def toggle_patch_mode(self, mode):
-        """切换是否全局多开或防撤回"""
-        if mode == "multiple":
-            mode_text = "全局多开"
-        elif mode == "revoke":
-            mode_text = "防撤回"
-        else:
-            return
-        success, result = func_account.get_sw_acc_list(self.sw, self.sw_data_dir, self.multiple_status)
-        if success is True:
-            acc_list_dict, _, _ = result
-            login = acc_list_dict["login"]
-            if len(login) > 0:
-                answer = messagebox.askokcancel(
-                    "警告",
-                    "检测到正在使用微信。切换模式需要修改 WechatWin.dll 文件，请先手动退出所有微信后再进行，否则将会强制关闭微信进程。"
-                )
-                if not answer:
-                    self.recognize_curr_tab_and_refresh()
-                    return
-
-        try:
-            result = func_sw_dll.switch_dll(self.sw, mode, self.sw_dll_dir, self.sw_ver)  # 执行切换操作
-            if result is True:
-                messagebox.showinfo("提示", f"成功开启:{mode_text}")
-            elif result is False:
-                messagebox.showinfo("提示", f"成功关闭:{mode_text}")
-            else:
-                messagebox.showinfo("提示", "请重试！")
-        except psutil.AccessDenied:
-            messagebox.showerror("权限不足", "无法终止微信进程，请以管理员身份运行程序。")
-        except Exception as e:
-            messagebox.showerror("错误", f"操作失败: {str(e)}")
-        finally:
-            self.refresh()
-
-    def open_rewards(self):
-        """打开赞赏窗口"""
-        rewards_window = tk.Toplevel(self.root)
-        rewards_ui.RewardsWindow(self.root, self.root, rewards_window, Config.REWARDS_PNG_PATH)
 
     def open_update_log(self):
         """打开版本日志窗口"""
-        success, result = func_update.split_vers_by_cur_from_local(self.current_full_version)
+        success, result = func_update.split_vers_by_cur_from_local(self.app_info["curr_full_ver"])
         if success is True:
             new_versions, old_versions = result
             update_log_window = tk.Toplevel(self.root)
@@ -817,17 +493,10 @@ class MainWindow:
         else:
             messagebox.showerror("错误", result)
 
-    def open_about(self, need_to_update):
-        """打开关于窗口"""
-        about_wnd = tk.Toplevel(self.root)
-        about_ui.AboutWindow(self.root, self.root, about_wnd, need_to_update)
-
-    def to_enable_new_func(self, event=None):
-        if event is None:
-            pass
-        subfunc_file.save_global_setting('enable_new_func', True)
-        messagebox.showinfo("发现彩蛋", "解锁新菜单，快去看看吧！")
-        self.refresh()
+    def open_debug_window(self):
+        """打开调试窗口，显示所有输出日志"""
+        debug_window = tk.Toplevel(self.root)
+        debug_ui.DebugWindow(debug_window)
 
     def to_manual_login(self):
         """按钮：手动登录"""
@@ -837,18 +506,19 @@ class MainWindow:
             args=(
                 self,
                 self.sw,
-                self.multiple_status,
+                self.states["multiple"],
                 partial(hwnd_utils.bring_wnd_to_front, window_class=self, root=self.root)
             )
         ).start()
 
     def to_auto_login(self, accounts):
         """登录所选账号"""
-        self.root.iconify()  # 最小化主窗口
+        if self.root_menu.need_hide_wnd is True:
+            self.root.iconify()  # 最小化主窗口
         try:
             threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.multiple_status, self.refresh_main_frame, self.sw)
+                args=(accounts, self.states["multiple"], self.refresh_main_frame, self.sw)
             ).start()
         except Exception as e:
             logger.error(e)
@@ -856,16 +526,12 @@ class MainWindow:
     def to_create_config(self, account):
         """按钮：创建或重新配置"""
         threading.Thread(target=func_config.test,
-                         args=(self, account, self.multiple_status, self.sw)).start()
+                         args=(self, account, self.states["multiple"], self.sw)).start()
 
-    def test(self):
-        # 清除窗口中的所有控件
-        for widget in self.root.winfo_children():
-            widget.destroy()
-
-        sidebar_ui.SidebarUI(self.root)
-
-    def open_debug_window(self):
-        """打开调试窗口，显示所有输出日志"""
-        debug_window = tk.Toplevel(self.root)
-        debug_ui.DebugWindow(debug_window)
+    def open_acc_detail(self, account, event=None):
+        """打开详情窗口"""
+        if event is None:
+            pass
+        detail_window = tk.Toplevel(self.root)
+        detail_ui.DetailWindow(self.root, self.root, detail_window, self.sw,
+                               account, self.refresh_main_frame)

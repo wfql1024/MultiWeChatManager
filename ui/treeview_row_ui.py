@@ -20,7 +20,7 @@ def try_convert(value):
 
 
 class TreeviewRowUI:
-    def __init__(self, root, root_class, root_main_frame, result, data_path, multiple_status, sw):
+    def __init__(self, root, root_class, root_main_frame, result, data_path, sw):
         self.sw = sw
         self.acc_index = None
         self.hovered_item = None
@@ -47,7 +47,7 @@ class TreeviewRowUI:
         self.sign_visible:bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
 
         # 构建列表
-        acc_list_dict, wechat_processes, _ = result
+        acc_list_dict, _, _ = result
         logins = acc_list_dict["login"]
         logouts = acc_list_dict["logout"]
         # 调整行高
@@ -179,7 +179,7 @@ class TreeviewRowUI:
         for col in columns:
             tree.heading(
                 col, text=col,
-                command=lambda c=col: self.apply_or_switch_col_order(tree, c, table_type)
+                command=lambda c=col: self.apply_or_switch_col_order(tree, table_type, c)
             )
             tree.column(col, anchor='center')  # 设置列宽
 
@@ -486,7 +486,7 @@ class TreeviewRowUI:
         if len(item_id) == 0:
             return
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            self.open_detail(tree.item(item_id, "values")[self.acc_index])
+            self.root_class.open_acc_detail(tree.item(item_id, "values")[self.acc_index])
         else:
             if item_id and "disabled" not in tree.item(item_id, "tags"):  # 确保不可选的行不触发
                 if item_id in selected_items:
@@ -529,9 +529,3 @@ class TreeviewRowUI:
                 self.get_selected_accounts(login_status)  # 实时更新选中行显示
                 self.update_top_title(login_status)
                 callback()
-
-    def open_detail(self, account):
-        """打开详情窗口"""
-        detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(self.root, self.root, detail_window, self.sw,
-                               account, self.root_class.refresh_main_frame)

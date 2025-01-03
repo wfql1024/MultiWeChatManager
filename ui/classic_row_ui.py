@@ -7,7 +7,6 @@ from PIL import ImageTk, Image
 
 from functions import func_config, func_account, subfunc_file, subfunc_sw
 from resources import Constants
-from ui import detail_ui
 from utils import string_utils, widget_utils
 from utils.logger_utils import mylogger as logger
 
@@ -17,11 +16,11 @@ class AccountRow:
     为每一个账号创建其行布局的类
     """
 
-    def __init__(self, root, m_class, parent_frame, account, config_status,
+    def __init__(self, root, r_class, parent_frame, account, config_status,
                  login_status, update_top_checkbox_callback, sw):
         self.sw = sw
         self.root = root
-        self.m_class = m_class
+        self.r_class = r_class
         self.config_status = config_status
         self.start_time = time.time()
         self.tooltips = {}
@@ -84,7 +83,7 @@ class AccountRow:
             self.config_button_text = "重新配置" if self.config_status != "无配置" else "添加配置"
             self.config_button = ttk.Button(
                 self.button_frame, text=self.config_button_text, style='Custom.TButton',
-                command=partial(self.m_class.to_create_config, account)
+                command=partial(self.r_class.to_create_config, account)
             )
             self.config_button.pack(side=tk.RIGHT)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
@@ -94,7 +93,7 @@ class AccountRow:
             # 登录按钮
             self.login_button = ttk.Button(
                 self.button_frame, text="自动登录", style='Custom.TButton',
-                command=lambda: self.m_class.to_auto_login([account]))
+                command=lambda: self.r_class.to_auto_login([account]))
             self.login_button.pack(side=tk.RIGHT)
 
             if self.config_status == "无配置":
@@ -114,7 +113,7 @@ class AccountRow:
         widget_utils.UnlimitedClickHandler(
             self.root,
             self.avatar_label,
-            partial(self.open_detail, account),
+            partial(self.r_class.open_acc_detail, account),
             partial(subfunc_sw.switch_to_sw_account_wnd, self.sw, account, self.root)
         )
 
@@ -150,21 +149,12 @@ class AccountRow:
         avatar_label.image = photo  # 保持对图像的引用
         return avatar_label
 
-    def open_detail(self, account, event=None):
-        """打开详情窗口"""
-        if event is None:
-            pass
-        detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(self.root, self.root, detail_window, self.sw,
-                               account, self.m_class.refresh_main_frame)
-
 
 class ClassicRowUI:
-    def __init__(self, root, r_class, m_main_frame, result, data_path, multiple_status, sw="WeChat"):
+    def __init__(self, root, r_class, m_main_frame, result, data_path, sw):
         self.sw = sw
         self.r_class = r_class
         self.data_path = data_path
-        self.multiple_status = multiple_status
         self.rows = {
             "login": {},
             "logout": {}

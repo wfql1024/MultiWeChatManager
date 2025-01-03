@@ -25,7 +25,7 @@ class Config:
         "login_sort": "login_sort",
         "logout_sort": "logout_sort",
         "login_size": "login_size",
-        "sub_exe": "sub_executable",
+        "rest_mode": "rest_mode",
     }
 
     INI_DEFAULT_VALUE = {
@@ -41,14 +41,14 @@ class Config:
             "login_sort": "配置,True",
             "logout_sort": "配置,True",
             "login_size": f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            "sub_exe": "python",
+            "rest_mode": "python",
         },
         "Weixin": {
             "view": "tree",
             "login_sort": "配置,True",
             "logout_sort": "配置,True",
             "login_size": f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            "sub_exe": "handle",
+            "rest_mode": "handle",
         },
     }
 
