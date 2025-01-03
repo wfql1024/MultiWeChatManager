@@ -1,7 +1,125 @@
+import queue
 import re
+import sys
 import tkinter as tk
 import webbrowser
 from functools import partial
+from tkinter import ttk
+
+from resources import Constants
+from utils import debug_utils
+from utils.logger_utils import mylogger as logger
+
+
+class ScrollableCanvas:
+    def __init__(self, master_frame):
+        self.master_frame = master_frame
+        # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
+        scrollbar_frame = tk.Frame(self.master_frame)
+        scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        self.canvas = tk.Canvas(self.master_frame, highlightthickness=0)
+        self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
+
+        # 创建滚动条
+        print("创建滚动条...")
+        self.scrollbar = ttk.Scrollbar(scrollbar_frame, orient="vertical", command=self.canvas.yview)
+        self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
+        # 创建一个Frame在Canvas中
+        self.main_frame = ttk.Frame(self.canvas)
+        # 将main_frame放置到Canvas的窗口中，并禁用Canvas的宽高跟随调整
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
+        # 将滚动条连接到Canvas
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        # 配置Canvas的滚动区域
+        self.canvas.bind('<Configure>', self.on_canvas_configure)
+
+    def bind_mouse_wheel(self, widget):
+        """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
+        widget.bind("<MouseWheel>", self.on_mousewheel, add='+')
+        widget.bind("<Button-4>", self.on_mousewheel, add='+')
+        widget.bind("<Button-5>", self.on_mousewheel, add='+')
+
+        for child in widget.winfo_children():
+            self.bind_mouse_wheel(child)
+
+    def unbind_mouse_wheel(self, widget):
+        """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
+        widget.unbind("<MouseWheel>")
+        widget.unbind("<Button-4>")
+        widget.unbind("<Button-5>")
+
+        for child in widget.winfo_children():
+            self.unbind_mouse_wheel(child)
+
+    def on_mousewheel(self, event):
+        """鼠标滚轮触发动作"""
+        # 对于Windows和MacOS
+        if event.delta:
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        # 对于Linux
+        else:
+            if event.num == 5:
+                self.canvas.yview_scroll(1, "units")
+            elif event.num == 4:
+                self.canvas.yview_scroll(-1, "units")
+
+    def on_canvas_configure(self, event):
+        """动态调整canvas中窗口的宽度，并根据父子间高度关系进行滚轮事件绑定与解绑"""
+        try:
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            width = event.width
+            self.canvas.itemconfig(tagOrId=self.canvas_window, width=width)
+            if self.main_frame.winfo_height() > self.canvas.winfo_height():
+                self.bind_mouse_wheel(self.canvas)
+                self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
+            else:
+                self.unbind_mouse_wheel(self.canvas)
+                self.scrollbar.pack_forget()
+        except Exception as e:
+            logger.error(e)
+
+
+class StatusBar:
+    def __init__(self, root, r_class, debug):
+
+        self.status_bar = None
+        self.statusbar_output_var = None
+
+        self.root = root
+        self.r_class = r_class
+        self.debug = debug
+
+        # 创建状态栏
+        self.create_status_bar()
+        self.message_queue = queue.Queue()  # 创建消息队列
+        sys.stdout = debug_utils.RedirectText(self.statusbar_output_var, self.message_queue, self.debug)  # 重定向 stdout
+        self.update_status()  # 定期检查队列中的消息
+
+    def create_status_bar(self):
+        """创建状态栏"""
+        print(f"加载状态栏...")
+        self.statusbar_output_var = tk.StringVar()
+        self.status_bar = tk.Label(self.root, textvariable=self.statusbar_output_var, bd=Constants.STATUS_BAR_BD,
+                                   relief=tk.SUNKEN, anchor=tk.W, height=Constants.STATUS_BAR_HEIGHT)
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+        # 绑定点击事件
+        if self.debug:
+            self.status_bar.bind("<Button-1>", lambda event: self.r_class.open_debug_window())
+
+    def update_status(self):
+        """即时更新状态栏"""
+        try:
+            # 从队列中获取消息并更新状态栏
+            message = self.message_queue.get_nowait()
+            if message.strip():  # 如果消息不为空，更新状态栏
+                self.statusbar_output_var.set(message)
+        except queue.Empty:
+            pass
+        except Exception as e:
+            print(e)
+            pass
+        # 每 1 毫秒检查一次队列
+        self.root.after(1, self.update_status)
 
 
 class UnlimitedClickHandler:

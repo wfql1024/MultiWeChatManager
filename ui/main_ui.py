@@ -1,7 +1,5 @@
 # main_ui.py
 import os
-import queue
-import sys
 import threading
 import time
 import tkinter as tk
@@ -14,7 +12,7 @@ from typing import Dict, Union
 from functions import func_setting, func_login, func_file, func_account, subfunc_file, func_update, func_config
 from resources import Strings, Config, Constants
 from ui import setting_ui, debug_ui, update_log_ui, classic_row_ui, treeview_row_ui, loading_ui, detail_ui, menu_ui
-from utils import hwnd_utils, debug_utils
+from utils import hwnd_utils, widget_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -37,6 +35,13 @@ class MainWindow:
     """构建主窗口的类"""
 
     def __init__(self, root, args=None):
+        self.settings_button = None
+        self.error_frame = None
+        self.tab_control = None
+        self.tab_dict = None
+        self.tab_frame = None
+        self.main_frame = None
+        self.scrollable_canvas = None
         self.root_menu = None
         
         self.states: Dict[str, Union[str, None]] = {
@@ -82,28 +87,18 @@ class MainWindow:
         self.app_info["curr_full_ver"] = subfunc_file.get_app_current_version()
 
         self.root = root
-        self.loading_window = tk.Toplevel(self.root)
-        self.loading_class = loading_ui.LoadingWindow(self.loading_window)
-        self.root.withdraw()  # 初始化时隐藏主窗口
+        self.debug = args.debug
+        self.new = args.new
+
+        # 渲染加载窗口
+        self.loading_wnd = tk.Toplevel(self.root)
+        self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)
+
         # 启动自检
         print("稍后自检...")
         self.root.after(2000, self.load_on_startup)
 
-        self.error_frame = None
-        self.scrollbar = None
-        self.canvas_window = None
-        self.canvas = None
-        self.tab_control = None
-        self.tab_dict = None
-        self.tab_frame = None
-        self.chosen_view = None
-        self.debug = args.debug
-        self.new = args.new
-        self.settings_button = None
         self.start_time = None
-        self.status_bar = None
-        self.statusbar_output_var = None
-        self.main_frame = None
 
         # 版本更新，统计表结构更新，需升级
         subfunc_file.merge_refresh_nodes()
@@ -123,15 +118,13 @@ class MainWindow:
         style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
 
         # 主窗口属性
+        self.root.withdraw()  # 初始化时隐藏主窗口
         self.root.title("微信多开管理器")
         self.root.iconbitmap(Config.PROJ_ICO_PATH)
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE
 
         # 创建状态栏
-        self.create_status_bar()
-        self.message_queue = queue.Queue()  # 创建消息队列
-        sys.stdout = debug_utils.RedirectText(self.statusbar_output_var, self.message_queue, self.debug)  # 重定向 stdout
-        self.update_status()  # 定期检查队列中的消息
+        self.statusbar_class = widget_utils.StatusBar(self.root, self, self.debug)
 
         # 创建选项卡
         self.create_tab()
@@ -140,32 +133,6 @@ class MainWindow:
         if self.new is True:
             self.root.after(3000, self.open_update_log)
             self.root.after(3000, lambda: func_file.mov_backup(new=self.new))
-
-    def create_status_bar(self):
-        """创建状态栏"""
-        print(f"加载状态栏...")
-        self.statusbar_output_var = tk.StringVar()
-        self.status_bar = tk.Label(self.root, textvariable=self.statusbar_output_var, bd=Constants.STATUS_BAR_BD,
-                                   relief=tk.SUNKEN, anchor=tk.W, height=Constants.STATUS_BAR_HEIGHT)
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-        # 绑定点击事件
-        if self.debug:
-            self.status_bar.bind("<Button-1>", lambda event: self.open_debug_window())
-
-    def update_status(self):
-        """即时更新状态栏"""
-        try:
-            # 从队列中获取消息并更新状态栏
-            message = self.message_queue.get_nowait()
-            if message.strip():  # 如果消息不为空，更新状态栏
-                self.statusbar_output_var.set(message)
-        except queue.Empty:
-            pass
-        except Exception as e:
-            print(e)
-            pass
-        # 每 1 毫秒检查一次队列
-        self.root.after(1, self.update_status)
 
     def create_tab(self):
         """创建选项卡"""
@@ -207,10 +174,10 @@ class MainWindow:
         # print(f"启动自检中...")
         def func_thread():
             # self.check_and_init()
-            if hasattr(self, 'loading_class') and self.loading_class:
+            if hasattr(self, 'loading_class') and self.loading_wnd_class:
                 # print("主程序关闭等待窗口")
-                self.loading_class.auto_close()
-                self.loading_class = None
+                self.loading_wnd_class.auto_close()
+                self.loading_wnd_class = None
             # 设置主窗口位置
             hwnd_utils.bring_wnd_to_center(self.root, self.window_width, self.window_height)
             self.root.deiconify()
@@ -239,7 +206,7 @@ class MainWindow:
                 if len(new_versions) != 0:
                     self.app_info["need_update"] = True
 
-        self.chosen_view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
+        self.sw_info["view"] = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
 
         if self.sw_info["inst_path"] is None or self.sw_info["data_dir"] is None or self.sw_info["dll_dir"] is None:
             print("路径设置错误，请点击按钮修改")
@@ -378,47 +345,32 @@ class MainWindow:
                                          command=self.to_manual_login, style='Custom.TButton')
         manual_login_button.pack(side=tk.LEFT)
 
-        # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
-        scrollbar_frame = tk.Frame(self.tab_frame)
-        scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)
-        self.canvas = tk.Canvas(self.tab_frame, highlightthickness=0)
-        self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
-
-        # 创建滚动条
-        print("创建滚动条...")
-        self.scrollbar = ttk.Scrollbar(scrollbar_frame, orient="vertical", command=self.canvas.yview)
-        self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
-        # 创建一个Frame在Canvas中
-        self.main_frame = ttk.Frame(self.canvas)
-        # 将main_frame放置到Canvas的窗口中，并禁用Canvas的宽高跟随调整
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
-        # 将滚动条连接到Canvas
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-        # 配置Canvas的滚动区域
-        self.canvas.bind('<Configure>', self.on_canvas_configure)
+        # 创建一个可以滚动的画布，并放置一个主框架在画布上
+        self.scrollable_canvas = widget_utils.ScrollableCanvas(self.tab_frame)
+        self.main_frame = self.scrollable_canvas.main_frame
 
         # 创建账号列表界面
-        if self.chosen_view == "classic":
+        if self.sw_info["view"] == "classic":
             self.classic_uis[self.sw] = classic_row_ui.ClassicRowUI(
                 self.root, self, self.main_frame, result, self.sw_info["data_dir"], self.sw)
-        elif self.chosen_view == "tree":
+        elif self.sw_info["view"] == "tree":
             self.tree_uis[self.sw] = treeview_row_ui.TreeviewRowUI(
                 self.root, self, self.main_frame, result, self.sw_info["data_dir"], self.sw)
         else:
             pass
 
         subfunc_file.update_statistic_data(
-            self.sw, 'refresh', self.chosen_view, str(len(login)), time.time() - self.start_time)
+            self.sw, 'refresh', self.sw_info["view"], str(len(login)), time.time() - self.start_time)
         print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
         self.root_menu.edit_menu.entryconfig("刷新", state="normal")
 
         # 加载完成后更新一下界面并且触发事件以此更新绑定
-        self.canvas.update_idletasks()
+        self.scrollable_canvas.canvas.update_idletasks()
         event = tk.Event()
-        event.width = self.canvas.winfo_width()
-        self.on_canvas_configure(event)
+        event.width = self.scrollable_canvas.canvas.winfo_width()
+        self.scrollable_canvas.on_canvas_configure(event)
 
         # 获取已登录的窗口hwnd
         func_account.get_main_hwnd_of_accounts(login, self.sw)
@@ -431,51 +383,6 @@ class MainWindow:
         """重新配置设置后调用"""
         self.check_and_init()
         self.refresh()
-
-    def bind_mouse_wheel(self, widget):
-        """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
-        widget.bind("<MouseWheel>", self.on_mousewheel, add='+')
-        widget.bind("<Button-4>", self.on_mousewheel, add='+')
-        widget.bind("<Button-5>", self.on_mousewheel, add='+')
-
-        for child in widget.winfo_children():
-            self.bind_mouse_wheel(child)
-
-    def unbind_mouse_wheel(self, widget):
-        """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
-        widget.unbind("<MouseWheel>")
-        widget.unbind("<Button-4>")
-        widget.unbind("<Button-5>")
-
-        for child in widget.winfo_children():
-            self.unbind_mouse_wheel(child)
-
-    def on_mousewheel(self, event):
-        """鼠标滚轮触发动作"""
-        # 对于Windows和MacOS
-        if event.delta:
-            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-        # 对于Linux
-        else:
-            if event.num == 5:
-                self.canvas.yview_scroll(1, "units")
-            elif event.num == 4:
-                self.canvas.yview_scroll(-1, "units")
-
-    def on_canvas_configure(self, event):
-        """动态调整canvas中窗口的宽度，并根据父子间高度关系进行滚轮事件绑定与解绑"""
-        try:
-            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-            width = event.width
-            self.canvas.itemconfig(tagOrId=self.canvas_window, width=width)
-            if self.main_frame.winfo_height() > self.canvas.winfo_height():
-                self.bind_mouse_wheel(self.canvas)
-                self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
-            else:
-                self.unbind_mouse_wheel(self.canvas)
-                self.scrollbar.pack_forget()
-        except Exception as e:
-            logger.error(e)
 
     def open_settings(self, tab):
         """打开设置窗口"""
