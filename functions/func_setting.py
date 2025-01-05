@@ -2,6 +2,8 @@
 import os
 from tkinter import messagebox, simpledialog
 
+import yaml
+
 from functions import subfunc_file
 from resources import Config
 from utils import ini_utils, sw_utils, file_utils
@@ -170,6 +172,36 @@ def set_wnd_scale(after, scale=None):
     messagebox.showinfo("提示", "修改成功，将在重新启动程序后生效！")
     after()
     return
+
+def read_yaml(file_path):
+    """读取YML文件并解析"""
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return yaml.safe_load(file)
+
+def insert_tree_data(tree, data):
+    """将YML数据插入到Treeview中"""
+    for top_key, top_value in data.items():
+        # 插入一级节点（如global, WeChat等）
+        top_node = tree.insert("", "end", text=top_key, values=(top_key, ""))
+
+        # 插入二级节点（name 和 value）
+        for sub_key, sub_value in top_value.items():
+            tree.insert(top_node, "end", text=sub_key, values=(sub_value["name"], sub_value["value"]))
+
+def create_setting_tab():
+    pass
+    # self.tab_mng = ttk.Frame(self.tab_control)
+    # self.tab_control.add(self.tab_mng, text='管理')
+    # # 读取YML文件并解析
+    # data = read_yaml(Config.LOCAL_SETTING_YML_PATH)
+    # # 创建Treeview控件
+    # tree = ttk.Treeview(self.tab_mng, columns=("name", "value"), show="headings")
+    # tree.pack(expand=True, fill=tk.BOTH)
+    # # 定义列标题
+    # tree.heading("name", text="Name")
+    # tree.heading("value", text="Value")
+    # # 填充树数据
+    # insert_tree_data(tree, data)
 
 
 if __name__ == "__main__":

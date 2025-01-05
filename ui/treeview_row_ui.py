@@ -1,12 +1,12 @@
 import tkinter as tk
 from functools import partial
 from tkinter import ttk
+from typing import Dict, Union
 
 from PIL import ImageTk, Image
 
 from functions import func_config, func_account, subfunc_file, subfunc_sw
 from resources import Constants, Strings
-from ui import detail_ui
 from utils import widget_utils, string_utils
 from utils.logger_utils import mylogger as logger
 from utils.widget_utils import UnlimitedClickHandler
@@ -25,11 +25,11 @@ class TreeviewRowUI:
         self.acc_index = None
         self.hovered_item = None
         self.photo_images = []
-        self.selected_accounts = {
+        self.selected_accounts: Dict[str, Union[list, None]] = {
             "login": [],
             "logout": []
         }
-        self.selected_items = {
+        self.selected_items: Dict[str, Union[list, None]] = {
             "login": [],
             "logout": []
         }
@@ -88,7 +88,7 @@ class TreeviewRowUI:
             self.one_key_quit = ttk.Button(
                 self.login_button_frame, text="一键退出", style='Custom.TButton',
                 command=lambda: func_account.to_quit_selected_accounts(
-                    self.sw, self.selected_accounts["login"], self.root_class.refresh_main_frame
+                    self.sw, self.selected_accounts["login"], self.root_class.refresh_sw_main_frame
                 ))
             self.one_key_quit.pack(side=tk.RIGHT)
             # 配置
@@ -503,7 +503,7 @@ class TreeviewRowUI:
             tree = self.login_tree
             selected_items = self.selected_items["login"]
             callback = lambda: func_account.to_quit_selected_accounts(
-                    self.sw, self.selected_accounts["login"], self.root_class.refresh_main_frame
+                    self.sw, self.selected_accounts["login"], self.root_class.refresh_sw_main_frame
                 )
         elif login_status == "logout":
             tree = self.logout_tree

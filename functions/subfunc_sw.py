@@ -82,7 +82,7 @@ def open_sw(sw, status, has_mutex_dictionary=None):
         time.sleep(0.1)
     else:
         # 获取当前选择的多开子程序
-        multiple_mode = subfunc_file.fetch_sw_setting_or_set_default(sw, 'sub_exe')
+        multiple_mode = subfunc_file.fetch_sw_setting_or_set_default(sw, 'rest_mode')
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if multiple_mode == "WeChatMultiple_Anhkgg.exe":
             sub_exe_process = create_process_without_admin(

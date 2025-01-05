@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 from tkinter import messagebox
+from typing import Tuple, Union
 
 import requests
 
@@ -14,7 +15,26 @@ from utils import file_utils
 from utils.logger_utils import mylogger as logger
 
 
-def split_vers_by_cur_from_local(current_ver):
+def has_newer_version(curr_ver) -> bool:
+    """
+    检查是否有新版本
+    :param curr_ver: 当前版本
+    :return: Union[Tuple[成功, 是的], Tuple[失败, 错误信息]]
+    """
+    success, result = split_vers_by_cur_from_local(curr_ver)
+    if success is True:
+        new_versions, old_versions = result
+        if len(new_versions) != 0:
+            return True
+    return False
+
+def split_vers_by_cur_from_local(current_ver) -> Union[Tuple[bool, Tuple[list, list]], Tuple[bool, str]]:
+    """
+    从本地获取所有版本号，然后根据当前版本号将其分为两部分：
+    一部分是高于或等于当前版本号的，另一部分是低于当前版本号的。
+    :param current_ver: 当前版本
+    :return: Union[Tuple[成功, Tuple[新版列表, 旧表列表]], Tuple[失败, 错误信息]]
+    """
     try:
         with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
             config_data = json.load(f)

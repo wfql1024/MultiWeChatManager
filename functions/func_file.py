@@ -229,14 +229,13 @@ def create_lnk_for_account(sw, account, multiple_status):
     :param multiple_status: 是否多开状态
     :return: 是否成功
     """
-    # TODO: 废案
     # 确保可以创建快捷启动
     data_path = func_setting.get_sw_data_dir(sw)
     wechat_path = func_setting.get_sw_install_path(sw)
     if not data_path or not wechat_path:
         messagebox.showerror("错误", "无法获取数据路径")
         return False
-    avatar_path = os.path.join(Config.PROJ_USER_PATH, f"{account}", f"{account}.jpg")
+    avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
     if not os.path.exists(avatar_path):
         avatar_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
 
@@ -282,11 +281,11 @@ def create_lnk_for_account(sw, account, multiple_status):
         """
 
     # 确保路径存在
-    account_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}')
+    account_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}')
     if not os.path.exists(account_file_path):
         os.makedirs(account_file_path)
     # 保存为批处理文件
-    bat_file_path = os.path.join(Config.PROJ_USER_PATH, f'{account}', f'{prefix}{account}.bat')
+    bat_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}', f'{prefix}{account}.bat')
     # 以带有BOM的UTF-8格式写入bat文件
     with open(bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
         bat_file.write(bat_content)
@@ -300,7 +299,7 @@ def create_lnk_for_account(sw, account, multiple_status):
     shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
 
     # 图标文件路径
-    acc_dir = os.path.join(Config.PROJ_USER_PATH, f"{account}")
+    acc_dir = os.path.join(Config.PROJ_USER_PATH, str(sw), f"{account}")
     exe_name = os.path.splitext(os.path.basename(exe_path))[0]
 
     # 步骤1：提取图标为图片

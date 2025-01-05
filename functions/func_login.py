@@ -56,7 +56,7 @@ def manual_login(r_class, sw, status, window_callback):
         messagebox.showerror("错误", "手动登录失败，请重试")
 
     # 刷新菜单和窗口前置
-    r_class.root.after(0, r_class.refresh_main_frame)
+    r_class.root.after(0, r_class.refresh_sw_main_frame)
     window_callback()
 
 
@@ -130,7 +130,7 @@ def auto_login_accounts(accounts, status, callback, sw):
     if status == "已开启":
         multiple_mode = "全局多开"
     else:
-        multiple_mode = subfunc_file.fetch_sw_setting_or_set_default(sw, 'sub_exe')
+        multiple_mode = subfunc_file.fetch_sw_setting_or_set_default(sw, 'rest_mode')
     # 开始遍历登录账号过程
     start_time = time.time()
     # 使用一个set存储不重复的handle

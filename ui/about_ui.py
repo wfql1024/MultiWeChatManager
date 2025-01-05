@@ -3,6 +3,7 @@ import tkinter as tk
 import webbrowser
 from functools import partial
 from tkinter import ttk, messagebox
+from typing import Dict, Union
 
 from PIL import Image, ImageTk
 
@@ -10,6 +11,7 @@ from functions import func_update, subfunc_file
 from resources import Config, Strings, Constants
 from ui import update_log_ui
 from utils import hwnd_utils, widget_utils
+from utils.logger_utils import mylogger as logger
 
 
 class Direction:
@@ -17,17 +19,61 @@ class Direction:
         self.value = initial
 
 
-def open_url(url):
-    if url is None or url == "":
+def open_urls(urls):
+    if urls is None:
         return
-    webbrowser.open_new(url)
+    url_list = list(urls)
+    if len(url_list) == 0:
+        return
+    for url in url_list:
+        webbrowser.open_new(url)
+
+
+def pack_grids(frame, part_dict, max_columns=6):
+    grids = ttk.Frame(frame)
+    grids.pack(**Constants.T_FRM_PACK)
+    for idx, info in enumerate(part_dict.values()):
+        item = ttk.Label(grids, text=info.get('text', None),
+                         style="Link.TLabel", cursor="hand2")
+        row = idx // max_columns
+        column = idx % max_columns
+        item.grid(row=row, column=column, **Constants.W_GRID_PACK)
+
+        # 获取所有链接
+        urls = []
+        for link in info["links"].values():
+            urls.append(link)
+
+        # 绑定点击事件
+        item.bind("<Button-1>", partial(lambda event, urls2open: open_urls(urls2open), urls2open=urls))
 
 
 class AboutWindow:
-    def __init__(self, root, parent, wnd, need_to_update):
+    def __init__(self, root, parent, wnd, app_info):
+        self.about_info = None
+        self.app_name = None
+        self.content_frame = None
+        self.main_frame = None
+
+        self.scroll_tasks: Dict[str, Union[list, None]] = {
+            "reference": None,
+            "sponsor": None,
+        }
+        self.scroll_direction: Dict[str, Union[Direction, None]] = {
+            "reference": None,
+            "sponsor": None,
+        }
+        self.scroll_text_str: Dict[str, Union[str, None]] = {
+            "reference": None,
+            "sponsor": None,
+        }
+        self.logo_img = []
+
         self.root = root
         self.parent = parent
         self.wnd = wnd
+        self.app_info = app_info
+
         self.wnd.title("关于")
         self.width, self.height = Constants.ABOUT_WND_SIZE
         hwnd_utils.bring_wnd_to_center(self.wnd, self.width, self.height)
@@ -40,6 +86,21 @@ class AboutWindow:
         self.wnd.attributes('-toolwindow', True)
         self.wnd.grab_set()
 
+        self.cfg_data = subfunc_file.try_get_local_cfg()
+        try:
+            self.display_main_content()
+        except Exception as e:
+            logger.error(e)
+            self.cfg_data = subfunc_file.force_fetch_remote_encrypted_cfg()
+            if self.wnd is not None:
+                for widget in self.wnd.winfo_children():
+                    widget.destroy()
+            self.display_main_content()
+        
+    def display_main_content(self):
+        self.app_name = self.cfg_data["global"]["app_name"]
+        self.about_info = self.cfg_data["global"]["about"]
+
         self.main_frame = ttk.Frame(self.wnd, padding=Constants.FRM_PAD)
         self.main_frame.pack(**Constants.FRM_PACK)
 
@@ -48,140 +109,75 @@ class AboutWindow:
         logo_frame.pack(**Constants.L_FRM_PACK)
 
         # 内容框架（右框架）
-        content_frame = ttk.Frame(self.main_frame, padding=Constants.R_FRM_PAD)
-        content_frame.pack(**Constants.R_FRM_PACK)
+        self.content_frame = ttk.Frame(self.main_frame, padding=Constants.R_FRM_PAD)
+        self.content_frame.pack(**Constants.R_FRM_PACK)
 
         # 加载并调整图标
         try:
             icon_image = Image.open(Config.PROJ_ICO_PATH)
             icon_image = icon_image.resize(Constants.LOGO_SIZE, Image.LANCZOS)
-            self.icon_photo = ImageTk.PhotoImage(icon_image)
+            self.logo_img = ImageTk.PhotoImage(icon_image)
         except Exception as e:
-            print(f"无法加载图标图片: {e}")
+            logger.error(f"无法加载图标图片: {e}")
             # 如果图标加载失败，仍然继续布局
-            self.icon_photo = ImageTk.PhotoImage(Image.new('RGB', Constants.LOGO_SIZE, color='white'))
-        icon_label = ttk.Label(logo_frame, image=self.icon_photo)
-        icon_label.image = self.icon_photo
+            self.logo_img = ImageTk.PhotoImage(Image.new('RGB', Constants.LOGO_SIZE, color='white'))
+        icon_label = ttk.Label(logo_frame, image=self.logo_img)
+        icon_label.image = self.logo_img
         icon_label.pack(**Constants.T_WGT_PACK)
 
         # 顶部：标题和版本号框架
-        title_version_frame = ttk.Frame(content_frame)
+        title_version_frame = ttk.Frame(self.content_frame)
         title_version_frame.pack(**Constants.T_FRM_PACK)
 
         # 标题和版本号标签
         current_full_version = subfunc_file.get_app_current_version()
+        title_version_str = f"{self.app_name} {current_full_version}"
         title_version_label = ttk.Label(
             title_version_frame,
-            text=f"微信多开管理器 {current_full_version}",
+            text=title_version_str,
             style='FirstTitle.TLabel',
         )
         title_version_label.pack(anchor='sw', **Constants.T_WGT_PACK, ipady=Constants.IPAD_Y)
 
         # 开发者主页
-        author_label = ttk.Label(content_frame, text="by 吾峰起浪", style='SecondTitle.TLabel')
+        author_label = ttk.Label(self.content_frame, text="by 吾峰起浪", style='SecondTitle.TLabel')
         author_label.pack(anchor='sw', **Constants.T_WGT_PACK)
-        author_grids = ttk.Frame(content_frame)
-        author_grids.pack(**Constants.T_FRM_PACK)
-        row = 0
-        for idx, (text, url) in enumerate(Strings.AUTHOR.items()):
-            link = ttk.Label(author_grids, text=text,
-                             style="Link.TLabel", cursor="hand2")
-            link.grid(row=row, column=idx, **Constants.W_GRID_PACK)
-            # 绑定点击事件
-            link.bind("<Button-1>", lambda event, url2open=url: open_url(url2open))
+        pack_grids(self.content_frame, self.about_info["author"])
 
         # 项目信息
-        proj_label = ttk.Label(content_frame, text="项目信息", style='SecondTitle.TLabel')
+        proj_label = ttk.Label(self.content_frame, text="项目信息", style='SecondTitle.TLabel')
         proj_label.pack(anchor='sw', **Constants.T_WGT_PACK)
-        proj_grids = ttk.Frame(content_frame)
-        proj_grids.pack(**Constants.T_FRM_PACK)
-        row = 0
-        for idx, (text, url) in enumerate(Strings.PROJ.items()):
-            link = ttk.Label(proj_grids, text=text,
-                             style="Link.TLabel", cursor="hand2")
-            link.grid(row=row, column=idx, **Constants.W_GRID_PACK)
-            # 绑定点击事件
-            link.bind("<Button-1>", lambda event, url2open=url: open_url(url2open))
+        pack_grids(self.content_frame, self.about_info["project"])
 
         # 鸣谢
-        thanks_label = ttk.Label(content_frame, text="鸣谢", style='SecondTitle.TLabel')
+        thanks_label = ttk.Label(self.content_frame, text="鸣谢", style='SecondTitle.TLabel')
         thanks_label.pack(anchor='sw', **Constants.T_WGT_PACK)
-        thanks_grids = ttk.Frame(content_frame)
-        thanks_grids.pack(**Constants.T_FRM_PACK)
-        for idx, (person, info) in enumerate(Strings.THANKS.items()):
-            link = ttk.Label(thanks_grids, text=info.get('text', None),
-                             style="Link.TLabel", cursor="hand2")
-            row = idx // 6
-            column = idx % 6
-            link.grid(row=row, column=column, **Constants.W_GRID_PACK)
-            # 绑定点击事件
-            link.bind(
-                "<Button-1>",
-                lambda
-                    event,
-                    bilibili=info.get('bilibili', None),
-                    github=info.get('github', None),
-                    pj=info.get('52pj', None):
-                (
-                    open_url(bilibili),
-                    open_url(github),
-                    open_url(pj)
-                )
-            )
+        pack_grids(self.content_frame, self.about_info["thanks"])
+
 
         # 技术参考
-        reference_label = ttk.Label(content_frame, text="技术参考", style='SecondTitle.TLabel')
+        reference_label = ttk.Label(self.content_frame, text="技术参考", style='SecondTitle.TLabel')
         reference_label.pack(anchor='w', **Constants.T_WGT_PACK)
-        reference_frame = ttk.Frame(content_frame)
+        reference_frame = ttk.Frame(self.content_frame)
         reference_frame.pack(**Constants.T_FRM_PACK)
-        reference_scrollbar = tk.Scrollbar(reference_frame)
-        reference_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        reference_text = tk.Text(reference_frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
-                                 height=12, bg=wnd.cget("bg"),
-                                 yscrollcommand=reference_scrollbar.set, bd=0, highlightthickness=0)
 
-        reference_text.insert(tk.END, '\n')
-        reference_text.insert(tk.END, Strings.REFERENCE_TEXT)
-        reference_text.insert(tk.END, '\n')
+        reference_list = self.about_info.get('reference', [])
+        lines = []
+        for item in reference_list:
+            lines.append(item["title"])
+            lines.append(item["link"])
+            lines.append("")  # 空行
+        self.scroll_text_str["reference"] = "\n".join(lines).strip()
 
-        widget_utils.add_hyperlink_events(reference_text, Strings.REFERENCE_TEXT)
-        reference_text.config(state=tk.DISABLED)
-        reference_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=Constants.GRID_PAD)
-        reference_scrollbar.config(command=reference_text.yview)
-        # 创建方向对象
-        self.reference_scroll_direction = Direction(1)  # 初始方向为向下
-        self.reference_scroll_tasks = []
-        # 启动滚动任务
-        widget_utils.auto_scroll_text(
-            self.reference_scroll_tasks, self.reference_scroll_direction, reference_text, self.root
-        )
-        # 鼠标进入控件时取消所有任务
-        reference_text.bind(
-            "<Enter>",
-            lambda event: [
-                              self.root.after_cancel(task) for task in self.reference_scroll_tasks
-                          ] and self.reference_scroll_tasks.clear()
-        )
-        # 鼠标离开控件时继续滚动，保留当前方向
-        reference_text.bind(
-            "<Leave>",
-            lambda event: widget_utils.auto_scroll_text(
-                self.reference_scroll_tasks, self.reference_scroll_direction, reference_text, self.root
-            )
-        )
+        self.pack_scrollable_text(reference_frame, "reference", 12)
 
         # 赞助
-        sponsor_label = ttk.Label(content_frame, text="赞助", style='SecondTitle.TLabel')
-        sponsor_frame = ttk.Frame(content_frame)
+        sponsor_label = ttk.Label(self.content_frame, text="赞助", style='SecondTitle.TLabel')
+        sponsor_frame = ttk.Frame(self.content_frame)
         sponsor_label.pack(anchor='w', **Constants.T_WGT_PACK)
         sponsor_frame.pack(**Constants.T_FRM_PACK)
-        sponsor_scrollbar = tk.Scrollbar(sponsor_frame)
-        sponsor_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        sponsor_text = tk.Text(sponsor_frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
-                               height=5, bg=wnd.cget("bg"), foreground='grey',
-                               yscrollcommand=sponsor_scrollbar.set, bd=0, highlightthickness=0)
 
-        sponsor_list = Strings.SPONSOR_TEXT
+        sponsor_list = self.about_info.get('sponsor', [])
         sponsor_list_lines = []
         for idx, item in enumerate(sponsor_list):
             date = sponsor_list[idx].get('date', None)
@@ -189,40 +185,16 @@ class AboutWindow:
             amount = sponsor_list[idx].get('amount', None)
             user = sponsor_list[idx].get('user', None)
             sponsor_list_lines.append(f"• {date}  {currency}{amount}  {user}")
-        sponsor_text.insert(tk.END, '\n')
-        sponsor_text.insert(tk.END, '\n'.join(sponsor_list_lines))
-        sponsor_text.insert(tk.END, '\n')
-        sponsor_text.config(state=tk.DISABLED)
-        sponsor_text.pack(side=tk.LEFT, fill=tk.X, expand=False, padx=Constants.GRID_PAD)
-        sponsor_scrollbar.config(command=sponsor_text.yview)
-        # 创建方向对象
-        self.sponsor_scroll_direction = Direction(1)  # 初始方向为向下
-        self.sponsor_scroll_tasks = []
-        # 启动滚动任务
-        widget_utils.auto_scroll_text(
-            self.sponsor_scroll_tasks, self.sponsor_scroll_direction, sponsor_text, self.root
-        )
-        # 鼠标进入控件时取消所有任务
-        sponsor_text.bind(
-            "<Enter>",
-            lambda event: [
-                self.root.after_cancel(task) for task in self.sponsor_scroll_tasks
-            ]
-        )
-        # 鼠标离开控件时继续滚动，保留当前方向
-        sponsor_text.bind(
-            "<Leave>",
-            lambda event: widget_utils.auto_scroll_text(
-                self.sponsor_scroll_tasks, self.sponsor_scroll_direction, sponsor_text, self.root
-            )
-        )
+        self.scroll_text_str["sponsor"] = "\n".join(sponsor_list_lines)
+
+        self.pack_scrollable_text(sponsor_frame, "sponsor", 5)
 
         # 底部区域=声明+检查更新按钮
-        bottom_frame = ttk.Frame(content_frame)
+        bottom_frame = ttk.Frame(self.content_frame)
         bottom_frame.pack(**Constants.B_FRM_PACK)
 
         surprise_sign = Strings.SURPRISE_SIGN
-        prefix = surprise_sign if need_to_update is True else ""
+        prefix = surprise_sign if self.app_info["need_update"] is True else ""
 
         # 左边：声明框架
         disclaimer_frame = ttk.Frame(bottom_frame, padding=Constants.L_FRM_PAD)
@@ -246,6 +218,43 @@ class AboutWindow:
         )
         copyright_label.pack(**Constants.T_WGT_PACK)
 
+    def pack_scrollable_text(self, frame, part, height):
+        scrollbar = tk.Scrollbar(frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        text = tk.Text(frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
+                       height=height, bg=self.wnd.cget("bg"),
+                       yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
+
+        text.insert(tk.END, '\n')
+        text.insert(tk.END, self.scroll_text_str[part])
+        text.insert(tk.END, '\n')
+
+        widget_utils.add_hyperlink_events(text, self.scroll_text_str[part])
+        text.config(state=tk.DISABLED)
+        text.pack(side=tk.LEFT, fill=tk.X, expand=False, padx=Constants.GRID_PAD)
+        scrollbar.config(command=text.yview)
+        # 创建方向对象
+        self.scroll_direction[part] = Direction(1)  # 初始方向为向下
+        self.scroll_tasks[part] = []
+        # 启动滚动任务
+        widget_utils.auto_scroll_text(
+            self.scroll_tasks[part], self.scroll_direction[part], text, self.root
+        )
+        # 鼠标进入控件时取消所有任务
+        text.bind(
+            "<Enter>",
+            lambda event: [
+                self.root.after_cancel(task) for task in self.scroll_tasks[part]
+            ]
+        )
+        # 鼠标离开控件时继续滚动，保留当前方向
+        text.bind(
+            "<Leave>",
+            lambda event: widget_utils.auto_scroll_text(
+                self.scroll_tasks[part], self.scroll_direction[part], text, self.root
+            )
+        )
+
     def check_for_updates(self, current_full_version):
         subfunc_file.force_fetch_remote_encrypted_cfg()
         success, result = func_update.split_vers_by_cur_from_local(current_full_version)
@@ -263,17 +272,12 @@ class AboutWindow:
 
     def on_close(self):
         """窗口关闭时执行的操作"""
-        for task in self.reference_scroll_tasks:
-            try:
-                self.root.after_cancel(task)  # 取消滚动任务
-            except Exception as e:
-                print(f"Error cancelling task: {e}")
-
-        for task in self.sponsor_scroll_tasks:
-            try:
-                self.root.after_cancel(task)  # 取消滚动任务
-            except Exception as e:
-                print(f"Error cancelling task: {e}")
+        for info in self.scroll_tasks.values():
+            for task in info:
+                try:
+                    self.root.after_cancel(task)  # 取消滚动任务
+                except Exception as e:
+                    logger.error(f"Error cancelling task: {e}")
 
         self.wnd.destroy()  # 关闭窗口
         if self.parent != self.root:

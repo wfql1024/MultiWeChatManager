@@ -200,7 +200,7 @@ class ClassicRowUI:
             self.one_key_quit = ttk.Button(
                 self.login_btn_frame, text="一键退出", style='Custom.TButton',
                 command=lambda: func_account.to_quit_selected_accounts(
-                    self.sw, self.get_selected_accounts("login"), self.r_class.refresh_main_frame
+                    self.sw, self.get_selected_accounts("login"), self.r_class.refresh_sw_main_frame
                 )
             )
             self.one_key_quit.pack(side=tk.RIGHT)
@@ -242,7 +242,7 @@ class ClassicRowUI:
             # 一键登录
             self.one_key_auto_login = ttk.Button(
                 self.logout_bottom_frame, text="一键登录", style='Custom.TButton',
-                command = lambda: self.r_class.to_auto_login(self.get_selected_accounts("logout")),
+                command=lambda: self.r_class.to_auto_login(self.get_selected_accounts("logout")),
             )
             self.one_key_auto_login.pack(side=tk.RIGHT)
 
