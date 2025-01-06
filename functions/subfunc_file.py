@@ -4,7 +4,7 @@ import math
 import os
 import re
 import sys
-from typing import Tuple, Any
+from typing import *
 
 import requests
 from Crypto.Cipher import AES
@@ -111,6 +111,7 @@ def save_sw_setting(sw, key, value, after=None):
                                   Config.INI_KEY[key], value)
     if after is not None:
         after()
+    print(f"成功修改{sw}的{key}为{value}！")
 
 
 def save_global_setting(key, value, after=None):
@@ -118,6 +119,7 @@ def save_global_setting(key, value, after=None):
                                   Config.INI_KEY[key], value)
     if after is not None:
         after()
+    print(f"成功修改{key}为{value}！")
 
 
 def get_sw_install_path_from_setting_ini(sw:str) -> list:
@@ -286,7 +288,7 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
     print(all_sw)
 
     # 对所有其他软件进行遍历
-    for other_sw in all_sw:
+    for other_sw in all_sw.keys():
         print(other_sw, now_sw)
         # 平台相同，跳过
         if other_sw == now_sw:
@@ -372,7 +374,7 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
     print(all_sw)
 
     # 对所有其他软件进行遍历
-    for other_sw in all_sw:
+    for other_sw in all_sw.keys():
         print(other_sw, now_sw)
         # 平台相同，跳过
         if other_sw == now_sw:
@@ -607,7 +609,14 @@ def get_app_current_version():
     return f"v{version_number}-{Config.VER_STATUS}"
 
 
-def get_file_with_correct_md5(folders, md5s):
+def get_file_with_correct_md5(folders:list, md5s:list):
+    """
+    从文件夹中找到md5匹配的文件
+    :param folders: 文件夹列表
+    :param md5s: md5列表
+    :return: Union[匹配的文件路径, None]
+    """
+    lower_md5s = [md5.lower() for md5 in md5s]
     for folder in folders:
         for root, _, files in os.walk(folder):
             for file_name in files:
@@ -615,7 +624,7 @@ def get_file_with_correct_md5(folders, md5s):
                 try:
                     file_md5 = file_utils.calculate_md5(file_path)
                     # 检查 MD5 是否匹配正确的 MD5 列表
-                    if file_md5 in md5s:
+                    if file_md5.lower() in lower_md5s:
                         return file_path  # 返回匹配的文件路径
                 except Exception as e:
                     logger.error(e)

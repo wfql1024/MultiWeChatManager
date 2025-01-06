@@ -1,10 +1,10 @@
-import glob
 import os
 import re
 import sys
 import tkinter as tk
 import webbrowser
 from functools import partial
+from pathlib import Path
 from tkinter import messagebox
 from typing import Dict, Union
 
@@ -14,6 +14,7 @@ from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_a
 from resources import Strings, Config
 from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui
 from utils import widget_utils
+from utils.logger_utils import mylogger as logger
 
 
 class MenuUI:
@@ -310,7 +311,8 @@ class MenuUI:
             )
             # 动态添加外部子程序
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
-            exe_files = glob.glob(os.path.join(external_res_path, f"{self.sw}Multiple_*.exe"))
+            exe_files = [str(p) for p in Path(external_res_path).rglob(f"{self.sw}Multiple_*.exe")]
+            # exe_files = glob.glob(os.path.join(external_res_path, f"{self.sw}Multiple_*.exe"))
             if len(exe_files) != 0:
                 self.rest_mode_menu.add_separator()  # ————————————————分割线————————————————
                 for exe_file in exe_files:
@@ -336,7 +338,8 @@ class MenuUI:
                             "hide_wnd", not self.settings_values["hide_wnd"], self.create_root_menu_bar))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        self.settings_menu.add_command(label="重置", command=partial(func_file.reset, self.r_class.refresh))
+        self.settings_menu.add_command(
+            label="重置", command=partial(func_file.reset, self.r_class.initialize_in_init))
 
         # ————————————————————————————帮助菜单————————————————————————————
         # 检查版本表是否当天已更新
@@ -395,12 +398,12 @@ class MenuUI:
 
     def open_settings(self, sw):
         """打开设置窗口"""
-        def reset_and_refresh():
-            """重新配置设置后调用"""
-            self.r_class.refresh()
+        # def reset_and_refresh():
+        #     """重新配置设置后调用"""
+        #     self.r_class.refresh()
         settings_window = tk.Toplevel(self.root)
         setting_ui.SettingWindow(settings_window, sw, self.states["multiple"],
-                                 reset_and_refresh)
+                                 self.r_class.refresh)
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
@@ -435,6 +438,7 @@ class MenuUI:
             messagebox.showerror("权限不足", "无法终止微信进程，请以管理员身份运行程序。")
         except Exception as e:
             messagebox.showerror("错误", f"操作失败: {str(e)}")
+            logger.error(f"切换{mode_text}时发生错误: {str(e)}")
         finally:
             self.r_class.refresh()
 
@@ -462,6 +466,7 @@ class MenuUI:
         if event is None:
             pass
         subfunc_file.save_global_setting('enable_new_func', True)
-        messagebox.showinfo("发现彩蛋", "解锁新菜单，快去看看吧！")
-        self.r_class.refresh()
+        messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
+        # self.r_class.refresh()
+        self.create_root_menu_bar()
 

@@ -17,6 +17,7 @@ class MainWindow:
     """构建主窗口的类"""
     def __init__(self, root, args=None):
         # IDE初始化
+        self._initialized = None
         self.statusbar_class = None
         self.sw = None
         self.start_time = None
@@ -44,10 +45,6 @@ class MainWindow:
         self.debug = args.debug
         self.new = args.new
 
-        # 渲染加载窗口
-        self.loading_wnd = tk.Toplevel(self.root)
-        self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)
-
         # 统一管理style
         style = ttk.Style()
         style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
@@ -60,6 +57,14 @@ class MainWindow:
         style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
 
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE
+        self.root.withdraw()  # 初始化时隐藏主窗口
+
+        # 渲染加载窗口
+        self.loading_wnd = tk.Toplevel(self.root)
+        self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)
+
+        # 创建状态栏
+        self.statusbar_class = widget_utils.StatusBar(self.root, self, self.debug)
 
         try:
             # 初次使用
@@ -75,6 +80,7 @@ class MainWindow:
             logger.error(e)
 
     def initialize_in_init(self):
+        """初始化加载"""
         # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
         if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
             os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
@@ -96,11 +102,7 @@ class MainWindow:
             self.cfg_data = subfunc_file.force_fetch_remote_encrypted_cfg()
             self.init_notebook()
 
-        # 创建状态栏
-        self.statusbar_class = widget_utils.StatusBar(self.root, self, self.debug)
-
         # 设置主窗口
-        self.root.withdraw()  # 初始化时隐藏主窗口
         try:
             title = self.cfg_data["global"]["app_name"]
         except Exception as e:
@@ -121,6 +123,7 @@ class MainWindow:
         """创建选项卡"""
         print("创建选项卡...")
         self.sw_notebook = ttk.Notebook(self.root)
+        self.sw_notebook.pack(expand=True, fill='both')
         self.tab_dict = self.cfg_data["global"]["all_sw"]
         for item in self.tab_dict.keys():
             self.tab_dict[item]['frame'] = ttk.Frame(self.sw_notebook)
@@ -129,22 +132,29 @@ class MainWindow:
             print(self.tab_dict)
         # 选择一个选项卡并触发事件
         self.sw_notebook.select(self.tab_dict[self.sw]['frame'])
-        self.sw_notebook.pack(expand=True, fill='both')
+        # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
         self.on_tab_change(_event=None)
 
     def on_tab_change(self, _event):
         """处理选项卡变化事件，排除特殊选项卡"""
         print("切换选项卡响应中...")
+        self.sw_notebook.unbind('<<NotebookTabChanged>>')  # 暂时取消绑定
+        if not hasattr(self, '_initialized'):
+            self._initialized = True
+            return  # 忽略初始化触发
         if self.sw_notebook.select() == "!disabled":
             return
         selected_frame = self.sw_notebook.nametowidget(self.sw_notebook.select())  # 获取当前选中的Frame
         selected_tab = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
         if selected_tab:
             subfunc_file.save_global_setting("tab", selected_tab)
-            self.refresh()
-            print(f"当前选项卡: {selected_tab}")
+            msg_str = f"当前选项卡: {selected_tab}"
+            self.refresh(message=msg_str)
+            print(msg_str)
+        # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
-    def refresh(self):
+
+    def refresh(self, message=None):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
@@ -162,14 +172,14 @@ class MainWindow:
 
         # 刷新界面
         def reload_func():
-            self.root.after(0, self.refresh_sw_main_frame)
+            self.root.after(0, self.refresh_sw_main_frame, message)
         try:
             # 线程启动获取登录情况和渲染列表
             threading.Thread(target=reload_func).start()
         except Exception as e:
             logger.error(e)
 
-    def refresh_sw_main_frame(self):
+    def refresh_sw_main_frame(self, message=None):
         """加载或刷新主界面"""
         # 检测是否路径错误
         if self.root_menu.path_error is True:
@@ -190,12 +200,12 @@ class MainWindow:
             def thread_func():
                 success, result = func_account.get_sw_acc_list(
                     self.sw, self.root_menu.sw_info["data_dir"], self.root_menu.states["multiple"])
-                self.root.after(0, self.create_account_list_ui, success, result)
+                self.root.after(0, self.create_account_list_ui, success, result, message)
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
 
-    def create_account_list_ui(self, success, result):
+    def create_account_list_ui(self, success, result, message=None):
         """渲染主界面账号列表"""
         if success is not True:
             error_label = ttk.Label(self.main_frame, text="无法获取账户列表，请检查路径设置", foreground="red")
@@ -238,7 +248,8 @@ class MainWindow:
             pass
         subfunc_file.update_statistic_data(
             self.sw, 'refresh', self.sw_info["view"], str(len(login)), time.time() - self.start_time)
-        print(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
+        msg_str = f"{message} | " if message else ""
+        print(f"{msg_str}加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 恢复刷新可用性
         self.root_menu.edit_menu.entryconfig("刷新", state="normal")
@@ -255,6 +266,8 @@ class MainWindow:
         # 进行静默获取头像及配置
         func_account.silent_get_and_config(login, logout, self.sw_info["data_dir"],
                                            self.refresh_sw_main_frame, self.sw)
+        self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
+
 
     def wait_for_loading_close_and_bind(self):
         """启动时关闭等待窗口，绑定事件"""
@@ -262,12 +275,12 @@ class MainWindow:
             # self.check_and_init()
             if hasattr(self, 'loading_wnd_class') and self.loading_wnd_class:
                 # print("主程序关闭等待窗口")
-                self.loading_wnd_class.auto_close()
+                self.root.after(0, self.loading_wnd_class.auto_close)
                 self.loading_wnd_class = None
             # 设置主窗口位置
-            hwnd_utils.bring_wnd_to_center(self.root, self.window_width, self.window_height)
+            self.root.after(0, hwnd_utils.bring_wnd_to_center, self.root, self.window_width, self.window_height)
             self.root.deiconify()
-            self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
+            # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
         try:
             # 线程启动获取登录情况和渲染列表

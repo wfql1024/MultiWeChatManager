@@ -35,8 +35,9 @@ def clear_user_file(after):
                 os.unlink(item_path)
             elif os.path.isdir(item_path):
                 shutil.rmtree(item_path)
-        messagebox.showinfo("重置完成", "目录已成功重置。")
-        after()
+        messagebox.showinfo("清除完成", "用户目录已成功清除。")
+        after(message="清除用户目录完成！")
+        return
 
 
 def open_config_file(sw):
@@ -56,7 +57,7 @@ def clear_config_file(sw, after):
     """清除配置文件"""
     confirm = messagebox.askokcancel(
         "确认清除",
-        "该操作将会清空登录配置文件，请确认是否需要清除？"
+        f"该操作将会清空{sw}登录配置文件，请确认是否需要清除？"
     )
     if confirm:
         data_path = func_setting.get_sw_data_dir(sw)
@@ -78,19 +79,12 @@ def clear_config_file(sw, after):
             if len(files_to_delete) > 0:
                 # 删除这些文件
                 for file_path in files_to_delete:
-                    if os.path.isfile(file_path):
-                        try:
-                            os.remove(file_path)
-                            print(f"已删除: {file_path}")
-                        except Exception as e:
-                            print(f"无法删除 {file_path}: {e}")
-                    elif os.path.isdir(file_path):
-                        try:
-                            shutil.rmtree(file_path)
-                            print(f"已删除: {file_path}")
-                        except Exception as e:
-                            print(f"无法删除 {file_path}: {e}")
-                after()
+                    try:
+                        file_utils.move_to_recycle_bin(file_path)
+                        print(f"已删除: {file_path}")
+                    except Exception as e:
+                        logger.error(f"无法删除 {file_path}: {e}")
+        after(message=f"清除{sw}登录配置完成！")
 
 
 def open_program_file():
@@ -129,8 +123,7 @@ def mov_backup(new=None):
             try:
                 item_path = os.path.join(executable_dir, item)
                 if os.path.isdir(item_path) and item.startswith("[") and item.endswith("]"):
-                    dir_path = os.path.join(executable_dir, item)
-                    file_utils.move_to_recycle_bin(dir_path)
+                    file_utils.move_to_recycle_bin(item_path)
             except Exception as e:
                 logger.error(e)
                 messagebox.showerror("错误", f"移动文件夹到回收站时发生错误：\n"
@@ -148,11 +141,13 @@ def clear_statistic_data(after):
     if confirm:
         file_path = Config.STATISTIC_JSON_PATH
         try:
-            os.remove(file_path)
+            file_utils.move_to_recycle_bin(file_path)
             print(f"已删除: {file_path}")
         except Exception as e:
             print(f"无法删除 {file_path}: {e}")
+            logger.error(e)
         after()
+        print("成功清除统计数据！")
 
 
 def open_dll_dir(sw):
@@ -171,51 +166,40 @@ def open_dll_dir(sw):
 
 def create_app_lnk():
     """创建程序快捷方式"""
-    # 当前是打包后的环境
+    # 打包后的环境？
     if getattr(sys, 'frozen', False):
         exe_path = sys.executable
     else:
-        exe_path = os.path.abspath(r'./dist/微信多开管理器/微信多开管理器.exe')
+        exe_path = os.path.abspath(r'./dist/微信多开管理器38/微信多开管理器.exe')
 
     notice = []
     exe_dir = os.path.dirname(exe_path)
     exe_name = os.path.basename(exe_path)
-
-    # 创建常规版本快捷方式
     shortcut_name = os.path.splitext(exe_name)[0]  # 去掉 .exe 后缀
     desktop = winshell.desktop()
-    shortcut_path = os.path.join(desktop, f"{shortcut_name}.lnk")
 
-    shell = Dispatch('WScript.Shell')
-    shortcut = shell.CreateShortCut(shortcut_path)
-    shortcut.TargetPath = exe_path
-    shortcut.WorkingDirectory = exe_dir
-    shortcut.IconLocation = exe_path
-    shortcut.save()
-    # 打印常规版本创建成功信息
-    notice.append(f"常规版快捷方式已创建： {shortcut_path}")
+    # 定义子方法用于创建快捷方式
+    def create_shortcut(kind, arguments=""):
+        """创建快捷方式"""
+        formated_suffix = f"_{kind}" if kind != "" else ""
+        shortcut_path = os.path.join(desktop, f"{shortcut_name}{formated_suffix}.lnk")
+        shell = Dispatch('WScript.Shell')
+        shortcut = shell.CreateShortCut(shortcut_path)
+        shortcut.TargetPath = exe_path
+        shortcut.Arguments = arguments
+        shortcut.WorkingDirectory = exe_dir
+        shortcut.IconLocation = exe_path
+        shortcut.save()
+        notice.append(f"{kind}快捷方式已创建： {shortcut_path}")
 
-    # 创建_调试版快捷方式，添加 --debug 参数
-    debug_shortcut_path = os.path.join(desktop, f"{shortcut_name}_调试版.lnk")
-    debug_shortcut = shell.CreateShortCut(debug_shortcut_path)
-    debug_shortcut.TargetPath = exe_path
-    debug_shortcut.Arguments = "--debug"  # 添加调试参数
-    debug_shortcut.WorkingDirectory = exe_dir
-    debug_shortcut.IconLocation = exe_path
-    debug_shortcut.save()
-    # 打印调试版创建成功信息
-    notice.append(f"调试版快捷方式已创建： {debug_shortcut_path}")
+    # 创建常规版本快捷方式
+    create_shortcut("")  # 常规版，无后缀
 
-    # 创建_假装首次使用版快捷方式，添加 --new 参数
-    new_shortcut_path = os.path.join(desktop, f"{shortcut_name}_假装首次使用版.lnk")
-    new_shortcut = shell.CreateShortCut(new_shortcut_path)
-    new_shortcut.TargetPath = exe_path
-    new_shortcut.Arguments = "--new"  # 添加首次使用参数
-    new_shortcut.WorkingDirectory = exe_dir
-    new_shortcut.IconLocation = exe_path
-    new_shortcut.save()
-    # 打印假装首次使用版创建成功信息
-    notice.append(f"假装首次使用版快捷方式已创建： {new_shortcut_path}")
+    # 创建调试版快捷方式
+    create_shortcut("调试版", "--debug")  # 添加 --debug 参数
+
+    # 创建假装首次使用版快捷方式
+    create_shortcut("假装首次使用版", "--new")  # 添加 --new 参数
 
     # 打印所有创建成功信息
     messagebox.showinfo("成功", "\n".join(notice))
@@ -364,6 +348,7 @@ def create_multiple_lnk(sw, status, after):
         if result is False:
             continue
     after()
+    print("创建快捷启动成功！")
     return True
 
 
@@ -379,51 +364,48 @@ def reset(after):
         "该操作需要关闭所有微信进程，将清空除配置文件外的所有文件及设置，请确认是否需要重置？"
     )
 
-    if confirm:
+    if not confirm:
+        messagebox.showinfo("操作取消", "重置操作已取消。")
+    else:
         try:
+            # 恢复每个平台的补丁dll
             all_sw, = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
             # print(all_sw)
             for sw in all_sw:
-                # 恢复dll
                 dll_dir_path = func_setting.get_sw_dll_dir(sw)
                 patch_dll, = subfunc_file.get_details_from_remote_setting_json(
                     sw, patch_dll=None)
                 if patch_dll is None:
                     continue
-
-                # 恢复原始的dll
                 dll_path = os.path.join(dll_dir_path, patch_dll)
                 bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
-
+                try:
                 # 检查 .bak 文件是否存在
-                if os.path.exists(bak_path):
-                    # 如果 WeChatWin.dll 存在，删除它
-                    if os.path.exists(dll_path):
-                        os.remove(dll_path)
-                        print(f"Deleted: {dll_path}")
+                    if os.path.exists(bak_path):
+                        # 如果 ?.dll 存在，删除它
+                        if os.path.exists(dll_path):
+                            file_utils.move_to_recycle_bin(dll_path)
+                            print("已移入回收站：{dll_path}")
+                        # 将 ?.dll.bak 文件重命名为 ?.dll
+                        os.rename(bak_path, dll_path)
+                        print(f"Restored: {dll_path} from {bak_path}")
+                except Exception as e:
+                    logger.error(e)
 
-                    # 将 .bak 文件重命名为 WeChatWin.dll
-                    os.rename(bak_path, dll_path)
-                    print(f"Restored: {dll_path} from {bak_path}")
-                else:
-                    print(f"No action needed. {bak_path} not found.")
-
-            # 确认后删除目录的所有内容
-            directory_path = Config.PROJ_USER_PATH
-            for item in os.listdir(directory_path):
-                item_path = os.path.join(directory_path, item)
-                if os.path.isfile(item_path) or os.path.islink(item_path):
-                    os.unlink(item_path)
-                elif os.path.isdir(item_path):
-                    shutil.rmtree(item_path)
+            # 删除用户文件
+            user_dir = Config.PROJ_USER_PATH
+            for item in os.listdir(user_dir):
+                item_path = os.path.join(user_dir, item)
+                try:
+                    file_utils.move_to_recycle_bin(item_path)
+                except Exception as e:
+                    logger.error(e)
 
             messagebox.showinfo("重置完成", "目录已成功重置。")
             after()
-        except PermissionError as e:
-            print(e)
+        except Exception as e:
+            logger.error(e)
             messagebox.showinfo("拒绝访问", "请确保微信已全部退出。")
-    else:
-        messagebox.showinfo("操作取消", "重置操作已取消。")
 
 
 if __name__ == '__main__':

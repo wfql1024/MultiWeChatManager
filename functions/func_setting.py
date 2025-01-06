@@ -171,6 +171,7 @@ def set_wnd_scale(after, scale=None):
     )
     messagebox.showinfo("提示", "修改成功，将在重新启动程序后生效！")
     after()
+    print(f"成功设置窗口缩放比例为 {scale}！")
     return
 
 def read_yaml(file_path):

@@ -5,7 +5,7 @@ import psutil
 
 from functions import func_setting, subfunc_file
 from resources import Config
-from utils import hwnd_utils, handle_utils, process_utils
+from utils import hwnd_utils, handle_utils, process_utils, file_utils
 
 
 class Test(TestCase):
@@ -50,3 +50,7 @@ class Test(TestCase):
     def test_lowercase(self):
         text = "3C63CD2D88D247F930BB3E970EC73043"
         print(text.lower())
+
+    def test_move_to_recycle_bin(self):
+        file_to_delete = r"E:\Now\Desktop\微信多开管理器_调试版.lnk"
+        file_utils.move_to_recycle_bin(file_to_delete)

@@ -212,6 +212,10 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
 def get_sw_acc_list(sw, data_dir, multiple_status):
     """
     获取账号及其登录情况
+    :param sw: 平台
+    :param data_dir: 数据路径
+    :param multiple_status: 多开状态
+    :return: Union[Tuple[True, Tuple[账号字典，进程字典，有无互斥体]], Tuple[False, 错误信息]]
     """
     def update_acc_list_by_pid(process_id: int):
         """
@@ -242,8 +246,8 @@ def get_sw_acc_list(sw, data_dir, multiple_status):
                             logged_in_ids.add(wx_id)
                             print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
                             return
-                    except ValueError:
-                        pass
+                    except Exception as e:
+                        logger.error(e)
             for f in psutil.Process(process_id).open_files():
                 # print(process_id, f)
                 # 将路径中的反斜杠替换为正斜杠
@@ -263,8 +267,8 @@ def get_sw_acc_list(sw, data_dir, multiple_status):
                             logged_in_ids.add(wx_id)
                             print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
                             return
-                    except ValueError:
-                        pass
+                    except Exception as e:
+                        logger.error(e)
         except psutil.AccessDenied:
             logger.error(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
         except psutil.NoSuchProcess:

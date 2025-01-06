@@ -26,6 +26,7 @@ class SHFileOpStruct(ctypes.Structure):
 
 
 def move_to_recycle_bin(file_path):
+    file_path = os.path.abspath(file_path)
     # 确保文件存在
     if not os.path.exists(file_path):
         print(f"文件不存在: {file_path}")
@@ -151,5 +152,4 @@ def get_sorted_full_versions(versions):
 
 if __name__ == '__main__':
     # 测试
-    file_to_delete = r"E:\Now\Desktop\微信多开管理器_调试版.lnk"
-    move_to_recycle_bin(file_to_delete)
+    pass

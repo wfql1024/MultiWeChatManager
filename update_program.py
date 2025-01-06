@@ -1,6 +1,5 @@
 import argparse
 import ctypes
-import glob
 import logging
 import os
 import platform
@@ -12,6 +11,7 @@ import time
 import tkinter as tk
 import winreg
 import zipfile
+from pathlib import Path
 from tkinter import ttk, messagebox
 
 import colorlog
@@ -123,6 +123,21 @@ def find_file(start_dir, filename):
     for root, dirs, files in os.walk(start_dir):
         if filename in files:
             return os.path.join(root, filename)
+    return None
+
+
+def find_file_fuzzy_with_keywords(start_dir, keywords, extension=None):
+    """
+    递归模糊查找包含任意关键字的文件
+    :param start_dir: 起始目录
+    :param keywords: 关键字列表，文件名需要包含列表中的任意一个关键字
+    :param extension: 可选，文件扩展名（如 '.exe'），默认为 None 表示不限制扩展名
+    :return: 符合条件的第一个文件路径，或 None
+    """
+    for root, dirs, files in os.walk(start_dir):
+        for file in files:
+            if any(keyword in file for keyword in keywords) and (extension is None or file.endswith(extension)):
+                return os.path.join(root, file)
     return None
 
 
@@ -249,8 +264,8 @@ def update_and_reopen(args, root):
             os.startfile(version_dir)
             root.after(0, root.destroy)  # 安全销毁
 
-        # 4. 拷贝 tmp_dir 中 "微信多开管理器.exe" 所在的目录的所有文件和文件夹到 install_path 中并覆盖
-        new_exe_path = find_file(tmp_dir, "微信多开管理器.exe")
+        # 4. 拷贝 tmp_dir 中 "?.exe" 所在的目录的所有文件和文件夹到 install_path 中并覆盖
+        new_exe_path = find_file_fuzzy_with_keywords(tmp_dir, ["多开", "多聊"], ".exe")
         if new_exe_path is not None:
             exe_dir = os.path.dirname(new_exe_path)
             for item in os.listdir(exe_dir):
@@ -282,26 +297,24 @@ def update_and_reopen(args, root):
             os.startfile(version_dir)
             root.after(0, root.destroy)  # 安全销毁
 
-        # 5. 启动 install_path 中的 "微信多开管理器.exe"
-        exe_files = glob.glob(os.path.join(install_dir, f"*.exe"))
-        exe = None
-        has_exe = False
+        # 5. 启动 install_path 中的 "?.exe"
+        # exe_files = glob.glob(os.path.join(install_dir, f"*.exe"))
+        exe_files = [str(p) for p in Path(install_dir).rglob(f"*.exe")]
+        exe2open = None
         if len(exe_files) == 0:
             logger.error("未找到程序")
         elif len(exe_files) == 1:
-            exe = exe_files[0]
+            exe2open = exe_files[0]
         else:
             key_words = ["多聊", "多开"]
             for e in exe_files:
-                for key_word in key_words:
-                    if key_word in e:
-                        exe = e
-                        break
-                if has_exe is True:
+                if any(key_word in e for key_word in key_words):
+                    exe2open = e
                     break
-        if exe is not None:
+
+        if exe2open is not None:
             # 启动新程序
-            subprocess.Popen([exe, "--new"])
+            subprocess.Popen([exe2open, "--new"])
             logger.info("新版程序已启动，参数: --new")
         else:
             logger.error("新版程序不存在。")

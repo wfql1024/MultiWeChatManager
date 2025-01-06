@@ -2,7 +2,6 @@ import argparse
 import ctypes
 import os
 import sys
-import threading
 import tkinter as tk
 
 from ui.main_ui import MainWindow
@@ -55,10 +54,11 @@ def main():
     os.environ['http_proxy'] = ''
     os.environ['https_proxy'] = ''
     os.environ['no_proxy'] = '*'
+
     # # 启动键盘监听器线程
     # keyboard_thread = threading.Thread(target=start_keyboard_listener, daemon=True)
     # keyboard_thread.start()
-    print("管理员身份" if ctypes.windll.shell32.IsUserAnAdmin() == 1 else "非管理员身份")
+
     # 创建参数解析器
     parser = argparse.ArgumentParser(description="Process command line flags.")
     # 添加 --debug 和 -d 选项
@@ -67,14 +67,11 @@ def main():
     # 解析命令行参数
     args, unknown = parser.parse_known_args()
     # 检查是否有 --debug 或 -d 参数
-    if args.debug:
-        print("当前是调试模式")
-    else:
-        print("当前是普通模式")
+
+    print("权限：" + "管理员身份" if ctypes.windll.shell32.IsUserAnAdmin() == 1 else "非管理员身份")
+    print("调试模式：" + str(args.debug))
+
     root = tk.Tk()
-    # # 设置程序缩放
-    # SCALE_FACTOR = float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)
-    # root.tk.call('tk', 'scaling', 96 * SCALE_FACTOR / 100 / 72)
     MainWindow(
         root,
         args=args
