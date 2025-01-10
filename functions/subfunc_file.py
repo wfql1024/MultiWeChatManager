@@ -107,19 +107,35 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
 
 
 def save_sw_setting(sw, key, value, after=None):
+    changed = False
+    origin_value = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
+                                  Config.INI_KEY[key])
     ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                   Config.INI_KEY[key], value)
     if after is not None:
         after()
-    print(f"成功修改{sw}的{key}为{value}！")
+    if value != origin_value:
+        print(f"成功修改{sw}的{key}为{value}！")
+        changed = True
+    else:
+        print(f"一致的值：{sw}的{key}为{value}！")
+    return changed
 
 
 def save_global_setting(key, value, after=None):
+    changed = False
+    origin_value = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
+                                  Config.INI_KEY[key])
     ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
                                   Config.INI_KEY[key], value)
     if after is not None:
         after()
-    print(f"成功修改{key}为{value}！")
+    if value != origin_value:
+        print(f"成功修改{key}为{value}！")
+        changed = True
+    else:
+        print(f"一致的值：{key}为{value}！")
+    return changed
 
 
 def get_sw_install_path_from_setting_ini(sw:str) -> list:

@@ -8,14 +8,21 @@ from utils import process_utils
 from utils.logger_utils import mylogger as logger
 
 
-def is_valid_sw_install_path(path, sw) -> bool:
-    if path and path != "":
-        return os.path.exists(path)
-    else:
+def is_valid_sw_install_path(sw, path) -> bool:
+    if path is None:
         return False
+    if path == "":
+        return False
+    executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+
+    path_ext = os.path.splitext(path)[1].lower()
+    exe_ext = os.path.splitext(executable)[1].lower()
+
+    return path_ext == exe_ext
 
 
-def is_valid_sw_data_dir(path, sw) -> bool:
+
+def is_valid_sw_data_dir(sw, path) -> bool:
     if path is None:
         return False
     if path == "":
@@ -27,7 +34,7 @@ def is_valid_sw_data_dir(path, sw) -> bool:
     return os.path.exists(config_data_path)
 
 
-def is_valid_sw_dll_dir(path, sw) -> bool:
+def is_valid_sw_dll_dir(sw, path) -> bool:
     if path is None:
         return False
     if path == "":

@@ -2,35 +2,49 @@ import re
 import tkinter as tk
 from functools import partial
 from tkinter import ttk, filedialog, messagebox
+from typing import Dict
 
 import win32com
 import win32com.client
 
 from functions import func_setting, subfunc_sw, subfunc_file, func_sw_dll
-from resources import Constants
-from utils import sw_utils, hwnd_utils
+from resources import Constants, Config
+from utils import sw_utils, hwnd_utils, ini_utils
 from utils.logger_utils import mylogger as logger
 
 
 class SettingWindow:
-    def __init__(self, wnd, tab, status, after):
+    def __init__(self, wnd, sw, status, after):
+        self.changed: Dict[str, bool] = {
+            "inst_path": False,
+            "data_dir": False,
+            "dll_dir": False,
+            "login_size": False
+        }
+        self.origin_values = {
+            "inst_path": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "inst_path"),
+            "data_dir": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "data_dir"),
+            "dll_dir": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "dll_dir"),
+            "login_size": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "login_size")
+        }
         self.ver = None
         self.inst_path = None
         self.data_dir = None
         self.dll_dir = None
+
         self.status = status
         self.after = after
         self.wnd = wnd
-        self.sw = tab
+        self.sw = sw
         self.need_to_clear_acc = False
-        wnd.title(f"{tab}设置")
 
+        wnd.title(f"{sw}设置")
         window_width, window_height = Constants.SETTING_WND_SIZE
         hwnd_utils.bring_wnd_to_center(self.wnd, window_width, window_height)
-
         # 移除窗口装饰并设置为工具窗口
         wnd.attributes('-toolwindow', True)
         wnd.grab_set()
+        self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # 第一行 - 微信安装路径
         self.install_label = tk.Label(wnd, text="程序路径：")
@@ -57,11 +71,11 @@ class SettingWindow:
         self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
 
         self.data_get_button = ttk.Button(wnd, text="获取",
-                                          command=partial(self.load_or_get_sw_data_path, self.sw, True))
+                                          command=partial(self.load_or_get_sw_data_dir, self.sw, True))
         self.data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
 
         self.data_choose_button = ttk.Button(wnd, text="选择路径",
-                                             command=partial(self.choose_sw_data_path, self.sw))
+                                             command=partial(self.choose_sw_data_dir, self.sw))
         self.data_choose_button.grid(row=1, column=3, **Constants.WE_GRID_PACK)
 
         # 新增第三行 - WeChatWin.dll 路径
@@ -124,20 +138,32 @@ class SettingWindow:
 
         # 初始加载已经配置的，或是没有配置的话自动获取
         self.load_or_get_sw_inst_path(self.sw, False)
-        self.load_or_get_sw_data_path(self.sw, False)
+        self.load_or_get_sw_data_dir(self.sw, False)
         self.load_or_get_sw_dll_dir(self.sw, False)
         self.get_cur_sw_ver(self.sw, False)
         self.get_screen_size()
         login_size = subfunc_file.fetch_sw_setting_or_set_default(self.sw, 'login_size')
         self.login_size_var.set(login_size)
 
+    def check_bools(self):
+        keys_to_check = ["data_dir"]
+        self.need_to_clear_acc = any(self.changed[key] for key in keys_to_check)
+
     def on_ok(self):
+        self.check_bools()
         if self.validate_paths():
             # 检查是否需要清空账号信息
             if self.need_to_clear_acc:
                 subfunc_file.clear_acc_info_of_sw(self.sw)
             self.after()
             self.wnd.destroy()
+
+    def on_close(self):
+        self.check_bools()
+        if self.need_to_clear_acc:
+            subfunc_file.clear_acc_info_of_sw(self.sw)
+        self.after()
+        self.wnd.destroy()
 
     def validate_paths(self):
         self.inst_path = self.inst_path_var.get()
@@ -150,21 +176,90 @@ class SettingWindow:
         elif not bool(re.match(r'^\d+\*\d+$', self.login_size_var.get())):
             messagebox.showerror("错误", f"请确保填入的尺寸符合\"整数*整数\"的形式")
             return False
-        subfunc_file.save_sw_setting(self.sw, 'login_size', f"{self.login_size_var.get()}")
-        subfunc_file.save_sw_setting(self.sw, 'inst_path', self.inst_path)
-        subfunc_file.save_sw_setting(self.sw, 'data_dir', self.data_dir)
-        subfunc_file.save_sw_setting(self.sw, 'dll_dir', self.dll_dir)
         return True
 
+    def load_or_get_sw_inst_path(self, sw, click=False):
+        """获取路径，若成功会进行保存"""
+        path = func_setting.get_sw_install_path_only(sw, click)  # 此函数会保存路径
+        if path:
+            self.inst_path_var.set(path.replace('\\', '/'))
+            self.inst_path = path
+            if self.inst_path != self.origin_values["inst_path"]:
+                self.changed["inst_path"] = True
+        else:
+            self.inst_path_var.set("获取失败，请登录微信后获取或手动选择路径")
+
+    def choose_sw_inst_path(self, sw):
+        """选择路径，若检验成功会进行保存"""
+        while True:
+            path = filedialog.askopenfilename(filetypes=[("Executable files", "*.exe"), ("All files", "*.*")])
+            if not path:  # 用户取消选择
+                return
+            path = path.replace('\\', '/')
+            if sw_utils.is_valid_sw_install_path(sw, path):
+                self.inst_path_var.set(path)
+                self.inst_path = path
+                subfunc_file.save_sw_setting(self.sw, 'inst_path', self.inst_path)
+                if self.inst_path != self.origin_values["inst_path"]:
+                    self.changed["inst_path"] = True
+                break
+            else:
+                messagebox.showerror("错误", "请选择WeChat.exe文件")
+
+    def load_or_get_sw_data_dir(self, sw, click=False):
+        """获取路径，若成功会进行保存"""
+        path = func_setting.get_sw_data_dir_only(sw, click)  # 此函数会保存路径
+        if path:
+            self.data_dir_var.set(path.replace('\\', '/'))
+            self.data_dir = path
+            if self.data_dir != self.origin_values["data_dir"]:
+                self.changed["data_dir"] = True
+        else:
+            self.data_dir_var.set("获取失败，请手动选择包含All Users文件夹的父文件夹（通常为Wechat Files）")
+
+    def choose_sw_data_dir(self, sw):
+        """选择路径，若检验成功会进行保存"""
+        while True:
+            try:
+                # 尝试使用 `filedialog.askdirectory` 方法
+                path = filedialog.askdirectory()
+                if not path:  # 用户取消选择
+                    return
+            except Exception as e:
+                logger.error(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
+                try:
+                    # 异常处理部分，使用 `win32com.client`
+                    shell = win32com.client.Dispatch("Shell.Application")
+                    folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
+                    if not folder:  # 用户取消选择
+                        return
+                    path = folder.Self.Path.replace('\\', '/')
+                except Exception as e:
+                    logger.error(f"win32com.client 也失败了: {e}")
+                    return
+            if sw_utils.is_valid_sw_data_dir(sw, path):
+                self.data_dir_var.set(path)
+                self.data_dir = path
+                subfunc_file.save_sw_setting(self.sw, 'data_dir', self.data_dir)
+                if self.data_dir != self.origin_values["data_dir"]:
+                    self.changed["data_dir"] = True
+                break
+            else:
+                messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
+
     def load_or_get_sw_dll_dir(self, sw, click=False):
-        path = func_setting.get_sw_dll_dir(sw, click)
+        """获取路径，若成功会进行保存"""
+        path = func_setting.get_sw_dll_dir_only(sw, click)  # 此函数会保存路径
         if path:
             self.dll_dir_var.set(path.replace('\\', '/'))
             self.dll_dir = path
+            if self.dll_dir != self.origin_values["dll_dir"]:
+                self.changed["dll_dir"] = True
         else:
             self.dll_dir_var.set("获取失败，请手动选择安装目录下最新版本号文件夹")
 
     def choose_sw_dll_dir(self, sw):
+        """选择路径，若检验成功会进行保存"""
         while True:
             try:
                 # 尝试使用 `filedialog.askdirectory` 方法
@@ -183,76 +278,19 @@ class SettingWindow:
                 except Exception as e:
                     print(f"win32com.client 也失败了: {e}")
                     return
-            if sw_utils.is_valid_sw_dll_dir(path, sw):
+            if sw_utils.is_valid_sw_dll_dir(sw, path):
                 self.dll_dir_var.set(path)
                 self.dll_dir = path
+                subfunc_file.save_sw_setting(self.sw, 'dll_dir', self.dll_dir)
+                if self.dll_dir != self.origin_values["dll_dir"]:
+                    self.changed["dll_dir"] = True
                 break
             else:
                 messagebox.showerror("错误", "请选择包含WeChatWin.dll的版本号最新的文件夹")
 
-    def load_or_get_sw_inst_path(self, sw, click=False):
-        # print(sw)
-        path = func_setting.get_sw_install_path(sw, click)
-        if path:
-            self.inst_path_var.set(path.replace('\\', '/'))
-            self.inst_path = path
-        else:
-            self.inst_path_var.set("获取失败，请登录微信后获取或手动选择路径")
-
-    def choose_sw_inst_path(self, sw):
-        while True:
-            path = filedialog.askopenfilename(filetypes=[("Executable files", "*.exe"), ("All files", "*.*")])
-            if not path:  # 用户取消选择
-                return
-            path = path.replace('\\', '/')
-            if sw_utils.is_valid_sw_install_path(path, sw):
-                self.inst_path_var.set(path)
-                self.inst_path = path
-                break
-            else:
-                messagebox.showerror("错误", "请选择WeChat.exe文件")
-
-    def load_or_get_sw_data_path(self, sw, click=False):
-        path = func_setting.get_sw_data_dir(sw, click)
-        if click is True:
-            self.need_to_clear_acc = True
-        if path:
-            self.data_dir_var.set(path.replace('\\', '/'))
-            self.data_dir = path
-        else:
-            self.data_dir_var.set("获取失败，请手动选择包含All Users文件夹的父文件夹（通常为Wechat Files）")
-
-    def choose_sw_data_path(self, sw):
-        while True:
-            try:
-                # 尝试使用 `filedialog.askdirectory` 方法
-                path = filedialog.askdirectory()
-                if not path:  # 用户取消选择
-                    return
-                self.need_to_clear_acc = True
-            except Exception as e:
-                logger.error(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
-                try:
-                    # 异常处理部分，使用 `win32com.client`
-                    shell = win32com.client.Dispatch("Shell.Application")
-                    folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
-                    if not folder:  # 用户取消选择
-                        return
-                    path = folder.Self.Path.replace('\\', '/')
-                    self.need_to_clear_acc = True
-                except Exception as e:
-                    logger.error(f"win32com.client 也失败了: {e}")
-                    return
-            if sw_utils.is_valid_sw_data_dir(path, sw):
-                self.data_dir_var.set(path)
-                self.data_dir = path
-                break
-            else:
-                messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
-
     def get_cur_sw_ver(self, sw, click):
         print("获取版本号")
-        _, version = func_setting.get_sw_inst_path_and_ver(sw, click)
+        _, version = func_setting.get_sw_inst_path_and_ver_only(sw, click)
         if version is not None:
             self.version_var.set(version)
             self.ver = version

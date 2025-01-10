@@ -1,6 +1,7 @@
 # func_setting.py
 import os
 from tkinter import messagebox, simpledialog
+from typing import Union, Tuple
 
 import yaml
 
@@ -10,51 +11,63 @@ from utils import ini_utils, sw_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
 
-def get_sw_data_dir_from_other_sw(sw:str) -> list:
-    """通过其他软件的方式获取微信数据文件夹"""
-    data_dir_name, = subfunc_file.get_details_from_remote_setting_json(
-        sw, data_dir_name=None)
-    if data_dir_name is None or data_dir_name == "":
-        return []
-    if sw == "Weixin":
-        old_path = get_sw_data_dir(sw="WeChat")
-        if old_path and old_path != "":
-            return [os.path.join(os.path.dirname(old_path), data_dir_name).replace('\\', '/')]
-        else:
-            return []
+def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders:list, check_sw_path_func) \
+        -> Union[Tuple[bool, bool, Union[None, str]]]:
+    """
+    获取微信数据路径的结果元组
+    :param path_type: 路径类型
+    :param sw: 平台
+    :param path_finders: 是否从设置窗口调用
+    :param check_sw_path_func: 校验函数，参数为sw和path
+    :return: 成功，是否改变，结果
+    """
+    success = False
+    changed = False
+    result = None
+
+    # 尝试各种方法
+    for index, finder in enumerate(path_finders):
+        if finder is None:
+            continue
+        paths = finder(sw)
+        path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
+        if not path_list:
+            continue
+        # 检验地址并退出所有循环
+        for path in path_list:
+            if check_sw_path_func(sw, path):
+                logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
+                standardized_path = os.path.abspath(path).replace('\\', '/')
+                changed = subfunc_file.save_sw_setting(sw, path_type, standardized_path)
+                result = standardized_path
+                success = True
+                break
+        if success:
+            break
+
+    return success, changed, result
 
 
-def get_sw_dll_dir_by_files(sw:str) -> list:
-    """通过文件遍历方式获取dll文件夹"""
-    dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
-        sw, dll_dir_check_suffix=None, executable=None)
-    install_path = get_sw_install_path(sw)
-    if install_path and install_path != "":
-        install_dir = os.path.dirname(install_path)
-    else:
-        return []
-
-    version_folders = []
-    # 遍历所有文件及子文件夹
-    for root, dirs, files in os.walk(install_dir):
-        if dll_name in files:
-            version_folders.append(root)  # 将包含WeChatWin.dll的目录添加到列表中
-
-    if not version_folders:
-        return []
-
-    # 只有一个文件夹，直接返回
-    if len(version_folders) == 1:
-        dll_dir = version_folders[0].replace('\\', '/')
-        print(f"只有一个文件夹：{dll_dir}")
-        return [dll_dir]
-
-    return [file_utils.get_newest_full_version_dir(version_folders)]
-
-
-def get_sw_install_path(sw:str, from_setting_window=False):
-    """获取微信安装路径"""
+def get_sw_install_path_only(sw: str, from_setting_window=False) -> Union[None, str]:
+    """
+    获取微信安装路径
+    :param sw: 平台
+    :param from_setting_window: 是否从设置窗口调用
+    :return: 路径
+    """
     print("获取安装路径...")
+    _, _, result = get_sw_install_path(sw, from_setting_window)
+    return result
+
+
+def get_sw_install_path(sw: str, from_setting_window=False) \
+        -> Union[Tuple[bool, bool, Union[None, str]]]:
+    """
+    获取微信安装路径的结果元组
+    :param sw: 平台
+    :param from_setting_window: 是否从设置窗口调用
+    :return: 成功，是否改变，结果
+    """
     path_finders = [
         sw_utils.get_sw_install_path_from_process,
         (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_install_path_from_setting_ini,
@@ -63,84 +76,76 @@ def get_sw_install_path(sw:str, from_setting_window=False):
         sw_utils.get_sw_install_path_by_guess,
     ]
 
-    for index, finder in enumerate(path_finders):
-        if finder is not None:
-            paths = finder(sw)
-            path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
-            if len(path_list) == 0:
-                continue
-            for path in path_list:
-                if sw_utils.is_valid_sw_install_path(path, sw):
-                    standardized_path = os.path.abspath(path).replace('\\', '/')
-                    subfunc_file.save_sw_setting(sw, 'inst_path', standardized_path)
-                    logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
-                    return standardized_path
-    return None
+    check_func = sw_utils.is_valid_sw_install_path
+    path_type = 'inst_path'
+
+    return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
 
-def get_sw_data_dir(sw:str, from_setting_window=False):
-    """获取微信数据存储文件夹"""
-    print("获取数据目录...")
-    # 获取地址的各种方法
+
+def get_sw_data_dir_only(sw: str, from_setting_window=False):
+    """
+    获取微信数据路径
+    :param sw: 平台
+    :param from_setting_window: 是否从设置窗口调用
+    :return: 路径
+    """
+    print("获取安装路径...")
+    _, _, result = get_sw_data_dir(sw, from_setting_window)
+    return result
+
+
+def get_sw_data_dir(sw: str, from_setting_window=False) \
+        -> Union[Tuple[bool, bool, Union[None, str]]]:
+    """
+    获取微信数据路径的结果元组
+    :param sw: 平台
+    :param from_setting_window: 是否从设置窗口调用
+    :return: 成功，是否改变，结果
+    """
     path_finders = [
         (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_data_dir_from_setting_ini,
         sw_utils.get_sw_data_dir_from_user_register,
         sw_utils.get_sw_data_dir_by_guess,
         get_sw_data_dir_from_other_sw,
     ]
+    check_func = sw_utils.is_valid_sw_data_dir
+    path_type = 'data_dir'
 
-    # 尝试各种方法
-    for index, finder in enumerate(path_finders):
-
-        if finder is not None:
-            paths = finder(sw)
-            path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
-            if len(path_list) == 0:
-                continue
-            # 对得到地址进行检验，正确则返回并保存
-            for path in path_list:
-                if sw_utils.is_valid_sw_data_dir(path, sw):
-                    standardized_path = os.path.abspath(path).replace('\\', '/')
-                    subfunc_file.save_sw_setting(sw, 'data_dir', standardized_path)
-                    logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
-                    return standardized_path
-    return None
+    return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
 
-def get_sw_dll_dir(sw:str, from_setting_window=False):
+def get_sw_dll_dir_only(sw: str, from_setting_window=False):
     """获取微信dll所在文件夹"""
     print("获取dll目录...")
+    _, _, result = get_sw_dll_dir(sw, from_setting_window)
+    return result
+
+
+def get_sw_dll_dir(sw: str, from_setting_window=False):
+    """获取微信dll所在文件夹"""
     path_finders = [
         (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_dll_dir_from_setting_ini,
         sw_utils.get_sw_dll_dir_by_memo_maps,
         get_sw_dll_dir_by_files,
     ]
-    for index, finder in enumerate(path_finders):
-        if finder is not None:
-            paths = finder(sw)
-            path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
-            if len(path_list) == 0:
-                continue
-            # 对得到地址进行检验，正确则返回并保存
-            for path in path_list:
-                if sw_utils.is_valid_sw_dll_dir(path, sw):
-                    standardized_path = os.path.abspath(path).replace('\\', '/')
-                    subfunc_file.save_sw_setting(sw, 'dll_dir', standardized_path)
-                    logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
-                    return standardized_path
-    return None
+    check_func = sw_utils.is_valid_sw_dll_dir
+    path_type = 'dll_dir'
+
+    return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
 
-def get_sw_inst_path_and_ver(sw:str, from_setting_window=False):
+def get_sw_inst_path_and_ver_only(sw: str, from_setting_window=False):
     """获取当前使用的版本号"""
     # print(sw)
-    install_path = get_sw_install_path(sw, from_setting_window)
+    install_path = get_sw_install_path_only(sw, from_setting_window)
     # print(install_path)
     if install_path is not None:
         if os.path.exists(install_path):
             return install_path, file_utils.get_file_version(install_path)
         return install_path, None
     return None, None
+
 
 def set_wnd_scale(after, scale=None):
     if scale is None:
@@ -174,10 +179,64 @@ def set_wnd_scale(after, scale=None):
     print(f"成功设置窗口缩放比例为 {scale}！")
     return
 
+
+def get_sw_data_dir_from_other_sw(sw: str) -> list:
+    """通过其他软件的方式获取微信数据文件夹"""
+    data_dir_name, = subfunc_file.get_details_from_remote_setting_json(
+        sw, data_dir_name=None)
+    paths = []
+    if data_dir_name is None or data_dir_name == "":
+        paths = []
+    if sw == "Weixin":
+        other_path = get_sw_data_dir_only("WeChat")
+        if other_path and other_path != "":
+            paths = [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
+        else:
+            paths = []
+    if sw == "WeChat":
+        other_path = get_sw_data_dir_only("Weixin")
+        if other_path and other_path!= "":
+            return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
+        else:
+            return []
+
+    return paths
+
+
+
+def get_sw_dll_dir_by_files(sw: str) -> list:
+    """通过文件遍历方式获取dll文件夹"""
+    dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
+        sw, dll_dir_check_suffix=None, executable=None)
+    install_path = get_sw_install_path_only(sw)
+    if install_path and install_path != "":
+        install_dir = os.path.dirname(install_path)
+    else:
+        return []
+
+    version_folders = []
+    # 遍历所有文件及子文件夹
+    for root, dirs, files in os.walk(install_dir):
+        if dll_name in files:
+            version_folders.append(root)  # 将包含WeChatWin.dll的目录添加到列表中
+
+    if not version_folders:
+        return []
+
+    # 只有一个文件夹，直接返回
+    if len(version_folders) == 1:
+        dll_dir = version_folders[0].replace('\\', '/')
+        print(f"只有一个文件夹：{dll_dir}")
+        return [dll_dir]
+
+    return [file_utils.get_newest_full_version_dir(version_folders)]
+
+
 def read_yaml(file_path):
     """读取YML文件并解析"""
     with open(file_path, 'r', encoding='utf-8') as file:
         return yaml.safe_load(file)
+
 
 def insert_tree_data(tree, data):
     """将YML数据插入到Treeview中"""
@@ -188,6 +247,7 @@ def insert_tree_data(tree, data):
         # 插入二级节点（name 和 value）
         for sub_key, sub_value in top_value.items():
             tree.insert(top_node, "end", text=sub_key, values=(sub_value["name"], sub_value["value"]))
+
 
 def create_setting_tab():
     pass
