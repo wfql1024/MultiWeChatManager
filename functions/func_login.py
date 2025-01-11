@@ -32,7 +32,7 @@ def manual_login(r_class, sw, status, window_callback):
     # 关闭配置文件锁
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-    hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
+    hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
     subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
     subfunc_file.clear_all_acc_in_acc_json(sw)
@@ -40,14 +40,14 @@ def manual_login(r_class, sw, status, window_callback):
     has_mutex_dict = subfunc_sw.get_mutex_dict(sw)
     logger.info(f"当前模式是：{status}")
     sub_exe_process, sub_exe = subfunc_sw.open_sw(sw, status, has_mutex_dict)
-    wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 20)
+    wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 20)
     if wechat_hwnd:
         subfunc_file.set_all_acc_values_to_false(sw)
         subfunc_file.update_statistic_data(sw, 'manual', '_', sub_exe, time.time() - start_time)
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
-        if hwnd_utils.wait_for_wnd_close(wechat_hwnd, timeout=60):
+        if hwnd_utils.wait_hwnd_close(wechat_hwnd, timeout=60):
             print(f"手动登录成功，正在刷新...")
         else:
             messagebox.showinfo("提示", "登录窗口长时间未操作，即将刷新列表")
@@ -89,7 +89,7 @@ def auto_login_accounts(accounts, status, callback, sw):
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
         subfunc_file.get_details_from_remote_setting_json(
             sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
-    hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
+    hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
     subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
     subfunc_file.clear_all_acc_in_acc_json(sw)
@@ -155,7 +155,7 @@ def auto_login_accounts(accounts, status, callback, sw):
         # 等待打开窗口
         end_time = time.time() + 20
         while True:
-            wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, 1)
+            wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 1)
             if wechat_hwnd is not None and wechat_hwnd not in wechat_handles:
                 # 确保打开了新的微信登录窗口
                 wechat_handles.add(wechat_hwnd)
@@ -186,10 +186,11 @@ def auto_login_accounts(accounts, status, callback, sw):
                 win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
             )
         except Exception as e:
-            print(e)
+            logger.error(e)
 
-        # 统计时间
+        # 逐次统计时间
         subfunc_file.update_statistic_data(sw, 'auto', str(j + 1), sub_exe, time.time() - start_time)
+    # 统计平均时间
     subfunc_file.update_statistic_data(sw, 'auto', 'avg', multiple_mode,
                                        (time.time() - start_time) / count)
 
@@ -199,34 +200,42 @@ def auto_login_accounts(accounts, status, callback, sw):
 
     def func():
         # 两轮点击所有窗口的登录，防止遗漏
-        handles = hwnd_utils.find_all_wnd_by_class_and_title(login_wnd_class)
-        time.sleep(2.5)
-        for h in handles:
-            hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
-            time.sleep(0.5)
-        time.sleep(2.5)
-        for h in handles:
+        hwnd_list = hwnd_utils.get_hwnd_list_by_class_and_title(login_wnd_class)
+        time.sleep(0.5)
+        inner_start_time = time.time()
+        for h in hwnd_list:
             hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
             time.sleep(0.2)
-        for h in handles:
-            titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
+        print("查找后用时：", time.time() - inner_start_time, "s")
+        # for h in hwnd_list:
+        #     hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
+        #     time.sleep(0.2)
+        inner_start_time = time.time()
+        for h in hwnd_list:
+            titles = ["进入微信", "进入WeChat", "Enter Weixin", "进入微信"]  # 添加所有需要查找的标题
             try:
-                # 依次查找每个标题
-                for title in titles:
-                    cx, cy = hwnd_utils.get_center_pos_by_hwnd_and_title(h, title)
-                    if cx is not None and cy is not None:
-                        hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
-                        break  # 找到有效坐标后退出循环
+                # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
+                cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
+                print(hwnd_utils.get_child_hwnd_list_of_(h))
+                # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
+                # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
+                # cx, cy = hwnd_utils.find_widget_with_uia(h, titles)  # 有问题，修复较复杂，不管
+                print("查找后用时：", time.time() - inner_start_time, "s")
+                if cx is not None and cy is not None:
+                    hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
+                    break  # 找到有效坐标后退出循环
             except TypeError as te:
-                print(te)
+                logger.warning(te)
                 print("没有按钮，应该是点过啦~")
+            except Exception as fe:
+                logger.error(fe)
 
     threading.Thread(target=func).start()
 
     # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
     end_time = time.time() + 30
     while True:
-        hs = hwnd_utils.find_all_wnd_by_class_and_title(login_wnd_class)
+        hs = hwnd_utils.get_hwnd_list_by_class_and_title(login_wnd_class)
         # print("等待登录完成")
         if len(hs) == 0:
             callback()
