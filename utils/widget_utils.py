@@ -21,7 +21,7 @@ class ScrollableCanvas:
         self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
 
         # 创建滚动条
-        print("创建滚动条...")
+        # print("创建滚动条...")
         self.scrollbar = ttk.Scrollbar(scrollbar_frame, orient="vertical", command=self.canvas.yview)
         self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
         # 创建一个Frame在Canvas中
@@ -273,14 +273,88 @@ def insert_two_lines(text_widget, line_list):
     text_widget.see(tk.END)  # 确保插入的文本可以显示在视图中
 
 
+def enable_widget_with_condition(widget, condition):
+    """
+    根据条件动态启用控件。
+
+    Args:
+        widget: 需要设置状态的 tkinter 控件。
+        condition: 一个元组，形式为 (数值, (最小允许值, 最大允许值))。
+                   - 数值: 用于判断的当前值。
+                   - 最小允许值: 若为 None，则不限制最小值。
+                   - 最大允许值: 若为 None，则不限制最大值。
+
+    操作:
+        如果数值满足条件范围，则将控件设置为 "normal"；
+        否则设置为 "disabled"。
+    """
+    # 解包 condition
+    value, (min_value, max_value) = condition
+
+    # 检查条件
+    is_valid = True
+    if min_value is not None:
+        is_valid = is_valid and (value >= min_value)
+    if max_value is not None:
+        is_valid = is_valid and (value <= max_value)
+
+    # 设置控件状态
+    if is_valid:
+        widget.config(state="normal")
+    else:
+        widget.config(state="disabled")
+
+
+def set_widget_tip_with_condition(tooltips, widget, text, condition=None):
+    """
+    根据条件动态绑定或解绑控件的提示信息 (tooltip)。
+
+    Args:
+        tooltips (dict): 存储 widget 和对应 Tooltip 实例的字典。
+        widget: 需要绑定提示信息的 tkinter 控件。
+        text (str): 提示信息文本。
+        condition (tuple, optional): 一个元组，形式为 (数值, (最小允许值, 最大允许值))。
+                                     - 数值: 用于判断的当前值。
+                                     - 最小允许值: 若为 None，则不限制最小值。
+                                     - 最大允许值: 若为 None，则不限制最大值。
+
+    操作:
+        - 如果 condition 满足范围条件，则绑定提示信息。
+        - 如果 condition 不满足范围条件，则解绑提示信息。
+    """
+    if condition is not None:
+        # 解包 condition
+        value, (min_value, max_value) = condition
+
+        # 判断条件是否满足
+        is_valid = True
+        if min_value is not None:
+            is_valid = is_valid and (value >= min_value)
+        if max_value is not None:
+            is_valid = is_valid and (value <= max_value)
+
+        # 根据条件判断是否绑定或解绑提示
+        if is_valid:
+            if widget not in tooltips:
+                tooltips[widget] = Tooltip(widget, text)
+        else:
+            if widget in tooltips:
+                tooltips[widget].widget.unbind("<Enter>")
+                tooltips[widget].widget.unbind("<Leave>")
+                del tooltips[widget]
+    else:
+        # 如果没有传入 condition，直接绑定提示信息
+        if widget not in tooltips:
+            tooltips[widget] = Tooltip(widget, text)
+
+
 def disable_button_and_add_tip(tooltips, button, text):
     """
     禁用按钮，启用提示
     :return: None
     """
     button.state(['disabled'])
-    if button not in tooltips:
-        tooltips[button] = Tooltip(button, text)
+    tooltips[button] = Tooltip(button, text)
 
 
 def enable_button_and_unbind_tip(tooltips, button):

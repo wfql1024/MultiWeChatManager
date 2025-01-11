@@ -55,6 +55,9 @@ class MainWindow:
         style.configure('SecondTitle.TLabel', font=("", Constants.SECOND_TITLE_FONTSIZE))
         style.configure("RedWarning.TLabel", foreground="red", font=("", Constants.LITTLE_FONTSIZE))
         style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
+        style.configure("RowTreeview", background="#FFFFFF", foreground="black",
+                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="none")
+        style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
 
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE
         self.root.withdraw()  # 初始化时隐藏主窗口
@@ -172,7 +175,11 @@ class MainWindow:
 
         # 刷新界面
         def reload_func():
-            self.root.after(0, self.refresh_sw_main_frame, message)
+            try:
+                self.root.after(0, self.refresh_sw_main_frame, message)
+            except Exception as e_reload:
+                logger.error(e_reload)
+                self.root.after(5000, self.refresh_sw_main_frame, message)
         try:
             # 线程启动获取登录情况和渲染列表
             threading.Thread(target=reload_func).start()
@@ -243,7 +250,7 @@ class MainWindow:
                 self.root, self, self.main_frame, result, self.sw_info["data_dir"], self.sw)
         elif self.sw_info["view"] == "tree":
             self.tree_uis[self.sw] = treeview_row_ui.TreeviewRowUI(
-                self.root, self, self.main_frame, result, self.sw_info["data_dir"], self.sw)
+                self, result)
         else:
             pass
         subfunc_file.update_statistic_data(
@@ -266,6 +273,8 @@ class MainWindow:
         # 进行静默获取头像及配置
         func_account.silent_get_and_config(login, logout, self.sw_info["data_dir"],
                                            self.refresh_sw_main_frame, self.sw)
+
+        # 重新绑定标签切换事件
         self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
 
@@ -278,7 +287,7 @@ class MainWindow:
                 self.root.after(0, self.loading_wnd_class.auto_close)
                 self.loading_wnd_class = None
             # 设置主窗口位置
-            self.root.after(0, hwnd_utils.bring_wnd_to_center, self.root, self.window_width, self.window_height)
+            self.root.after(0, hwnd_utils.bring_tk_wnd_to_center, self.root, self.window_width, self.window_height)
             self.root.deiconify()
             # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
@@ -328,7 +337,7 @@ class MainWindow:
                 self,
                 self.sw,
                 self.root_menu.states["multiple"],
-                partial(hwnd_utils.bring_wnd_to_front, window_class=self, root=self.root)
+                partial(hwnd_utils.bring_tk_wnd_to_front, self.root, self.root)
             )
         ).start()
 
@@ -344,10 +353,16 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
-    def to_create_config(self, account):
+    def to_create_config(self, accounts):
         """按钮：创建或重新配置"""
         threading.Thread(target=func_config.test,
-                         args=(self, account, self.root_menu.states["multiple"], self.sw)).start()
+                         args=(self, accounts[0], self.root_menu.states["multiple"], self.sw)).start()
+
+    def to_quit_accounts(self, accounts):
+        """退出所选账号"""
+        answer = func_account.quit_selected_accounts(self.sw, accounts)
+        if answer is True:
+            self.refresh_sw_main_frame()
 
     def open_acc_detail(self, account, event=None):
         """打开详情窗口"""

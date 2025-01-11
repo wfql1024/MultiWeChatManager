@@ -6,17 +6,16 @@ from utils import json_utils, hwnd_utils, widget_utils, string_utils
 from utils.logger_utils import mylogger as logger
 
 
-class StatisticWindow:
-    def __init__(self, wnd, sw, view):
+class AccSettingWindow:
+    def __init__(self, wnd, sw):
         self.sw = sw
-        self.refresh_mode_combobox = None
-        self.refresh_tree = None
         self.manual_tree = None
         self.auto_tree = None
+        self.refresh_tree = None
+        self.refresh_mode_combobox = None
         self.auto_count_combobox = None
         self.wnd = wnd
-        self.wnd.title(f"{sw}统计数据")
-        self.view = view
+        self.wnd.title(f"{sw}账号管理")
         self.wnd.attributes('-toolwindow', True)
         self.window_width, self.window_height = Constants.STATISTIC_WND_SIZE
         hwnd_utils.bring_tk_wnd_to_center(self.wnd, self.window_width, self.window_height)
@@ -198,7 +197,8 @@ class StatisticWindow:
         items = [(tree.item(i)["values"], i) for i in tree.get_children()]
         is_ascending = self.tree_dict[tree_type]['sort']
         need_to_reverse = is_ascending
-        items.sort(key=lambda x: (string_utils.try_convert_to_float(x[0][list(tree["columns"]).index(col)])),
+        items.sort(key=lambda x: (string_utils.try_convert_to_float(x[0][list(tree["columns"]).index(col)])
+                                  if col not in ["模式"] else x[0][list(tree["columns"]).index(col)]),
                    reverse=need_to_reverse)
         # 清空表格并重新插入排序后的数据
         for i in tree.get_children():
@@ -211,6 +211,4 @@ class StatisticWindow:
 
 # 创建主窗口
 if __name__ == "__main__":
-    root = tk.Tk()
-    statistic_window = StatisticWindow(root, "WeChat", 'tree')
-    root.mainloop()
+    pass

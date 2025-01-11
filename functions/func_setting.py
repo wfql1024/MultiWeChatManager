@@ -48,7 +48,7 @@ def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders:list, chec
     return success, changed, result
 
 
-def get_sw_install_path_only(sw: str, from_setting_window=False) -> Union[None, str]:
+def get_sw_install_path(sw: str, from_setting_window=False) -> Union[None, str]:
     """
     获取微信安装路径
     :param sw: 平台
@@ -56,11 +56,11 @@ def get_sw_install_path_only(sw: str, from_setting_window=False) -> Union[None, 
     :return: 路径
     """
     print("获取安装路径...")
-    _, _, result = get_sw_install_path(sw, from_setting_window)
+    _, _, result = get_sw_install_path_by_tuple(sw, from_setting_window)
     return result
 
 
-def get_sw_install_path(sw: str, from_setting_window=False) \
+def get_sw_install_path_by_tuple(sw: str, from_setting_window=False) \
         -> Union[Tuple[bool, bool, Union[None, str]]]:
     """
     获取微信安装路径的结果元组
@@ -83,7 +83,7 @@ def get_sw_install_path(sw: str, from_setting_window=False) \
 
 
 
-def get_sw_data_dir_only(sw: str, from_setting_window=False):
+def get_sw_data_dir(sw: str, from_setting_window=False):
     """
     获取微信数据路径
     :param sw: 平台
@@ -91,11 +91,11 @@ def get_sw_data_dir_only(sw: str, from_setting_window=False):
     :return: 路径
     """
     print("获取安装路径...")
-    _, _, result = get_sw_data_dir(sw, from_setting_window)
+    _, _, result = get_sw_data_dir_to_tuple(sw, from_setting_window)
     return result
 
 
-def get_sw_data_dir(sw: str, from_setting_window=False) \
+def get_sw_data_dir_to_tuple(sw: str, from_setting_window=False) \
         -> Union[Tuple[bool, bool, Union[None, str]]]:
     """
     获取微信数据路径的结果元组
@@ -115,14 +115,14 @@ def get_sw_data_dir(sw: str, from_setting_window=False) \
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
 
-def get_sw_dll_dir_only(sw: str, from_setting_window=False):
+def get_sw_dll_dir(sw: str, from_setting_window=False):
     """获取微信dll所在文件夹"""
     print("获取dll目录...")
-    _, _, result = get_sw_dll_dir(sw, from_setting_window)
+    _, _, result = get_sw_dll_dir_to_tuple(sw, from_setting_window)
     return result
 
 
-def get_sw_dll_dir(sw: str, from_setting_window=False):
+def get_sw_dll_dir_to_tuple(sw: str, from_setting_window=False):
     """获取微信dll所在文件夹"""
     path_finders = [
         (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_dll_dir_from_setting_ini,
@@ -135,10 +135,10 @@ def get_sw_dll_dir(sw: str, from_setting_window=False):
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
 
-def get_sw_inst_path_and_ver_only(sw: str, from_setting_window=False):
+def get_sw_inst_path_and_ver(sw: str, from_setting_window=False):
     """获取当前使用的版本号"""
     # print(sw)
-    install_path = get_sw_install_path_only(sw, from_setting_window)
+    install_path = get_sw_install_path(sw, from_setting_window)
     # print(install_path)
     if install_path is not None:
         if os.path.exists(install_path):
@@ -188,13 +188,13 @@ def get_sw_data_dir_from_other_sw(sw: str) -> list:
     if data_dir_name is None or data_dir_name == "":
         paths = []
     if sw == "Weixin":
-        other_path = get_sw_data_dir_only("WeChat")
+        other_path = get_sw_data_dir("WeChat")
         if other_path and other_path != "":
             paths = [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
         else:
             paths = []
     if sw == "WeChat":
-        other_path = get_sw_data_dir_only("Weixin")
+        other_path = get_sw_data_dir("Weixin")
         if other_path and other_path!= "":
             return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
         else:
@@ -208,7 +208,7 @@ def get_sw_dll_dir_by_files(sw: str) -> list:
     """通过文件遍历方式获取dll文件夹"""
     dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
         sw, dll_dir_check_suffix=None, executable=None)
-    install_path = get_sw_install_path_only(sw)
+    install_path = get_sw_install_path(sw)
     if install_path and install_path != "":
         install_dir = os.path.dirname(install_path)
     else:

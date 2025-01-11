@@ -66,8 +66,8 @@ class Constants:
     UPDATE_LOG_WND_SIZE = (int(480 * SF), int(400 * SF))  # 更新日志窗口尺寸
     ABOUT_WND_SIZE = (int(500 * SF), int(540 * SF))  # 关于窗口尺寸
     DEBUG_WND_SIZE = (int(800 * SF), int(600 * SF))  # 调试窗口尺寸
-    DETAIL_WND_SIZE = (int(240 * SF), int(280 * SF))  # 详情窗口尺寸
-    STATISTIC_WND_SIZE = (int(336 * SF), int(432 * SF))  # 统计窗口尺寸
+    DETAIL_WND_SIZE = (int(240 * SF), int(360 * SF))  # 详情窗口尺寸
+    STATISTIC_WND_SIZE = (int(360 * SF), int(432 * SF))  # 统计窗口尺寸
 
     LOADING_PRG_LEN = int(200 * SF)  # 加载进度条长度
 

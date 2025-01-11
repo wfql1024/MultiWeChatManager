@@ -12,7 +12,7 @@ import psutil
 
 from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_account, func_update
 from resources import Strings, Config
-from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui
+from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui, acc_setting_ui
 from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 
@@ -233,6 +233,10 @@ class MenuUI:
                                            command=partial(self.open_settings, self.sw))
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
+        self.settings_menu.add_command(label=f"账号管理",
+                                       command=partial(self.open_acc_setting, self.sw))
+        self.settings_menu.add_separator()  # ————————————————分割线————————————————
+
         # 防撤回和全局多开需要依赖存储路径，因此判断若无路径直接跳过菜单创建
         if self.sw_info["data_dir"] is not None:
             # -防撤回
@@ -396,11 +400,12 @@ class MenuUI:
             widget.destroy()
         sidebar_ui.SidebarUI(self.root)
 
+    def open_acc_setting(self, sw):
+        acc_setting_window = tk.Toplevel(self.root)
+        acc_setting_ui.AccSettingWindow(acc_setting_window, sw)
+
     def open_settings(self, sw):
         """打开设置窗口"""
-        # def reset_and_refresh():
-        #     """重新配置设置后调用"""
-        #     self.r_class.refresh()
         settings_window = tk.Toplevel(self.root)
         setting_ui.SettingWindow(settings_window, sw, self.states["multiple"],
                                  self.r_class.refresh)

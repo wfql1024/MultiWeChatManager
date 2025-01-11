@@ -50,21 +50,24 @@ class AccountRow:
         has_mutex, = subfunc_file.get_sw_acc_details_from_json("WeChat", account, has_mutex=None)
         style = ttk.Style()
         style.configure("Mutex.TLabel", foreground="red")
-        try:
-            if has_mutex and self.sign_visible:
-                self.account_label = ttk.Label(self.row_frame, text=wrapped_display_name, style="Mutex.TLabel")
-            else:
-                self.account_label = ttk.Label(self.row_frame, text=wrapped_display_name)
-            self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=Constants.CLZ_ROW_LBL_PAD_X)
-        except Exception as e:
-            logger.warning(e)
-            # 清理 display_name
-            cleaned_display_name = string_utils.clean_display_name(wrapped_display_name)
-            if has_mutex and self.sign_visible:
-                self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name, style="Mutex.TLabel")
-            else:
-                self.account_label = ttk.Label(self.row_frame, text=cleaned_display_name)
-            self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=Constants.CLZ_ROW_LBL_PAD_X)
+        if has_mutex and self.sign_visible:
+            try:
+                self.account_label = ttk.Label(
+                    self.row_frame, style="Mutex.TLabel", text=wrapped_display_name)
+            except Exception as e:
+                logger.warning(e)
+                self.account_label = ttk.Label(
+                    self.row_frame, style="Mutex.TLabel", text=string_utils.clean_texts(wrapped_display_name))
+        else:
+            try:
+                self.account_label = ttk.Label(
+                    self.row_frame, text=wrapped_display_name)
+            except Exception as e:
+                logger.warning(e)
+                self.account_label = ttk.Label(
+                    self.row_frame, text=string_utils.clean_texts(wrapped_display_name))
+
+        self.account_label.pack(side=tk.LEFT, fill=tk.X, padx=Constants.CLZ_ROW_LBL_PAD_X)
 
         # print(f"加载账号显示区域用时{time.time() - self.start_time:.4f}秒")
 
@@ -83,7 +86,7 @@ class AccountRow:
             self.config_button_text = "重新配置" if self.config_status != "无配置" else "添加配置"
             self.config_button = ttk.Button(
                 self.button_frame, text=self.config_button_text, style='Custom.TButton',
-                command=partial(self.r_class.to_create_config, account)
+                command=partial(self.r_class.to_create_config, [account])
             )
             self.config_button.pack(side=tk.RIGHT)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
@@ -199,9 +202,7 @@ class ClassicRowUI:
             # 一键退出
             self.one_key_quit = ttk.Button(
                 self.login_btn_frame, text="一键退出", style='Custom.TButton',
-                command=lambda: func_account.to_quit_selected_accounts(
-                    self.sw, self.get_selected_accounts("login"), self.r_class.refresh_sw_main_frame
-                )
+                command=lambda: self.r_class.to_quit_accounts(self.get_selected_accounts("login"))
             )
             self.one_key_quit.pack(side=tk.RIGHT)
 
@@ -248,6 +249,9 @@ class ClassicRowUI:
 
             # 加载未登录列表
             for account in logouts:
+                hidden, = subfunc_file.get_sw_acc_details_from_json(sw, account, hidden=False)
+                if hidden:
+                    continue
                 self.add_account_row(self.logout_frame, account, "logout")
 
             # 更新顶部复选框状态

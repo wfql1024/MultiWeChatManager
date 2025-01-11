@@ -1,8 +1,12 @@
 import platform
+import sys
 
 SYS_VER = int(platform.release())
-NEWER_VER = True if SYS_VER >= 10 else False
-
+if getattr(sys, "frozen", False):  # 如果是编译环境
+    NEWER_VER = SYS_VER >= 10
+else:
+    # print("编译环境")
+    NEWER_VER = (sys.version_info >= (3, 8))
 
 class Strings:
     REMOTE_SETTING_JSON_GITEE = 'https://gitee.com/wfql1024/MultiWeChatManager/raw/master/remote_setting'
@@ -18,3 +22,15 @@ class Strings:
     SURPRISE_SIGN = "✨" if NEWER_VER else "*"
     MUTEX_SIGN = "🔒" if NEWER_VER else "⚔"
     CFG_SIGN = "📝" if NEWER_VER else "❐"
+
+if __name__ == '__main__':
+    print(sys.version_info)
+    print(sys.version_info >= (3, 8))
+    print(NEWER_VER)
+    print(Strings.VIDEO_TUTORIAL_LINK)
+    print(Strings.NOT_ENABLED_NEW_FUNC)
+    print(Strings.ENABLED_NEW_FUNC)
+    print(Strings.WARNING_SIGN)
+    print(Strings.SURPRISE_SIGN)
+    print(Strings.MUTEX_SIGN)
+    print(Strings.CFG_SIGN)

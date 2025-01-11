@@ -17,12 +17,12 @@ from utils import process_utils, image_utils, string_utils, hwnd_utils
 from utils.logger_utils import mylogger as logger
 
 
-def to_quit_selected_accounts(sw, accounts_selected, callback):
+def quit_selected_accounts(sw, accounts_selected):
     accounts_to_quit = []
     for acc in accounts_selected:
         pid, = subfunc_file.get_sw_acc_details_from_json(sw, acc, pid=None)
         display_name = get_acc_origin_display_name(sw, acc)
-        cleaned_display_name = string_utils.clean_display_name(display_name)
+        cleaned_display_name = string_utils.clean_texts(display_name)
         accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
     accounts_to_quit_str = "\n".join(accounts_to_quit)
     if messagebox.askokcancel("提示",
@@ -31,9 +31,10 @@ def to_quit_selected_accounts(sw, accounts_selected, callback):
             quited_accounts = quit_accounts(sw, accounts_selected)
             quited_accounts_str = "\n".join(quited_accounts)
             messagebox.showinfo("提示", f"已退登：\n{quited_accounts_str}")
-            callback()
         except Exception as e:
             logger.error(e)
+        return True
+    return False
 
 
 def quit_accounts(sw, accounts):
@@ -42,7 +43,7 @@ def quit_accounts(sw, accounts):
         try:
             pid, = subfunc_file.get_sw_acc_details_from_json(sw, account, pid=None)
             display_name = get_acc_origin_display_name(sw, account)
-            cleaned_display_name = string_utils.clean_display_name(display_name)
+            cleaned_display_name = string_utils.clean_texts(display_name)
             executable_name, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
             process = psutil.Process(pid)
             if process_utils.process_exists(pid) and process.name() == executable_name:
@@ -340,7 +341,7 @@ def get_main_hwnd_of_accounts(acc_list, sw):
         return False
     for acc in acc_list:
         pid, = subfunc_file.get_sw_acc_details_from_json(sw, acc, pid=None)
-        hwnd_list = hwnd_utils.find_hwnd_by_pid_and_class(pid, target_class)
+        hwnd_list = hwnd_utils.get_hwnd_list_by_pid_and_class(pid, target_class)
         # print(pid, hwnd_list)
         if len(hwnd_list) >= 1:
             hwnd = hwnd_list[0]

@@ -6,17 +6,23 @@ import win32gui
 
 from functions import func_setting, subfunc_file
 from resources import Config
-from utils import hwnd_utils, process_utils, ini_utils, pywinhandle, handle_utils, sys_utils
+from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 
 
 def switch_to_sw_account_wnd(sw, acc, program_wnd, event=None):
-    hwnd_utils.bring_wnd_to_left(program_wnd)
+    if event is None:
+        pass
     main_wnd_class, = subfunc_file.get_details_from_remote_setting_json(
         sw, main_wnd_class=None)
     classes = [main_wnd_class]
-    hwnd_utils.hide_all_wnd_by_classes(classes)
     main_hwnd, = subfunc_file.get_sw_acc_details_from_json(sw, acc, main_hwnd=None)
+
+    # 程序主窗口左移
+    hwnd_utils.bring_tk_wnd_to_left(program_wnd)
+    # 隐藏所有平台主窗口
+    hwnd_utils.hide_all_by_wnd_classes(classes)
+    # 恢复平台指定主窗口
     hwnd_utils.restore_window(main_hwnd)
 
 
@@ -100,13 +106,13 @@ def open_sw(sw, status, has_mutex_dictionary=None):
             sub_exe_process = create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{multiple_mode}"
             )
-            sub_exe_hwnd = hwnd_utils.wait_for_wnd_open("WTWindow", 8)
+            sub_exe_hwnd = hwnd_utils.wait_open_to_get_hwnd("WTWindow", 8)
             if sub_exe_hwnd:
-                button_handle = hwnd_utils.get_all_child_hwnd(
+                button_handle = hwnd_utils.get_child_hwnd_list_of_(
                     sub_exe_hwnd
                 )[1]
                 if button_handle:
-                    button_details = hwnd_utils.get_wnd_details_from_hwnd(button_handle)
+                    button_details = hwnd_utils.get_hwnd_details_of_(button_handle)
                     button_cx = int(button_details["width"] / 2)
                     button_cy = int(button_details["height"] / 2)
                     hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
@@ -164,7 +170,7 @@ def get_login_size(tab, status):
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
         tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
     print(login_wnd_class)
-    hwnd_utils.close_all_wnd_by_classes(redundant_wnd_list)
+    hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
 
     # 关闭配置文件锁
     handle_utils.close_sw_mutex_by_handle(
@@ -173,13 +179,13 @@ def get_login_size(tab, status):
     kill_sw_multiple_processes(tab)
     has_mutex_dict = get_mutex_dict(tab)
     sub_exe_process, sub_exe = open_sw(tab, status, has_mutex_dict)
-    wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, timeout=8)
+    wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
         time.sleep(2)
-        login_wnd_details = hwnd_utils.get_wnd_details_from_hwnd(wechat_hwnd)
+        login_wnd_details = hwnd_utils.get_hwnd_details_of_(wechat_hwnd)
         login_wnd = login_wnd_details["window"]
         login_width = login_wnd_details["width"]
         login_height = login_wnd_details["height"]
@@ -208,7 +214,7 @@ def logging_in_listener():
         print(f"当前有微信窗口：{handles}")
         for handle in list(handles):
             if win32gui.IsWindow(handle):
-                wechat_wnd_details = hwnd_utils.get_wnd_details_from_hwnd(handle)
+                wechat_wnd_details = hwnd_utils.get_hwnd_details_of_(handle)
                 wechat_width = wechat_wnd_details["width"]
                 wechat_height = wechat_wnd_details["height"]
                 hwnd_utils.do_click_in_wnd(handle, int(wechat_width * 0.5), int(wechat_height * 0.75))

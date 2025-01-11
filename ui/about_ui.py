@@ -76,7 +76,7 @@ class AboutWindow:
 
         self.wnd.title("关于")
         self.width, self.height = Constants.ABOUT_WND_SIZE
-        hwnd_utils.bring_wnd_to_center(self.wnd, self.width, self.height)
+        hwnd_utils.bring_tk_wnd_to_center(self.wnd, self.width, self.height)
         self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
 
         # 禁用窗口大小调整

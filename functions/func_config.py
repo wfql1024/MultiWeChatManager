@@ -33,7 +33,7 @@ def get_config_status_by_account(account, data_path, sw) -> str:
     if os.path.exists(acc_cfg_path):
         mod_time = os.path.getmtime(acc_cfg_path)
         date = datetime.fromtimestamp(mod_time)
-        return f"{date.year % 100:02}-{date.month}-{date.day} {date.hour:02}:{date.minute:02}"
+        return f"{date.year % 100:02}/{date.month:02}/{date.day:02} {date.hour:02}:{date.minute:02}"
     else:
         return "无配置"
 
@@ -120,7 +120,7 @@ def test(root_class, account, multiple_status, tab):
     ):
         redundant_wnd_classes, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
             tab, redundant_wnd_class=None, executable=None, cfg_handle_regex_list=None)
-        hwnd_utils.close_all_wnd_by_classes(redundant_wnd_classes)
+        hwnd_utils.close_all_by_wnd_classes(redundant_wnd_classes)
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
         subfunc_sw.kill_sw_multiple_processes(tab)
@@ -128,18 +128,18 @@ def test(root_class, account, multiple_status, tab):
         has_mutex_dict = subfunc_sw.get_mutex_dict(tab)
         sub_exe_process, _ = subfunc_sw.open_sw(tab, multiple_status, has_mutex_dict)
         login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(tab, login_wnd_class=None)
-        wechat_hwnd = hwnd_utils.wait_for_wnd_open(login_wnd_class, timeout=8)
+        wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
         if wechat_hwnd:
             if sub_exe_process:
                 sub_exe_process.terminate()
-            time.sleep(2)
+            time.sleep(1)
+            hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(wechat_hwnd, root_class.root.winfo_id())
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
                 success, result = operate_config('add', tab, account)
                 if success is True:
                     created_list_text = "\n".join(result)
                     messagebox.showinfo("成功", f"已生成：\n{created_list_text}")
-            else:
-                hwnd_utils.close_wnd_by_name(login_wnd_class)
+            hwnd_utils.close_by_wnd_class(login_wnd_class)
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
     root_class.root.after(0, root_class.refresh_sw_main_frame)

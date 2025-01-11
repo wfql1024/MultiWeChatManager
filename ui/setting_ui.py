@@ -40,7 +40,7 @@ class SettingWindow:
 
         wnd.title(f"{sw}设置")
         window_width, window_height = Constants.SETTING_WND_SIZE
-        hwnd_utils.bring_wnd_to_center(self.wnd, window_width, window_height)
+        hwnd_utils.bring_tk_wnd_to_center(self.wnd, window_width, window_height)
         # 移除窗口装饰并设置为工具窗口
         wnd.attributes('-toolwindow', True)
         wnd.grab_set()
@@ -180,7 +180,7 @@ class SettingWindow:
 
     def load_or_get_sw_inst_path(self, sw, click=False):
         """获取路径，若成功会进行保存"""
-        path = func_setting.get_sw_install_path_only(sw, click)  # 此函数会保存路径
+        path = func_setting.get_sw_install_path(sw, click)  # 此函数会保存路径
         if path:
             self.inst_path_var.set(path.replace('\\', '/'))
             self.inst_path = path
@@ -208,7 +208,7 @@ class SettingWindow:
 
     def load_or_get_sw_data_dir(self, sw, click=False):
         """获取路径，若成功会进行保存"""
-        path = func_setting.get_sw_data_dir_only(sw, click)  # 此函数会保存路径
+        path = func_setting.get_sw_data_dir(sw, click)  # 此函数会保存路径
         if path:
             self.data_dir_var.set(path.replace('\\', '/'))
             self.data_dir = path
@@ -249,7 +249,7 @@ class SettingWindow:
 
     def load_or_get_sw_dll_dir(self, sw, click=False):
         """获取路径，若成功会进行保存"""
-        path = func_setting.get_sw_dll_dir_only(sw, click)  # 此函数会保存路径
+        path = func_setting.get_sw_dll_dir(sw, click)  # 此函数会保存路径
         if path:
             self.dll_dir_var.set(path.replace('\\', '/'))
             self.dll_dir = path
@@ -290,7 +290,7 @@ class SettingWindow:
 
     def get_cur_sw_ver(self, sw, click):
         print("获取版本号")
-        _, version = func_setting.get_sw_inst_path_and_ver_only(sw, click)
+        _, version = func_setting.get_sw_inst_path_and_ver(sw, click)
         if version is not None:
             self.version_var.set(version)
             self.ver = version

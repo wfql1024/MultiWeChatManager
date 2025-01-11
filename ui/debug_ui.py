@@ -16,7 +16,7 @@ class DebugWindow:
         self.wnd = wnd
         wnd.title("调试窗口")
         wnd_width, wnd_height = Constants.DEBUG_WND_SIZE
-        hwnd_utils.bring_wnd_to_center(self.wnd, wnd_width, wnd_height)
+        hwnd_utils.bring_tk_wnd_to_center(self.wnd, wnd_width, wnd_height)
 
         # 创建工具栏
         self.toolbar = tk.Frame(wnd)

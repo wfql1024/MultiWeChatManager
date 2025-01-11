@@ -11,7 +11,7 @@ class LoadingWindow:
         self.wnd.title("加载中")
         self.wnd.withdraw()  # 初始时隐藏窗口
         wnd_width, wnd_height = Constants.LOADING_WND_SIZE
-        hwnd_utils.bring_wnd_to_center(self.wnd, wnd_width, wnd_height)
+        hwnd_utils.bring_tk_wnd_to_center(self.wnd, wnd_width, wnd_height)
 
         self.wnd.resizable(False, False)
         # print("显示等待窗口")

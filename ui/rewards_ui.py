@@ -18,7 +18,7 @@ class RewardsWindow:
         img = Image.open(image_path)
         # 设置窗口大小为图片的大小
         img_width, img_height = img.size  # 获取图片的宽和高
-        hwnd_utils.bring_wnd_to_center(self.wnd, img_width, img_height)
+        hwnd_utils.bring_tk_wnd_to_center(self.wnd, img_width, img_height)
 
         # 移除窗口装饰并设置为工具窗口
         wnd.attributes('-toolwindow', True)

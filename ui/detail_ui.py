@@ -14,6 +14,7 @@ from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
 from utils import string_utils, widget_utils, hwnd_utils
+from utils.logger_utils import mylogger as logger
 
 
 class DetailWindow:
@@ -67,7 +68,6 @@ class DetailWindow:
         # 备注
         note, = subfunc_file.get_sw_acc_details_from_json(self.sw, self.account, note=None)
         self.note_var = tk.StringVar(value="") if note is None else tk.StringVar(value=note)
-
         self.note_frame = ttk.Frame(frame)
         self.note_frame.pack(anchor="w", **Constants.T_WGT_PACK)
         note_label = ttk.Label(self.note_frame, text="备注：")
@@ -75,27 +75,43 @@ class DetailWindow:
         self.note_entry = ttk.Entry(self.note_frame, textvariable=self.note_var, width=30)
         self.note_entry.pack(side=tk.LEFT)
 
+        # 隐藏账号
+        self.hidden_frame = ttk.Frame(frame)
+        self.hidden, = subfunc_file.get_sw_acc_details_from_json(sw, account, hidden=False)
+        self.hidden_var = tk.BooleanVar(value=self.hidden)
+        self.hidden_checkbox = tk.Checkbutton(self.hidden_frame, text="未登录时隐藏", variable=self.hidden_var)
+        self.hidden_checkbox.pack(side=tk.LEFT)
+
+        # 账号自启动
+        self.auto_start_frame = ttk.Frame(frame)
+        self.auto_start, = subfunc_file.get_sw_acc_details_from_json(sw, account, auto_start=False)
+        self.auto_start_var = tk.BooleanVar(value=self.auto_start)
+        self.auto_start_checkbox = tk.Checkbutton(
+            self.auto_start_frame, text="进入软件时自启动", variable=self.auto_start_var)
+        self.auto_start_checkbox.pack(side=tk.LEFT)
+
         # 按钮区域
         button_frame = ttk.Frame(frame, padding=Constants.B_FRM_PAD)
-        button_frame.pack(**Constants.B_FRM_PACK)
-
-        ttk.Frame(button_frame).pack(side=tk.LEFT, expand=True)
-        ttk.Frame(button_frame).pack(side=tk.RIGHT, expand=True)
-
+        ttk.Frame(button_frame).pack(side=tk.LEFT, expand=True)  # 占位
+        ttk.Frame(button_frame).pack(side=tk.RIGHT, expand=True)  # 占位
         self.fetch_button = ttk.Button(button_frame, text="获取", command=self.fetch_data)
         self.fetch_button.pack(**Constants.L_WGT_PACK)
-        save_button = ttk.Button(button_frame, text="保存", command=self.save_note)
+        save_button = ttk.Button(button_frame, text="保存", command=self.save_acc_settings)
         save_button.pack(**Constants.R_WGT_PACK)
 
+        # 底部区域按从下至上的顺序pack
+        button_frame.pack(**Constants.B_FRM_PACK)
+        self.auto_start_frame.pack(anchor="w", **Constants.B_WGT_PACK)
+        self.hidden_frame.pack(anchor="w", **Constants.B_WGT_PACK)
 
-        ttk.Frame(frame).pack(fill=tk.BOTH, expand=True)
+        ttk.Frame(frame).pack(fill=tk.BOTH, expand=True)  # 占位
 
         print(f"加载控件完成")
 
         self.load_data_label()
 
         wnd_width, wnd_height = Constants.DETAIL_WND_SIZE
-        hwnd_utils.bring_wnd_to_center(self.wnd, wnd_width, wnd_height)
+        hwnd_utils.bring_tk_wnd_to_center(self.wnd, wnd_width, wnd_height)
         self.wnd.deiconify()
         wnd.grab_set()
 
@@ -132,8 +148,8 @@ class DetailWindow:
         try:
             self.nickname_lbl.config(text=f"昵称: {nickname}")
         except Exception as e:
-            print(e)
-            self.nickname_lbl.config(text=f"昵称: {string_utils.clean_display_name(nickname)}")
+            logger.error(e)
+            self.nickname_lbl.config(text=f"昵称: {string_utils.clean_texts(nickname)}")
         self.pid_label.config(text=f"PID: {pid}")
         if not pid:
             widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
@@ -194,11 +210,19 @@ class DetailWindow:
         widget_utils.enable_button_and_unbind_tip(self.tooltips, self.fetch_button)
         self.load_data_label()
 
-    def save_note(self):
+    def save_acc_settings(self):
+        """
+        保存账号设置
+        :return:
+        """
         new_note = self.note_var.get().strip()
         if new_note == "":
             subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, note=None)
         else:
             subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, note=new_note)
-        self.update_callback()
+        hidden = self.hidden_var.get()
+        subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, hidden=hidden)
+        auto_start = self.auto_start_var.get()
+        subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, auto_start=auto_start)
+        self.update_callback(message="账号设置成功")
         self.wnd.destroy()

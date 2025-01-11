@@ -10,18 +10,18 @@ from utils import hwnd_utils, handle_utils, process_utils, file_utils
 
 class Test(TestCase):
     def SetUp(self):
-        self.hwnd = hwnd_utils.get_window_handle("微信（测试版）")
+        self.hwnd = hwnd_utils.get_a_hwnd_by_title("微信（测试版）")
         print(self.hwnd)
 
     def test_get_wnd_details_from_hwnd(self):
-        details = hwnd_utils.get_wnd_details_from_hwnd(10100452)
+        details = hwnd_utils.get_hwnd_details_of_(10100452)
         print(details['class'])
 
     def test_get_sw_data_dir(self):
         print(func_setting.get_sw_data_dir(sw="Weixin"))
 
     def test_wait_for_wnd_open(self):
-        hwnd_utils.wait_for_wnd_open("Qt51514QWindowIcon")
+        hwnd_utils.wait_open_to_get_hwnd("Qt51514QWindowIcon")
 
     def test_close_sw_mutex_by_handle(self):
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
@@ -54,3 +54,10 @@ class Test(TestCase):
     def test_move_to_recycle_bin(self):
         file_to_delete = r"E:\Now\Desktop\微信多开管理器_调试版.lnk"
         file_utils.move_to_recycle_bin(file_to_delete)
+
+    def test_hide_wnd(self):
+        pid = 20468  # 替换为目标进程的 PID
+        target_class = "WeChatMainWndForPC"  # 替换为目标窗口类名
+        test_hwnd = hwnd_utils.get_hwnd_list_by_pid_and_class(pid, target_class)
+        hwnd_utils.hide_all_by_wnd_classes([target_class])
+        print("Found HWNDs:", test_hwnd)

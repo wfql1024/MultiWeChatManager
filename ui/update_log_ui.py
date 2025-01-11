@@ -18,7 +18,7 @@ class UpdateLogWindow:
         self.wnd = wnd
         self.wnd.title("版本日志" if not new_versions else "发现新版本")
         self.width, self.height = Constants.UPDATE_LOG_WND_SIZE
-        hwnd_utils.bring_wnd_to_center(self.wnd, self.width, self.height)
+        hwnd_utils.bring_tk_wnd_to_center(self.wnd, self.width, self.height)
         # 禁用窗口大小调整、移除其余无用按钮、置顶
         self.wnd.resizable(False, False)
         # 移除窗口装饰并设置为工具窗口
