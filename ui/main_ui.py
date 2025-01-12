@@ -7,9 +7,10 @@ import tkinter as tk
 from functools import partial
 from tkinter import ttk
 from functions import func_login, func_file, func_account, subfunc_file, func_config
+from public_class import reusable_widget
 from resources import Strings, Config, Constants
 from ui import debug_ui, classic_row_ui, treeview_row_ui, loading_ui, detail_ui, menu_ui
-from utils import hwnd_utils, widget_utils
+from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -67,7 +68,7 @@ class MainWindow:
         self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)
 
         # 创建状态栏
-        self.statusbar_class = widget_utils.StatusBar(self.root, self, self.debug)
+        self.statusbar_class = reusable_widget.StatusBar(self.root, self, self.debug)
 
         try:
             # 初次使用
@@ -239,7 +240,7 @@ class MainWindow:
         manual_login_button.pack(side=tk.LEFT)
 
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = widget_utils.ScrollableCanvas(self.tab_frame)
+        self.scrollable_canvas = reusable_widget.ScrollableCanvas(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
         # 创建账号列表界面并统计

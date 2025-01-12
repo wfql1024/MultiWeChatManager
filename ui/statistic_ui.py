@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 
+from public_class import reusable_widget
 from resources import Config, Constants
-from utils import json_utils, hwnd_utils, widget_utils, string_utils
+from utils import json_utils, hwnd_utils, string_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -27,7 +28,7 @@ class StatisticWindow:
         style.configure("Treeview")
 
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = widget_utils.ScrollableCanvas(wnd)
+        self.scrollable_canvas = reusable_widget.ScrollableCanvas(wnd)
         self.main_frame = self.scrollable_canvas.main_frame
 
         self.tree_dict = {
