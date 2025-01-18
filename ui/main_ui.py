@@ -133,7 +133,7 @@ class MainWindow:
             self.tab_dict[item]['frame'] = ttk.Frame(self.sw_notebook)
             self.tab_dict[item]['frame'].var = item
             self.sw_notebook.add(self.tab_dict[item]['frame'], text=self.tab_dict[item]['text'])
-            print(self.tab_dict)
+        print(self.tab_dict)
         # 选择一个选项卡并触发事件
         self.sw_notebook.select(self.tab_dict[self.sw]['frame'])
         # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
@@ -216,11 +216,7 @@ class MainWindow:
     def create_account_list_ui(self, success, result, message=None):
         """渲染主界面账号列表"""
         if success is not True:
-            error_label = ttk.Label(self.main_frame, text="无法获取账户列表，请检查路径设置", foreground="red")
-            error_label.pack(pady=Constants.ERR_LBL_PAD_Y)
-            self.settings_button = ttk.Button(self.main_frame, text="设置", style='Custom.TButton',
-                                              command=partial(self.root_menu.open_settings, self.sw))
-            self.settings_button.pack()
+            self.show_setting_error()
             self.root_menu.edit_menu.entryconfig("刷新", state="normal")
             return
 
@@ -263,10 +259,7 @@ class MainWindow:
         self.root_menu.edit_menu.entryconfig("刷新", state="normal")
 
         # 加载完成后更新一下界面并且触发事件
-        self.scrollable_canvas.canvas.update_idletasks()
-        event = tk.Event()
-        event.width = self.scrollable_canvas.canvas.winfo_width()
-        self.scrollable_canvas.on_canvas_configure(event)
+        self.scrollable_canvas.refresh_canvas()
 
         # 获取已登录的窗口hwnd
         func_account.get_main_hwnd_of_accounts(login, self.sw)

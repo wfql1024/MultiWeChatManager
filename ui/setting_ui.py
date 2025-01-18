@@ -12,6 +12,8 @@ from resources import Constants, Config
 from utils import sw_utils, hwnd_utils, ini_utils
 from utils.logger_utils import mylogger as logger
 
+# TODO:修改下获取程序路径，程序版本以及程序版本文件夹的逻辑
+
 
 class SettingWindow:
     def __init__(self, wnd, sw, status, after):
@@ -103,7 +105,7 @@ class SettingWindow:
         self.version_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
 
         self.screen_size_get_button = ttk.Button(wnd, text="获取",
-                                                 command=partial(self.get_cur_sw_ver, self.sw, True))
+                                                 command=partial(self.get_cur_sw_ver, self.sw))
         self.screen_size_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第五行 - 屏幕大小

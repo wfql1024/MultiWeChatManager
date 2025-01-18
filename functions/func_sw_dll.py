@@ -10,8 +10,10 @@ import winshell
 from functions import subfunc_file
 from utils import file_utils
 
+# TODO:提取查找字节和修改字节的方法到utils，提取出一个检查是否有进程没有关闭的方法
 
 def check_dll(sw, mode, dll_dir, cur_sw_ver):
+
     """检查当前的dll状态，判断是否为全局多开或者不可用"""
     patch_dll, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll="WeChatWin.dll")
     dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
@@ -63,12 +65,12 @@ def switch_dll(sw, mode, dll_dir, ver):
     if patch_dll is None or executable is None:
         messagebox.showerror("错误", "该版本暂无适配")
         return False
+
     # 尝试终止微信进程
     wechat_processes = []
     for proc in psutil.process_iter(['pid', 'name']):
-        if proc.name().lower() == executable:
+        if proc.name().lower() == executable.lower():
             wechat_processes.append(proc)
-
     if wechat_processes:
         print("发现正在运行的微信进程，尝试关闭...")
         for proc in wechat_processes:
@@ -78,10 +80,8 @@ def switch_dll(sw, mode, dll_dir, ver):
                 print(f"无法终止进程 {proc.pid}，可能需要管理员权限。")
             except Exception as e:
                 print(f"终止进程 {proc.pid} 时出错: {str(e)}")
-
         # 等待进程完全关闭
         time.sleep(2)
-
         # 检查是否所有进程都已关闭
         still_running = [p for p in wechat_processes if p.is_running()]
         if still_running:

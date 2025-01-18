@@ -20,12 +20,16 @@ class Config:
         "tab": "tab",
         "scale": "scale",
         "sign_visible": "sign_visible",
+        "hidden_sort": "hidden_sort",
+        "auto_start_sort": "auto_start_sort",
+        "all_sort": "all_sort",
 
         "view": "view",
-        "login_sort": "login_sort",
-        "logout_sort": "logout_sort",
         "login_size": "login_size",
         "rest_mode": "rest_mode",
+        "login_sort": "login_sort",
+        "logout_sort": "logout_sort",
+
     }
 
     INI_DEFAULT_VALUE = {
@@ -35,6 +39,9 @@ class Config:
         "tab": "WeChat",
         "scale": "auto",
         "sign_visible": "True",
+        "hidden_sort": "#0,True",
+        "auto_start_sort": "#0,True",
+        "all_sort": "#0,True",
 
         "WeChat": {
             "view": "tree",

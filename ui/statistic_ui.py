@@ -208,10 +208,3 @@ class StatisticWindow:
             tree.insert("", "end", values=item[0])
         tree.configure(height=len(items) + 1)
         self.tree_dict[tree_type]['sort'] = not is_ascending  # 切换排序顺序
-
-
-# 创建主窗口
-if __name__ == "__main__":
-    root = tk.Tk()
-    statistic_window = StatisticWindow(root, "WeChat", 'tree')
-    root.mainloop()

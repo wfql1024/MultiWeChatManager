@@ -47,7 +47,7 @@ class AccountRow:
         # 账号标签
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
         wrapped_display_name = func_account.get_acc_wrapped_display_name(self.sw, account)
-        has_mutex, = subfunc_file.get_sw_acc_details_from_json("WeChat", account, has_mutex=None)
+        has_mutex, = subfunc_file.get_sw_acc_details_from_json(self.sw, account, has_mutex=None)
         style = ttk.Style()
         style.configure("Mutex.TLabel", foreground="red")
         if has_mutex and self.sign_visible:

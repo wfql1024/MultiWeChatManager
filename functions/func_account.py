@@ -119,11 +119,11 @@ def get_acc_origin_display_name(sw, account) -> str:
     :return: 展示在界面的名字
     """
     # 依次查找 note, nickname, alias，找到第一个不为 None 的值
-    display_name = account  # 默认值为 account
+    display_name = str(account)  # 默认值为 account
     for key in ("note", "nickname", "alias"):
-        value = subfunc_file.get_sw_acc_details_from_json(sw, account, **{key: None})[0]
+        value, = subfunc_file.get_sw_acc_details_from_json(sw, account, **{key: None})
         if value is not None:
-            display_name = value
+            display_name = str(value)
             break
 
     return display_name

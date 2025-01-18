@@ -25,26 +25,31 @@ class TreeviewRowUI:
             "auto_quit_btn": {
                 "text": "一键退出",
                 "btn": None,
-                "tip": "请选择要退出的账号",
                 "func": self.root_class.to_quit_accounts,
-                "enable_scope": (1, None),
-                "tip_scope": (0, 0)
+                "enable_scopes": [(1, None)],
+                "tip_scopes_dict": {
+                    "请选择要退出的账号": [(0, 0)],
+                }
             },
             "auto_login_btn": {
                 "text": "一键登录",
                 "btn": None,
                 "tip": "请选择要登录的账号",
                 "func": self.root_class.to_auto_login,
-                "enable_scope": (1, None),
-                "tip_scope": (0, 0)
+                "enable_scopes": [(1, None)],
+                "tip_scopes_dict": {
+                    "请选择要登录的账号": [(0, 0)],
+                }
             },
             "config_btn": {
                 "text": "❐配 置",
                 "btn": None,
-                "tip": "请选择一个账号进行配置，伴有符号为推荐配置账号",
                 "func": self.root_class.to_create_config,
-                "enable_scope": (1, 1),
-                "tip_scope": (0, 0)
+                "enable_scopes": [(1, 1)],
+                "tip_scopes_dict": {
+                    "请选择一个账号进行配置，伴有符号为推荐配置账号": [(0, 0)],
+                    "只能配置一个账号哦~": [(2, None)],
+                }
             }
         }
 
@@ -57,20 +62,22 @@ class TreeviewRowUI:
 
         # 加载未登录列表
         if len(self.acc_list_dict["logout"]) != 0:
-            self.tree_class["login"] = AccLoginTreeView(
+            self.tree_class["logout"] = AccLoginTreeView(
                 self, "logout", "未登录：", self.btn_dict["auto_login_btn"])
 
 
 class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
-    def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *btn_dicts):
+    def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
+        self.root = None
         self.photo_images = []
         self.sign_visible = None
         self.data_dir = None
         self.item_list = None
-        super().__init__(parent_class, table_tag, title_text, major_btn_dict, *btn_dicts)
+        super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
+        self.root = self.parent_class.root
         self.item_list = self.parent_class.acc_list_dict[self.table_tag]
         self.data_dir = self.root_class.sw_info["data_dir"]
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
@@ -91,12 +98,13 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
                     width=Constants.TREE_DSP_WIDTH, anchor='w')
         tree.column("原始id", anchor='center')
         tree.column("当前id", anchor='center')
+        tree.column("昵称", anchor='center')
 
         # 在非全屏时，隐藏特定列
         columns_to_hide = ["原始id", "当前id", "昵称"]
         col_width_to_show = int(self.root.winfo_screenwidth() / 5)
-        self.tree.bind("<Configure>", lambda e: self.adjust_columns_on_maximize(
-            e, col_width_to_show, columns_to_hide), add='+')
+        self.tree.bind("<Configure>", lambda e: self.adjust_columns_on_maximize_(
+            e, self.root, col_width_to_show, columns_to_hide), add='+')
 
     def display_table(self):
         tree = self.tree.nametowidget(self.tree)
@@ -146,4 +154,8 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
             if config_status == "无配置" and login_status == "logout":
                 widget_utils.add_a_tag_to_item(tree, account, "disabled")
 
-        tree.config(height=len(accounts))
+        # self.adjust_treeview_height(None)
+        tree.config(height=len(tree.get_children()))
+
+
+

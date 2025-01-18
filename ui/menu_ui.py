@@ -12,13 +12,13 @@ import psutil
 
 from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_account, func_update
 from resources import Strings, Config
-from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui, acc_setting_ui
+from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui, acc_manager_ui
 from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 
 
 class MenuUI:
-    def __init__(self, root, r_class, sw, cfg_data):
+    def __init__(self, root, root_class, sw, cfg_data):
         """获取必要的设置项信息"""
         self.path_error = None
         self.multiple_err = None
@@ -39,7 +39,7 @@ class MenuUI:
         self.menu_bar = None
         
         self.root = root
-        self.r_class = r_class
+        self.root_class = root_class
         self.sw = sw
         self.cfg_data = cfg_data
 
@@ -111,7 +111,7 @@ class MenuUI:
         self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
         self.user_file_menu.add_command(label="打开", command=func_file.open_user_file)
         self.user_file_menu.add_command(label="清除",
-                                        command=partial(func_file.clear_user_file, self.r_class.refresh))
+                                        command=partial(func_file.clear_user_file, self.root_class.refresh))
         # >配置文件
         self.config_file_menu = tk.Menu(self.file_menu, tearoff=False)
         if not self.sw_info["data_dir"]:
@@ -123,7 +123,7 @@ class MenuUI:
                                               command=partial(func_file.open_config_file, self.sw))
             self.config_file_menu.add_command(label="清除",
                                               command=partial(func_file.clear_config_file, self.sw,
-                                                              self.r_class.refresh))
+                                                              self.root_class.refresh))
         # >程序目录
         self.program_file_menu = tk.Menu(self.file_menu, tearoff=False)
         self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
@@ -158,7 +158,7 @@ class MenuUI:
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
         # -刷新
-        self.edit_menu.add_command(label="刷新", command=self.r_class.refresh)
+        self.edit_menu.add_command(label="刷新", command=self.root_class.refresh)
 
         # ————————————————————————————视图菜单————————————————————————————
         # 视图单选
@@ -181,7 +181,7 @@ class MenuUI:
         self.view_options_menu.add_checkbutton(
             label="显示状态标志", variable=self.settings_var["sign_vis"],
             command=partial(subfunc_file.save_global_setting,
-                            "sign_visible", not self.settings_values["sign_vis"], self.r_class.refresh)
+                            "sign_visible", not self.settings_values["sign_vis"], self.root_class.refresh)
         )
         # 特有菜单
         if self.settings_values["view"] == "classic":
@@ -343,7 +343,7 @@ class MenuUI:
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(
-            label="重置", command=partial(func_file.reset, self.r_class.initialize_in_init))
+            label="重置", command=partial(func_file.reset, self.root_class.initialize_in_init))
 
         # ————————————————————————————帮助菜单————————————————————————————
         # 检查版本表是否当天已更新
@@ -389,10 +389,10 @@ class MenuUI:
 
     def change_classic_view(self):
         self.root.unbind("<Configure>")
-        subfunc_file.save_sw_setting(self.sw, "view", "classic", self.r_class.refresh)
+        subfunc_file.save_sw_setting(self.sw, "view", "classic", self.root_class.refresh)
 
     def change_tree_view(self):
-        subfunc_file.save_sw_setting(self.sw, "view", "tree", self.r_class.refresh)
+        subfunc_file.save_sw_setting(self.sw, "view", "tree", self.root_class.refresh)
 
     def change_sidebar_view(self):
         # 清除窗口中的所有控件
@@ -401,14 +401,14 @@ class MenuUI:
         sidebar_ui.SidebarUI(self.root)
 
     def open_acc_setting(self, sw):
-        acc_setting_window = tk.Toplevel(self.root)
-        acc_setting_ui.AccSettingWindow(acc_setting_window, sw)
+        acc_manager_window = tk.Toplevel(self.root)
+        acc_manager_ui.AccManagerWindow(self, acc_manager_window, sw)
 
     def open_settings(self, sw):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
         setting_ui.SettingWindow(settings_window, sw, self.states["multiple"],
-                                 self.r_class.refresh)
+                                 self.root_class.refresh)
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
@@ -428,7 +428,7 @@ class MenuUI:
                     "检测到正在使用微信。切换模式需要修改 WechatWin.dll 文件，请先手动退出所有微信后再进行，否则将会强制关闭微信进程。"
                 )
                 if not answer:
-                    self.r_class.refresh()
+                    self.root_class.refresh()
                     return
 
         try:
@@ -445,7 +445,7 @@ class MenuUI:
             messagebox.showerror("错误", f"操作失败: {str(e)}")
             logger.error(f"切换{mode_text}时发生错误: {str(e)}")
         finally:
-            self.r_class.refresh()
+            self.root_class.refresh()
 
     def open_rewards(self):
         """打开赞赏窗口"""

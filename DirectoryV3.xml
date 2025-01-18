@@ -15,7 +15,8 @@
     <tree path="/thread_manager.py" title="线程管理器，项目中线程操作统一写在这里"/>
     <tree path="/build.bat" title="打包命令，控制台直接使用可以打包项目"/>
     <tree path="/user_files" title="项目生成的文件夹，无代码"/>
-    <tree path="/version_adaptation.json" title="版本适配表，在这里更新微信新版本的偏移地址"/>
+    <tree path="/version_adaptation.json" title="版本适配表，在这里更新微信新版本的偏移地址，2.5及之前可用" extension=""
+          presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
     <tree path="/functions/subfunc_file.py" title="subfunc为介于工具类和功能直接实现类的子功能类" extension=""
           presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
 </trees>

@@ -68,6 +68,7 @@ class Constants:
     DEBUG_WND_SIZE = (int(800 * SF), int(600 * SF))  # 调试窗口尺寸
     DETAIL_WND_SIZE = (int(240 * SF), int(360 * SF))  # 详情窗口尺寸
     STATISTIC_WND_SIZE = (int(360 * SF), int(432 * SF))  # 统计窗口尺寸
+    ACC_MNG_WND_SIZE = (int(400 * SF), int(550 * SF))  # 账号管理窗口尺寸
 
     LOADING_PRG_LEN = int(200 * SF)  # 加载进度条长度
 
@@ -90,6 +91,27 @@ class Constants:
     CLZ_CFG_LBL_PAD_X = (int(4 * SF), int(4 * SF))  # 经典视图配置标签左右内边距
 
     TREE_ROW_HEIGHT = int(40 * SF)  # 列表视图行高度
+
+    COLUMN_WIDTH = {
+        "ID": int(45 * SF),
+        "SEC_ID": int(60 * SF),
+        "配置": int(116 * SF),
+        "PID": int(64 * SF),
+        "展示": int(122 * SF),
+        "隐藏": int(64 * SF),
+        "自启动": int(64 * SF),
+        "快捷键": int(64 * SF),
+    }
+    COLUMN_MIN_WIDTH = {
+        "ID": int(45 * SF),
+        "SEC_ID": int(60 * SF),
+        "配置": int(116 * SF),
+        "PID": int(64 * SF),
+        "展示": int(112 * SF),
+        "隐藏": int(64 * SF),
+        "自启动": int(64 * SF),
+        "快捷键": int(64 * SF),
+    }
 
     TREE_ID_MIN_WIDTH = int(45 * SF)  # 列表视图ID列最小宽度
     TREE_ID_WIDTH = int(45 * SF)  # 列表视图ID列宽度

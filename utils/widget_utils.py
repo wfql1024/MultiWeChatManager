@@ -54,8 +54,9 @@ class Tooltip:
         self.widget = widget
         self.text = text
         self.tooltip = None
-        self.widget.bind("<Enter>", self.show)
-        self.widget.bind("<Leave>", self.hide)
+        # print(f"{widget}绑定{text}")
+        self.widget.bind("<Enter>", self.show, add=True)
+        self.widget.bind("<Leave>", self.hide, add=True)
 
     def show(self, _event=None):
         x, y, _, _ = self.widget.bbox("insert")
@@ -74,6 +75,75 @@ class Tooltip:
             self.tooltip.destroy()
             self.tooltip = None
 
+
+class TreeUtils:
+    class CopiedTreeData:
+        def __init__(self, tree):
+            self.items = self.get_all_items_recursive(tree)
+
+        def get_all_items_recursive(self, t, parent=""):
+            """
+            递归获取所有节点的数据，包括父节点
+            :param t: TreeView 实例
+            :param parent: 当前父节点
+            :return: 包含所有节点数据的列表
+            """
+            items = []
+            for child in t.get_children(parent):
+                item_data = {
+                    "values": t.item(child)["values"],
+                    "text": t.item(child)["text"],
+                    "image": t.item(child)["image"],
+                    "tags": t.item(child)["tags"],
+                    "iid": child,  # 包括 iid
+                    "parent": parent  # 记录父节点
+                }
+                items.append(item_data)
+                # 递归获取子节点的数据
+                items.extend(self.get_all_items_recursive(t, parent=child))
+            return items
+
+        def insert_items(self, tree, parent=""):
+            """
+            递归插入数据，保持层级关系
+            :param tree: TreeView 实例
+            :param parent: 当前父节点
+            """
+            items = self.items
+
+            for item in items:
+                # print(f"轮到{items}中的{item}")
+                if item["parent"] == parent:
+                    tree.insert(
+                        parent,
+                        "end",
+                        iid=item["iid"],
+                        text=item["text"],
+                        image=item["image"],
+                        values=item["values"],
+                        tags=item["tags"],
+                        open=True
+                    )
+                    # 插入子节点
+                    self.insert_items(tree, parent=item["iid"])
+
+    @staticmethod
+    def count_visible_rows_recursive(tree, item_id):
+        """
+        递归计算tree中item_id及其子节点的行数
+        :param tree: 树
+        :param item_id: 节点id
+        :return: 节点下可见行数（含自身）
+        """
+        # 如果节点是展开的，计算它和它所有子节点的行数
+        total_rows_of_items = 1  # 当前节点占一行
+        is_open = tree.item(item_id, "open")
+        # print(f"{item_id}的展开状态：{is_open}")
+        if is_open == 1 or is_open is True:  # 如果节点展开，遍历它的子节点
+            for child in tree.get_children(item_id):
+                total_rows_of_items += TreeUtils.count_visible_rows_recursive(tree, child)
+        # print(f"{item_id}及其子节点的行数：{total_rows_of_items}")
+        return total_rows_of_items
 
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
@@ -159,24 +229,24 @@ def enable_widget_with_condition(widget, condition):
 
     Args:
         widget: 需要设置状态的 tkinter 控件。
-        condition: 一个元组，形式为 (数值, (最小允许值, 最大允许值))。
+        condition: 一个元组，形式为 (数值, [(最小允许值, 最大允许值), ...])。
                    - 数值: 用于判断的当前值。
-                   - 最小允许值: 若为 None，则不限制最小值。
-                   - 最大允许值: 若为 None，则不限制最大值。
+                   - ranges: 一个包含多个元组的列表，每个元组代表一个区间 (最小允许值, 最大允许值)。
+                             - 最小允许值: 若为 None，则不限制最小值。
+                             - 最大允许值: 若为 None，则不限制最大值。
 
     操作:
-        如果数值满足条件范围，则将控件设置为 "normal"；
+        如果数值满足任意一个区间的范围，则将控件设置为 "normal"；
         否则设置为 "disabled"。
     """
     # 解包 condition
-    value, (min_value, max_value) = condition
+    value, ranges = condition
 
-    # 检查条件
-    is_valid = True
-    if min_value is not None:
-        is_valid = is_valid and (value >= min_value)
-    if max_value is not None:
-        is_valid = is_valid and (value <= max_value)
+    # 遍历所有区间，检查是否满足任意一个区间
+    is_valid = any(
+        (min_value is None or value >= min_value) and (max_value is None or value <= max_value)
+        for min_value, max_value in ranges
+    )
 
     # 设置控件状态
     if is_valid:
@@ -185,47 +255,44 @@ def enable_widget_with_condition(widget, condition):
         widget.config(state="disabled")
 
 
-def set_widget_tip_with_condition(tooltips, widget, text, condition=None):
+def set_widget_tip_with_condition(tooltips, widget, value_to_check, tip_scopes_dict):
     """
     根据条件动态绑定或解绑控件的提示信息 (tooltip)。
 
     Args:
         tooltips (dict): 存储 widget 和对应 Tooltip 实例的字典。
         widget: 需要绑定提示信息的 tkinter 控件。
-        text (str): 提示信息文本。
-        condition (tuple, optional): 一个元组，形式为 (数值, (最小允许值, 最大允许值))。
-                                     - 数值: 用于判断的当前值。
-                                     - 最小允许值: 若为 None，则不限制最小值。
-                                     - 最大允许值: 若为 None，则不限制最大值。
+        value_to_check : 待比较的值。
+        tip_scopes_dict (list of tuples, optional): 一个包含tip和区间列表的字典。
+                                              每个区间的形式为 (最小允许值, 最大允许值)。
+                                              - 最小允许值: 若为 None，则不限制最小值。
+                                              - 最大允许值: 若为 None，则不限制最大值。
 
     操作:
-        - 如果 condition 满足范围条件，则绑定提示信息。
-        - 如果 condition 不满足范围条件，则解绑提示信息。
+        - 如果满足任意一个区间的范围条件，则绑定提示信息。
+        - 如果不满足任何区间的范围条件，则解绑提示信息。
     """
-    if condition is not None:
-        # 解包 condition
-        value, (min_value, max_value) = condition
+    # 初始化解绑已有的提示
+    widget.nametowidget(widget).unbind("<Enter>")
+    widget.nametowidget(widget).unbind("<Leave>")
 
-        # 判断条件是否满足
-        is_valid = True
-        if min_value is not None:
-            is_valid = is_valid and (value >= min_value)
-        if max_value is not None:
-            is_valid = is_valid and (value <= max_value)
-
+    for tip, scopes in tip_scopes_dict.items():
+        # 遍历所有区间，检查是否满足某一个区间
+        is_valid = any(
+            (min_value is None or value_to_check >= min_value) and (max_value is None or value_to_check <= max_value)
+            for min_value, max_value in scopes
+        )
+        # print(tip, scopes, is_valid)
         # 根据条件判断是否绑定或解绑提示
         if is_valid:
             if widget not in tooltips:
-                tooltips[widget] = Tooltip(widget, text)
+                tooltips[widget] = dict()
+            tooltips[widget][tip] = Tooltip(widget, tip)
         else:
-            if widget in tooltips:
-                tooltips[widget].widget.unbind("<Enter>")
-                tooltips[widget].widget.unbind("<Leave>")
-                del tooltips[widget]
-    else:
-        # 如果没有传入 condition，直接绑定提示信息
-        if widget not in tooltips:
-            tooltips[widget] = Tooltip(widget, text)
+            if widget in tooltips and tip in tooltips[widget]:
+                del tooltips[widget][tip]
+                if len(tooltips[widget]) == 0:
+                    del tooltips[widget]
 
 
 def disable_button_and_add_tip(tooltips, button, text):
