@@ -86,6 +86,8 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
         self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
 
     def set_table_style(self):
+        super().set_table_style()
+
         tree = self.tree
         # 特定列的宽度和样式设置
         tree.column("#0", minwidth=Constants.TREE_ID_MIN_WIDTH,
@@ -116,7 +118,7 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
         for account in accounts:
             # 未登录账号中，隐藏的账号不显示
             hidden, = subfunc_file.get_sw_acc_details_from_json(self.sw, account, hidden=None)
-            if hidden and login_status == "logout":
+            if hidden is True and login_status == "logout":
                 continue
 
             display_name = "  " + func_account.get_acc_origin_display_name(self.sw, account)
@@ -154,8 +156,5 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
             if config_status == "无配置" and login_status == "logout":
                 widget_utils.add_a_tag_to_item(tree, account, "disabled")
 
-        # self.adjust_treeview_height(None)
-        tree.config(height=len(tree.get_children()))
-
-
+        self.adjust_treeview_height(None)
 

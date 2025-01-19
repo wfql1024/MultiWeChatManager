@@ -145,6 +145,33 @@ class TreeUtils:
         # print(f"{item_id}及其子节点的行数：{total_rows_of_items}")
         return total_rows_of_items
 
+    @staticmethod
+    def get_all_leaf_items_recursive(tree, item_id=None):
+        """
+        递归获取 tree 中所有叶子节点的 iid
+        :param tree: 树
+        :param item_id: 当前节点的 iid，默认为 None，表示从根节点开始遍历
+        :return: 叶子节点 iid 列表
+        """
+        leaf_items = []
+
+        # 如果没有传入 item_id，默认为根节点
+        if item_id is None:
+            item_id = ""  # 根节点的 iid 通常是 ""
+
+        # 获取当前节点的所有子节点
+        children = tree.get_children(item_id)
+
+        if not children:  # 如果没有子节点，当前节点是叶子节点
+            leaf_items.append(item_id)
+        else:
+            # 否则，递归遍历所有子节点
+            for child in children:
+                leaf_items.extend(TreeUtils.get_all_leaf_items_recursive(tree, child))  # 递归调用获取子节点的叶子节点
+
+        return leaf_items
+
+
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
 

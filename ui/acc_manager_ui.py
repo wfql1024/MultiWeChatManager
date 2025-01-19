@@ -12,16 +12,8 @@ from utils.logger_utils import mylogger as logger
 
 class AccManagerWindow:
     def __init__(self, parent_class, wnd, sw):
-        self.acc_list_dict = {
-            "hidden": [("WeChat", "wxid_t2dchu5zw9y022"), ("Weixin", "wxid_t2dchu5zw9y022_100")],
-            "auto_start": [("WeChat", "wxid_t2dchu5zw9y022")],
-            "all": [("WeChat", "wxid_t2dchu5zw9y022")],
-        }
-        self.tree_class = {
-
-        }
-
-        self.acc_data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        self.acc_data = None
+        self.tree_class = {}
 
         self.parent_class = parent_class
         self.root_class = self.parent_class.root_class
@@ -89,45 +81,69 @@ class AccManagerWindow:
                 },
             }
         }
+        self.display_ui()
 
+    def display_ui(self):
+        self.acc_data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
         # 加载已隐藏列表
         self.tree_class["hidden"] = AccManageTreeView(
             self,
             "hidden", "已隐藏：", self.btn_dict["cancel_hiding_btn"],
         )
-
         # 加载已自启列表
         self.tree_class["auto_start"] = AccManageTreeView(
             self, "auto_start", "已自启：", self.btn_dict["cancel_auto_start_btn"])
-
         # 加载所有
         self.tree_class["all"] = AccManageTreeView(
             self, "all", "所有账号：", None,
-            self.btn_dict["add_hiding_btn"],
             self.btn_dict["add_auto_start_btn"],
+            self.btn_dict["add_hiding_btn"],
         )
 
         # 加载完成后更新一下界面并且触发事件
         self.scrollable_canvas.refresh_canvas()
 
     def to_cancel_hiding_of_(self, items):
+        print(f"进入取消隐藏方法")
+        for item in items:
+            sw, acc = item.split("/")
+            subfunc_file.update_sw_acc_details_to_json(sw, acc, hidden=False)
+        self.refresh_acc_manager()
         pass
 
     def to_cancel_auto_start_of_(self, items):
+        print(f"进入取消自启方法")
+        for item in items:
+            sw, acc = item.split("/")
+            subfunc_file.update_sw_acc_details_to_json(sw, acc, auto_start=False)
+        self.refresh_acc_manager()
         pass
 
     def to_add_hiding_of_(self, items):
+        print(f"进入隐藏方法")
+        for item in items:
+            sw, acc = item.split("/")
+            subfunc_file.update_sw_acc_details_to_json(sw, acc, hidden=True)
+        self.refresh_acc_manager()
         pass
 
     def to_add_auto_start_of_(self, items):
+        print(f"进入自启方法")
+        for item in items:
+            sw, acc = item.split("/")
+            subfunc_file.update_sw_acc_details_to_json(sw, acc, auto_start=True)
+        self.refresh_acc_manager()
         pass
 
     def to_add_hotkey_of_(self, items):
+        print(f"进入添加热键方法")
         pass
 
     def refresh_acc_manager(self):
-        for tree in self.tree_class.values():
-            tree.display_table()
+        for widget in self.main_frame.winfo_children():
+            widget.destroy()
+        self.display_ui()
+
 
 class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
@@ -137,13 +153,11 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
         self.photo_images = []
         self.sign_visible = None
         self.data_dir = None
-        self.item_list = None
         super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
         self.wnd = self.parent_class.wnd
         # print(f"self.wnd={self.wnd}")
-        self.item_list = self.parent_class.acc_list_dict[self.table_tag]
         self.acc_data = self.parent_class.acc_data
         self.data_dir = self.root_class.sw_info["data_dir"]
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
@@ -152,6 +166,8 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
         self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
 
     def set_table_style(self):
+        super().set_table_style()
+
         tree = self.tree
         # 特定列的宽度和样式设置
         tree.column("#0", minwidth=Constants.COLUMN_MIN_WIDTH["SEC_ID"],
@@ -220,11 +236,11 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
 
                 try:
                     # 插入 account 数据，作为 sw 节点的子节点
-                    tree.insert(sw_node_id, "end", iid=acc, image=photo,
+                    tree.insert(sw_node_id, "end", iid=f"{sw}/{acc}", image=photo,
                                 values=(display_name, hotkey, hidden, auto_start, acc, nickname))
                 except Exception as ec:
                     logger.warning(ec)
-                    tree.insert(sw_node_id, "end", iid=acc, image=photo,
+                    tree.insert(sw_node_id, "end", iid=f"{sw}/{acc}", image=photo,
                                 values=string_utils.clean_texts(
                                     display_name, hotkey, hidden, auto_start, acc, nickname))
 
@@ -245,3 +261,9 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
             for col in columns_to_hide:
                 if col in tree["columns"]:
                     tree.column(col, width=width)  # 设置合适的宽度
+
+class AccEntity:
+    def __init__(self, sw, acc):
+        self.sw = sw
+        self.acc = acc
+    pass

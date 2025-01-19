@@ -57,7 +57,7 @@ class MainWindow:
         style.configure("RedWarning.TLabel", foreground="red", font=("", Constants.LITTLE_FONTSIZE))
         style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
         style.configure("RowTreeview", background="#FFFFFF", foreground="black",
-                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="none")
+                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended")
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
 
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE

@@ -230,7 +230,7 @@ def update_sw_acc_details_to_json(sw, account, **kwargs):
         # 遍历 kwargs 中的所有参数，并更新到 account_data 中
         for key, value in kwargs.items():
             tab_info[account][key] = value
-            # logger.info(f"在json更新[{account}][{key}]:{string_utils.clean_display_name(str(value))}")
+            logger.info(f"在json更新[{account}][{key}]:{str(value)}")
         json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
         return True
     except Exception as e:
