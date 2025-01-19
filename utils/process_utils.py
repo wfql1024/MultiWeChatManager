@@ -1,6 +1,7 @@
 import ctypes
 import subprocess
 import sys
+import time
 from ctypes import wintypes
 from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
 
@@ -84,6 +85,26 @@ def remove_child_pids(pids):
 
     return pids
 
+def try_terminate_executable(executable_name):
+    """检查指定的可执行文件是否正在运行，如果是，则终止它，并返回剩余的进程列表"""
+    # 尝试终止微信进程
+    wechat_processes = []
+    for proc in psutil.process_iter(['pid', 'name']):
+        if proc.name().lower() == executable_name.lower():
+            wechat_processes.append(proc)
+    if wechat_processes:
+        print("发现正在运行的微信进程，尝试关闭...")
+        for proc in wechat_processes:
+            try:
+                proc.terminate()
+            except psutil.AccessDenied:
+                print(f"无法终止进程 {proc.pid}，可能需要管理员权限。")
+            except Exception as e:
+                print(f"终止进程 {proc.pid} 时出错: {str(e)}")
+        # 等待进程完全关闭
+        time.sleep(2)
+        # 检查是否所有进程都已关闭
+        return [p for p in wechat_processes if p.is_running()]
 
 def is_process_admin(pid):
     try:

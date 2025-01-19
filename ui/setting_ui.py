@@ -306,7 +306,7 @@ class SettingWindow:
 
     def to_get_login_size(self, status):
         if status is None:
-            status, _, _ = func_sw_dll.check_dll(self.sw, "multiple", self.dll_dir, self.ver)
+            status, _, _ = func_sw_dll.check_dll(self.sw, "multiple", self.dll_dir)
         result = subfunc_sw.get_login_size(self.sw, status)
         if result:
             login_width, login_height = result

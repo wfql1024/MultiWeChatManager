@@ -241,7 +241,7 @@ class MenuUI:
         if self.sw_info["data_dir"] is not None:
             # -防撤回
             self.states["revoke"], _, _ = func_sw_dll.check_dll(
-                self.sw, "revoke", self.sw_info["dll_dir"], self.sw_info["ver"])
+                self.sw, "revoke", self.sw_info["dll_dir"])
             revoke_state = self.states["revoke"]
             if revoke_state == "不可用":
                 self.settings_menu.add_command(label=f"防撤回      {revoke_state}", state="disabled")
@@ -256,7 +256,7 @@ class MenuUI:
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
             # -全局多开
             self.states['multiple'], _, _ = func_sw_dll.check_dll(
-                self.sw, "multiple", self.sw_info["dll_dir"], self.sw_info["ver"])
+                self.sw, "multiple", self.sw_info["dll_dir"])
             multiple_state = self.states['multiple']
             if multiple_state == "不可用":
                 self.settings_menu.add_command(label=f"全局多开  {multiple_state}", state="disabled")
@@ -412,38 +412,11 @@ class MenuUI:
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
-        if mode == "multiple":
-            mode_text = "全局多开"
-        elif mode == "revoke":
-            mode_text = "防撤回"
-        else:
-            return
-        success, result = func_account.get_sw_acc_list(self.sw, self.sw_info["data_dir"], self.states["multiple"])
-        if success is True:
-            acc_list_dict, _, _ = result
-            login = acc_list_dict["login"]
-            if len(login) > 0:
-                answer = messagebox.askokcancel(
-                    "警告",
-                    "检测到正在使用微信。切换模式需要修改 WechatWin.dll 文件，请先手动退出所有微信后再进行，否则将会强制关闭微信进程。"
-                )
-                if not answer:
-                    self.root_class.refresh()
-                    return
-
         try:
-            result = func_sw_dll.switch_dll(self.sw, mode, self.sw_info["dll_dir"], self.sw_info["ver"])  # 执行切换操作
-            if result is True:
-                messagebox.showinfo("提示", f"成功开启:{mode_text}")
-            elif result is False:
-                messagebox.showinfo("提示", f"成功关闭:{mode_text}")
-            else:
-                messagebox.showinfo("提示", "请重试！")
-        except psutil.AccessDenied:
-            messagebox.showerror("权限不足", "无法终止微信进程，请以管理员身份运行程序。")
+            func_sw_dll.switch_dll(self.sw, mode, self.sw_info["dll_dir"])  # 执行切换操作
         except Exception as e:
             messagebox.showerror("错误", f"操作失败: {str(e)}")
-            logger.error(f"切换{mode_text}时发生错误: {str(e)}")
+            logger.error(f"发生错误: {str(e)}")
         finally:
             self.root_class.refresh()
 
@@ -474,4 +447,5 @@ class MenuUI:
         messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
         # self.r_class.refresh()
         self.create_root_menu_bar()
+
 

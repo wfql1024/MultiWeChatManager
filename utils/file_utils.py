@@ -1,10 +1,54 @@
 import ctypes
 import datetime as dt
 import hashlib
+import mmap
 import os
 import re
 
 import win32api
+
+class DLLUtils:
+    @staticmethod
+    def find_patterns_from_dll_in_hexadecimal(dll_path, *hex_patterns):
+        with open(dll_path, 'rb') as f:
+            dll_content = f.read()
+
+        # 将所有传入的 hex_patterns 转换为字节模式
+        patterns = [bytes.fromhex(pattern) for pattern in hex_patterns]
+
+        # 如果只有一个模式，直接返回布尔值
+        if len(patterns) == 1:
+            return patterns[0] in dll_content
+
+        # 如果有多个模式，返回布尔列表
+        return [pattern in dll_content for pattern in patterns]
+
+    @staticmethod
+    def edit_patterns_in_dll_in_hexadecimal(dll_path, **hex_patterns_dicts):
+        print(hex_patterns_dicts)
+        results = []
+
+        with open(dll_path, 'r+b') as f:
+            # 使用 mmap 来更高效地操作文件内容
+            mmap_file = mmap.mmap(f.fileno(), 0)
+            # 遍历所有传入的旧模式和新模式
+            for old_pattern, new_pattern in hex_patterns_dicts.items():
+                old, new = bytes.fromhex(old_pattern), bytes.fromhex(new_pattern)
+                pos = mmap_file.find(old)
+                # 查找并替换模式
+                if pos != -1:
+                    mmap_file[pos: pos + len(old)] = new
+                    print(f"替换完成：{old_pattern} -> {new_pattern}")
+                    results.append(True)  # 替换成功
+                else:
+                    print(f"未找到对应的HEX模式：{old_pattern}")
+                    results.append(False)  # 替换失败
+
+            mmap_file.flush()
+            mmap_file.close()
+
+        # 如果传入多个模式，返回布尔列表；如果只有一个，返回单一布尔值
+        return results if len(results) > 1 else results[0]
 
 # Windows API 常量
 FO_DELETE = 0x03

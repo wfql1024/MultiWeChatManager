@@ -350,7 +350,7 @@ class MainWindow:
     def to_create_config(self, accounts):
         """按钮：创建或重新配置"""
         threading.Thread(target=func_config.test,
-                         args=(self, accounts[0], self.root_menu.states["multiple"], self.sw)).start()
+                         args=(self, self.sw, accounts[0], self.root_menu.states["multiple"])).start()
 
     def to_quit_accounts(self, accounts):
         """退出所选账号"""

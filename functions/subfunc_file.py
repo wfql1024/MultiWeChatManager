@@ -144,7 +144,7 @@ def get_sw_install_path_from_setting_ini(sw:str) -> list:
     return [path] if path is not None else []
 
 
-def get_sw_data_dir_from_setting_ini(sw:str) -> list:
+def get_sw_data_dirs_from_setting_ini(sw:str) -> list:
     path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
                                           Config.INI_KEY['data_dir'])
     return [path] if path is not None else []
@@ -230,7 +230,7 @@ def update_sw_acc_details_to_json(sw, account, **kwargs):
         # 遍历 kwargs 中的所有参数，并更新到 account_data 中
         for key, value in kwargs.items():
             tab_info[account][key] = value
-            logger.info(f"在json更新[{account}][{key}]:{str(value)}")
+            # logger.info(f"在json更新[{account}][{key}]:{str(value)}")
         json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
         return True
     except Exception as e:
@@ -238,7 +238,7 @@ def update_sw_acc_details_to_json(sw, account, **kwargs):
         return False
 
 
-def get_sw_acc_details_from_json(sw, account: str, **kwargs) -> Tuple[Any, ...]:
+def get_sw_acc_details_from_json(sw=None, account=None, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     """
     根据用户输入的变量名，获取对应的账户信息
     :param sw: 选择软件标签
@@ -248,10 +248,20 @@ def get_sw_acc_details_from_json(sw, account: str, **kwargs) -> Tuple[Any, ...]:
     """
     try:
         data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
-        account_info = data.get(sw, {}).get(account, {})
+        if sw is None:
+            return data
+
+        sw_data = data.get(sw, {})
+        if account is None:
+            return sw_data
+
+        account_data = sw_data.get(account, {})
+        if len(kwargs) == 0:
+            return account_data
+
         result = tuple()
         for key, default in kwargs.items():
-            value = account_info.get(key, default)
+            value = account_data.get(key, default)
             result += (value,)
             # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
         return result

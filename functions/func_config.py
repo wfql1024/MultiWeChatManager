@@ -106,7 +106,7 @@ def operate_config(method, sw, account):
             return False, f"复制配置文件时发生错误：{str(e)}"
     return True, success_list
 
-def test(root_class, account, multiple_status, tab):
+def test(root_class, sw, account, multiple_status):
     """
     尝试打开微信，让用户判断是否是对应的账号，根据用户结果去创建配置或结束
     :param account: 账号
@@ -119,15 +119,15 @@ def test(root_class, account, multiple_status, tab):
             "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
     ):
         redundant_wnd_classes, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
-            tab, redundant_wnd_class=None, executable=None, cfg_handle_regex_list=None)
+            sw, redundant_wnd_class=None, executable=None, cfg_handle_regex_list=None)
         hwnd_utils.close_all_by_wnd_classes(redundant_wnd_classes)
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-        subfunc_sw.kill_sw_multiple_processes(tab)
+        subfunc_sw.kill_sw_multiple_processes(sw)
         time.sleep(0.5)
-        has_mutex_dict = subfunc_sw.get_mutex_dict(tab)
-        sub_exe_process, _ = subfunc_sw.open_sw(tab, multiple_status, has_mutex_dict)
-        login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(tab, login_wnd_class=None)
+        has_mutex_dict = subfunc_sw.get_mutex_dict(sw)
+        sub_exe_process, _ = subfunc_sw.open_sw(sw, multiple_status, has_mutex_dict)
+        login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(sw, login_wnd_class=None)
         wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
         if wechat_hwnd:
             if sub_exe_process:
@@ -135,7 +135,7 @@ def test(root_class, account, multiple_status, tab):
             time.sleep(1)
             hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(wechat_hwnd, root_class.root.winfo_id())
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
-                success, result = operate_config('add', tab, account)
+                success, result = operate_config('add', sw, account)
                 if success is True:
                     created_list_text = "\n".join(result)
                     messagebox.showinfo("成功", f"已生成：\n{created_list_text}")

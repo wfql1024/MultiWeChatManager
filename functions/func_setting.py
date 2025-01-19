@@ -104,7 +104,7 @@ def get_sw_data_dir_to_tuple(sw: str, from_setting_window=False) \
     :return: 成功，是否改变，结果
     """
     path_finders = [
-        (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_data_dir_from_setting_ini,
+        (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_data_dirs_from_setting_ini,
         sw_utils.get_sw_data_dir_from_user_register,
         sw_utils.get_sw_data_dir_by_guess,
         get_sw_data_dir_from_other_sw,
