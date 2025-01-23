@@ -31,7 +31,7 @@ def login_auto_start_accounts(root, root_class):
             auto_start, = subfunc_file.get_sw_acc_details_from_json(sw, acc, auto_start=None)
             if auto_start is True:
                 can_auto_start[sw].add(acc)
-    print("设置了自启动：", can_auto_start)
+    print(f"设置了自启动：{can_auto_start}")
 
     # 获取已经登录的账号
     for sw in all_sw:
@@ -42,10 +42,9 @@ def login_auto_start_accounts(root, root_class):
         logged_in = acc_list_dict["login"]
         for acc in logged_in:
             can_auto_start[sw].discard(acc)
-    print("排除已登录之后需要自启动：", can_auto_start)
 
-    if len(can_auto_start) != 0:
-        print(can_auto_start)
+    if any(len(sw_set) != 0 for sw, sw_set in can_auto_start.items()):
+        print(f"排除已登录之后需要登录：{can_auto_start}")
         # 打印即将自动登录的提示
         for i in range(0, 3):
             print(f"即将自动登录：{3 - i}秒")

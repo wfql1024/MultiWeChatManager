@@ -219,9 +219,11 @@ def get_sw_acc_list(_root, root_class, sw):
     :return: Union[Tuple[True, Tuple[账号字典，进程字典，有无互斥体]], Tuple[False, 错误信息]]
     """
     sw_class = root_class.sw_classes[sw]
+    # print(sw_class)
     # print(sw_class.__dict__)
 
     data_dir = sw_class.data_dir
+    # print(data_dir)
     if os.path.isdir(data_dir) is False:
         return False, "数据路径不存在"
 
@@ -296,7 +298,7 @@ def get_sw_acc_list(_root, root_class, sw):
         return False, "该平台未适配"
     pids = process_utils.get_process_ids_by_name(exe)
     pids = process_utils.remove_child_pids(pids)
-    print(f"读取到微信所有进程，用时：{time.time() - start_time:.4f} 秒")
+    print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
     if len(pids) != 0:
         for pid in pids:
             update_acc_list_by_pid(pid)
@@ -313,8 +315,8 @@ def get_sw_acc_list(_root, root_class, sw):
     login = list(logged_in_ids & folders)
     logout = list(folders - logged_in_ids)
 
-    print(f"login：{login}")
-    print(f"logout：{logout}")
+    print(f"{sw}已登录：{login}")
+    print(f"{sw}未登录：{logout}")
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据

@@ -83,7 +83,7 @@ class MenuUI:
 
         # 传递错误信息给主窗口
         if self.sw_class.inst_path is None or self.sw_class.data_dir is None or self.sw_class.dll_dir is None:
-            print("路径设置错误，请点击按钮修改")
+            print("路径设置错误...")
             self.path_error = True
 
         print("创建菜单栏...")

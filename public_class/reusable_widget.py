@@ -60,6 +60,7 @@ class StatusBar:
 class ScrollableCanvas:
     def __init__(self, master_frame):
         self.master_frame = master_frame
+
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
         scrollbar_frame = tk.Frame(self.master_frame)
         scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)

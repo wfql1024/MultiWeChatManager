@@ -129,7 +129,12 @@ class MainWindow:
         print(tab_dict)
         for sw in tab_dict.keys():
             self.sw_classes[sw] = SoftwareInfo(sw)
+            print(f"创建{sw}的信息体...")
+            self.sw_classes[sw].data_dir = func_setting.get_sw_data_dir(sw)
+            self.sw_classes[sw].inst_path, self.sw_classes[sw].ver = func_setting.get_sw_inst_path_and_ver(sw)
+            self.sw_classes[sw].dll_dir = func_setting.get_sw_dll_dir(sw)
             self.sw_classes[sw].frame = ttk.Frame(self.sw_notebook)
+            # print(self.sw_classes[sw].frame)
             self.sw_classes[sw].frame.var = sw
             self.sw_classes[sw].text = tab_dict[sw]['text']
             self.sw_classes[sw].name = tab_dict[sw]['name']
@@ -160,6 +165,7 @@ class MainWindow:
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
+
         self.tab_frame = self.sw_classes[self.sw].frame
 
         # 刷新菜单
@@ -187,11 +193,6 @@ class MainWindow:
 
     def refresh_sw_main_frame(self, message=None):
         """加载或刷新主界面"""
-        # 检测是否路径错误
-        if self.root_menu.path_error is True:
-            self.show_setting_error()
-            return
-
         print(f"清除旧界面...")
         for widget in self.tab_frame.winfo_children():
             widget.destroy()
@@ -204,20 +205,40 @@ class MainWindow:
         try:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
-                success, result = func_account.get_sw_acc_list(self.root, self, self.sw)
-                self.root.after(0, self.create_account_list_ui, success, result, message)
+                self.root.after(0, self.create_main_ui, message)
 
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
 
-    def create_account_list_ui(self, success, result, message=None):
+    def create_main_ui(self, message=None):
         """渲染主界面账号列表"""
-        if success is not True:
+        # 检测是否路径错误
+        if self.root_menu.path_error is True:
             self.show_setting_error()
-            self.root_menu.edit_menu.entryconfig("刷新", state="normal")
-            return
 
+        else:
+            success, result = func_account.get_sw_acc_list(self.root, self, self.sw)
+            if success is not True:
+                self.show_setting_error()
+            else:
+                self.create_account_list_ui(result, message)
+
+        # print("创建完成，无论是错误界面还是正常界面，下面代码都要进行")
+
+        # 恢复刷新可用性
+        self.root_menu.edit_menu.entryconfig("刷新", state="normal")
+
+        # 加载完成后更新一下界面并且触发事件
+        if self.scrollable_canvas.canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
+            self.scrollable_canvas.refresh_canvas()
+
+        self.after_refresh_when_start()
+
+        # 重新绑定标签切换事件
+        self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
+
+    def create_account_list_ui(self, result, message=None):
         print(f"渲染账号列表.........................................................")
 
         acc_list_dict, _, mutex = result
@@ -252,12 +273,6 @@ class MainWindow:
         msg_str = f"{message} | " if message else ""
         print(f"{msg_str}加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
-        # 恢复刷新可用性
-        self.root_menu.edit_menu.entryconfig("刷新", state="normal")
-
-        # 加载完成后更新一下界面并且触发事件
-        self.scrollable_canvas.refresh_canvas()
-
         # 获取已登录的窗口hwnd
         func_account.get_main_hwnd_of_accounts(login, self.sw)
 
@@ -265,16 +280,44 @@ class MainWindow:
         func_account.silent_get_and_config(login, logout, self.sw_classes[self.sw].data_dir,
                                            self.refresh_sw_main_frame, self.sw)
 
-        if self.finish_started is not True:
-            self.after_refresh_when_start()
+        self.after_success_create_acc_ui_when_start()
 
-            self.finish_started = True
+    def show_setting_error(self):
+        """出错的话，选择已经有的界面中创建错误信息显示"""
+        if self.tab_frame is not None:
+            for widget in self.tab_frame.winfo_children():
+                widget.destroy()
+        if self.tab_frame is not None:
+            self.error_frame = ttk.Frame(self.tab_frame, padding=Constants.T_FRM_PAD)
 
-        # 重新绑定标签切换事件
-        self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
+        self.error_frame.pack(**Constants.T_FRM_PACK)
+        error_label = ttk.Label(self.error_frame, text="路径设置错误，请点击按钮修改", foreground="red",
+                                anchor=tk.CENTER)
+        error_label.pack(**Constants.T_WGT_PACK)
+        self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
+                                          command=partial(self.root_menu.open_settings, self.sw))
+        self.settings_button.pack()
 
     def after_refresh_when_start(self):
+        """首次启动后，无论是否成功创建账号列表，都执行"""
+        if self.finish_started is True:
+            return
+
+        # 需要进行的操作
+        pass
+
+        self.finish_started = True
+
+    def after_success_create_acc_ui_when_start(self):
+        """首次启动后，成功创建账号列表才会执行"""
+        if self.finish_started is True:
+            return
+
+        # 需要进行的操作
         self.to_login_auto_start_accounts()
+
+        self.finish_started = True
+
 
     def wait_for_loading_close_and_bind(self):
         """启动时关闭等待窗口，绑定事件"""
@@ -295,32 +338,6 @@ class MainWindow:
             threading.Thread(target=func_thread).start()
         except Exception as e:
             logger.error(e)
-
-    def show_setting_error(self):
-        """出错的话，选择已经有的界面中创建错误信息显示"""
-        if self.main_frame is not None:
-            for widget in self.main_frame.winfo_children():
-                widget.destroy()
-        if self.error_frame is not None:
-            for widget in self.error_frame.winfo_children():
-                widget.destroy()
-        if self.tab_frame is not None:
-            for widget in self.tab_frame.winfo_children():
-                widget.destroy()
-
-        # 选择已经存在的框架进行错误信息显示
-        if self.tab_frame is not None:
-            self.error_frame = ttk.Frame(self.tab_frame, padding=Constants.T_FRM_PAD)
-        elif self.main_frame is not None:
-            self.error_frame = ttk.Frame(self.main_frame, padding=Constants.T_FRM_PAD)
-
-        self.error_frame.pack(**Constants.T_FRM_PACK)
-        error_label = ttk.Label(self.error_frame, text="路径设置错误，请点击按钮修改", foreground="red",
-                                anchor=tk.CENTER)
-        error_label.pack(**Constants.T_WGT_PACK)
-        self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
-                                          command=partial(self.root_menu.open_settings, self.sw))
-        self.settings_button.pack()
 
     def open_debug_window(self):
         """打开调试窗口，显示所有输出日志"""
@@ -388,7 +405,12 @@ class SoftwareInfo:
         self.data_dir = None
         self.dll_dir = None
         self.ver = None
+        self.data_dir = None
+        self.inst_path, self.ver = None, None
+        self.dll_dir = None
 
-        self.data_dir = func_setting.get_sw_data_dir(self.sw)
-        self.inst_path, self.ver = func_setting.get_sw_inst_path_and_ver(self.sw)
-        self.dll_dir = func_setting.get_sw_dll_dir(self.sw)
+        # print("创建类完成")
+        #
+        # print(self.data_dir)
+        # print(self.inst_path)
+        # print(self.dll_dir)

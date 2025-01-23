@@ -74,7 +74,7 @@ def get_sw_install_path_from_machine_register(sw: str) -> list:
         logger.info(f"通过设备注册表获取了安装地址：{found_path}")
         if found_path:
             results.append(found_path.replace('\\', '/'))
-    except WindowsError as e:
+    except Exception as e:
         logger.error(e)
     return results
 
@@ -90,7 +90,7 @@ def get_sw_install_path_from_user_register(sw: str) -> list:
         logger.info(f"通过用户注册表获取了安装地址：{found_path}")
         if found_path:
             results.append(os.path.join(found_path, executable).replace('\\', '/'))
-    except WindowsError as we:
+    except Exception as we:
         logger.error(we)
     return results
 
@@ -114,7 +114,7 @@ def get_sw_data_dir_from_user_register(sw: str) -> list:
         winreg.CloseKey(key)
         value = os.path.join(value, dir_name).replace('\\', '/')
         results.append(value)
-    except WindowsError as we:
+    except Exception as we:
         logger.error(we)
     return results
 

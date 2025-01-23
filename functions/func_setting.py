@@ -30,13 +30,14 @@ def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders: list, che
         if finder is None:
             continue
         paths = finder(sw)
+        logger.info(f"使用{finder.__name__}方法得到{sw}的路径列表：{paths}")
         path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
         if not path_list:
             continue
         # 检验地址并退出所有循环
         for path in path_list:
             if check_sw_path_func(sw, path):
-                logger.info(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果")
+                print(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果 {path}")
                 standardized_path = os.path.abspath(path).replace('\\', '/')
                 changed = subfunc_file.save_sw_setting(sw, path_type, standardized_path)
                 result = standardized_path
@@ -89,7 +90,7 @@ def get_sw_data_dir(sw: str, from_setting_window=False):
     :param from_setting_window: 是否从设置窗口调用
     :return: 路径
     """
-    print("获取安装路径...")
+    print("获取数据存储路径...")
     _, _, result = get_sw_data_dir_to_tuple(sw, from_setting_window)
     return result
 
@@ -187,15 +188,15 @@ def get_sw_data_dir_from_other_sw(sw: str) -> list:
     if data_dir_name is None or data_dir_name == "":
         paths = []
     if sw == "Weixin":
-        other_path = get_sw_data_dir("WeChat")
-        if other_path and other_path != "":
-            paths = [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
+        other_path = subfunc_file.get_sw_data_dirs_from_setting_ini("WeChat")
+        if other_path and len(other_path) != 0:
+            paths = [os.path.join(os.path.dirname(other_path[0]), data_dir_name).replace('\\', '/')]
         else:
             paths = []
     if sw == "WeChat":
         other_path = get_sw_data_dir("Weixin")
-        if other_path and other_path != "":
-            return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
+        if other_path and len(other_path) != 0:
+            return [os.path.join(os.path.dirname(other_path[0]), data_dir_name).replace('\\', '/')]
         else:
             return []
 
