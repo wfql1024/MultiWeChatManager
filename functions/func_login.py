@@ -35,12 +35,16 @@ def login_auto_start_accounts(root, root_class):
 
     # 获取已经登录的账号
     for sw in all_sw:
-        success, result = func_account.get_sw_acc_list(root, root_class, sw)
-        if success is not True:
-            continue
-        acc_list_dict, _, _ = result
-        logged_in = acc_list_dict["login"]
-        for acc in logged_in:
+        if sw == root_class.sw:
+            logins = root_class.sw_classes[sw].login_accounts
+        else:
+            success, result = func_account.get_sw_acc_list(root, root_class, sw)
+            if success is not True:
+                continue
+            acc_list_dict, _, _ = result
+            logins = acc_list_dict["login"]
+
+        for acc in logins:
             can_auto_start[sw].discard(acc)
 
     if any(len(sw_set) != 0 for sw, sw_set in can_auto_start.items()):
@@ -49,6 +53,9 @@ def login_auto_start_accounts(root, root_class):
         for i in range(0, 3):
             print(f"即将自动登录：{3 - i}秒")
             time.sleep(1)
+    else:
+        print("自启动账号都已登录完毕！")
+        return
 
     # 遍历登录需要自启但未登录的账号
     for sw in can_auto_start:
@@ -106,7 +113,7 @@ def manual_login(root, root_class, sw):
         messagebox.showerror("错误", "手动登录失败，请重试")
 
     # 刷新菜单和窗口前置
-    root_class.root.after(0, root_class.refresh_sw_main_frame)
+    root_class.root.after(0, root_class.refresh_sw_main_frame, sw)
     hwnd_utils.bring_tk_wnd_to_front(root, root)
 
 
@@ -258,7 +265,7 @@ def auto_login_accounts(root_class, sw, accounts):
         for h in hwnd_list:
             hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
             time.sleep(0.2)
-        print("查找后用时：", time.time() - inner_start_time, "s")
+        print(f"查找后用时：{time.time() - inner_start_time}s")
         # for h in hwnd_list:
         #     hwnd_utils.do_click_in_wnd(h, int(login_width * 0.5), int(login_height * 0.75))
         #     time.sleep(0.2)
@@ -272,7 +279,7 @@ def auto_login_accounts(root_class, sw, accounts):
                 # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
                 # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
                 # cx, cy = hwnd_utils.find_widget_with_uia(h, titles)  # 有问题，修复较复杂，不管
-                print("查找后用时：", time.time() - inner_start_time, "s")
+                print(f"查找后用时：{time.time() - inner_start_time}s")
                 if cx is not None and cy is not None:
                     hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
                     break  # 找到有效坐标后退出循环
@@ -293,5 +300,5 @@ def auto_login_accounts(root_class, sw, accounts):
             break
         if time.time() > end_time:
             break
-    root_class.root.after(0, root_class.refresh_sw_main_frame)
+    root_class.root.after(0, root_class.refresh_sw_main_frame, sw)
     return True

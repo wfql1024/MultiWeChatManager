@@ -145,4 +145,4 @@ def test(root_class, sw, account, multiple_status):
             hwnd_utils.close_by_wnd_class(login_wnd_class)
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
-    root_class.root.after(0, root_class.refresh_sw_main_frame)
+    root_class.root.after(0, root_class.refresh_sw_main_frame, sw)

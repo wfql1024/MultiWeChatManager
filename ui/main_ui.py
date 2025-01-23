@@ -154,10 +154,10 @@ class MainWindow:
         if self.sw_notebook.select() == "!disabled":
             return
         selected_frame = self.sw_notebook.nametowidget(self.sw_notebook.select())  # 获取当前选中的Frame
-        selected_tab = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
-        if selected_tab:
-            subfunc_file.save_global_setting("tab", selected_tab)
-            msg_str = f"当前选项卡: {selected_tab}"
+        selected_sw = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
+        if selected_sw:
+            subfunc_file.save_global_setting("tab", selected_sw)
+            msg_str = f"当前选项卡: {selected_sw}"
             self.refresh(message=msg_str)
             print(msg_str)
 
@@ -180,10 +180,10 @@ class MainWindow:
         # 刷新界面
         def reload_func():
             try:
-                self.root.after(0, self.refresh_sw_main_frame, message)
+                self.root.after(0, self.refresh_sw_main_frame, self.sw, message)
             except Exception as e_reload:
                 logger.error(e_reload)
-                self.root.after(5000, self.refresh_sw_main_frame, message)
+                self.root.after(5000, self.refresh_sw_main_frame, self.sw, message)
 
         try:
             # 线程启动获取登录情况和渲染列表
@@ -191,8 +191,12 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
-    def refresh_sw_main_frame(self, message=None):
+    def refresh_sw_main_frame(self, sw, message=None):
         """加载或刷新主界面"""
+        # 如果要刷新的页面不是当前选定选项卡，不用处理
+        if sw != self.sw:
+            return
+
         print(f"清除旧界面...")
         for widget in self.tab_frame.winfo_children():
             widget.destroy()
@@ -206,7 +210,6 @@ class MainWindow:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
                 self.root.after(0, self.create_main_ui, message)
-
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
@@ -230,7 +233,7 @@ class MainWindow:
         self.root_menu.edit_menu.entryconfig("刷新", state="normal")
 
         # 加载完成后更新一下界面并且触发事件
-        if self.scrollable_canvas.canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
+        if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
             self.scrollable_canvas.refresh_canvas()
 
         self.after_refresh_when_start()
@@ -244,6 +247,9 @@ class MainWindow:
         acc_list_dict, _, mutex = result
         login = acc_list_dict["login"]
         logout = acc_list_dict["logout"]
+
+        self.sw_classes[self.sw].login_accounts = login
+        self.sw_classes[self.sw].logout_accounts = logout
 
         # 底部框架=手动登录
         bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
@@ -277,8 +283,7 @@ class MainWindow:
         func_account.get_main_hwnd_of_accounts(login, self.sw)
 
         # 进行静默获取头像及配置
-        func_account.silent_get_and_config(login, logout, self.sw_classes[self.sw].data_dir,
-                                           self.refresh_sw_main_frame, self.sw)
+        func_account.silent_get_and_config(self.root, self, self.sw, login, logout)
 
         self.after_success_create_acc_ui_when_start()
 
@@ -287,7 +292,6 @@ class MainWindow:
         if self.tab_frame is not None:
             for widget in self.tab_frame.winfo_children():
                 widget.destroy()
-        if self.tab_frame is not None:
             self.error_frame = ttk.Frame(self.tab_frame, padding=Constants.T_FRM_PAD)
 
         self.error_frame.pack(**Constants.T_FRM_PACK)
@@ -374,7 +378,7 @@ class MainWindow:
         """退出所选账号"""
         answer = func_account.quit_selected_accounts(self.sw, accounts)
         if answer is True:
-            self.refresh_sw_main_frame()
+            self.refresh_sw_main_frame(self.sw)
 
     def to_login_auto_start_accounts(self):
         """启动程序后自动登录"""
@@ -408,6 +412,8 @@ class SoftwareInfo:
         self.data_dir = None
         self.inst_path, self.ver = None, None
         self.dll_dir = None
+        self.login_accounts = None
+        self.logout_accounts = None
 
         # print("创建类完成")
         #

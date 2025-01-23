@@ -224,5 +224,5 @@ class DetailWindow:
         subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, hidden=hidden)
         auto_start = self.auto_start_var.get()
         subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, auto_start=auto_start)
-        self.update_callback(message="账号设置成功")
+        self.update_callback(self.sw, message="账号设置成功")
         self.wnd.destroy()

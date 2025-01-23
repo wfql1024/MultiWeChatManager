@@ -311,11 +311,11 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
     print("尝试用窃取法获取头像")
     changed = False
     all_sw, = get_details_from_remote_setting_json("global", all_sw=None)
-    print(all_sw)
+    # print(all_sw)
 
     # 对所有其他软件进行遍历
     for other_sw in all_sw.keys():
-        print(other_sw, now_sw)
+        # print(other_sw, now_sw)
         # 平台相同，跳过
         if other_sw == now_sw:
             continue
@@ -397,11 +397,11 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
     print("尝试用窃取法获取昵称")
     changed = False
     all_sw, = get_details_from_remote_setting_json("global", all_sw=None)
-    print(all_sw)
+    # print(all_sw)
 
     # 对所有其他软件进行遍历
     for other_sw in all_sw.keys():
-        print(other_sw, now_sw)
+        # print(other_sw, now_sw)
         # 平台相同，跳过
         if other_sw == now_sw:
             continue

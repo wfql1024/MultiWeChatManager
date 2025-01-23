@@ -168,7 +168,9 @@ def silent_get_nickname(sw, acc_list, data_dir):
     return changed1 or changed2
 
 
-def silent_get_and_config(login, logout, data_dir, callback, sw):
+def silent_get_and_config(root, root_class, sw, login, logout):
+    data_dir = root_class.sw_classes[sw].data_dir
+
     # 悄悄执行检测昵称和头像
     need_to_notice = False
 
@@ -207,7 +209,7 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
     # 5. 通知
     if need_to_notice is True:
         messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")
-        callback()
+        root.after(0, root_class.refresh_sw_main_frame, sw)
 
 
 def get_sw_acc_list(_root, root_class, sw):
