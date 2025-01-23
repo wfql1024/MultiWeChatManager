@@ -6,7 +6,8 @@ import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk
-from functions import func_login, func_file, func_account, subfunc_file, func_config
+
+from functions import func_login, func_file, func_account, subfunc_file, func_config, func_setting
 from public_class import reusable_widget
 from resources import Strings, Config, Constants
 from ui import debug_ui, classic_row_ui, treeview_row_ui, loading_ui, detail_ui, menu_ui
@@ -16,30 +17,26 @@ from utils.logger_utils import mylogger as logger
 
 class MainWindow:
     """构建主窗口的类"""
+
     def __init__(self, root, args=None):
         # IDE初始化
+        self.sw_classes = None
         self._initialized = None
         self.statusbar_class = None
         self.sw = None
         self.start_time = None
         self.root_menu = None
-        self.sw_info = None
         self.cfg_data = None
         self.settings_button = None
         self.error_frame = None
         self.sw_notebook = None
-        self.tab_dict = None
         self.tab_frame = None
         self.main_frame = None
         self.scrollable_canvas = None
+        self.finish_started = None
 
-        self.tree_uis = {
-            "WeChat": None,
-            "Weixin": None,
-        }
-        self.classic_uis = {
-            "WeChat": None,
-            "Weixin": None,
+        self.sw_classes = {
+
         }
 
         self.root = root
@@ -128,14 +125,17 @@ class MainWindow:
         print("创建选项卡...")
         self.sw_notebook = ttk.Notebook(self.root)
         self.sw_notebook.pack(expand=True, fill='both')
-        self.tab_dict = self.cfg_data["global"]["all_sw"]
-        for item in self.tab_dict.keys():
-            self.tab_dict[item]['frame'] = ttk.Frame(self.sw_notebook)
-            self.tab_dict[item]['frame'].var = item
-            self.sw_notebook.add(self.tab_dict[item]['frame'], text=self.tab_dict[item]['text'])
-        print(self.tab_dict)
+        tab_dict = self.cfg_data["global"]["all_sw"]
+        print(tab_dict)
+        for sw in tab_dict.keys():
+            self.sw_classes[sw] = SoftwareInfo(sw)
+            self.sw_classes[sw].frame = ttk.Frame(self.sw_notebook)
+            self.sw_classes[sw].frame.var = sw
+            self.sw_classes[sw].text = tab_dict[sw]['text']
+            self.sw_classes[sw].name = tab_dict[sw]['name']
+            self.sw_notebook.add(self.sw_classes[sw].frame, text=self.sw_classes[sw].text)
         # 选择一个选项卡并触发事件
-        self.sw_notebook.select(self.tab_dict[self.sw]['frame'])
+        self.sw_notebook.select(self.sw_classes[self.sw].frame)
         # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
         self.on_tab_change(_event=None)
 
@@ -155,18 +155,15 @@ class MainWindow:
             msg_str = f"当前选项卡: {selected_tab}"
             self.refresh(message=msg_str)
             print(msg_str)
-        # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
-
 
     def refresh(self, message=None):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
-        self.tab_frame = self.tab_dict[self.sw]['frame']
+        self.tab_frame = self.sw_classes[self.sw].frame
 
         # 刷新菜单
-        self.root_menu = menu_ui.MenuUI(
-            self.root, self, self.sw, self.cfg_data)
+        self.root_menu = menu_ui.MenuUI(self.root, self)
         try:
             self.root.after(0, self.root_menu.create_root_menu_bar)
         except Exception as re:
@@ -181,6 +178,7 @@ class MainWindow:
             except Exception as e_reload:
                 logger.error(e_reload)
                 self.root.after(5000, self.refresh_sw_main_frame, message)
+
         try:
             # 线程启动获取登录情况和渲染列表
             threading.Thread(target=reload_func).start()
@@ -206,9 +204,9 @@ class MainWindow:
         try:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
-                success, result = func_account.get_sw_acc_list(
-                    self.sw, self.root_menu.sw_info["data_dir"], self.root_menu.states["multiple"])
+                success, result = func_account.get_sw_acc_list(self.root, self, self.sw)
                 self.root.after(0, self.create_account_list_ui, success, result, message)
+
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
@@ -240,18 +238,17 @@ class MainWindow:
         self.main_frame = self.scrollable_canvas.main_frame
 
         # 创建账号列表界面并统计
-        self.sw_info = self.root_menu.sw_info
-        self.sw_info["view"] = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
-        if self.sw_info["view"] == "classic":
-            self.classic_uis[self.sw] = classic_row_ui.ClassicRowUI(
-                self.root, self, self.main_frame, result, self.sw_info["data_dir"], self.sw)
-        elif self.sw_info["view"] == "tree":
-            self.tree_uis[self.sw] = treeview_row_ui.TreeviewRowUI(
+        self.sw_classes[self.sw].view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
+        if self.sw_classes[self.sw].view == "classic":
+            self.sw_classes[self.sw].classic_ui = classic_row_ui.ClassicRowUI(
+                self.root, self, self.main_frame, result, self.sw_classes[self.sw].data_dir, self.sw)
+        elif self.sw_classes[self.sw].view == "tree":
+            self.sw_classes[self.sw].tree_ui = treeview_row_ui.TreeviewRowUI(
                 self, result)
         else:
             pass
         subfunc_file.update_statistic_data(
-            self.sw, 'refresh', self.sw_info["view"], str(len(login)), time.time() - self.start_time)
+            self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(login)), time.time() - self.start_time)
         msg_str = f"{message} | " if message else ""
         print(f"{msg_str}加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
@@ -265,15 +262,23 @@ class MainWindow:
         func_account.get_main_hwnd_of_accounts(login, self.sw)
 
         # 进行静默获取头像及配置
-        func_account.silent_get_and_config(login, logout, self.sw_info["data_dir"],
+        func_account.silent_get_and_config(login, logout, self.sw_classes[self.sw].data_dir,
                                            self.refresh_sw_main_frame, self.sw)
+
+        if self.finish_started is not True:
+            self.after_refresh_when_start()
+
+            self.finish_started = True
 
         # 重新绑定标签切换事件
         self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
+    def after_refresh_when_start(self):
+        self.to_login_auto_start_accounts()
 
     def wait_for_loading_close_and_bind(self):
         """启动时关闭等待窗口，绑定事件"""
+
         def func_thread():
             # self.check_and_init()
             if hasattr(self, 'loading_wnd_class') and self.loading_wnd_class:
@@ -327,12 +332,7 @@ class MainWindow:
         print("手动登录")
         threading.Thread(
             target=func_login.manual_login,
-            args=(
-                self,
-                self.sw,
-                self.root_menu.states["multiple"],
-                partial(hwnd_utils.bring_tk_wnd_to_front, self.root, self.root)
-            )
+            args=(self.root, self, self.sw)
         ).start()
 
     def to_auto_login(self, accounts):
@@ -340,23 +340,30 @@ class MainWindow:
         if self.root_menu.settings_values["hide_wnd"] is True:
             self.root.iconify()  # 最小化主窗口
         try:
-            threading.Thread(
+            t = threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(accounts, self.root_menu.states["multiple"], self.refresh_sw_main_frame, self.sw)
-            ).start()
+                args=(self, self.sw, accounts)
+            )
+            t.start()
         except Exception as e:
             logger.error(e)
 
     def to_create_config(self, accounts):
         """按钮：创建或重新配置"""
         threading.Thread(target=func_config.test,
-                         args=(self, self.sw, accounts[0], self.root_menu.states["multiple"])).start()
+                         args=(self, self.sw, accounts[0], self.sw_classes[self.sw].multiple_state)).start()
 
     def to_quit_accounts(self, accounts):
         """退出所选账号"""
         answer = func_account.quit_selected_accounts(self.sw, accounts)
         if answer is True:
             self.refresh_sw_main_frame()
+
+    def to_login_auto_start_accounts(self):
+        """启动程序后自动登录"""
+        thread = threading.Thread(target=func_login.login_auto_start_accounts,
+                                  args=(self.root, self))
+        thread.start()
 
     def open_acc_detail(self, account, event=None):
         """打开详情窗口"""
@@ -365,3 +372,23 @@ class MainWindow:
         detail_window = tk.Toplevel(self.root)
         detail_ui.DetailWindow(self.root, self.root, detail_window, self.sw,
                                account, self.refresh_sw_main_frame)
+
+
+class SoftwareInfo:
+    def __init__(self, sw):
+        self.sw = sw
+        self.name = None
+        self.frame = None
+        self.view = None
+        self.multiple_state = None
+        self.revoke = None
+        self.classic_ui = None
+        self.tree_ui = None
+        self.inst_path = None
+        self.data_dir = None
+        self.dll_dir = None
+        self.ver = None
+
+        self.data_dir = func_setting.get_sw_data_dir(self.sw)
+        self.inst_path, self.ver = func_setting.get_sw_inst_path_and_ver(self.sw)
+        self.dll_dir = func_setting.get_sw_dll_dir(self.sw)

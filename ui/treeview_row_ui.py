@@ -1,5 +1,5 @@
-from abc import ABC
 import tkinter as tk
+from abc import ABC
 
 from PIL import ImageTk, Image
 
@@ -58,7 +58,7 @@ class TreeviewRowUI:
             self.tree_class["login"] = AccLoginTreeView(
                 self,
                 "login", "已登录：", self.btn_dict["auto_quit_btn"],
-                self.btn_dict["config_btn"],)
+                self.btn_dict["config_btn"], )
 
         # 加载未登录列表
         if len(self.acc_list_dict["logout"]) != 0:
@@ -79,7 +79,8 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
     def initialize_members_in_init(self):
         self.root = self.parent_class.root
         self.item_list = self.parent_class.acc_list_dict[self.table_tag]
-        self.data_dir = self.root_class.sw_info["data_dir"]
+        self.sw = self.root_class.sw
+        self.data_dir = self.root_class.sw_classes[self.sw].data_dir
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
         self.columns = (" ", "配置", "pid", "原始id", "当前id", "昵称")
         sort_str = subfunc_file.fetch_sw_setting_or_set_default(self.sw, f"{self.table_tag}_sort")
@@ -113,7 +114,7 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
         accounts = self.item_list
         login_status = self.table_tag
 
-        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.data_dir, self.sw)
+        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.sw, self.data_dir)
 
         for account in accounts:
             # 未登录账号中，隐藏的账号不显示
@@ -122,7 +123,7 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
                 continue
 
             display_name = "  " + func_account.get_acc_origin_display_name(self.sw, account)
-            config_status = func_config.get_config_status_by_account(account, self.data_dir, self.sw)
+            config_status = func_config.get_sw_acc_login_cfg(self.sw, account, self.data_dir)
             avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_sw_acc_details_from_json(
                 self.sw,
                 account,
@@ -140,7 +141,7 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
             self.photo_images.append(photo)
 
             suffix = Strings.MUTEX_SIGN if has_mutex and self.sign_visible else ""
-            pid =  " " +  str(pid) + suffix
+            pid = " " + str(pid) + suffix
             suffix = Strings.CFG_SIGN if account == curr_config_acc and self.sign_visible else ""
             config_status = "" + str(config_status) + suffix
 
@@ -157,4 +158,3 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
                 widget_utils.add_a_tag_to_item(tree, account, "disabled")
 
         self.adjust_treeview_height(None)
-

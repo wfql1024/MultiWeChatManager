@@ -140,6 +140,7 @@ def query_system_handle_information():
         # if current_length > 0x4000000:
         #     return
         start_time = time.time()
+
         class SYSTEM_HANDLE_INFORMATION_EX(Structure):
             _fields_ = [
                 ('HandleCount', ULONG_PTR),

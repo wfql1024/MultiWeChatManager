@@ -14,6 +14,8 @@ from utils import hwnd_utils, widget_utils
 from utils.logger_utils import mylogger as logger
 
 
+# TODO：控件的提取，关于页面转为网络更新
+
 class Direction:
     def __init__(self, initial=1):
         self.value = initial
@@ -96,7 +98,7 @@ class AboutWindow:
                 for widget in self.wnd.winfo_children():
                     widget.destroy()
             self.display_main_content()
-        
+
     def display_main_content(self):
         self.app_name = self.cfg_data["global"]["app_name"]
         self.about_info = self.cfg_data["global"]["about"]
@@ -153,7 +155,6 @@ class AboutWindow:
         thanks_label = ttk.Label(self.content_frame, text="鸣谢", style='SecondTitle.TLabel')
         thanks_label.pack(anchor='sw', **Constants.T_WGT_PACK)
         pack_grids(self.content_frame, self.about_info["thanks"])
-
 
         # 技术参考
         reference_label = ttk.Label(self.content_frame, text="技术参考", style='SecondTitle.TLabel')

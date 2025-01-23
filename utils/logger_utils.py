@@ -7,6 +7,7 @@ import sys
 
 import colorlog
 
+
 def get_call_stack(sequence="/", max_depth=100):
     """
     获取调用栈，并返回当前方法及往前回溯指定层数的方法名称，按顺序用连接符连接。
@@ -20,6 +21,7 @@ def get_call_stack(sequence="/", max_depth=100):
     call_chain = [frame_info.function for frame_info in stack[1:max_depth + 1]]
     # 从前往后连接方法名
     return sequence.join(reversed(call_chain))
+
 
 class LoggerUtils:
     def __init__(self, file):
@@ -61,8 +63,6 @@ class LoggerUtils:
         logger.addHandler(log_ch)
 
         return logger
-
-
 
 
 app_path = os.path.basename(os.path.abspath(sys.argv[0]))

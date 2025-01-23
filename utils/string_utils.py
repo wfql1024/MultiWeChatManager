@@ -16,6 +16,7 @@ def clean_texts(*texts) -> Union[Tuple, str, Any]:
     Returns:
         tuple: 清理后的字符串。如果只传入一个字符串，则返回单个字符串。
     """
+
     def clean_text(text):
         if not isinstance(text, str):
             return text  # 非字符串类型直接返回
@@ -34,7 +35,6 @@ def clean_texts(*texts) -> Union[Tuple, str, Any]:
 
     # 如果只传入一个文本，则返回单个字符串而非元组
     return cleaned_texts if len(cleaned_texts) > 1 else cleaned_texts[0]
-
 
 
 def balanced_wrap_text(text, max_width=10) -> str:

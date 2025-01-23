@@ -380,7 +380,7 @@ def reset(after):
                 dll_path = os.path.join(dll_dir_path, patch_dll)
                 bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
                 try:
-                # 检查 .bak 文件是否存在
+                    # 检查 .bak 文件是否存在
                     if os.path.exists(bak_path):
                         # 如果 ?.dll 存在，删除它
                         if os.path.exists(dll_path):

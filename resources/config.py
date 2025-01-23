@@ -1,9 +1,11 @@
 import os
+
 from resources import constants
 
 # 获取屏幕缩放因子
 SCALE_FACTOR = constants.get_scale_factor()
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 class Config:
     VER_STATUS = 'Beta'

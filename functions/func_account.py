@@ -197,9 +197,9 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
             need_to_notice = True
 
     # 4. 偷偷创建配置文件
-    curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(data_dir, sw)
+    curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(sw, data_dir)
     if curr_config_acc is not None:
-        if func_config.get_config_status_by_account(curr_config_acc, data_dir, sw) == "无配置":
+        if func_config.get_sw_acc_login_cfg(sw, curr_config_acc, data_dir) == "无配置":
             changed, _ = func_config.operate_config('add', sw, curr_config_acc)
             if changed is True:
                 need_to_notice = True
@@ -210,14 +210,21 @@ def silent_get_and_config(login, logout, data_dir, callback, sw):
         callback()
 
 
-def get_sw_acc_list(sw, data_dir, multiple_status):
+def get_sw_acc_list(_root, root_class, sw):
     """
     获取账号及其登录情况
+    :param _root: 主窗口
+    :param root_class: 主窗口类
     :param sw: 平台
-    :param data_dir: 数据路径
-    :param multiple_status: 多开状态
     :return: Union[Tuple[True, Tuple[账号字典，进程字典，有无互斥体]], Tuple[False, 错误信息]]
     """
+    sw_class = root_class.sw_classes[sw]
+    # print(sw_class.__dict__)
+
+    data_dir = sw_class.data_dir
+    if os.path.isdir(data_dir) is False:
+        return False, "数据路径不存在"
+
     def update_acc_list_by_pid(process_id: int):
         """
         为存在的微信进程匹配出对应的账号，并更新[已登录账号]和[(已登录进程,账号)]
@@ -313,6 +320,7 @@ def get_sw_acc_list(sw, data_dir, multiple_status):
     # 更新数据
     has_mutex = False
     pid_dict = dict(proc_dict)
+    multiple_status = sw_class.multiple_state
     if multiple_status == "已开启":
         print(f"由于是全局多开模式，直接所有has_mutex都为false")
         for acc in login + logout:
@@ -346,3 +354,5 @@ def get_main_hwnd_of_accounts(acc_list, sw):
         if len(hwnd_list) >= 1:
             hwnd = hwnd_list[0]
             subfunc_file.update_sw_acc_details_to_json(sw, acc, main_hwnd=hwnd)
+            display_name = get_acc_origin_display_name(sw, acc)
+            hwnd_utils.set_window_title(hwnd, f"微信 - {display_name}")

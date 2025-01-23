@@ -8,9 +8,7 @@ from pathlib import Path
 from tkinter import messagebox
 from typing import Dict, Union
 
-import psutil
-
-from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_account, func_update
+from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_update
 from resources import Strings, Config
 from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui, acc_manager_ui
 from utils import widget_utils
@@ -18,7 +16,7 @@ from utils.logger_utils import mylogger as logger
 
 
 class MenuUI:
-    def __init__(self, root, root_class, sw, cfg_data):
+    def __init__(self, root, root_class):
         """获取必要的设置项信息"""
         self.path_error = None
         self.multiple_err = None
@@ -37,21 +35,16 @@ class MenuUI:
         self.user_file_menu = None
         self.file_menu = None
         self.menu_bar = None
-        
+
         self.root = root
         self.root_class = root_class
-        self.sw = sw
-        self.cfg_data = cfg_data
 
-        self.sw_info: Dict[str, Union[str, None]] = {
-            "data_dir": None,
-            "inst_path": None,
-            "ver": None,
-            "dll_dir": None,
-            "login_size": None,
-            "view": None,
-        }
-        self.app_info:Dict[str, Union[str, bool, None]] = {
+        self.sw = root_class.sw
+        self.cfg_data = root_class.cfg_data
+        self.sw_classes = root_class.sw_classes
+        self.sw_class = self.sw_classes[self.sw]
+
+        self.app_info: Dict[str, Union[str, bool, None]] = {
             "name": os.path.basename(sys.argv[0]),
             "author": "吾峰起浪",
             "curr_full_ver": subfunc_file.get_app_current_version(),
@@ -82,13 +75,14 @@ class MenuUI:
 
     def create_root_menu_bar(self):
         """创建菜单栏"""
-        # 路径检查
-        self.sw_info["data_dir"] = func_setting.get_sw_data_dir(self.sw)
-        self.sw_info["inst_path"], self.sw_info["ver"] = func_setting.get_sw_inst_path_and_ver(self.sw)
-        self.sw_info["dll_dir"] = func_setting.get_sw_dll_dir(self.sw)
+        if self.root_class.finish_started is True:
+            # 路径检查
+            self.sw_class.data_dir = func_setting.get_sw_data_dir(self.sw)
+            self.sw_class.inst_path, self.sw_class.ver = func_setting.get_sw_inst_path_and_ver(self.sw)
+            self.sw_class.dll_dir = func_setting.get_sw_dll_dir(self.sw)
 
         # 传递错误信息给主窗口
-        if self.sw_info["inst_path"] is None or self.sw_info["data_dir"] is None or self.sw_info["dll_dir"] is None:
+        if self.sw_class.inst_path is None or self.sw_class.data_dir is None or self.sw_class.dll_dir is None:
             print("路径设置错误，请点击按钮修改")
             self.path_error = True
 
@@ -114,7 +108,7 @@ class MenuUI:
                                         command=partial(func_file.clear_user_file, self.root_class.refresh))
         # >配置文件
         self.config_file_menu = tk.Menu(self.file_menu, tearoff=False)
-        if not self.sw_info["data_dir"]:
+        if not self.sw_class.data_dir:
             self.file_menu.add_command(label="配置文件  未获取")
             self.file_menu.entryconfig(f"配置文件  未获取", state="disable")
         else:
@@ -140,7 +134,7 @@ class MenuUI:
                                                         self.create_root_menu_bar))
         # -打开主dll所在文件夹
         self.file_menu.add_command(label="查看DLL目录", command=partial(func_file.open_dll_dir, self.sw))
-        if self.sw_info["data_dir"] is None:
+        if self.sw_class.data_dir is None:
             self.file_menu.entryconfig(f"查看DLL目录", state="disable")
 
         # -创建软件快捷方式
@@ -151,7 +145,7 @@ class MenuUI:
         # print(f"支持快捷启动：{quick_start_sp}")
         self.file_menu.add_command(label="创建快捷启动",
                                    command=partial(func_file.create_multiple_lnk,
-                                                   self.sw, self.states["multiple"], self.create_root_menu_bar),
+                                                   self.sw, self.sw_class.multiple_state, self.create_root_menu_bar),
                                    state="normal" if quick_start_sp is True else "disabled")
 
         # ————————————————————————————编辑菜单————————————————————————————
@@ -238,11 +232,11 @@ class MenuUI:
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
         # 防撤回和全局多开需要依赖存储路径，因此判断若无路径直接跳过菜单创建
-        if self.sw_info["data_dir"] is not None:
+        if self.sw_class.data_dir is not None:
             # -防撤回
-            self.states["revoke"], _, _ = func_sw_dll.check_dll(
-                self.sw, "revoke", self.sw_info["dll_dir"])
-            revoke_state = self.states["revoke"]
+            self.sw_class.revoke_state, _, _ = func_sw_dll.check_dll(
+                self.sw, "revoke", self.sw_class.dll_dir)
+            revoke_state = self.sw_class.revoke_state
             if revoke_state == "不可用":
                 self.settings_menu.add_command(label=f"防撤回      {revoke_state}", state="disabled")
             elif revoke_state.startswith("错误"):
@@ -255,9 +249,9 @@ class MenuUI:
                                                command=partial(self.toggle_patch_mode, mode="revoke"))
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
             # -全局多开
-            self.states['multiple'], _, _ = func_sw_dll.check_dll(
-                self.sw, "multiple", self.sw_info["dll_dir"])
-            multiple_state = self.states['multiple']
+            self.sw_class.multiple_state, _, _ = func_sw_dll.check_dll(
+                self.sw, "multiple", self.sw_class.dll_dir)
+            multiple_state = self.sw_class.multiple_state
             if multiple_state == "不可用":
                 self.settings_menu.add_command(label=f"全局多开  {multiple_state}", state="disabled")
             elif multiple_state.startswith("错误"):
@@ -269,8 +263,8 @@ class MenuUI:
                 self.settings_menu.add_command(label=f"全局多开  {multiple_state}",
                                                command=partial(self.toggle_patch_mode, mode="multiple"))
         else:
-            self.states['multiple'] = multiple_state = "不可用"
-            self.states['revoke'] = "不可用"
+            self.sw_class.multiple_state = multiple_state = "不可用"
+            self.sw_class.revoke_state = "不可用"
 
         # >多开子程序选择
         self.settings_var["rest_mode"] = tk.StringVar()  # 用于跟踪当前选中的子程序
@@ -343,6 +337,10 @@ class MenuUI:
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(
+            label="测试自启动登录账号", command=partial(self.root_class.to_login_auto_start_accounts))
+
+        self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        self.settings_menu.add_command(
             label="重置", command=partial(func_file.reset, self.root_class.initialize_in_init))
 
         # ————————————————————————————帮助菜单————————————————————————————
@@ -407,13 +405,13 @@ class MenuUI:
     def open_settings(self, sw):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
-        setting_ui.SettingWindow(settings_window, sw, self.states["multiple"],
+        setting_ui.SettingWindow(settings_window, sw, self.sw_class.multiple_state,
                                  self.root_class.refresh)
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
         try:
-            func_sw_dll.switch_dll(self.sw, mode, self.sw_info["dll_dir"])  # 执行切换操作
+            func_sw_dll.switch_dll(self.sw, mode, self.sw_class.dll_dir)  # 执行切换操作
         except Exception as e:
             messagebox.showerror("错误", f"操作失败: {str(e)}")
             logger.error(f"发生错误: {str(e)}")
@@ -447,5 +445,3 @@ class MenuUI:
         messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
         # self.r_class.refresh()
         self.create_root_menu_bar()
-
-

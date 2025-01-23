@@ -1,15 +1,15 @@
 import ctypes
 import sys
 import time
+import tkinter as tk
 from ctypes import wintypes
 
-import win32api
-import tkinter as tk
-import win32gui
-import win32con
-import uiautomation as auto
-import pygetwindow as gw
 import comtypes.client
+import pygetwindow as gw
+import uiautomation as auto
+import win32api
+import win32con
+import win32gui
 
 from utils.logger_utils import mylogger as logger
 
@@ -307,6 +307,20 @@ def get_hwnd_details_of_(hwnd):
 """通过hwnd操作"""
 
 
+def set_window_title(hwnd, new_title):
+    """
+    修改指定窗口的标题
+    :param hwnd: 窗口句柄 (int)
+    :param new_title: 新的窗口标题 (str)
+    """
+
+    # 调用 SetWindowTextW 函数，修改窗口标题
+    result = ctypes.windll.user32.SetWindowTextW(hwnd, new_title)
+
+    if result == 0:
+        raise ctypes.WinError()  # 抛出错误信息
+
+
 def do_click_in_wnd(hwnd, cx, cy):
     """
     在窗口中的相对位置点击鼠标，可以后台
@@ -495,4 +509,3 @@ def bring_tk_wnd_to_front(root, wnd, use_delay=True):
 
 if __name__ == '__main__':
     pass
-

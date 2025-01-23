@@ -77,7 +77,8 @@ class AccManagerWindow:
                 "func": self.to_add_hotkey_of_,
                 "enable_scopes": [(1, 1)],
                 "tip_scopes_dict": {
-                    "请选择一个要添加热键的账号": [(0, 0)]
+                    "请选择一个要添加热键的账号": [(0, 0)],
+                    "一个一个来啦~": [(2, None)]
                 },
             }
         }
@@ -152,14 +153,12 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
         self.wnd = None
         self.photo_images = []
         self.sign_visible = None
-        self.data_dir = None
         super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
         self.wnd = self.parent_class.wnd
         # print(f"self.wnd={self.wnd}")
         self.acc_data = self.parent_class.acc_data
-        self.data_dir = self.root_class.sw_info["data_dir"]
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
         self.columns = (" ", "快捷键", "隐藏", "自启动", "原始id", "昵称")
         sort_str = subfunc_file.fetch_global_setting_or_set_default(f"{self.table_tag}_sort")
@@ -177,7 +176,7 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
         tree.column("快捷键", minwidth=Constants.COLUMN_MIN_WIDTH["快捷键"],
                     width=Constants.COLUMN_WIDTH["快捷键"], anchor='center', stretch=tk.NO)
         tree.column("自启动", minwidth=Constants.COLUMN_MIN_WIDTH["自启动"],
-                    width=Constants.COLUMN_WIDTH["自启动"], anchor='w', stretch=tk.NO)
+                    width=Constants.COLUMN_WIDTH["自启动"], anchor='center', stretch=tk.NO)
         tree.column("隐藏", minwidth=Constants.COLUMN_MIN_WIDTH["隐藏"],
                     width=Constants.COLUMN_WIDTH["隐藏"], anchor='center', stretch=tk.NO)
         tree.column("原始id", anchor='center')
@@ -204,7 +203,7 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
                     continue
                 if table_tag == "hidden" and sw_data[acc].get("hidden", None) != True:
                     continue
-                if table_tag == "auto_start" and sw_data[acc].get("auto_start", None)!= True:
+                if table_tag == "auto_start" and sw_data[acc].get("auto_start", None) != True:
                     continue
 
                 display_name = "  " + func_account.get_acc_origin_display_name(sw, acc)
@@ -217,6 +216,9 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
                     auto_start="-",
                     nickname="请获取数据",
                 )
+
+                hidden = "√" if hidden is True else "-"
+                auto_start = "√" if auto_start is True else "-"
 
                 # 获取头像图像
                 img = func_account.get_acc_avatar_from_files(acc, sw)
@@ -262,8 +264,10 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
                 if col in tree["columns"]:
                     tree.column(col, width=width)  # 设置合适的宽度
 
+
 class AccEntity:
     def __init__(self, sw, acc):
         self.sw = sw
         self.acc = acc
+
     pass

@@ -7,6 +7,7 @@ import re
 
 import win32api
 
+
 class DLLUtils:
     @staticmethod
     def find_patterns_from_dll_in_hexadecimal(dll_path, *hex_patterns):
@@ -49,6 +50,7 @@ class DLLUtils:
 
         # 如果传入多个模式，返回布尔列表；如果只有一个，返回单一布尔值
         return results if len(results) > 1 else results[0]
+
 
 # Windows API 常量
 FO_DELETE = 0x03

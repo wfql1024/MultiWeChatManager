@@ -36,6 +36,7 @@ def get_system_dpi_by_device_caps():
     ctypes.windll.user32.ReleaseDC(0, hdc)
     return dpi
 
+
 # def get_main_monitor_scale_factor_by_ctypes():
 #     scale_factor = ctypes.windll.shcore.GetScaleFactorForDevice(0)
 #     return scale_factor

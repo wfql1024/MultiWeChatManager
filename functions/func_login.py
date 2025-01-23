@@ -3,23 +3,71 @@ import threading
 import time
 import tkinter as tk
 from tkinter import messagebox
+from typing import Dict
 
 import win32con
 import win32gui
 
-from functions import func_config, subfunc_sw, subfunc_file
+from functions import func_config, subfunc_sw, subfunc_file, func_account
 from resources import Config
 from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
-def manual_login(r_class, sw, status, window_callback):
+def login_auto_start_accounts(root, root_class):
+    all_sw_dict, = subfunc_file.get_details_from_remote_setting_json("global", all_sw=None)
+    all_sw = [key for key in all_sw_dict.keys()]
+    print("所有平台：", all_sw)
+
+    # 获取需要自启动的账号
+    can_auto_start: Dict[str, set] = {
+
+    }
+    for sw in all_sw:
+        if sw not in can_auto_start:
+            can_auto_start[sw] = set()
+        sw_data = subfunc_file.get_sw_acc_details_from_json(sw)
+        for acc in sw_data:
+            auto_start, = subfunc_file.get_sw_acc_details_from_json(sw, acc, auto_start=None)
+            if auto_start is True:
+                can_auto_start[sw].add(acc)
+    print("设置了自启动：", can_auto_start)
+
+    # 获取已经登录的账号
+    for sw in all_sw:
+        success, result = func_account.get_sw_acc_list(root, root_class, sw)
+        if success is not True:
+            continue
+        acc_list_dict, _, _ = result
+        logged_in = acc_list_dict["login"]
+        for acc in logged_in:
+            can_auto_start[sw].discard(acc)
+    print("排除已登录之后需要自启动：", can_auto_start)
+
+    if len(can_auto_start) != 0:
+        print(can_auto_start)
+        # 打印即将自动登录的提示
+        for i in range(0, 3):
+            print(f"即将自动登录：{3 - i}秒")
+            time.sleep(1)
+
+    # 遍历登录需要自启但未登录的账号
+    for sw in can_auto_start:
+        try:
+            threading.Thread(
+                target=auto_login_accounts,
+                args=(root_class, sw, list(can_auto_start[sw]))
+            ).start()
+        except Exception as e:
+            logger.error(e)
+
+
+def manual_login(root, root_class, sw):
     """
     根据状态进行手动登录过程
+    :param root: 主窗口
+    :param root_class: 主窗口类
     :param sw: 选择的软件标签
-    :param r_class: 主窗口类
-    :param window_callback: 窗口方法
-    :param status: 状态
     :return: 成功与否
     """
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
@@ -32,14 +80,17 @@ def manual_login(r_class, sw, status, window_callback):
     # 关闭配置文件锁
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
+
     hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
     subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
     subfunc_file.clear_all_acc_in_acc_json(sw)
     subfunc_file.update_all_acc_in_acc_json(sw)
+
+    state = root_class.sw_classes[sw].multiple_state
+    logger.info(f"当前模式是：{state}")
     has_mutex_dict = subfunc_sw.get_mutex_dict(sw)
-    logger.info(f"当前模式是：{status}")
-    sub_exe_process, sub_exe = subfunc_sw.open_sw(sw, status, has_mutex_dict)
+    sub_exe_process, sub_exe = subfunc_sw.open_sw(sw, state, has_mutex_dict)
     wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 20)
     if wechat_hwnd:
         subfunc_file.set_all_acc_values_to_false(sw)
@@ -56,17 +107,16 @@ def manual_login(r_class, sw, status, window_callback):
         messagebox.showerror("错误", "手动登录失败，请重试")
 
     # 刷新菜单和窗口前置
-    r_class.root.after(0, r_class.refresh_sw_main_frame)
-    window_callback()
+    root_class.root.after(0, root_class.refresh_sw_main_frame)
+    hwnd_utils.bring_tk_wnd_to_front(root, root)
 
 
-def auto_login_accounts(accounts, status, callback, sw):
+def auto_login_accounts(root_class, sw, accounts):
     """
     对选择的账号，进行全自动登录
+    :param root_class:
     :param sw: 选择的软件标签
-    :param callback:
     :param accounts: 选择的账号列表
-    :param status: 是否全局多开
     :return: 是否成功
     """
 
@@ -83,8 +133,11 @@ def auto_login_accounts(accounts, status, callback, sw):
             positions.append((x + i * (login_width + actual_gap_width), y))
         print(positions)
 
-    if len(accounts) == 0:
+    status = root_class.sw_classes[sw].multiple_state
+
+    if accounts is None or len(accounts) == 0:
         return False
+
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
         subfunc_file.get_details_from_remote_setting_json(
@@ -238,8 +291,8 @@ def auto_login_accounts(accounts, status, callback, sw):
         hs = hwnd_utils.get_hwnd_list_by_class_and_title(login_wnd_class)
         # print("等待登录完成")
         if len(hs) == 0:
-            callback()
-            return True
+            break
         if time.time() > end_time:
-            callback()
-            return True
+            break
+    root_class.root.after(0, root_class.refresh_sw_main_frame)
+    return True

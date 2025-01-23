@@ -11,7 +11,7 @@ from utils import ini_utils, sw_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
 
-def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders:list, check_sw_path_func) \
+def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders: list, check_sw_path_func) \
         -> Union[Tuple[bool, bool, Union[None, str]]]:
     """
     获取微信数据路径的结果元组
@@ -80,7 +80,6 @@ def get_sw_install_path_by_tuple(sw: str, from_setting_window=False) \
     path_type = 'inst_path'
 
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
-
 
 
 def get_sw_data_dir(sw: str, from_setting_window=False):
@@ -195,13 +194,12 @@ def get_sw_data_dir_from_other_sw(sw: str) -> list:
             paths = []
     if sw == "WeChat":
         other_path = get_sw_data_dir("Weixin")
-        if other_path and other_path!= "":
+        if other_path and other_path != "":
             return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
         else:
             return []
 
     return paths
-
 
 
 def get_sw_dll_dir_by_files(sw: str) -> list:

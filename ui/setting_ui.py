@@ -12,6 +12,7 @@ from resources import Constants, Config
 from utils import sw_utils, hwnd_utils, ini_utils
 from utils.logger_utils import mylogger as logger
 
+
 # TODO:修改下获取程序路径，程序版本以及程序版本文件夹的逻辑
 
 

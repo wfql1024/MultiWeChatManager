@@ -178,8 +178,8 @@ class StatisticWindow:
             for acc_count, stats in refresh_data:
                 min_time, count, avg_time, max_time = stats.split(",")
                 tree.insert("", "end",
-                                         values=(acc_count, min_time.replace("inf", "null"),
-                                                 int(float(count)), avg_time, max_time))
+                            values=(acc_count, min_time.replace("inf", "null"),
+                                    int(float(count)), avg_time, max_time))
             tree.config(height=len(refresh_data) + 1)
         except Exception as e:
             logger.error(e)

@@ -260,7 +260,7 @@ class ClassicRowUI:
     def add_account_row(self, parent_frame, account, login_status):
         """渲染账号所在行"""
         print(f"渲染{account}.........................................................")
-        config_status = func_config.get_config_status_by_account(account, self.data_path, self.sw)
+        config_status = func_config.get_sw_acc_login_cfg(self.sw, account, self.data_path)
 
         # 创建列表实例
         row = AccountRow(self.root, self.r_class, parent_frame, account, config_status,

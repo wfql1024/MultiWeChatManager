@@ -4,9 +4,13 @@ import os
 import sys
 import tkinter as tk
 
-from ui.main_ui import MainWindow
-from pynput import keyboard
 import pygetwindow as gw
+from pynput import keyboard
+
+from ui.main_ui import MainWindow
+
+global root_class
+
 
 def on_press(key):
     try:
@@ -17,10 +21,13 @@ def on_press(key):
     except AttributeError:
         pass
 
+
 def start_keyboard_listener():
     """启动键盘监听器"""
     with keyboard.Listener(on_press=on_press) as listener:
         listener.join()
+
+
 # SCALE_FACTOR = ctypes.windll.shcore.GetScaleFactorForDevice(0)
 
 
@@ -72,10 +79,11 @@ def main():
     print("调试模式：" + str(args.debug))
 
     root = tk.Tk()
-    MainWindow(
+    root_class = MainWindow(
         root,
         args=args
     )
+
     root.mainloop()
 
 

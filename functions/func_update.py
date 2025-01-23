@@ -28,6 +28,7 @@ def has_newer_version(curr_ver) -> bool:
             return True
     return False
 
+
 def split_vers_by_cur_from_local(current_ver) -> Union[Tuple[bool, Tuple[list, list]], Tuple[bool, str]]:
     """
     从本地获取所有版本号，然后根据当前版本号将其分为两部分：

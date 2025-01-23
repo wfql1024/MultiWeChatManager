@@ -109,7 +109,7 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
 def save_sw_setting(sw, key, value, after=None):
     changed = False
     origin_value = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
-                                  Config.INI_KEY[key])
+                                                  Config.INI_KEY[key])
     ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
                                   Config.INI_KEY[key], value)
     if after is not None:
@@ -125,7 +125,7 @@ def save_sw_setting(sw, key, value, after=None):
 def save_global_setting(key, value, after=None):
     changed = False
     origin_value = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
-                                  Config.INI_KEY[key])
+                                                  Config.INI_KEY[key])
     ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
                                   Config.INI_KEY[key], value)
     if after is not None:
@@ -138,19 +138,19 @@ def save_global_setting(key, value, after=None):
     return changed
 
 
-def get_sw_install_path_from_setting_ini(sw:str) -> list:
+def get_sw_install_path_from_setting_ini(sw: str) -> list:
     path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
                                           Config.INI_KEY['inst_path'])
     return [path] if path is not None else []
 
 
-def get_sw_data_dirs_from_setting_ini(sw:str) -> list:
+def get_sw_data_dirs_from_setting_ini(sw: str) -> list:
     path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
                                           Config.INI_KEY['data_dir'])
     return [path] if path is not None else []
 
 
-def get_sw_dll_dir_from_setting_ini(sw:str) -> list:
+def get_sw_dll_dir_from_setting_ini(sw: str) -> list:
     path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
                                           Config.INI_KEY['dll_dir'])
     return [path] if path is not None else []
@@ -451,10 +451,10 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
     return changed
 
 
-def get_curr_wx_id_from_config_file(data_dir, sw):
+def get_curr_wx_id_from_config_file(sw, data_dir):
     config_path_suffix, config_files = get_details_from_remote_setting_json(
         sw, config_path_suffix=None, config_file_list=None)
-    if len(config_files) == 0 or config_files is None:
+    if config_files is None or len(config_files) == 0:
         return None
     file = config_files[0]
     config_data_path = os.path.join(str(data_dir), str(config_path_suffix), str(file)).replace("\\", "/")
@@ -635,7 +635,7 @@ def get_app_current_version():
     return f"v{version_number}-{Config.VER_STATUS}"
 
 
-def get_file_with_correct_md5(folders:list, md5s:list):
+def get_file_with_correct_md5(folders: list, md5s: list):
     """
     从文件夹中找到md5匹配的文件
     :param folders: 文件夹列表

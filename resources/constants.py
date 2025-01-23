@@ -2,8 +2,9 @@ import configparser
 import ctypes
 import os
 import platform
-import winreg
 import tkinter as tk
+import winreg
+
 
 # 如需使用缩放因子，请直接拷贝以下部分*****************************************************************
 def get_scale_factor():
@@ -53,8 +54,11 @@ def get_scale_factor():
         # 用户选择了具体的缩放因子
         return int(scale) / 100
 
+
 # 获取屏幕缩放因子
 SCALE_FACTOR = get_scale_factor()
+
+
 # 如需使用缩放因子，请直接拷贝以上部分*****************************************************************
 
 class Constants:
@@ -140,8 +144,6 @@ class Constants:
         "padx": GRID_PAD,
         "pady": GRID_PAD
     }
-
-
 
     # 框架
     FRM_PAD = (int(16 * SF), int(16 * SF))  # 常规框架内边距

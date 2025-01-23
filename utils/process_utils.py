@@ -85,6 +85,7 @@ def remove_child_pids(pids):
 
     return pids
 
+
 def try_terminate_executable(executable_name):
     """检查指定的可执行文件是否正在运行，如果是，则终止它，并返回剩余的进程列表"""
     # 尝试终止微信进程
@@ -105,6 +106,7 @@ def try_terminate_executable(executable_name):
         time.sleep(2)
         # 检查是否所有进程都已关闭
         return [p for p in wechat_processes if p.is_running()]
+
 
 def is_process_admin(pid):
     try:

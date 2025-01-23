@@ -10,7 +10,7 @@ from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
-def get_config_status_by_account(account, data_path, sw) -> str:
+def get_sw_acc_login_cfg(sw, account, data_path) -> str:
     """
     通过账号的配置状态
     :param sw: 选择的软件标签
@@ -23,7 +23,7 @@ def get_config_status_by_account(account, data_path, sw) -> str:
         return "无配置路径"
     config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
         sw, config_path_suffix=None, config_file_list=None)
-    if len(config_files) == 0 or config_files is None:
+    if config_files is None or len(config_files) == 0:
         return "无法获取配置路径"
     file = config_files[0]
     file_suffix = file.split(".")[-1]
@@ -80,6 +80,7 @@ def operate_config(method, sw, account):
                 shutil.rmtree(p)
             else:
                 logger.error(f"配置项目异常：{p}")
+                return False, f"配置项目异常：{p}"
         except Exception as e:
             logger.error(e)
             return False, f"移除配置项目时发生错误：{str(e)}"
@@ -100,11 +101,12 @@ def operate_config(method, sw, account):
                 success_list.append(dest_path)
             else:
                 logger.error(f"配置项目异常：{origin}-{acc}")
+                return False, f"配置项目异常：{origin}-{acc}"
         except Exception as e:
             logger.error(e)
-            messagebox.showerror("错误", f"复制配置文件时发生错误：{str(e)}")
             return False, f"复制配置文件时发生错误：{str(e)}"
     return True, success_list
+
 
 def test(root_class, sw, account, multiple_status):
     """
@@ -129,6 +131,7 @@ def test(root_class, sw, account, multiple_status):
         sub_exe_process, _ = subfunc_sw.open_sw(sw, multiple_status, has_mutex_dict)
         login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(sw, login_wnd_class=None)
         wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
+        print(wechat_hwnd)
         if wechat_hwnd:
             if sub_exe_process:
                 sub_exe_process.terminate()

@@ -155,7 +155,7 @@ class ActionableTreeView(ABC):
         self.selected_items = []
         self.func_of_id_col = None
 
-        self.sort:Dict[str, bool] = {
+        self.sort: Dict[str, bool] = {
 
         }
         self.default_sort = {
@@ -616,4 +616,3 @@ class ActionableTreeView(ABC):
         tree.bind("<Motion>", partial(self.on_mouse_motion))
         self.apply_or_switch_col_order()
         self.adjust_treeview_height(None)
-

@@ -32,6 +32,7 @@ def ask_for_manual_terminate_or_force(executable):
 
     return True
 
+
 def backup_dll(sw, dll_dir):
     """备份当前的dll"""
     # 获取桌面路径
@@ -55,9 +56,13 @@ def backup_dll(sw, dll_dir):
         shutil.copyfile(dll_path, bak_path)
         shutil.copyfile(dll_path, bak_desktop_path)
 
-def check_dll(sw, mode, dll_dir, cur_sw_ver=None):
+
+def check_dll(sw, mode, dll_dir):
     """检查当前的dll状态，判断是否为全局多开或者不可用"""
     patch_dll, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll="WeChatWin.dll")
+    if patch_dll is None:
+        return "错误：该平台未适配", None, None
+
     dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
     cur_sw_ver = file_utils.get_file_version(dll_path)
     config_data = subfunc_file.try_get_local_cfg()
@@ -65,10 +70,14 @@ def check_dll(sw, mode, dll_dir, cur_sw_ver=None):
     if not config_data:
         return "错误：没有数据", None, None
 
-    result1 = config_data[sw][mode][cur_sw_ver]["STABLE"]["pattern"]
-    result2 = config_data[sw][mode][cur_sw_ver]["PATCH"]["pattern"]
-    pattern1_hex_list = result1.split(',')
-    pattern2_hex_list = result2.split(',')
+    try:
+        result1 = config_data[sw][mode][cur_sw_ver]["STABLE"]["pattern"]
+        result2 = config_data[sw][mode][cur_sw_ver]["PATCH"]["pattern"]
+        pattern1_hex_list = result1.split(',')
+        pattern2_hex_list = result2.split(',')
+    except KeyError:
+        subfunc_file.force_fetch_remote_encrypted_cfg()
+        return "错误：未找到该版本的适配", None, None
 
     try:
         for pattern1_hex, pattern2_hex in zip(pattern1_hex_list, pattern2_hex_list):
@@ -82,7 +91,6 @@ def check_dll(sw, mode, dll_dir, cur_sw_ver=None):
                 return "错误，非独一无二的特征码", None, None
         return "不可用", None, None
     except (PermissionError, FileNotFoundError, KeyError, TimeoutError, RuntimeError, Exception) as e:
-        subfunc_file.force_fetch_remote_encrypted_cfg()
         error_msg = {
             PermissionError: "权限不足，无法检查 DLL 文件。",
             FileNotFoundError: "未找到文件，请检查路径。",
@@ -92,6 +100,7 @@ def check_dll(sw, mode, dll_dir, cur_sw_ver=None):
             Exception: "发生错误。"
         }.get(type(e), "发生未知错误。")
         return f"错误：{error_msg}{str(e)}", None, None
+
 
 def switch_dll(sw, mode, dll_dir):
     """
@@ -150,4 +159,3 @@ def switch_dll(sw, mode, dll_dir):
         }.get(type(e), "发生未知错误。")
         logger.error(f"切换{mode_text}时发生错误: {str(e)}")
         messagebox.showinfo("错误", f"切换{mode_text}时发生错误: {str(e)}\n{error_msg}")
-
