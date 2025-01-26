@@ -80,6 +80,8 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
+    """主流程"""
+
     def initialize_in_init(self):
         """初始化加载"""
         # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
@@ -210,6 +212,7 @@ class MainWindow:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
                 self.root.after(0, self.create_main_ui, message)
+
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
@@ -302,6 +305,8 @@ class MainWindow:
                                           command=partial(self.root_menu.open_settings, self.sw))
         self.settings_button.pack()
 
+    """后处理"""
+
     def after_refresh_when_start(self):
         """首次启动后，无论是否成功创建账号列表，都执行"""
         if self.finish_started is True:
@@ -321,7 +326,6 @@ class MainWindow:
         self.to_login_auto_start_accounts()
 
         self.finish_started = True
-
 
     def wait_for_loading_close_and_bind(self):
         """启动时关闭等待窗口，绑定事件"""
@@ -343,6 +347,8 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
+    """功能区"""
+
     def open_debug_window(self):
         """打开调试窗口，显示所有输出日志"""
         debug_window = tk.Toplevel(self.root)
@@ -358,12 +364,13 @@ class MainWindow:
 
     def to_auto_login(self, accounts):
         """登录所选账号"""
+        login_dict = {self.sw: accounts}
         if self.root_menu.settings_values["hide_wnd"] is True:
             self.root.iconify()  # 最小化主窗口
         try:
             t = threading.Thread(
                 target=func_login.auto_login_accounts,
-                args=(self, self.sw, accounts)
+                args=(self, login_dict)
             )
             t.start()
         except Exception as e:

@@ -3,6 +3,7 @@ import sys
 import time
 import tkinter as tk
 from ctypes import wintypes
+from typing import Tuple, List
 
 import comtypes.client
 import pygetwindow as gw
@@ -506,6 +507,95 @@ def bring_tk_wnd_to_front(root, wnd, use_delay=True):
         wnd.attributes('-topmost', False)
         wnd.focus_force()
 
+
+"""窗口排列"""
+
+
+def layout_wnd_positions(wnd_cnt, login_size, screen_size):
+    """
+    计算窗口布局位置，并以字符画形式展示布局示例。
+
+    :param wnd_cnt: 窗口数量
+    :param login_size: 单个窗口的尺寸 (宽, 高)
+    :param screen_size: 屏幕的尺寸 (宽, 高)
+    :return: 每个窗口的左上角位置列表
+    """
+    login_width, login_height = login_size
+    screen_width, screen_height = screen_size
+
+    # 计算一行最多可以显示多少个
+    max_column = int(screen_width / login_width)
+    cnt_in_row = min(wnd_cnt, max_column)
+
+    positions = []
+    # 实际的间隔设置
+    actual_gap_width = int((screen_width - cnt_in_row * login_width) / (cnt_in_row + 1))
+    # 去除两边间隔总共的宽度
+    all_login_width = int(cnt_in_row * login_width + (cnt_in_row - 1) * actual_gap_width)
+    # 计算起始位置x，y
+    x = int((screen_width - all_login_width) / 2)
+    y = int((screen_height - login_height) / 2) - 25
+    # 计算每个窗口的位置
+    for i in range(wnd_cnt):
+        positions.append((
+            x + (i % cnt_in_row) * (login_width + actual_gap_width),
+            y + int((i // cnt_in_row - 0.618) * login_width)
+        ))
+
+    # 打印窗口分布示例
+    print(positions)
+    return positions
+
+
+def print_window_layout_scaled(login_size:Tuple[int, int], screen_size:Tuple[int, int],
+                               positions:List[Tuple[int, int]], max_width=120, ratio=2.5):
+    """
+    打印窗口分布的等比例缩放字符画示例，并添加屏幕边框。
+    :param ratio: 由于字符在行和列中的比例不同，需要进行比例调整
+    :param login_size: 单个窗口的尺寸 (宽, 高)
+    :param screen_size: 屏幕的尺寸 (宽, 高)
+    :param positions: 窗口左上角位置列表
+    :param max_width: 缩放后字符画的最大宽度
+    """
+    scale_factor = max_width / screen_size[0]  # 缩放比例
+    scaled_width = int(screen_size[0] * scale_factor)
+    scaled_height = int(screen_size[1] * scale_factor / ratio)
+
+    # 缩放窗口尺寸和位置
+    scaled_login_width = int(login_size[0] * scale_factor)
+    scaled_login_height = int(login_size[1] * scale_factor / ratio)
+    scaled_positions = [
+        (int(x * scale_factor), int(y * scale_factor / ratio)) for x, y in positions
+    ]
+
+    # 初始化字符画网格
+    screen_grid = [[' ' for _ in range(scaled_width)] for _ in range(scaled_height)]
+
+    # 将窗口标记到网格中
+    for i, (x, y) in enumerate(scaled_positions):
+        # 标记四个角
+        if 0 <= y < scaled_height and 0 <= x < scaled_width:
+            screen_grid[y][x] = '┌'  # 左上角
+        if 0 <= y < scaled_height and 0 <= x + scaled_login_width - 1 < scaled_width:
+            screen_grid[y][x + scaled_login_width - 1] = '┐'  # 右上角
+        if 0 <= y + scaled_login_height - 1 < scaled_height and 0 <= x < scaled_width:
+            screen_grid[y + scaled_login_height - 1][x] = '└'  # 左下角
+        if 0 <= y + scaled_login_height - 1 < scaled_height and 0 <= x + scaled_login_width - 1 < scaled_width:
+            screen_grid[y + scaled_login_height - 1][x + scaled_login_width - 1] = '┘'  # 右下角
+
+        # 标记中心的编号
+        center_y = y + scaled_login_height // 2
+        center_x = x + scaled_login_width // 2
+        if 0 <= center_y < scaled_height and 0 <= center_x < scaled_width:
+            screen_grid[center_y][center_x] = "+"
+
+    # 添加屏幕边框
+    horizontal_border = '+' + '-' * scaled_width + '+'
+    print("\n屏幕窗口布局示例（等比例缩放）：")
+    print(horizontal_border)  # 顶边框
+    for row in screen_grid:
+        print('|' + ''.join(row) + '|')  # 左右边框
+    print(horizontal_border)  # 底边框
 
 if __name__ == '__main__':
     pass

@@ -67,7 +67,8 @@ def operate_config(method, sw, account):
                         .replace("\\", "/"))
         # 构建配置字典
         origin_acc_dict.update({origin_cfg_path: acc_cfg_path})
-        print(item, origin_cfg_path, item_suffix, acc_cfg_item, acc_cfg_path, origin_acc_dict)
+        # print("\n".join([item, origin_cfg_path, item_suffix, acc_cfg_item, acc_cfg_path]))
+        print(item, origin_acc_dict)
 
     paths_to_del = list(origin_acc_dict.keys()) if method == "use" else list(origin_acc_dict.values())
 
@@ -78,9 +79,9 @@ def operate_config(method, sw, account):
                 os.remove(p)
             elif os.path.isdir(p):
                 shutil.rmtree(p)
-            else:
-                logger.error(f"配置项目异常：{p}")
-                return False, f"配置项目异常：{p}"
+            # else:
+            #     logger.error(f"配置项目异常：{p}")
+            #     return False, f"配置项目异常：{p}"
         except Exception as e:
             logger.error(e)
             return False, f"移除配置项目时发生错误：{str(e)}"
