@@ -417,13 +417,8 @@ class SoftwareInfo:
         self.dll_dir = None
         self.ver = None
         self.data_dir = None
-        self.inst_path, self.ver = None, None
+        self.inst_path = None
+        self.ver = None
         self.dll_dir = None
         self.login_accounts = None
         self.logout_accounts = None
-
-        # print("创建类完成")
-        #
-        # print(self.data_dir)
-        # print(self.inst_path)
-        # print(self.dll_dir)

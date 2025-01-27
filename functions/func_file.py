@@ -179,9 +179,9 @@ def create_app_lnk():
     desktop = winshell.desktop()
 
     # 定义子方法用于创建快捷方式
-    def create_shortcut(kind, arguments=""):
+    def create_shortcut(suffix, arguments=""):
         """创建快捷方式"""
-        formated_suffix = f"_{kind}" if kind != "" else ""
+        formated_suffix = f"_{suffix}" if suffix != "" else ""
         shortcut_path = os.path.join(desktop, f"{shortcut_name}{formated_suffix}.lnk")
         shell = Dispatch('WScript.Shell')
         shortcut = shell.CreateShortCut(shortcut_path)
@@ -190,7 +190,7 @@ def create_app_lnk():
         shortcut.WorkingDirectory = exe_dir
         shortcut.IconLocation = exe_path
         shortcut.save()
-        notice.append(f"{kind}快捷方式已创建： {shortcut_path}")
+        notice.append(f"{suffix}快捷方式已创建： {shortcut_path}")
 
     # 创建常规版本快捷方式
     create_shortcut("")  # 常规版，无后缀

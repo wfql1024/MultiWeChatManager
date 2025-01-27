@@ -3,9 +3,11 @@ import datetime as dt
 import hashlib
 import mmap
 import os
+import win32com.client
+from pathlib import Path
 import re
-
 import win32api
+import winshell
 
 
 class DLLUtils:
@@ -195,6 +197,65 @@ def get_sorted_full_versions(versions):
     # 返回按版本号排序的文件夹列表
     return sorted_versions
 
+
+def get_shortcut_target(shortcut_path):
+    """
+    从快捷方式文件中获取目标路径。
+    :param shortcut_path: 快捷方式文件的路径
+    :return: 目标路径，如果出错或不是快捷方式，则返回 None
+    """
+    try:
+        # 使用 win32com 读取快捷方式
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shortcut = shell.CreateShortcut(str(shortcut_path))
+
+        # 获取快捷方式的目标路径并返回
+        shortcut_target = Path(shortcut.TargetPath).resolve()
+        return shortcut_target
+    except Exception as e:
+        # 捕获任何异常并返回 None
+        print(f"错误: {e}")
+        return None
+
+def check_shortcut_in_folder(folder_path, target_path):
+    """
+    检查指定文件夹中的所有快捷方式，如果有快捷方式指向目标路径，返回 True 和快捷方式路径。
+
+    :param folder_path: 文件夹路径
+    :param target_path: 目标路径
+    :return: 如果找到匹配的快捷方式，则返回 (True, 快捷方式路径)，否则返回 (False, None)
+    """
+    # 确保目标路径是绝对路径
+    target_path = Path(target_path).resolve()
+    paths = []
+
+    # 获取文件夹中的所有文件
+    for file in os.listdir(folder_path):
+        file_path = Path(folder_path) / file
+        # 检查文件是否是快捷方式 (.lnk)
+        if file_path.suffix.lower() == '.lnk' and get_shortcut_target(file_path) == target_path:
+            paths.append(file_path)
+
+    if isinstance(paths, list) and len(paths) != 0:
+        # 如果找到匹配的快捷方式，返回 True 和快捷方式路径
+        return True, paths
+    # 如果没有找到匹配的快捷方式，返回 False
+    return False, None
+
+def create_shortcut_for_(target_path, shortcut_path, ico_path=None):
+    """
+    创建一个快捷方式。
+    :param shortcut_path: 快捷方式的路径
+    :param target_path: 目标路径
+    :param ico_path: 快捷方式的图标（可选）
+    """
+    # 创建快捷方式
+    with winshell.shortcut(shortcut_path) as shortcut:
+        shortcut.path = target_path
+        shortcut.working_directory = os.path.dirname(target_path)
+        # 修正icon_location的传递方式，传入一个包含路径和索引的元组
+        if ico_path:
+            shortcut.icon_location = (ico_path, 0)
 
 if __name__ == '__main__':
     # 测试

@@ -18,6 +18,7 @@ from utils.logger_utils import mylogger as logger
 class MenuUI:
     def __init__(self, root, root_class):
         """获取必要的设置项信息"""
+        self.auto_start_menu = None
         self.path_error = None
         self.multiple_err = None
         self.revoke_err = None
@@ -336,8 +337,16 @@ class MenuUI:
                             "hide_wnd", not self.settings_values["hide_wnd"], self.create_root_menu_bar))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        self.settings_menu.add_command(
-            label="测试自启动登录账号", command=partial(self.root_class.to_login_auto_start_accounts))
+        _, self.settings_values["auto_start"] = subfunc_file.check_auto_start_or_toggle_to_()
+        self.settings_var["auto_start"] = tk.BooleanVar(value=self.settings_values["auto_start"])
+        self.auto_start_menu = tk.Menu(self.settings_menu, tearoff=False)
+        self.settings_menu.add_cascade(label="自启动", menu=self.auto_start_menu)
+        self.auto_start_menu.add_checkbutton(
+            label="开机自启动", variable=self.settings_var["auto_start"],
+            command=partial(self.toggle_auto_start,
+                            not self.settings_values["auto_start"]))
+        self.auto_start_menu.add_command(
+            label="测试登录自启动账号", command=partial(self.root_class.to_login_auto_start_accounts))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(
@@ -417,6 +426,16 @@ class MenuUI:
             logger.error(f"发生错误: {str(e)}")
         finally:
             self.root_class.refresh()
+
+    def toggle_auto_start(self, value):
+        """切换是否开机自启动"""
+        success, res = subfunc_file.check_auto_start_or_toggle_to_(value)
+        self.create_root_menu_bar()
+        if success is not True:
+            messagebox.showerror("错误", res)
+            print("操作失败！")
+        else:
+            print(f"已添加自启动！" if value is True else f"已关闭自启动！")
 
     def open_rewards(self):
         """打开赞赏窗口"""

@@ -11,7 +11,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
 from resources import Config, Strings
-from utils import json_utils, ini_utils, file_utils, image_utils
+from utils import json_utils, ini_utils, file_utils, image_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 
 """获取远程配置"""
@@ -763,5 +763,46 @@ def downgrade_item_lvl_under_manual():
     json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
-if __name__ == "__main__":
-    downgrade_item_lvl_under_manual()
+def get_packed_executable():
+    """获取打包后的可执行文件路径"""
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的可执行文件
+        return sys.executable
+    else:
+        # 如果是源代码运行
+        return None
+
+
+def check_auto_start_or_toggle_to_(target_state=None):
+    startup_folder = sys_utils.get_startup_folder()
+    print(startup_folder)
+    # app_path = get_packed_executable()
+    app_path = r"D:\PortableSoftware\Tools\微信多开管理器\微信多开管理器.exe"  # 测试路径
+    print(app_path)
+
+    if app_path is None:
+        auto_start, paths = False, None
+        shortcut_path = None
+    else:
+        auto_start, paths = file_utils.check_shortcut_in_folder(startup_folder, app_path)
+        shortcut_name = os.path.splitext(os.path.basename(app_path))[0]
+        shortcut_path = os.path.join(startup_folder, f"{shortcut_name}.lnk")
+
+    if target_state is None:
+        return True, auto_start
+
+    else:
+        try:
+            if target_state is True:
+                file_utils.create_shortcut_for_(app_path, shortcut_path)
+            elif target_state is False:
+                for path in paths:
+                    file_utils.move_to_recycle_bin(path)
+            return True, None
+        except Exception as e:
+            logger.error(e)
+            return False, str(e)
+
+
+if __name__ == '__main__':
+    print(check_auto_start_or_toggle_to_())

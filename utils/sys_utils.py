@@ -2,6 +2,7 @@ import ctypes
 import platform
 import winreg
 from ctypes import wintypes
+from pathlib import Path
 
 # 定义常量
 MDT_EFFECTIVE_DPI = 0  # 有效 DPI（当前缩放）
@@ -35,6 +36,19 @@ def get_system_dpi_by_device_caps():
     dpi = ctypes.windll.gdi32.GetDeviceCaps(hdc, 88)  # LOGPIXELSX = 88
     ctypes.windll.user32.ReleaseDC(0, hdc)
     return dpi
+
+def get_startup_folder():
+    # 定义常量：Startup 文件夹的 CSIDL 值
+    CSIDL_STARTUP = 7
+    MAX_PATH = 260
+
+    # 创建缓冲区存储路径
+    buf = ctypes.create_unicode_buffer(MAX_PATH)
+
+    # 调用 SHGetFolderPath 获取路径
+    ctypes.windll.shell32.SHGetFolderPathW(None, CSIDL_STARTUP, None, 0, buf)
+
+    return Path(buf.value)
 
 
 # def get_main_monitor_scale_factor_by_ctypes():
