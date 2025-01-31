@@ -28,6 +28,9 @@ class DetailWindow:
         self.account = account
         self.update_callback = update_callback
         self.tooltips = {}  # 初始化 tooltip 属性
+        self.hotkey_var = tk.StringVar()
+        self.last_valid_hotkey = ""  # 记录上一个有效的快捷键
+        self.current_keys = set()  # 当前按下的键
 
         # 禁用窗口大小调整
         self.wnd.resizable(False, False)
@@ -75,6 +78,16 @@ class DetailWindow:
         self.note_entry = ttk.Entry(self.note_frame, textvariable=self.note_var, width=30)
         self.note_entry.pack(side=tk.LEFT)
 
+        # 热键
+        hotkey, = subfunc_file.get_sw_acc_details_from_json(self.sw, self.account, hotkey=None)
+        self.hotkey_var = tk.StringVar(value="") if hotkey is None else tk.StringVar(value=hotkey)
+        self.hotkey_frame = ttk.Frame(frame)
+        self.hotkey_frame.pack(anchor="w", **Constants.T_WGT_PACK)
+        hotkey_label = ttk.Label(self.hotkey_frame, text="热键：")
+        hotkey_label.pack(side=tk.LEFT, anchor="w")
+        self.hotkey_entry = ttk.Entry(self.hotkey_frame, textvariable=self.hotkey_var, width=30)
+        self.hotkey_entry.pack(side=tk.LEFT)
+
         # 隐藏账号
         self.hidden_frame = ttk.Frame(frame)
         self.hidden, = subfunc_file.get_sw_acc_details_from_json(sw, account, hidden=False)
@@ -114,6 +127,61 @@ class DetailWindow:
         hwnd_utils.bring_tk_wnd_to_center(self.wnd, wnd_width, wnd_height)
         self.wnd.deiconify()
         wnd.grab_set()
+
+        # 绑定事件
+        self.hotkey_entry.bind("<FocusIn>", self.start_recording)
+        self.hotkey_entry.bind("<KeyPress>", self.on_key_press)
+        self.hotkey_entry.bind("<KeyRelease>", self.on_key_release)
+
+    def start_recording(self, event):
+        """ 清空当前录制状态 """
+        self.current_keys.clear()
+
+    def normalize_key(self, key):
+        """ 统一修饰键的名称，去掉左右区分 """
+        key_map = {
+            "Shift_L": "Shift", "Shift_R": "Shift",
+            "Control_L": "Ctrl", "Control_R": "Ctrl",
+            "Alt_L": "Alt", "Alt_R": "Alt",
+            "Win_L": "Win", "Win_R": "Win"
+        }
+        return key_map.get(key, key)  # 如果是修饰键则转换，否则原样返回
+
+    def sort_keys(self, keys):
+        """ 按 Ctrl → Alt → Shift → Win → 其他 的顺序排序 """
+        order = {"Ctrl": 1, "Alt": 2, "Shift": 3, "Win": 4}
+        return sorted(keys, key=lambda k: order.get(k, 5))  # 未定义的按键放最后
+
+    def on_key_press(self, event):
+        """ 按键时实时显示组合键 """
+        key = self.normalize_key(event.keysym)  # 规范化按键名称
+        print("按着", key)
+        self.current_keys.add(key)
+
+        # 生成排序后的快捷键字符串
+        hotkey_text = "+".join(self.sort_keys(self.current_keys))
+        print(hotkey_text)
+        self.hotkey_var.set(hotkey_text)
+
+        # 判断是否包含非修饰键
+        if self.is_valid_hotkey(self.current_keys):
+            self.last_valid_hotkey = hotkey_text  # 记录有效快捷键
+
+    def on_key_release(self, event):
+        """ 松开按键时，判断是否有效并更新记录 """
+        key = self.normalize_key(event.keysym)  # 规范化按键名称
+        print("松开", key)
+        if key in self.current_keys:
+            self.current_keys.remove(key)
+        self.hotkey_var.set(self.last_valid_hotkey)  # 恢复上一次的快捷键
+
+
+    def is_valid_hotkey(self, keys):
+        """ 判断快捷键是否有效（是否包含非修饰键） """
+        modifier_keys = {"Shift", "Ctrl", "Alt", "Win"}
+        valid = any(key not in modifier_keys for key in keys)
+        print(f"{keys}是valid={valid}")
+        return valid
 
     def load_data_label(self):
         print(f"加载数据...")

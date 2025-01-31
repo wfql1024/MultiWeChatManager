@@ -99,6 +99,7 @@ class AccManagerWindow:
             self, "all", "所有账号：", None,
             self.btn_dict["add_auto_start_btn"],
             self.btn_dict["add_hiding_btn"],
+            self.btn_dict["add_hotkey_btn"],
         )
 
         # 加载完成后更新一下界面并且触发事件

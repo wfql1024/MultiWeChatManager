@@ -362,11 +362,18 @@ class MainWindow:
             args=(self.root, self, self.sw)
         ).start()
 
-    def to_auto_login(self, accounts):
+    def to_auto_login(self, items):
         """登录所选账号"""
-        login_dict = {self.sw: accounts}
+        login_dict = {}
+        for item in items:
+            sw, acc = item.split("/")
+            if sw not in login_dict:
+                login_dict[sw] = []
+            login_dict[sw].append(acc)
+
         if self.root_menu.settings_values["hide_wnd"] is True:
             self.root.iconify()  # 最小化主窗口
+
         try:
             t = threading.Thread(
                 target=func_login.auto_login_accounts,
@@ -376,13 +383,15 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
-    def to_create_config(self, accounts):
+    def to_create_config(self, items):
         """按钮：创建或重新配置"""
+        accounts = [items.split("/")[1] for items in items]
         threading.Thread(target=func_config.test,
                          args=(self, self.sw, accounts[0], self.sw_classes[self.sw].multiple_state)).start()
 
-    def to_quit_accounts(self, accounts):
+    def to_quit_accounts(self, items):
         """退出所选账号"""
+        accounts = [items.split("/")[1] for items in items]
         answer = func_account.quit_selected_accounts(self.sw, accounts)
         if answer is True:
             self.refresh_sw_main_frame(self.sw)
@@ -393,13 +402,14 @@ class MainWindow:
                                   args=(self.root, self))
         thread.start()
 
-    def open_acc_detail(self, account, event=None):
+    def open_acc_detail(self, item, event=None):
         """打开详情窗口"""
         if event is None:
             pass
+        sw, acc = item.split("/")
         detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(self.root, self.root, detail_window, self.sw,
-                               account, self.refresh_sw_main_frame)
+        detail_ui.DetailWindow(self.root, self.root, detail_window, sw,
+                               acc, self.refresh_sw_main_frame)
 
 
 class SoftwareInfo:

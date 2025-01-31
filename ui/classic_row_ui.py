@@ -20,13 +20,15 @@ class AccountRow:
                  login_status, update_top_checkbox_callback, sw):
         self.sw = sw
         self.root = root
-        self.r_class = r_class
+        self.root_class = r_class
         self.config_status = config_status
         self.start_time = time.time()
         self.tooltips = {}
         self.update_top_checkbox_callback = update_top_checkbox_callback
         self.login_status = login_status
         # print(f"初始化用时{time.time() - self.start_time:.4f}秒")
+
+        iid = f"{self.sw}/{account}"
 
         # 行框架=复选框+头像标签+账号标签+按钮区域+配置标签
         self.row_frame = ttk.Frame(parent_frame)
@@ -86,7 +88,7 @@ class AccountRow:
             self.config_button_text = "重新配置" if self.config_status != "无配置" else "添加配置"
             self.config_button = ttk.Button(
                 self.button_frame, text=self.config_button_text, style='Custom.TButton',
-                command=partial(self.r_class.to_create_config, [account])
+                command=partial(self.root_class.to_create_config, [iid])
             )
             self.config_button.pack(side=tk.RIGHT)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
@@ -96,7 +98,7 @@ class AccountRow:
             # 登录按钮
             self.login_button = ttk.Button(
                 self.button_frame, text="自动登录", style='Custom.TButton',
-                command=lambda: self.r_class.to_auto_login([account]))
+                command=lambda: self.root_class.to_auto_login([iid]))
             self.login_button.pack(side=tk.RIGHT)
 
             if self.config_status == "无配置":
@@ -112,11 +114,13 @@ class AccountRow:
                     child.bind("<Button-1>", self.toggle_checkbox, add="+")
         # print(f"加载配置/登录区域用时{time.time() - self.start_time:.4f}秒")
 
+
+
         # 头像绑定详情事件
         widget_utils.UnlimitedClickHandler(
             self.root,
             self.avatar_label,
-            partial(self.r_class.open_acc_detail, account),
+            partial(self.root_class.open_acc_detail, iid),
             partial(subfunc_sw.switch_to_sw_account_wnd, self.sw, account, self.root)
         )
 
@@ -358,6 +362,6 @@ class ClassicRowUI:
 
     def get_selected_accounts(self, login_status):
         """获取已登录列表"""
-        accounts = [account for account, row in self.rows[login_status].items() if row.checkbox_var.get()]
-        print(accounts)
-        return accounts
+        items = [f"{self.sw}/{account}" for account, row in self.rows[login_status].items() if row.checkbox_var.get()]
+        print(items)
+        return items

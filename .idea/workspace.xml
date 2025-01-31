@@ -4,14 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="修复账号自启动登录过程中不同线程间的冲突">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="完善软件自启动功能">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/acc_manager_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/acc_manager_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/classic_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/classic_row_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/detail_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/detail_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/sys_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/sys_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/treeview_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/treeview_row_ui.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -638,15 +637,8 @@
       <workItem from="1737695371818" duration="9176000" />
       <workItem from="1737780638592" duration="8891000" />
       <workItem from="1737827755286" duration="24995000" />
-      <workItem from="1737959340001" duration="4326000" />
-    </task>
-    <task id="LOCAL-00181" summary="新版2.11待发布">
-      <option name="closed" value="true" />
-      <created>1733971047784</created>
-      <option name="number" value="00181" />
-      <option name="presentableId" value="LOCAL-00181" />
-      <option name="project" value="LOCAL" />
-      <updated>1733971047785</updated>
+      <workItem from="1737959340001" duration="22184000" />
+      <workItem from="1738300656834" duration="1015000" />
     </task>
     <task id="LOCAL-00182" summary="更新适配表~">
       <option name="closed" value="true" />
@@ -1032,7 +1024,15 @@
       <option name="project" value="LOCAL" />
       <updated>1737881278378</updated>
     </task>
-    <option name="localTasksCounter" value="230" />
+    <task id="LOCAL-00230" summary="完善软件自启动功能">
+      <option name="closed" value="true" />
+      <created>1737971033376</created>
+      <option name="number" value="00230" />
+      <option name="presentableId" value="LOCAL-00230" />
+      <option name="project" value="LOCAL" />
+      <updated>1737971033376</updated>
+    </task>
+    <option name="localTasksCounter" value="231" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1097,7 +1097,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="规范化“路径获取”相关代码" />
     <MESSAGE value="更新适配4.0.1.20" />
     <MESSAGE value="优化函数调用，新增选择是否隐藏主窗口登录的选项" />
     <MESSAGE value="主界面ui代码优化，分离出菜单代码" />
@@ -1122,11 +1121,12 @@
     <MESSAGE value="打包测试过程中发现一些问题并修复：启动时的错误处理机制" />
     <MESSAGE value="优化刷新机制和自启动登录时获取所有平台列表的方法，减少时间浪费" />
     <MESSAGE value="修复账号自启动登录过程中不同线程间的冲突" />
-    <option name="LAST_COMMIT_MESSAGE" value="修复账号自启动登录过程中不同线程间的冲突" />
+    <MESSAGE value="完善软件自启动功能" />
+    <option name="LAST_COMMIT_MESSAGE" value="完善软件自启动功能" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_multiple.coverage" NAME="wechat_multiple Coverage Results" MODIFIED="1726457491071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/mutex" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1737970210797" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1738301532374" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$hwnd_utils.coverage" NAME="hwnd_utils Coverage Results" MODIFIED="1732812542774" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_wechat_dll.coverage" NAME="func_wechat_dll Coverage Results" MODIFIED="1727833508675" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />

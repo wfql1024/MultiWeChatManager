@@ -145,16 +145,18 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
             suffix = Strings.CFG_SIGN if account == curr_config_acc and self.sign_visible else ""
             config_status = "" + str(config_status) + suffix
 
+            iid = f"{self.sw}/{account}"
+
             try:
-                tree.insert("", "end", iid=account, image=photo,
+                tree.insert("", "end", iid=iid, image=photo,
                             values=(display_name, config_status, pid, account, alias, nickname))
             except Exception as ec:
                 logger.warning(ec)
-                tree.insert("", "end", iid=account, image=photo,
+                tree.insert("", "end", iid=iid, image=photo,
                             values=string_utils.clean_texts(
                                 display_name, config_status, pid, account, alias, nickname))
 
             if config_status == "无配置" and login_status == "logout":
-                widget_utils.add_a_tag_to_item(tree, account, "disabled")
+                widget_utils.add_a_tag_to_item(tree, iid, "disabled")
 
         self.adjust_treeview_height(None)
