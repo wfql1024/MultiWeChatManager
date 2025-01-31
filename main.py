@@ -79,7 +79,7 @@ def main():
     print("调试模式：" + str(args.debug))
 
     root = tk.Tk()
-    root_class = MainWindow(
+    MainWindow(
         root,
         args=args
     )

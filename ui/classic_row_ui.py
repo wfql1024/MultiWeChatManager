@@ -121,7 +121,7 @@ class AccountRow:
             self.root,
             self.avatar_label,
             partial(self.root_class.open_acc_detail, iid),
-            partial(subfunc_sw.switch_to_sw_account_wnd, self.sw, account, self.root)
+            partial(subfunc_sw.switch_to_sw_account_wnd, iid, self.root)
         )
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")

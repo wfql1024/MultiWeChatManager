@@ -6,6 +6,8 @@ import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk
+import keyboard
+
 
 from functions import func_login, func_file, func_account, subfunc_file, func_config, func_setting
 from public_class import reusable_widget
@@ -79,6 +81,27 @@ class MainWindow:
             self.initialize_in_init()
         except Exception as e:
             logger.error(e)
+
+        self.hotkey_map = {
+            "Shift+Ctrl+Alt+A": lambda: print("执行任务 A"),
+            "Shift+8": lambda: print("执行任务 B"),
+            "Shift+*": lambda: print("执行任务 C"),
+            "*": lambda: print("执行任务 D"),
+        }
+
+        # 在子线程中运行监听
+        listener_thread = threading.Thread(target=self.start_hotkey_listener, daemon=True)
+        listener_thread.start()
+
+    def start_hotkey_listener(self):
+        """启动全局快捷键监听"""
+        for hk in self.hotkey_map:
+            keyboard.add_hotkey(hk, lambda hotkey=hk: self.execute_task(hotkey))
+
+        keyboard.wait()  # 让监听线程保持运行
+    def execute_task(self, hotkey):
+        if hotkey in self.hotkey_map:
+            self.hotkey_map[hotkey]()  # 执行绑定的任务
 
     """主流程"""
 

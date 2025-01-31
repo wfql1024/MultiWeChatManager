@@ -10,16 +10,17 @@ from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_util
 from utils.logger_utils import mylogger as logger
 
 
-def switch_to_sw_account_wnd(sw, acc, program_wnd, event=None):
+def switch_to_sw_account_wnd(item_id, root, event=None):
     if event is None:
         pass
+    sw, acc = item_id.split("/")
     main_wnd_class, = subfunc_file.get_details_from_remote_setting_json(
         sw, main_wnd_class=None)
     classes = [main_wnd_class]
     main_hwnd, = subfunc_file.get_sw_acc_details_from_json(sw, acc, main_hwnd=None)
 
     # 程序主窗口左移
-    hwnd_utils.bring_tk_wnd_to_left(program_wnd)
+    hwnd_utils.bring_tk_wnd_to_left(root)
     # 隐藏所有平台主窗口
     hwnd_utils.hide_all_by_wnd_classes(classes)
     # 恢复平台指定主窗口

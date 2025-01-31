@@ -12,6 +12,154 @@ from resources import Constants
 from utils import widget_utils, string_utils, debug_utils
 from utils.logger_utils import mylogger as logger
 from utils.widget_utils import TreeUtils
+import keyboard
+
+
+class HotkeyEntry4Keyboard:
+    def __init__(self, set_hotkey, hotkey_frame):
+        self.last_valid_hotkey = None
+        self.current_keys = set()
+        self.hotkey_var = tk.StringVar(value="") if set_hotkey is None else tk.StringVar(value=set_hotkey)
+        self.hotkey_entry = ttk.Entry(hotkey_frame, textvariable=self.hotkey_var, width=30)
+        self.hotkey_entry.pack(side=tk.LEFT)
+
+        # 绑定焦点事件
+        self.hotkey_entry.bind("<FocusIn>", self.start_recording)
+        self.hotkey_entry.bind("<FocusOut>", self.stop_recording)
+
+    def start_recording(self, event=None):
+        """ 开始监听键盘 """
+        self.current_keys.clear()
+        keyboard.hook(self.on_key_event)
+
+    def stop_recording(self, event=None):
+        """ 停止监听键盘 """
+        keyboard.unhook_all()
+
+    def on_key_event(self, event):
+        """ 处理按键事件（按下/松开） """
+        key = event.name.capitalize()  # keyboard 库的按键名已经是标准化的
+        print(f"{'按下' if event.event_type == 'down' else '松开'}：{key}")
+
+        if event.event_type == "down":
+            self.current_keys.add(key)
+        elif event.event_type == "up":
+            self.current_keys.discard(key)
+
+        # 生成快捷键字符串
+        hotkey_text = "+".join(self.sort_keys(self.current_keys))
+        self.hotkey_var.set(hotkey_text)
+
+        if self.is_valid_hotkey(self.current_keys):
+            self.last_valid_hotkey = hotkey_text
+
+        self.hotkey_var.set(self.last_valid_hotkey)
+
+    @staticmethod
+    def sort_keys(keys):
+        """ 按 Ctrl → Alt → Shift → Win → 其他 的顺序排序 """
+        order = {"Ctrl": 1, "Alt": 2, "Shift": 3, "Win": 4}
+        return sorted(keys, key=lambda k: order.get(k, 5))  # 未定义的按键放最后
+
+    @staticmethod
+    def is_valid_hotkey(keys):
+        """ 判断快捷键是否有效（必须包含 1 个非修饰键 + 至少 1 个修饰键） """
+        modifier_keys = {"Shift", "Ctrl", "Alt", "Win"}
+        non_modifier_keys = [key for key in keys if key not in modifier_keys]
+        valid = len(non_modifier_keys) == 1 and any(key in modifier_keys for key in keys)
+        print(f"{keys} 是 valid={valid}")
+        return valid
+
+
+class HotkeyEntry:
+    def __init__(self, set_hotkey, hotkey_frame):
+        self.last_valid_hotkey = None
+        self.current_keys = set()
+        self.hotkey_var = tk.StringVar(value="") if set_hotkey is None else tk.StringVar(value=set_hotkey)
+        self.hotkey_entry = ttk.Entry(hotkey_frame, textvariable=self.hotkey_var, width=30)
+        self.hotkey_entry.pack(side=tk.LEFT)
+
+        # 绑定事件
+        self.hotkey_entry.bind("<FocusIn>", self.start_recording)
+        self.hotkey_entry.bind("<KeyPress>", self.on_key_press)
+        self.hotkey_entry.bind("<KeyRelease>", self.on_key_release)
+
+    def start_recording(self, event):
+        """ 清空当前录制状态 """
+        if event:
+            pass
+        self.current_keys.clear()
+
+    @staticmethod
+    def normalize_key(key, keycode):
+        """ 统一按键名称，包括修饰键、数字键、字母键大小写 """
+        key_map = {
+            "Shift_L": "Shift", "Shift_R": "Shift",
+            "Control_L": "Ctrl", "Control_R": "Ctrl",
+            "Alt_L": "Alt", "Alt_R": "Alt",
+            "Win_L": "Win", "Win_R": "Win",
+            "minus": "-", "equal": "=",
+            "comma": ",", "period": ".",
+            "slash": "/", "backslash": "\\",
+            "bracketleft": "[", "bracketright": "]",
+            "semicolon": ";", "quoteright": "'",
+            "quoteleft": "`", "space": "Space"
+        }
+
+        # 修饰键归一化
+        if key in key_map:
+            return key_map[key]
+
+        # 数字键（不受 Shift 影响）
+        if keycode in range(48, 58):  # 0-9
+            return chr(keycode)
+
+        # 字母键始终大写
+        if len(key) == 1 and key.isalpha():
+            return key.upper()
+
+        return key  # 其他按键保持原样
+
+    @staticmethod
+    def sort_keys(keys):
+        """ 按 Ctrl → Alt → Shift → Win → 其他 的顺序排序 """
+        order = {"Ctrl": 1, "Alt": 2, "Shift": 3, "Win": 4}
+        return sorted(keys, key=lambda k: order.get(k, 5))  # 未定义的按键放最后
+
+    @staticmethod
+    def is_valid_hotkey(keys):
+        """ 判断快捷键是否有效（是否包含非修饰键） """
+        modifier_keys = {"Shift", "Ctrl", "Alt", "Win"}
+        non_modifier_keys = [key for key in keys if key not in modifier_keys]  # 找出所有非修饰键
+        # 判断方式：需要包含非修饰键，且至少有一个修饰键
+        valid = len(non_modifier_keys) == 1 and any(key in modifier_keys for key in keys)
+        print(f"{keys}是valid={valid}")
+        return valid
+
+    def on_key_press(self, event):
+        key = self.normalize_key(event.keysym, event.keycode)
+        print("按着", key, chr(event.keycode))
+        self.current_keys.add(key)
+
+        hotkey_text = "+".join(self.sort_keys(self.current_keys))
+        print(hotkey_text)
+        self.hotkey_var.set(hotkey_text)
+
+        if self.is_valid_hotkey(self.current_keys):
+            self.last_valid_hotkey = hotkey_text
+
+        return "break"
+
+    def on_key_release(self, event):
+        key = self.normalize_key(event.keysym, event.keycode)
+        print("松开", key)
+        if "??" in self.current_keys:
+            self.current_keys.remove("??")
+        if key in self.current_keys:
+            self.current_keys.remove(key)
+        self.hotkey_var.set(self.last_valid_hotkey)
+
+        return "break"
 
 
 class StatusBar:
@@ -459,8 +607,7 @@ class ActionableTreeView(ABC):
 
         # 图片列双击切换窗口
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            subfunc_sw.switch_to_sw_account_wnd(
-                self.sw, item_id, self.root)
+            subfunc_sw.switch_to_sw_account_wnd(item_id, self.root)
         else:
             if item_id:
                 # 取消所有选择
