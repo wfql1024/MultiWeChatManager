@@ -16,8 +16,20 @@ import keyboard
 
 
 class HotkeyEntry4Keyboard:
+    SHIFT_SYMBOL_MAP = {
+        "(": "9", "*": "8", "&": "7", "^": "6", "%": "5", "$": "4", "#": "3", "@": "2", "!": "1", ")": "0",
+        "_": "-", "+": "=", "~": "`",
+        "}": "]", "{": "[", "|": "\\",
+        ":": ";", '"': "'",
+        "<": ",", ">": ".", "?": "/",
+        "left windows": "Win", "right windows": "Win",
+        "left ctrl": "Ctrl", "right ctrl": "Ctrl",
+        "left alt": "Alt", "right alt": "Alt",
+        "left shift": "Shift", "right shift": "Shift",
+    }
+
     def __init__(self, set_hotkey, hotkey_frame):
-        self.last_valid_hotkey = None
+        self.last_valid_hotkey = ""
         self.current_keys = set()
         self.hotkey_var = tk.StringVar(value="") if set_hotkey is None else tk.StringVar(value=set_hotkey)
         self.hotkey_entry = ttk.Entry(hotkey_frame, textvariable=self.hotkey_var, width=30)
@@ -29,49 +41,71 @@ class HotkeyEntry4Keyboard:
 
     def start_recording(self, event=None):
         """ 开始监听键盘 """
+        if event:
+            pass
         self.current_keys.clear()
+
         keyboard.hook(self.on_key_event)
 
-    def stop_recording(self, event=None):
+    @staticmethod
+    def stop_recording(event=None):
         """ 停止监听键盘 """
+        if event:
+            pass
         keyboard.unhook_all()
 
     def on_key_event(self, event):
         """ 处理按键事件（按下/松开） """
-        key = event.name.capitalize()  # keyboard 库的按键名已经是标准化的
-        print(f"{'按下' if event.event_type == 'down' else '松开'}：{key}")
+        key = self.normalize_key(event.name, event)
 
         if event.event_type == "down":
             self.current_keys.add(key)
         elif event.event_type == "up":
             self.current_keys.discard(key)
 
-        # 生成快捷键字符串
         hotkey_text = "+".join(self.sort_keys(self.current_keys))
         self.hotkey_var.set(hotkey_text)
-
         if self.is_valid_hotkey(self.current_keys):
             self.last_valid_hotkey = hotkey_text
 
-        self.hotkey_var.set(self.last_valid_hotkey)
+        if event.event_type == "up":
+            self.hotkey_var.set(self.last_valid_hotkey)
+
+    def normalize_key(self, key, event):
+        """ 标准化按键（避免 Shift+符号 变成两个快捷键） """
+        # print(key)
+        if event:
+            pass
+        if key.lower() in self.SHIFT_SYMBOL_MAP:
+            key = self.SHIFT_SYMBOL_MAP[key]  # 统一成非 Shift 状态下的符号
+            # print(key)
+        return key.capitalize()  # 统一大小写，如 k → K
 
     @staticmethod
     def sort_keys(keys):
         """ 按 Ctrl → Alt → Shift → Win → 其他 的顺序排序 """
         order = {"Ctrl": 1, "Alt": 2, "Shift": 3, "Win": 4}
-        return sorted(keys, key=lambda k: order.get(k, 5))  # 未定义的按键放最后
+        return sorted(keys, key=lambda k: order.get(k, 5))
 
     @staticmethod
     def is_valid_hotkey(keys):
-        """ 判断快捷键是否有效（必须包含 1 个非修饰键 + 至少 1 个修饰键） """
+        """ 判断快捷键是否有效（必须包含 1 个非修饰键 + 至少 1 个修饰键，F1~F12 可单独存在） """
         modifier_keys = {"Shift", "Ctrl", "Alt", "Win"}
+        function_keys = {f"F{i}" for i in range(1, 13)}  # F1~F12 允许单独出现
+
         non_modifier_keys = [key for key in keys if key not in modifier_keys]
-        valid = len(non_modifier_keys) == 1 and any(key in modifier_keys for key in keys)
-        print(f"{keys} 是 valid={valid}")
+
+        # 规则：
+        # 1. 至少包含 1 个非修饰键 + 1 个修饰键
+        # 2. 如果唯一的非修饰键是 F1~F12，则可以单独出现
+        valid = (
+                        len(non_modifier_keys) == 1 and any(key in modifier_keys for key in keys)
+                ) or (len(non_modifier_keys) == 1 and non_modifier_keys[0] in function_keys)
+
         return valid
 
 
-class HotkeyEntry:
+class HotkeyEntry4Tkinter:
     def __init__(self, set_hotkey, hotkey_frame):
         self.last_valid_hotkey = None
         self.current_keys = set()

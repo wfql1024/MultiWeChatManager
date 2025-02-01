@@ -10,9 +10,7 @@ from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_util
 from utils.logger_utils import mylogger as logger
 
 
-def switch_to_sw_account_wnd(item_id, root, event=None):
-    if event is None:
-        pass
+def switch_to_sw_account_wnd(item_id, root):
     sw, acc = item_id.split("/")
     main_wnd_class, = subfunc_file.get_details_from_remote_setting_json(
         sw, main_wnd_class=None)

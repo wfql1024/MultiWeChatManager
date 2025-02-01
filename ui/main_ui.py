@@ -1,4 +1,5 @@
 # main_ui.py
+import json
 import os
 import sys
 import threading
@@ -9,7 +10,7 @@ from tkinter import ttk
 import keyboard
 
 
-from functions import func_login, func_file, func_account, subfunc_file, func_config, func_setting
+from functions import func_login, func_file, func_account, subfunc_file, func_config, func_setting, subfunc_sw
 from public_class import reusable_widget
 from resources import Strings, Config, Constants
 from ui import debug_ui, classic_row_ui, treeview_row_ui, loading_ui, detail_ui, menu_ui
@@ -83,22 +84,62 @@ class MainWindow:
             logger.error(e)
 
         self.hotkey_map = {
-            "Shift+Ctrl+Alt+A": lambda: print("执行任务 A"),
-            "Shift+8": lambda: print("执行任务 B"),
-            "Shift+*": lambda: print("执行任务 C"),
-            "*": lambda: print("执行任务 D"),
         }
+
+        self.listener_thread = None  # 监听线程
+        self.stop_event = threading.Event()  # 用于控制线程退出
 
         # 在子线程中运行监听
         listener_thread = threading.Thread(target=self.start_hotkey_listener, daemon=True)
         listener_thread.start()
 
+    def load_hotkeys_from_json(self, json_path):
+        """ 从 JSON 文件加载快捷键映射 """
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        hotkey_map = {}
+        for sw, accounts in data.items():
+            for acc, details in accounts.items():
+                if isinstance(details, dict) and "hotkey" in details:
+                    hotkey = details["hotkey"]
+                    if hotkey is not None and hotkey != "":  # 确保 hotkey 不是 None 或 空字符串
+                        hotkey_map[hotkey] = \
+                            lambda software=sw, account=acc: self.to_switch_to_sw_account_wnd(f"{software}/{account}")
+
+        # 更新映射
+        self.hotkey_map = hotkey_map
+        print(self.hotkey_map)
+
     def start_hotkey_listener(self):
-        """启动全局快捷键监听"""
+        """ 启动全局快捷键监听 """
+        if self.listener_thread and self.listener_thread.is_alive():
+            return  # 避免重复启动
+
+        # 先清除之前的快捷键绑定
+        keyboard.unhook_all()
+
+        # 注册新的快捷键
         for hk in self.hotkey_map:
             keyboard.add_hotkey(hk, lambda hotkey=hk: self.execute_task(hotkey))
 
-        keyboard.wait()  # 让监听线程保持运行
+        # 启动监听线程
+        self.stop_event.clear()
+        self.listener_thread = threading.Thread(target=self._hotkey_listener, daemon=True)
+        self.listener_thread.start()
+
+    def _hotkey_listener(self):
+        """ 热键监听线程，等待退出信号 """
+        while not self.stop_event.is_set():
+            keyboard.wait()  # 等待快捷键事件，直到 stop_event 触发
+
+    def stop_hotkey_listener(self):
+        """ 停止全局快捷键监听 """
+        if self.listener_thread and self.listener_thread.is_alive():
+            self.stop_event.set()  # 设置退出信号
+            keyboard.unhook_all()  # 取消所有快捷键监听
+            self.listener_thread = None  # 清除线程引用
+
     def execute_task(self, hotkey):
         if hotkey in self.hotkey_map:
             self.hotkey_map[hotkey]()  # 执行绑定的任务
@@ -311,6 +352,13 @@ class MainWindow:
         # 进行静默获取头像及配置
         func_account.silent_get_and_config(self.root, self, self.sw, login, logout)
 
+        # 先停止旧的监听线程
+        self.stop_hotkey_listener()
+        # 更新快捷键
+        self.load_hotkeys_from_json(Config.TAB_ACC_JSON_PATH)
+
+        self.start_hotkey_listener()
+
         self.after_success_create_acc_ui_when_start()
 
     def show_setting_error(self):
@@ -433,6 +481,9 @@ class MainWindow:
         detail_window = tk.Toplevel(self.root)
         detail_ui.DetailWindow(self.root, self.root, detail_window, sw,
                                acc, self.refresh_sw_main_frame)
+
+    def to_switch_to_sw_account_wnd(self, item, event=None):
+        subfunc_sw.switch_to_sw_account_wnd(item, self.root)
 
 
 class SoftwareInfo:
