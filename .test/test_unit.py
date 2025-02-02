@@ -61,3 +61,8 @@ class Test(TestCase):
         test_hwnd = hwnd_utils.get_hwnd_list_by_pid_and_class(pid, target_class)
         hwnd_utils.hide_all_by_wnd_classes([target_class])
         print("Found HWNDs:", test_hwnd)
+
+    def test_calculate_md5(self):
+        file_path = r"E:\Now\QuickCenter\WorkBench\技术梦想\项目\MultiWeChatManager\Releases\MultiWeChatManager_win10+_x64_v2.15.0.1458-Beta.zip"
+        md5 = file_utils.calculate_md5(file_path)
+        print(md5)
