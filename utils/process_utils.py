@@ -228,7 +228,7 @@ def process_exists(pid):
         return False
 
 
-def get_process_ids_by_name(process_name):
+def get_process_ids_by_name(process_name) -> list:
     """通过进程名获取所有的进程id"""
     matching_processes = []
     try:

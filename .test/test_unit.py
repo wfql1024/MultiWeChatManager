@@ -53,7 +53,7 @@ class Test(TestCase):
 
     def test_move_to_recycle_bin(self):
         file_to_delete = r"E:\Now\Desktop\微信多开管理器_调试版.lnk"
-        file_utils.move_to_recycle_bin(file_to_delete)
+        file_utils.move_files_to_recycle_bin([file_to_delete])
 
     def test_hide_wnd(self):
         pid = 20468  # 替换为目标进程的 PID

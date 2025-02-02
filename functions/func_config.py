@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+from collections.abc import Sized
 from datetime import datetime
 from tkinter import messagebox
 
@@ -23,7 +24,7 @@ def get_sw_acc_login_cfg(sw, account, data_path) -> str:
         return "无配置路径"
     config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
         sw, config_path_suffix=None, config_file_list=None)
-    if config_files is None or len(config_files) == 0:
+    if not isinstance(config_files, Sized) or len(config_files) == 0:
         return "无法获取配置路径"
     file = config_files[0]
     file_suffix = file.split(".")[-1]

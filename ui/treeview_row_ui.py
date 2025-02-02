@@ -1,5 +1,6 @@
 import tkinter as tk
 from abc import ABC
+from collections.abc import Sized
 
 from PIL import ImageTk, Image
 
@@ -19,6 +20,9 @@ class TreeviewRowUI:
         self.root_class = root_class
         self.root = self.root_class.root
         self.acc_list_dict, _, _ = result
+
+        logins = self.acc_list_dict["login"]
+        logouts = self.acc_list_dict["logout"]
 
         self.main_frame = self.root_class.main_frame
         self.btn_dict = {
@@ -54,14 +58,14 @@ class TreeviewRowUI:
         }
 
         # 加载登录列表
-        if len(self.acc_list_dict["login"]) != 0:
+        if isinstance(logins, Sized) and len(logins) != 0:
             self.tree_class["login"] = AccLoginTreeView(
                 self,
                 "login", "已登录：", self.btn_dict["auto_quit_btn"],
                 self.btn_dict["config_btn"], )
 
         # 加载未登录列表
-        if len(self.acc_list_dict["logout"]) != 0:
+        if isinstance(logouts, Sized) and len(logouts) != 0:
             self.tree_class["logout"] = AccLoginTreeView(
                 self, "logout", "未登录：", self.btn_dict["auto_login_btn"])
 

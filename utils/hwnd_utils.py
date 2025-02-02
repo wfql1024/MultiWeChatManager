@@ -431,10 +431,11 @@ def hide_all_by_wnd_classes(wnd_classes):
     """
     for class_name in wnd_classes:
         try:
-            hwnd = win32gui.FindWindow(class_name, None)
-            if hwnd:
+            hwnd_list = get_hwnd_list_by_class_and_title(class_name)
+            for hwnd in hwnd_list:
                 win32gui.ShowWindow(hwnd, win32con.SW_HIDE)  # 隐藏窗口
-                time.sleep(0.1)  # 短暂延时避免过快查找
+                print(f"隐藏了{hwnd}")
+                time.sleep(0.01)  # 短暂延时避免过快查找
         except Exception as ex:
             logger.error(ex)
 
@@ -547,8 +548,8 @@ def layout_wnd_positions(wnd_cnt, login_size, screen_size):
     return positions
 
 
-def print_window_layout_scaled(login_size:Tuple[int, int], screen_size:Tuple[int, int],
-                               positions:List[Tuple[int, int]], max_width=120, ratio=2.5):
+def print_window_layout_scaled(login_size: Tuple[int, int], screen_size: Tuple[int, int],
+                               positions: List[Tuple[int, int]], max_width=120, ratio=2.5):
     """
     打印窗口分布的等比例缩放字符画示例，并添加屏幕边框。
     :param ratio: 由于字符在行和列中的比例不同，需要进行比例调整
@@ -596,6 +597,7 @@ def print_window_layout_scaled(login_size:Tuple[int, int], screen_size:Tuple[int
     for row in screen_grid:
         print('|' + ''.join(row) + '|')  # 左右边框
     print(horizontal_border)  # 底边框
+
 
 if __name__ == '__main__':
     pass

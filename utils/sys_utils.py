@@ -37,6 +37,7 @@ def get_system_dpi_by_device_caps():
     ctypes.windll.user32.ReleaseDC(0, hdc)
     return dpi
 
+
 def get_startup_folder():
     # 定义常量：Startup 文件夹的 CSIDL 值
     CSIDL_STARTUP = 7

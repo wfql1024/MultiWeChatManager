@@ -7,12 +7,13 @@ from itertools import chain
 from tkinter import ttk
 from typing import Dict
 
+import keyboard
+
 from functions import subfunc_file, subfunc_sw
 from resources import Constants
 from utils import widget_utils, string_utils, debug_utils
 from utils.logger_utils import mylogger as logger
 from utils.widget_utils import TreeUtils
-import keyboard
 
 
 class HotkeyEntry4Keyboard:

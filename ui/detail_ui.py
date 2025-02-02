@@ -19,15 +19,15 @@ from utils.logger_utils import mylogger as logger
 
 
 class DetailWindow:
-    def __init__(self, root, parent, wnd, sw,
-                 account, update_callback):
+    def __init__(self, root, parent, root_class, wnd, sw,
+                 account):
         self.root = root
         self.parent = parent
+        self.root_class = root_class
         self.wnd = wnd
         self.sw = sw
         self.wnd.withdraw()
         self.account = account
-        self.update_callback = update_callback
         self.tooltips = {}  # 初始化 tooltip 属性
         self.last_valid_hotkey = ""  # 记录上一个有效的快捷键
         self.current_keys = set()  # 当前按下的键
@@ -237,5 +237,11 @@ class DetailWindow:
         subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, auto_start=auto_start)
         hotkey = self.hotkey_entry_class.hotkey_var.get().strip()
         subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, hotkey=hotkey)
-        self.update_callback(self.sw, message="账号设置成功")
+        self.root_class.refresh_sw_main_frame(self.sw, message="账号设置成功")
         self.wnd.destroy()
+
+    def set_focus_to_(self, widget_tag):
+        if widget_tag == "note":
+            self.note_entry.focus_set()
+        elif widget_tag == "hotkey":
+            self.hotkey_entry_class.hotkey_entry.focus_set()

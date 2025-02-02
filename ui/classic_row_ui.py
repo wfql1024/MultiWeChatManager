@@ -1,5 +1,6 @@
 import time
 import tkinter as tk
+from collections.abc import Sized, Iterable
 from functools import partial
 from tkinter import ttk
 
@@ -114,8 +115,6 @@ class AccountRow:
                     child.bind("<Button-1>", self.toggle_checkbox, add="+")
         # print(f"加载配置/登录区域用时{time.time() - self.start_time:.4f}秒")
 
-
-
         # 头像绑定详情事件
         widget_utils.UnlimitedClickHandler(
             self.root,
@@ -171,11 +170,11 @@ class ClassicRowUI:
         self.main_frame = m_main_frame
         acc_list_dict, wechat_processes, mutex = result
         # 已登录列表
-        logins = acc_list_dict.get("login")
+        logins: list = acc_list_dict.get("login")
         # 未登录列表
-        logouts = acc_list_dict.get("logout")
+        logouts: list = acc_list_dict.get("logout")
 
-        if len(logins) != 0:
+        if isinstance(logins, Sized) and len(logins) != 0:
             # 已登录框架=已登录标题+已登录列表
             self.login_frame = ttk.Frame(self.main_frame)
             self.login_frame.pack(side=tk.TOP, fill=tk.X,
@@ -211,12 +210,13 @@ class ClassicRowUI:
             self.one_key_quit.pack(side=tk.RIGHT)
 
             # 加载已登录列表
-            for account in logins:
-                self.add_account_row(self.login_frame, account, "login")
+            if isinstance(logins, Iterable):
+                for account in logins:
+                    self.add_account_row(self.login_frame, account, "login")
 
             self.update_top_title("login")
 
-        if len(logouts) != 0:
+        if isinstance(logouts, Sized) and len(logouts) != 0:
             # 未登录框架=未登录标题+未登录列表
             self.logout_frame = ttk.Frame(self.main_frame)
             self.logout_frame.pack(side=tk.TOP, fill=tk.X, pady=Constants.LOG_IO_FRM_PAD_Y,
@@ -252,11 +252,12 @@ class ClassicRowUI:
             self.one_key_auto_login.pack(side=tk.RIGHT)
 
             # 加载未登录列表
-            for account in logouts:
-                hidden, = subfunc_file.get_sw_acc_details_from_json(sw, account, hidden=False)
-                if hidden:
-                    continue
-                self.add_account_row(self.logout_frame, account, "logout")
+            if isinstance(logouts, Iterable):
+                for account in logouts:
+                    hidden, = subfunc_file.get_sw_acc_details_from_json(sw, account, hidden=False)
+                    if hidden:
+                        continue
+                    self.add_account_row(self.logout_frame, account, "logout")
 
             # 更新顶部复选框状态
             self.update_top_title("logout")

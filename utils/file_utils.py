@@ -3,10 +3,11 @@ import datetime as dt
 import hashlib
 import mmap
 import os
-import win32com.client
-from pathlib import Path
 import re
+from pathlib import Path
+
 import win32api
+import win32com.client
 import winshell
 
 
@@ -73,20 +74,22 @@ class SHFileOpStruct(ctypes.Structure):
     ]
 
 
-def move_to_recycle_bin(file_path):
-    file_path = os.path.abspath(file_path)
-    # 确保文件存在
-    if not os.path.exists(file_path):
-        print(f"文件不存在: {file_path}")
+def move_files_to_recycle_bin(file_paths):
+    file_paths = [os.path.abspath(path) for path in file_paths]
+
+    # 确保所有文件或文件夹都存在
+    valid_paths = [path for path in file_paths if os.path.exists(path)]
+    if not valid_paths:
+        print("没有可删除的文件或文件夹")
         return False
 
-    # 将文件路径转换为字符串并以 null 结尾
-    file_path = file_path + "\0"
+    # 组合多个路径，以 null 字符分隔，并以双 null 结尾
+    file_paths_str = "\0".join(valid_paths) + "\0\0"
 
     # 创建 SHFileOpStruct 实例
     file_op = SHFileOpStruct()
     file_op.wFunc = FO_DELETE
-    file_op.pFrom = file_path
+    file_op.pFrom = file_paths_str
     file_op.fFlags = FOF_ALLOWUNDO  # 允许撤销操作（即放入回收站）
 
     # 调用 Windows API
@@ -94,7 +97,7 @@ def move_to_recycle_bin(file_path):
 
     # 返回操作是否成功
     if result == 0:
-        print(f"文件已成功移动到回收站: {file_path}")
+        print(f"以下文件已成功移动到回收站:\n" + "\n".join(valid_paths))
         return True
     else:
         print(f"文件移动失败，错误代码: {result}")
@@ -217,6 +220,7 @@ def get_shortcut_target(shortcut_path):
         print(f"错误: {e}")
         return None
 
+
 def check_shortcut_in_folder(folder_path, target_path):
     """
     检查指定文件夹中的所有快捷方式，如果有快捷方式指向目标路径，返回 True 和快捷方式路径。
@@ -242,6 +246,7 @@ def check_shortcut_in_folder(folder_path, target_path):
     # 如果没有找到匹配的快捷方式，返回 False
     return False, None
 
+
 def create_shortcut_for_(target_path, shortcut_path, ico_path=None):
     """
     创建一个快捷方式。
@@ -256,6 +261,7 @@ def create_shortcut_for_(target_path, shortcut_path, ico_path=None):
         # 修正icon_location的传递方式，传入一个包含路径和索引的元组
         if ico_path:
             shortcut.icon_location = (ico_path, 0)
+
 
 if __name__ == '__main__':
     # 测试

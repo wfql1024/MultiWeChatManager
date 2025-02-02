@@ -24,7 +24,7 @@ def has_newer_version(curr_ver) -> bool:
     success, result = split_vers_by_cur_from_local(curr_ver)
     if success is True:
         new_versions, old_versions = result
-        if len(new_versions) != 0:
+        if new_versions:
             return True
     return False
 

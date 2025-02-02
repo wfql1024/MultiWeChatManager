@@ -36,7 +36,7 @@ class Config:
 
     INI_DEFAULT_VALUE = {
         "screen_size": f"1920*1080",
-        "hide_wnd": "True",
+        "hide_wnd": "False",
         "enable_new_func": "True",
         "tab": "WeChat",
         "scale": "auto",

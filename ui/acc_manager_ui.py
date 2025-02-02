@@ -139,6 +139,7 @@ class AccManagerWindow:
 
     def to_add_hotkey_of_(self, items):
         print(f"进入添加热键方法")
+        self.root_class.open_acc_detail(items[0], "hotkey")
         pass
 
     def refresh_acc_manager(self):

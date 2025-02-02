@@ -1,7 +1,7 @@
 @echo off
 
 :: 清空 dist 文件夹（如果存在）
-if exist "dist\微信多开管理器By38\微信多开管理器" rmdir /S /Q "dist\微信多开管理器By38\微信多开管理器"
+if exist "dist\微信多开管理器By38" rmdir /S /Q "dist\微信多开管理器By38"
 if exist "build" rmdir /S /Q "build"
 if exist "*.spec" del /Q "*.spec"
 

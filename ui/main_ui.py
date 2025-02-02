@@ -7,8 +7,8 @@ import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk
-import keyboard
 
+import keyboard
 
 from functions import func_login, func_file, func_account, subfunc_file, func_config, func_setting, subfunc_sw
 from public_class import reusable_widget
@@ -23,6 +23,7 @@ class MainWindow:
 
     def __init__(self, root, args=None):
         # IDE初始化
+        self.detail_ui_class = None
         self.sw_classes = None
         self._initialized = None
         self.statusbar_class = None
@@ -109,7 +110,7 @@ class MainWindow:
 
         # 更新映射
         self.hotkey_map = hotkey_map
-        print(self.hotkey_map)
+        # print(self.hotkey_map)
 
     def start_hotkey_listener(self):
         """ 启动全局快捷键监听 """
@@ -312,11 +313,11 @@ class MainWindow:
         print(f"渲染账号列表.........................................................")
 
         acc_list_dict, _, mutex = result
-        login = acc_list_dict["login"]
-        logout = acc_list_dict["logout"]
+        logins: list = acc_list_dict["login"]
+        logouts: list = acc_list_dict["logout"]
 
-        self.sw_classes[self.sw].login_accounts = login
-        self.sw_classes[self.sw].logout_accounts = logout
+        self.sw_classes[self.sw].login_accounts = logins
+        self.sw_classes[self.sw].logout_accounts = logouts
 
         # 底部框架=手动登录
         bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
@@ -342,21 +343,21 @@ class MainWindow:
         else:
             pass
         subfunc_file.update_statistic_data(
-            self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(login)), time.time() - self.start_time)
+            self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(logins)), time.time() - self.start_time)
         msg_str = f"{message} | " if message else ""
         print(f"{msg_str}加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 获取已登录的窗口hwnd
-        func_account.get_main_hwnd_of_accounts(login, self.sw)
+        func_account.get_main_hwnd_of_accounts(logins, self.sw)
 
         # 进行静默获取头像及配置
-        func_account.silent_get_and_config(self.root, self, self.sw, login, logout)
+        func_account.silent_get_and_config(self.root, self, self.sw, logins, logouts)
 
         # 先停止旧的监听线程
         self.stop_hotkey_listener()
         # 更新快捷键
         self.load_hotkeys_from_json(Config.TAB_ACC_JSON_PATH)
-
+        # 开启监听线程
         self.start_hotkey_listener()
 
         self.after_success_create_acc_ui_when_start()
@@ -473,14 +474,15 @@ class MainWindow:
                                   args=(self.root, self))
         thread.start()
 
-    def open_acc_detail(self, item, event=None):
+    def open_acc_detail(self, item, widget_tag=None, event=None):
         """打开详情窗口"""
         if event is None:
             pass
         sw, acc = item.split("/")
         detail_window = tk.Toplevel(self.root)
-        detail_ui.DetailWindow(self.root, self.root, detail_window, sw,
-                               acc, self.refresh_sw_main_frame)
+        self.detail_ui_class = detail_ui.DetailWindow(self.root, self.root, self, detail_window, sw,
+                                                      acc)
+        self.detail_ui_class.set_focus_to_(widget_tag)
 
     def to_switch_to_sw_account_wnd(self, item, event=None):
         subfunc_sw.switch_to_sw_account_wnd(item, self.root)

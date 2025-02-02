@@ -1,6 +1,7 @@
 import importlib
 import os
 import sqlite3
+from collections.abc import Sized
 from tkinter import messagebox
 
 from functions import func_setting, subfunc_file
@@ -59,7 +60,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
             if success is not True:
                 logger.error(f"账号{acc}查询失败")
                 continue
-            if len(result) > 0:
+            if isinstance(result, Sized) and len(result) > 0:
                 user_name, alias = result[0]
                 subfunc_file.update_sw_acc_details_to_json(sw, acc, alias=alias or user_name)
             else:
@@ -69,7 +70,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
             if success is not True:
                 logger.error(f"账号{acc}查询失败")
                 continue
-            if len(result) > 0:
+            if isinstance(result, Sized) and len(result) > 0:
                 user_name, nickname = result[0]
                 subfunc_file.update_sw_acc_details_to_json(sw, acc, nickname=nickname)
             else:
@@ -79,7 +80,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
             if success is not True:
                 logger.error(f"账号{acc}查询失败")
                 continue
-            if len(result) > 0:
+            if isinstance(result, Sized) and len(result) > 0:
                 usr_name, url = result[0]
                 origin_url, = subfunc_file.get_sw_acc_details_from_json(sw, acc, avatar_url=None)
                 save_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg").replace('\\', '/')

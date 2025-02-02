@@ -105,8 +105,8 @@ class MenuUI:
         self.user_file_menu = tk.Menu(self.file_menu, tearoff=False)
         self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
         self.user_file_menu.add_command(label="打开", command=func_file.open_user_file)
-        self.user_file_menu.add_command(label="清除",
-                                        command=partial(func_file.clear_user_file, self.root_class.refresh))
+        self.user_file_menu.add_command(label="清除", command=partial(
+            func_file.clear_user_file, self.root_class.initialize_in_init))
         # >配置文件
         self.config_file_menu = tk.Menu(self.file_menu, tearoff=False)
         if not self.sw_class.data_dir:

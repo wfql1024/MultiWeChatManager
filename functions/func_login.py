@@ -35,17 +35,20 @@ def login_auto_start_accounts(root, root_class):
 
     # 获取已经登录的账号
     for sw in all_sw:
-        if sw == root_class.sw:
-            logins = root_class.sw_classes[sw].login_accounts
-        else:
-            success, result = func_account.get_sw_acc_list(root, root_class, sw)
-            if success is not True:
-                continue
-            acc_list_dict, _, _ = result
-            logins = acc_list_dict["login"]
-
-        for acc in logins:
-            can_auto_start[sw].discard(acc)
+        try:
+            if sw == root_class.sw:
+                logins = root_class.sw_classes[sw].login_accounts
+            else:
+                success, result = func_account.get_sw_acc_list(root, root_class, sw)
+                if success is not True:
+                    continue
+                acc_list_dict, _, _ = result
+                logins = acc_list_dict["login"]
+            for acc in logins:
+                can_auto_start[sw].discard(acc)
+        except Exception as e:
+            logger.error(e)
+            continue
 
     if any(len(sw_set) != 0 for sw, sw_set in can_auto_start.items()):
         print(f"排除已登录之后需要登录：{can_auto_start}")

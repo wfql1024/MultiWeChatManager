@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Iterable
 from tkinter import messagebox
 
 import psutil
@@ -301,7 +302,7 @@ def get_sw_acc_list(_root, root_class, sw):
     pids = process_utils.get_process_ids_by_name(exe)
     pids = process_utils.remove_child_pids(pids)
     print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
-    if len(pids) != 0:
+    if isinstance(pids, Iterable):
         for pid in pids:
             update_acc_list_by_pid(pid)
     print(f"完成判断进程对应账号，用时：{time.time() - start_time:.4f} 秒")
@@ -355,7 +356,7 @@ def get_main_hwnd_of_accounts(acc_list, sw):
         pid, = subfunc_file.get_sw_acc_details_from_json(sw, acc, pid=None)
         hwnd_list = hwnd_utils.get_hwnd_list_by_pid_and_class(pid, target_class)
         # print(pid, hwnd_list)
-        if len(hwnd_list) >= 1:
+        if len(hwnd_list) > 0:
             hwnd = hwnd_list[0]
             subfunc_file.update_sw_acc_details_to_json(sw, acc, main_hwnd=hwnd)
             display_name = get_acc_origin_display_name(sw, acc)

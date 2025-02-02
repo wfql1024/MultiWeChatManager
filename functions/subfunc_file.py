@@ -776,8 +776,8 @@ def get_packed_executable():
 def check_auto_start_or_toggle_to_(target_state=None):
     startup_folder = sys_utils.get_startup_folder()
     print(startup_folder)
-    # app_path = get_packed_executable()
-    app_path = r"D:\PortableSoftware\Tools\微信多开管理器\微信多开管理器.exe"  # 测试路径
+    app_path = get_packed_executable()
+    # app_path = r"D:\PortableSoftware\Tools\微信多开管理器\微信多开管理器.exe"  # 测试路径
     print(app_path)
 
     if app_path is None:
@@ -796,8 +796,7 @@ def check_auto_start_or_toggle_to_(target_state=None):
             if target_state is True:
                 file_utils.create_shortcut_for_(app_path, shortcut_path)
             elif target_state is False:
-                for path in paths:
-                    file_utils.move_to_recycle_bin(path)
+                file_utils.move_files_to_recycle_bin(paths)
             return True, None
         except Exception as e:
             logger.error(e)

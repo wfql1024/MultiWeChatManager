@@ -1,6 +1,5 @@
 import glob
 import os
-import shutil
 import sys
 from tkinter import messagebox
 
@@ -27,17 +26,20 @@ def clear_user_file(after):
         "确认清除",
         "该操作将会清空头像、昵称、配置的路径等数据，请确认是否需要清除？"
     )
-    directory_path = Config.PROJ_USER_PATH
+    user_dir = Config.PROJ_USER_PATH
+    items = [os.path.join(user_dir, item) for item in os.listdir(user_dir)]
     if confirm:
-        for item in os.listdir(directory_path):
-            item_path = os.path.join(directory_path, item)
-            if os.path.isfile(item_path) or os.path.islink(item_path):
-                os.unlink(item_path)
-            elif os.path.isdir(item_path):
-                shutil.rmtree(item_path)
-        messagebox.showinfo("清除完成", "用户目录已成功清除。")
-        after(message="清除用户目录完成！")
-        return
+        try:
+            file_utils.move_files_to_recycle_bin(items)
+            messagebox.showinfo("清除完成", "用户目录已移入回收站。")
+            after()
+            return
+        except Exception as e:
+            logger.error(e)
+            messagebox.showerror("错误", "清除失败，将打开用户目录。")
+            open_user_file()
+            after()
+            return
 
 
 def open_config_file(sw):
@@ -63,27 +65,29 @@ def clear_config_file(sw, after):
         data_path = func_setting.get_sw_data_dir(sw)
         config_path_suffix, config_file_list = subfunc_file.get_details_from_remote_setting_json(
             sw, config_path_suffix=None, config_file_list=None)
-        if config_path_suffix is None or len(config_file_list) == 0 or config_file_list is None:
+        if (config_path_suffix is None or config_file_list is None or
+                not isinstance(config_file_list, list) or len(config_file_list) == 0):
             messagebox.showinfo("提醒", f"{sw}平台还没有适配")
             return
+
+        files_to_delete = []
 
         for file in config_file_list:
             config_path = os.path.join(data_path, str(config_path_suffix))
             # 获取所有 `.data` 文件，除了 `config.data`
             file_suffix = file.split(".")[-1]
             data_files = glob.glob(os.path.join(config_path, f'*.{file_suffix}').replace("\\", "/"))
-            files_to_delete = [f for f in data_files if not os.path.split(config_path) == config_path_suffix]
+            files_to_delete.extend([f for f in data_files if not os.path.split(config_path) == config_path_suffix])
             # print(file_suffix)
             # print(data_files)
             # print(files_to_delete)
-            if len(files_to_delete) > 0:
-                # 删除这些文件
-                for file_path in files_to_delete:
-                    try:
-                        file_utils.move_to_recycle_bin(file_path)
-                        print(f"已删除: {file_path}")
-                    except Exception as e:
-                        logger.error(f"无法删除 {file_path}: {e}")
+        if len(files_to_delete) > 0:
+            # 删除这些文件
+            try:
+                file_utils.move_files_to_recycle_bin(files_to_delete)
+                print(f"已删除: {files_to_delete}")
+            except Exception as e:
+                logger.error(f"无法删除 {files_to_delete}: {e}")
         after(message=f"清除{sw}登录配置完成！")
 
 
@@ -117,18 +121,21 @@ def mov_backup(new=None):
             "已更新最新版，是否删除旧版备份？\n（可从回收站中恢复）"
         )
 
+    items_to_delete = []
+
     if answer:
         # 移动文件夹到回收站
         for item in os.listdir(executable_dir):
-            try:
-                item_path = os.path.join(executable_dir, item)
-                if os.path.isdir(item_path) and item.startswith("[") and item.endswith("]"):
-                    file_utils.move_to_recycle_bin(item_path)
-            except Exception as e:
-                logger.error(e)
-                messagebox.showerror("错误", f"移动文件夹到回收站时发生错误：\n"
-                                             f"{str(e)}\n将打开程序文件夹")
-                open_program_file()
+            item_path = os.path.join(executable_dir, item)
+            if os.path.isdir(item_path) and item.startswith("[") and item.endswith("]"):
+                items_to_delete.append(item_path)
+        try:
+            file_utils.move_files_to_recycle_bin(items_to_delete)
+        except Exception as e:
+            logger.error(e)
+            messagebox.showerror("错误", f"移动文件夹到回收站时发生错误：\n"
+                                         f"{str(e)}\n将打开程序文件夹")
+            open_program_file()
         messagebox.showinfo("成功", "已成功移动到回收站！")
 
 
@@ -141,7 +148,7 @@ def clear_statistic_data(after):
     if confirm:
         file_path = Config.STATISTIC_JSON_PATH
         try:
-            file_utils.move_to_recycle_bin(file_path)
+            file_utils.move_files_to_recycle_bin([file_path])
             print(f"已删除: {file_path}")
         except Exception as e:
             print(f"无法删除 {file_path}: {e}")
@@ -367,6 +374,7 @@ def reset(after):
     if not confirm:
         messagebox.showinfo("操作取消", "重置操作已取消。")
     else:
+        items_to_del = []
         try:
             # 恢复每个平台的补丁dll
             all_sw, = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
@@ -379,27 +387,29 @@ def reset(after):
                     continue
                 dll_path = os.path.join(dll_dir_path, patch_dll)
                 bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
+                del_path = os.path.join(dll_dir_path, f"{patch_dll}.del")
                 try:
                     # 检查 .bak 文件是否存在
                     if os.path.exists(bak_path):
-                        # 如果 ?.dll 存在，删除它
+                        # 如果 ?.dll 存在，准备删除它
                         if os.path.exists(dll_path):
-                            file_utils.move_to_recycle_bin(dll_path)
-                            print("已移入回收站：{dll_path}")
+                            os.rename(dll_path, del_path)
+                            items_to_del.append(del_path)
+                            print(f"加入待删列表：{del_path}")
                         # 将 ?.dll.bak 文件重命名为 ?.dll
                         os.rename(bak_path, dll_path)
-                        print(f"Restored: {dll_path} from {bak_path}")
+                        print(f"已恢复: {dll_path} from {bak_path}")
                 except Exception as e:
                     logger.error(e)
 
             # 删除用户文件
             user_dir = Config.PROJ_USER_PATH
-            for item in os.listdir(user_dir):
-                item_path = os.path.join(user_dir, item)
-                try:
-                    file_utils.move_to_recycle_bin(item_path)
-                except Exception as e:
-                    logger.error(e)
+            items = [os.path.join(user_dir, item) for item in os.listdir(user_dir)]
+            items_to_del.extend(items)
+            try:
+                file_utils.move_files_to_recycle_bin(items_to_del)
+            except Exception as e:
+                logger.error(e)
 
             messagebox.showinfo("重置完成", "目录已成功重置。")
             after()
