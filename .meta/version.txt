@@ -6,7 +6,7 @@ VSVersionInfo(
   ffi=FixedFileInfo(
     # filevers and prodvers should be always a tuple with four items: (1, 2, 3, 4)
     # Set not needed items to zero 0.
-    filevers=(2, 11, 0, 911),  # 文件版本
+    filevers=(2, 15, 0, 1458),  # 文件版本
     # Contains a bitmask that specifies the valid bits 'flags'r
     mask=0x3f,
     # Contains a bitmask that specifies the Boolean attributes of the file.
@@ -29,12 +29,12 @@ VSVersionInfo(
         StringTable(
           u'040904B0',
           [
-            StringStruct(u'CompanyName', u'极峰创科 JhiFeng Chan Tech'),
-            StringStruct(u'FileDescription', u'微信多开管理器，旨在提升微信多开使用体验。'),    # 文件说明
-            StringStruct(u'InternalName', u'微信多开'),
-            StringStruct(u'LegalCopyright', u'吾峰起浪版权所有'), #版权
+            StringStruct(u'CompanyName', u'极峰创科 JhiFeng Chan Tech Studio'),
+            StringStruct(u'FileDescription', u'极峰多聊，旨在提升聊天平台多开使用体验。'),    # 文件说明
+            StringStruct(u'InternalName', u'极峰多聊'),
+            StringStruct(u'LegalCopyright', u'吾峰起浪 © 版权所有'), #版权
             StringStruct(u'OriginalFilename', u'MultiWeChatManager.exe'), #原始文件名
-            StringStruct(u'ProductName', u'微信多开管理器'),      #产品名称
+            StringStruct(u'ProductName', u'极峰多聊'),      #产品名称
           ]
         )
       ]

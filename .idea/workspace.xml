@@ -4,32 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="实机测试并修复遇见的问题">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_unit.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_unit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Build4Win10+.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Build4Win10+.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Build4Win7.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Build4Win7.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_account.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_account.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_config.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_detail.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_detail.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_login.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_update.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_update.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public_class/reusable_widget.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/reusable_widget.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/acc_manager_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/acc_manager_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/classic_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/classic_row_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/detail_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/detail_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/treeview_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/treeview_row_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/hwnd_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/hwnd_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/process_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/process_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/sys_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/sys_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.meta/version.txt" beforeDir="false" afterPath="$PROJECT_DIR$/.meta/version.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -659,15 +636,7 @@
       <workItem from="1737959340001" duration="22184000" />
       <workItem from="1738300656834" duration="20488000" />
       <workItem from="1738388484567" duration="33986000" />
-      <workItem from="1738498640967" duration="4938000" />
-    </task>
-    <task id="LOCAL-00185" summary="修改某些变量及文件名，改动平台数据存储路径后会重置该平台的账号数据">
-      <option name="closed" value="true" />
-      <created>1734146505527</created>
-      <option name="number" value="00185" />
-      <option name="presentableId" value="LOCAL-00185" />
-      <option name="project" value="LOCAL" />
-      <updated>1734146505528</updated>
+      <workItem from="1738498640967" duration="6827000" />
     </task>
     <task id="LOCAL-00186" summary="修改某些变量及文件名，改动平台数据存储路径后会重置该平台的账号数据,优化升级程序">
       <option name="closed" value="true" />
@@ -1053,7 +1022,15 @@
       <option name="project" value="LOCAL" />
       <updated>1738391622888</updated>
     </task>
-    <option name="localTasksCounter" value="234" />
+    <task id="LOCAL-00234" summary="实机测试并修复遇见的问题">
+      <option name="closed" value="true" />
+      <created>1738504519061</created>
+      <option name="number" value="00234" />
+      <option name="presentableId" value="LOCAL-00234" />
+      <option name="project" value="LOCAL" />
+      <updated>1738504519062</updated>
+    </task>
+    <option name="localTasksCounter" value="235" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1118,7 +1095,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="主界面ui代码优化，分离状态栏代码和滚动条画布代码" />
     <MESSAGE value="更新配置文件测试在线获取关于页面信息" />
     <MESSAGE value="重构主界面加载，关于页内容来源改为从网络中获取" />
     <MESSAGE value="优化控制台输出，更好显示用户交互信息。修复打开程序加载选项卡时卡死的问题，修复特定路径下显示不了多开子程序的问题" />
@@ -1143,7 +1119,8 @@
     <MESSAGE value="统一列表条目存储和解析规范，初步写了快捷键录制功能" />
     <MESSAGE value="测试不同方案的录制快捷键的实现" />
     <MESSAGE value="已实现快捷键的录制与应用" />
-    <option name="LAST_COMMIT_MESSAGE" value="已实现快捷键的录制与应用" />
+    <MESSAGE value="实机测试并修复遇见的问题" />
+    <option name="LAST_COMMIT_MESSAGE" value="实机测试并修复遇见的问题" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_multiple.coverage" NAME="wechat_multiple Coverage Results" MODIFIED="1726457491071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/mutex" />
