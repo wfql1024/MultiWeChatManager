@@ -7,6 +7,7 @@ from tkinter import ttk
 from PIL import ImageTk, Image
 
 from functions import func_config, func_account, subfunc_file, subfunc_sw
+from public_class.global_members import GlobalMembers
 from resources import Constants
 from utils import string_utils, widget_utils
 from utils.logger_utils import mylogger as logger
@@ -17,11 +18,13 @@ class AccountRow:
     为每一个账号创建其行布局的类
     """
 
-    def __init__(self, root, r_class, parent_frame, account, config_status,
-                 login_status, update_top_checkbox_callback, sw):
-        self.sw = sw
-        self.root = root
-        self.root_class = r_class
+    def __init__(self, parent_frame, account, config_status,
+                 login_status, update_top_checkbox_callback):
+        self.root_class = GlobalMembers.root_class
+        self.root = self.root_class.root
+        self.sw = self.root_class.sw
+        self.sw_class = self.root_class.sw_classes[self.sw]
+        self.data_path = self.sw_class.data_dir
         self.config_status = config_status
         self.start_time = time.time()
         self.tooltips = {}
@@ -157,17 +160,18 @@ class AccountRow:
 
 
 class ClassicRowUI:
-    def __init__(self, root, r_class, m_main_frame, result, data_path, sw):
-        self.sw = sw
-        self.r_class = r_class
-        self.data_path = data_path
+    def __init__(self, result):
+        self.root_class = GlobalMembers.root_class
+        self.root = self.root_class.root
+        self.main_frame = self.root_class.main_frame
+        self.sw = self.root_class.sw
+        self.sw_class = self.root_class.sw_classes[self.sw]
+        self.data_path = self.sw_class.data_dir
         self.rows = {
             "login": {},
             "logout": {}
         }
         self.tooltips = {}
-        self.root = root
-        self.main_frame = m_main_frame
         acc_list_dict, wechat_processes, mutex = result
         # 已登录列表
         logins: list = acc_list_dict.get("login")
@@ -205,7 +209,7 @@ class ClassicRowUI:
             # 一键退出
             self.one_key_quit = ttk.Button(
                 self.login_btn_frame, text="一键退出", style='Custom.TButton',
-                command=lambda: self.r_class.to_quit_accounts(self.get_selected_accounts("login"))
+                command=lambda: self.root_class.to_quit_accounts(self.get_selected_accounts("login"))
             )
             self.one_key_quit.pack(side=tk.RIGHT)
 
@@ -247,14 +251,14 @@ class ClassicRowUI:
             # 一键登录
             self.one_key_auto_login = ttk.Button(
                 self.logout_bottom_frame, text="一键登录", style='Custom.TButton',
-                command=lambda: self.r_class.to_auto_login(self.get_selected_accounts("logout")),
+                command=lambda: self.root_class.to_auto_login(self.get_selected_accounts("logout")),
             )
             self.one_key_auto_login.pack(side=tk.RIGHT)
 
             # 加载未登录列表
             if isinstance(logouts, Iterable):
                 for account in logouts:
-                    hidden, = subfunc_file.get_sw_acc_details_from_json(sw, account, hidden=False)
+                    hidden, = subfunc_file.get_sw_acc_details_from_json(self.sw, account, hidden=False)
                     if hidden:
                         continue
                     self.add_account_row(self.logout_frame, account, "logout")
@@ -268,8 +272,7 @@ class ClassicRowUI:
         config_status = func_config.get_sw_acc_login_cfg(self.sw, account, self.data_path)
 
         # 创建列表实例
-        row = AccountRow(self.root, self.r_class, parent_frame, account, config_status,
-                         login_status, self.update_top_title, self.sw)
+        row = AccountRow(parent_frame, account, config_status, login_status, self.update_top_title)
 
         # 将已登录、未登录但已配置实例存入字典
         if login_status == "login":

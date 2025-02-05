@@ -1,10 +1,11 @@
 # debug_utils.py
 # 这个是很底层的工具类，不要导入项目其他的模块
 import inspect
+import io
 import sys
 
 
-class RedirectText:
+class RedirectText(io.TextIOBase):
     """
     用以传送打印到窗口状态栏的类，将输出按结构化的方式分割处理，并保存所有输出。
     """
@@ -17,16 +18,16 @@ class RedirectText:
         self.logs = []  # 用于保存结构化的输出
 
     def write(self, text):
-        if self.debug:
-            lines = text.splitlines()  # 分割成行
+        lines = text.splitlines()  # 分割成行
+        for line in lines:
+            if self.debug:
             # 去掉最后一行（可能为空或包含特殊符号）
             # 保存每行内容到 logs，注意需要排除结尾符号
-            for line in lines:
                 if len(line) > 0:
                     # 从你的工具中获取前缀、堆栈等结构化部分
-                    stack_prefix = indent()  # 缩进前缀
+                    stack_prefix = get_call_stack_indent()  # 缩进前缀
                     call_stack = get_call_stack()  # 堆栈
-                    output_prefix = indent()  # 输出前缀
+                    output_prefix = get_call_stack_indent()  # 输出前缀
                     output_content = line  # 实际输出内容
 
                     # 保存为字典
@@ -39,9 +40,7 @@ class RedirectText:
 
                     self.message_queue.put(output_content)  # 将原始内容放入队列
                     self.logs.append(log_entry)  # 保存结构化日志条目
-        else:
-            lines = text.splitlines()
-            for line in lines:
+            else:
                 self.message_queue.put(line)  # 仅将内容放入队列
 
         # 继续在控制台输出
@@ -49,13 +48,23 @@ class RedirectText:
             self.original_stdout.write(text)
 
     def flush(self):
-        # 确保标准输出的缓冲区被清空
-        self.original_stdout.flush()
+        """确保标准输出的缓冲区被清空"""
+        if self.original_stdout:
+            self.original_stdout.flush()
+
+    @property
+    def writable(self):
+        """告知 Python 这个流是可写的"""
+        return True
+
+    @property
+    def encoding(self):
+        """返回 stdout 的编码，确保兼容性"""
+        return getattr(self.original_stdout, "encoding", "utf-8")
 
     def get_logs(self):
-        # 返回保存的日志
+        """返回保存的日志"""
         return self.logs  # 返回结构化日志
-
 
 def simplify_call_stack(text):
     # 需要掐头去尾处理的标识符
@@ -93,7 +102,7 @@ def get_call_stack(sequence="/", max_depth=100):
     return sequence.join(reversed(call_chain))
 
 
-def indent(sequence="··· ", max_depth=100):
+def get_call_stack_indent(sequence="··· ", max_depth=100):
     """
     根据调用栈的深度返回缩进字符串，使用自定义的序列循环输出。
     :param sequence: 自定义序列，缩进按照该序列输出并循环。

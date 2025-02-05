@@ -1,68 +1,354 @@
-import ctypes
-import subprocess
 import sys
 import time
 from ctypes import wintypes
 from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
-
 import psutil
+import ctypes
+import os
+import subprocess
 
-kernel32 = ctypes.windll.kernel32
-OpenProcess = kernel32.OpenProcess
-CloseHandle = kernel32.CloseHandle
-K32EnumProcessModules = kernel32.K32EnumProcessModules
-K32GetModuleFileNameExA = kernel32.K32GetModuleFileNameExA
+"""create_process_with_logon使用"""
 
-# 定义常量和类型
-PROCESS_ALL_ACCESS = 0x1F0FFF
+# 定义必要的常量和结构体
+LOGON_WITH_PROFILE = 0x00000001
+CREATE_NO_WINDOW = 0x08000000
 
-# 设置函数参数和返回类型
-K32EnumProcessModules.argtypes = [ctypes.wintypes.HANDLE, ctypes.POINTER(ctypes.wintypes.HMODULE),
-                                  ctypes.wintypes.DWORD, ctypes.POINTER(ctypes.wintypes.DWORD)]
-K32EnumProcessModules.restype = ctypes.wintypes.BOOL
 
-K32GetModuleFileNameExA.argtypes = [ctypes.wintypes.HANDLE, ctypes.wintypes.HMODULE, ctypes.POINTER(ctypes.c_char),
-                                    ctypes.wintypes.DWORD]
-K32GetModuleFileNameExA.restype = ctypes.wintypes.DWORD
+class STARTUPINFO(ctypes.Structure):
+    _fields_ = [
+        ("cb", wintypes.DWORD),
+        ("lpReserved", wintypes.LPWSTR),
+        ("lpDesktop", wintypes.LPWSTR),
+        ("lpTitle", wintypes.LPWSTR),
+        ("dwX", wintypes.DWORD),
+        ("dwY", wintypes.DWORD),
+        ("dwXSize", wintypes.DWORD),
+        ("dwYSize", wintypes.DWORD),
+        ("dwXCountChars", wintypes.DWORD),
+        ("dwYCountChars", wintypes.DWORD),
+        ("dwFillAttribute", wintypes.DWORD),
+        ("dwFlags", wintypes.DWORD),
+        ("wShowWindow", wintypes.WORD),
+        ("cbReserved2", wintypes.WORD),
+        ("lpReserved2", wintypes.LPBYTE),
+        ("hStdInput", wintypes.HANDLE),
+        ("hStdOutput", wintypes.HANDLE),
+        ("hStdError", wintypes.HANDLE),
+    ]
 
-# 加载 Windows API 库
-advapi32 = ctypes.WinDLL('advapi32', use_last_error=True)
-kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
-user32 = ctypes.WinDLL('user32', use_last_error=True)
 
-# 常量定义
-CREATE_NO_WINDOW = 0x08000000  # 隐藏窗口
-CREATE_NEW_CONSOLE = 0x00000010
+class PROCESS_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ("hProcess", wintypes.HANDLE),
+        ("hThread", wintypes.HANDLE),
+        ("dwProcessId", wintypes.DWORD),
+        ("dwThreadId", wintypes.DWORD),
+    ]
+
+
+# 加载Advapi32.dll
+advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+
+# 定义CreateProcessWithLogonW函数
+CreateProcessWithLogonW = advapi32.CreateProcessWithLogonW
+CreateProcessWithLogonW.argtypes = [
+    wintypes.LPWSTR,  # lpUsername
+    wintypes.LPWSTR,  # lpDomain
+    wintypes.LPWSTR,  # lpPassword
+    wintypes.DWORD,  # dwLogonFlags
+    wintypes.LPWSTR,  # lpApplicationName
+    wintypes.LPWSTR,  # lpCommandLine
+    wintypes.DWORD,  # dwCreationFlags
+    wintypes.LPVOID,  # lpEnvironment
+    wintypes.LPWSTR,  # lpCurrentDirectory
+    ctypes.POINTER(STARTUPINFO),  # lpStartupInfo
+    ctypes.POINTER(PROCESS_INFORMATION),  # lpProcessInformation
+]
+CreateProcessWithLogonW.restype = wintypes.BOOL
+
+
+def create_process_with_logon(username, password, executable, args=None):
+    startup_info = STARTUPINFO()
+    startup_info.cb = ctypes.sizeof(STARTUPINFO)
+    process_info = PROCESS_INFORMATION()
+
+    command_line = f'"{executable}"'
+    if args:
+        command_line += " " + args
+
+    if not CreateProcessWithLogonW(
+            username,  # 用户名
+            None,  # 域名（本地用户为None）
+            password,  # 密码
+            LOGON_WITH_PROFILE,  # 登录标志
+            None,  # 应用程序名（使用命令行）
+            command_line,  # 命令行
+            CREATE_NO_WINDOW,  # 创建标志
+            None,  # 环境变量
+            None,  # 当前目录
+            ctypes.byref(startup_info),  # 启动信息
+            ctypes.byref(process_info),  # 进程信息
+    ):
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    return process_info.dwProcessId
+
+
+# 定义必要的常量和结构体
 PROCESS_QUERY_INFORMATION = 0x0400
 TOKEN_DUPLICATE = 0x0002
 TOKEN_ALL_ACCESS = 0xF01FF
 SecurityImpersonation = 2
 TokenPrimary = 1
 
-# 函数声明
-OpenProcess.restype = HANDLE
-OpenProcess.argtypes = [DWORD, BOOL, DWORD]
 
+class STARTUPINFO(ctypes.Structure):
+    _fields_ = [
+        ("cb", wintypes.DWORD),
+        ("lpReserved", wintypes.LPWSTR),
+        ("lpDesktop", wintypes.LPWSTR),
+        ("lpTitle", wintypes.LPWSTR),
+        ("dwX", wintypes.DWORD),
+        ("dwY", wintypes.DWORD),
+        ("dwXSize", wintypes.DWORD),
+        ("dwYSize", wintypes.DWORD),
+        ("dwXCountChars", wintypes.DWORD),
+        ("dwYCountChars", wintypes.DWORD),
+        ("dwFillAttribute", wintypes.DWORD),
+        ("dwFlags", wintypes.DWORD),
+        ("wShowWindow", wintypes.WORD),
+        ("cbReserved2", wintypes.WORD),
+        ("lpReserved2", wintypes.LPBYTE),
+        ("hStdInput", wintypes.HANDLE),
+        ("hStdOutput", wintypes.HANDLE),
+        ("hStdError", wintypes.HANDLE),
+    ]
+
+
+class PROCESS_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ("hProcess", wintypes.HANDLE),
+        ("hThread", wintypes.HANDLE),
+        ("dwProcessId", wintypes.DWORD),
+        ("dwThreadId", wintypes.DWORD),
+    ]
+
+
+# 加载必要的DLL
+kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+advapi32 = ctypes.WinDLL("advapi32", use_last_error=True)
+
+# 定义函数
+GetShellWindow = ctypes.windll.user32.GetShellWindow
+GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
+OpenProcess = kernel32.OpenProcess
 OpenProcessToken = advapi32.OpenProcessToken
-OpenProcessToken.restype = BOOL
-OpenProcessToken.argtypes = [HANDLE, DWORD, ctypes.POINTER(HANDLE)]
-
 DuplicateTokenEx = advapi32.DuplicateTokenEx
-DuplicateTokenEx.restype = BOOL
-DuplicateTokenEx.argtypes = [HANDLE, DWORD, ctypes.POINTER(ctypes.c_void_p), ctypes.c_int, ctypes.c_int,
-                             ctypes.POINTER(HANDLE)]
-
 CreateProcessWithTokenW = advapi32.CreateProcessWithTokenW
-CreateProcessWithTokenW.restype = BOOL
-CreateProcessWithTokenW.argtypes = [HANDLE, DWORD, LPCWSTR, LPCWSTR, DWORD, ctypes.c_void_p, LPCWSTR, ctypes.c_void_p,
-                                    ctypes.c_void_p]
+CloseHandle = kernel32.CloseHandle
 
-GetShellWindow = user32.GetShellWindow
-GetShellWindow.restype = HANDLE
 
-GetWindowThreadProcessId = user32.GetWindowThreadProcessId
-GetWindowThreadProcessId.restype = DWORD
-GetWindowThreadProcessId.argtypes = [HANDLE, ctypes.POINTER(DWORD)]
+def create_process_with_medium_il_better(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
+    """
+    以文件管理器的令牌打开可执行文件
+    :param executable: 可执行文件
+    :param args: 传入的其他参数
+    :param creation_flags: 窗口标志参数
+    :return: 子进程的PID
+    """
+    h_token2 = None
+    h_token = None
+    h_process = None
+
+    try:
+        # 获取 Explorer 的窗口句柄
+        h_program = GetShellWindow()
+        if not h_program:
+            raise ctypes.WinError(ctypes.get_last_error())
+
+        # 获取 Explorer 进程 ID
+        explorer_pid = wintypes.DWORD()
+        GetWindowThreadProcessId(h_program, ctypes.byref(explorer_pid))
+
+        # 打开 Explorer 进程
+        h_process = OpenProcess(PROCESS_QUERY_INFORMATION, False, explorer_pid.value)
+        if not h_process:
+            raise ctypes.WinError(ctypes.get_last_error())
+
+        # 打开 Explorer 的进程令牌
+        h_token = wintypes.HANDLE()
+        if not OpenProcessToken(h_process, TOKEN_DUPLICATE, ctypes.byref(h_token)):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+        # 复制令牌
+        h_token2 = wintypes.HANDLE()
+        if not DuplicateTokenEx(h_token, TOKEN_ALL_ACCESS, None, SecurityImpersonation, TokenPrimary,
+                                ctypes.byref(h_token2)):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+        # 设置启动信息结构
+        startup_info = STARTUPINFO()
+        startup_info.cb = ctypes.sizeof(STARTUPINFO)
+        process_info = PROCESS_INFORMATION()
+
+        # 构建命令行
+        command_line = f'"{executable}"'
+        if args:
+            command_line += " " + args
+
+        # 创建带有 Explorer 令牌的进程
+        if not CreateProcessWithTokenW(h_token2, 0, None, command_line, creation_flags, None, None,
+                                       ctypes.byref(startup_info), ctypes.byref(process_info)):
+            raise ctypes.WinError(ctypes.get_last_error())
+
+        # 返回子进程的PID
+        return process_info.dwProcessId
+
+    finally:
+        # 清理句柄
+        if "h_token2" in locals():
+            CloseHandle(h_token2) if h_token2 is not None else None
+        if "h_token" in locals():
+            CloseHandle(h_token) if h_token is not None else None
+        if "h_process" in locals():
+            CloseHandle(h_process) if h_process is not None else None
+
+
+def create_process_with_medium_il(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
+    """
+    以文件管理器的令牌打开可执行文件
+    :param executable: 可执行文件
+    :param args: 传入的其他参数
+    :param creation_flags: 窗口标志参数
+    :return: 无
+    """
+    # 获取 Explorer 的窗口句柄
+    h_program = GetShellWindow()
+    if not h_program:
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 获取 Explorer 进程 ID
+    explorer_pid = DWORD()
+    GetWindowThreadProcessId(h_program, ctypes.byref(explorer_pid))
+
+    # 打开 Explorer 进程
+    h_process = OpenProcess(PROCESS_QUERY_INFORMATION, False, explorer_pid.value)
+    if not h_process:
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 打开 Explorer 的进程令牌
+    h_token = HANDLE()
+    if not OpenProcessToken(h_process, TOKEN_DUPLICATE, ctypes.byref(h_token)):
+        kernel32.CloseHandle(h_process)
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 复制令牌
+    h_token2 = HANDLE()
+    if not DuplicateTokenEx(h_token, TOKEN_ALL_ACCESS, None, SecurityImpersonation, TokenPrimary,
+                            ctypes.byref(h_token2)):
+        kernel32.CloseHandle(h_token)
+        kernel32.CloseHandle(h_process)
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 设置启动信息结构
+    startup_info = ctypes.create_string_buffer(104)  # STARTUPINFO结构体的大小
+    process_info = ctypes.create_string_buffer(24)  # PROCESS_INFORMATION结构体的大小
+
+    # 创建带有 Explorer 令牌的进程
+    if not CreateProcessWithTokenW(h_token2, 0, executable, args, creation_flags, None, None, startup_info,
+                                   process_info):
+        kernel32.CloseHandle(h_token2)
+        kernel32.CloseHandle(h_token)
+        kernel32.CloseHandle(h_process)
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    # 清理句柄
+    kernel32.CloseHandle(h_token2)
+    kernel32.CloseHandle(h_token)
+    kernel32.CloseHandle(h_process)
+
+    print(f"Process started successfully.")
+
+    # 获取 PROCESS_INFORMATION 结构体
+    pi = ctypes.cast(process_info, ctypes.POINTER(ctypes.c_void_p))
+    h_process = pi[0]  # 进程句柄
+    h_thread = pi[1]  # 线程句柄
+
+    class Process:
+        def __init__(self, handle_process, handle_thread):
+            self.h_process = handle_process
+            self.h_thread = handle_thread
+
+        def terminate(self):
+            kernel32.TerminateProcess(self.h_process, 0)
+            kernel32.CloseHandle(self.h_thread)
+            kernel32.CloseHandle(self.h_process)
+
+    return Process(h_process, h_thread)
+
+
+def create_process_with_task_scheduler(executable, args=None):
+    """
+    使用任务计划程序启动子进程
+    :param executable: 可执行文件
+    :param args: 传入的其他参数
+    :return: 无
+    """
+    # 构建任务名称和XML文件路径
+    task_name = "TempTask"
+    xml_path = os.path.join(os.getenv("TEMP"), "task.xml")
+
+    # 构建命令行
+    command_line = f'"{executable}"'
+    if args:
+        command_line += " " + args
+
+    # 创建任务XML
+    xml_content = f"""
+    <Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">
+      <Principals>
+        <Principal id="Author">
+          <UserId>S-1-5-18</UserId>
+          <RunLevel>LeastPrivilege</RunLevel>
+        </Principal>
+      </Principals>
+      <Settings>
+        <Enabled>true</Enabled>
+        <Hidden>false</Hidden>
+        <RunOnlyIfLoggedOn>false</RunOnlyIfLoggedOn>
+        <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>
+        <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>
+        <AllowHardTerminate>true</AllowHardTerminate>
+        <StartWhenAvailable>false</StartWhenAvailable>
+        <AllowStartOnDemand>true</AllowStartOnDemand>
+        <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>
+      </Settings>
+      <Actions Context="Author">
+        <Exec>
+          <Command>{executable}</Command>
+          <Arguments>{args if args else ""}</Arguments>
+        </Exec>
+      </Actions>
+    </Task>
+    """
+    with open(xml_path, "w") as f:
+        f.write(xml_content)
+
+    # 创建任务
+    subprocess.run(["schtasks", "/Create", "/TN", task_name, "/XML", xml_path], check=True)
+
+    # 运行任务
+    subprocess.run(["schtasks", "/Run", "/TN", task_name], check=True)
+
+    # 删除任务
+    subprocess.run(["schtasks", "/Delete", "/TN", task_name, "/F"], check=True)
+
+    # 删除临时XML文件
+    os.remove(xml_path)
+
+
+# 定义常量和类型
+PROCESS_ALL_ACCESS = 0x1F0FFF
 
 
 def remove_child_pids(pids):
@@ -116,7 +402,7 @@ def is_process_admin(pid):
         return False
 
 
-def get_process_by_name(process_name):
+def get_pids_and_handles_by_name(process_name):
     """通过进程名获取单个进程ID和句柄"""
     for proc in psutil.process_iter(['name', 'pid']):
         if proc.name().lower() == process_name.lower():
@@ -124,59 +410,6 @@ def get_process_by_name(process_name):
             handle = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
             return pid, handle
     return None, None
-
-
-def get_process_handle(pid):
-    """
-    通过pid获得句柄
-    :param pid: 进程id
-    :return: 获得的句柄
-    """
-    handle = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
-
-    if handle == 0 or handle == -1:  # 0 和 -1 都表示失败
-        error = ctypes.get_last_error()
-        print(f"无法获取进程句柄，错误码：{error}")
-        return None
-
-    return handle
-
-
-def get_module_base_address(process_handle, module_name):
-    """
-    获取指定模块（DLL）在目标进程中的基址
-    :param process_handle: 句柄
-    :param module_name: 模块名（如dll）
-    :return: 基址
-    """
-    h_modules = (ctypes.wintypes.HMODULE * 1024)()
-    cb_needed = ctypes.wintypes.DWORD()
-    module_name_bytes = module_name.encode('ascii')
-
-    if K32EnumProcessModules(process_handle, h_modules, ctypes.sizeof(h_modules), ctypes.byref(cb_needed)):
-        for i in range(cb_needed.value // ctypes.sizeof(ctypes.wintypes.HMODULE)):
-            module_path = ctypes.create_string_buffer(260)
-            if K32GetModuleFileNameExA(process_handle, h_modules[i], module_path, ctypes.sizeof(module_path)):
-                if module_path.value.decode('ascii').lower().endswith(module_name_bytes.lower()):
-                    return h_modules[i]
-    return None
-
-
-def get_base_address(process_name, pid, process_handle, module_name):
-    """通过句柄和模块名获得基址"""
-    if not process_handle:
-        print(f"无法打开 {process_name} 的进程 {pid} 及其句柄 {process_handle}")
-        return None
-
-    try:
-        base_address = get_module_base_address(process_handle, module_name)
-        if not base_address:
-            print(f"无法获取 {module_name} 的基址")
-            return None
-
-        return base_address
-    finally:
-        CloseHandle(process_handle)
 
 
 def get_file_from_pid(pid):
@@ -285,78 +518,28 @@ def create_process_for_win7(executable, args=None, creation_flags=0):
         return None
 
 
-def create_process_with_medium_il(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
-    """
-    以文件管理器的令牌打开可执行文件
-    :param executable: 可执行文件
-    :param args: 传入的其他参数
-    :param creation_flags: 窗口标志参数
-    :return: 无
-    """
-    # 获取 Explorer 的窗口句柄
-    h_program = GetShellWindow()
-    if not h_program:
-        raise ctypes.WinError(ctypes.get_last_error())
+# 加载 Windows API 库
+user32 = ctypes.WinDLL('user32', use_last_error=True)
 
-    # 获取 Explorer 进程 ID
-    explorer_pid = DWORD()
-    GetWindowThreadProcessId(h_program, ctypes.byref(explorer_pid))
+# 函数声明
+OpenProcess.restype = HANDLE
+OpenProcess.argtypes = [DWORD, BOOL, DWORD]
 
-    # 打开 Explorer 进程
-    h_process = OpenProcess(PROCESS_QUERY_INFORMATION, False, explorer_pid.value)
-    if not h_process:
-        raise ctypes.WinError(ctypes.get_last_error())
+OpenProcessToken.restype = BOOL
+OpenProcessToken.argtypes = [HANDLE, DWORD, ctypes.POINTER(HANDLE)]
 
-    # 打开 Explorer 的进程令牌
-    h_token = HANDLE()
-    if not OpenProcessToken(h_process, TOKEN_DUPLICATE, ctypes.byref(h_token)):
-        kernel32.CloseHandle(h_process)
-        raise ctypes.WinError(ctypes.get_last_error())
+DuplicateTokenEx.restype = BOOL
+DuplicateTokenEx.argtypes = [HANDLE, DWORD, ctypes.POINTER(ctypes.c_void_p), ctypes.c_int, ctypes.c_int,
+                             ctypes.POINTER(HANDLE)]
 
-    # 复制令牌
-    h_token2 = HANDLE()
-    if not DuplicateTokenEx(h_token, TOKEN_ALL_ACCESS, None, SecurityImpersonation, TokenPrimary,
-                            ctypes.byref(h_token2)):
-        kernel32.CloseHandle(h_token)
-        kernel32.CloseHandle(h_process)
-        raise ctypes.WinError(ctypes.get_last_error())
+CreateProcessWithTokenW.restype = BOOL
+CreateProcessWithTokenW.argtypes = [HANDLE, DWORD, LPCWSTR, LPCWSTR, DWORD, ctypes.c_void_p, LPCWSTR, ctypes.c_void_p,
+                                    ctypes.c_void_p]
 
-    # 设置启动信息结构
-    startup_info = ctypes.create_string_buffer(104)  # STARTUPINFO结构体的大小
-    process_info = ctypes.create_string_buffer(24)  # PROCESS_INFORMATION结构体的大小
+GetShellWindow.restype = HANDLE
 
-    # 创建带有 Explorer 令牌的进程
-    if not CreateProcessWithTokenW(h_token2, 0, executable, args, creation_flags, None, None, startup_info,
-                                   process_info):
-        kernel32.CloseHandle(h_token2)
-        kernel32.CloseHandle(h_token)
-        kernel32.CloseHandle(h_process)
-        raise ctypes.WinError(ctypes.get_last_error())
-
-    # 清理句柄
-    kernel32.CloseHandle(h_token2)
-    kernel32.CloseHandle(h_token)
-    kernel32.CloseHandle(h_process)
-
-    print(f"Process started successfully.")
-
-    # 获取 PROCESS_INFORMATION 结构体
-    pi = ctypes.cast(process_info, ctypes.POINTER(ctypes.c_void_p))
-    h_process = pi[0]  # 进程句柄
-    h_thread = pi[1]  # 线程句柄
-
-    class Process:
-        def __init__(self, handle_process, handle_thread):
-            self.h_process = handle_process
-            self.h_thread = handle_thread
-
-        def terminate(self):
-            kernel32.TerminateProcess(self.h_process, 0)
-            kernel32.CloseHandle(self.h_thread)
-            kernel32.CloseHandle(self.h_process)
-
-    return Process(h_process, h_thread)
-
+GetWindowThreadProcessId.restype = DWORD
+GetWindowThreadProcessId.argtypes = [HANDLE, ctypes.POINTER(DWORD)]
 
 if __name__ == '__main__':
     pass

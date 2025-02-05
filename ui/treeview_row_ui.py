@@ -5,19 +5,20 @@ from collections.abc import Sized
 from PIL import ImageTk, Image
 
 from functions import func_config, func_account, subfunc_file
-from public_class import reusable_widget
+from public_class import reusable_widget, global_members
+from public_class.global_members import GlobalMembers
 from resources import Constants, Strings
 from utils import widget_utils, string_utils
 from utils.logger_utils import mylogger as logger
 
 
 class TreeviewRowUI:
-    def __init__(self, root_class, result):
+    def __init__(self, result):
         self.tree_class = {
 
         }
 
-        self.root_class = root_class
+        self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
         self.acc_list_dict, _, _ = result
 
@@ -68,7 +69,6 @@ class TreeviewRowUI:
         if isinstance(logouts, Sized) and len(logouts) != 0:
             self.tree_class["logout"] = AccLoginTreeView(
                 self, "logout", "未登录：", self.btn_dict["auto_login_btn"])
-
 
 class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):

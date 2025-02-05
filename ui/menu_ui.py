@@ -9,6 +9,7 @@ from tkinter import messagebox
 from typing import Dict, Union
 
 from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_update
+from public_class.global_members import GlobalMembers
 from resources import Strings, Config
 from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui, acc_manager_ui
 from utils import widget_utils
@@ -16,7 +17,7 @@ from utils.logger_utils import mylogger as logger
 
 
 class MenuUI:
-    def __init__(self, root, root_class):
+    def __init__(self):
         """获取必要的设置项信息"""
         self.auto_start_menu = None
         self.path_error = None
@@ -37,12 +38,12 @@ class MenuUI:
         self.file_menu = None
         self.menu_bar = None
 
-        self.root = root
-        self.root_class = root_class
+        self.root_class = GlobalMembers.root_class
+        self.root = self.root_class.root
 
-        self.sw = root_class.sw
-        self.cfg_data = root_class.cfg_data
-        self.sw_classes = root_class.sw_classes
+        self.sw = self.root_class.sw
+        self.cfg_data = self.root_class.cfg_data
+        self.sw_classes = self.root_class.sw_classes
         self.sw_class = self.sw_classes[self.sw]
 
         self.app_info: Dict[str, Union[str, bool, None]] = {
@@ -64,6 +65,7 @@ class MenuUI:
             "rest_mode": None,
             "hide_wnd": None,
             "new_func": None,
+            "auto_press": None,
         }
         self.settings_var: Dict[str, Union[tk.BooleanVar, tk.StringVar, None]] = {
             "sign_vis": None,
@@ -72,6 +74,7 @@ class MenuUI:
             "rest_mode": None,
             "hide_wnd": None,
             "new_func": None,
+            "auto_press": None,
         }
 
     def create_root_menu_bar(self):
@@ -166,6 +169,8 @@ class MenuUI:
                                        command=self.change_classic_view)
         self.view_menu.add_radiobutton(label="列表", variable=self.settings_var["view"], value="tree",
                                        command=self.change_tree_view)
+        self.view_menu.add_radiobutton(label="侧栏", variable=self.settings_var["view"], value="sidebar",
+                                       command=self.change_sidebar_view)
 
         # 视图选项
         self.settings_values["sign_vis"] = \
@@ -329,12 +334,19 @@ class MenuUI:
         self.settings_values["hide_wnd"] = \
             True if subfunc_file.fetch_global_setting_or_set_default("hide_wnd") == "True" else False
         self.settings_var["hide_wnd"] = tk.BooleanVar(value=self.settings_values["hide_wnd"])
+        self.settings_values["auto_press"] = \
+            True if subfunc_file.fetch_global_setting_or_set_default("auto_press") == "True" else False
+        self.settings_var["auto_press"] = tk.BooleanVar(value=self.settings_values["auto_press"])
         self.login_menu = tk.Menu(self.settings_menu, tearoff=False)
         self.settings_menu.add_cascade(label="登录选项", menu=self.login_menu)
         self.login_menu.add_checkbutton(
             label="自动登录时隐藏窗口", variable=self.settings_var["hide_wnd"],
             command=partial(subfunc_file.save_global_setting,
                             "hide_wnd", not self.settings_values["hide_wnd"], self.create_root_menu_bar))
+        self.login_menu.add_checkbutton(
+            label="自动点击登录按钮", variable=self.settings_var["auto_press"],
+            command=partial(subfunc_file.save_global_setting,
+                            "auto_press", not self.settings_values["auto_press"], self.create_root_menu_bar))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         _, self.settings_values["auto_start"] = subfunc_file.check_auto_start_or_toggle_to_()
@@ -405,7 +417,7 @@ class MenuUI:
         # 清除窗口中的所有控件
         for widget in self.root.winfo_children():
             widget.destroy()
-        sidebar_ui.SidebarUI(self.root)
+        sidebar_ui.SidebarUI()
 
     def open_acc_setting(self, sw):
         acc_manager_window = tk.Toplevel(self.root)

@@ -197,6 +197,24 @@ class HotkeyEntry4Tkinter:
         return "break"
 
 
+class QueueWithUpdate(queue.Queue):
+    def __init__(self, update_callback):
+        super().__init__()
+        self.update_callback = update_callback  # 更新状态栏的回调函数
+
+    def put(self, item, block=True, timeout=None):
+        """重写入队方法，入队时立即更新状态栏"""
+        super().put(item, block, timeout)
+        self.update_callback()  # 入队后，立即触发更新状态栏
+
+    def get(self, block=True, timeout=None):
+        """重写出队方法，返回消息"""
+        try:
+            item = super().get(block, timeout)
+            return item
+        except queue.Empty:
+            return None
+
 class StatusBar:
     def __init__(self, root, r_class, debug):
 
@@ -209,9 +227,9 @@ class StatusBar:
 
         # 创建状态栏
         self.create_status_bar()
-        self.message_queue = queue.Queue()  # 创建消息队列
+        self.message_queue = QueueWithUpdate(self.update_status)  # 创建消息队列
         sys.stdout = debug_utils.RedirectText(self.statusbar_output_var, self.message_queue, self.debug)  # 重定向 stdout
-        self.update_status()  # 定期检查队列中的消息
+        self.update_status()
 
     def create_status_bar(self):
         """创建状态栏"""
@@ -237,7 +255,7 @@ class StatusBar:
             print(e)
             pass
         # 每 1 毫秒检查一次队列
-        self.root.after(1, self.update_status)
+        # self.root.after(1, self.update_status)
 
 
 class ScrollableCanvas:

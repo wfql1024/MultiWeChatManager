@@ -258,37 +258,43 @@ def auto_login_accounts(root_class, login_dict: Dict[str, List]):
 
         # 定义点击按钮并等待成功的线程，启动线程
         def click_all_login_button():
-            # 两轮点击所有窗口的登录，防止遗漏
-            hwnd_list = hwnd_utils.get_hwnd_list_by_class_and_title(login_wnd_class)
-            time.sleep(0.5)
-            inner_start_time = time.time()
-            for i in range(1):
-                for h in hwnd_list:
-                    cx = int(hwnd_utils.get_hwnd_details_of_(h)["width"] * 0.5)
-                    cy = int(hwnd_utils.get_hwnd_details_of_(h)["height"] * 0.75)
-                    hwnd_utils.do_click_in_wnd(h, cx, cy)
-                    time.sleep(0.2)
-                print(f"查找后用时：{time.time() - inner_start_time}s")
-
-            inner_start_time = time.time()
-            for h in hwnd_list:
-                titles = ["进入微信", "进入WeChat", "Enter Weixin", "进入微信"]  # 添加所有需要查找的标题
-                try:
-                    # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
-                    cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
-                    print(hwnd_utils.get_child_hwnd_list_of_(h))
-                    # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
-                    # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
-                    # cx, cy = hwnd_utils.find_widget_with_uia(h, titles)  # 有问题，修复较复杂，不管
+            # 判断是否需要自动点击按钮
+            auto_press = root_class.root_menu.settings_values["auto_press"]
+            if auto_press:
+                # 两轮点击所有窗口的登录，防止遗漏
+                hwnd_list = hwnd_utils.get_hwnd_list_by_class_and_title(login_wnd_class)
+                time.sleep(0.5)
+                inner_start_time = time.time()
+                for i in range(1):
+                    for h in hwnd_list:
+                        cx = int(hwnd_utils.get_hwnd_details_of_(h)["width"] * 0.5)
+                        cy = int(hwnd_utils.get_hwnd_details_of_(h)["height"] * 0.75)
+                        hwnd_utils.do_click_in_wnd(h, cx, cy)
+                        time.sleep(0.2)
                     print(f"查找后用时：{time.time() - inner_start_time}s")
-                    if cx is not None and cy is not None:
-                        hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
-                        break  # 找到有效坐标后退出循环
-                except TypeError as te:
-                    logger.warning(te)
-                    print("没有按钮，应该是点过啦~")
-                except Exception as fe:
-                    logger.error(fe)
+
+                inner_start_time = time.time()
+                for h in hwnd_list:
+                    titles = ["进入微信", "进入WeChat", "Enter Weixin", "进入微信"]  # 添加所有需要查找的标题
+                    try:
+                        # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
+                        cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
+                        print(hwnd_utils.get_child_hwnd_list_of_(h))
+                        # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
+                        # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
+                        # cx, cy = hwnd_utils.find_widget_with_uia(h, titles)  # 有问题，修复较复杂，不管
+                        print(f"查找后用时：{time.time() - inner_start_time}s")
+                        if cx is not None and cy is not None:
+                            hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
+                            break  # 找到有效坐标后退出循环
+                    except TypeError as te:
+                        logger.warning(te)
+                        print("没有按钮，应该是点过啦~")
+                    except Exception as fe:
+                        logger.error(fe)
+            else:
+                print("请手动点击登录按钮")
+
 
             # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
             ddl_time = time.time() + 30

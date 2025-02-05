@@ -1,4 +1,5 @@
 # handle_utils.py
+import ctypes
 import re
 import subprocess
 import time
@@ -7,6 +8,24 @@ from resources import Config
 from utils import process_utils
 from utils.logger_utils import mylogger as logger
 
+kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+OpenProcess = kernel32.OpenProcess
+
+
+def get_process_handle(pid):
+    """
+    通过pid获得句柄
+    :param pid: 进程id
+    :return: 获得的句柄
+    """
+    handle = OpenProcess(PROCESS_ALL_ACCESS, False, pid)
+
+    if handle == 0 or handle == -1:  # 0 和 -1 都表示失败
+        error = ctypes.get_last_error()
+        print(f"无法获取进程句柄，错误码：{error}")
+        return None
+
+    return handle
 
 def close_handles_by_matches(handle_exe, matches):
     """

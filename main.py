@@ -7,7 +7,7 @@ import tkinter as tk
 import pygetwindow as gw
 from pynput import keyboard
 
-from ui.main_ui import MainWindow
+from ui import main_ui
 
 global root_class
 
@@ -79,7 +79,7 @@ def main():
     print("调试模式：" + str(args.debug))
 
     root = tk.Tk()
-    MainWindow(
+    main_ui.MainWindow(
         root,
         args=args
     )

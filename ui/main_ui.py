@@ -12,6 +12,7 @@ import keyboard
 
 from functions import func_login, func_file, func_account, subfunc_file, func_config, func_setting, subfunc_sw
 from public_class import reusable_widget
+from public_class.global_members import GlobalMembers
 from resources import Strings, Config, Constants
 from ui import debug_ui, classic_row_ui, treeview_row_ui, loading_ui, detail_ui, menu_ui
 from utils import hwnd_utils
@@ -23,6 +24,10 @@ class MainWindow:
 
     def __init__(self, root, args=None):
         # IDE初始化
+        self.stop_event = None
+        self.listener_thread = None
+        self.window_height = None
+        self.window_width = None
         self.detail_ui_class = None
         self.sw_classes = None
         self._initialized = None
@@ -43,33 +48,16 @@ class MainWindow:
 
         }
 
+        GlobalMembers.root_class = self
+
         self.root = root
         self.debug = args.debug
         self.new = args.new
-
-        # 统一管理style
-        style = ttk.Style()
-        style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
-                        width=Constants.CUS_BTN_WIDTH)
-        style.configure('Tool.TButton', width=2)
-        style.configure('FirstTitle.TLabel', font=("", Constants.FIRST_TITLE_FONTSIZE, "bold"))
-        style.configure('Link.TLabel', font=("", Constants.LINK_FONTSIZE), foreground="grey")
-        style.configure('SecondTitle.TLabel', font=("", Constants.SECOND_TITLE_FONTSIZE))
-        style.configure("RedWarning.TLabel", foreground="red", font=("", Constants.LITTLE_FONTSIZE))
-        style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
-        style.configure("RowTreeview", background="#FFFFFF", foreground="black",
-                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended")
-        style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
-
-        self.window_width, self.window_height = Constants.PROJ_WND_SIZE
+        
         self.root.withdraw()  # 初始化时隐藏主窗口
-
         # 渲染加载窗口
         self.loading_wnd = tk.Toplevel(self.root)
-        self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)
-
-        # 创建状态栏
-        self.statusbar_class = reusable_widget.StatusBar(self.root, self, self.debug)
+        self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)        
 
         try:
             # 初次使用
@@ -87,12 +75,7 @@ class MainWindow:
         self.hotkey_map = {
         }
 
-        self.listener_thread = None  # 监听线程
-        self.stop_event = threading.Event()  # 用于控制线程退出
-
-        # 在子线程中运行监听
-        listener_thread = threading.Thread(target=self.start_hotkey_listener, daemon=True)
-        listener_thread.start()
+        
 
     def load_hotkeys_from_json(self, json_path):
         """ 从 JSON 文件加载快捷键映射 """
@@ -160,6 +143,25 @@ class MainWindow:
         subfunc_file.swap_cnt_and_mode_levels_in_auto()
         subfunc_file.downgrade_item_lvl_under_manual()
 
+        # 统一管理style
+        style = ttk.Style()
+        style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
+                        width=Constants.CUS_BTN_WIDTH)
+        style.configure('Tool.TButton', width=2)
+        style.configure('FirstTitle.TLabel', font=("", Constants.FIRST_TITLE_FONTSIZE, "bold"))
+        style.configure('Link.TLabel', font=("", Constants.LINK_FONTSIZE), foreground="grey")
+        style.configure('SecondTitle.TLabel', font=("", Constants.SECOND_TITLE_FONTSIZE))
+        style.configure("RedWarning.TLabel", foreground="red", font=("", Constants.LITTLE_FONTSIZE))
+        style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
+        style.configure("RowTreeview", background="#FFFFFF", foreground="black",
+                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended")
+        style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
+
+        # 创建状态栏
+        self.statusbar_class = reusable_widget.StatusBar(self.root, self, self.debug)
+        
+        self.window_width, self.window_height = Constants.PROJ_WND_SIZE
+        
         # 获取基本属性，加载标签页
         self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
         self.cfg_data = subfunc_file.try_get_local_cfg()
@@ -179,12 +181,25 @@ class MainWindow:
         self.root.title(title)
         self.root.iconbitmap(Config.PROJ_ICO_PATH)
 
+        self.listener_thread = None  # 监听线程
+        self.stop_event = threading.Event()  # 用于控制线程退出
+
+        # 在子线程中运行监听
+        listener_thread = threading.Thread(target=self.start_hotkey_listener, daemon=True)
+        listener_thread.start()
+
+        self.root.after(0, hwnd_utils.bring_tk_wnd_to_center, self.root, self.window_width, self.window_height)
+        self.root.overrideredirect(False)
+
+
     def init_notebook(self):
         """集中写界面初始化方法"""
         if hasattr(self, 'sw_notebook') and self.sw_notebook is not None:
-            for wdg in self.sw_notebook.winfo_children():
-                wdg.destroy()
-            self.sw_notebook.destroy()
+            if self.sw_notebook.winfo_exists():
+                sw_notebook = self.sw_notebook.nametowidget(self.sw_notebook)
+                for wdg in sw_notebook.winfo_children():
+                    wdg.destroy()
+                sw_notebook.destroy()
         self.create_tab()
 
     def create_tab(self):
@@ -236,7 +251,7 @@ class MainWindow:
         self.tab_frame = self.sw_classes[self.sw].frame
 
         # 刷新菜单
-        self.root_menu = menu_ui.MenuUI(self.root, self)
+        self.root_menu = menu_ui.MenuUI()
         try:
             self.root.after(0, self.root_menu.create_root_menu_bar)
         except Exception as re:
@@ -335,11 +350,9 @@ class MainWindow:
         # 创建账号列表界面并统计
         self.sw_classes[self.sw].view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
         if self.sw_classes[self.sw].view == "classic":
-            self.sw_classes[self.sw].classic_ui = classic_row_ui.ClassicRowUI(
-                self.root, self, self.main_frame, result, self.sw_classes[self.sw].data_dir, self.sw)
+            self.sw_classes[self.sw].classic_ui = classic_row_ui.ClassicRowUI(result)
         elif self.sw_classes[self.sw].view == "tree":
-            self.sw_classes[self.sw].tree_ui = treeview_row_ui.TreeviewRowUI(
-                self, result)
+            self.sw_classes[self.sw].tree_ui = treeview_row_ui.TreeviewRowUI(result)
         else:
             pass
         subfunc_file.update_statistic_data(
@@ -409,9 +422,7 @@ class MainWindow:
                 self.root.after(0, self.loading_wnd_class.auto_close)
                 self.loading_wnd_class = None
             # 设置主窗口位置
-            self.root.after(0, hwnd_utils.bring_tk_wnd_to_center, self.root, self.window_width, self.window_height)
-            self.root.deiconify()
-            # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
+            self.root.after(0, self.root.deiconify)
 
         try:
             # 线程启动获取登录情况和渲染列表

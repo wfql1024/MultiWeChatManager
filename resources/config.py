@@ -25,6 +25,7 @@ class Config:
         "hidden_sort": "hidden_sort",
         "auto_start_sort": "auto_start_sort",
         "all_sort": "all_sort",
+        "auto_press": "auto_press",
 
         "view": "view",
         "login_size": "login_size",
@@ -44,6 +45,7 @@ class Config:
         "hidden_sort": "#0,True",
         "auto_start_sort": "#0,True",
         "all_sort": "#0,True",
+        "auto_press": "True",
 
         "WeChat": {
             "view": "tree",

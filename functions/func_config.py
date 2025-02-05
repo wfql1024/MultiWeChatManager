@@ -1,7 +1,6 @@
 import os
 import shutil
 import time
-from collections.abc import Sized
 from datetime import datetime
 from tkinter import messagebox
 
@@ -15,7 +14,7 @@ def get_sw_acc_login_cfg(sw, account, data_path) -> str:
     """
     通过账号的配置状态
     :param sw: 选择的软件标签
-    :param data_path: 微信数据存储路径
+    :param data_path: 数据存储路径
     :param account: 账号
     :return: 配置状态
     """
@@ -24,7 +23,7 @@ def get_sw_acc_login_cfg(sw, account, data_path) -> str:
         return "无配置路径"
     config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
         sw, config_path_suffix=None, config_file_list=None)
-    if not isinstance(config_files, Sized) or len(config_files) == 0:
+    if not isinstance(config_files, list) or len(config_files) == 0:
         return "无法获取配置路径"
     file = config_files[0]
     file_suffix = file.split(".")[-1]

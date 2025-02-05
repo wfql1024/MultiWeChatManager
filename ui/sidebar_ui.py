@@ -8,6 +8,8 @@ import win32api
 import win32con
 import win32gui
 
+from public_class.global_members import GlobalMembers
+
 
 def create_button_in_wnd(hwnd, x, y, width, height, button_text="Click Me"):
     # 加载kernel32.dll，用于获取模块句柄
@@ -159,8 +161,9 @@ def embed_wnd_into_right_panel(right_panel_hwnd, target_hwnd):
 
 
 class SidebarUI:
-    def __init__(self, root):
-        self.root = root
+    def __init__(self):
+        self.root_class = GlobalMembers.root_class
+        self.root = self.root_class.root
         self.root.title("窗口嵌入示例")
         self.root.geometry("1600x800")  # 窗口大小
         self.target_handle = None  # 存储目标窗口句柄
@@ -176,7 +179,7 @@ class SidebarUI:
         self.root.bind("<B1-Motion>", self.do_drag)
 
         # 左侧栏
-        self.left_frame = tk.Frame(root, bg="gray", width=self.left_frame_width)
+        self.left_frame = tk.Frame(self.root, bg="gray", width=self.left_frame_width)
         self.left_frame.pack(side="left", fill="y")
         self.left_frame.pack_propagate(False)  # 禁止根据子控件调整大小
 
@@ -192,6 +195,12 @@ class SidebarUI:
         self.unbind_button = tk.Button(self.left_frame, text="解绑窗口", command=self.unbind_window)
         self.unbind_button.pack(pady=10)
 
+        # 恢复窗口
+        self.restore_button = tk.Button(self.left_frame, text="恢复窗口", command=self.restore_to_main_ui)
+        self.restore_button.pack(pady=10)
+
+
+
         # 剩余右侧区域（用于嵌入窗口的地方）
         self.right_frame_hwnd = self.create_right_frame()
         self.monitor_thread = threading.Thread(target=self.monitor_window_position, daemon=True)
@@ -201,7 +210,15 @@ class SidebarUI:
         # self.nested_window_drag_thread = threading.Thread(target=self.monitor_nested_window_drag, daemon=True)
         # self.nested_window_drag_thread.start()
 
-    def ensure_taskbar_visibility(self):
+    def restore_to_main_ui(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+        self.root_class.initialize_in_init()
+        self.root.unbind("<Button-1>")
+        self.root.unbind("<B1-Motion>")
+
+    @staticmethod
+    def ensure_taskbar_visibility():
         """
         确保窗口在任务栏中显示
         """
@@ -308,7 +325,7 @@ class SidebarUI:
 
                     # 更新上次的位置记录
                     last_position = nested_rect
-            time.sleep(0.05)
+            time.sleep(0.00001)
 
     def start_drag(self, event):
         """
@@ -325,6 +342,7 @@ class SidebarUI:
         y = self.root.winfo_y() + (event.y - self.offset_y)
         self.root.geometry(f"+{x}+{y}")
 
+    @staticmethod
     def find_all_windows_by_class_and_title(class_name, window_title=None):
         def enum_windows_callback(hwnd, results):
             # 获取窗口的类名和标题
@@ -338,9 +356,3 @@ class SidebarUI:
         results = []
         win32gui.EnumWindows(enum_windows_callback, results)
         return results
-
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = SidebarUI(root)
-    root.mainloop()
