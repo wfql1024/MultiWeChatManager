@@ -16,6 +16,7 @@ from resources.config import Config
 from resources.strings import Strings
 from utils import string_utils, widget_utils, hwnd_utils
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
 
 
 class DetailWindow:
@@ -237,7 +238,8 @@ class DetailWindow:
         subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, auto_start=auto_start)
         hotkey = self.hotkey_entry_class.hotkey_var.get().strip()
         subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, hotkey=hotkey)
-        self.root_class.refresh_sw_main_frame(self.sw, message="账号设置成功")
+        printer.vital("账号设置成功")
+        self.root_class.refresh_sw_main_frame(self.sw)
         self.wnd.destroy()
 
     def set_focus_to_(self, widget_tag):

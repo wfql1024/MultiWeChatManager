@@ -106,6 +106,7 @@ def open_sw(sw, status, has_mutex_dictionary=None):
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{multiple_mode}"
             )
             sub_exe_hwnd = hwnd_utils.wait_open_to_get_hwnd("WTWindow", 8)
+            print(f"子程序窗口：{sub_exe_hwnd}")
             if sub_exe_hwnd:
                 button_handle = hwnd_utils.get_child_hwnd_list_of_(
                     sub_exe_hwnd
@@ -196,7 +197,11 @@ def get_login_size(tab, status):
 def create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
     if (sys_utils.get_sys_major_version_name() == "win11" or
             sys_utils.get_sys_major_version_name() == "win10"):
-        return process_utils.create_process_with_medium_il(executable, args, creation_flags)
+        return process_utils.create_process_with_logon(
+            "2535912997@qq.com", "1314@zhihui", executable, args, creation_flags)
+        # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
+        # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
+        # return process_utils.create_process_with_medium_il(executable, args, creation_flags)
     else:
         return process_utils.create_process_for_win7(executable, args, creation_flags)
 
@@ -206,7 +211,7 @@ def logging_in_listener():
     flag = False
 
     while True:
-        handle = win32gui.FindWindow("WeChatLoginWndForPC")
+        handle = win32gui.FindWindow("WeChatLoginWndForPC", None)
         if handle:
             handles.add(handle)
             flag = True

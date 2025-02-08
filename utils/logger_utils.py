@@ -3,6 +3,7 @@
 import inspect
 import logging
 import os
+import queue
 import sys
 
 import colorlog
@@ -21,6 +22,18 @@ def get_call_stack(sequence="/", max_depth=100):
     call_chain = [frame_info.function for frame_info in stack[1:max_depth + 1]]
     # 从前往后连接方法名
     return sequence.join(reversed(call_chain))
+
+
+class PrinterUtils:
+    def __init__(self):
+        self.vital_message = None  # 用于保存 Vital 级别的输出
+
+    def normal(self, obj):
+        print(f"{self.vital_message} | {str(obj)}" if self.vital_message else str(obj))
+
+    def vital(self, obj):
+        self.vital_message = str(obj)
+
 
 
 class LoggerUtils:
@@ -68,6 +81,7 @@ class LoggerUtils:
 app_path = os.path.basename(os.path.abspath(sys.argv[0]))
 log_file = app_path.split('.')[0] + '.log'
 mylogger = LoggerUtils.get_logger(log_file)
+myprinter = PrinterUtils()
 
 if __name__ == '__main__':
     pass

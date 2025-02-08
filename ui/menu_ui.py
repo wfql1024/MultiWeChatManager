@@ -14,6 +14,7 @@ from resources import Strings, Config
 from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui, acc_manager_ui
 from utils import widget_utils
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
 
 
 class MenuUI:
@@ -156,7 +157,7 @@ class MenuUI:
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
         # -刷新
-        self.edit_menu.add_command(label="刷新", command=self.root_class.refresh)
+        self.edit_menu.add_command(label="刷新", command=self.to_refresh)
 
         # ————————————————————————————视图菜单————————————————————————————
         # 视图单选
@@ -405,6 +406,10 @@ class MenuUI:
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.root)
         statistic_ui.StatisticWindow(statistic_window, self.sw, self.settings_values["view"])
+
+    def to_refresh(self):
+        printer.vital("手动刷新")
+        self.root_class.refresh()
 
     def change_classic_view(self):
         self.root.unbind("<Configure>")

@@ -105,11 +105,11 @@ def manual_login(root, root_class, sw):
     state = root_class.sw_classes[sw].multiple_state
     logger.info(f"当前模式是：{state}")
     has_mutex_dict = subfunc_sw.get_mutex_dict(sw)
-    sub_exe_process, sub_exe = subfunc_sw.open_sw(sw, state, has_mutex_dict)
+    sub_exe_process, mode = subfunc_sw.open_sw(sw, state, has_mutex_dict)
     wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 20)
     if wechat_hwnd:
         subfunc_file.set_all_acc_values_to_false(sw)
-        subfunc_file.update_statistic_data(sw, 'manual', '_', sub_exe, time.time() - start_time)
+        subfunc_file.update_statistic_data(sw, 'manual', '_', mode, time.time() - start_time)
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
@@ -216,14 +216,22 @@ def auto_login_accounts(root_class, login_dict: Dict[str, List]):
                     # 确保打开了新的微信登录窗口
                     wechat_handles.add(wechat_hwnd)
                     if sub_exe_process:
+                        # print(f"进程{sub_exe_process}")
+                        # print(isinstance(sub_exe_process, process_utils.Process))
+                        # print(sub_exe_process.h_process, sub_exe_process.h_thread)
                         sub_exe_process.terminate()
                     print(f"打开窗口成功：{wechat_hwnd}")
                     subfunc_file.set_all_acc_values_to_false(sw)
                     subfunc_file.update_has_mutex_from_all_acc(sw)
                     break
                 if time.time() > end_time:
-                    print(f"超时！换下一个账号")
+                    print(f"超时！此号打开窗口失败！")
+                    wechat_hwnd = None
                     break
+
+            if wechat_hwnd is None:
+                # 跳过这个账号
+                continue
 
             # 安排窗口位置
             # 横坐标算出完美的平均位置

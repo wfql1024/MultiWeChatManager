@@ -53,6 +53,7 @@ from win32con import PROCESS_ALL_ACCESS
 
 from decrypt.interface import DecryptInterface
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
 
 
 class WeChatDecryptImpl(DecryptInterface):
@@ -66,7 +67,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     # 第一步：找key
     def get_acc_str_key_by_pid(self, pid):
-        print("正在获取key...")
+        printer.vital("获取key...")
         logger.info(f"pid: {pid}")
         logger.info("遍历微信内存，去暴力找key......")
         phone_types = [b'android\x00', b'iphone\x00']
@@ -110,50 +111,59 @@ class WeChatDecryptImpl(DecryptInterface):
             # key_addr=pm.pattern_scan_all(hex_key)
             # 判断操作系统位数，只需执行一次
             if phone_addr <= 2 ** 32:  # 如果是32位
-                is_32bit = True
                 logger.info(f"使用32位寻址去找key")
+                unpack_key_addr = lambda addr: struct.unpack('<I', pm.read_bytes(addr, 4))[0]
             else:  # 如果是64位
-                is_32bit = False
                 logger.info(f"使用64位寻址去找key")
+                unpack_key_addr = lambda addr: struct.unpack('<Q', pm.read_bytes(addr, 8))[0]
 
-            i = phone_addr  # 从找到的电话类型地址，作为基址，在附近查找
+            # 开始寻址...
+            address = phone_addr  # 从找到的电话类型地址，作为基址，在附近查找
             str_key = None
             logger.info(f"正在从电话类型基址的附近查找……")
             end_time = time.time() + 5
+            addr_cnt = 0
+            read_cnt = 0
+            correct_cnt = 0
+            printer.normal(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
+
             k = 0
-            while i > min_address:
+            while address > min_address:
                 if time.time() > end_time:
                     logger.info(f"超时了")
                     break
                 # j 的数列：-1,2,-3,4,-5...
                 k = k + 1
                 j = (k if k % 2 != 0 else -k)
-                i += j
+                address += j
                 # logger.info(i)
-                if is_32bit:
-                    key_addr_bytes = pm.read_bytes(i, 4)  # 32位寻址下，地址指针占4个字节，找到存key的地址指针
-                    key_addr = struct.unpack('<I', key_addr_bytes)[0]
-                else:
-                    key_addr_bytes = pm.read_bytes(i, 8)  # 64位寻址下，地址指针占8个字节，找到存key的地址指针
-                    key_addr = struct.unpack('<Q', key_addr_bytes)[0]
+                key_addr = unpack_key_addr(address)
+                addr_cnt += 1
+                # printer.normal(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
+
                 # if not is_writable_region(pm.process_id, key_addr):  # 要是这个指针指向的区域不能写，那也跳过
                 #     continue
                 try:
                     key = pm.read_bytes(key_addr, 32)
+                    read_cnt += 1
+                    printer.normal(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
                 except Exception as e:
-                    # logger.error(e)
+                    if e:
+                        pass
                     continue
                 # print("可写入", key)
                 str_key = binascii.hexlify(key).decode()
                 if check_sqlite_pass(misc_db, str_key):
+                    correct_cnt += 1
+                    printer.normal(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
                     # 到这里就是找到了……
-                    logger.info(f"pointer={i:X}, key_addr={key_addr:X}, key={key}")
+                    logger.info(f"pointer={address:X}, key_addr={key_addr:X}, key={key}")
                     logger.info(f"str_key:{str_key}")
-                    logger.info(f"查找用时：{time.time() + 5 - end_time:.4f}秒，地址差为{i - phone_addr:X}")
+                    logger.info(f"查找用时：{time.time() + 5 - end_time:.4f}秒，地址差为{address - phone_addr:X}")
                     return True, str_key
                 else:
                     logger.warning(
-                        f"Error key: diff={i - phone_addr:X}, pointer={i:X}, key_addr={key_addr:X}, key={key}")
+                        f"Error key: diff={address - phone_addr:X}, pointer={address:X}, key_addr={key_addr:X}, key={key}")
                     str_key = None
 
             if not str_key:
@@ -165,7 +175,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     # 第二步：拷贝数据库
     def copy_origin_db_to_proj(self, pid, account):
-        print("查找所需数据库文件...")
+        printer.vital("查找所需数据库文件...")
         pm = pymem.Pymem()
         pm.open_process_from_id(pid)
         p = psutil.Process(pid)
@@ -189,7 +199,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     # 第三步：解密
     def decrypt_db_file_by_str_key(self, pid, mm_db_path, str_key):
-        print(f"正在对数据库解密...")
+        printer.vital(f"数据库解密...")
         logger.info("正在对数据库解密......")
         sqlite_file_header = bytes("SQLite format 3", encoding='ASCII') + bytes(1)  # 文件头
         main_key = bytes.fromhex(str_key)
@@ -222,7 +232,7 @@ class WeChatDecryptImpl(DecryptInterface):
             logger.error(f'验证密钥比对失败: {hmac_key}')
             return False, RuntimeError(f'验证密钥比对失败: {hmac_key}')
 
-        print("解密成功，数据库写入解密后的内容...")
+        printer.normal("成功，数据库写入解密后的内容...")
         new_blist = [blist[i:i + DEFAULT_PAGESIZE] for i in range(DEFAULT_PAGESIZE, len(blist), DEFAULT_PAGESIZE)]
 
         decrypted_mm_db_path = None
@@ -255,7 +265,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     def get_acc_id_and_alias_from_db(self, cursor, acc):
         sql = f"SELECT UserName, Alias FROM 'Contact' WHERE UserName = '{acc}';"
-        print(f"执行：{sql}")
+        printer.normal(f"执行：{sql}")
         try:
             cursor.execute(sql)
             results = cursor.fetchall()
@@ -266,7 +276,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     def get_acc_nickname_from_db(self, cursor, acc):
         sql = f"SELECT UserName, NickName FROM 'Contact' WHERE UserName = '{acc}';"
-        print(f"执行：{sql}")
+        printer.normal(f"执行：{sql}")
         try:
             cursor.execute(sql)
             results = cursor.fetchall()
@@ -277,7 +287,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     def get_acc_avatar_from_db(self, cursor, acc):
         sql = f"SELECT UsrName, bigHeadImgUrl FROM 'ContactHeadImgUrl' WHERE UsrName = '{acc}';"
-        print(f"执行：{sql}")
+        printer.normal(f"执行：{sql}")
         try:
             cursor.execute(sql)
             results = cursor.fetchall()

@@ -4,7 +4,6 @@ import inspect
 import io
 import sys
 
-
 class RedirectText(io.TextIOBase):
     """
     用以传送打印到窗口状态栏的类，将输出按结构化的方式分割处理，并保存所有输出。

@@ -331,10 +331,10 @@ def do_click_in_wnd(hwnd, cx, cy):
     :return: 无
     """
     long_position = win32api.MAKELONG(cx, cy)  # 模拟鼠标指针 传送到指定坐标
-    print(f"要点击的handle：{hwnd}")
+    print(f"要点击的控件句柄：{hwnd}")
     win32api.SendMessage(hwnd, win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, long_position)  # 模拟鼠标按下
     win32api.SendMessage(hwnd, win32con.WM_LBUTTONUP, win32con.MK_LBUTTON, long_position)  # 模拟鼠标弹起
-    print(f"模拟点击按钮")
+    print(f"已点击：{hwnd}")
 
 
 def minimize_window(hwnd):

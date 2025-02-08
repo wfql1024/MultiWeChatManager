@@ -1,13 +1,14 @@
 import importlib
 import os
 import sqlite3
-from collections.abc import Sized
 from tkinter import messagebox
 
 from functions import func_setting, subfunc_file
 from resources.config import Config
 from utils import image_utils
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
+import decrypt
 
 
 def fetch_acc_detail_by_pid(sw, pid, account, after):
@@ -45,7 +46,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
         if os.path.isdir(os.path.join(data_path, folder))
     ) - excluded_folders
 
-    print("连接数据库...")
+    printer.vital("数据库查询...")
     if os.path.isfile(decrypted_mm_db_path):
         conn = sqlite3.connect(decrypted_mm_db_path)
     else:
@@ -60,7 +61,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
             if success is not True:
                 logger.error(f"账号{acc}查询失败")
                 continue
-            if isinstance(result, Sized) and len(result) > 0:
+            if isinstance(result, list) and len(result) > 0:
                 user_name, alias = result[0]
                 subfunc_file.update_sw_acc_details_to_json(sw, acc, alias=alias or user_name)
             else:
@@ -70,7 +71,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
             if success is not True:
                 logger.error(f"账号{acc}查询失败")
                 continue
-            if isinstance(result, Sized) and len(result) > 0:
+            if isinstance(result, list) and len(result) > 0:
                 user_name, nickname = result[0]
                 subfunc_file.update_sw_acc_details_to_json(sw, acc, nickname=nickname)
             else:
@@ -80,7 +81,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
             if success is not True:
                 logger.error(f"账号{acc}查询失败")
                 continue
-            if isinstance(result, Sized) and len(result) > 0:
+            if isinstance(result, list) and len(result) > 0:
                 usr_name, url = result[0]
                 origin_url, = subfunc_file.get_sw_acc_details_from_json(sw, acc, avatar_url=None)
                 save_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg").replace('\\', '/')
@@ -112,12 +113,13 @@ def get_decrypt_utils(platform):
     module_name = None
     class_name = None
     try:
-        # 动态加载模块，模块名称格式为 {platform}_decrypt_utils
-        module_name = f"decrypt.impl.{platform}_decrypt_impl"
-        module = importlib.import_module(module_name)
+        # # 动态加载模块，模块名称格式为 {platform}_decrypt_utils
+        # # module_name = f"decrypt.impl.{platform}_decrypt_impl"
+        # module_name = f"decrypt"
+        # module = importlib.import_module(module_name)
         # 从模块中获取工具类，例如 WeChatDecryptUtils
         class_name = f"{platform}DecryptImpl"
-        decrypt_class = getattr(module, class_name)
+        decrypt_class = getattr(decrypt, class_name)
         return decrypt_class()
     except ModuleNotFoundError:
         raise ValueError(f"未找到模块: {module_name}")

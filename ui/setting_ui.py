@@ -149,6 +149,7 @@ class SettingWindow:
         self.login_size_var.set(login_size)
 
     def check_bools(self):
+        # 需要检验是否更改的属性
         keys_to_check = ["data_dir"]
         self.need_to_clear_acc = any(self.changed[key] for key in keys_to_check)
 
@@ -317,8 +318,3 @@ class SettingWindow:
             else:
                 self.login_size_var.set(f"350*475")
 
-
-if __name__ == "__main__":
-    root = tk.Tk()
-    root.withdraw()  # 隐藏根窗口
-    filedialog.askopenfilename(filetypes=[("Executable files", "*.exe"), ("All files", "*.*")])

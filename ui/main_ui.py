@@ -17,6 +17,7 @@ from resources import Strings, Config, Constants
 from ui import debug_ui, classic_row_ui, treeview_row_ui, loading_ui, detail_ui, menu_ui
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
 
 
 class MainWindow:
@@ -239,11 +240,10 @@ class MainWindow:
         selected_sw = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
         if selected_sw:
             subfunc_file.save_global_setting("tab", selected_sw)
-            msg_str = f"当前选项卡: {selected_sw}"
-            self.refresh(message=msg_str)
-            print(msg_str)
+            printer.vital(f"当前选项卡: {selected_sw}")
+            self.refresh()
 
-    def refresh(self, message=None):
+    def refresh(self):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
@@ -262,10 +262,10 @@ class MainWindow:
         # 刷新界面
         def reload_func():
             try:
-                self.root.after(0, self.refresh_sw_main_frame, self.sw, message)
+                self.root.after(0, self.refresh_sw_main_frame, self.sw)
             except Exception as e_reload:
                 logger.error(e_reload)
-                self.root.after(5000, self.refresh_sw_main_frame, self.sw, message)
+                self.root.after(5000, self.refresh_sw_main_frame, self.sw)
 
         try:
             # 线程启动获取登录情况和渲染列表
@@ -273,7 +273,7 @@ class MainWindow:
         except Exception as e:
             logger.error(e)
 
-    def refresh_sw_main_frame(self, sw, message=None):
+    def refresh_sw_main_frame(self, sw):
         """加载或刷新主界面"""
         # 如果要刷新的页面不是当前选定选项卡，不用处理
         if sw != self.sw:
@@ -291,13 +291,13 @@ class MainWindow:
         try:
             # 线程启动获取登录情况和渲染列表
             def thread_func():
-                self.root.after(0, self.create_main_ui, message)
+                self.root.after(0, self.create_main_ui)
 
             threading.Thread(target=thread_func).start()
         except Exception as e:
             logger.error(e)
 
-    def create_main_ui(self, message=None):
+    def create_main_ui(self):
         """渲染主界面账号列表"""
         # 检测是否路径错误
         if self.root_menu.path_error is True:
@@ -308,7 +308,7 @@ class MainWindow:
             if success is not True:
                 self.show_setting_error()
             else:
-                self.create_account_list_ui(result, message)
+                self.create_account_list_ui(result)
 
         # print("创建完成，无论是错误界面还是正常界面，下面代码都要进行")
 
@@ -324,7 +324,7 @@ class MainWindow:
         # 重新绑定标签切换事件
         self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
-    def create_account_list_ui(self, result, message=None):
+    def create_account_list_ui(self, result):
         print(f"渲染账号列表.........................................................")
 
         acc_list_dict, _, mutex = result
@@ -357,8 +357,7 @@ class MainWindow:
             pass
         subfunc_file.update_statistic_data(
             self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(logins)), time.time() - self.start_time)
-        msg_str = f"{message} | " if message else ""
-        print(f"{msg_str}加载完成！用时：{time.time() - self.start_time:.4f}秒")
+        printer.normal(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
         # 获取已登录的窗口hwnd
         func_account.get_main_hwnd_of_accounts(logins, self.sw)
@@ -496,6 +495,8 @@ class MainWindow:
         self.detail_ui_class.set_focus_to_(widget_tag)
 
     def to_switch_to_sw_account_wnd(self, item, event=None):
+        if event:
+            pass
         subfunc_sw.switch_to_sw_account_wnd(item, self.root)
 
 

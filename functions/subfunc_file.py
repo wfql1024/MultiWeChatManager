@@ -3,7 +3,9 @@ import json
 import math
 import os
 import re
+import subprocess
 import sys
+import time
 from typing import *
 
 import requests
@@ -777,7 +779,6 @@ def check_auto_start_or_toggle_to_(target_state=None):
     startup_folder = sys_utils.get_startup_folder()
     print(startup_folder)
     app_path = get_packed_executable()
-    # app_path = r"D:\PortableSoftware\Tools\微信多开管理器\微信多开管理器.exe"  # 测试路径
     print(app_path)
 
     if app_path is None:
@@ -802,6 +803,30 @@ def check_auto_start_or_toggle_to_(target_state=None):
             logger.error(e)
             return False, str(e)
 
+def create_and_export_task():
+    """创建任务并导出 XML"""
+    task_name = f"TempTask_{int(time.time())}"
+    exported_xml_path = Config.TASK_TP_XML_PATH
+
+    # 1. 创建任务
+    subprocess.run([
+        "schtasks", "/Create", "/TN", task_name, "/SC", "ONCE", "/ST", "12:00",
+        "/TR", "C:\\Windows\\System32\\notepad.exe", "/RL", "HIGHEST", "/F"
+    ], check=True)
+
+    # 2. 导出任务 XML
+    result = subprocess.run(["schtasks", "/Query", "/TN", task_name, "/XML"],
+                   capture_output=True,
+                   check=True)
+
+    # 使用错误处理来忽略无法解码的字节
+    xml_data = result.stdout.decode("utf-16", errors="ignore")
+
+    # 重新保存为 UTF-8
+    with open(exported_xml_path, "w", encoding="utf-8") as f:
+        f.write(xml_data)
+
+    print(f"任务 XML 导出成功: {exported_xml_path}")
 
 if __name__ == '__main__':
-    print(check_auto_start_or_toggle_to_())
+    create_and_export_task()
