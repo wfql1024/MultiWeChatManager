@@ -215,6 +215,7 @@ class QueueWithUpdate(queue.Queue):
         except queue.Empty:
             return None
 
+
 class StatusBar:
     def __init__(self, root, r_class, debug):
 
@@ -356,6 +357,7 @@ class ActionableTreeView(ABC):
         self.tooltips = {}
         self.selected_items = []
         self.func_of_id_col = None
+        self.sw = None
 
         self.sort: Dict[str, bool] = {
 
@@ -378,10 +380,11 @@ class ActionableTreeView(ABC):
         self.rest_btn_dicts = rest_btn_dicts
 
         # 其他的成员变量
-        self.root = self.parent_class.root
         self.root_class = self.parent_class.root_class
+        self.root = self.root_class.root
+        self.acc_tab_ui = self.root_class.acc_tab_ui
+
         self.main_frame = self.parent_class.main_frame
-        self.sw = self.root_class.sw
 
         self.initialize_members_in_init()
 
@@ -601,7 +604,6 @@ class ActionableTreeView(ABC):
         tree = event.widget
         selected_items = self.selected_items
         item_id = tree.identify_row(event.y)
-        self.func_of_id_col = lambda: self.root_class.open_acc_detail(item_id)
 
         # 列标题不响应
         if len(item_id) == 0:
@@ -620,7 +622,7 @@ class ActionableTreeView(ABC):
             return
 
         if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            self.func_of_id_col()
+            self.func_of_id_col(item_id)
             pass
         else:
             if item_id:
@@ -790,7 +792,10 @@ class ActionableTreeView(ABC):
 
         # 保存排序状态
         self.sort[col] = is_asc_after
-        subfunc_file.save_sw_setting(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
+        if self.sw is not None:
+            subfunc_file.save_sw_setting(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
+        else:
+            subfunc_file.save_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
 
     def adjust_table(self):
         """

@@ -3,7 +3,6 @@
 import inspect
 import logging
 import os
-import queue
 import sys
 
 import colorlog
@@ -33,7 +32,6 @@ class PrinterUtils:
 
     def vital(self, obj):
         self.vital_message = str(obj)
-
 
 
 class LoggerUtils:

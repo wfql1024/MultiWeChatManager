@@ -317,4 +317,3 @@ class SettingWindow:
                 self.login_size_var.set(f"{login_width}*{login_height}")
             else:
                 self.login_size_var.set(f"350*475")
-

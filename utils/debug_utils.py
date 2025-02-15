@@ -4,6 +4,7 @@ import inspect
 import io
 import sys
 
+
 class RedirectText(io.TextIOBase):
     """
     用以传送打印到窗口状态栏的类，将输出按结构化的方式分割处理，并保存所有输出。
@@ -20,8 +21,8 @@ class RedirectText(io.TextIOBase):
         lines = text.splitlines()  # 分割成行
         for line in lines:
             if self.debug:
-            # 去掉最后一行（可能为空或包含特殊符号）
-            # 保存每行内容到 logs，注意需要排除结尾符号
+                # 去掉最后一行（可能为空或包含特殊符号）
+                # 保存每行内容到 logs，注意需要排除结尾符号
                 if len(line) > 0:
                     # 从你的工具中获取前缀、堆栈等结构化部分
                     stack_prefix = get_call_stack_indent()  # 缩进前缀
@@ -64,6 +65,7 @@ class RedirectText(io.TextIOBase):
     def get_logs(self):
         """返回保存的日志"""
         return self.logs  # 返回结构化日志
+
 
 def simplify_call_stack(text):
     # 需要掐头去尾处理的标识符

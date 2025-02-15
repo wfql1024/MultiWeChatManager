@@ -20,17 +20,19 @@ class TreeviewRowUI:
 
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
+        self.acc_tab_ui = self.root_class.acc_tab_ui
+
         self.acc_list_dict, _, _ = result
 
         logins = self.acc_list_dict["login"]
         logouts = self.acc_list_dict["logout"]
 
-        self.main_frame = self.root_class.main_frame
+        self.main_frame = self.acc_tab_ui.main_frame
         self.btn_dict = {
             "auto_quit_btn": {
                 "text": "一键退出",
                 "btn": None,
-                "func": self.root_class.to_quit_accounts,
+                "func": self.acc_tab_ui.to_quit_accounts,
                 "enable_scopes": [(1, None)],
                 "tip_scopes_dict": {
                     "请选择要退出的账号": [(0, 0)],
@@ -40,7 +42,7 @@ class TreeviewRowUI:
                 "text": "一键登录",
                 "btn": None,
                 "tip": "请选择要登录的账号",
-                "func": self.root_class.to_auto_login,
+                "func": self.acc_tab_ui.to_auto_login,
                 "enable_scopes": [(1, None)],
                 "tip_scopes_dict": {
                     "请选择要登录的账号": [(0, 0)],
@@ -49,7 +51,7 @@ class TreeviewRowUI:
             "config_btn": {
                 "text": "❐配 置",
                 "btn": None,
-                "func": self.root_class.to_create_config,
+                "func": self.acc_tab_ui.to_create_config,
                 "enable_scopes": [(1, 1)],
                 "tip_scopes_dict": {
                     "请选择一个账号进行配置，伴有符号为推荐配置账号": [(0, 0)],
@@ -70,9 +72,11 @@ class TreeviewRowUI:
             self.tree_class["logout"] = AccLoginTreeView(
                 self, "logout", "未登录：", self.btn_dict["auto_login_btn"])
 
+
 class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
+        self.acc_tab_ui = None
         self.root = None
         self.photo_images = []
         self.sign_visible = None
@@ -82,8 +86,11 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
 
     def initialize_members_in_init(self):
         self.root = self.parent_class.root
+        self.acc_tab_ui = self.acc_tab_ui
+        self.sw = self.acc_tab_ui.sw
+        self.func_of_id_col = self.acc_tab_ui.to_open_acc_detail
+
         self.item_list = self.parent_class.acc_list_dict[self.table_tag]
-        self.sw = self.root_class.sw
         self.data_dir = self.root_class.sw_classes[self.sw].data_dir
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
         self.columns = (" ", "配置", "pid", "原始id", "当前id", "昵称")

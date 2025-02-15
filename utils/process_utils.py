@@ -1,13 +1,15 @@
-import datetime
-import sys
-import time
-from ctypes import wintypes
-from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
-import psutil
 import ctypes
+import datetime
 import os
 import subprocess
+import sys
+import time
 import xml.etree.ElementTree as ET
+from ctypes import wintypes
+from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
+
+import psutil
+
 from utils.logger_utils import mylogger as logger
 
 
@@ -302,7 +304,7 @@ def create_process_with_task_scheduler(executable, args):
     pid = None
     end_time = time.time() + 5
     while len(pids) == 0:
-        pids:list = get_process_ids_by_name(os.path.basename(executable))
+        pids: list = get_process_ids_by_name(os.path.basename(executable))
         if time.time() > end_time:
             break
     if len(pids) > 0:

@@ -14,8 +14,6 @@ from utils import hwnd_utils, widget_utils
 from utils.logger_utils import mylogger as logger
 
 
-# TODO：控件的提取，关于页面转为网络更新
-
 class Direction:
     def __init__(self, initial=1):
         self.value = initial

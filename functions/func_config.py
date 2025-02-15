@@ -5,6 +5,7 @@ from datetime import datetime
 from tkinter import messagebox
 
 from functions import func_setting, subfunc_sw, subfunc_file
+from public_class.global_members import GlobalMembers
 from resources import Config
 from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
@@ -109,14 +110,17 @@ def operate_config(method, sw, account):
     return True, success_list
 
 
-def test(root_class, sw, account, multiple_status):
+def test(sw, account, multiple_status):
     """
     尝试打开微信，让用户判断是否是对应的账号，根据用户结果去创建配置或结束
     :param account: 账号
-    :param root_class: 主窗口类
     :param multiple_status: 是否全局多开状态
     :return: 是否对应
     """
+    root_class = GlobalMembers.root_class
+    root = root_class.root
+    acc_tab_ui = root_class.acc_tab_ui
+
     if messagebox.askyesno(
             "确认",
             "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
@@ -137,7 +141,7 @@ def test(root_class, sw, account, multiple_status):
             if sub_exe_process:
                 sub_exe_process.terminate()
             time.sleep(1)
-            hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(wechat_hwnd, root_class.root.winfo_id())
+            hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(wechat_hwnd, root.winfo_id())
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
                 success, result = operate_config('add', sw, account)
                 if success is True:
@@ -146,4 +150,4 @@ def test(root_class, sw, account, multiple_status):
             hwnd_utils.close_by_wnd_class(login_wnd_class)
         else:
             messagebox.showerror("错误", "打开登录窗口失败")
-    root_class.root.after(0, root_class.refresh_sw_main_frame, sw)
+    root.after(0, acc_tab_ui.refresh_frame, sw)

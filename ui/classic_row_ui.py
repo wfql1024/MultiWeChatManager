@@ -22,7 +22,9 @@ class AccountRow:
                  login_status, update_top_checkbox_callback):
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
-        self.sw = self.root_class.sw
+        self.acc_tab_ui = self.root_class.acc_tab_ui
+
+        self.sw = self.acc_tab_ui.sw
         self.sw_class = self.root_class.sw_classes[self.sw]
         self.data_path = self.sw_class.data_dir
         self.config_status = config_status
@@ -92,7 +94,7 @@ class AccountRow:
             self.config_button_text = "重新配置" if self.config_status != "无配置" else "添加配置"
             self.config_button = ttk.Button(
                 self.button_frame, text=self.config_button_text, style='Custom.TButton',
-                command=partial(self.root_class.to_create_config, [iid])
+                command=partial(self.acc_tab_ui.to_create_config, [iid])
             )
             self.config_button.pack(side=tk.RIGHT)
             self.row_frame.bind("<Button-1>", self.toggle_checkbox, add="+")
@@ -102,7 +104,7 @@ class AccountRow:
             # 登录按钮
             self.login_button = ttk.Button(
                 self.button_frame, text="自动登录", style='Custom.TButton',
-                command=lambda: self.root_class.to_auto_login([iid]))
+                command=lambda: self.acc_tab_ui.to_auto_login([iid]))
             self.login_button.pack(side=tk.RIGHT)
 
             if self.config_status == "无配置":
@@ -122,7 +124,7 @@ class AccountRow:
         widget_utils.UnlimitedClickHandler(
             self.root,
             self.avatar_label,
-            partial(self.root_class.open_acc_detail, iid),
+            partial(self.acc_tab_ui.to_open_acc_detail, iid),
             partial(subfunc_sw.switch_to_sw_account_wnd, iid, self.root)
         )
 
@@ -163,9 +165,12 @@ class ClassicRowUI:
     def __init__(self, result):
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
-        self.main_frame = self.root_class.main_frame
-        self.sw = self.root_class.sw
-        self.sw_class = self.root_class.sw_classes[self.sw]
+        self.acc_tab_ui = self.root_class.acc_tab_ui
+        self.sw_classes = self.root_class.sw_classes
+
+        self.main_frame = self.acc_tab_ui.main_frame
+        self.sw = self.acc_tab_ui.sw
+        self.sw_class = self.sw_classes[self.sw]
         self.data_path = self.sw_class.data_dir
         self.rows = {
             "login": {},
@@ -209,7 +214,7 @@ class ClassicRowUI:
             # 一键退出
             self.one_key_quit = ttk.Button(
                 self.login_btn_frame, text="一键退出", style='Custom.TButton',
-                command=lambda: self.root_class.to_quit_accounts(self.get_selected_accounts("login"))
+                command=lambda: self.acc_tab_ui.to_quit_accounts(self.get_selected_accounts("login"))
             )
             self.one_key_quit.pack(side=tk.RIGHT)
 
@@ -251,7 +256,7 @@ class ClassicRowUI:
             # 一键登录
             self.one_key_auto_login = ttk.Button(
                 self.logout_bottom_frame, text="一键登录", style='Custom.TButton',
-                command=lambda: self.root_class.to_auto_login(self.get_selected_accounts("logout")),
+                command=lambda: self.acc_tab_ui.to_auto_login(self.get_selected_accounts("logout")),
             )
             self.one_key_auto_login.pack(side=tk.RIGHT)
 

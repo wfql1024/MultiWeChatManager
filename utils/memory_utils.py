@@ -1,7 +1,6 @@
 import ctypes
 from ctypes import wintypes
 
-
 kernel32 = ctypes.windll.kernel32
 ReadProcessMemory = kernel32.ReadProcessMemory
 CloseHandle = kernel32.CloseHandle
@@ -20,6 +19,7 @@ K32EnumProcessModules.restype = wintypes.BOOL
 K32GetModuleFileNameExA.argtypes = [wintypes.HANDLE, wintypes.HMODULE, ctypes.POINTER(ctypes.c_char),
                                     wintypes.DWORD]
 K32GetModuleFileNameExA.restype = wintypes.DWORD
+
 
 def get_module_base_address(process_handle, module_name):
     """

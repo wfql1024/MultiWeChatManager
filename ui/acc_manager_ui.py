@@ -11,25 +11,38 @@ from utils.logger_utils import mylogger as logger
 
 
 class AccManagerWindow:
-    def __init__(self, parent_class, wnd, sw):
+    """账号管理窗口"""
+
+    def __init__(self, parent_class, wnd):
+        self.parent_class = parent_class
+        self.root_class = self.parent_class.root_class
+        self.sw = None
+        wnd.title(f"账号管理")
+        wnd.attributes('-toolwindow', True)
+        window_width, window_height = Constants.ACC_MNG_WND_SIZE
+        hwnd_utils.bring_tk_wnd_to_center(wnd, window_width, window_height)
+        wnd.grab_set()
+        wnd.update_idletasks()
+
+        self.acc_manager_ui = AccManagerUI(self, wnd, wnd)
+        self.acc_manager_ui.refresh_frame()
+
+
+class AccManagerUI:
+    """账号管理UI"""
+
+    def __init__(self, parent_class, wnd, frame):
+        self.main_frame = None
+        self.scrollable_canvas = None
         self.acc_data = None
         self.tree_class = {}
 
         self.parent_class = parent_class
         self.root_class = self.parent_class.root_class
-        self.root = self.parent_class.root
+        self.sw_notebook = self.root_class.sw_notebook
         self.wnd = wnd
-        self.sw = sw
-        self.wnd.title(f"账号管理")
-        self.wnd.attributes('-toolwindow', True)
-        self.window_width, self.window_height = Constants.ACC_MNG_WND_SIZE
-        hwnd_utils.bring_tk_wnd_to_center(self.wnd, self.window_width, self.window_height)
-        wnd.grab_set()
-        wnd.update_idletasks()
-
-        # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widget.ScrollableCanvas(wnd)
-        self.main_frame = self.scrollable_canvas.main_frame
+        self.tab_frame = frame
+        self.sw = None
 
         self.btn_dict = {
             "cancel_hiding_btn": {
@@ -82,9 +95,12 @@ class AccManagerWindow:
                 },
             }
         }
-        self.display_ui()
 
     def display_ui(self):
+        # 创建一个可以滚动的画布，并放置一个主框架在画布上
+        self.scrollable_canvas = reusable_widget.ScrollableCanvas(self.tab_frame)
+        self.main_frame = self.scrollable_canvas.main_frame
+
         self.acc_data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
         # 加载已隐藏列表
         self.tree_class["hidden"] = AccManageTreeView(
@@ -102,15 +118,21 @@ class AccManagerWindow:
             self.btn_dict["add_hotkey_btn"],
         )
 
+        print("列表都加载完，已经在这里了")
+
         # 加载完成后更新一下界面并且触发事件
-        self.scrollable_canvas.refresh_canvas()
+        if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
+            self.scrollable_canvas.refresh_canvas()
+
+        # 重新绑定标签切换事件
+        self.sw_notebook.bind('<<NotebookTabChanged>>', self.root_class.on_tab_change)
 
     def to_cancel_hiding_of_(self, items):
         print(f"进入取消隐藏方法")
         for item in items:
             sw, acc = item.split("/")
             subfunc_file.update_sw_acc_details_to_json(sw, acc, hidden=False)
-        self.refresh_acc_manager()
+        self.refresh_frame()
         pass
 
     def to_cancel_auto_start_of_(self, items):
@@ -118,7 +140,7 @@ class AccManagerWindow:
         for item in items:
             sw, acc = item.split("/")
             subfunc_file.update_sw_acc_details_to_json(sw, acc, auto_start=False)
-        self.refresh_acc_manager()
+        self.refresh_frame()
         pass
 
     def to_add_hiding_of_(self, items):
@@ -126,7 +148,7 @@ class AccManagerWindow:
         for item in items:
             sw, acc = item.split("/")
             subfunc_file.update_sw_acc_details_to_json(sw, acc, hidden=True)
-        self.refresh_acc_manager()
+        self.refresh_frame()
         pass
 
     def to_add_auto_start_of_(self, items):
@@ -134,18 +156,25 @@ class AccManagerWindow:
         for item in items:
             sw, acc = item.split("/")
             subfunc_file.update_sw_acc_details_to_json(sw, acc, auto_start=True)
-        self.refresh_acc_manager()
+        self.refresh_frame()
         pass
 
     def to_add_hotkey_of_(self, items):
         print(f"进入添加热键方法")
-        self.root_class.open_acc_detail(items[0], "hotkey")
+        self.to_open_acc_detail(items[0], "hotkey")
         pass
 
-    def refresh_acc_manager(self):
-        for widget in self.main_frame.winfo_children():
+    def refresh_frame(self, sw=None):
+        if sw:
+            pass
+        print("清理账号管理界面")
+        for widget in self.tab_frame.winfo_children():
             widget.destroy()
         self.display_ui()
+
+    def to_open_acc_detail(self, item, widget_tag=None, event=None):
+        """打开详情窗口"""
+        self.root_class.open_acc_detail(item, self, widget_tag, event)
 
 
 class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
@@ -165,6 +194,7 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
         self.columns = (" ", "快捷键", "隐藏", "自启动", "原始id", "昵称")
         sort_str = subfunc_file.fetch_global_setting_or_set_default(f"{self.table_tag}_sort")
         self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
+        self.func_of_id_col = self.parent_class.to_open_acc_detail
 
     def set_table_style(self):
         super().set_table_style()

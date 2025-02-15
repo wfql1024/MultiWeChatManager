@@ -199,8 +199,6 @@ class SidebarUI:
         self.restore_button = tk.Button(self.left_frame, text="恢复窗口", command=self.restore_to_main_ui)
         self.restore_button.pack(pady=10)
 
-
-
         # 剩余右侧区域（用于嵌入窗口的地方）
         self.right_frame_hwnd = self.create_right_frame()
         self.monitor_thread = threading.Thread(target=self.monitor_window_position, daemon=True)

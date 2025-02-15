@@ -11,6 +11,7 @@ import psutil
 from PIL import Image
 
 from functions import subfunc_file, func_config
+from public_class.global_members import GlobalMembers
 from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
@@ -169,7 +170,10 @@ def silent_get_nickname(sw, acc_list, data_dir):
     return changed1 or changed2
 
 
-def silent_get_and_config(root, root_class, sw, login, logout):
+def silent_get_and_config(sw, login, logout):
+    root_class = GlobalMembers.root_class
+    acc_tab_ui = root_class.acc_tab_ui
+    root = root_class.root
     data_dir = root_class.sw_classes[sw].data_dir
 
     # 悄悄执行检测昵称和头像
@@ -210,7 +214,7 @@ def silent_get_and_config(root, root_class, sw, login, logout):
     # 5. 通知
     if need_to_notice is True:
         messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")
-        root.after(0, root_class.refresh_sw_main_frame, sw)
+        root.after(0, acc_tab_ui.refresh_frame, sw)
 
 
 def get_sw_acc_list(_root, root_class, sw):

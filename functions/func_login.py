@@ -9,12 +9,17 @@ import win32con
 import win32gui
 
 from functions import func_config, subfunc_sw, subfunc_file, func_account
+from public_class.global_members import GlobalMembers
 from resources import Config
 from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
-def login_auto_start_accounts(root, root_class):
+def login_auto_start_accounts():
+    root_class = GlobalMembers.root_class
+    root = root_class.root
+    acc_tab_ui = root_class.acc_tab_ui
+
     all_sw_dict, = subfunc_file.get_details_from_remote_setting_json("global", all_sw=None)
     all_sw = [key for key in all_sw_dict.keys()]
     print("所有平台：", all_sw)
@@ -36,7 +41,7 @@ def login_auto_start_accounts(root, root_class):
     # 获取已经登录的账号
     for sw in all_sw:
         try:
-            if sw == root_class.sw:
+            if sw == acc_tab_ui.sw:
                 logins = root_class.sw_classes[sw].login_accounts
             else:
                 success, result = func_account.get_sw_acc_list(root, root_class, sw)
@@ -71,20 +76,22 @@ def login_auto_start_accounts(root, root_class):
     try:
         threading.Thread(
             target=auto_login_accounts,
-            args=(root_class, login_dict)
+            args=(login_dict,)
         ).start()
     except Exception as e:
         logger.error(e)
 
 
-def manual_login(root, root_class, sw):
+def manual_login(sw):
     """
     根据状态进行手动登录过程
-    :param root: 主窗口
-    :param root_class: 主窗口类
     :param sw: 选择的软件标签
     :return: 成功与否
     """
+    root_class = GlobalMembers.root_class
+    root = root_class.root
+    acc_tab_ui = root_class.acc_tab_ui
+
     # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
     start_time = time.time()
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
@@ -122,17 +129,19 @@ def manual_login(root, root_class, sw):
         messagebox.showerror("错误", "手动登录失败，请重试")
 
     # 刷新菜单和窗口前置
-    root_class.root.after(0, root_class.refresh_sw_main_frame, sw)
+    root_class.root.after(0, acc_tab_ui.refresh_frame, sw)
     hwnd_utils.bring_tk_wnd_to_front(root, root)
 
 
-def auto_login_accounts(root_class, login_dict: Dict[str, List]):
+def auto_login_accounts(login_dict: Dict[str, List]):
     """
     对选择的账号，进行全自动登录
     :param login_dict: 登录列表字典
-    :param root_class: 主窗口类
     :return: 是否成功
     """
+    root_class = GlobalMembers.root_class
+    root = root_class.root
+    acc_tab_ui = root_class.acc_tab_ui
 
     # print(login_dict)
 
@@ -267,7 +276,7 @@ def auto_login_accounts(root_class, login_dict: Dict[str, List]):
         # 定义点击按钮并等待成功的线程，启动线程
         def click_all_login_button():
             # 判断是否需要自动点击按钮
-            auto_press = root_class.root_menu.settings_values["auto_press"]
+            auto_press = root_class.global_settings_value.auto_press
             if auto_press:
                 # 两轮点击所有窗口的登录，防止遗漏
                 hwnd_list = hwnd_utils.get_hwnd_list_by_class_and_title(login_wnd_class)
@@ -303,7 +312,6 @@ def auto_login_accounts(root_class, login_dict: Dict[str, List]):
             else:
                 print("请手动点击登录按钮")
 
-
             # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
             ddl_time = time.time() + 30
             while True:
@@ -313,7 +321,7 @@ def auto_login_accounts(root_class, login_dict: Dict[str, List]):
                     break
                 if time.time() > ddl_time:
                     break
-            root_class.root.after(0, root_class.refresh_sw_main_frame, sw)
+            root.after(0, acc_tab_ui.refresh_frame, sw)
 
         threading.Thread(target=click_all_login_button).start()
 

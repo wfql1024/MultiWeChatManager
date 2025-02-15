@@ -803,6 +803,7 @@ def check_auto_start_or_toggle_to_(target_state=None):
             logger.error(e)
             return False, str(e)
 
+
 def create_and_export_task():
     """创建任务并导出 XML"""
     task_name = f"TempTask_{int(time.time())}"
@@ -816,8 +817,8 @@ def create_and_export_task():
 
     # 2. 导出任务 XML
     result = subprocess.run(["schtasks", "/Query", "/TN", task_name, "/XML"],
-                   capture_output=True,
-                   check=True)
+                            capture_output=True,
+                            check=True)
 
     # 使用错误处理来忽略无法解码的字节
     xml_data = result.stdout.decode("utf-16", errors="ignore")
@@ -827,6 +828,7 @@ def create_and_export_task():
         f.write(xml_data)
 
     print(f"任务 XML 导出成功: {exported_xml_path}")
+
 
 if __name__ == '__main__':
     create_and_export_task()

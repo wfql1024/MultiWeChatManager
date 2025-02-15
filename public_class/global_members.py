@@ -1,5 +1,3 @@
-
-
 class GlobalMembers:
     _instance = None
     _root_class = None
@@ -16,6 +14,3 @@ class GlobalMembers:
     @root_class.setter
     def root_class(self, value):
         self._root_class = value
-
-
-

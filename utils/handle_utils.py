@@ -27,6 +27,7 @@ def get_process_handle(pid):
 
     return handle
 
+
 def close_handles_by_matches(handle_exe, matches):
     """
     封装关闭句柄的操作，遍历所有匹配项并尝试关闭每个句柄。
