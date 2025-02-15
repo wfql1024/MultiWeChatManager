@@ -17,7 +17,7 @@ def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders: list, che
     获取微信数据路径的结果元组
     :param path_type: 路径类型
     :param sw: 平台
-    :param path_finders: 是否从设置窗口调用
+    :param path_finders: 获取路径的函数列表
     :param check_sw_path_func: 校验函数，参数为sw和path
     :return: 成功，是否改变，结果
     """

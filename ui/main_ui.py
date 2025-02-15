@@ -48,17 +48,18 @@ class MainWindow:
         self.sw_classes = {
 
         }
-
+        self.global_settings = GlobalSettings()
+        self.app_info = AppInfo()
         GlobalMembers.root_class = self
 
         self.root = root
         self.debug = args.debug
         self.new = args.new
-        
+
         self.root.withdraw()  # 初始化时隐藏主窗口
         # 渲染加载窗口
         self.loading_wnd = tk.Toplevel(self.root)
-        self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)        
+        self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)
 
         try:
             # 初次使用
@@ -75,8 +76,6 @@ class MainWindow:
 
         self.hotkey_map = {
         }
-
-        
 
     def load_hotkeys_from_json(self, json_path):
         """ 从 JSON 文件加载快捷键映射 """
@@ -160,9 +159,9 @@ class MainWindow:
 
         # 创建状态栏
         self.statusbar_class = reusable_widget.StatusBar(self.root, self, self.debug)
-        
+
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE
-        
+
         # 获取基本属性，加载标签页
         self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
         self.cfg_data = subfunc_file.try_get_local_cfg()
@@ -191,7 +190,6 @@ class MainWindow:
 
         self.root.after(0, hwnd_utils.bring_tk_wnd_to_center, self.root, self.window_width, self.window_height)
         self.root.overrideredirect(False)
-
 
     def init_notebook(self):
         """集中写界面初始化方法"""
@@ -337,7 +335,7 @@ class MainWindow:
         # 底部框架=手动登录
         bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
         bottom_frame.pack(side=tk.BOTTOM)
-        prefix = Strings.MUTEX_SIGN if mutex is True and self.root_menu.settings_values["sign_vis"] else ""
+        prefix = Strings.MUTEX_SIGN if mutex is True and self.global_settings.sign_vis else ""
         manual_login_text = f"{prefix}手动登录"
         manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
                                          command=self.to_manual_login, style='Custom.TButton')
@@ -520,3 +518,25 @@ class SoftwareInfo:
         self.dll_dir = None
         self.login_accounts = None
         self.logout_accounts = None
+
+
+class AppInfo:
+    def __init__(self):
+        self.name = os.path.basename(sys.argv[0])
+        self.author = "吾峰起浪",
+        self.curr_full_ver = subfunc_file.get_app_current_version()
+        self.need_update = None
+        self.hint = "狂按"
+
+
+
+class GlobalSettings:
+    def __init__(self):
+        self.sign_vis = None
+        self.scale = None
+        self.login_size = None
+        self.rest_mode = None
+        self.hide_wnd = None
+        self.call_mode = None
+        self.new_func = None
+        self.auto_press = None

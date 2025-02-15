@@ -1,12 +1,10 @@
 import os
 import re
-import sys
 import tkinter as tk
 import webbrowser
 from functools import partial
 from pathlib import Path
 from tkinter import messagebox
-from typing import Dict, Union
 
 from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_update
 from public_class.global_members import GlobalMembers
@@ -20,11 +18,11 @@ from utils.logger_utils import myprinter as printer
 class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
+        self.call_mode_menu = None
         self.auto_start_menu = None
         self.path_error = None
         self.multiple_err = None
         self.revoke_err = None
-        self.login_menu = None
         self.help_menu = None
         self.rest_mode_menu = None
         self.settings_menu = None
@@ -41,42 +39,14 @@ class MenuUI:
 
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
+        self.global_settings = self.root_class.global_settings
+        self.app_info = self.root_class.app_info
 
         self.sw = self.root_class.sw
         self.cfg_data = self.root_class.cfg_data
         self.sw_classes = self.root_class.sw_classes
         self.sw_class = self.sw_classes[self.sw]
 
-        self.app_info: Dict[str, Union[str, bool, None]] = {
-            "name": os.path.basename(sys.argv[0]),
-            "author": "吾峰起浪",
-            "curr_full_ver": subfunc_file.get_app_current_version(),
-            "need_update": None,
-            "hint": "狂按",
-        }
-        self.states: Dict[str, Union[str, bool, None]] = {
-            "multiple": None,
-            "revoke": None,
-            "has_error": None,
-        }
-        self.settings_values: Dict[str, Union[str, bool, None]] = {
-            "sign_vis": None,
-            "scale": None,
-            "login_size": None,
-            "rest_mode": None,
-            "hide_wnd": None,
-            "new_func": None,
-            "auto_press": None,
-        }
-        self.settings_var: Dict[str, Union[tk.BooleanVar, tk.StringVar, None]] = {
-            "sign_vis": None,
-            "scale": None,
-            "login_size": None,
-            "rest_mode": None,
-            "hide_wnd": None,
-            "new_func": None,
-            "auto_press": None,
-        }
 
     def create_root_menu_bar(self):
         """创建菜单栏"""
@@ -161,60 +131,60 @@ class MenuUI:
 
         # ————————————————————————————视图菜单————————————————————————————
         # 视图单选
-        self.settings_values["view"] = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
-        self.settings_var["view"] = tk.StringVar(value=self.settings_values["view"])
+        self.global_settings.view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
+        view_var = tk.StringVar(value=self.global_settings.view)
         self.view_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="视图", menu=self.view_menu)
 
-        self.view_menu.add_radiobutton(label="经典", variable=self.settings_var["view"], value="classic",
+        self.view_menu.add_radiobutton(label="经典", variable=view_var, value="classic",
                                        command=self.change_classic_view)
-        self.view_menu.add_radiobutton(label="列表", variable=self.settings_var["view"], value="tree",
+        self.view_menu.add_radiobutton(label="列表", variable=view_var, value="tree",
                                        command=self.change_tree_view)
-        self.view_menu.add_radiobutton(label="侧栏", variable=self.settings_var["view"], value="sidebar",
+        self.view_menu.add_radiobutton(label="侧栏", variable=view_var, value="sidebar",
                                        command=self.change_sidebar_view)
 
         # 视图选项
-        self.settings_values["sign_vis"] = \
+        self.global_settings.sign_vis = \
             True if subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True" else False
-        self.settings_var["sign_vis"] = tk.BooleanVar(value=self.settings_values["sign_vis"])
+        sign_vis_var = tk.BooleanVar(value=self.global_settings.sign_vis)
         self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
         self.view_options_menu.add_checkbutton(
-            label="显示状态标志", variable=self.settings_var["sign_vis"],
+            label="显示状态标志", variable=sign_vis_var,
             command=partial(subfunc_file.save_global_setting,
-                            "sign_visible", not self.settings_values["sign_vis"], self.root_class.refresh)
+                            "sign_visible", not self.global_settings.sign_vis, self.root_class.refresh)
         )
         # 特有菜单
-        if self.settings_values["view"] == "classic":
+        if self.global_settings.view == "classic":
             # 添加经典视图的菜单项
             pass
-        elif self.settings_values["view"] == "tree":
+        elif self.global_settings.view == "tree":
             # 添加列表视图的菜单项
             pass
 
         # 缩放
         self.view_menu.add_separator()  # ————————————————分割线————————————————
-        self.settings_values["scale"] = subfunc_file.fetch_global_setting_or_set_default("scale")
-        scale = self.settings_values["scale"]
-        self.settings_var["scale"] = tk.StringVar(value=scale)
+        self.global_settings.scale = subfunc_file.fetch_global_setting_or_set_default("scale")
+        scale = self.global_settings.scale
+        scale_var = tk.StringVar(value=scale)
         self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
-        self.wnd_scale_menu.add_radiobutton(label="跟随系统", variable=self.settings_var["scale"], value="auto",
+        self.wnd_scale_menu.add_radiobutton(label="跟随系统", variable=scale_var, value="auto",
                                             command=partial(func_setting.set_wnd_scale,
                                                             self.create_root_menu_bar, "auto"))
         options = ["100", "125", "150", "175", "200"]
         for option in options:
-            self.wnd_scale_menu.add_radiobutton(label=f"{option}%", variable=self.settings_var["scale"], value=option,
+            self.wnd_scale_menu.add_radiobutton(label=f"{option}%", variable=scale_var, value=option,
                                                 command=partial(func_setting.set_wnd_scale,
                                                                 self.create_root_menu_bar, option))
         if scale != "auto" and scale not in options:
             self.wnd_scale_menu.add_radiobutton(label=f"自定义:{scale}%",
-                                                variable=self.settings_var["scale"], value=scale,
+                                                variable=scale_var, value=scale,
                                                 command=partial(func_setting.set_wnd_scale,
                                                                 self.create_root_menu_bar))
         else:
             self.wnd_scale_menu.add_radiobutton(label=f"自定义",
-                                                variable=self.settings_var["scale"], value="0",
+                                                variable=scale_var, value="0",
                                                 command=partial(func_setting.set_wnd_scale,
                                                                 self.create_root_menu_bar))
 
@@ -274,23 +244,23 @@ class MenuUI:
             self.sw_class.revoke_state = "不可用"
 
         # >多开子程序选择
-        self.settings_var["rest_mode"] = tk.StringVar()  # 用于跟踪当前选中的子程序
         # 检查状态
         if multiple_state == "已开启":
             self.settings_menu.add_command(label="其余模式", state="disabled")
         else:
             self.rest_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
             self.settings_menu.add_cascade(label="其余模式", menu=self.rest_mode_menu)
-            self.settings_values["rest_mode"] = subfunc_file.fetch_sw_setting_or_set_default(
+            self.global_settings.rest_mode = subfunc_file.fetch_sw_setting_or_set_default(
                 self.sw, "rest_mode")
-            self.settings_var["rest_mode"].set(self.settings_values["rest_mode"])  # 设置初始选中的子程序
+            rest_mode_value = self.global_settings.rest_mode
+            rest_mode_var = tk.StringVar(value=rest_mode_value)  # 设置初始选中的子程序
             python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
                 self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
             # 添加 Python 的单选按钮
             self.rest_mode_menu.add_radiobutton(
                 label='python',
                 value='python',
-                variable=self.settings_var["rest_mode"],
+                variable=rest_mode_var,
                 command=partial(subfunc_file.save_sw_setting,
                                 self.sw, "rest_mode", "python", self.create_root_menu_bar),
                 state='disabled' if not python_sp else 'normal'
@@ -299,7 +269,7 @@ class MenuUI:
             self.rest_mode_menu.add_radiobutton(
                 label='python[S]',
                 value='python[S]',
-                variable=self.settings_var["rest_mode"],
+                variable=rest_mode_var,
                 command=partial(subfunc_file.save_sw_setting,
                                 self.sw, "rest_mode", "python[S]", self.create_root_menu_bar),
                 state='disabled' if not python_s_sp else 'normal'
@@ -309,7 +279,7 @@ class MenuUI:
             self.rest_mode_menu.add_radiobutton(
                 label='handle',
                 value='handle',
-                variable=self.settings_var["rest_mode"],
+                variable=rest_mode_var,
                 command=partial(subfunc_file.save_sw_setting,
                                 self.sw, "rest_mode", "handle", self.create_root_menu_bar),
                 state='disabled' if not handle_sp else 'normal'
@@ -326,38 +296,77 @@ class MenuUI:
                     self.rest_mode_menu.add_radiobutton(
                         label=right_part,
                         value=exe_name,
-                        variable=self.settings_var["rest_mode"],
+                        variable=rest_mode_var,
                         command=partial(subfunc_file.save_sw_setting,
                                         self.sw, "rest_mode", exe_name, self.create_root_menu_bar),
                     )
 
-        # >登录选项
-        self.settings_values["hide_wnd"] = \
+        self.global_settings.hide_wnd = \
             True if subfunc_file.fetch_global_setting_or_set_default("hide_wnd") == "True" else False
-        self.settings_var["hide_wnd"] = tk.BooleanVar(value=self.settings_values["hide_wnd"])
-        self.settings_values["auto_press"] = \
+        hide_wnd_value = self.global_settings.hide_wnd
+        hide_wnd_var = tk.BooleanVar(value=hide_wnd_value)
+        self.settings_menu.add_checkbutton(
+            label="自动登录前隐藏主窗口", variable=hide_wnd_var,
+            command=partial(subfunc_file.save_global_setting,
+                            "hide_wnd", not self.global_settings.hide_wnd, self.create_root_menu_bar))
+
+        # >调用模式
+        self.call_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
+        self.settings_menu.add_cascade(label="调用模式", menu=self.call_mode_menu)
+        self.global_settings.call_mode = subfunc_file.fetch_global_setting_or_set_default(
+            "call_mode")
+        call_mode_value = self.global_settings.call_mode
+        call_mode_var = tk.StringVar(value=call_mode_value)  # 设置初始选中的子程序
+
+        python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
+            self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
+        # 添加 HANDLE 的单选按钮
+        self.call_mode_menu.add_radiobutton(
+            label='HANDLE',
+            value='HANDLE',
+            variable=call_mode_var,
+            command=partial(subfunc_file.save_global_setting,
+                            "call_mode", "HANDLE", self.create_root_menu_bar),
+            state='disabled' if not python_sp else 'normal'
+        )
+        # 添加 DEFAULT 的单选按钮
+        self.call_mode_menu.add_radiobutton(
+            label='DEFAULT',
+            value='DEFAULT',
+            variable=call_mode_var,
+            command=partial(subfunc_file.save_global_setting,
+                            "call_mode", "DEFAULT", self.create_root_menu_bar),
+            state='disabled' if not python_s_sp else 'normal'
+        )
+        # 添加 LOGON 的单选按钮
+        self.call_mode_menu.add_radiobutton(
+            label='LOGON',
+            value='LOGON',
+            variable=call_mode_var,
+            command=partial(subfunc_file.save_global_setting,
+                            "call_mode", "handle", self.create_root_menu_bar),
+            state='disabled' if not handle_sp else 'normal'
+        )
+
+        self.global_settings.auto_press = \
             True if subfunc_file.fetch_global_setting_or_set_default("auto_press") == "True" else False
-        self.settings_var["auto_press"] = tk.BooleanVar(value=self.settings_values["auto_press"])
-        self.login_menu = tk.Menu(self.settings_menu, tearoff=False)
-        self.settings_menu.add_cascade(label="登录选项", menu=self.login_menu)
-        self.login_menu.add_checkbutton(
-            label="自动登录时隐藏窗口", variable=self.settings_var["hide_wnd"],
+        auto_press_value = self.global_settings.auto_press
+        auto_press_var = tk.BooleanVar(value=auto_press_value)
+        self.settings_menu.add_checkbutton(
+            label="自动点击登录按钮", variable=auto_press_var,
             command=partial(subfunc_file.save_global_setting,
-                            "hide_wnd", not self.settings_values["hide_wnd"], self.create_root_menu_bar))
-        self.login_menu.add_checkbutton(
-            label="自动点击登录按钮", variable=self.settings_var["auto_press"],
-            command=partial(subfunc_file.save_global_setting,
-                            "auto_press", not self.settings_values["auto_press"], self.create_root_menu_bar))
+                            "auto_press", not self.global_settings.auto_press, self.create_root_menu_bar))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        _, self.settings_values["auto_start"] = subfunc_file.check_auto_start_or_toggle_to_()
-        self.settings_var["auto_start"] = tk.BooleanVar(value=self.settings_values["auto_start"])
+        _, self.global_settings.auto_start = subfunc_file.check_auto_start_or_toggle_to_()
+        auto_start_value = self.global_settings.auto_start
+        auto_start_var = tk.BooleanVar(value=auto_start_value)
         self.auto_start_menu = tk.Menu(self.settings_menu, tearoff=False)
         self.settings_menu.add_cascade(label="自启动", menu=self.auto_start_menu)
         self.auto_start_menu.add_checkbutton(
-            label="开机自启动", variable=self.settings_var["auto_start"],
+            label="开机自启动", variable=auto_start_var,
             command=partial(self.toggle_auto_start,
-                            not self.settings_values["auto_start"]))
+                            not self.global_settings.auto_start))
         self.auto_start_menu.add_command(
             label="测试登录自启动账号", command=partial(self.root_class.to_login_auto_start_accounts))
 
@@ -369,8 +378,8 @@ class MenuUI:
         # 检查版本表是否当天已更新
         subfunc_file.try_get_local_cfg()
         surprise_sign = Strings.SURPRISE_SIGN
-        self.app_info["need_update"] = func_update.has_newer_version(self.app_info["curr_full_ver"])
-        prefix = surprise_sign if self.app_info["need_update"] is True else ""
+        self.app_info.need_update = func_update.has_newer_version(self.app_info.curr_full_ver)
+        prefix = surprise_sign if self.app_info.need_update is True else ""
         self.help_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label=f"{prefix}帮助", menu=self.help_menu)
         self.help_menu.add_command(label="我来赏你！", command=self.open_rewards)
@@ -381,14 +390,14 @@ class MenuUI:
                                    command=partial(self.open_about, self.app_info))
 
         # ————————————————————————————作者标签————————————————————————————
-        self.settings_values["new_func"] = \
+        self.global_settings.new_func = \
             True if subfunc_file.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
-        author_str = self.app_info["author"]
-        hint_str = self.app_info["hint"]
+        author_str = self.app_info.author
+        hint_str = self.app_info.hint
         author_str_without_hint = f"by {author_str}"
         author_str_with_hint = f"by {author_str}（{hint_str}）"
 
-        if self.settings_values["new_func"] is True:
+        if self.global_settings.new_func is True:
             self.menu_bar.add_command(label=author_str_without_hint)
             self.menu_bar.entryconfigure(author_str_without_hint, state="disabled")
         else:
@@ -405,7 +414,7 @@ class MenuUI:
     def open_statistic(self):
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.root)
-        statistic_ui.StatisticWindow(statistic_window, self.sw, self.settings_values["view"])
+        statistic_ui.StatisticWindow(statistic_window, self.sw, self.global_settings.view)
 
     def to_refresh(self):
         printer.vital("手动刷新")
@@ -461,7 +470,7 @@ class MenuUI:
 
     def open_update_log(self):
         """打开版本日志窗口"""
-        success, result = func_update.split_vers_by_cur_from_local(self.app_info["curr_full_ver"])
+        success, result = func_update.split_vers_by_cur_from_local(self.app_info.curr_full_ver)
         if success is True:
             new_versions, old_versions = result
             update_log_window = tk.Toplevel(self.root)
@@ -479,5 +488,4 @@ class MenuUI:
             pass
         subfunc_file.save_global_setting('enable_new_func', True)
         messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
-        # self.r_class.refresh()
         self.create_root_menu_bar()

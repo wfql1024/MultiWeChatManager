@@ -202,6 +202,7 @@ def create_process_without_admin(executable, args=None, creation_flags=subproces
         # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
         # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
         # return process_utils.create_process_with_medium_il(executable, args, creation_flags)
+        # return process_utils.create_process_for_win7(executable, args, creation_flags)
     else:
         return process_utils.create_process_for_win7(executable, args, creation_flags)
 

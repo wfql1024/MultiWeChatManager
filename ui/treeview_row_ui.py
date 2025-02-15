@@ -5,7 +5,7 @@ from collections.abc import Sized
 from PIL import ImageTk, Image
 
 from functions import func_config, func_account, subfunc_file
-from public_class import reusable_widget, global_members
+from public_class import reusable_widget
 from public_class.global_members import GlobalMembers
 from resources import Constants, Strings
 from utils import widget_utils, string_utils
