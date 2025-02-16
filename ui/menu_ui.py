@@ -128,7 +128,9 @@ class MenuUI:
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
         # -刷新
+        self.edit_menu.add_command(label="快速刷新", command=self.to_quick_refresh)
         self.edit_menu.add_command(label="刷新", command=self.to_refresh)
+        self.edit_menu.add_command(label="初始化", command=self.to_initialize)
 
         # ————————————————————————————视图菜单————————————————————————————
         # 视图单选
@@ -412,9 +414,18 @@ class MenuUI:
         statistic_window = tk.Toplevel(self.root)
         statistic_ui.StatisticWindow(statistic_window, self.sw, self.global_settings_value.view)
 
-    def to_refresh(self):
-        printer.vital("手动刷新")
+    def to_quick_refresh(self):
+        self.root_class.quick_refresh = True
         self.root_class.acc_tab_ui.refresh()
+
+    def to_refresh(self):
+        printer.vital("常规刷新")
+        self.root_class.quick_refresh = False
+        self.root_class.acc_tab_ui.refresh()
+
+    def to_initialize(self):
+        printer.vital("初始化")
+        self.root_class.initialize_in_init()
 
     def change_classic_view(self):
         self.root.unbind("<Configure>")

@@ -20,6 +20,7 @@ class MainWindow:
 
     def __init__(self, root, args=None):
         # IDE初始化
+        self.quick_refresh = None
         self.acc_manager_ui = None
         self.all_acc_frame = None
         self.hotkey_manager = None
@@ -94,7 +95,8 @@ class MainWindow:
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
 
         # 创建状态栏
-        self.statusbar_class = reusable_widget.StatusBar(self.root, self, self.debug)
+        if self.statusbar_class is None or not self.statusbar_class.status_bar.winfo_exists():
+            self.statusbar_class = reusable_widget.StatusBar(self.root, self, self.debug)
         self.hotkey_manager = func_hotkey.HotkeyManager()
 
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE

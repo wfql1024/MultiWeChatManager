@@ -13,6 +13,8 @@ from functions import subfunc_file, subfunc_sw
 from resources import Constants
 from utils import widget_utils, string_utils, debug_utils
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
+
 from utils.widget_utils import TreeUtils
 
 
@@ -346,6 +348,7 @@ class ActionableTreeView(ABC):
         :param major_btn_dict: 主按钮信息
         :param rest_btn_dicts: 其他按钮信息
         """
+        self.data_src = None
         self.tree_frame = None
         self.button_frame = None
         self.label = None
@@ -391,6 +394,8 @@ class ActionableTreeView(ABC):
         self.create_title()
         self.tree = self.create_table(self.columns)
         self.display_table()
+        self.set_table_style()
+        self.adjust_treeview_height(None)
         self.adjust_table()
 
     def create_title(self):
@@ -805,12 +810,8 @@ class ActionableTreeView(ABC):
         tree = self.tree.nametowidget(self.tree)
 
         if len(tree.get_children()) == 0:
-            self.tree_frame.destroy()
+            self.tree_frame.pack_forget()
 
-        if not self.tree_frame.winfo_exists():
-            return
-
-        self.set_table_style()
         self.update_top_title()
         widget_utils.UnlimitedClickHandler(
             self.root,
@@ -821,4 +822,19 @@ class ActionableTreeView(ABC):
         tree.bind("<Leave>", partial(self.on_leave))
         tree.bind("<Motion>", partial(self.on_mouse_motion))
         self.apply_or_switch_col_order()
-        self.adjust_treeview_height(None)
+
+    def quick_refresh_items(self, data_src):
+        """
+        快速刷新，需要传入display方法所需要的数据列表
+        :param data_src: 数据列表
+        :return:
+        """
+        printer.vital("快速刷新")
+        tree = self.tree.nametowidget(self.tree)
+        self.data_src = data_src
+
+        for i in tree.get_children():
+            tree.delete(i)
+
+        self.display_table()
+        self.adjust_table()

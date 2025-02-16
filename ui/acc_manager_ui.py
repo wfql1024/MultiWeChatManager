@@ -180,7 +180,7 @@ class AccManagerUI:
 class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
-        self.acc_data = None
+        self.data_src = None
         self.wnd = None
         self.photo_images = []
         self.sign_visible = None
@@ -189,7 +189,7 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
     def initialize_members_in_init(self):
         self.wnd = self.parent_class.wnd
         # print(f"self.wnd={self.wnd}")
-        self.acc_data = self.parent_class.acc_data
+        self.data_src = self.parent_class.acc_data
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
         self.columns = (" ", "快捷键", "隐藏", "自启动", "原始id", "昵称")
         sort_str = subfunc_file.fetch_global_setting_or_set_default(f"{self.table_tag}_sort")
@@ -222,7 +222,7 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
 
     def display_table(self):
         tree = self.tree.nametowidget(self.tree)
-        sw_acc_data = self.acc_data
+        sw_acc_data = self.data_src
         table_tag = self.table_tag
 
         # 假设你已经有了一个用于存储 sw 节点的字典

@@ -18,6 +18,7 @@ class AccTabUI:
 
     def __init__(self):
         # IDE初始化
+        self.sw_class = None
         self.detail_ui_class = None
         self.settings_button = None
         self.error_frame = None
@@ -39,8 +40,9 @@ class AccTabUI:
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
+        self.sw_class = self.sw_classes[self.sw]
 
-        self.tab_frame = self.sw_classes[self.sw].frame
+        self.tab_frame = self.sw_class.frame
 
         # 刷新菜单
         self.root_menu = menu_ui.MenuUI()
@@ -71,13 +73,10 @@ class AccTabUI:
         if sw != self.sw:
             return
 
-        print(f"清除旧界面...")
-        for widget in self.tab_frame.winfo_children():
-            widget.destroy()
-        print(f"加载主界面，锁定刷新按钮...")
+        print(f"锁定刷新按钮...")
         self.root_menu.edit_menu.entryconfig("刷新", state="disabled")
         self.start_time = time.time()
-        print(f"初始化，已用时：{time.time() - self.start_time:.4f}秒")
+        print(f"计时开始：{time.time() - self.start_time:.4f}秒")
         # 使用ThreadManager异步获取账户列表
         print(f"获取登录状态...")
         try:
@@ -115,36 +114,59 @@ class AccTabUI:
         self.sw_notebook.bind('<<NotebookTabChanged>>', self.root_class.on_tab_change)
 
     def create_account_list_ui(self, result):
-        print(f"渲染账号列表.........................................................")
+        """账号列表获取成功，加载列表"""
+        def slowly_create():
+            print(f"清除旧界面...")
+            if self.tab_frame is not None and self.tab_frame.winfo_exists():
+                for widget in self.tab_frame.winfo_children():
+                    widget.destroy()
 
+            # 底部框架=手动登录
+            bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
+            bottom_frame.pack(side=tk.BOTTOM)
+            prefix = Strings.MUTEX_SIGN if mutex is True and self.global_settings_value.sign_vis else ""
+            manual_login_text = f"{prefix}手动登录"
+            manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
+                                             command=self.to_manual_login, style='Custom.TButton')
+            manual_login_button.pack(side=tk.LEFT)
+
+            # 创建一个可以滚动的画布，并放置一个主框架在画布上
+            self.scrollable_canvas = reusable_widget.ScrollableCanvas(self.tab_frame)
+            self.main_frame = self.scrollable_canvas.main_frame
+
+        print(f"渲染账号列表...")
         acc_list_dict, _, mutex = result
-        logins: list = acc_list_dict["login"]
-        logouts: list = acc_list_dict["logout"]
+        logins = self.sw_class.login_accounts = acc_list_dict["login"]
+        logouts = self.sw_class.logout_accounts = acc_list_dict["logout"]
 
-        self.sw_classes[self.sw].login_accounts = logins
-        self.sw_classes[self.sw].logout_accounts = logouts
+        self.sw_class.view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
 
-        # 底部框架=手动登录
-        bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
-        bottom_frame.pack(side=tk.BOTTOM)
-        prefix = Strings.MUTEX_SIGN if mutex is True and self.global_settings_value.sign_vis else ""
-        manual_login_text = f"{prefix}手动登录"
-        manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
-                                         command=self.to_manual_login, style='Custom.TButton')
-        manual_login_button.pack(side=tk.LEFT)
+        if self.sw_class.view == "classic":
+            # 经典视图没有做快速刷新功能
+            slowly_create()
+            self.sw_class.classic_ui = classic_row_ui.ClassicRowUI(result)
 
-        # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widget.ScrollableCanvas(self.tab_frame)
-        self.main_frame = self.scrollable_canvas.main_frame
+        elif self.sw_class.view == "tree":
+            if self.root_class.quick_refresh is True:
+                try:
+                    acc_list_dict, _, _ = result
+                    tree_class = self.sw_class.tree_ui.tree_class
+                    if all(tree_class[t].can_quick_refresh for t in tree_class):
+                        # 快速刷新
+                        for t in tree_class:
+                            tree_class[t].quick_refresh_items(acc_list_dict[t])
+                except Exception as e:
+                    logger.warning(e)
+                    self.root_class.quick_refresh = False
+                    slowly_create()
+                    self.sw_class.tree_ui = treeview_row_ui.TreeviewRowUI(result)
+            else:
+                slowly_create()
+                self.sw_class.tree_ui = treeview_row_ui.TreeviewRowUI(result)
 
-        # 创建账号列表界面并统计
-        self.sw_classes[self.sw].view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
-        if self.sw_classes[self.sw].view == "classic":
-            self.sw_classes[self.sw].classic_ui = classic_row_ui.ClassicRowUI(result)
-        elif self.sw_classes[self.sw].view == "tree":
-            self.sw_classes[self.sw].tree_ui = treeview_row_ui.TreeviewRowUI(result)
         else:
             pass
+
         subfunc_file.update_statistic_data(
             self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(logins)), time.time() - self.start_time)
         printer.normal(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")

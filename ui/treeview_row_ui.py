@@ -61,14 +61,14 @@ class TreeviewRowUI:
         }
 
         # 加载登录列表
-        if isinstance(logins, Sized) and len(logins) != 0:
+        if isinstance(logins, Sized):
             self.tree_class["login"] = AccLoginTreeView(
                 self,
                 "login", "已登录：", self.btn_dict["auto_quit_btn"],
                 self.btn_dict["config_btn"], )
 
         # 加载未登录列表
-        if isinstance(logouts, Sized) and len(logouts) != 0:
+        if isinstance(logouts, Sized):
             self.tree_class["logout"] = AccLoginTreeView(
                 self, "logout", "未登录：", self.btn_dict["auto_login_btn"])
 
@@ -76,12 +76,13 @@ class TreeviewRowUI:
 class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
+        self.can_quick_refresh = None
         self.acc_tab_ui = None
         self.root = None
         self.photo_images = []
         self.sign_visible = None
         self.data_dir = None
-        self.item_list = None
+        self.data_src = None
         super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
@@ -90,7 +91,7 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
         self.sw = self.acc_tab_ui.sw
         self.func_of_id_col = self.acc_tab_ui.to_open_acc_detail
 
-        self.item_list = self.parent_class.acc_list_dict[self.table_tag]
+        self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.data_dir = self.root_class.sw_classes[self.sw].data_dir
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
         self.columns = (" ", "配置", "pid", "原始id", "当前id", "昵称")
@@ -122,8 +123,9 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
 
     def display_table(self):
         tree = self.tree.nametowidget(self.tree)
-        accounts = self.item_list
+        accounts = self.data_src
         login_status = self.table_tag
+        # print(f"tree={tree}, accounts={accounts}, login_status={login_status}")
 
         curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.sw, self.data_dir)
 
@@ -170,4 +172,8 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
             if config_status == "无配置" and login_status == "logout":
                 widget_utils.add_a_tag_to_item(tree, iid, "disabled")
 
-        self.adjust_treeview_height(None)
+        self.can_quick_refresh = True
+        self.root_class.quick_refresh = True
+
+
+

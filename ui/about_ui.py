@@ -193,7 +193,7 @@ class AboutWindow:
         bottom_frame.pack(**Constants.B_FRM_PACK)
 
         surprise_sign = Strings.SURPRISE_SIGN
-        prefix = surprise_sign if self.app_info["need_update"] is True else ""
+        prefix = surprise_sign if self.app_info.need_update is True else ""
 
         # 左边：声明框架
         disclaimer_frame = ttk.Frame(bottom_frame, padding=Constants.L_FRM_PAD)
