@@ -837,4 +837,8 @@ class ActionableTreeView(ABC):
             tree.delete(i)
 
         self.display_table()
+        self.adjust_treeview_height(None)
         self.adjust_table()
+        self.selected_items.clear()
+        self.update_top_title()
+        # self.selected_values.clear()

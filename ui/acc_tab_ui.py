@@ -175,7 +175,9 @@ class AccTabUI:
         func_account.get_main_hwnd_of_accounts(logins, self.sw)
 
         # 进行静默获取头像及配置
-        func_account.silent_get_and_config(self.sw, logins, logouts)
+        def func():
+            func_account.silent_get_and_config(self.sw, logins, logouts)
+        threading.Thread(target=func).start()
 
         # 先停止旧的监听线程
         self.hotkey_manager.stop_hotkey_listener()

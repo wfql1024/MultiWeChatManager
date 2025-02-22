@@ -174,10 +174,10 @@ def find_widget_with_uiautomation(hwnd, title, _control_type="Button"):
                     center_y = (rect.top + rect.bottom) // 2 - main_rect.top
                     return center_x, center_y
             except Exception as ex:
-                print(ex)
+                logger.warning(ex)
         return None, None
     except Exception as e:
-        print(f"uiautomation error: {e}")
+        logger.error(f"uiautomation error: {e}")
         return None, None
 
 
