@@ -65,7 +65,7 @@ def check_dll(sw, mode, dll_dir):
 
     dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
     cur_sw_ver = file_utils.get_file_version(dll_path)
-    config_data = subfunc_file.try_get_local_cfg()
+    config_data = subfunc_file.read_remote_cfg_in_rules()
 
     if not config_data:
         return "错误：没有数据", None, None
@@ -75,8 +75,8 @@ def check_dll(sw, mode, dll_dir):
         result2 = config_data[sw][mode][cur_sw_ver]["PATCH"]["pattern"]
         pattern1_hex_list = result1.split(',')
         pattern2_hex_list = result2.split(',')
-    except KeyError:
-        subfunc_file.force_fetch_remote_encrypted_cfg()
+    except Exception as e:
+        logger.error(e)
         return "错误：未找到该版本的适配", None, None
 
     try:

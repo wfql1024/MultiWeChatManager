@@ -15,6 +15,7 @@ from Crypto.Util.Padding import unpad
 from resources import Config, Strings
 from utils import json_utils, ini_utils, file_utils, image_utils, sys_utils
 from utils.logger_utils import mylogger as logger
+import datetime as dt
 
 """获取远程配置"""
 
@@ -38,10 +39,13 @@ def decrypt_response(response_text):
     return plaintext.decode()
 
 
-def force_fetch_remote_encrypted_cfg():
+def force_fetch_remote_encrypted_cfg(url=None):
     """强制从网络中获取最新的配置文件"""
     print(f"正从远程源下载...")
     urls = [Strings.REMOTE_SETTING_JSON_GITEE, Strings.REMOTE_SETTING_JSON_GITHUB]
+
+    if url is not None:
+        urls = [url].extend(urls)
 
     for url in urls:
         print(f"正在尝试从此处下载: {url}...")
@@ -55,34 +59,65 @@ def force_fetch_remote_encrypted_cfg():
                 return json.loads(decrypted_data)  # 返回加载的 JSON 数据
             else:
                 print(f"获取失败: {response.status_code}，尝试下一个源...")
+
         except requests.exceptions.Timeout:
             logger.warning(f"请求 {url} 超时，尝试下一个源...")
         except Exception as e:
             logger.error(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
 
-    raise RuntimeError("所有源获取配置数据失败")
+    return None
 
-
-def try_get_local_cfg():
+def try_read_remote_cfg_locally():
     """
-    尝试从本地获取配置数据，优先从本地获取，成功后停止；失败会从网络下载远程配置
-    :return:
+    尝试从本地读取配置数据，优先从本地获取，成功后停止；失败会从网络下载远程配置
+    :return: 是否成功；数据
     """
-    if not (os.path.exists(Config.REMOTE_SETTING_JSON_PATH)
-            and file_utils.is_latest_file_by_day(Config.REMOTE_SETTING_JSON_PATH)):
-        config_data = force_fetch_remote_encrypted_cfg()
-    else:
-        # print("本地版本对照表存在，读取中...")
+    config_data = None
+    try:
+        with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
+            config_data = json.load(f)
+    except Exception as e:
+        logger.error(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
         try:
-            with open(Config.REMOTE_SETTING_JSON_PATH, 'r', encoding='utf-8') as f:
-                config_data = json.load(f)
-        except Exception as e:
-            print(f"错误：读取本地 JSON 文件失败: {e}，尝试从云端下载")
             config_data = force_fetch_remote_encrypted_cfg()
-            print(f"从云端下载了文件：{config_data}")
-            raise RuntimeError("本地 JSON 文件读取失败")
+            logger.info(f"成功从云端下载了配置文件!")
+        except Exception as e:
+            logger.error(f"错误：从云端下载 JSON 文件失败: {e}")
     return config_data
 
+
+def read_remote_cfg_in_rules():
+    """
+    有策略地获取远程配置：
+        检查是否到了需要强制更新的日期，
+        如果是，则强制从网络获取，失败则使用本地，成功则将日期往后推；
+        如果不是，则从本地获取。
+    :return:
+    """
+    # 获取存储的日期
+    next_check_time_str = fetch_global_setting_or_set_default("next_check_time")
+    if next_check_time_str is None:
+        next_check_time = dt.datetime.today().date()
+        today = dt.datetime.today().date()
+    else:
+        # 将字符串日期解析为日期对象
+        next_check_time = dt.datetime.strptime(next_check_time_str, "%Y-%m-%d").date()
+        today = dt.datetime.today().date()
+
+    # 如果今天的日期大于等于 next_check_time，执行代码并更新 next_check_time
+    if today >= next_check_time:
+        # 强制获取远程配置
+        config_data = force_fetch_remote_encrypted_cfg()
+        if config_data is not None:
+            # 更新 next_check_time 为明天
+            next_check_time = today + dt.timedelta(days=1)
+            next_check_time_str = next_check_time.strftime("%Y-%m-%d")
+            save_global_setting("next_check_time", next_check_time_str)
+            return config_data
+        else:
+            return try_read_remote_cfg_locally()
+    else:
+        return try_read_remote_cfg_locally()
 
 def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
     """

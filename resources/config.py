@@ -27,6 +27,7 @@ class Config:
         "all_sort": "all_sort",
         "auto_press": "auto_press",
         "call_mode": "call_mode",
+        "next_check_time": "next_check_time",
 
         "view": "view",
         "login_size": "login_size",
@@ -48,6 +49,7 @@ class Config:
         "all_sort": "#0,True",
         "auto_press": "True",
         "call_mode": "HANDLE",
+        "next_check_time": None,
 
         "WeChat": {
             "view": "tree",

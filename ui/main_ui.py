@@ -3,7 +3,7 @@ import os
 import sys
 import threading
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 from functions import func_file, subfunc_file, func_setting, subfunc_sw, func_login, func_hotkey
 from public_class import reusable_widget
@@ -80,6 +80,22 @@ class MainWindow:
         subfunc_file.swap_cnt_and_mode_levels_in_auto()
         subfunc_file.downgrade_item_lvl_under_manual()
 
+        # 获取远程配置文件
+        try:
+            self.cfg_data = subfunc_file.try_read_remote_cfg_locally()
+        except Exception as e:
+            logger.error(e)
+            try:
+                self.cfg_data = subfunc_file.force_fetch_remote_encrypted_cfg()
+            except Exception as e:
+                logger.error(e)
+
+        # 没有配置文件则退出程序
+        if self.cfg_data is None:
+            messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
+            self.root.after(0, self.root.destroy)
+            return
+
         # 统一管理style
         style = ttk.Style()
         style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
@@ -101,15 +117,8 @@ class MainWindow:
 
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE
 
-        # 获取基本属性，加载标签页
-        # self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
-        self.cfg_data = subfunc_file.try_get_local_cfg()
-        try:
-            self.init_notebook()
-        except Exception as e:
-            logger.error(e)
-            self.cfg_data = subfunc_file.force_fetch_remote_encrypted_cfg()
-            self.init_notebook()
+        # 加载标签页
+        self.init_notebook()
 
         # 设置主窗口
         try:

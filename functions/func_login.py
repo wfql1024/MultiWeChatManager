@@ -288,7 +288,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
                         cy = int(hwnd_utils.get_hwnd_details_of_(h)["height"] * 0.75)
                         hwnd_utils.do_click_in_wnd(h, cx, cy)
                         time.sleep(0.2)
-                    print(f"查找后用时：{time.time() - inner_start_time}s")
+                    print(f"通过位置查找，用时：{time.time() - inner_start_time:.4f}s")
 
                 inner_start_time = time.time()
                 for h in hwnd_list:
@@ -296,11 +296,11 @@ def auto_login_accounts(login_dict: Dict[str, List]):
                     try:
                         # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
                         cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
-                        print(hwnd_utils.get_child_hwnd_list_of_(h))
+                        # print(hwnd_utils.get_child_hwnd_list_of_(h))
                         # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
                         # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
                         # cx, cy = hwnd_utils.find_widget_with_uia(h, titles)  # 有问题，修复较复杂，不管
-                        print(f"查找后用时：{time.time() - inner_start_time}s")
+                        print(f"通过控件查找，用时：{time.time() - inner_start_time:.4f}s")
                         if cx is not None and cy is not None:
                             hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
                             break  # 找到有效坐标后退出循环

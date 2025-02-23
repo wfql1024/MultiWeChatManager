@@ -86,15 +86,12 @@ class AboutWindow:
         self.wnd.attributes('-toolwindow', True)
         self.wnd.grab_set()
 
-        self.cfg_data = subfunc_file.try_get_local_cfg()
-        try:
-            self.display_main_content()
-        except Exception as e:
-            logger.error(e)
-            self.cfg_data = subfunc_file.force_fetch_remote_encrypted_cfg()
-            if self.wnd is not None:
-                for widget in self.wnd.winfo_children():
-                    widget.destroy()
+        self.cfg_data = subfunc_file.read_remote_cfg_in_rules()
+        if self.cfg_data is None:
+            messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
+            # 关闭wnd窗口
+            self.wnd.destroy()
+        else:
             self.display_main_content()
 
     def display_main_content(self):
@@ -255,7 +252,10 @@ class AboutWindow:
         )
 
     def check_for_updates(self, current_full_version):
-        subfunc_file.force_fetch_remote_encrypted_cfg()
+        config_data = subfunc_file.force_fetch_remote_encrypted_cfg()
+        if config_data is None:
+            messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
+            return False
         success, result = func_update.split_vers_by_cur_from_local(current_full_version)
         if success is True:
             new_versions, old_versions = result

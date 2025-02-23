@@ -2,7 +2,7 @@ import threading
 import time
 import tkinter as tk
 from functools import partial
-from tkinter import ttk
+from tkinter import ttk, messagebox
 
 from functions import subfunc_file, func_account, func_config, func_login
 from public_class import reusable_widget
@@ -46,12 +46,16 @@ class AccTabUI:
 
         # 刷新菜单
         self.root_menu = menu_ui.MenuUI()
+        config_data = subfunc_file.read_remote_cfg_in_rules()
+        if config_data is None:
+            messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
+            self.root.destroy()
         try:
             self.root.after(0, self.root_menu.create_root_menu_bar)
         except Exception as re:
             logger.error(re)
-            subfunc_file.force_fetch_remote_encrypted_cfg()
-            self.root.after(0, self.root_menu.create_root_menu_bar)
+            messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
+            self.root.destroy()
 
         # 刷新界面
         def reload_func():

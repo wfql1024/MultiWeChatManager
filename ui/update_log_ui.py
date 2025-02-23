@@ -35,9 +35,13 @@ class UpdateLogWindow:
 
         print("显示更新日志")
 
-        data = subfunc_file.try_get_local_cfg()
+        config_data = subfunc_file.read_remote_cfg_in_rules()
+        if config_data is None:
+            messagebox.showerror("错误", "无法获取远程配置文件")
+            self.wnd.destroy()
+            return
 
-        global_info = data["global"]
+        global_info = config_data["global"]
         # 创建一个用于放置滚动文本框的框架
         log_frame = ttk.Frame(main_frame)
         log_frame.pack(pady=(5, 0), fill=tk.BOTH, expand=True)

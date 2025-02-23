@@ -374,7 +374,7 @@ class MenuUI:
 
         # ————————————————————————————帮助菜单————————————————————————————
         # 检查版本表是否当天已更新
-        subfunc_file.try_get_local_cfg()
+        subfunc_file.read_remote_cfg_in_rules()
         surprise_sign = Strings.SURPRISE_SIGN
         self.app_info.need_update = func_update.has_newer_version(self.app_info.curr_full_ver)
         prefix = surprise_sign if self.app_info.need_update is True else ""

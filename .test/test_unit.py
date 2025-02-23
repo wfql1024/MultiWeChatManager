@@ -1,4 +1,5 @@
 import ctypes
+from datetime import datetime
 from unittest import TestCase
 
 import psutil
@@ -66,3 +67,7 @@ class Test(TestCase):
         file_path = r"E:\Now\QuickCenter\WorkBench\技术梦想\项目\MultiWeChatManager\Releases\MultiWeChatManager_win10+_x64_v2.15.0.1458-Beta.zip"
         md5 = file_utils.calculate_md5(file_path)
         print(md5)
+
+    def test_get_now_datetime(self):
+        now = datetime.now()
+        print(now)
