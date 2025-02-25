@@ -10,8 +10,9 @@ from typing import Dict
 import keyboard
 
 from functions import subfunc_file, subfunc_sw
+from public_class.global_members import GlobalMembers
 from resources import Constants
-from utils import widget_utils, string_utils, debug_utils
+from utils import widget_utils, string_utils, debug_utils, hwnd_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
@@ -842,3 +843,73 @@ class ActionableTreeView(ABC):
         self.selected_items.clear()
         self.update_top_title()
         # self.selected_values.clear()
+
+
+class SubToolWnd(ABC):
+    def __init__(self, wnd, title):
+        """
+        这是一个层级敏感的窗口类，当关闭时，会自动恢复父窗口的焦点
+        :param wnd:
+        :param title:
+        """
+        self.position = None
+        self.wnd_height = None
+        self.wnd_width = None
+
+        self.wnd = wnd
+        self.title = title
+
+        self.root_class = GlobalMembers.root_class
+        self.root = self.root_class.root
+
+        self.initialize_members_in_init()
+
+        wnd.withdraw()  # 隐藏窗口
+
+        # 设置窗口
+        wnd.title(self.title)
+        wnd.attributes('-toolwindow', True)
+        self.set_wnd()
+        self.load_content()
+        wnd.update_idletasks()
+        hwnd_utils.set_size_and_bring_tk_wnd_to_(wnd, self.wnd_width, self.wnd_height, self.position)
+
+        wnd.deiconify()  # 显示窗口
+        wnd.grab_set()
+        wnd.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    @abstractmethod
+    def initialize_members_in_init(self):
+        """
+        子类中重写方法若需要设置或新增成员变量，重写这个方法并在其中定义和赋值成员
+        一些固定的变量名：
+            self.position: 窗口位置
+            self.wnd_height: 窗口高度
+            self.wnd_width: 窗口宽度
+        :return:
+        """
+        pass
+
+    def set_wnd(self):
+        """
+        除去本类基本的设置外，其余窗口设置可以在此方法中书写
+        已经设置好的窗口属性：工具窗口属性、默认可以调节大小
+        :return:
+        """
+        pass
+
+    def load_content(self):
+        pass
+
+    def finally_do(self):
+        pass
+
+    def on_close(self):
+        """窗口关闭时执行的操作"""
+        # 关闭前
+        self.finally_do()
+
+        master_wnd = self.wnd.master
+        self.wnd.destroy()  # 关闭窗口
+        if master_wnd != self.root:
+            master_wnd.grab_set()  # 恢复父窗口的焦点

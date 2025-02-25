@@ -12,6 +12,7 @@ import win32api
 import win32con
 import win32gui
 
+from public_class.enums import Position
 from utils.logger_utils import mylogger as logger
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
@@ -467,7 +468,7 @@ def close_all_by_wnd_classes(wnd_classes):
 """tk窗口相关"""
 
 
-def bring_tk_wnd_to_center(wnd, width=None, height=None):
+def set_size_and_bring_tk_wnd_to_(wnd, width=None, height=None, position=Position.CENTER):
     if not isinstance(wnd, (tk.Tk, tk.Toplevel)):
         raise ValueError("wnd 必须是 Tk 或 Toplevel 窗口实例")
 
@@ -475,22 +476,40 @@ def bring_tk_wnd_to_center(wnd, width=None, height=None):
         width = wnd.winfo_width()
     if height is None:
         height = wnd.winfo_height()
-    x = (wnd.winfo_screenwidth() // 2) - (width // 2)
-    y = int(wnd.winfo_screenheight() // 2.15) - int(height // 2.15)
+    if position is None:
+        position = Position.CENTER
+
+    # 获取屏幕的宽度和高度
+    screen_width = wnd.winfo_screenwidth()
+    screen_height = wnd.winfo_screenheight()
+
+    if position == Position.CENTER:
+        # 居中
+        x = (screen_width // 2) - (width // 2)
+        y = int(screen_height // 2.15) - int(height // 2.15)
+    elif position == Position.LEFT:
+        # 靠左
+        x = 0
+        y = wnd.winfo_y()
+    elif position == Position.RIGHT:
+        # 靠右
+        x = screen_width - width
+        y = wnd.winfo_y()
+    elif position == Position.TOP:
+        # 靠上
+        x = (screen_width // 2) - (width // 2)
+        y = 0
+    elif position == Position.BOTTOM:
+        # 靠下
+        x = (screen_width // 2) - (width // 2)
+        y = screen_height - height
+    else:
+        raise ValueError(f"Unsupported position: {position}")
+
+    # 设置窗口大小和位置
     wnd.geometry('{}x{}+{}+{}'.format(width, height, x, y))
 
-
-def bring_tk_wnd_to_left(wnd, width=None, height=None):
-    if not isinstance(wnd, (tk.Tk, tk.Toplevel)):
-        raise ValueError("wnd 必须是 Tk 或 Toplevel 窗口实例")
-
-    if width is None:
-        width = wnd.winfo_width()
-    if height is None:
-        height = wnd.winfo_height()
-    x = 0
-    y = wnd.winfo_y()
-    wnd.geometry('{}x{}+{}+{}'.format(width, height, x, y))
+    wnd.focus_set()
 
 
 def bring_tk_wnd_to_front(root, wnd, use_delay=True):

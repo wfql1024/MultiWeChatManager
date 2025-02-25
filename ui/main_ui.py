@@ -50,7 +50,7 @@ class MainWindow:
         self.root.withdraw()  # 初始化时隐藏主窗口
         # 渲染加载窗口
         self.loading_wnd = tk.Toplevel(self.root)
-        self.loading_wnd_class = loading_ui.LoadingWindow(self.loading_wnd)
+        self.loading_wnd_class = loading_ui.LoadingWnd(self.loading_wnd, "加载中...")
 
         try:
             # 初次使用
@@ -100,6 +100,7 @@ class MainWindow:
         style = ttk.Style()
         style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
                         width=Constants.CUS_BTN_WIDTH)
+        style.configure("Treeview")
         style.configure('Tool.TButton', width=2)
         style.configure('FirstTitle.TLabel', font=("", Constants.FIRST_TITLE_FONTSIZE, "bold"))
         style.configure('Link.TLabel', font=("", Constants.LINK_FONTSIZE), foreground="grey")
@@ -129,7 +130,7 @@ class MainWindow:
         self.root.title(title)
         self.root.iconbitmap(Config.PROJ_ICO_PATH)
 
-        self.root.after(0, hwnd_utils.bring_tk_wnd_to_center, self.root, self.window_width, self.window_height)
+        self.root.after(0, hwnd_utils.set_size_and_bring_tk_wnd_to_, self.root, self.window_width, self.window_height)
         self.root.overrideredirect(False)
 
     def init_notebook(self):
@@ -190,7 +191,7 @@ class MainWindow:
             self.acc_tab_ui.refresh()
         else:
             # 不是平台选项卡
-            self.acc_manager_ui = acc_manager_ui.AccManagerUI(self, self.root, selected_frame)
+            self.acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, selected_frame)
             self.acc_manager_ui.refresh_frame()
 
     def wait_for_loading_close_and_bind(self):
@@ -225,7 +226,7 @@ class MainWindow:
     def open_debug_window(self):
         """打开调试窗口，显示所有输出日志"""
         debug_window = tk.Toplevel(self.root)
-        debug_ui.DebugWindow(debug_window)
+        debug_ui.DebugWnd(debug_window, "调试窗口")
 
     @staticmethod
     def to_login_auto_start_accounts():
@@ -233,14 +234,13 @@ class MainWindow:
         thread = threading.Thread(target=func_login.login_auto_start_accounts)
         thread.start()
 
-    def open_acc_detail(self, item, parent_frame, widget_tag=None, event=None):
+    def open_acc_detail(self, item, tab_class, widget_tag=None, event=None):
         """打开详情窗口"""
         if event is None:
             pass
         sw, acc = item.split("/")
         detail_window = tk.Toplevel(self.root)
-        self.detail_ui_class = detail_ui.DetailWindow(self.root, self.root, parent_frame, detail_window, sw,
-                                                      acc)
+        self.detail_ui_class = detail_ui.DetailWnd(detail_window, f"属性 - {acc}", sw, acc, tab_class)
         self.detail_ui_class.set_focus_to_(widget_tag)
 
     def to_switch_to_sw_account_wnd(self, item, event=None):

@@ -1,36 +1,32 @@
 import tkinter as tk
+from abc import ABC
 from tkinter import ttk
 
 from public_class import reusable_widget
+from public_class.reusable_widget import SubToolWnd
 from resources import Config, Constants
-from utils import json_utils, hwnd_utils, string_utils
+from utils import json_utils, string_utils
 from utils.logger_utils import mylogger as logger
 
 
-class StatisticWindow:
-    def __init__(self, wnd, sw, view):
-        self.sw = sw
+class StatisticWnd(SubToolWnd, ABC):
+    def __init__(self, wnd, title, sw):
         self.refresh_mode_combobox = None
         self.refresh_tree = None
         self.manual_tree = None
         self.auto_tree = None
         self.auto_count_combobox = None
-        self.wnd = wnd
-        self.wnd.title(f"{sw}统计数据")
-        self.view = view
-        self.wnd.attributes('-toolwindow', True)
-        self.window_width, self.window_height = Constants.STATISTIC_WND_SIZE
-        hwnd_utils.bring_tk_wnd_to_center(self.wnd, self.window_width, self.window_height)
-        wnd.grab_set()
-        wnd.update_idletasks()
+        self.tree_dict = None
+        self.main_frame = None
+        self.scrollable_canvas = None
+        self.view = None
 
-        style = ttk.Style()
-        style.configure("Treeview")
+        self.sw = sw
+        super().__init__(wnd, title)
 
-        # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widget.ScrollableCanvas(wnd)
-        self.main_frame = self.scrollable_canvas.main_frame
-
+    def initialize_members_in_init(self):
+        self.view = self.root_class.global_settings_value.view
+        self.wnd_width, self.wnd_height = Constants.STATISTIC_WND_SIZE
         self.tree_dict = {
             "manual": {
                 "sort": False
@@ -42,6 +38,11 @@ class StatisticWindow:
                 "sort": False
             }
         }
+
+    def load_content(self):
+        # 创建一个可以滚动的画布，并放置一个主框架在画布上
+        self.scrollable_canvas = reusable_widget.ScrollableCanvas(self.wnd)
+        self.main_frame = self.scrollable_canvas.main_frame
 
         self.create_manual_table()
         self.create_auto_table()

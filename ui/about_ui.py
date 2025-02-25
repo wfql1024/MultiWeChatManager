@@ -1,6 +1,7 @@
 # about_ui.py
 import tkinter as tk
 import webbrowser
+from abc import ABC
 from functools import partial
 from tkinter import ttk, messagebox
 from typing import Dict, Union
@@ -8,9 +9,10 @@ from typing import Dict, Union
 from PIL import Image, ImageTk
 
 from functions import func_update, subfunc_file
+from public_class.reusable_widget import SubToolWnd
 from resources import Config, Strings, Constants
 from ui import update_log_ui
-from utils import hwnd_utils, widget_utils
+from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -48,13 +50,24 @@ def pack_grids(frame, part_dict, max_columns=6):
         item.bind("<Button-1>", partial(lambda event, urls2open: open_urls(urls2open), urls2open=urls))
 
 
-class AboutWindow:
-    def __init__(self, root, parent, wnd, app_info):
+class AboutWnd(SubToolWnd, ABC):
+    def __init__(self, wnd, title, app_info):
+        self.logo_img = None
+        self.scroll_text_str = None
+        self.scroll_direction = None
+        self.scroll_tasks = None
+        self.cfg_data = None
         self.about_info = None
         self.app_name = None
         self.content_frame = None
         self.main_frame = None
 
+        self.app_info = app_info
+
+        super().__init__(wnd, title)
+
+    def initialize_members_in_init(self):
+        self.wnd_width, self.wnd_height = Constants.ABOUT_WND_SIZE
         self.scroll_tasks: Dict[str, Union[list, None]] = {
             "reference": None,
             "sponsor": None,
@@ -69,23 +82,11 @@ class AboutWindow:
         }
         self.logo_img = []
 
-        self.root = root
-        self.parent = parent
-        self.wnd = wnd
-        self.app_info = app_info
 
-        self.wnd.title("关于")
-        self.width, self.height = Constants.ABOUT_WND_SIZE
-        hwnd_utils.bring_tk_wnd_to_center(self.wnd, self.width, self.height)
-        self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
-
-        # 禁用窗口大小调整
+    def set_wnd(self):
         self.wnd.resizable(False, False)
 
-        # 移除窗口装饰并设置为工具窗口
-        self.wnd.attributes('-toolwindow', True)
-        self.wnd.grab_set()
-
+    def load_content(self):
         self.cfg_data = subfunc_file.read_remote_cfg_in_rules()
         if self.cfg_data is None:
             messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
@@ -261,7 +262,7 @@ class AboutWindow:
             new_versions, old_versions = result
             if len(new_versions) != 0:
                 update_log_window = tk.Toplevel(self.wnd)
-                update_log_ui.UpdateLogWindow(self.root, self.wnd, update_log_window, old_versions, new_versions)
+                update_log_ui.UpdateLogWnd(update_log_window, "", old_versions, new_versions)
             else:
                 messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
                 return True
@@ -269,21 +270,10 @@ class AboutWindow:
             messagebox.showinfo("错误", result)
             return False
 
-    def on_close(self):
-        """窗口关闭时执行的操作"""
+    def finally_do(self):
         for info in self.scroll_tasks.values():
             for task in info:
                 try:
                     self.root.after_cancel(task)  # 取消滚动任务
                 except Exception as e:
                     logger.error(f"Error cancelling task: {e}")
-
-        self.wnd.destroy()  # 关闭窗口
-        if self.parent != self.root:
-            self.parent.grab_set()  # 恢复父窗口的焦点
-
-
-if __name__ == '__main__':
-    test_root = tk.Tk()
-    about_window = AboutWindow(test_root, test_root, test_root, True)
-    test_root.mainloop()

@@ -1,70 +1,82 @@
 import os
 import sys
 import tkinter as tk
+from abc import ABC
 from datetime import datetime
 from tkinter import scrolledtext
 from tkinter.font import Font
 
 import winshell
 
+from public_class.reusable_widget import SubToolWnd
 from resources import Constants
-from utils import debug_utils, hwnd_utils
+from utils import debug_utils
 
 
-class DebugWindow:
-    def __init__(self, wnd):
-        self.wnd = wnd
-        wnd.title("调试窗口")
-        wnd_width, wnd_height = Constants.DEBUG_WND_SIZE
-        hwnd_utils.bring_tk_wnd_to_center(self.wnd, wnd_width, wnd_height)
+class DebugWnd(SubToolWnd, ABC):
+    def __init__(self, wnd, title):
+        self.text_area = None
+        self.simplify_checkbox = None
+        self.simplify_var = None
+        self.callstack_var = None
+        self.max_indent_scale = None
+        self.min_indent_scale = None
+        self.indent_var = None
+        super().__init__(wnd, title)
+
+    def initialize_members_in_init(self):
+        self.wnd_width, self.wnd_height = Constants.DEBUG_WND_SIZE
+
+    def load_content(self):
+        wnd = self.wnd
 
         # 创建工具栏
-        self.toolbar = tk.Frame(wnd)
-        self.toolbar.pack(side=tk.TOP, fill=tk.X)
+        toolbar = tk.Frame(wnd)
+        toolbar.pack(side=tk.TOP, fill=tk.X)
 
         # 刷新按钮
-        self.refresh_button = tk.Button(self.toolbar, text="刷新", command=self.refresh_text)
-        self.refresh_button.pack(side=tk.LEFT)
+        refresh_button = tk.Button(toolbar, text="刷新", command=self.refresh_text)
+        refresh_button.pack(side=tk.LEFT)
 
         # 打印日志按钮
-        self.print_log_button = tk.Button(self.toolbar, text="生成日志文件", command=self.write_log_to_txt)
-        self.print_log_button.pack(side=tk.LEFT)
+        print_log_button = tk.Button(toolbar, text="生成日志文件", command=self.write_log_to_txt)
+        print_log_button.pack(side=tk.LEFT)
 
         # 缩进复选框
         self.indent_var = tk.BooleanVar(value=True)
-        self.indent_checkbox = tk.Checkbutton(self.toolbar, text="缩进", variable=self.indent_var,
+        indent_checkbox = tk.Checkbutton(toolbar, text="缩进", variable=self.indent_var,
                                               command=self.refresh_text)
-        self.indent_checkbox.pack(side=tk.LEFT)
+        indent_checkbox.pack(side=tk.LEFT)
 
         # 创建Frame用于包含两个滑块
-        self.indent_frame = tk.Frame(self.toolbar)
-        self.indent_frame.pack(side=tk.LEFT)
+        indent_frame = tk.Frame(toolbar)
+        indent_frame.pack(side=tk.LEFT)
 
         # 最小缩进尺
-        self.min_indent_label = tk.Label(self.indent_frame, text="最小缩进:")
-        self.min_indent_label.pack(side=tk.LEFT)
-        self.min_indent_scale = tk.Scale(self.indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
+        min_indent_label = tk.Label(indent_frame, text="最小缩进:")
+        min_indent_label.pack(side=tk.LEFT)
+        self.min_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
                                          command=lambda x: self.update_indent_scales())
         self.min_indent_scale.set(0)  # 设置默认最小缩进
         self.min_indent_scale.pack(side=tk.LEFT)
 
         # 最大缩进尺
-        self.max_indent_label = tk.Label(self.indent_frame, text="最大缩进:")
-        self.max_indent_label.pack(side=tk.LEFT)
-        self.max_indent_scale = tk.Scale(self.indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
+        max_indent_label = tk.Label(indent_frame, text="最大缩进:")
+        max_indent_label.pack(side=tk.LEFT)
+        self.max_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
                                          command=lambda x: self.update_indent_scales())
         self.max_indent_scale.set(20)  # 设置默认最大缩进
         self.max_indent_scale.pack(side=tk.LEFT)
 
         # 调用复选框
         self.callstack_var = tk.BooleanVar(value=True)
-        self.callstack_checkbox = tk.Checkbutton(self.toolbar, text="调用栈", variable=self.callstack_var,
+        callstack_checkbox = tk.Checkbutton(toolbar, text="调用栈", variable=self.callstack_var,
                                                  command=self.update_simplify_checkbox)
-        self.callstack_checkbox.pack(side=tk.LEFT)
+        callstack_checkbox.pack(side=tk.LEFT)
 
         # 简化复选框
         self.simplify_var = tk.BooleanVar(value=True)
-        self.simplify_checkbox = tk.Checkbutton(self.toolbar, text="简化调用栈",
+        self.simplify_checkbox = tk.Checkbutton(toolbar, text="简化调用栈",
                                                 variable=self.simplify_var, command=self.refresh_text)
         self.simplify_checkbox.pack(side=tk.LEFT)
 

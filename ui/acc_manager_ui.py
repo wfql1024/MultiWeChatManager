@@ -5,40 +5,41 @@ from PIL import Image, ImageTk
 
 from functions import subfunc_file, func_account
 from public_class import reusable_widget
+from public_class.global_members import GlobalMembers
+from public_class.reusable_widget import SubToolWnd
 from resources import Constants, Config
-from utils import hwnd_utils, string_utils, json_utils
+from utils import string_utils, json_utils
 from utils.logger_utils import mylogger as logger
 
 
-class AccManagerWindow:
+class AccManagerWnd(SubToolWnd, ABC):
     """账号管理窗口"""
-
-    def __init__(self, parent_class, wnd):
-        self.parent_class = parent_class
-        self.root_class = self.parent_class.root_class
+    def __init__(self, wnd, title):
+        self.acc_manager_ui = None
         self.sw = None
-        wnd.title(f"账号管理")
-        wnd.attributes('-toolwindow', True)
-        window_width, window_height = Constants.ACC_MNG_WND_SIZE
-        hwnd_utils.bring_tk_wnd_to_center(wnd, window_width, window_height)
-        wnd.grab_set()
-        wnd.update_idletasks()
 
-        self.acc_manager_ui = AccManagerUI(self, wnd, wnd)
+        super().__init__(wnd, title)
+
+    def initialize_members_in_init(self):
+        self.wnd_width, self.wnd_height = Constants.ACC_MNG_WND_SIZE
+        self.acc_manager_ui = AccManagerUI(self.wnd, self.wnd)
+
+    def load_content(self):
         self.acc_manager_ui.refresh_frame()
+        pass
+
 
 
 class AccManagerUI:
     """账号管理UI"""
 
-    def __init__(self, parent_class, wnd, frame):
+    def __init__(self, wnd, frame):
         self.main_frame = None
         self.scrollable_canvas = None
         self.acc_data = None
         self.tree_class = {}
 
-        self.parent_class = parent_class
-        self.root_class = self.parent_class.root_class
+        self.root_class = GlobalMembers.root_class
         self.sw_notebook = self.root_class.sw_notebook
         self.wnd = wnd
         self.tab_frame = frame

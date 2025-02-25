@@ -207,8 +207,8 @@ class MenuUI:
                                            command=partial(self.open_settings, self.sw))
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
-        self.settings_menu.add_command(label=f"账号管理", command=self.open_acc_setting)
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        # self.settings_menu.add_command(label=f"账号管理", command=self.open_acc_setting)
+        # self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
         # 防撤回和全局多开需要依赖存储路径，因此判断若无路径直接跳过菜单创建
         if self.sw_class.data_dir is not None:
@@ -412,7 +412,7 @@ class MenuUI:
     def open_statistic(self):
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.root)
-        statistic_ui.StatisticWindow(statistic_window, self.sw, self.global_settings_value.view)
+        statistic_ui.StatisticWnd(statistic_window, f"{self.sw}统计数据", self.sw)
 
     def to_quick_refresh(self):
         self.root_class.quick_refresh = True
@@ -441,14 +441,14 @@ class MenuUI:
         sidebar_ui.SidebarUI()
 
     def open_acc_setting(self):
-        acc_manager_window = tk.Toplevel(self.root)
-        acc_manager_ui.AccManagerWindow(self, acc_manager_window)
+        acc_manager_wnd = tk.Toplevel(self.root)
+        acc_manager_ui.AccManagerWnd(acc_manager_wnd, "账号管理")
 
     def open_settings(self, sw):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
-        setting_ui.SettingWindow(settings_window, sw, self.sw_class.multiple_state,
-                                 self.root_class.acc_tab_ui.refresh)
+        setting_ui.SettingWnd(settings_window, sw, self.sw_class.multiple_state,
+                              self.root_class.acc_tab_ui.refresh, f"{sw}设置")
 
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
@@ -473,7 +473,7 @@ class MenuUI:
     def open_rewards(self):
         """打开赞赏窗口"""
         rewards_window = tk.Toplevel(self.root)
-        rewards_ui.RewardsWindow(self.root, self.root, rewards_window, Config.REWARDS_PNG_PATH)
+        rewards_ui.RewardsWnd(rewards_window, "我来赏你！", Config.REWARDS_PNG_PATH)
 
     def open_update_log(self):
         """打开版本日志窗口"""
@@ -481,14 +481,14 @@ class MenuUI:
         if success is True:
             new_versions, old_versions = result
             update_log_window = tk.Toplevel(self.root)
-            update_log_ui.UpdateLogWindow(self.root, self.root, update_log_window, old_versions)
+            update_log_ui.UpdateLogWnd(update_log_window, "", old_versions)
         else:
             messagebox.showerror("错误", result)
 
     def open_about(self, app_info):
         """打开关于窗口"""
         about_wnd = tk.Toplevel(self.root)
-        about_ui.AboutWindow(self.root, self.root, about_wnd, app_info)
+        about_ui.AboutWnd(about_wnd, "关于", app_info)
 
     def to_enable_new_func(self, event=None):
         if event is None:

@@ -1,5 +1,6 @@
 import re
 import tkinter as tk
+from abc import ABC
 from functools import partial
 from tkinter import ttk, filedialog, messagebox
 from typing import Dict
@@ -8,133 +9,149 @@ import win32com
 import win32com.client
 
 from functions import func_setting, subfunc_sw, subfunc_file, func_sw_dll
+from public_class.reusable_widget import SubToolWnd
 from resources import Constants, Config
-from utils import sw_utils, hwnd_utils, ini_utils
+from utils import sw_utils, ini_utils
 from utils.logger_utils import mylogger as logger
 
 
 # TODO:修改下获取程序路径，程序版本以及程序版本文件夹的逻辑
 
 
-class SettingWindow:
-    def __init__(self, wnd, sw, status, after):
+class SettingWnd(SubToolWnd, ABC):
+    def __init__(self, wnd, sw, status, after, title):
+        self.origin_values = None
+        self.changed = None
+        self.login_size_entry = None
+        self.login_size_var = None
+        self.screen_size_entry = None
+        self.screen_size_var = None
+        self.version_entry = None
+        self.version_var = None
+        self.dll_path_entry = None
+        self.dll_dir_var = None
+        self.data_path_entry = None
+        self.data_dir_var = None
+        self.install_path_entry = None
+        self.inst_path_var = None
+        self.ver = None
+        self.inst_path = None
+        self.data_dir = None
+        self.dll_dir = None
+
+        self.sw = sw
+        self.status = status
+        self.after = after
+        self.need_to_clear_acc = False
+
+        super().__init__(wnd, title)
+
+    def initialize_members_in_init(self):
+        self.wnd_width, self.wnd_height = Constants.SETTING_WND_SIZE
+        self.wnd_height = None
         self.changed: Dict[str, bool] = {
             "inst_path": False,
             "data_dir": False,
             "dll_dir": False,
             "login_size": False
         }
+        sw = self.sw
         self.origin_values = {
             "inst_path": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "inst_path"),
             "data_dir": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "data_dir"),
             "dll_dir": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "dll_dir"),
             "login_size": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "login_size")
         }
-        self.ver = None
-        self.inst_path = None
-        self.data_dir = None
-        self.dll_dir = None
 
-        self.status = status
-        self.after = after
-        self.wnd = wnd
-        self.sw = sw
-        self.need_to_clear_acc = False
+    def load_content(self):
+        wnd = self.wnd
 
-        wnd.title(f"{sw}设置")
-        window_width, window_height = Constants.SETTING_WND_SIZE
-        hwnd_utils.bring_tk_wnd_to_center(self.wnd, window_width, window_height)
-        # 移除窗口装饰并设置为工具窗口
-        wnd.attributes('-toolwindow', True)
-        wnd.grab_set()
-        self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
-
-        # 第一行 - 微信安装路径
-        self.install_label = tk.Label(wnd, text="程序路径：")
-        self.install_label.grid(row=0, column=0, **Constants.W_GRID_PACK)
+        # 第一行 - 安装路径
+        install_label = tk.Label(wnd, text="程序路径：")
+        install_label.grid(row=0, column=0, **Constants.W_GRID_PACK)
 
         self.inst_path_var = tk.StringVar()
         self.install_path_entry = tk.Entry(wnd, textvariable=self.inst_path_var, state='readonly', width=70)
         self.install_path_entry.grid(row=0, column=1, **Constants.WE_GRID_PACK)
 
-        self.install_get_button = ttk.Button(wnd, text="获取",
-                                             command=partial(self.load_or_get_sw_inst_path, self.sw, True))
-        self.install_get_button.grid(row=0, column=2, **Constants.WE_GRID_PACK)
+        install_get_button = ttk.Button(wnd, text="获取",
+                                        command=partial(self.load_or_get_sw_inst_path, self.sw, True))
+        install_get_button.grid(row=0, column=2, **Constants.WE_GRID_PACK)
 
-        self.install_choose_button = ttk.Button(wnd, text="选择路径",
-                                                command=partial(self.choose_sw_inst_path, self.sw))
-        self.install_choose_button.grid(row=0, column=3, **Constants.WE_GRID_PACK)
+        install_choose_button = ttk.Button(wnd, text="选择路径",
+                                           command=partial(self.choose_sw_inst_path, self.sw))
+        install_choose_button.grid(row=0, column=3, **Constants.WE_GRID_PACK)
 
-        # 第二行 - 微信数据存储路径
-        self.data_label = tk.Label(wnd, text="存储路径：")
-        self.data_label.grid(row=1, column=0, **Constants.W_GRID_PACK)
+        # 第二行 - 数据存储路径
+        data_label = tk.Label(wnd, text="存储路径：")
+        data_label.grid(row=1, column=0, **Constants.W_GRID_PACK)
 
         self.data_dir_var = tk.StringVar()
         self.data_path_entry = tk.Entry(wnd, textvariable=self.data_dir_var, state='readonly', width=70)
         self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
 
-        self.data_get_button = ttk.Button(wnd, text="获取",
-                                          command=partial(self.load_or_get_sw_data_dir, self.sw, True))
-        self.data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
+        data_get_button = ttk.Button(wnd, text="获取",
+                                     command=partial(self.load_or_get_sw_data_dir, self.sw, True))
+        data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
 
-        self.data_choose_button = ttk.Button(wnd, text="选择路径",
-                                             command=partial(self.choose_sw_data_dir, self.sw))
-        self.data_choose_button.grid(row=1, column=3, **Constants.WE_GRID_PACK)
+        data_choose_button = ttk.Button(wnd, text="选择路径",
+                                        command=partial(self.choose_sw_data_dir, self.sw))
+        data_choose_button.grid(row=1, column=3, **Constants.WE_GRID_PACK)
 
-        # 新增第三行 - WeChatWin.dll 路径
-        self.dll_label = tk.Label(wnd, text="DLL所在路径：")
-        self.dll_label.grid(row=2, column=0, **Constants.W_GRID_PACK)
+        # 新增第三行 - dll路径
+        dll_label = tk.Label(wnd, text="DLL所在路径：")
+        dll_label.grid(row=2, column=0, **Constants.W_GRID_PACK)
 
         self.dll_dir_var = tk.StringVar()
         self.dll_path_entry = tk.Entry(wnd, textvariable=self.dll_dir_var, state='readonly', width=70)
         self.dll_path_entry.grid(row=2, column=1, **Constants.WE_GRID_PACK)
 
-        self.dll_get_button = ttk.Button(wnd, text="获取",
-                                         command=partial(self.load_or_get_sw_dll_dir, self.sw, True))
-        self.dll_get_button.grid(row=2, column=2, **Constants.WE_GRID_PACK)
+        dll_get_button = ttk.Button(wnd, text="获取",
+                                    command=partial(self.load_or_get_sw_dll_dir, self.sw, True))
+        dll_get_button.grid(row=2, column=2, **Constants.WE_GRID_PACK)
 
-        self.dll_choose_button = ttk.Button(wnd, text="选择路径",
-                                            command=partial(self.choose_sw_dll_dir, self.sw))
-        self.dll_choose_button.grid(row=2, column=3, **Constants.WE_GRID_PACK)
+        dll_choose_button = ttk.Button(wnd, text="选择路径",
+                                       command=partial(self.choose_sw_dll_dir, self.sw))
+        dll_choose_button.grid(row=2, column=3, **Constants.WE_GRID_PACK)
 
         # 新增第四行 - 当前版本
-        self.version_label = tk.Label(wnd, text="应用版本：")
-        self.version_label.grid(row=3, column=0, **Constants.W_GRID_PACK)
+        version_label = tk.Label(wnd, text="应用版本：")
+        version_label.grid(row=3, column=0, **Constants.W_GRID_PACK)
 
         self.version_var = tk.StringVar()
         self.version_entry = tk.Entry(wnd, textvariable=self.version_var, state='readonly', width=70)
         self.version_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
 
-        self.screen_size_get_button = ttk.Button(wnd, text="获取",
-                                                 command=partial(self.get_cur_sw_ver, self.sw))
-        self.screen_size_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
+        ver_get_button = ttk.Button(wnd, text="获取",
+                                    command=partial(self.get_cur_sw_ver, self.sw))
+        ver_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第五行 - 屏幕大小
-        self.screen_size_label = tk.Label(wnd, text="屏幕大小：")
-        self.screen_size_label.grid(row=4, column=0, **Constants.W_GRID_PACK)
+        screen_size_label = tk.Label(wnd, text="屏幕大小：")
+        screen_size_label.grid(row=4, column=0, **Constants.W_GRID_PACK)
 
         self.screen_size_var = tk.StringVar()
         self.screen_size_entry = tk.Entry(wnd, textvariable=self.screen_size_var, state='readonly', width=70)
         self.screen_size_entry.grid(row=4, column=1, **Constants.WE_GRID_PACK)
 
-        self.screen_size_get_button = ttk.Button(wnd, text="获取", command=self.get_screen_size)
-        self.screen_size_get_button.grid(row=4, column=2, **Constants.WE_GRID_PACK)
+        screen_size_get_button = ttk.Button(wnd, text="获取", command=self.get_screen_size)
+        screen_size_get_button.grid(row=4, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第六行 - 登录窗口大小
-        self.login_size_label = tk.Label(wnd, text="登录尺寸：")
-        self.login_size_label.grid(row=5, column=0, **Constants.W_GRID_PACK)
+        login_size_label = tk.Label(wnd, text="登录尺寸：")
+        login_size_label.grid(row=5, column=0, **Constants.W_GRID_PACK)
 
         self.login_size_var = tk.StringVar()
         self.login_size_entry = tk.Entry(wnd, textvariable=self.login_size_var, state='readonly', width=70)
         self.login_size_entry.grid(row=5, column=1, **Constants.WE_GRID_PACK)
 
-        self.login_size_get_button = ttk.Button(wnd, text="获取",
-                                                command=partial(self.to_get_login_size, self.status))
-        self.login_size_get_button.grid(row=5, column=2, **Constants.WE_GRID_PACK)
+        login_size_get_button = ttk.Button(wnd, text="获取",
+                                           command=partial(self.to_get_login_size, self.status))
+        login_size_get_button.grid(row=5, column=2, **Constants.WE_GRID_PACK)
 
         # 修改确定按钮，从第4行到第6行
-        self.ok_button = ttk.Button(wnd, text="确定", command=self.on_ok)
-        self.ok_button.grid(row=3, column=3, rowspan=3, **Constants.NEWS_GRID_PACK)
+        ok_button = ttk.Button(wnd, text="确定", command=self.on_ok)
+        ok_button.grid(row=3, column=3, rowspan=3, **Constants.NEWS_GRID_PACK)
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         wnd.grid_columnconfigure(1, weight=1)
@@ -191,7 +208,7 @@ class SettingWindow:
             if self.inst_path != self.origin_values["inst_path"]:
                 self.changed["inst_path"] = True
         else:
-            self.inst_path_var.set("获取失败，请登录微信后获取或手动选择路径")
+            self.inst_path_var.set("获取失败，请登录后获取或手动选择路径")
 
     def choose_sw_inst_path(self, sw):
         """选择路径，若检验成功会进行保存"""
@@ -208,7 +225,7 @@ class SettingWindow:
                     self.changed["inst_path"] = True
                 break
             else:
-                messagebox.showerror("错误", "请选择WeChat.exe文件")
+                messagebox.showerror("错误", "请选择可执行文件！")
 
     def load_or_get_sw_data_dir(self, sw, click=False):
         """获取路径，若成功会进行保存"""
@@ -219,7 +236,7 @@ class SettingWindow:
             if self.data_dir != self.origin_values["data_dir"]:
                 self.changed["data_dir"] = True
         else:
-            self.data_dir_var.set("获取失败，请手动选择包含All Users文件夹的父文件夹（通常为Wechat Files）")
+            self.data_dir_var.set("获取失败，请手动选择存储文件夹（可在平台设置中查看）")
 
     def choose_sw_data_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
@@ -249,7 +266,7 @@ class SettingWindow:
                     self.changed["data_dir"] = True
                 break
             else:
-                messagebox.showerror("错误", "该路径不是有效的存储路径，可以在微信设置中查看存储路径")
+                messagebox.showerror("错误", "该路径不是有效的存储路径，可以在平台设置中查看存储路径")
 
     def load_or_get_sw_dll_dir(self, sw, click=False):
         """获取路径，若成功会进行保存"""
@@ -290,7 +307,7 @@ class SettingWindow:
                     self.changed["dll_dir"] = True
                 break
             else:
-                messagebox.showerror("错误", "请选择包含WeChatWin.dll的版本号最新的文件夹")
+                messagebox.showerror("错误", "请选择包含dll文件的版本号最新的文件夹")
 
     def get_cur_sw_ver(self, sw, click):
         print("获取版本号")

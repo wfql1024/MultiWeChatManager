@@ -5,6 +5,7 @@ import psutil
 import win32gui
 
 from functions import func_setting, subfunc_file
+from public_class.enums import Position
 from resources import Config
 from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
@@ -18,7 +19,7 @@ def switch_to_sw_account_wnd(item_id, root):
     main_hwnd, = subfunc_file.get_sw_acc_details_from_json(sw, acc, main_hwnd=None)
 
     # 程序主窗口左移
-    hwnd_utils.bring_tk_wnd_to_left(root)
+    hwnd_utils.set_size_and_bring_tk_wnd_to_(root, None, None, Position.LEFT)
     # 隐藏所有平台主窗口
     hwnd_utils.hide_all_by_wnd_classes(classes)
     # 恢复平台指定主窗口

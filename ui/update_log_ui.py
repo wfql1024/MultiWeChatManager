@@ -3,28 +3,34 @@ import tempfile
 import threading
 import tkinter as tk
 import uuid
+from abc import ABC
 from functools import partial
 from tkinter import messagebox, ttk
 
 from functions import func_update, subfunc_file
+from public_class.reusable_widget import SubToolWnd
 from resources import Constants
-from utils import file_utils, sys_utils, hwnd_utils
+from utils import file_utils, sys_utils
 
 
-class UpdateLogWindow:
-    def __init__(self, root, parent, wnd, old_versions, new_versions=None):
-        self.root = root
-        self.parent = parent
-        self.wnd = wnd
-        self.wnd.title("版本日志" if not new_versions else "发现新版本")
-        self.width, self.height = Constants.UPDATE_LOG_WND_SIZE
-        hwnd_utils.bring_tk_wnd_to_center(self.wnd, self.width, self.height)
-        # 禁用窗口大小调整、移除其余无用按钮、置顶
+class UpdateLogWnd(SubToolWnd, ABC):
+    def __init__(self, wnd, title, old_versions, new_versions=None):
+        self.log_text = None
+        self.old_versions = old_versions
+        self.new_versions = new_versions
+
+        super().__init__(wnd, title)
+
+    def initialize_members_in_init(self):
+        self.wnd_width, self.wnd_height = Constants.UPDATE_LOG_WND_SIZE
+
+    def set_wnd(self):
         self.wnd.resizable(False, False)
-        # 移除窗口装饰并设置为工具窗口
-        self.wnd.attributes('-toolwindow', True)
-        self.wnd.grab_set()
-        self.wnd.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.wnd.title("版本日志" if not self.new_versions else "发现新版本")
+
+    def load_content(self):
+        new_versions = self.new_versions
+        old_versions = self.old_versions
 
         main_frame = ttk.Frame(self.wnd, padding="5")
         main_frame.pack(fill="both", expand=True)
@@ -114,11 +120,6 @@ class UpdateLogWindow:
 
         # 配置滚动条
         scrollbar.config(command=self.log_text.yview)
-
-    def on_close(self):
-        self.wnd.destroy()
-        if self.parent != self.root:
-            self.parent.grab_set()
 
     def show_download_window(self, ver_dicts, download_dir=None):
         def update_progress(idx, total_files, downloaded, total_length):

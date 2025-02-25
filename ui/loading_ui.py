@@ -1,22 +1,24 @@
+from abc import ABC
 from tkinter import ttk
 
+from public_class.reusable_widget import SubToolWnd
 from resources import Constants
-from utils import hwnd_utils
 
 
-class LoadingWindow:
-    def __init__(self, wnd):
-        # print("打开加载窗口")
-        self.wnd = wnd
-        self.wnd.title("加载中")
-        self.wnd.withdraw()  # 初始时隐藏窗口
-        wnd_width, wnd_height = Constants.LOADING_WND_SIZE
-        hwnd_utils.bring_tk_wnd_to_center(self.wnd, wnd_width, wnd_height)
+class LoadingWnd(SubToolWnd, ABC):
+    def __init__(self, wnd, title):
+        self.progress = None
+        self.label = None
 
+        super().__init__(wnd, title)
+
+    def initialize_members_in_init(self):
+        self.wnd_width, self.wnd_height = Constants.LOADING_WND_SIZE
+
+    def set_wnd(self):
         self.wnd.resizable(False, False)
-        # print("显示等待窗口")
-        self.wnd.deiconify()  # 显示窗口
 
+    def load_content(self):
         self.label = ttk.Label(self.wnd, text="正在载入，请稍等……")
         self.label.pack(pady=Constants.T_PAD_Y)
         self.progress = ttk.Progressbar(self.wnd, mode="determinate", length=Constants.LOADING_PRG_LEN)
