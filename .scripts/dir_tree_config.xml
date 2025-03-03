@@ -1,4 +1,15 @@
+<!-- 这个文件若填写相对路径，是相对于本文件的 -->
 <config>
+    <!--  位置  -->
+    <!--  根目录  -->
+    <root_dir>..</root_dir>
+    <!--  TreeInfoTip配置文件位置，默认名字是DirectoryV3.xml，请以该名结尾  -->
+    <tree_info_tip_xml>../DirectoryV3.xml</tree_info_tip_xml>
+    <!--  输出位置  -->
+    <output_dir>.</output_dir>
+    <!--  输出文件名  -->
+    <output_name>dir_tree</output_name>
+
     <!--  扫描  -->
     <!--  忽略.开头的文件夹  -->
     <ignore_dot_dir>true</ignore_dot_dir>
@@ -10,6 +21,9 @@
     <ignore_dir_list>__pycache__,user_files,dist</ignore_dir_list>
     <!--  忽略文件  -->
     <ignore_file>false</ignore_file>
+    <!--  简略显示，忽略目录中没有备注信息的项  -->
+    <simply_show_dir_list>Demo</simply_show_dir_list>
+
     <!--  预览  -->
     <!--  输出格式: text或markdown  -->
     <output_type>text</output_type>
@@ -21,6 +35,4 @@
     <always_show_bridge>false</always_show_bridge>
     <!--  注释前缀  -->
     <comment_prefix>#</comment_prefix>
-    <!--  TreeInfoTip配置文件位置  -->
-    <tree_info_tip_xml>DirectoryV3.xml</tree_info_tip_xml>
 </config>
