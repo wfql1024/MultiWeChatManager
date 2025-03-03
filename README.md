@@ -56,7 +56,7 @@
 - 某些账号获取详情可能失败，原因暂不明确，但该功能只是获取头像昵称等信息，不影响其他功能
 
 ## 支持作者
-![我来赏你！](external_res/rewards.png)
+![rewards](https://github.com/user-attachments/assets/9a632a23-69f2-4e80-b207-ca9d98f00ba9)
 
 ## 附录：项目目录结构
 ### txt格式
