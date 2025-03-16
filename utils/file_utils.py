@@ -1,19 +1,168 @@
 import ctypes
 import datetime as dt
 import hashlib
+import json
 import mmap
-import os
 import re
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+from Crypto.Util.Padding import unpad
 from pathlib import Path
-
 import win32api
 import win32com.client
 import winshell
+import configparser
+import os
+from typing import IO
+from utils import logger_utils
+import yaml
+from typing import Any, Optional
 
+logger = logger_utils.mylogger
 
-class DLLUtils:
+class YamlUtils:
+    @staticmethod
+    def load_yaml(file_path: str) -> Optional[dict]:
+        """加载 YAML 文件"""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                return yaml.safe_load(file)
+        except Exception as e:
+            logger.e(f"加载 YAML 文件失败: {e}")
+            return None
+
+    @staticmethod
+    def get_nested_value(data: dict, key_path: str, default_value: Any = None, separator: str = '/') -> Any:
+        """
+        从嵌套字典中获取多级键的值
+        :param data: 嵌套字典
+        :param key_path: 多级键路径，例如 "a/b/c"
+        :param default_value: 如果路径不存在，返回的默认值
+        :param separator: 路径分隔符，默认为 "/"
+        :return: 对应的值，如果路径不存在则返回默认值
+        """
+        keys = key_path.split(separator)
+        current = data
+        for key in keys:
+            if isinstance(current, dict) and key in current:
+                current = current[key]
+            else:
+                return default_value
+        return current
+
+    @staticmethod
+    def set_nested_value(data: dict, key_path: str, value: Any, separator: str = '/') -> None:
+        """
+        设置嵌套字典中多级键的值
+        :param data: 嵌套字典
+        :param key_path: 多级键路径，例如 "a/b/c"
+        :param value: 要设置的值
+        :param separator: 路径分隔符，默认为 "/"
+        """
+        keys = key_path.split(separator)
+        current = data
+        for key in keys[:-1]:  # 遍历除最后一个键外的所有键
+            if key not in current or not isinstance(current[key], dict):
+                current[key] = {}  # 如果键不存在或不是字典，创建一个空字典
+            current = current[key]
+        current[keys[-1]] = value  # 设置最后一个键的值
+
+class JsonUtils:
+    @staticmethod
+    def load_json(json_file):
+        try:
+            if os.path.exists(json_file):
+                # print("地址没错")
+                with open(json_file, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+            return {}
+        except Exception as e:
+            logger.error(e)
+            return {}
+
+    @staticmethod
+    def save_json_data(account_data_file, account_data):
+        try:
+            with open(account_data_file, 'w', encoding='utf-8') as f:
+                json_string = json.dumps(account_data, ensure_ascii=False, indent=4)
+                f.write(json_string)
+        except Exception as e:
+            logger.error(e)
+
+class IniUtils:
+    @staticmethod
+    def get_setting_from_ini(ini_path, section, key, default_value=None, validation_func=None):
+        try:
+            # 检查文件是否存在
+            if not os.path.exists(ini_path):
+                logger.warning(f"文件不存在: {ini_path}，创建空文件")
+                open(ini_path, 'w').close()  # 创建空文件
+                return None
+
+            # 读取配置文件
+            config = configparser.ConfigParser()
+            config.read(ini_path)
+
+            # 检查节和键是否存在
+            if section in config and key in config[section]:
+                current_value = config[section][key]
+                # 验证配置值
+                if validation_func is None or validation_func(current_value):
+                    # logger.info(f"读取 {ini_path}[{section}]{key} = {current_value}")
+                    return current_value
+
+            # 如果节或键不存在，返回默认值
+            logger.warning(f"配置项不存在: {ini_path}[{section}]{key}")
+            return default_value
+
+        except Exception as e:
+            logger.error(f"读取配置文件失败: {ini_path}, 错误: {e}")
+            return None
+
+    @staticmethod
+    def save_setting_to_ini(ini_path, section, key, value):
+        config = configparser.ConfigParser()
+
+        ini_path = ini_path.replace('\\', '/')
+        # 先确保目录存在，如果不存在则创建
+        ini_dir = os.path.dirname(ini_path)
+        if not os.path.exists(ini_dir):
+            os.makedirs(ini_dir, exist_ok=True)  # 创建文件夹
+            logger.warning(f"文件夹不存在，已创建: {ini_dir}")
+
+        # 确保目录存在后再读取文件
+        if os.path.exists(ini_path):
+            try:
+                files_read = config.read(ini_path)
+                if not files_read:
+                    logger.warning(f"Unable to read {ini_path}")
+            except Exception as e:
+                logger.error(f"Failed to read {ini_path}: {e}")
+
+        # 检查 section 是否存在
+        if section not in config:
+            config[section] = {}
+
+        config[section][key] = str(value)
+
+        # 写入配置文件
+        try:
+            with open(ini_path, 'w') as configfile:
+                configfile: IO[str] = configfile
+                config.write(configfile)  # type: ignore
+                # logger.info(f"写入{value} -----> {os.path.basename(ini_path)}[{section}]{key}")
+        except IOError as e:
+            logger.error(f"Failed to write to {ini_path}: {e}")
+
+class DllUtils:
     @staticmethod
     def find_patterns_from_dll_in_hexadecimal(dll_path, *hex_patterns):
+        """
+        在 DLL 文件中查找指定的十六进制模式，并返回一个布尔列表。
+        :param dll_path: DLL 文件的路径
+        :param hex_patterns: 一个或多个十六进制模式，每个模式为一个字符串
+        :return: 一个布尔列表，每个元素对应一个模式，True 表示找到，False 表示未找到
+        """
         with open(dll_path, 'rb') as f:
             dll_content = f.read()
 
@@ -29,6 +178,12 @@ class DLLUtils:
 
     @staticmethod
     def edit_patterns_in_dll_in_hexadecimal(dll_path, **hex_patterns_dicts):
+        """
+        在 DLL 文件中查找指定的十六进制模式，并替换为新的十六进制模式。
+        :param dll_path: DLL 文件的路径
+        :param hex_patterns_dicts: 一个或多个十六进制模式的字典，每个字典包含旧模式和新模式
+        :return: 一个布尔列表，每个元素对应一个模式，True 表示替换成功，False 表示未找到对应模式
+        """
         print(hex_patterns_dicts)
         results = []
 
@@ -261,6 +416,38 @@ def create_shortcut_for_(target_path, shortcut_path, ico_path=None):
         # 修正icon_location的传递方式，传入一个包含路径和索引的元组
         if ico_path:
             shortcut.icon_location = (ico_path, 0)
+
+class CryptoUtils:
+    @staticmethod
+    def decrypt_json_file(input_file, output_file, key):
+        # 确保密钥长度为 16、24 或 32 字节
+        key = key.ljust(16)[:16].encode()
+
+        with open(input_file, 'rb') as f:
+            file_data = f.read()
+
+        iv = file_data[:16]
+        ciphertext = file_data[16:]
+        cipher = AES.new(key, AES.MODE_CBC, iv)
+
+        plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
+        with open(output_file, 'wb') as f:
+            f.write(plaintext)
+
+    @staticmethod
+    def encrypt_json_file(input_file, output_file, key):
+        # 确保密钥长度为 16、24 或 32 字节
+        key = key.ljust(16)[:16].encode()
+        cipher = AES.new(key, AES.MODE_CBC)
+        iv = cipher.iv
+
+        with open(input_file, 'rb') as f:
+            plaintext = f.read()
+
+        # 加密并写入文件
+        ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
+        with open(output_file, 'wb') as f:
+            f.write(iv + ciphertext)
 
 
 if __name__ == '__main__':

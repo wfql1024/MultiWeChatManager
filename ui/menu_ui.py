@@ -7,6 +7,7 @@ from pathlib import Path
 from tkinter import messagebox
 
 from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_update
+from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
 from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui, acc_manager_ui
@@ -43,7 +44,7 @@ class MenuUI:
         self.global_settings_var = self.root_class.global_settings_var
         self.app_info = self.root_class.app_info
         self.sw_classes = self.root_class.sw_classes
-        self.cfg_data = self.root_class.cfg_data
+        # self.remote_cfg_data = self.root_class.remote_cfg_data
 
         self.acc_tab_ui = self.root_class.acc_tab_ui
         self.sw = self.acc_tab_ui.sw
@@ -134,7 +135,7 @@ class MenuUI:
 
         # ————————————————————————————视图菜单————————————————————————————
         # 视图单选
-        view_value = self.global_settings_value.view = subfunc_file.fetch_sw_setting_or_set_default(
+        view_value = self.global_settings_value.view = subfunc_file.fetch_sw_setting_or_set_default_or_none(
             self.sw, "view")
         view_var = self.global_settings_var.view = tk.StringVar(value=view_value)
         self.view_menu = tk.Menu(self.menu_bar, tearoff=False)
@@ -149,7 +150,7 @@ class MenuUI:
 
         # 视图选项
         sign_vis_value = self.global_settings_value.sign_vis = \
-            True if subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True" else False
+            True if subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True" else False
         sign_vis_var = self.global_settings_var.sign_vis = tk.BooleanVar(value=sign_vis_value)
         self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
@@ -168,7 +169,7 @@ class MenuUI:
 
         # 缩放
         self.view_menu.add_separator()  # ————————————————分割线————————————————
-        scale_value = self.global_settings_value.scale = subfunc_file.fetch_global_setting_or_set_default("scale")
+        scale_value = self.global_settings_value.scale = subfunc_file.fetch_global_setting_or_set_default_or_none("scale")
         scale_var = self.global_settings_var.scale = tk.StringVar(value=scale_value)
         self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
@@ -194,7 +195,7 @@ class MenuUI:
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=False)
         # -应用设置
-        login_size = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "login_size")
+        login_size = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, "login_size")
         # print(f"登录窗口大小：{login_size}")
         warning_sign = Strings.WARNING_SIGN
         if not login_size or not re.match(r"^\d+\*\d+$", login_size):
@@ -252,8 +253,8 @@ class MenuUI:
         else:
             self.rest_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
             self.settings_menu.add_cascade(label="其余模式", menu=self.rest_mode_menu)
-            rest_mode_value = self.global_settings_value.rest_mode = subfunc_file.fetch_sw_setting_or_set_default(
-                self.sw, "rest_mode")
+            rest_mode_value = self.global_settings_value.rest_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(
+                self.sw, Keywords.REST_MODE)
             rest_mode_var = self.global_settings_var.rest_mode = tk.StringVar(value=rest_mode_value)  # 设置初始选中的子程序
             python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
                 self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
@@ -263,7 +264,7 @@ class MenuUI:
                 value='python',
                 variable=rest_mode_var,
                 command=partial(subfunc_file.save_sw_setting,
-                                self.sw, "rest_mode", "python", self.create_root_menu_bar),
+                                self.sw, Keywords.REST_MODE, "python", self.create_root_menu_bar),
                 state='disabled' if not python_sp else 'normal'
             )
             # 添加 强力Python 的单选按钮
@@ -272,7 +273,7 @@ class MenuUI:
                 value='python[S]',
                 variable=rest_mode_var,
                 command=partial(subfunc_file.save_sw_setting,
-                                self.sw, "rest_mode", "python[S]", self.create_root_menu_bar),
+                                self.sw, Keywords.REST_MODE, "python[S]", self.create_root_menu_bar),
                 state='disabled' if not python_s_sp else 'normal'
             )
             self.rest_mode_menu.add_separator()  # ————————————————分割线————————————————
@@ -282,7 +283,7 @@ class MenuUI:
                 value='handle',
                 variable=rest_mode_var,
                 command=partial(subfunc_file.save_sw_setting,
-                                self.sw, "rest_mode", "handle", self.create_root_menu_bar),
+                                self.sw, Keywords.REST_MODE, "handle", self.create_root_menu_bar),
                 state='disabled' if not handle_sp else 'normal'
             )
             # 动态添加外部子程序
@@ -299,11 +300,11 @@ class MenuUI:
                         value=exe_name,
                         variable=rest_mode_var,
                         command=partial(subfunc_file.save_sw_setting,
-                                        self.sw, "rest_mode", exe_name, self.create_root_menu_bar),
+                                        self.sw, Keywords.REST_MODE, exe_name, self.create_root_menu_bar),
                     )
 
         hide_wnd_value = self.global_settings_value.hide_wnd = \
-            True if subfunc_file.fetch_global_setting_or_set_default("hide_wnd") == "True" else False
+            True if subfunc_file.fetch_global_setting_or_set_default_or_none("hide_wnd") == "True" else False
         hide_wnd_var = self.global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)
         self.settings_menu.add_checkbutton(
             label="自动登录前隐藏主窗口", variable=hide_wnd_var,
@@ -313,7 +314,7 @@ class MenuUI:
         # >调用模式
         self.call_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
         self.settings_menu.add_cascade(label="调用模式", menu=self.call_mode_menu)
-        call_mode_value = self.global_settings_value.call_mode = subfunc_file.fetch_global_setting_or_set_default(
+        call_mode_value = self.global_settings_value.call_mode = subfunc_file.fetch_global_setting_or_set_default_or_none(
             "call_mode")
         call_mode_var = self.global_settings_var.call_mode = tk.StringVar(value=call_mode_value)  # 设置初始选中的子程序
 
@@ -348,7 +349,7 @@ class MenuUI:
         )
 
         auto_press_value = self.global_settings_value.auto_press = \
-            True if subfunc_file.fetch_global_setting_or_set_default("auto_press") == "True" else False
+            True if subfunc_file.fetch_global_setting_or_set_default_or_none("auto_press") == "True" else False
         auto_press_var = self.global_settings_var.auto_press = tk.BooleanVar(value=auto_press_value)
         self.settings_menu.add_checkbutton(
             label="自动点击登录按钮", variable=auto_press_var,
@@ -389,7 +390,7 @@ class MenuUI:
 
         # ————————————————————————————作者标签————————————————————————————
         new_func_value = self.global_settings_value.new_func = \
-            True if subfunc_file.fetch_global_setting_or_set_default("enable_new_func") == "True" else False
+            True if subfunc_file.fetch_global_setting_or_set_default_or_none(Keywords.ENABLE_NEW_FUNC) == "True" else False
         author_str = self.app_info.author
         hint_str = self.app_info.hint
         author_str_without_hint = f"by {author_str}"

@@ -20,9 +20,9 @@ def get_scale_factor():
     setting_ini_path = fr'{proj_path}\user_files\setting.ini'
     scale = "auto"
     if os.path.exists(setting_ini_path):
-        config = configparser.ConfigParser()
-        config.read(setting_ini_path)
         try:
+            config = configparser.ConfigParser()
+            config.read(setting_ini_path)
             scale = int(config['global']['scale'])
         except Exception as e:
             print(e)

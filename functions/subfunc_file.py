@@ -12,35 +12,37 @@ import requests
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
+from public_class.enums import Keywords
 from resources import Config, Strings
-from utils import json_utils, ini_utils, file_utils, image_utils, sys_utils
+from utils import file_utils, image_utils, sys_utils
+from utils.file_utils import IniUtils, JsonUtils
 from utils.logger_utils import mylogger as logger
 import datetime as dt
 
 """获取远程配置"""
 
 
-def decrypt_response(response_text):
-    # 分割加密数据和密钥
-    encrypted_data, key = response_text.rsplit(' ', 1)
-
-    # 解码 Base64 数据
-    encrypted_data = base64.b64decode(encrypted_data)
-    aes_key = key.ljust(16)[:16].encode()  # 确保密钥长度
-
-    # 提取 iv 和密文
-    iv = encrypted_data[:16]
-    ciphertext = encrypted_data[16:]
-
-    # 解密
-    cipher = AES.new(aes_key, AES.MODE_CBC, iv)
-    plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
-
-    return plaintext.decode()
-
-
 def force_fetch_remote_encrypted_cfg(url=None):
     """强制从网络中获取最新的配置文件"""
+
+    def decrypt_response(response_text):
+        # 分割加密数据和密钥
+        encrypted_data, key = response_text.rsplit(' ', 1)
+
+        # 解码 Base64 数据
+        encrypted_data = base64.b64decode(encrypted_data)
+        aes_key = key.ljust(16)[:16].encode()  # 确保密钥长度
+
+        # 提取 iv 和密文
+        iv = encrypted_data[:16]
+        ciphertext = encrypted_data[16:]
+
+        # 解密
+        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+        plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
+
+        return plaintext.decode()
+
     print(f"正从远程源下载...")
     urls = [Strings.REMOTE_SETTING_JSON_GITEE, Strings.REMOTE_SETTING_JSON_GITHUB]
 
@@ -66,6 +68,7 @@ def force_fetch_remote_encrypted_cfg(url=None):
             logger.error(f"从 {url} 获取时发生错误: {e}，尝试下一个源...")
 
     return None
+
 
 def try_read_remote_cfg_locally():
     """
@@ -95,7 +98,7 @@ def read_remote_cfg_in_rules():
     :return:
     """
     # 获取存储的日期
-    next_check_time_str = fetch_global_setting_or_set_default("next_check_time")
+    next_check_time_str = fetch_global_setting_or_set_default_or_none("next_check_time")
     if next_check_time_str is None:
         next_check_time = dt.datetime.today().date()
         today = dt.datetime.today().date()
@@ -119,6 +122,7 @@ def read_remote_cfg_in_rules():
     else:
         return try_read_remote_cfg_locally()
 
+
 def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
     """
     从远程设置json中获取数据
@@ -127,7 +131,7 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
     :return:
     """
     try:
-        data = json_utils.load_json_data(Config.REMOTE_SETTING_JSON_PATH)
+        data = JsonUtils.load_json(Config.REMOTE_SETTING_JSON_PATH)
         info = data.get(tab, {})
         result = tuple()
         for key, default in kwargs.items():
@@ -145,10 +149,8 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
 
 def save_sw_setting(sw, key, value, after=None):
     changed = False
-    origin_value = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
-                                                  Config.INI_KEY[key])
-    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, sw,
-                                  Config.INI_KEY[key], value)
+    origin_value = IniUtils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, key)
+    IniUtils.save_setting_to_ini(Config.SETTING_INI_PATH, sw, key, value)
     if after is not None:
         after()
     if value != origin_value:
@@ -161,10 +163,8 @@ def save_sw_setting(sw, key, value, after=None):
 
 def save_global_setting(key, value, after=None):
     changed = False
-    origin_value = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
-                                                  Config.INI_KEY[key])
-    ini_utils.save_setting_to_ini(Config.SETTING_INI_PATH, Config.INI_GLOBAL_SECTION,
-                                  Config.INI_KEY[key], value)
+    origin_value = IniUtils.get_setting_from_ini(Config.SETTING_INI_PATH, Keywords.GLOBAL_SECTION, key)
+    IniUtils.save_setting_to_ini(Config.SETTING_INI_PATH, Keywords.GLOBAL_SECTION, key, value)
     if after is not None:
         after()
     if value != origin_value:
@@ -175,63 +175,51 @@ def save_global_setting(key, value, after=None):
     return changed
 
 
-def get_sw_install_path_from_setting_ini(sw: str) -> list:
-    path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
-                                          Config.INI_KEY['inst_path'])
-    return [path] if path is not None else []
-
-
-def get_sw_data_dirs_from_setting_ini(sw: str) -> list:
-    path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
-                                          Config.INI_KEY['data_dir'])
-    return [path] if path is not None else []
-
-
-def get_sw_dll_dir_from_setting_ini(sw: str) -> list:
-    path = ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw,
-                                          Config.INI_KEY['dll_dir'])
-    return [path] if path is not None else []
-
-
-def fetch_global_setting_or_set_default(setting_key):
+def fetch_global_setting_or_set_default_or_none(setting_key):
     """
     获取配置项，若没有则添加默认
     :return: 已选择的子程序
     """
-    value = ini_utils.get_setting_from_ini(
+    value = IniUtils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
-        Config.INI_GLOBAL_SECTION,
-        Config.INI_KEY[setting_key],
+        Keywords.GLOBAL_SECTION,
+        setting_key,
     )
     if not value or value == "" or value == "None" or value == "none":
-        ini_utils.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            Config.INI_GLOBAL_SECTION,
-            Config.INI_KEY[setting_key],
-            Config.INI_DEFAULT_VALUE[setting_key]
-        )
-        value = Config.INI_DEFAULT_VALUE[setting_key]
+        try:
+            value = Config.INI_DEFAULT_VALUE[setting_key]
+            IniUtils.save_setting_to_ini(
+                Config.SETTING_INI_PATH,
+                Keywords.GLOBAL_SECTION,
+                setting_key,
+                value
+            )
+        except KeyError:
+            return None
     return value
 
 
-def fetch_sw_setting_or_set_default(sw, setting_key):
+def fetch_sw_setting_or_set_default_or_none(sw, setting_key):
     """
-    获取配置项，若没有则添加默认
+    获取配置项，若没有则设置默认值，若没有默认值则返回None
     :return: 已选择的子程序
     """
-    value = ini_utils.get_setting_from_ini(
+    value = IniUtils.get_setting_from_ini(
         Config.SETTING_INI_PATH,
         sw,
-        Config.INI_KEY[setting_key],
+        setting_key,
     )
     if not value or value == "" or value == "None" or value == "none":
-        ini_utils.save_setting_to_ini(
-            Config.SETTING_INI_PATH,
-            sw,
-            Config.INI_KEY[setting_key],
-            Config.INI_DEFAULT_VALUE[sw][setting_key]
-        )
-        value = Config.INI_DEFAULT_VALUE[sw][setting_key]
+        try:
+            value = Config.INI_DEFAULT_VALUE[sw][setting_key]
+            IniUtils.save_setting_to_ini(
+                Config.SETTING_INI_PATH,
+                sw,
+                setting_key,
+                value
+            )
+        except KeyError:
+            return None
     # print(f"获取{sw}平台的{setting_key}配置项为{value}")
     return value
 
@@ -246,19 +234,19 @@ def clear_acc_info_of_sw(sw):
     """
     print("清理该平台账号记录...")
     # 加载当前账户数据
-    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
     tab_info = data.get(sw, {})
     # 检查 all_acc 节点是否存在
     tab_info.clear()
     # 保存更新后的数据
-    json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
+    JsonUtils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
     return True
 
 
 def update_sw_acc_details_to_json(sw, account, **kwargs):
     """更新账户信息到 JSON"""
     try:
-        data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
         if sw not in data:
             data[sw] = {}
         tab_info = data.get(sw, {})
@@ -268,7 +256,7 @@ def update_sw_acc_details_to_json(sw, account, **kwargs):
         for key, value in kwargs.items():
             tab_info[account][key] = value
             # logger.info(f"在json更新[{account}][{key}]:{str(value)}")
-        json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
+        JsonUtils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
         return True
     except Exception as e:
         logger.error(e)
@@ -284,7 +272,7 @@ def get_sw_acc_details_from_json(sw=None, account=None, **kwargs) -> Union[Dict,
     :return: 包含所请求数据的元组
     """
     try:
-        data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
         if sw is None:
             return data
 
@@ -378,7 +366,7 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
         # print(now_sw_left_cut, now_sw_right_cut)
 
         # 加载其他平台的账号列表
-        data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
         other_acc_list = data.get(other_sw, {})
         for now_acc in now_acc_list:
             # 对账号进行裁剪
@@ -464,7 +452,7 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
         # print(now_sw_left_cut, now_sw_right_cut)
 
         # 加载其他平台的账号列表
-        data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
         other_acc_list = data.get(other_sw, {})
         for now_acc in now_acc_list:
             # 对账号进行裁剪
@@ -521,7 +509,7 @@ def clear_all_acc_in_acc_json(sw):
     """
     print("清理互斥体记录...")
     # 加载当前账户数据
-    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
     tab_info = data.get(sw, {})
     # 检查 all_acc 节点是否存在
     if "all_acc" in tab_info:
@@ -531,7 +519,7 @@ def clear_all_acc_in_acc_json(sw):
         print("all_acc 节点的所有字段已清空")
 
     # 保存更新后的数据
-    json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
+    JsonUtils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
     return True
 
 
@@ -542,7 +530,7 @@ def update_all_acc_in_acc_json(tab):
     """
     print("构建互斥体记录...")
     # 加载当前账户数据
-    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
     tab_info = data.get(tab, {})
     # 初始化 all_wechat 为空字典
     all_wechat = {}
@@ -568,7 +556,7 @@ def set_all_acc_values_to_false(tab):
     :return: 是否成功
     """
     # 加载当前账户数据
-    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
 
     tab_info = data.get(tab, {})
     # 获取 all_acc 节点，如果不存在就创建一个空的
@@ -579,7 +567,7 @@ def set_all_acc_values_to_false(tab):
         all_acc[pid] = False
 
     # 保存更新后的数据
-    json_utils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
+    JsonUtils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
     return True
 
 
@@ -589,7 +577,7 @@ def update_has_mutex_from_all_acc(tab):
     :return: 是否成功
     """
     has_mutex = False
-    data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
     if tab not in data:
         data[tab] = {}
     tab_info = data.get(tab, {})
@@ -620,7 +608,7 @@ def update_statistic_data(sw, mode, main_key, sub_key, time_spent):
     if mode == 'refresh' and time_spent > 2:
         return
 
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
     if sw not in data:
         logger.info(f"sw不存在：{sw}")
         data[sw] = {}
@@ -648,7 +636,7 @@ def update_statistic_data(sw, mode, main_key, sub_key, time_spent):
     new_avg_time = (avg_time * count + time_spent) / new_count
 
     tab_info[mode][main_key][sub_key] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
 """软件版本及更新相关"""
@@ -696,7 +684,7 @@ def get_file_with_correct_md5(folders: list, md5s: list):
 
 def merge_refresh_nodes():
     """统计数据结构改变后，将所有的节点分流到classic和tree中"""
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
     # 确保 refresh 节点存在
     if "refresh" not in data or not isinstance(data["refresh"], dict):
         return data
@@ -728,13 +716,13 @@ def merge_refresh_nodes():
 
         # 删除原始节点
         del refresh_data[key]
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, data)
     return data
 
 
 def move_data_to_wechat():
     """统计数据结构改变后，将原本所有的数据移动到WeChat节点下"""
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
 
     # 检查是否已有 "WeChat" 节点
     if "WeChat" not in data:
@@ -742,12 +730,12 @@ def move_data_to_wechat():
         wechat_data = {
             "WeChat": data
         }
-        json_utils.save_json_data(Config.STATISTIC_JSON_PATH, wechat_data)
+        JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, wechat_data)
 
 
 def swap_cnt_and_mode_levels_in_auto():
     """将auto表中的次数节点和模式节点交换层级"""
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
     for sw in data.keys():
         auto_info = data.get(sw, {}).get("auto", {})
         # print(auto_info)
@@ -775,12 +763,12 @@ def swap_cnt_and_mode_levels_in_auto():
 
         # 转换好的结果重新赋给json文件中
         data[sw]['auto'] = tmp
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
 def downgrade_item_lvl_under_manual():
     """将manual表中的节点降级"""
-    data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+    data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
     for sw in data.keys():
         manual_info = data.get(sw, {}).get("manual", {})
         # print(manual_info)
@@ -797,7 +785,7 @@ def downgrade_item_lvl_under_manual():
 
         # 转换好的结果重新赋给json文件中
         data[sw]['manual'] = manual_info
-    json_utils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, data)
 
 
 def get_packed_executable():

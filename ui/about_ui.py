@@ -56,7 +56,7 @@ class AboutWnd(SubToolWnd, ABC):
         self.scroll_text_str = None
         self.scroll_direction = None
         self.scroll_tasks = None
-        self.cfg_data = None
+        self.remote_cfg_data = None
         self.about_info = None
         self.app_name = None
         self.content_frame = None
@@ -87,8 +87,8 @@ class AboutWnd(SubToolWnd, ABC):
         self.wnd.resizable(False, False)
 
     def load_content(self):
-        self.cfg_data = subfunc_file.read_remote_cfg_in_rules()
-        if self.cfg_data is None:
+        self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
+        if self.remote_cfg_data is None:
             messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
             # 关闭wnd窗口
             self.wnd.destroy()
@@ -96,8 +96,8 @@ class AboutWnd(SubToolWnd, ABC):
             self.display_main_content()
 
     def display_main_content(self):
-        self.app_name = self.cfg_data["global"]["app_name"]
-        self.about_info = self.cfg_data["global"]["about"]
+        self.app_name = self.remote_cfg_data["global"]["app_name"]
+        self.about_info = self.remote_cfg_data["global"]["about"]
 
         self.main_frame = ttk.Frame(self.wnd, padding=Constants.FRM_PAD)
         self.main_frame.pack(**Constants.FRM_PACK)

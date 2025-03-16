@@ -9,6 +9,7 @@ import win32con
 import win32gui
 
 from functions import func_config, subfunc_sw, subfunc_file, func_account
+from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from resources import Config
 from utils import hwnd_utils, handle_utils
@@ -20,7 +21,7 @@ def login_auto_start_accounts():
     root = root_class.root
     acc_tab_ui = root_class.acc_tab_ui
 
-    all_sw_dict, = subfunc_file.get_details_from_remote_setting_json("global", all_sw=None)
+    all_sw_dict, = subfunc_file.get_details_from_remote_setting_json(Keywords.GLOBAL_SECTION, all_sw=None)
     all_sw = [key for key in all_sw_dict.keys()]
     print("所有平台：", all_sw)
 
@@ -99,11 +100,11 @@ def manual_login(sw):
     if redundant_wnd_list is None or login_wnd_class is None or cfg_handles is None or executable_name is None:
         messagebox.showinfo("错误", "尚未适配！")
         return
+
+    # hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
     # 关闭配置文件锁
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-
-    hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
     subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
     subfunc_file.clear_all_acc_in_acc_json(sw)
@@ -159,7 +160,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
     screen_width = int(tk.Tk().winfo_screenwidth())
     screen_height = int(tk.Tk().winfo_screenheight())
     if not screen_height or not screen_width:
-        size = subfunc_file.fetch_global_setting_or_set_default("screen_size").split('*')
+        size = subfunc_file.fetch_global_setting_or_set_default_or_none(Keywords.SCREEN_SIZE).split('*')
         screen_width, screen_height = int(size[0]), int(size[1])
     if not screen_width or screen_width == "":
         messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
@@ -195,7 +196,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
         if status == "已开启":
             multiple_mode = "全局多开"
         else:
-            multiple_mode = subfunc_file.fetch_sw_setting_or_set_default(sw, 'rest_mode')
+            multiple_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, 'rest_mode')
         # 开始遍历登录账号过程
         start_time = time.time()
         # 使用一个set存储不重复的handle
@@ -338,7 +339,7 @@ def get_max_dimensions_from_sw_list(sw_list):
 
     for software in sw_list:
         # 获取尺寸配置
-        siz = subfunc_file.fetch_sw_setting_or_set_default(software, "login_size")
+        siz = subfunc_file.fetch_sw_setting_or_set_default_or_none(software, "login_size")
         if siz and siz.strip():
             try:
                 # 拆分宽度和高度，并确保为整数

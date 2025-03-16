@@ -17,6 +17,7 @@ class LoadingWnd(SubToolWnd, ABC):
 
     def set_wnd(self):
         self.wnd.resizable(False, False)
+        self.wnd.overrideredirect(True)  # 去除窗口标题栏
 
     def load_content(self):
         self.label = ttk.Label(self.wnd, text="正在载入，请稍等……")

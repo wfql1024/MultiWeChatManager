@@ -93,9 +93,9 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
 
         self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.data_dir = self.root_class.sw_classes[self.sw].data_dir
-        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
+        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
         self.columns = (" ", "配置", "pid", "原始id", "当前id", "昵称")
-        sort_str = subfunc_file.fetch_sw_setting_or_set_default(self.sw, f"{self.table_tag}_sort")
+        sort_str = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, f"{self.table_tag}_sort")
         self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
 
     def set_table_style(self):

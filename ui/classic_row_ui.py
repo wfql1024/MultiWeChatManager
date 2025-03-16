@@ -53,7 +53,7 @@ class AccountRow:
         # print(f"加载头像区域用时{time.time() - self.start_time:.4f}秒")
 
         # 账号标签
-        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
+        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
         wrapped_display_name = func_account.get_acc_wrapped_display_name(self.sw, account)
         has_mutex, = subfunc_file.get_sw_acc_details_from_json(self.sw, account, has_mutex=None)
         style = ttk.Style()

@@ -191,9 +191,9 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
         self.wnd = self.parent_class.wnd
         # print(f"self.wnd={self.wnd}")
         self.data_src = self.parent_class.acc_data
-        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default("sign_visible") == "True"
+        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
         self.columns = (" ", "快捷键", "隐藏", "自启动", "原始id", "昵称")
-        sort_str = subfunc_file.fetch_global_setting_or_set_default(f"{self.table_tag}_sort")
+        sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
         self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
         self.func_of_id_col = self.parent_class.to_open_acc_detail
 

@@ -39,7 +39,7 @@ class AccTabUI:
     def refresh(self):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
-        self.sw = subfunc_file.fetch_global_setting_or_set_default("tab")
+        self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("tab")
         self.sw_class = self.sw_classes[self.sw]
 
         self.tab_frame = self.sw_class.frame
@@ -143,7 +143,7 @@ class AccTabUI:
         logins = self.sw_class.login_accounts = acc_list_dict["login"]
         logouts = self.sw_class.logout_accounts = acc_list_dict["logout"]
 
-        self.sw_class.view = subfunc_file.fetch_sw_setting_or_set_default(self.sw, "view")
+        self.sw_class.view = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, "view")
 
         if self.sw_class.view == "classic":
             # 经典视图没有做快速刷新功能

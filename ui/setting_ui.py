@@ -10,8 +10,8 @@ import win32com.client
 
 from functions import func_setting, subfunc_sw, subfunc_file, func_sw_dll
 from public_class.reusable_widget import SubToolWnd
-from resources import Constants, Config
-from utils import sw_utils, ini_utils
+from resources import Constants
+from utils import sw_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -57,10 +57,10 @@ class SettingWnd(SubToolWnd, ABC):
         }
         sw = self.sw
         self.origin_values = {
-            "inst_path": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "inst_path"),
-            "data_dir": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "data_dir"),
-            "dll_dir": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "dll_dir"),
-            "login_size": ini_utils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, "login_size")
+            "inst_path": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "inst_path"),
+            "data_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "data_dir"),
+            "dll_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "dll_dir"),
+            "login_size": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "login_size")
         }
 
     def load_content(self):
@@ -162,7 +162,7 @@ class SettingWnd(SubToolWnd, ABC):
         self.load_or_get_sw_dll_dir(self.sw, False)
         self.get_cur_sw_ver(self.sw, False)
         self.get_screen_size()
-        login_size = subfunc_file.fetch_sw_setting_or_set_default(self.sw, 'login_size')
+        login_size = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, 'login_size')
         self.login_size_var.set(login_size)
 
     def check_bools(self):

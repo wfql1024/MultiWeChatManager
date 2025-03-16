@@ -7,6 +7,7 @@ from tkinter import ttk, messagebox
 
 from functions import func_file, subfunc_file, func_setting, subfunc_sw, func_login, func_hotkey
 from public_class import reusable_widget
+from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from resources import Config, Constants
 from ui import loading_ui, menu_ui, acc_tab_ui, debug_ui, detail_ui, acc_manager_ui
@@ -30,7 +31,7 @@ class MainWindow:
         self.detail_ui_class = None
         self._initialized = None
         self.statusbar_class = None
-        self.cfg_data = None
+        self.remote_cfg_data = None
         self.sw_notebook = None
         self.first_created_acc_ui = None
         self.finish_started = None
@@ -52,18 +53,18 @@ class MainWindow:
         self.loading_wnd = tk.Toplevel(self.root)
         self.loading_wnd_class = loading_ui.LoadingWnd(self.loading_wnd, "加载中...")
 
-        try:
-            # 初次使用
-            if self.new is True:
-                self.root.after(3000, menu_ui.MenuUI.open_update_log)
-                self.root.after(3000, lambda: func_file.mov_backup(new=self.new))
-            # 关闭加载窗口
-            print("2秒后关闭加载窗口...")
-            self.root.after(2000, self.wait_for_loading_close_and_bind)
-            # 其余部分
-            self.initialize_in_init()
-        except Exception as e:
-            logger.error(e)
+        # try:
+        # 初次使用
+        if self.new is True:
+            self.root.after(3000, menu_ui.MenuUI.open_update_log)
+            self.root.after(3000, lambda: func_file.mov_backup(new=self.new))
+        # 关闭加载窗口
+        print("2秒后关闭加载窗口...")
+        self.root.after(2000, self.wait_for_loading_close_and_bind)
+        # 其余部分
+        self.initialize_in_init()
+        # except Exception as e:
+        #     logger.error(e)
 
     """主流程"""
 
@@ -82,16 +83,16 @@ class MainWindow:
 
         # 获取远程配置文件
         try:
-            self.cfg_data = subfunc_file.try_read_remote_cfg_locally()
+            self.remote_cfg_data = subfunc_file.try_read_remote_cfg_locally()
         except Exception as e:
             logger.error(e)
             try:
-                self.cfg_data = subfunc_file.force_fetch_remote_encrypted_cfg()
+                self.remote_cfg_data = subfunc_file.force_fetch_remote_encrypted_cfg()
             except Exception as e:
                 logger.error(e)
 
         # 没有配置文件则退出程序
-        if self.cfg_data is None:
+        if self.remote_cfg_data is None:
             messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
             self.root.after(0, self.root.destroy)
             return
@@ -123,7 +124,7 @@ class MainWindow:
 
         # 设置主窗口
         try:
-            title = self.cfg_data["global"]["app_name"]
+            title = self.remote_cfg_data["global"]["app_name"]
         except Exception as e:
             logger.error(e)
             title = os.path.basename(sys.argv[0])
@@ -151,7 +152,7 @@ class MainWindow:
         self.all_acc_frame = ttk.Frame(self.sw_notebook)
         self.sw_notebook.add(self.all_acc_frame, text="全部")
 
-        tab_dict = self.cfg_data["global"]["all_sw"]
+        tab_dict = self.remote_cfg_data["global"]["all_sw"]
         print(tab_dict)
         for sw in tab_dict.keys():
             self.sw_classes[sw] = SoftwareInfo(sw)
@@ -167,7 +168,7 @@ class MainWindow:
 
             self.sw_notebook.add(self.sw_classes[sw].frame, text=self.sw_classes[sw].text)
         # 选择一个选项卡并触发事件
-        current_sw = subfunc_file.fetch_global_setting_or_set_default("tab")
+        current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(Keywords.TAB)
         self.sw_notebook.select(self.sw_classes[current_sw].frame)
         # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
         self.on_tab_change(_event=None)

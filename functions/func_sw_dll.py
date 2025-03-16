@@ -7,7 +7,7 @@ import winshell
 
 from functions import subfunc_file
 from utils import file_utils, process_utils
-from utils.file_utils import DLLUtils
+from utils.file_utils import DllUtils
 from utils.logger_utils import mylogger as logger
 
 
@@ -77,12 +77,12 @@ def check_dll(sw, mode, dll_dir):
         pattern2_hex_list = result2.split(',')
     except Exception as e:
         logger.error(e)
-        return "错误：未找到该版本的适配", None, None
+        return f"错误：未找到版本{cur_sw_ver}的适配", None, None
 
     try:
         for pattern1_hex, pattern2_hex in zip(pattern1_hex_list, pattern2_hex_list):
-            has_pattern1 = DLLUtils.find_patterns_from_dll_in_hexadecimal(dll_path, pattern1_hex)
-            has_pattern2 = DLLUtils.find_patterns_from_dll_in_hexadecimal(dll_path, pattern2_hex)
+            has_pattern1 = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, pattern1_hex)
+            has_pattern2 = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, pattern2_hex)
             if has_pattern1 and not has_pattern2:
                 return "未开启", pattern1_hex, pattern2_hex
             elif has_pattern2 and not has_pattern1:
@@ -134,7 +134,7 @@ def switch_dll(sw, mode, dll_dir):
     try:
         if current_mode == "已开启":
             print(f"当前：{mode}已开启")
-            success = DLLUtils.edit_patterns_in_dll_in_hexadecimal(
+            success = DllUtils.edit_patterns_in_dll_in_hexadecimal(
                 dll_path, **{hex_patch_pattern: hex_stable_pattern})
             if success:
                 messagebox.showinfo("提示", f"成功关闭:{mode_text}")
@@ -144,7 +144,7 @@ def switch_dll(sw, mode, dll_dir):
             print(f"当前：{mode}未开启")
             backup_dll(sw, dll_dir)
 
-            success = DLLUtils.edit_patterns_in_dll_in_hexadecimal(
+            success = DllUtils.edit_patterns_in_dll_in_hexadecimal(
                 dll_path, **{hex_stable_pattern: hex_patch_pattern})
             if success:
                 messagebox.showinfo("提示", f"成功开启:{mode_text}")

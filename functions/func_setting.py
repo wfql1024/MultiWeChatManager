@@ -6,10 +6,21 @@ from typing import Union, Tuple
 import yaml
 
 from functions import subfunc_file
-from resources import Config
-from utils import ini_utils, sw_utils, file_utils
+from public_class.enums import Keywords, SW
+from utils import sw_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
+
+def create_path_finder_of_(path_key):
+    """
+    创建路径查找函数
+    :param path_key: 路径类型
+    :return: 路径查找函数
+    """
+    def get_sw_path_from_local_cfg(sw: str) -> list:
+        path = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, path_key)
+        return [path] if path is not None else []
+    return get_sw_path_from_local_cfg
 
 def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders: list, check_sw_path_func) \
         -> Union[Tuple[bool, bool, Union[None, str]]]:
@@ -29,7 +40,7 @@ def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders: list, che
     for index, finder in enumerate(path_finders):
         if finder is None:
             continue
-        paths = finder(sw)
+        paths = finder(sw=sw)
         logger.info(f"使用{finder.__name__}方法得到{sw}的路径列表：{paths}")
         path_list = list(paths)  # 如果确定返回值是可迭代对象，强制转换为列表
         if not path_list:
@@ -49,96 +60,96 @@ def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders: list, che
     return success, changed, result
 
 
-def get_sw_install_path(sw: str, from_setting_window=False) -> Union[None, str]:
+def get_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
     """
     获取微信安装路径
     :param sw: 平台
-    :param from_setting_window: 是否从设置窗口调用
+    :param ignore_local_record: 是否忽略本地记录
     :return: 路径
     """
     print("获取安装路径...")
-    _, _, result = get_sw_install_path_by_tuple(sw, from_setting_window)
+    _, _, result = get_sw_install_path_by_tuple(sw, ignore_local_record)
     return result
 
 
-def get_sw_install_path_by_tuple(sw: str, from_setting_window=False) \
+def get_sw_install_path_by_tuple(sw: str, ignore_local_record=False) \
         -> Union[Tuple[bool, bool, Union[None, str]]]:
     """
     获取微信安装路径的结果元组
     :param sw: 平台
-    :param from_setting_window: 是否从设置窗口调用
+    :param ignore_local_record: 是否忽略本地记录
     :return: 成功，是否改变，结果
     """
     path_finders = [
         sw_utils.get_sw_install_path_from_process,
-        (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_install_path_from_setting_ini,
+        (lambda lsw: []) if ignore_local_record else create_path_finder_of_(Keywords.INST_PATH),
         sw_utils.get_sw_install_path_from_machine_register,
         sw_utils.get_sw_install_path_from_user_register,
         sw_utils.get_sw_install_path_by_guess,
     ]
 
     check_func = sw_utils.is_valid_sw_install_path
-    path_type = 'inst_path'
+    path_type = Keywords.INST_PATH
 
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
 
-def get_sw_data_dir(sw: str, from_setting_window=False):
+def get_sw_data_dir(sw: str, ignore_local_record=False):
     """
     获取微信数据路径
     :param sw: 平台
-    :param from_setting_window: 是否从设置窗口调用
+    :param ignore_local_record: 是否忽略本地记录
     :return: 路径
     """
     print("获取数据存储路径...")
-    _, _, result = get_sw_data_dir_to_tuple(sw, from_setting_window)
+    _, _, result = get_sw_data_dir_to_tuple(sw, ignore_local_record)
     return result
 
 
-def get_sw_data_dir_to_tuple(sw: str, from_setting_window=False) \
+def get_sw_data_dir_to_tuple(sw: str, ignore_local_record=False) \
         -> Union[Tuple[bool, bool, Union[None, str]]]:
     """
     获取微信数据路径的结果元组
     :param sw: 平台
-    :param from_setting_window: 是否从设置窗口调用
+    :param ignore_local_record: 是否忽略本地记录
     :return: 成功，是否改变，结果
     """
     path_finders = [
-        (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_data_dirs_from_setting_ini,
+        (lambda lsw: []) if ignore_local_record else create_path_finder_of_(Keywords.DATA_DIR),
         sw_utils.get_sw_data_dir_from_user_register,
         sw_utils.get_sw_data_dir_by_guess,
         get_sw_data_dir_from_other_sw,
     ]
     check_func = sw_utils.is_valid_sw_data_dir
-    path_type = 'data_dir'
+    path_type = Keywords.DATA_DIR
 
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
 
-def get_sw_dll_dir(sw: str, from_setting_window=False):
+def get_sw_dll_dir(sw: str, ignore_local_record=False):
     """获取微信dll所在文件夹"""
     print("获取dll目录...")
-    _, _, result = get_sw_dll_dir_to_tuple(sw, from_setting_window)
+    _, _, result = get_sw_dll_dir_to_tuple(sw, ignore_local_record)
     return result
 
 
-def get_sw_dll_dir_to_tuple(sw: str, from_setting_window=False):
+def get_sw_dll_dir_to_tuple(sw: str, ignore_local_record=False):
     """获取微信dll所在文件夹"""
     path_finders = [
-        (lambda lsw: []) if from_setting_window else subfunc_file.get_sw_dll_dir_from_setting_ini,
+        (lambda lsw: []) if ignore_local_record else create_path_finder_of_(Keywords.DLL_DIR),
         sw_utils.get_sw_dll_dir_by_memo_maps,
         get_sw_dll_dir_by_files,
     ]
     check_func = sw_utils.is_valid_sw_dll_dir
-    path_type = 'dll_dir'
+    path_type = Keywords.DLL_DIR
 
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
 
-def get_sw_inst_path_and_ver(sw: str, from_setting_window=False):
+def get_sw_inst_path_and_ver(sw: str, ignore_local_record=False):
     """获取当前使用的版本号"""
     # print(sw)
-    install_path = get_sw_install_path(sw, from_setting_window)
+    install_path = get_sw_install_path(sw, ignore_local_record)
     # print(install_path)
     if install_path is not None:
         if os.path.exists(install_path):
@@ -168,12 +179,12 @@ def set_wnd_scale(after, scale=None):
             after()
             return
 
-    ini_utils.save_setting_to_ini(
-        Config.SETTING_INI_PATH,
-        Config.INI_GLOBAL_SECTION,
-        Config.INI_KEY["scale"],
+    subfunc_file.save_global_setting(
+        Keywords.GLOBAL_SECTION,
+        Keywords.SCALE,
         str(scale)
     )
+
     messagebox.showinfo("提示", "修改成功，将在重新启动程序后生效！")
     after()
     print(f"成功设置窗口缩放比例为 {scale}！")
@@ -187,14 +198,14 @@ def get_sw_data_dir_from_other_sw(sw: str) -> list:
     paths = []
     if data_dir_name is None or data_dir_name == "":
         paths = []
-    if sw == "Weixin":
-        other_path = subfunc_file.get_sw_data_dirs_from_setting_ini("WeChat")
+    if sw == SW.WEIXIN:
+        other_path = create_path_finder_of_(Keywords.DATA_DIR)(SW.WECHAT)
         if other_path and len(other_path) != 0:
             paths = [os.path.join(os.path.dirname(other_path[0]), data_dir_name).replace('\\', '/')]
         else:
             paths = []
-    if sw == "WeChat":
-        other_path = get_sw_data_dir("Weixin")
+    if sw == SW.WECHAT:
+        other_path = get_sw_data_dir(SW.WEIXIN)
         if other_path and len(other_path) != 0:
             return [os.path.join(os.path.dirname(other_path[0]), data_dir_name).replace('\\', '/')]
         else:

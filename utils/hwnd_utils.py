@@ -411,7 +411,7 @@ def wait_hwnd_close(hwnd, timeout=30):
     while time.time() - start_time < timeout:
         if win32gui.IsWindow(hwnd) == 0:  # 检查窗口是否存在
             return True
-        time.sleep(0.5)
+        time.sleep(1)
     return False
 
 
