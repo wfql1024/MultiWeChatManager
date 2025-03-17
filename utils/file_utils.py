@@ -20,6 +20,266 @@ from typing import Any, Optional
 
 logger = logger_utils.mylogger
 
+
+class DictUtils:
+    @staticmethod
+    def _get_nested_value(data: Any, key_path: Optional[str],
+                          default_value: Any = None, separator: str = '/') -> Any:
+        """
+        按照地址格式获取字典中的子字典或值（若获取不到则使用默认值），该方法不会破坏原字典结构
+        :param data: 嵌套字典
+        :param key_path: 多级键路径，例如 "a/b/c"
+        :param default_value: 如果路径不存在，返回的默认值
+        :param separator: 路径分隔符，默认为 "/"
+        :return: 对应的子字典或值，如果路径不存在则返回默认值
+        """
+        # print("获取数据……………………………………………………")
+        # print(data, key_path, default_value, separator)
+        try:
+            # 不传入data，直接返回默认值
+            if data is None:
+                return default_value
+
+            # 地址为空直接返回本值
+            if key_path is None:
+                return data
+
+            # 地址无法解析，返回默认值
+            if not isinstance(key_path, str):
+                return default_value
+
+            # 根据地址，查找对应的子字典或值，路径不存在则返回默认值
+            keys = key_path.split(separator)
+            sub_data = data
+            for key in keys:
+                if isinstance(sub_data, dict) and key in sub_data:
+                    sub_data = sub_data[key]
+                else:
+                    return default_value
+            return sub_data
+        except Exception as e:
+            logger.error(e)
+            return default_value
+
+    @staticmethod
+    def _set_nested_value(data: dict, key_path: str, value: Any, separator: str = '/') -> bool:
+        """
+        按照地址格式更新字典中的子字典或值（可以设置默认值），该方法会对不存在的键路径进行创建
+        :param data: 嵌套字典
+        :param key_path: 多级键路径，例如 "a/b/c"
+        :param value: 要设置的值
+        :param separator: 路径分隔符，默认为 "/"
+        :return: 是否成功
+        """
+        # print("设置数据……………………………………………………")
+        # print(data, key_path, value, separator)
+        try:
+            # 非字典，无法操作
+            if not isinstance(data, dict):
+                return False
+            # 地址为空、地址不可解析，无法对自身操作
+            if key_path is None or not isinstance(key_path, str):
+                return False
+
+            # 根据地址，查找对应的子字典或值，路径不存在则创建
+            keys = key_path.split(separator)
+            current = data
+            for key in keys[:-1]:  # 遍历除最后一个键外的所有键
+                if key not in current or not isinstance(current[key], dict):
+                    current[key] = {}  # 如果键不存在或不是字典，创建一个空字典
+                current = current[key]
+            current[keys[-1]] = value  # 设置最后一个键的值
+            return True
+        except Exception as e:
+            logger.error(e)
+            return False
+
+    @staticmethod
+    def _clear_nested_value(data: dict, key_path=Optional[str], separator: str = '/') -> bool:
+        """
+        按照地址格式清空字典中的子字典或值（可以设置默认值），该方法不会对不存在的键路径进行创建
+        :param data: 嵌套字典
+        :param key_path: 多级键路径，例如 "a/b/c"
+        :param separator: 路径分隔符，默认为 "/"
+        :return: 是否成功
+        """
+        # print("清除节点……………………………………………………")
+        # print(data, key_path, separator)
+        try:
+            # 非字典，不作任何操作
+            if not isinstance(data, dict):
+                return False
+
+            # 获取值
+            value = DictUtils._get_nested_value(data, key_path, None, separator)
+            print(value)
+
+            # 如果值为空，说明路径错误或者值本身就是None，不作任何操作
+            if value is None:
+                return True
+            # 如果值是字典，则清空字典
+            if isinstance(value, dict):
+                value.clear()
+                return True
+            # 如果值是列表，则清空列表
+            if isinstance(value, list):
+                value.clear()
+                return True
+            # 否则，设置为空
+            DictUtils._set_nested_value(data, key_path, None, separator)
+            return True
+
+        except Exception as e:
+            logger.error(e)
+            return False
+
+    @staticmethod
+    def get_nested_values(data: Any, default_value: Any, separator: str, *front_addr, **kwargs):
+        """
+        按照地址格式获取 任意数据 中的 一个或多个 子字典或值（可以设置默认值）
+        :param separator: 地址分隔符
+        :param default_value: 若不是批量获取，则返回这个默认值
+        :param data: 嵌套字典
+        :param front_addr: 前置地址，如：("wechat", "account1")，可以不传入
+        :param kwargs: 需要批量获取的键地址及其默认值（如 note="", nickname=None），可以不传入
+        :return: 包含所请求数据的元组
+        """
+        # print("批量获取数据....................................")
+        # print(data, default_value, separator, front_addr, kwargs)
+        try:
+            # 1. 先处理前置地址，获取中间根节点
+            # 不传入前置地址，跳过获取中间根节点，进入后续操作
+            if len(front_addr) == 0:
+                sub_data = data
+            else:
+                if not all(key is None or isinstance(key, str) for key in front_addr):
+                    # 存在非法拼接：若前置地址中并不都是空或者字符串，则拼接失败，直接返回默认值
+                    return tuple(value for value in kwargs.values()) if len(kwargs) > 0 else default_value
+                else:
+                    # 拼接前置地址，获取中间根节点
+                    sub_data = DictUtils._get_nested_value(data, separator.join(front_addr), default_value, separator)
+
+            # 2. 已经获得中间根节点
+            # 若后续地址为空，则直接返回中间根节点
+            if len(kwargs) == 0:
+                return sub_data
+            result = tuple()
+            for key, default in kwargs.items():
+                value = DictUtils._get_nested_value(sub_data, key, default, separator)
+                result += (value,)
+            return result
+        except Exception as e:
+            logger.error(e)
+            return tuple()
+
+    @staticmethod
+    def set_nested_values(data: dict, value: Any, separator: str, *front_addr: Optional[str], **kwargs):
+        """
+        按照地址格式更新字典中的多个子字典或值（可以设置默认值）
+        :param separator: 地址分隔符
+        :param value: 要设置的值
+        :param data: 嵌套字典
+        :param front_addr: 前置地址，如：("wechat", "account1")
+        :param kwargs: 需要更新的键地址及其值（如 note="", nickname=None）
+        :return: 是否成功
+        """
+        # print("批量设置数据....................................")
+        # print(data, value, separator, front_addr, kwargs)
+        try:
+            # 非字典，无法操作
+            if not isinstance(data, dict):
+                return False
+
+            # 1. 尝试拼接前置地址，得到中间根节点
+            # 没有传入前置地址，或者传入的都是None，则中间根节点为data本身
+            if len(front_addr) == 0 or all(key is None for key in front_addr):
+                if len(kwargs) == 0:
+                    # 无法对自身操作
+                    return False
+                else:
+                    # 中间根节点是data本身，进入后续处理
+                    sub_data = data
+            else:
+                # 存在非法拼接：若前置地址中只能传入空或者字符串，若有其他类型则拼接失败，无法操作
+                if not all(key is None or isinstance(key, str) for key in front_addr):
+                    return False
+                else:
+                    # 合法拼接
+                    if len(kwargs) == 0:
+                        # 拼接前置地址，设置中间根节点的值
+                        return DictUtils._set_nested_value(data, separator.join(front_addr), value, separator)
+                    else:
+                        # 拼接前置地址，得到中间根节点进行后续处理
+                        sub_data = DictUtils._get_nested_value(data, separator.join(front_addr), value, separator)
+
+            # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给set_nested_value方法批量处理
+            # print(f"中间根节点：{sub_data}")
+            # 中间根节点不是字典，则转成空字典
+            if not isinstance(sub_data, dict):
+                DictUtils._set_nested_value(data, separator.join(front_addr), {}, separator)
+                sub_data = DictUtils._get_nested_value(data, separator.join(front_addr), value, separator)
+            # 中间根节点是字典，交给set_nested_value方法批量处理
+            return all(DictUtils._set_nested_value(sub_data, key_path, value, separator)
+                       for key_path, value in kwargs.items())
+
+        except Exception as e:
+            logger.error(e)
+            return False
+
+    @staticmethod
+    def clear_nested_values(data: dict, separator: str, *front_addr, **kwargs):
+        """
+        按照地址格式清空字典中的子字典或值（可以设置默认值），该方法不会对不存在的键路径进行创建
+        :param separator: 地址分隔符
+        :param data: 嵌套字典
+        :param front_addr: 前置地址，如：("wechat", "account1")
+        :param kwargs: 需要更新的键地址及其值（如 note="", nickname=None）
+        :return: 是否成功
+        """
+        # print("批量清除节点....................................")
+        # print(data, front_addr, kwargs)
+        try:
+            # 非字典，无法操作
+            if not isinstance(data, dict):
+                return False
+
+            sub_data = None
+            # 1. 尝试拼接前置地址，得到中间根节点
+            # 没有传入前置地址，或者传入的都是None，则中间根节点为data本身
+            if len(front_addr) == 0 or all(key is None for key in front_addr):
+                if len(kwargs) == 0:
+                    # 无法对自身操作
+                    data.clear()
+                else:
+                    # 中间根节点是data本身，进入后续处理
+                    sub_data = data
+            else:
+                # 存在非法拼接：若前置地址中只能传入空或者字符串，若有其他类型则拼接失败，无法操作
+                if not all(key is None or isinstance(key, str) for key in front_addr):
+                    return False
+                else:
+                    # 合法拼接
+                    if len(kwargs) == 0:
+                        # 拼接前置地址，清除该节点
+                        return DictUtils._clear_nested_value(data, separator.join(front_addr), separator)
+                    else:
+                        # 拼接前置地址，得到中间根节点进行后续处理
+                        sub_data = DictUtils._get_nested_value(data, separator.join(front_addr), separator)
+
+            # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给set_nested_value方法批量处理
+            # print(f"中间根节点：{sub_data}")
+            # 中间根节点不是字典，则转成空字典
+            if not isinstance(sub_data, dict):
+                return False
+            # 中间根节点是字典，交给set_nested_value方法批量处理
+            return all(DictUtils._clear_nested_value(sub_data, key_path, separator)
+                       for key_path, value in kwargs.items())
+
+        except Exception as e:
+            logger.error(e)
+            return False
+
+
 class YamlUtils:
     @staticmethod
     def load_yaml(file_path: str) -> Optional[dict]:
@@ -31,41 +291,6 @@ class YamlUtils:
             logger.e(f"加载 YAML 文件失败: {e}")
             return None
 
-    @staticmethod
-    def get_nested_value(data: dict, key_path: str, default_value: Any = None, separator: str = '/') -> Any:
-        """
-        从嵌套字典中获取多级键的值
-        :param data: 嵌套字典
-        :param key_path: 多级键路径，例如 "a/b/c"
-        :param default_value: 如果路径不存在，返回的默认值
-        :param separator: 路径分隔符，默认为 "/"
-        :return: 对应的值，如果路径不存在则返回默认值
-        """
-        keys = key_path.split(separator)
-        current = data
-        for key in keys:
-            if isinstance(current, dict) and key in current:
-                current = current[key]
-            else:
-                return default_value
-        return current
-
-    @staticmethod
-    def set_nested_value(data: dict, key_path: str, value: Any, separator: str = '/') -> None:
-        """
-        设置嵌套字典中多级键的值
-        :param data: 嵌套字典
-        :param key_path: 多级键路径，例如 "a/b/c"
-        :param value: 要设置的值
-        :param separator: 路径分隔符，默认为 "/"
-        """
-        keys = key_path.split(separator)
-        current = data
-        for key in keys[:-1]:  # 遍历除最后一个键外的所有键
-            if key not in current or not isinstance(current[key], dict):
-                current[key] = {}  # 如果键不存在或不是字典，创建一个空字典
-            current = current[key]
-        current[keys[-1]] = value  # 设置最后一个键的值
 
 class JsonUtils:
     @staticmethod
@@ -81,13 +306,14 @@ class JsonUtils:
             return {}
 
     @staticmethod
-    def save_json_data(account_data_file, account_data):
+    def save_json(account_data_file, account_data):
         try:
             with open(account_data_file, 'w', encoding='utf-8') as f:
                 json_string = json.dumps(account_data, ensure_ascii=False, indent=4)
                 f.write(json_string)
         except Exception as e:
             logger.error(e)
+
 
 class IniUtils:
     @staticmethod
@@ -153,6 +379,7 @@ class IniUtils:
                 # logger.info(f"写入{value} -----> {os.path.basename(ini_path)}[{section}]{key}")
         except IOError as e:
             logger.error(f"Failed to write to {ini_path}: {e}")
+
 
 class DllUtils:
     @staticmethod
@@ -416,6 +643,7 @@ def create_shortcut_for_(target_path, shortcut_path, ico_path=None):
         # 修正icon_location的传递方式，传入一个包含路径和索引的元组
         if ico_path:
             shortcut.icon_location = (ico_path, 0)
+
 
 class CryptoUtils:
     @staticmethod

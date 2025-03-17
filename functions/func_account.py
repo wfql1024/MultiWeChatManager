@@ -22,7 +22,7 @@ from utils.logger_utils import mylogger as logger
 def quit_selected_accounts(sw, accounts_selected):
     accounts_to_quit = []
     for acc in accounts_selected:
-        pid, = subfunc_file.get_sw_acc_details_from_json(sw, acc, pid=None)
+        pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
         display_name = get_acc_origin_display_name(sw, acc)
         cleaned_display_name = string_utils.clean_texts(display_name)
         accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
@@ -43,7 +43,7 @@ def quit_accounts(sw, accounts):
     quited_accounts = []
     for account in accounts:
         try:
-            pid, = subfunc_file.get_sw_acc_details_from_json(sw, account, pid=None)
+            pid, = subfunc_file.get_sw_acc_data(sw, account, pid=None)
             display_name = get_acc_origin_display_name(sw, account)
             cleaned_display_name = string_utils.clean_texts(display_name)
             executable_name, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
@@ -85,7 +85,7 @@ def get_acc_avatar_from_files(account, sw):
     if os.path.exists(avatar_path):
         return Image.open(avatar_path)
     # 如果没有，从网络下载
-    url, = subfunc_file.get_sw_acc_details_from_json(sw, account, avatar_url=None)
+    url, = subfunc_file.get_sw_acc_data(sw, account, avatar_url=None)
     if url is not None and url.endswith("/0"):
         image_utils.download_image(url, avatar_path)
 
@@ -123,7 +123,7 @@ def get_acc_origin_display_name(sw, account) -> str:
     # 依次查找 note, nickname, alias，找到第一个不为 None 的值
     display_name = str(account)  # 默认值为 account
     for key in ("note", "nickname", "alias"):
-        value, = subfunc_file.get_sw_acc_details_from_json(sw, account, **{key: None})
+        value, = subfunc_file.get_sw_acc_data(sw, account, **{key: None})
         if value is not None:
             display_name = str(value)
             break
@@ -184,7 +184,7 @@ def silent_get_and_config(sw, login, logout):
     accounts_need_to_get_nickname = []
     # print(login, logout)
     for acc in itertools.chain(login, logout):
-        avatar_url, nickname = subfunc_file.get_sw_acc_details_from_json(sw, acc, avatar_url=None, nickname=None)
+        avatar_url, nickname = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None, nickname=None)
         if avatar_url is None:
             accounts_need_to_get_avatar.append(acc)
         if nickname is None:
@@ -333,13 +333,13 @@ def get_sw_acc_list(_root, root_class, sw):
     if multiple_status == "已开启":
         print(f"由于是全局多开模式，直接所有has_mutex都为false")
         for acc in login + logout:
-            subfunc_file.update_sw_acc_details_to_json(sw, acc, pid=pid_dict.get(acc, None), has_mutex=False)
+            subfunc_file.update_sw_acc_data(sw, acc, pid=pid_dict.get(acc, None), has_mutex=False)
     else:
         for acc in login + logout:
             pid = pid_dict.get(acc, None)
             if pid is None:
-                subfunc_file.update_sw_acc_details_to_json(sw, acc, has_mutex=None)
-            subfunc_file.update_sw_acc_details_to_json(sw, acc, pid=pid_dict.get(acc, None))
+                subfunc_file.update_sw_acc_data(sw, acc, has_mutex=None)
+            subfunc_file.update_sw_acc_data(sw, acc, pid=pid_dict.get(acc, None))
         # 更新json表中各微信进程的互斥体情况
         success, has_mutex = subfunc_file.update_has_mutex_from_all_acc(sw)
 
@@ -357,11 +357,11 @@ def get_main_hwnd_of_accounts(acc_list, sw):
         messagebox.showerror("错误", f"{sw}平台未适配")
         return False
     for acc in acc_list:
-        pid, = subfunc_file.get_sw_acc_details_from_json(sw, acc, pid=None)
+        pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
         hwnd_list = hwnd_utils.get_hwnd_list_by_pid_and_class(pid, target_class)
         # print(pid, hwnd_list)
         if len(hwnd_list) > 0:
             hwnd = hwnd_list[0]
-            subfunc_file.update_sw_acc_details_to_json(sw, acc, main_hwnd=hwnd)
+            subfunc_file.update_sw_acc_data(sw, acc, main_hwnd=hwnd)
             display_name = get_acc_origin_display_name(sw, acc)
             hwnd_utils.set_window_title(hwnd, f"微信 - {display_name}")

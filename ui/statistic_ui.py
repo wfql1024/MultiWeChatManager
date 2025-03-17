@@ -5,7 +5,8 @@ from tkinter import ttk
 from public_class import reusable_widget
 from public_class.reusable_widget import SubToolWnd
 from resources import Config, Constants
-from utils import json_utils, string_utils
+from utils import string_utils
+from utils.file_utils import JsonUtils
 from utils.logger_utils import mylogger as logger
 
 
@@ -117,7 +118,7 @@ class StatisticWnd(SubToolWnd, ABC):
         self.tree_dict["refresh"]["tree"] = self.refresh_tree
 
     def display_table(self):
-        data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+        data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
         if self.sw not in data:
             data[self.sw] = {}
         tab_info = data.get(self.sw, {})
@@ -169,7 +170,7 @@ class StatisticWnd(SubToolWnd, ABC):
 
     def update_table_from_selection(self, mode, selected):
         """根据下拉框的选择，更新对应的表数据"""
-        data = json_utils.load_json_data(Config.STATISTIC_JSON_PATH)
+        data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
         tree = self.tree_dict[mode]['tree']
         # 清空之前的数据
         for item in tree.get_children():

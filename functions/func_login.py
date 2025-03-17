@@ -32,9 +32,9 @@ def login_auto_start_accounts():
     for sw in all_sw:
         if sw not in can_auto_start:
             can_auto_start[sw] = set()
-        sw_data = subfunc_file.get_sw_acc_details_from_json(sw)
+        sw_data = subfunc_file.get_sw_acc_data(sw)
         for acc in sw_data:
-            auto_start, = subfunc_file.get_sw_acc_details_from_json(sw, acc, auto_start=None)
+            auto_start, = subfunc_file.get_sw_acc_data(sw, acc, auto_start=None)
             if auto_start is True:
                 can_auto_start[sw].add(acc)
     print(f"设置了自启动：{can_auto_start}")
@@ -107,7 +107,7 @@ def manual_login(sw):
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
     subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
-    subfunc_file.clear_all_acc_in_acc_json(sw)
+    subfunc_file.clear_some_acc_data(sw, "all_acc")
     subfunc_file.update_all_acc_in_acc_json(sw)
 
     state = root_class.sw_classes[sw].multiple_state
@@ -190,7 +190,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
         hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
         subfunc_sw.kill_sw_multiple_processes(sw)
         time.sleep(0.5)
-        subfunc_file.clear_all_acc_in_acc_json(sw)
+        subfunc_file.clear_some_acc_data(sw, "all_acc")
         subfunc_file.update_all_acc_in_acc_json(sw)
 
         if status == "已开启":

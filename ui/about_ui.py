@@ -9,6 +9,7 @@ from typing import Dict, Union
 from PIL import Image, ImageTk
 
 from functions import func_update, subfunc_file
+from public_class.enums import Keywords
 from public_class.reusable_widget import SubToolWnd
 from resources import Config, Strings, Constants
 from ui import update_log_ui
@@ -96,8 +97,8 @@ class AboutWnd(SubToolWnd, ABC):
             self.display_main_content()
 
     def display_main_content(self):
-        self.app_name = self.remote_cfg_data["global"]["app_name"]
-        self.about_info = self.remote_cfg_data["global"]["about"]
+        self.app_name = self.remote_cfg_data[Keywords.GLOBAL_SECTION]["app_name"]
+        self.about_info = self.remote_cfg_data[Keywords.GLOBAL_SECTION]["about"]
 
         self.main_frame = ttk.Frame(self.wnd, padding=Constants.FRM_PAD)
         self.main_frame.pack(**Constants.FRM_PACK)

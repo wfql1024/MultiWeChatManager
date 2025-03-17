@@ -16,7 +16,7 @@ def switch_to_sw_account_wnd(item_id, root):
     main_wnd_class, = subfunc_file.get_details_from_remote_setting_json(
         sw, main_wnd_class=None)
     classes = [main_wnd_class]
-    main_hwnd, = subfunc_file.get_sw_acc_details_from_json(sw, acc, main_hwnd=None)
+    main_hwnd, = subfunc_file.get_sw_acc_data(sw, acc, main_hwnd=None)
 
     # 程序主窗口左移
     hwnd_utils.set_size_and_bring_tk_wnd_to_(root, None, None, Position.LEFT)
@@ -53,9 +53,9 @@ def get_mutex_dict(sw):
     has_mutex_dict = dict()
     for pid in pids:
         # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
-        has_mutex, = subfunc_file.get_sw_acc_details_from_json(sw, "all_acc", **{f"{pid}": True})
+        has_mutex, = subfunc_file.get_sw_acc_data(sw, "all_acc", **{f"{pid}": True})
         if has_mutex:
-            subfunc_file.update_sw_acc_details_to_json(sw, "all_acc", **{f"{pid}": True})
+            subfunc_file.update_sw_acc_data(sw, "all_acc", **{f"{pid}": True})
             has_mutex_dict.update({pid: has_mutex})
     print(f"获取互斥体情况完成!互斥体列表：{has_mutex_dict}")
     return has_mutex_dict

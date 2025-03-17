@@ -175,14 +175,14 @@ class SettingWnd(SubToolWnd, ABC):
         if self.validate_paths():
             # 检查是否需要清空账号信息
             if self.need_to_clear_acc:
-                subfunc_file.clear_acc_info_of_sw(self.sw)
+                subfunc_file.clear_some_acc_data(self.sw)
             self.after()
             self.wnd.destroy()
 
     def on_close(self):
         self.check_bools()
         if self.need_to_clear_acc:
-            subfunc_file.clear_acc_info_of_sw(self.sw)
+            subfunc_file.clear_some_acc_data(self.sw)
         self.after()
         self.wnd.destroy()
 

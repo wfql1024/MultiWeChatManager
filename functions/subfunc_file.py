@@ -15,11 +15,11 @@ from Crypto.Util.Padding import unpad
 from public_class.enums import Keywords
 from resources import Config, Strings
 from utils import file_utils, image_utils, sys_utils
-from utils.file_utils import IniUtils, JsonUtils
+from utils.file_utils import IniUtils, JsonUtils, DictUtils
 from utils.logger_utils import mylogger as logger
 import datetime as dt
 
-"""获取远程配置"""
+"""获取远程配置，此配置只读，不提供修改方法"""
 
 
 def force_fetch_remote_encrypted_cfg(url=None):
@@ -177,7 +177,7 @@ def save_global_setting(key, value, after=None):
 
 def fetch_global_setting_or_set_default_or_none(setting_key):
     """
-    获取配置项，若没有则添加默认
+    获取配置项，若没有则添加默认，若没有默认则返回None
     :return: 已选择的子程序
     """
     value = IniUtils.get_setting_from_ini(
@@ -224,75 +224,158 @@ def fetch_sw_setting_or_set_default_or_none(sw, setting_key):
     return value
 
 
-"""账号数据相关"""
+"""账号数据相关，该文件记录账号及登录时期的互斥体情况"""
 
 
-def clear_acc_info_of_sw(sw):
+def load_acc_data():
+    """
+    加载账号数据，请在这个方法中修改账号数据的加载方式，如格式、文件位置
+    :return: 账号数据字典
+    """
+    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
+    return data
+
+def save_acc_data(data):
+    """
+    保存账号数据，请在这个方法中修改账号数据的保存方式，如格式、文件位置
+    :param data: 账号数据字典
+    """
+    JsonUtils.save_json(Config.TAB_ACC_JSON_PATH, data)
+
+def clear_some_acc_data(*addr):
     """
     清空某平台的账号记录，在对平台重新设置后触发
     :return: 是否成功
     """
     print("清理该平台账号记录...")
-    # 加载当前账户数据
-    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
-    tab_info = data.get(sw, {})
-    # 检查 all_acc 节点是否存在
-    tab_info.clear()
-    # 保存更新后的数据
-    JsonUtils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
+    data = load_acc_data()
+    DictUtils.clear_nested_values(data, *addr)
+    save_acc_data(data)
     return True
 
-
-def update_sw_acc_details_to_json(sw, account, **kwargs):
+def update_sw_acc_data(*front_addr, **kwargs):
     """更新账户信息到 JSON"""
     try:
-        data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
-        if sw not in data:
-            data[sw] = {}
-        tab_info = data.get(sw, {})
-        if account not in tab_info:
-            tab_info[account] = {}
-        # 遍历 kwargs 中的所有参数，并更新到 account_data 中
-        for key, value in kwargs.items():
-            tab_info[account][key] = value
-            # logger.info(f"在json更新[{account}][{key}]:{str(value)}")
-        JsonUtils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
-        return True
+        data = load_acc_data()
+        success = DictUtils.set_nested_values(data, None, "/", *front_addr, **kwargs)
+        save_acc_data(data)
+        return success
     except Exception as e:
         logger.error(e)
         return False
 
-
-def get_sw_acc_details_from_json(sw=None, account=None, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
+def get_sw_acc_data(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     """
     根据用户输入的变量名，获取对应的账户信息
-    :param sw: 选择软件标签
-    :param account: 账户名
-    :param kwargs: 需要获取的变量名及其默认值（如 note="", nickname=None）
+    :param front_addr: 前置地址，如：("wechat", "account1")
+    :param kwargs: 需要获取的键地址及其默认值（如 note="", nickname=None）
     :return: 包含所请求数据的元组
     """
     try:
-        data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
-        if sw is None:
-            return data
-
-        sw_data = data.get(sw, {})
-        if account is None:
-            return sw_data
-
-        account_data = sw_data.get(account, {})
-        if len(kwargs) == 0:
-            return account_data
-
-        result = tuple()
-        for key, default in kwargs.items():
-            value = account_data.get(key, default)
-            result += (value,)
-            # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
-        return result
+        data = load_acc_data()
+        return DictUtils.get_nested_values(data, None, "/", *front_addr, **kwargs)
     except Exception as e:
         logger.error(e)
         return tuple()
+
+
+"""账号互斥体相关"""
+
+
+def clear_all_acc_in_acc_json(sw):
+    """
+    清空登录列表all_wechat结点，适合登录之前使用
+    :return: 是否成功
+    """
+    print("清理互斥体记录...")
+    # 加载当前账户数据
+    data = load_acc_data()
+
+    tab_info = data.get(sw, {})
+    # 检查 all_acc 节点是否存在
+    if "all_acc" in tab_info:
+        # 清除 all_acc 中的所有字段
+        tab_info["all_acc"].clear()
+        # print(tab_info["all_acc"])
+        print("all_acc 节点的所有字段已清空")
+
+    # 保存更新后的数据
+    save_acc_data(data)
+    return True
+
+
+def update_all_acc_in_acc_json(tab):
+    """
+    清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
+    :return: 是否成功
+    """
+    print("构建互斥体记录...")
+    # 加载当前账户数据
+    data = load_acc_data()
+    tab_info = data.get(tab, {})
+    # 初始化 all_wechat 为空字典
+    all_wechat = {}
+
+    # 遍历所有的账户
+    for account, details in tab_info.items():
+        pid = details.get("pid")
+        # 检查 pid 是否为整数
+        if isinstance(pid, int):
+            has_mutex = details.get("has_mutex", False)
+            all_wechat[str(pid)] = has_mutex
+            print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
+
+    # 更新 all_wechat 到 JSON 文件
+    update_sw_acc_data(tab, "all_acc", **all_wechat)
+    return True
+
+
+def set_all_acc_values_to_false(tab):
+    """
+    将所有微信进程all_acc中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
+    （因为登录好一个窗口，说明之前所有的微信都没有互斥体了）
+    :return: 是否成功
+    """
+    # 加载当前账户数据
+    data = load_acc_data()
+
+    tab_info = data.get(tab, {})
+    # 获取 all_acc 节点，如果不存在就创建一个空的
+    all_acc = tab_info.get("all_acc", {})
+
+    # 将所有字段的值设置为 False
+    for pid in all_acc:
+        all_acc[pid] = False
+
+    # 保存更新后的数据
+    save_acc_data(data)
+    return True
+
+
+def update_has_mutex_from_all_acc(tab):
+    """
+    将json中登录列表all_wechat结点中的情况加载回所有已登录账号，适合刷新结束时使用
+    :return: 是否成功
+    """
+    has_mutex = False
+    data = load_acc_data()
+    if tab not in data:
+        data[tab] = {}
+    tab_info = data.get(tab, {})
+    if "all_acc" not in tab_info:
+        tab_info["all_acc"] = {}
+    for account, details in tab_info.items():
+        if account == "all_acc":
+            continue
+        pid = details.get("pid", None)
+        if pid and pid is not None:
+            acc_mutex = tab_info["all_acc"].get(f"{pid}", True)
+            if acc_mutex is True:
+                has_mutex = True
+            update_sw_acc_data(tab, account, has_mutex=acc_mutex)
+    return True, has_mutex
+
+
 
 
 def get_avatar_url_from_file(sw, acc_list, data_dir):
@@ -327,7 +410,7 @@ def get_avatar_url_from_file(sw, acc_list, data_dir):
             logger.info(f"{acc}: {matched_url}")
             success = image_utils.download_image(matched_url, avatar_path)
             if success is True:
-                update_sw_acc_details_to_json(sw, acc, avatar_url=matched_url)
+                update_sw_acc_data(sw, acc, avatar_url=matched_url)
                 changed = True
     return changed
 
@@ -366,7 +449,7 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
         # print(now_sw_left_cut, now_sw_right_cut)
 
         # 加载其他平台的账号列表
-        data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
+        data = load_acc_data()
         other_acc_list = data.get(other_sw, {})
         for now_acc in now_acc_list:
             # 对账号进行裁剪
@@ -381,15 +464,15 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
                 # 裁剪后是一致的账号，才进行后续操作
                 if now_sw_been_cut_acc == other_sw_been_cut_acc:
                     # 分别获取两个平台的头像url
-                    now_sw_avatar_url, = get_sw_acc_details_from_json(now_sw, now_acc, avatar_url=None)
-                    other_sw_avatar_url, = get_sw_acc_details_from_json(other_sw, other_acc, avatar_url=None)
+                    now_sw_avatar_url, = get_sw_acc_data(now_sw, now_acc, avatar_url=None)
+                    other_sw_avatar_url, = get_sw_acc_data(other_sw, other_acc, avatar_url=None)
                     if other_sw_avatar_url is not None and now_sw_avatar_url is None:
                         # 只有当前平台没有头像url，且另一个平台有头像url，则进行偷取和下载
                         avatar_path = os.path.join(Config.PROJ_USER_PATH, now_sw, f"{now_acc}", f"{now_acc}.jpg")
                         logger.info(f"{now_acc}: {other_sw_avatar_url}")
                         success = image_utils.download_image(other_sw_avatar_url, avatar_path)
                         if success is True:
-                            update_sw_acc_details_to_json(now_sw, now_acc, avatar_url=other_sw_avatar_url)
+                            update_sw_acc_data(now_sw, now_acc, avatar_url=other_sw_avatar_url)
                             changed = True
     return changed
 
@@ -412,7 +495,7 @@ def get_nickname_from_file(sw, acc_list, data_dir):
             cleaned_str = re.sub(r'[0-9a-fA-F]{32}.*', '', matched_str)
             cleaned_str = re.sub(r'\x1A.*?\x12', '', cleaned_str)
             cleaned_str = re.sub(r'[^\x20-\x7E\xC0-\xFF\u4e00-\u9fa5]+', '', cleaned_str)
-            success = update_sw_acc_details_to_json(sw, acc, nickname=cleaned_str)
+            success = update_sw_acc_data(sw, acc, nickname=cleaned_str)
             if success is True:
                 changed = True
     return changed
@@ -452,7 +535,7 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
         # print(now_sw_left_cut, now_sw_right_cut)
 
         # 加载其他平台的账号列表
-        data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
+        data = load_acc_data()
         other_acc_list = data.get(other_sw, {})
         for now_acc in now_acc_list:
             # 对账号进行裁剪
@@ -467,11 +550,11 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
                 # 裁剪后是一致的账号，才进行后续操作
                 if now_sw_been_cut_acc == other_sw_been_cut_acc:
                     # 分别获取两个平台的昵称
-                    now_sw_nickname, = get_sw_acc_details_from_json(now_sw, now_acc, nickname=None)
-                    other_sw_nickname, = get_sw_acc_details_from_json(other_sw, other_acc, nickname=None)
+                    now_sw_nickname, = get_sw_acc_data(now_sw, now_acc, nickname=None)
+                    other_sw_nickname, = get_sw_acc_data(other_sw, other_acc, nickname=None)
                     if other_sw_nickname is not None and now_sw_nickname is None:
                         # 只有当前平台没有昵称，且另一个平台有昵称，则进行偷取和上传
-                        update_sw_acc_details_to_json(now_sw, now_acc, nickname=other_sw_nickname)
+                        update_sw_acc_data(now_sw, now_acc, nickname=other_sw_nickname)
                         changed = True
     return changed
 
@@ -497,102 +580,6 @@ def get_curr_wx_id_from_config_file(sw, data_dir):
             return wx_id
     else:
         return None
-
-
-"""账号互斥体相关"""
-
-
-def clear_all_acc_in_acc_json(sw):
-    """
-    清空登录列表all_wechat结点，适合登录之前使用
-    :return: 是否成功
-    """
-    print("清理互斥体记录...")
-    # 加载当前账户数据
-    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
-    tab_info = data.get(sw, {})
-    # 检查 all_acc 节点是否存在
-    if "all_acc" in tab_info:
-        # 清除 all_acc 中的所有字段
-        tab_info["all_acc"].clear()
-        # print(tab_info["all_acc"])
-        print("all_acc 节点的所有字段已清空")
-
-    # 保存更新后的数据
-    JsonUtils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
-    return True
-
-
-def update_all_acc_in_acc_json(tab):
-    """
-    清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
-    :return: 是否成功
-    """
-    print("构建互斥体记录...")
-    # 加载当前账户数据
-    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
-    tab_info = data.get(tab, {})
-    # 初始化 all_wechat 为空字典
-    all_wechat = {}
-
-    # 遍历所有的账户
-    for account, details in tab_info.items():
-        pid = details.get("pid")
-        # 检查 pid 是否为整数
-        if isinstance(pid, int):
-            has_mutex = details.get("has_mutex", False)
-            all_wechat[str(pid)] = has_mutex
-            print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
-
-    # 更新 all_wechat 到 JSON 文件
-    update_sw_acc_details_to_json(tab, "all_acc", **all_wechat)
-    return True
-
-
-def set_all_acc_values_to_false(tab):
-    """
-    将所有微信进程all_acc中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
-    （因为登录好一个窗口，说明之前所有的微信都没有互斥体了）
-    :return: 是否成功
-    """
-    # 加载当前账户数据
-    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
-
-    tab_info = data.get(tab, {})
-    # 获取 all_acc 节点，如果不存在就创建一个空的
-    all_acc = tab_info.get("all_acc", {})
-
-    # 将所有字段的值设置为 False
-    for pid in all_acc:
-        all_acc[pid] = False
-
-    # 保存更新后的数据
-    JsonUtils.save_json_data(Config.TAB_ACC_JSON_PATH, data)
-    return True
-
-
-def update_has_mutex_from_all_acc(tab):
-    """
-    将json中登录列表all_wechat结点中的情况加载回所有已登录账号，适合刷新结束时使用
-    :return: 是否成功
-    """
-    has_mutex = False
-    data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
-    if tab not in data:
-        data[tab] = {}
-    tab_info = data.get(tab, {})
-    if "all_acc" not in tab_info:
-        tab_info["all_acc"] = {}
-    for account, details in tab_info.items():
-        if account == "all_acc":
-            continue
-        pid = details.get("pid", None)
-        if pid and pid is not None:
-            acc_mutex = tab_info["all_acc"].get(f"{pid}", True)
-            if acc_mutex is True:
-                has_mutex = True
-            update_sw_acc_details_to_json(tab, account, has_mutex=acc_mutex)
-    return True, has_mutex
 
 
 """统计数据相关"""
@@ -636,7 +623,7 @@ def update_statistic_data(sw, mode, main_key, sub_key, time_spent):
     new_avg_time = (avg_time * count + time_spent) / new_count
 
     tab_info[mode][main_key][sub_key] = f"{new_min:.4f},{new_count},{new_avg_time:.4f},{new_max:.4f}"
-    JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    JsonUtils.save_json(Config.STATISTIC_JSON_PATH, data)
 
 
 """软件版本及更新相关"""
@@ -716,7 +703,7 @@ def merge_refresh_nodes():
 
         # 删除原始节点
         del refresh_data[key]
-    JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    JsonUtils.save_json(Config.STATISTIC_JSON_PATH, data)
     return data
 
 
@@ -730,7 +717,7 @@ def move_data_to_wechat():
         wechat_data = {
             "WeChat": data
         }
-        JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, wechat_data)
+        JsonUtils.save_json(Config.STATISTIC_JSON_PATH, wechat_data)
 
 
 def swap_cnt_and_mode_levels_in_auto():
@@ -763,7 +750,7 @@ def swap_cnt_and_mode_levels_in_auto():
 
         # 转换好的结果重新赋给json文件中
         data[sw]['auto'] = tmp
-    JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    JsonUtils.save_json(Config.STATISTIC_JSON_PATH, data)
 
 
 def downgrade_item_lvl_under_manual():
@@ -785,7 +772,7 @@ def downgrade_item_lvl_under_manual():
 
         # 转换好的结果重新赋给json文件中
         data[sw]['manual'] = manual_info
-    JsonUtils.save_json_data(Config.STATISTIC_JSON_PATH, data)
+    JsonUtils.save_json(Config.STATISTIC_JSON_PATH, data)
 
 
 def get_packed_executable():

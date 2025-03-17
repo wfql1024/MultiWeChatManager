@@ -71,3 +71,123 @@ class Test(TestCase):
     def test_get_now_datetime(self):
         now = datetime.now()
         print(now)
+
+    def test_get_nested_value(self):
+        print("测试单次获取嵌套值----------------------------------------------------------------------------")
+        # 获取嵌套值
+        # 定义参数可用值列表
+        data_values = [
+            None,  # data 为 None
+            2,  # data 为非字典类型
+            {"a": {"b": {"c": 1}}}  # data 为嵌套字典
+        ]
+
+        key_path_values = [
+            None,  # key_path 为 None
+            "",  # key_path 为空字符串
+            1,  # key_path 为非字符串类型
+            "a",  # key_path 为单层路径
+            "a/b",  # key_path 为多层路径
+            "a/b/c",  # key_path 为多层路径
+            "a/b/c/d"  # key_path 为不存在的路径
+        ]
+
+        # 遍历所有参数组合
+        for data in data_values:
+            for key_path in key_path_values:
+                # 调用方法并获取结果
+                result = file_utils.DictUtils._get_nested_value(data, key_path, default_value="default")
+                # 输出参数和结果
+                print(f"data: {data}, key_path: {key_path}, result: {result}")
+
+    def test_get_nested_values(self):
+        print("测试批量获取嵌套值----------------------------------------------------------------------------")
+        default_value = "default"
+        separator = "/"
+        # 批量获取嵌套值
+        # 定义参数可用值列表
+        data_values = [
+            None,  # data 为 None
+            2,  # data 为非字典类型
+            {"a": {"b": {"c": 1}}}  # data 为嵌套字典
+        ]
+
+        front_addr_lists = [
+            None,
+            [""],
+            [1],
+            ["a", 1],
+            ["a/b", ""],
+            ["a/b", "c"],
+            ["a", "b", "c"]
+        ]
+
+        default_dicts = [
+            None,
+            {"": "default"},
+            {"a": "default"},
+            {"b/d": "default"},
+            {"c/a": "default"}
+        ]
+
+        # 遍历所有参数组合
+        for data in data_values:
+            for front_addr_list in front_addr_lists:
+                # 调用方法并获取结果
+                if front_addr_list is None:
+                    for default_dict in default_dicts:
+                        if default_dict is None:
+                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator)
+                        else:
+                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator, **default_dict)
+                        # 输出参数和结果
+                        print(f"data: {data}, front_addr_list: {front_addr_list}, default_dict: {default_dict}, result: {result}")
+                else:
+                    for default_dict in default_dicts:
+                        if default_dict is None:
+                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator, *front_addr_list)
+                        else:
+                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator, *front_addr_list, **default_dict)
+                        # 输出参数和结果
+                        print(f"data: {data}, front_addr_list: {front_addr_list}, default_dict: {default_dict}, result: {result}")
+
+
+
+        # 修改嵌套值
+        data = {"a": {"b": {"c": 1}}}
+        self.assertEqual(file_utils.DictUtils._set_nested_value(None, None, 1), False)  # 无法修改
+
+        data = {"a": {"b": {"c": 1}}}
+        self.assertEqual(file_utils.DictUtils._set_nested_value(1, None, 1), False)  # 无法修改
+
+        data = {"a": {"b": {"c": 1}}}
+        self.assertEqual(file_utils.DictUtils._set_nested_value(data, 1, None), False)  # 无法修改
+
+        data = {"a": {"b": {"c": 1}}}
+        self.assertEqual(file_utils.DictUtils._set_nested_value(data, "a/b", None), True)  # 成功修改
+        self.assertEqual(data, {"a": {"b": None}})  # b节点改为None
+
+        data = {"a": {"b": {"c": 1}}}
+        self.assertEqual(file_utils.DictUtils._set_nested_value(data, "a/b/c", 2), True)  # 成功修改
+        self.assertEqual(data, {"a": {"b": {"c": 2}}})  # c节点改为2
+
+        data = {"a": {"b": {"c": 1}}}
+        self.assertEqual(file_utils.DictUtils._set_nested_value(data, "a/b/d/c", 2), True)  # 成功修改
+        self.assertEqual(data, {"a": {"b": {"c": 1, "d": {"c": 2}}}})
+
+        data = {"a": {"b": {"c": 1}}}
+        self.assertEqual(file_utils.DictUtils._set_nested_value(data, "a/b/c/d", 2), True)  # 成功修改
+        self.assertEqual(data, {"a": {"b": {"c": {"d": 2}}}})
+
+        # 清空嵌套值
+        data = {"a": {"b": {"c": 1}}}
+        self.assertEqual(file_utils.DictUtils._clear_nested_value(None, None), False)  # 无法修改
+        # data["a"]["b"].clear()
+
+    def test_set_nested_values(self):
+        data = {"a": {"b": {"c": 1}}, "": 3}
+        # print(file_utils.DictUtils.get_nested_value(data, "", "/", "/"))
+        # file_utils.DictUtils.set_nested_values(data, None, "/", **{"/b/c": 2})
+        # file_utils.DictUtils.set_nested_value(data, "a/b/c/d", "/", "/")
+        file_utils.DictUtils.clear_nested_values(data, "/", "a", "b/c", **{"/b/c": 2})
+        print(data)

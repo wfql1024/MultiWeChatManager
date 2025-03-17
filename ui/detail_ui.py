@@ -84,7 +84,7 @@ class DetailWnd(SubToolWnd, ABC):
         self.nickname_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
 
         # 备注
-        note, = subfunc_file.get_sw_acc_details_from_json(self.sw, self.account, note=None)
+        note, = subfunc_file.get_sw_acc_data(self.sw, self.account, note=None)
         self.note_var = tk.StringVar(value="") if note is None else tk.StringVar(value=note)
         note_frame = ttk.Frame(frame)
         note_frame.pack(anchor="w", **Constants.T_WGT_PACK)
@@ -94,7 +94,7 @@ class DetailWnd(SubToolWnd, ABC):
         self.note_entry.pack(side=tk.LEFT)
 
         # 热键
-        hotkey, = subfunc_file.get_sw_acc_details_from_json(self.sw, self.account, hotkey=None)
+        hotkey, = subfunc_file.get_sw_acc_data(self.sw, self.account, hotkey=None)
         hotkey_frame = ttk.Frame(frame)
         hotkey_frame.pack(anchor="w", **Constants.T_WGT_PACK)
         hotkey_label = ttk.Label(hotkey_frame, text="热键：")
@@ -103,14 +103,14 @@ class DetailWnd(SubToolWnd, ABC):
 
         # 隐藏账号
         hidden_frame = ttk.Frame(frame)
-        hidden, = subfunc_file.get_sw_acc_details_from_json(sw, account, hidden=False)
+        hidden, = subfunc_file.get_sw_acc_data(sw, account, hidden=False)
         self.hidden_var = tk.BooleanVar(value=hidden)
         hidden_checkbox = tk.Checkbutton(hidden_frame, text="未登录时隐藏", variable=self.hidden_var)
         hidden_checkbox.pack(side=tk.LEFT)
 
         # 账号自启动
         auto_start_frame = ttk.Frame(frame)
-        auto_start, = subfunc_file.get_sw_acc_details_from_json(sw, account, auto_start=False)
+        auto_start, = subfunc_file.get_sw_acc_data(sw, account, auto_start=False)
         self.auto_start_var = tk.BooleanVar(value=auto_start)
         auto_start_checkbox = tk.Checkbutton(
             auto_start_frame, text="进入软件时自启动", variable=self.auto_start_var)
@@ -160,7 +160,7 @@ class DetailWnd(SubToolWnd, ABC):
                 f.write(image_data)
             print(f"默认头像已保存到 {default_path}")
             avatar_path = default_path
-        avatar_url, alias, nickname, pid = subfunc_file.get_sw_acc_details_from_json(
+        avatar_url, alias, nickname, pid = subfunc_file.get_sw_acc_data(
             self.sw,
             self.account,
             avatar_url=None,
@@ -179,9 +179,9 @@ class DetailWnd(SubToolWnd, ABC):
         if not pid:
             widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
             self.pid_label.config(text=f"PID: 未登录")
-            subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, has_mutex=True)
+            subfunc_file.update_sw_acc_data(self.sw, self.account, has_mutex=True)
         else:
-            has_mutex, main_hwnd = subfunc_file.get_sw_acc_details_from_json(
+            has_mutex, main_hwnd = subfunc_file.get_sw_acc_data(
                 self.sw, self.account, has_mutex=True, main_hwnd=None)
             if has_mutex:
                 self.pid_label.config(text=f"PID: {pid}(有互斥体)\nHWND: {main_hwnd}")
@@ -213,7 +213,7 @@ class DetailWnd(SubToolWnd, ABC):
             self.avatar_label.config(text="无头像")
 
     def fetch_data(self):
-        pid, = subfunc_file.get_sw_acc_details_from_json(self.sw, self.account, pid=None)
+        pid, = subfunc_file.get_sw_acc_data(self.sw, self.account, pid=None)
         if not pid:
             widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
             messagebox.showinfo("提示", "未检测到该账号登录")
@@ -242,15 +242,15 @@ class DetailWnd(SubToolWnd, ABC):
         """
         new_note = self.note_var.get().strip()
         if new_note == "":
-            subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, note=None)
+            subfunc_file.update_sw_acc_data(self.sw, self.account, note=None)
         else:
-            subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, note=new_note)
+            subfunc_file.update_sw_acc_data(self.sw, self.account, note=new_note)
         hidden = self.hidden_var.get()
-        subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, hidden=hidden)
+        subfunc_file.update_sw_acc_data(self.sw, self.account, hidden=hidden)
         auto_start = self.auto_start_var.get()
-        subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, auto_start=auto_start)
+        subfunc_file.update_sw_acc_data(self.sw, self.account, auto_start=auto_start)
         hotkey = self.hotkey_entry_class.hotkey_var.get().strip()
-        subfunc_file.update_sw_acc_details_to_json(self.sw, self.account, hotkey=hotkey)
+        subfunc_file.update_sw_acc_data(self.sw, self.account, hotkey=hotkey)
         printer.vital("账号设置成功")
         self.tab_class.refresh_frame(self.sw)
         self.wnd.destroy()

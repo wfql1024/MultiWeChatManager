@@ -8,7 +8,8 @@ from public_class import reusable_widget
 from public_class.global_members import GlobalMembers
 from public_class.reusable_widget import SubToolWnd
 from resources import Constants, Config
-from utils import string_utils, json_utils
+from utils import string_utils
+from utils.file_utils import JsonUtils
 from utils.logger_utils import mylogger as logger
 
 
@@ -102,7 +103,7 @@ class AccManagerUI:
         self.scrollable_canvas = reusable_widget.ScrollableCanvas(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
-        self.acc_data = json_utils.load_json_data(Config.TAB_ACC_JSON_PATH)
+        self.acc_data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
         # 加载已隐藏列表
         self.tree_class["hidden"] = AccManageTreeView(
             self,
@@ -132,7 +133,7 @@ class AccManagerUI:
         print(f"进入取消隐藏方法")
         for item in items:
             sw, acc = item.split("/")
-            subfunc_file.update_sw_acc_details_to_json(sw, acc, hidden=False)
+            subfunc_file.update_sw_acc_data(sw, acc, hidden=False)
         self.refresh_frame()
         pass
 
@@ -140,7 +141,7 @@ class AccManagerUI:
         print(f"进入取消自启方法")
         for item in items:
             sw, acc = item.split("/")
-            subfunc_file.update_sw_acc_details_to_json(sw, acc, auto_start=False)
+            subfunc_file.update_sw_acc_data(sw, acc, auto_start=False)
         self.refresh_frame()
         pass
 
@@ -148,7 +149,7 @@ class AccManagerUI:
         print(f"进入隐藏方法")
         for item in items:
             sw, acc = item.split("/")
-            subfunc_file.update_sw_acc_details_to_json(sw, acc, hidden=True)
+            subfunc_file.update_sw_acc_data(sw, acc, hidden=True)
         self.refresh_frame()
         pass
 
@@ -156,7 +157,7 @@ class AccManagerUI:
         print(f"进入自启方法")
         for item in items:
             sw, acc = item.split("/")
-            subfunc_file.update_sw_acc_details_to_json(sw, acc, auto_start=True)
+            subfunc_file.update_sw_acc_data(sw, acc, auto_start=True)
         self.refresh_frame()
         pass
 
@@ -240,7 +241,7 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
                     continue
 
                 display_name = "  " + func_account.get_acc_origin_display_name(sw, acc)
-                avatar_url, hotkey, hidden, auto_start, nickname = subfunc_file.get_sw_acc_details_from_json(
+                avatar_url, hotkey, hidden, auto_start, nickname = subfunc_file.get_sw_acc_data(
                     sw,
                     acc,
                     avatar_url=None,

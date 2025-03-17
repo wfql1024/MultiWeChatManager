@@ -131,13 +131,13 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
 
         for account in accounts:
             # 未登录账号中，隐藏的账号不显示
-            hidden, = subfunc_file.get_sw_acc_details_from_json(self.sw, account, hidden=None)
+            hidden, = subfunc_file.get_sw_acc_data(self.sw, account, hidden=None)
             if hidden is True and login_status == "logout":
                 continue
 
             display_name = "  " + func_account.get_acc_origin_display_name(self.sw, account)
             config_status = func_config.get_sw_acc_login_cfg(self.sw, account, self.data_dir)
-            avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_sw_acc_details_from_json(
+            avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_sw_acc_data(
                 self.sw,
                 account,
                 avatar_url=None,
