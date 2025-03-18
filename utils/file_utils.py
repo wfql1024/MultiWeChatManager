@@ -22,15 +22,15 @@ logger = logger_utils.mylogger
 
 
 class DictUtils:
+    SEPARATOR = '/'
     @staticmethod
     def _get_nested_value(data: Any, key_path: Optional[str],
-                          default_value: Any = None, separator: str = '/') -> Any:
+                          default_value: Any = None) -> Any:
         """
         按照地址格式获取字典中的子字典或值（若获取不到则使用默认值），该方法不会破坏原字典结构
         :param data: 嵌套字典
         :param key_path: 多级键路径，例如 "a/b/c"
         :param default_value: 如果路径不存在，返回的默认值
-        :param separator: 路径分隔符，默认为 "/"
         :return: 对应的子字典或值，如果路径不存在则返回默认值
         """
         # print("获取数据……………………………………………………")
@@ -49,7 +49,7 @@ class DictUtils:
                 return default_value
 
             # 根据地址，查找对应的子字典或值，路径不存在则返回默认值
-            keys = key_path.split(separator)
+            keys = key_path.split(DictUtils.SEPARATOR)
             sub_data = data
             for key in keys:
                 if isinstance(sub_data, dict) and key in sub_data:
@@ -62,13 +62,12 @@ class DictUtils:
             return default_value
 
     @staticmethod
-    def _set_nested_value(data: dict, key_path: str, value: Any, separator: str = '/') -> bool:
+    def _set_nested_value(data: dict, key_path: str, value: Any) -> bool:
         """
         按照地址格式更新字典中的子字典或值（可以设置默认值），该方法会对不存在的键路径进行创建
         :param data: 嵌套字典
         :param key_path: 多级键路径，例如 "a/b/c"
         :param value: 要设置的值
-        :param separator: 路径分隔符，默认为 "/"
         :return: 是否成功
         """
         # print("设置数据……………………………………………………")
@@ -82,7 +81,7 @@ class DictUtils:
                 return False
 
             # 根据地址，查找对应的子字典或值，路径不存在则创建
-            keys = key_path.split(separator)
+            keys = key_path.split(DictUtils.SEPARATOR)
             current = data
             for key in keys[:-1]:  # 遍历除最后一个键外的所有键
                 if key not in current or not isinstance(current[key], dict):
@@ -95,12 +94,11 @@ class DictUtils:
             return False
 
     @staticmethod
-    def _clear_nested_value(data: dict, key_path=Optional[str], separator: str = '/') -> bool:
+    def _clear_nested_value(data: dict, key_path=Optional[str]) -> bool:
         """
         按照地址格式清空字典中的子字典或值（可以设置默认值），该方法不会对不存在的键路径进行创建
         :param data: 嵌套字典
         :param key_path: 多级键路径，例如 "a/b/c"
-        :param separator: 路径分隔符，默认为 "/"
         :return: 是否成功
         """
         # print("清除节点……………………………………………………")
@@ -111,7 +109,7 @@ class DictUtils:
                 return False
 
             # 获取值
-            value = DictUtils._get_nested_value(data, key_path, None, separator)
+            value = DictUtils._get_nested_value(data, key_path, None)
             print(value)
 
             # 如果值为空，说明路径错误或者值本身就是None，不作任何操作
@@ -126,7 +124,7 @@ class DictUtils:
                 value.clear()
                 return True
             # 否则，设置为空
-            DictUtils._set_nested_value(data, key_path, None, separator)
+            DictUtils._set_nested_value(data, key_path, None)
             return True
 
         except Exception as e:
@@ -134,10 +132,9 @@ class DictUtils:
             return False
 
     @staticmethod
-    def get_nested_values(data: Any, default_value: Any, separator: str, *front_addr, **kwargs):
+    def get_nested_values(data: Any, default_value: Any, *front_addr, **kwargs):
         """
         按照地址格式获取 任意数据 中的 一个或多个 子字典或值（可以设置默认值）
-        :param separator: 地址分隔符
         :param default_value: 若不是批量获取，则返回这个默认值
         :param data: 嵌套字典
         :param front_addr: 前置地址，如：("wechat", "account1")，可以不传入
@@ -157,7 +154,7 @@ class DictUtils:
                     return tuple(value for value in kwargs.values()) if len(kwargs) > 0 else default_value
                 else:
                     # 拼接前置地址，获取中间根节点
-                    sub_data = DictUtils._get_nested_value(data, separator.join(front_addr), default_value, separator)
+                    sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr), default_value)
 
             # 2. 已经获得中间根节点
             # 若后续地址为空，则直接返回中间根节点
@@ -165,7 +162,7 @@ class DictUtils:
                 return sub_data
             result = tuple()
             for key, default in kwargs.items():
-                value = DictUtils._get_nested_value(sub_data, key, default, separator)
+                value = DictUtils._get_nested_value(sub_data, key, default)
                 result += (value,)
             return result
         except Exception as e:
@@ -173,10 +170,9 @@ class DictUtils:
             return tuple()
 
     @staticmethod
-    def set_nested_values(data: dict, value: Any, separator: str, *front_addr: Optional[str], **kwargs):
+    def set_nested_values(data: dict, value: Any, *front_addr: Optional[str], **kwargs):
         """
         按照地址格式更新字典中的多个子字典或值（可以设置默认值）
-        :param separator: 地址分隔符
         :param value: 要设置的值
         :param data: 嵌套字典
         :param front_addr: 前置地址，如：("wechat", "account1")
@@ -207,19 +203,19 @@ class DictUtils:
                     # 合法拼接
                     if len(kwargs) == 0:
                         # 拼接前置地址，设置中间根节点的值
-                        return DictUtils._set_nested_value(data, separator.join(front_addr), value, separator)
+                        return DictUtils._set_nested_value(data, DictUtils.SEPARATOR.join(front_addr), value)
                     else:
                         # 拼接前置地址，得到中间根节点进行后续处理
-                        sub_data = DictUtils._get_nested_value(data, separator.join(front_addr), value, separator)
+                        sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr), value)
 
             # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给set_nested_value方法批量处理
             # print(f"中间根节点：{sub_data}")
             # 中间根节点不是字典，则转成空字典
             if not isinstance(sub_data, dict):
-                DictUtils._set_nested_value(data, separator.join(front_addr), {}, separator)
-                sub_data = DictUtils._get_nested_value(data, separator.join(front_addr), value, separator)
+                DictUtils._set_nested_value(data, DictUtils.SEPARATOR.join(front_addr), {})
+                sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr), value)
             # 中间根节点是字典，交给set_nested_value方法批量处理
-            return all(DictUtils._set_nested_value(sub_data, key_path, value, separator)
+            return all(DictUtils._set_nested_value(sub_data, key_path, value)
                        for key_path, value in kwargs.items())
 
         except Exception as e:
@@ -227,10 +223,9 @@ class DictUtils:
             return False
 
     @staticmethod
-    def clear_nested_values(data: dict, separator: str, *front_addr, **kwargs):
+    def clear_nested_values(data: dict, *front_addr, **kwargs):
         """
         按照地址格式清空字典中的子字典或值（可以设置默认值），该方法不会对不存在的键路径进行创建
-        :param separator: 地址分隔符
         :param data: 嵌套字典
         :param front_addr: 前置地址，如：("wechat", "account1")
         :param kwargs: 需要更新的键地址及其值（如 note="", nickname=None）
@@ -261,10 +256,10 @@ class DictUtils:
                     # 合法拼接
                     if len(kwargs) == 0:
                         # 拼接前置地址，清除该节点
-                        return DictUtils._clear_nested_value(data, separator.join(front_addr), separator)
+                        return DictUtils._clear_nested_value(data, DictUtils.SEPARATOR.join(front_addr))
                     else:
                         # 拼接前置地址，得到中间根节点进行后续处理
-                        sub_data = DictUtils._get_nested_value(data, separator.join(front_addr), separator)
+                        sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr))
 
             # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给set_nested_value方法批量处理
             # print(f"中间根节点：{sub_data}")
@@ -272,7 +267,7 @@ class DictUtils:
             if not isinstance(sub_data, dict):
                 return False
             # 中间根节点是字典，交给set_nested_value方法批量处理
-            return all(DictUtils._clear_nested_value(sub_data, key_path, separator)
+            return all(DictUtils._clear_nested_value(sub_data, key_path)
                        for key_path, value in kwargs.items())
 
         except Exception as e:

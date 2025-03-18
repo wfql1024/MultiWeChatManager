@@ -41,7 +41,7 @@ def login_auto_start_accounts():
 
     # 获取已经登录的账号
     for sw in all_sw:
-        try:
+        # try:
             if sw == acc_tab_ui.sw:
                 logins = root_class.sw_classes[sw].login_accounts
             else:
@@ -52,9 +52,9 @@ def login_auto_start_accounts():
                 logins = acc_list_dict["login"]
             for acc in logins:
                 can_auto_start[sw].discard(acc)
-        except Exception as e:
-            logger.error(e)
-            continue
+        # except Exception as e:
+        #     logger.error(e.with_traceback())
+        #     continue
 
     if any(len(sw_set) != 0 for sw, sw_set in can_auto_start.items()):
         print(f"排除已登录之后需要登录：{can_auto_start}")
@@ -107,7 +107,7 @@ def manual_login(sw):
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
     subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
-    subfunc_file.clear_some_acc_data(sw, "all_acc")
+    subfunc_file.clear_some_acc_data(sw, Keywords.PID_MUTEX)
     subfunc_file.update_all_acc_in_acc_json(sw)
 
     state = root_class.sw_classes[sw].multiple_state
@@ -190,7 +190,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
         hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
         subfunc_sw.kill_sw_multiple_processes(sw)
         time.sleep(0.5)
-        subfunc_file.clear_some_acc_data(sw, "all_acc")
+        subfunc_file.clear_some_acc_data(sw, Keywords.PID_MUTEX)
         subfunc_file.update_all_acc_in_acc_json(sw)
 
         if status == "已开启":

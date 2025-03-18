@@ -11,7 +11,7 @@ class Position(Enum):
 
 class Keywords(str, Enum):
     GLOBAL_SECTION = "global"
-
+    # 设置项中的全局设置
     INST_PATH = "inst_path"
     DATA_DIR = "data_dir"
     DLL_DIR = "dll_dir"
@@ -27,12 +27,24 @@ class Keywords(str, Enum):
     AUTO_PRESS = "auto_press"
     CALL_MODE = "call_mode"
     NEXT_CHECK_TIME = "next_check_time"
-
+    # 设置项中的平台设置
     VIEW = "view"
     LOGIN_SIZE = "login_size"
     REST_MODE = "rest_mode"
     LOGIN_SORT = "login_sort"
     LOGOUT_SORT = "logout_sort"
+
+    # 账号数据中的平台字段
+    PID_MUTEX = "pid_mutex"
+    # 账号数据中的平台字段
+    NICKNAME = "nickname"
+    AVATAR_URL = "avatar_url"
+    PID = "pid"
+    HAS_MUTEX = "has_mutex"
+    AUTO_START = "auto_start"
+    HOTKEY = "hotkey"
+    HIDDEN = "hidden"
+
 
 class SW(str, Enum):
     WECHAT = "WeChat"

@@ -79,3 +79,56 @@ class Test(TestCase):
         backup(dll)
         save(dll, data)
         pause()
+
+    def test_set_parent_wnd(self):
+        import ctypes
+        from ctypes import wintypes
+        import time
+
+        # 定义 Windows API 函数
+        user32 = ctypes.windll.user32
+
+        # 获取目标窗口句柄和你的窗口句柄
+        hwnd_target = user32.FindWindowW(None, "微信 - 吾峰起浪")
+        hwnd_my_window = user32.FindWindowW(None, "微信多开管理器")
+
+        # 获取你的窗口大小
+        my_window_rect = wintypes.RECT()
+        user32.GetWindowRect(hwnd_my_window, ctypes.byref(my_window_rect))
+        my_window_width = my_window_rect.right - my_window_rect.left
+        my_window_height = my_window_rect.bottom - my_window_rect.top
+
+        # 记录目标窗口的初始位置
+        last_rect = wintypes.RECT()
+        user32.GetWindowRect(hwnd_target, ctypes.byref(last_rect))
+
+        # 调整你的窗口初始位置（位于目标窗口左侧）
+        user32.SetWindowPos(
+            hwnd_my_window,
+            None,  # 无 Z 序调整
+            last_rect.left - my_window_width,  # 目标窗口左侧
+            last_rect.top,  # 与目标窗口顶部对齐
+            0, 0,  # 不调整窗口大小
+            0x0001  # SWP_NOSIZE
+        )
+
+        # 定期检查目标窗口位置
+        while True:
+            rect = wintypes.RECT()
+            user32.GetWindowRect(hwnd_target, ctypes.byref(rect))
+
+            # 如果目标窗口位置发生变化，调整你的窗口位置
+            if rect.left != last_rect.left or rect.top != last_rect.top:
+                # 计算你的窗口位置（位于目标窗口左侧）
+                user32.SetWindowPos(
+                    hwnd_my_window,
+                    None,  # 无 Z 序调整
+                    rect.left - my_window_width,  # 目标窗口左侧
+                    rect.top,  # 与目标窗口顶部对齐
+                    0, 0,  # 不调整窗口大小
+                    0x0001  # SWP_NOSIZE
+                )
+                last_rect = rect
+
+            # 设置检查间隔（100ms）
+            time.sleep(0.02)

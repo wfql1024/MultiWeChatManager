@@ -235,6 +235,7 @@ def load_acc_data():
     data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
     return data
 
+
 def save_acc_data(data):
     """
     保存账号数据，请在这个方法中修改账号数据的保存方式，如格式、文件位置
@@ -242,27 +243,30 @@ def save_acc_data(data):
     """
     JsonUtils.save_json(Config.TAB_ACC_JSON_PATH, data)
 
+
 def clear_some_acc_data(*addr):
     """
     清空某平台的账号记录，在对平台重新设置后触发
     :return: 是否成功
     """
-    print("清理该平台账号记录...")
+    print(f"清理{addr}处数据...")
     data = load_acc_data()
     DictUtils.clear_nested_values(data, *addr)
     save_acc_data(data)
     return True
 
+
 def update_sw_acc_data(*front_addr, **kwargs):
     """更新账户信息到 JSON"""
     try:
         data = load_acc_data()
-        success = DictUtils.set_nested_values(data, None, "/", *front_addr, **kwargs)
+        success = DictUtils.set_nested_values(data, None, *front_addr, **kwargs)
         save_acc_data(data)
         return success
     except Exception as e:
         logger.error(e)
         return False
+
 
 def get_sw_acc_data(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     """
@@ -273,7 +277,7 @@ def get_sw_acc_data(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     """
     try:
         data = load_acc_data()
-        return DictUtils.get_nested_values(data, None, "/", *front_addr, **kwargs)
+        return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
     except Exception as e:
         logger.error(e)
         return tuple()
@@ -282,100 +286,72 @@ def get_sw_acc_data(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
 """账号互斥体相关"""
 
 
-def clear_all_acc_in_acc_json(sw):
-    """
-    清空登录列表all_wechat结点，适合登录之前使用
-    :return: 是否成功
-    """
-    print("清理互斥体记录...")
-    # 加载当前账户数据
-    data = load_acc_data()
-
-    tab_info = data.get(sw, {})
-    # 检查 all_acc 节点是否存在
-    if "all_acc" in tab_info:
-        # 清除 all_acc 中的所有字段
-        tab_info["all_acc"].clear()
-        # print(tab_info["all_acc"])
-        print("all_acc 节点的所有字段已清空")
-
-    # 保存更新后的数据
-    save_acc_data(data)
-    return True
-
-
-def update_all_acc_in_acc_json(tab):
+def update_all_acc_in_acc_json(sw):
     """
     清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
     """
     print("构建互斥体记录...")
     # 加载当前账户数据
-    data = load_acc_data()
-    tab_info = data.get(tab, {})
-    # 初始化 all_wechat 为空字典
-    all_wechat = {}
+    sw_data = get_sw_acc_data(sw)
+    if sw_data is None:
+        return False
 
-    # 遍历所有的账户
-    for account, details in tab_info.items():
-        pid = details.get("pid")
-        # 检查 pid 是否为整数
-        if isinstance(pid, int):
-            has_mutex = details.get("has_mutex", False)
-            all_wechat[str(pid)] = has_mutex
-            print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
-
-    # 更新 all_wechat 到 JSON 文件
-    update_sw_acc_data(tab, "all_acc", **all_wechat)
+    pid_mutex = {}
+    # 遍历所有的账户，从有pid的账户中获取pid和has_mutex，并存入pid_mutex
+    for account, details in sw_data.items():
+        if isinstance(details, dict):
+            pid = details.get(Keywords.PID)
+            # 检查 pid 是否为整数
+            if isinstance(pid, int):
+                has_mutex = details.get(Keywords.HAS_MUTEX, False)
+                pid_mutex[str(pid)] = has_mutex
+                print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
+    update_sw_acc_data(sw, Keywords.PID_MUTEX, **pid_mutex)
     return True
 
 
-def set_all_acc_values_to_false(tab):
+def set_all_acc_values_to_false(sw):
     """
     将所有微信进程all_acc中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
     （因为登录好一个窗口，说明之前所有的微信都没有互斥体了）
     :return: 是否成功
     """
     # 加载当前账户数据
-    data = load_acc_data()
-
-    tab_info = data.get(tab, {})
-    # 获取 all_acc 节点，如果不存在就创建一个空的
-    all_acc = tab_info.get("all_acc", {})
+    pid_mutex_data = get_sw_acc_data(sw, Keywords.PID_MUTEX)
+    if pid_mutex_data is None:
+        return False
 
     # 将所有字段的值设置为 False
-    for pid in all_acc:
-        all_acc[pid] = False
-
-    # 保存更新后的数据
-    save_acc_data(data)
+    for pid in pid_mutex_data:
+        update_sw_acc_data(sw, Keywords.PID_MUTEX, **{pid: False})
     return True
 
 
-def update_has_mutex_from_all_acc(tab):
+def update_has_mutex_from_all_acc(sw):
     """
     将json中登录列表all_wechat结点中的情况加载回所有已登录账号，适合刷新结束时使用
     :return: 是否成功
     """
     has_mutex = False
-    data = load_acc_data()
-    if tab not in data:
-        data[tab] = {}
-    tab_info = data.get(tab, {})
-    if "all_acc" not in tab_info:
-        tab_info["all_acc"] = {}
-    for account, details in tab_info.items():
-        if account == "all_acc":
+    sw_data = get_sw_acc_data(sw)
+    if sw_data is None:
+        return False, has_mutex
+    pid_mutex_data = get_sw_acc_data(sw, Keywords.PID_MUTEX)
+    if pid_mutex_data is None:
+        return False, has_mutex
+
+    for acc, acc_details in sw_data.items():
+        if acc == Keywords.PID_MUTEX:
             continue
-        pid = details.get("pid", None)
-        if pid and pid is not None:
-            acc_mutex = tab_info["all_acc"].get(f"{pid}", True)
-            if acc_mutex is True:
-                has_mutex = True
-            update_sw_acc_data(tab, account, has_mutex=acc_mutex)
+        if isinstance(acc_details, dict):
+            pid = acc_details.get(Keywords.PID, None)
+            if pid is not None:
+                acc_mutex = pid_mutex_data.get(f"{pid}", True)
+                if acc_mutex is True:
+                    has_mutex = True
+                update_sw_acc_data(sw, acc, has_mutex=acc_mutex)
     return True, has_mutex
-
-
 
 
 def get_avatar_url_from_file(sw, acc_list, data_dir):

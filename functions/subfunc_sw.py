@@ -5,7 +5,7 @@ import psutil
 import win32gui
 
 from functions import func_setting, subfunc_file
-from public_class.enums import Position
+from public_class.enums import Position, Keywords
 from resources import Config
 from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
@@ -53,9 +53,9 @@ def get_mutex_dict(sw):
     has_mutex_dict = dict()
     for pid in pids:
         # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
-        has_mutex, = subfunc_file.get_sw_acc_data(sw, "all_acc", **{f"{pid}": True})
+        has_mutex, = subfunc_file.get_sw_acc_data(sw, Keywords.PID_MUTEX, **{f"{pid}": True})
         if has_mutex:
-            subfunc_file.update_sw_acc_data(sw, "all_acc", **{f"{pid}": True})
+            subfunc_file.update_sw_acc_data(sw, Keywords.PID_MUTEX, **{f"{pid}": True})
             has_mutex_dict.update({pid: has_mutex})
     print(f"获取互斥体情况完成!互斥体列表：{has_mutex_dict}")
     return has_mutex_dict

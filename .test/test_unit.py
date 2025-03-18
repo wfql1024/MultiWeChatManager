@@ -189,5 +189,5 @@ class Test(TestCase):
         # print(file_utils.DictUtils.get_nested_value(data, "", "/", "/"))
         # file_utils.DictUtils.set_nested_values(data, None, "/", **{"/b/c": 2})
         # file_utils.DictUtils.set_nested_value(data, "a/b/c/d", "/", "/")
-        file_utils.DictUtils.clear_nested_values(data, "/", "a", "b/c", **{"/b/c": 2})
+        file_utils.DictUtils.clear_nested_values(data, *(), "a", "b/c")
         print(data)

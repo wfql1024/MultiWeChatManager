@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 
 from functions import subfunc_file, func_account
 from public_class import reusable_widget
+from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from public_class.reusable_widget import SubToolWnd
 from resources import Constants, Config
@@ -233,7 +234,7 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
         for sw in sw_acc_data.keys():
             sw_data = sw_acc_data[sw]
             for acc in sw_data.keys():
-                if acc == "all_acc":
+                if acc == Keywords.PID_MUTEX:
                     continue
                 if table_tag == "hidden" and sw_data[acc].get("hidden", None) != True:
                     continue

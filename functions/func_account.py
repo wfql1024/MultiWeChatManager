@@ -327,7 +327,7 @@ def get_sw_acc_list(_root, root_class, sw):
     print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
-    has_mutex = False
+    has_mutex = True
     pid_dict = dict(proc_dict)
     multiple_status = sw_class.multiple_state
     if multiple_status == "已开启":

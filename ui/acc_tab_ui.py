@@ -120,6 +120,7 @@ class AccTabUI:
     def create_account_list_ui(self, result):
         """账号列表获取成功，加载列表"""
         def slowly_create():
+            printer.vital("刷新")
             print(f"清除旧界面...")
             if self.tab_frame is not None and self.tab_frame.winfo_exists():
                 for widget in self.tab_frame.winfo_children():

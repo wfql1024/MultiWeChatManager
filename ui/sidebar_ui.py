@@ -1,8 +1,27 @@
-import ctypes
-import threading
-import time
 import tkinter as tk
 from tkinter import messagebox, ttk
+import ctypes
+from ctypes import wintypes
+import threading
+import time
+
+# 定义 Windows API 函数
+user32 = ctypes.windll.user32
+
+# 手动定义 WINDOWPLACEMENT 结构体
+class WINDOWPLACEMENT(ctypes.Structure):
+    _fields_ = [
+        ("length", ctypes.c_uint),
+        ("flags", ctypes.c_uint),
+        ("showCmd", ctypes.c_uint),
+        ("ptMinPosition", wintypes.POINT),
+        ("ptMaxPosition", wintypes.POINT),
+        ("rcNormalPosition", wintypes.RECT),
+    ]
+
+# 定义窗口状态常量
+SW_MAXIMIZE = 3
+SW_RESTORE = 9
 
 import win32api
 import win32con
@@ -138,37 +157,45 @@ def create_right_panel(frame_hwnd, x, width, height):
     return right_panel_hwnd
 
 
-def embed_wnd_into_right_panel(right_panel_hwnd, target_hwnd):
-    """
-    将微信窗口嵌入到右侧主窗口中，并最大化
-    """
-    # 设置微信窗口的父窗口为右侧主窗口
-    ctypes.windll.user32.SetParent(target_hwnd, right_panel_hwnd)
 
-    # 获取右侧主窗口的大小
-    right_rect = win32gui.GetClientRect(right_panel_hwnd)
 
-    # 设置微信窗口的位置和大小
-    win32gui.SetWindowPos(
-        target_hwnd,  # 目标窗口句柄
-        None,  # 不改变 Z 顺序
-        0,  # X 坐标
-        0,  # Y 坐标
-        right_rect[2],  # 宽度为右侧主窗口的宽度
-        right_rect[3],  # 高度为右侧主窗口的高度
-        win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW  # 显示窗口
-    )
+# 定义监听线程
+def window_state_listener(hwnd_target, root):
+    while True:
+        # 获取目标窗口的状态
+        placement = WINDOWPLACEMENT()
+        placement.length = ctypes.sizeof(placement)
+        user32.GetWindowPlacement(hwnd_target, ctypes.byref(placement))
+
+        # 判断目标窗口的状态
+        if placement.showCmd == SW_MAXIMIZE:
+            # 目标窗口最大化，将我的窗口也最大化
+            print("最大化")
+            # root.state("zoomed")
+        elif placement.showCmd == SW_RESTORE:
+            # 目标窗口恢复常规大小，将我的窗口也恢复常规大小
+            print("恢复")
+            root.state("normal")
+            root.geometry("1600x800")
+
+        # 间隔 20ms
+        time.sleep(0.02)
 
 
 class SidebarUI:
     def __init__(self):
+        self.listener_running = None
+        self.root_hwnd = None
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
         self.root.title("窗口嵌入示例")
-        self.root.geometry("1600x800")  # 窗口大小
-        self.target_handle = None  # 存储目标窗口句柄
+        # self.root.geometry("1600x800")  # 窗口大小
+        self.hwnd_embed = None  # 存储目标窗口句柄
         self.left_frame_width = 96
+        self.pause_event = threading.Event()
         self.root.overrideredirect(True)  # 去除窗口标题栏
+
+        self.root_hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
 
         # 拖拽相关变量
         self.offset_x = 0
@@ -177,11 +204,13 @@ class SidebarUI:
         # 绑定鼠标事件实现拖拽功能
         self.root.bind("<Button-1>", self.start_drag)
         self.root.bind("<B1-Motion>", self.do_drag)
+        self.root.bind("<ButtonRelease-1>", self.stop_drag)
 
         # 左侧栏
         self.left_frame = tk.Frame(self.root, bg="gray", width=self.left_frame_width)
         self.left_frame.pack(side="left", fill="y")
         self.left_frame.pack_propagate(False)  # 禁止根据子控件调整大小
+        self.left_frame_hwnd = ctypes.windll.user32.GetParent(self.left_frame.winfo_id())
 
         # 输入框
         self.handle_entry = ttk.Entry(self.left_frame, width=5)
@@ -191,29 +220,33 @@ class SidebarUI:
         self.bind_button = tk.Button(self.left_frame, text="绑定窗口", command=self.bind_window)
         self.bind_button.pack(pady=10)
 
-        # 按钮：解绑
-        self.unbind_button = tk.Button(self.left_frame, text="解绑窗口", command=self.unbind_window)
-        self.unbind_button.pack(pady=10)
+        # # 按钮：解绑
+        # self.unbind_button = tk.Button(self.left_frame, text="解绑窗口", command=self.unbind_window)
+        # self.unbind_button.pack(pady=10)
 
         # 恢复窗口
         self.restore_button = tk.Button(self.left_frame, text="恢复窗口", command=self.restore_to_main_ui)
         self.restore_button.pack(pady=10)
 
-        # 剩余右侧区域（用于嵌入窗口的地方）
-        self.right_frame_hwnd = self.create_right_frame()
-        self.monitor_thread = threading.Thread(target=self.monitor_window_position, daemon=True)
-        self.monitor_thread.start()
-
         self.ensure_taskbar_visibility()
-        # self.nested_window_drag_thread = threading.Thread(target=self.monitor_nested_window_drag, daemon=True)
-        # self.nested_window_drag_thread.start()
+
+        self.nested_window_drag_thread = threading.Thread(target=self.monitor_nested_window_drag, daemon=True)
+        self.listener_running = True
+        self.nested_window_drag_thread.start()
 
     def restore_to_main_ui(self):
         for widget in self.root.winfo_children():
             widget.destroy()
+        try:
+            self.listener_running = False  # 停止线程
+            self.nested_window_drag_thread.join()  # 等待线程结束
+        except KeyboardInterrupt:
+            self.listener_running = False
+            self.nested_window_drag_thread.join()
         self.root_class.initialize_in_init()
         self.root.unbind("<Button-1>")
         self.root.unbind("<B1-Motion>")
+        self.root.unbind("<ButtonRelease-1>")
 
     @staticmethod
     def ensure_taskbar_visibility():
@@ -235,7 +268,7 @@ class SidebarUI:
         创建右侧嵌入区域的 Frame
         """
         right_frame = tk.Frame(self.root, bg="white")
-        right_frame.pack(side="right", fill="both", expand=True)
+        right_frame.pack(side="right")
 
         # 获取 Tkinter 窗口句柄
         hwnd = ctypes.windll.user32.GetParent(right_frame.winfo_id())
@@ -250,95 +283,102 @@ class SidebarUI:
             messagebox.showerror("错误", "请输入有效的窗口句柄 (数字)！")
             return
 
-        self.target_handle = int(handle)
-        if not win32gui.IsWindow(self.target_handle):
+        self.hwnd_embed = int(handle)
+        if not win32gui.IsWindow(self.hwnd_embed):
             messagebox.showerror("错误", "输入的句柄不是有效窗口！")
             return
 
         # 设置为右侧区域的子窗口
-        win32gui.SetParent(self.target_handle, self.right_frame_hwnd)
-        win32gui.ShowWindow(self.target_handle, win32con.SW_MAXIMIZE)
-        messagebox.showinfo("成功", f"窗口 {self.target_handle} 已嵌入！")
+        # win32gui.SetParent(self.hwnd_embed, None)
+        # win32gui.ShowWindow(self.hwnd_embed, win32con.SW_RESTORE)
+        messagebox.showinfo("成功", f"窗口 {self.hwnd_embed} 已嵌入！")
 
-    def unbind_window(self):
-        """
-        将目标窗口从右侧区域中解绑
-        """
-        if self.target_handle and win32gui.IsWindow(self.target_handle):
-            win32gui.SetParent(self.target_handle, None)
-            messagebox.showinfo("成功", f"窗口 {self.target_handle} 已解绑！")
-            self.target_handle = None
-        else:
-            messagebox.showerror("错误", "当前没有已绑定的窗口！")
+        # listener_thread = threading.Thread(
+        #     target=window_state_listener,
+        #     args=(self.hwnd_embed, self.root),
+        #     daemon=True
+        # )
+        # listener_thread.start()
 
-    def monitor_window_position(self):
-        """
-        实时调整目标窗口的位置，确保不会覆盖左侧栏
-        """
-        while True:
-            if self.target_handle and win32gui.IsWindow(self.target_handle):
-                # 获取程序窗口和右侧区域的大小
-                root_rect = win32gui.GetWindowRect(ctypes.windll.user32.GetParent(self.root.winfo_id()))
-                right_rect = win32gui.GetClientRect(self.right_frame_hwnd)
-
-                new_x = self.left_frame_width
-                new_y = 0
-                new_width = right_rect[2] - self.left_frame_width
-                new_height = right_rect[3]
-
-                # 调整嵌入窗口的位置和大小
-                win32gui.SetWindowPos(
-                    self.target_handle,
-                    None,
-                    new_x,
-                    new_y,
-                    new_width,
-                    new_height,
-                    win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW
-                )
-            time.sleep(0.05)
+    # def unbind_window(self):
+    #     """
+    #     将目标窗口从右侧区域中解绑
+    #     """
+    #     if self.hwnd_embed and win32gui.IsWindow(self.hwnd_embed):
+    #         win32gui.SetParent(self.hwnd_embed, None)
+    #         messagebox.showinfo("成功", f"窗口 {self.hwnd_embed} 已解绑！")
+    #         self.hwnd_embed = None
+    #     else:
+    #         messagebox.showerror("错误", "当前没有已绑定的窗口！")
 
     def monitor_nested_window_drag(self):
         """
         监控嵌套窗口的拖动行为，并同步调整主程序窗口的位置。
         """
-        last_position = None
-        while True:
-            if self.target_handle and win32gui.IsWindow(self.target_handle):
-                # 获取嵌套窗口的位置
-                nested_rect = win32gui.GetWindowRect(self.target_handle)
-                if last_position is None:
-                    last_position = nested_rect
+        while (self.listener_running):
+            if self.hwnd_embed and win32gui.IsWindow(self.hwnd_embed):
+                # 获取程序窗口和右侧区域的大小
+                embed_rect = win32gui.GetWindowRect(self.hwnd_embed)
+                panel_rect = win32gui.GetClientRect(self.left_frame_hwnd)
 
-                # 判断窗口是否移动
-                if nested_rect != last_position:
-                    # 计算嵌套窗口的移动量
-                    dx = nested_rect[0] - last_position[0]
-                    dy = nested_rect[1] - last_position[1]
+                new_x = - panel_rect[2] + embed_rect[0]
+                new_y = embed_rect[1]
+                new_height = embed_rect[3] - embed_rect[1]
 
-                    # 调整主窗口的位置
-                    main_x = self.root.winfo_x() + dx
-                    main_y = self.root.winfo_y() + dy
-                    self.root.geometry(f"+{main_x}+{main_y}")
+                self.root.geometry(f"{self.left_frame_width}x{new_height}+{new_x}+{new_y}")
+                print(embed_rect)
+                print(f"主窗口：{self.left_frame_width}x{new_height}+{new_x}+{new_y}")
 
-                    # 更新上次的位置记录
-                    last_position = nested_rect
-            time.sleep(0.00001)
+            self.pause_event.wait()
+            time.sleep(0.02)
 
     def start_drag(self, event):
         """
         记录鼠标起始位置
         """
+        print("记录鼠标起始位置")
         self.offset_x = event.x
         self.offset_y = event.y
+        self.pause_event.clear()
 
     def do_drag(self, event):
         """
         根据鼠标移动调整窗口位置
         """
+        print("根据鼠标移动调整窗口位置")
         x = self.root.winfo_x() + (event.x - self.offset_x)
         y = self.root.winfo_y() + (event.y - self.offset_y)
         self.root.geometry(f"+{x}+{y}")
+
+        if self.hwnd_embed and win32gui.IsWindow(self.hwnd_embed):
+            # 获取程序窗口和右侧区域的大小
+            root_rect = win32gui.GetWindowRect(self.root_hwnd)
+            panel_rect = win32gui.GetClientRect(self.left_frame_hwnd)
+            embed_rect = win32gui.GetWindowRect(self.hwnd_embed)
+
+            new_x = panel_rect[2] + root_rect[0]
+            new_y = root_rect[1]
+            new_height = root_rect[3] - root_rect[1]
+
+            # 调整嵌入窗口的位置和大小
+            win32gui.SetWindowPos(
+                self.hwnd_embed,
+                None,
+                new_x,
+                new_y,
+                embed_rect[2] - embed_rect[0],
+                new_height,
+                win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW
+            )
+            print(f"嵌入窗口：原宽度x{new_height}+{new_x}+{new_y}")
+
+    def stop_drag(self, event):
+        """
+        停止拖动
+        """
+        time.sleep(0.8)
+        self.pause_event.set()
+        print("停止拖动")
 
     @staticmethod
     def find_all_windows_by_class_and_title(class_name, window_title=None):

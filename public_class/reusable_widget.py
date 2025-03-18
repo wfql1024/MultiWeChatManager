@@ -350,18 +350,20 @@ class ActionableTreeView(ABC):
         :param rest_btn_dicts: 其他按钮信息
         """
         self.data_src = None
-        self.tree_frame = None
-        self.button_frame = None
-        self.label = None
-        self.title_frame = None
         self.hovered_item = None
-        self.checkbox_var = None
-        self.title = None
-        self.checkbox = None
         self.tooltips = {}
         self.selected_items = []
         self.func_of_id_col = None
         self.sw = None
+        self.quick_refresh_failed = None
+
+        self.tree_frame = None
+        self.title_frame = None
+        self.title = None
+        self.checkbox = None
+        self.checkbox_var = None
+        self.label = None
+        self.button_frame = None
 
         self.sort: Dict[str, bool] = {
 
@@ -396,14 +398,13 @@ class ActionableTreeView(ABC):
         self.tree = self.create_table(self.columns)
         self.display_table()
         self.set_table_style()
-        self.adjust_treeview_height(None)
-        self.adjust_table()
+        self._adjust_treeview_height(None)
+        self._adjust_table()
 
     def create_title(self):
+        # 框架=标题+列表
         self.tree_frame = ttk.Frame(self.main_frame)
         self.tree_frame.pack(side=tk.TOP, fill=tk.X)
-
-        # 框架=标题+列表
         self.title_frame = ttk.Frame(self.tree_frame)
         self.title_frame.pack(side=tk.TOP, fill=tk.X,
                               padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
@@ -461,7 +462,7 @@ class ActionableTreeView(ABC):
         for col in columns:
             tree.heading(
                 col, text=col,
-                command=lambda c=col: self.apply_or_switch_col_order(c)
+                command=lambda c=col: self._apply_or_switch_col_order(c)
             )
             tree.column(col, anchor='center')  # 设置列宽
             self.sort[col] = True
@@ -606,7 +607,7 @@ class ActionableTreeView(ABC):
                     tooltips, btn_dict["btn"], len(selected_rows),
                     btn_dict["tip_scopes_dict"])
 
-    def on_selection_in_tree(self, event=None):
+    def on_single_click_item(self, event=None):
         tree = event.widget
         selected_items = self.selected_items
         item_id = tree.identify_row(event.y)
@@ -623,7 +624,7 @@ class ActionableTreeView(ABC):
         # 只对叶子节点响应
         if tree.get_children(item_id):
             # print(tree.item(item_id, "open"))
-            self.adjust_treeview_height(event)
+            self._adjust_treeview_height(event)
             self.parent_class.scrollable_canvas.refresh_canvas()
             return
 
@@ -644,7 +645,7 @@ class ActionableTreeView(ABC):
                 self.get_selected_values()  # 实时更新选中行显示
                 self.update_top_title()
 
-    def on_double_selection_in_tree(self, event=None):
+    def on_double_click_item(self, event=None):
         double_click_func = lambda: self.major_btn_dict["func"](self.selected_items)
 
         tree = self.tree.nametowidget(self.tree)
@@ -662,7 +663,7 @@ class ActionableTreeView(ABC):
         # 如果节点有子节点，则不触发双击；只对叶子节点触发
         if tree.get_children(item_id):
             # print(tree.item(item_id, "open"))
-            self.adjust_treeview_height(event)
+            self._adjust_treeview_height(event)
             self.parent_class.scrollable_canvas.refresh_canvas()
             return
 
@@ -724,7 +725,7 @@ class ActionableTreeView(ABC):
                 if col in tree["columns"]:
                     tree.column(col, width=width)  # 设置合适的宽度
 
-    def adjust_treeview_height(self, event):
+    def _adjust_treeview_height(self, event):
         # print("触发表高调整")
         # print(event)
         if event:
@@ -741,7 +742,7 @@ class ActionableTreeView(ABC):
 
         # return "break"
 
-    def apply_or_switch_col_order(self, col=None):
+    def _apply_or_switch_col_order(self, col=None):
         """
         切换列排序或应用列排序，支持多级 TreeView，若不传入 col，则应用列排序
         :param col: 列
@@ -803,26 +804,34 @@ class ActionableTreeView(ABC):
         else:
             subfunc_file.save_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
 
-    def adjust_table(self):
+    def _adjust_table(self):
         """
         绑定事件以实现自适应调整表格
         :return: 结束
         """
+        self.quick_refresh_failed = False
         tree = self.tree.nametowidget(self.tree)
 
         if len(tree.get_children()) == 0:
+            # 如果条目数量为 0，隐藏控件
             self.tree_frame.pack_forget()
+        else:
+            # 如果条目数量不为 0，且控件未显示，则显示控件
+            if not self.tree_frame.winfo_ismapped():
+                # 摆烂，直接标准刷新吧
+                # print(f"{tree}这里出现问题")
+                self.quick_refresh_failed = True
 
         self.update_top_title()
         widget_utils.UnlimitedClickHandler(
             self.root,
             tree,
-            partial(self.on_selection_in_tree),
-            partial(self.on_double_selection_in_tree)
+            partial(self.on_single_click_item),
+            partial(self.on_double_click_item)
         )
         tree.bind("<Leave>", partial(self.on_leave))
         tree.bind("<Motion>", partial(self.on_mouse_motion))
-        self.apply_or_switch_col_order()
+        self._apply_or_switch_col_order()
 
     def quick_refresh_items(self, data_src):
         """
@@ -838,11 +847,15 @@ class ActionableTreeView(ABC):
             tree.delete(i)
 
         self.display_table()
-        self.adjust_treeview_height(None)
-        self.adjust_table()
+        self._adjust_treeview_height(None)
+        self._adjust_table()
+        if self.quick_refresh_failed is True:
+            # self.quick_refresh_failed = False
+            raise Exception("快速刷新失败")
         self.selected_items.clear()
         self.update_top_title()
         # self.selected_values.clear()
+
 
 
 class SubToolWnd(ABC):

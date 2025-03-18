@@ -179,12 +179,11 @@ class SettingWnd(SubToolWnd, ABC):
             self.after()
             self.wnd.destroy()
 
-    def on_close(self):
+    def finally_do(self):
         self.check_bools()
         if self.need_to_clear_acc:
             subfunc_file.clear_some_acc_data(self.sw)
         self.after()
-        self.wnd.destroy()
 
     def validate_paths(self):
         self.inst_path = self.inst_path_var.get()
