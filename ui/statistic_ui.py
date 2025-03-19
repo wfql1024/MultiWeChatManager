@@ -2,8 +2,8 @@ import tkinter as tk
 from abc import ABC
 from tkinter import ttk
 
-from public_class import reusable_widget
-from public_class.reusable_widget import SubToolWnd
+from public_class import reusable_widgets
+from public_class.reusable_widgets import SubToolWnd
 from resources import Config, Constants
 from utils import string_utils
 from utils.file_utils import JsonUtils
@@ -42,7 +42,7 @@ class StatisticWnd(SubToolWnd, ABC):
 
     def load_content(self):
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widget.ScrollableCanvas(self.wnd)
+        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.wnd)
         self.main_frame = self.scrollable_canvas.main_frame
 
         self.create_manual_table()

@@ -5,7 +5,7 @@ from tkinter import ttk
 
 from PIL import Image, ImageTk
 
-from public_class.reusable_widget import SubToolWnd
+from public_class.reusable_widgets import SubToolWnd
 
 
 class RewardsWnd(SubToolWnd, ABC):

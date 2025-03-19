@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 
 from functions import func_file, subfunc_file, func_setting, subfunc_sw, func_login, func_hotkey
-from public_class import reusable_widget
+from public_class import reusable_widgets
 from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from resources import Config, Constants
@@ -114,7 +114,7 @@ class MainWindow:
 
         # 创建状态栏
         if self.statusbar_class is None or not self.statusbar_class.status_bar.winfo_exists():
-            self.statusbar_class = reusable_widget.StatusBar(self.root, self, self.debug)
+            self.statusbar_class = reusable_widgets.StatusBar(self.root, self, self.debug)
         self.hotkey_manager = func_hotkey.HotkeyManager()
 
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE

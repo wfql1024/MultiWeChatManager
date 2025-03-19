@@ -5,7 +5,7 @@ from functools import partial
 from tkinter import ttk, messagebox
 
 from functions import subfunc_file, func_account, func_config, func_login
-from public_class import reusable_widget
+from public_class import reusable_widgets
 from public_class.global_members import GlobalMembers
 from resources import Constants, Config, Strings
 from ui import treeview_row_ui, classic_row_ui, menu_ui
@@ -136,7 +136,7 @@ class AccTabUI:
             manual_login_button.pack(side=tk.LEFT)
 
             # 创建一个可以滚动的画布，并放置一个主框架在画布上
-            self.scrollable_canvas = reusable_widget.ScrollableCanvas(self.tab_frame)
+            self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
             self.main_frame = self.scrollable_canvas.main_frame
 
         print(f"渲染账号列表...")

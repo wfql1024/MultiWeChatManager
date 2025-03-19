@@ -11,8 +11,8 @@ import psutil
 from PIL import Image, ImageTk
 
 from functions import func_detail, subfunc_file
-from public_class import reusable_widget
-from public_class.reusable_widget import SubToolWnd
+from public_class import reusable_widgets
+from public_class.reusable_widgets import SubToolWnd
 from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
@@ -99,7 +99,7 @@ class DetailWnd(SubToolWnd, ABC):
         hotkey_frame.pack(anchor="w", **Constants.T_WGT_PACK)
         hotkey_label = ttk.Label(hotkey_frame, text="热键：")
         hotkey_label.pack(side=tk.LEFT, anchor="w")
-        self.hotkey_entry_class = reusable_widget.HotkeyEntry4Keyboard(hotkey, hotkey_frame)
+        self.hotkey_entry_class = reusable_widgets.HotkeyEntry4Keyboard(hotkey, hotkey_frame)
 
         # 隐藏账号
         hidden_frame = ttk.Frame(frame)

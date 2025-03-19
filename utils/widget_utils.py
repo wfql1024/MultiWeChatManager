@@ -2,7 +2,9 @@ import re
 import tkinter as tk
 import webbrowser
 from functools import partial
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Dict
+
+from public_class.custom_classes import Condition
 
 
 class UnlimitedClickHandler:
@@ -270,69 +272,24 @@ def insert_two_lines(text_widget, line_list):
     text_widget.see(tk.END)  # 确保插入的文本可以显示在视图中
 
 
-def enable_widget_with_condition(
-        widget, condition: Tuple[int, List[Tuple[Optional[int], Optional[int]]]]):
-    """
-    根据条件动态启用控件。
-
-    Args:
-        widget: 需要设置状态的 tkinter 控件。
-        condition: 一个元组，形式为 (数值, [(最小允许值, 最大允许值), ...])。
-                   - 数值: 用于判断的当前值。
-                   - ranges: 一个包含多个元组的列表，每个元组代表一个区间 (最小允许值, 最大允许值)。
-                             - 最小允许值: 若为 None，则不限制最小值。
-                             - 最大允许值: 若为 None，则不限制最大值。
-
-    操作:
-        如果数值满足任意一个区间的范围，则将控件设置为 "normal"；
-        否则设置为 "disabled"。
-    """
-    # 解包 condition
-    value, ranges = condition
-
-    # 遍历所有区间，检查是否满足任意一个区间
-    is_valid = any(
-        (min_value is None or value >= min_value) and (max_value is None or value <= max_value)
-        for min_value, max_value in ranges
-    )
+def enable_widget_with_condition(widget, condition: Condition):
 
     # 设置控件状态
-    if is_valid:
+    if condition.check():
         widget.config(state="normal")
     else:
         widget.config(state="disabled")
 
 
-def set_widget_tip_with_condition(tooltips, widget, value_to_check, tip_scopes_dict):
-    """
-    根据条件动态绑定或解绑控件的提示信息 (tooltip)。
+def set_widget_tip_with_condition(tooltips, widget, tip_condition_dict: Dict[str, Condition]):
 
-    Args:
-        tooltips (dict): 存储 widget 和对应 Tooltip 实例的字典。
-        widget: 需要绑定提示信息的 tkinter 控件。
-        value_to_check : 待比较的值。
-        tip_scopes_dict (list of tuples, optional): 一个包含tip和区间列表的字典。
-                                              每个区间的形式为 (最小允许值, 最大允许值)。
-                                              - 最小允许值: 若为 None，则不限制最小值。
-                                              - 最大允许值: 若为 None，则不限制最大值。
-
-    操作:
-        - 如果满足任意一个区间的范围条件，则绑定提示信息。
-        - 如果不满足任何区间的范围条件，则解绑提示信息。
-    """
     # 初始化解绑已有的提示
     widget.nametowidget(widget).unbind("<Enter>")
     widget.nametowidget(widget).unbind("<Leave>")
 
-    for tip, scopes in tip_scopes_dict.items():
-        # 遍历所有区间，检查是否满足某一个区间
-        is_valid = any(
-            (min_value is None or value_to_check >= min_value) and (max_value is None or value_to_check <= max_value)
-            for min_value, max_value in scopes
-        )
-        # print(tip, scopes, is_valid)
-        # 根据条件判断是否绑定或解绑提示
-        if is_valid:
+    for tip, condition in tip_condition_dict.items():
+        # # 根据条件判断是否绑定或解绑提示
+        if condition.check():
             if widget not in tooltips:
                 tooltips[widget] = dict()
             tooltips[widget][tip] = Tooltip(widget, tip)

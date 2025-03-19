@@ -10,7 +10,7 @@ from PIL import Image, ImageTk
 
 from functions import func_update, subfunc_file
 from public_class.enums import Keywords
-from public_class.reusable_widget import SubToolWnd
+from public_class.reusable_widgets import SubToolWnd
 from resources import Config, Strings, Constants
 from ui import update_log_ui
 from utils import widget_utils

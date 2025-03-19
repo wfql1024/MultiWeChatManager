@@ -8,7 +8,7 @@ from functools import partial
 from tkinter import messagebox, ttk
 
 from functions import func_update, subfunc_file
-from public_class.reusable_widget import SubToolWnd
+from public_class.reusable_widgets import SubToolWnd
 from resources import Constants
 from utils import file_utils, sys_utils
 

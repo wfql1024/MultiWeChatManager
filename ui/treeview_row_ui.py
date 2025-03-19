@@ -5,8 +5,10 @@ from collections.abc import Sized
 from PIL import ImageTk, Image
 
 from functions import func_config, func_account, subfunc_file, subfunc_sw
-from public_class import reusable_widget
+from public_class import reusable_widgets
+from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
+from public_class.reusable_widgets import ActionableTreeView
 from resources import Constants, Strings
 from utils import string_utils
 from utils.logger_utils import mylogger as logger
@@ -34,9 +36,11 @@ class TreeviewRowUI:
                 "text": "一键退出",
                 "btn": None,
                 "func": self.acc_tab_ui.to_quit_accounts,
-                "enable_scopes": [(1, None)],
+                "enable_scopes":
+                    Condition(None, Condition.ConditionType.OR_SCOPE,[(1, None)]),
                 "tip_scopes_dict": {
-                    "请选择要退出的账号": [(0, 0)],
+                    "请选择要退出的账号":
+                        Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)])
                 }
             },
             "auto_login_btn": {
@@ -44,19 +48,24 @@ class TreeviewRowUI:
                 "btn": None,
                 "tip": "请选择要登录的账号",
                 "func": self.acc_tab_ui.to_auto_login,
-                "enable_scopes": [(1, None)],
+                "enable_scopes":
+                    Condition(None, Condition.ConditionType.OR_SCOPE,[(1, None)]),
                 "tip_scopes_dict": {
-                    "请选择要登录的账号": [(0, 0)],
+                    "请选择要登录的账号":
+                        Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)])
                 }
             },
             "config_btn": {
                 "text": "❐配 置",
                 "btn": None,
                 "func": self.acc_tab_ui.to_create_config,
-                "enable_scopes": [(1, 1)],
+                "enable_scopes":
+                    Condition(None, Condition.ConditionType.OR_SCOPE,[(1, 1)]),
                 "tip_scopes_dict": {
-                    "请选择一个账号进行配置，伴有符号为推荐配置账号": [(0, 0)],
-                    "只能配置一个账号哦~": [(2, None)],
+                    "请选择一个账号进行配置，伴有符号为推荐配置账号":
+                        Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)]),
+                    "只能配置一个账号哦~":
+                        Condition(None, Condition.ConditionType.OR_SCOPE,[(2, None)])
                 }
             }
         }
@@ -74,7 +83,7 @@ class TreeviewRowUI:
                 self, "logout", "未登录：", self.btn_dict["auto_login_btn"])
 
 
-class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
+class AccLoginTreeView(ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.can_quick_refresh = None
@@ -87,8 +96,9 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
         super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
-        self.root = self.parent_class.root
-        self.acc_tab_ui = self.acc_tab_ui
+        self.root_class = GlobalMembers.root_class
+        self.root = self.root_class.root
+        self.acc_tab_ui = self.root_class.acc_tab_ui
         self.sw = self.acc_tab_ui.sw
 
         self.data_src = self.parent_class.acc_list_dict[self.table_tag]

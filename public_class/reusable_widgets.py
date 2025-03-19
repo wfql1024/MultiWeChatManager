@@ -3,13 +3,13 @@ import sys
 import tkinter as tk
 from abc import ABC, abstractmethod
 from functools import partial
-from itertools import chain
 from tkinter import ttk
 from typing import Dict
 
 import keyboard
 
 from functions import subfunc_file, subfunc_sw
+from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
 from resources import Constants
 from utils import widget_utils, string_utils, debug_utils, hwnd_utils
@@ -610,6 +610,7 @@ class ActionableTreeView(ABC):
         tooltips = self.tooltips
         major_btn_dict = self.major_btn_dict
         rest_btn_dicts = self.rest_btn_dicts
+        all_buttons = (major_btn_dict, *rest_btn_dicts)
 
         # 根据列表是否有可选设置复选框相关事件的绑定
         if len(all_usable_rows) == 0:
@@ -630,16 +631,27 @@ class ActionableTreeView(ABC):
                 checkbox_var.set(0)
 
         # 控件的状态设置和提示设置
-        widget_utils.enable_widget_with_condition(checkbox, (len(all_usable_rows), [(1, None)]))
+        widget_utils.enable_widget_with_condition(
+            checkbox,
+            Condition(len(all_usable_rows), Condition.ConditionType.OR_SCOPE, [(1, None)])
+        )
 
-        # 使用 chain 合并 major_btn_dict 和 btn_dicts，并进行遍历
-        for btn_dict in chain([major_btn_dict] if major_btn_dict is not None else [], rest_btn_dicts or []):
-            if btn_dict is not None:  # 确保 btn_dict 不是 None
-                widget_utils.enable_widget_with_condition(
-                    btn_dict["btn"], (len(selected_rows), btn_dict["enable_scopes"]))
-                widget_utils.set_widget_tip_with_condition(
-                    tooltips, btn_dict["btn"], len(selected_rows),
-                    btn_dict["tip_scopes_dict"])
+        # 完善按钮的状态设置和提示设置
+        for btn_dict in all_buttons:
+            if btn_dict is None:
+                continue
+            btn_dict["enable_scopes"].value = len(selected_rows)
+            for tip, condition in btn_dict["tip_scopes_dict"].items():
+                condition.value = len(selected_rows)
+
+        for btn_dict in all_buttons:
+            if btn_dict is None:  # 确保 btn_dict 不是 None
+                continue
+            widget_utils.enable_widget_with_condition(
+                btn_dict["btn"], btn_dict["enable_scopes"])
+            widget_utils.set_widget_tip_with_condition(
+                tooltips, btn_dict["btn"],
+                btn_dict["tip_scopes_dict"])
 
     def click_on_id_column(self, click_time, item_id):
         """
@@ -750,7 +762,8 @@ class ActionableTreeView(ABC):
                     # 叶子节点
                     self.click_on_leaf_item(click_time, item_id, column_id)
 
-        self._adjust_table()
+        self._adjust_treeview_height(None)
+        self._update_top_title()
         self._get_selected_values()  # 实时更新选中行显示
 
     def _on_leave_tree(self, _event):

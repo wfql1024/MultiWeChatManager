@@ -8,7 +8,7 @@ from tkinter.font import Font
 
 import winshell
 
-from public_class.reusable_widget import SubToolWnd
+from public_class.reusable_widgets import SubToolWnd
 from resources import Constants
 from utils import debug_utils
 

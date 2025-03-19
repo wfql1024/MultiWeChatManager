@@ -1,7 +1,7 @@
 from abc import ABC
 from tkinter import ttk
 
-from public_class.reusable_widget import SubToolWnd
+from public_class.reusable_widgets import SubToolWnd
 from resources import Constants
 
 

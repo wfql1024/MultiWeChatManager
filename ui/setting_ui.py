@@ -9,7 +9,7 @@ import win32com
 import win32com.client
 
 from functions import func_setting, subfunc_sw, subfunc_file, func_sw_dll
-from public_class.reusable_widget import SubToolWnd
+from public_class.reusable_widgets import SubToolWnd
 from resources import Constants
 from utils import sw_utils
 from utils.logger_utils import mylogger as logger
