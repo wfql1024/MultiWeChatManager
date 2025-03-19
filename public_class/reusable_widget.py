@@ -349,6 +349,7 @@ class ActionableTreeView(ABC):
         :param major_btn_dict: 主按钮信息
         :param rest_btn_dicts: 其他按钮信息
         """
+        self.last_single_item = None
         self.data_src = None
         self.hovered_item = None
         self.tooltips = {}
@@ -388,8 +389,6 @@ class ActionableTreeView(ABC):
         # 其他的成员变量
         self.root_class = self.parent_class.root_class
         self.root = self.root_class.root
-        self.acc_tab_ui = self.root_class.acc_tab_ui
-
         self.main_frame = self.parent_class.main_frame
 
         self.initialize_members_in_init()
@@ -398,8 +397,12 @@ class ActionableTreeView(ABC):
         self.tree = self.create_table(self.columns)
         self.display_table()
         self.set_table_style()
-        self._adjust_treeview_height(None)
         self._adjust_table()
+
+    @abstractmethod
+    def initialize_members_in_init(self):
+        """子类中重写方法若需要设置或新增成员变量，重写这个方法并在其中定义和赋值成员"""
+        pass
 
     def create_title(self):
         # 框架=标题+列表
@@ -449,11 +452,6 @@ class ActionableTreeView(ABC):
                 btn_dict["btn"] = btn
                 btn.pack(side=tk.RIGHT)
 
-    @abstractmethod
-    def initialize_members_in_init(self):
-        """子类中重写方法若需要设置或新增成员变量，重写这个方法并在其中定义和赋值成员"""
-        pass
-
     def create_table(self, columns: tuple = ()):
         """定义表格，根据表格类型选择手动或自动登录表格"""
         tree = ttk.Treeview(self.tree_frame, columns=columns, show='tree', height=1, style="RowTreeview")
@@ -486,6 +484,7 @@ class ActionableTreeView(ABC):
         tree.tag_configure("disabled", background="#F5F7FA", foreground="grey")
         tree.tag_configure("selected", background=selected_bg, foreground="black")
         tree.tag_configure("hover", background=hover_bg, foreground="black")
+        self.tree.bind("<Configure>", lambda e: self.on_tree_configure(e), add='+')
 
         # 以下为自定义样式示例
         # # 特定列的宽度和样式设置
@@ -498,7 +497,38 @@ class ActionableTreeView(ABC):
         #     e, self.root, col_width_to_show, columns_to_hide), add='+')
         pass
 
-    def get_selected_values(self):
+    def _adjust_table(self):
+        """
+        绑定事件以实现自适应调整表格
+        :return: 结束
+        """
+        self._adjust_treeview_height(None)
+
+        self.quick_refresh_failed = False
+        tree = self.tree.nametowidget(self.tree)
+
+        if len(tree.get_children()) == 0:
+            # 如果条目数量为 0，隐藏控件
+            self.tree_frame.pack_forget()
+        else:
+            # 如果条目数量不为 0，且控件未显示，则显示控件
+            if not self.tree_frame.winfo_ismapped():
+                # 摆烂，直接标准刷新吧
+                # print(f"{tree}这里出现问题")
+                self.quick_refresh_failed = True
+
+        self._update_top_title()
+        widget_utils.UnlimitedClickHandler(
+            self.root,
+            tree,
+            partial(self._on_click_in_tree, 1),
+            partial(self._on_click_in_tree, 2)
+        )
+        tree.bind("<Leave>", partial(self._on_leave_tree))
+        tree.bind("<Motion>", partial(self._moving_on_tree))
+        self._apply_or_switch_col_order()
+
+    def _get_selected_values(self):
         # 获取选中行的“账号”列数据
         tree = self.tree.nametowidget(self.tree)
         selected_items = self.selected_items
@@ -530,7 +560,7 @@ class ActionableTreeView(ABC):
         print(self.selected_values)
         print(tree.selection())
 
-    def toggle_top_checkbox(self, _event):
+    def _toggle_top_checkbox(self, _event):
         """
         切换顶部复选框状态，更新子列表
         :param _event: 触发事件的控件
@@ -551,24 +581,28 @@ class ActionableTreeView(ABC):
                     # 执行全选
                     # print(tree.item(item_id, "tags"))
                     selected_items.append(item_id)
-                    widget_utils.add_a_tag_to_item(tree, item_id, "selected")
+                    TreeUtils.add_a_tag_to_item(tree, item_id, "selected")
                 else:
                     # 取消所有选择
                     selected_items.clear()
-                    widget_utils.remove_a_tag_of_item(tree, item_id, "selected")
+                    TreeUtils.remove_a_tag_of_item(tree, item_id, "selected")
 
         # 获取选中行的数据包以及根据选中情况更新顶部状态
-        self.get_selected_values()
-        self.update_top_title()
+        self._get_selected_values()
+        self._update_top_title()
         return "break"
 
-    def update_top_title(self):
-        """根据AccountRow实例的复选框状态更新顶行复选框状态"""
+    def _update_top_title(self):
+        """
+        根据tree的状态更新顶行复选框状态
+        :return:
+        """
         # toggle方法
-        toggle = partial(self.toggle_top_checkbox)
+        toggle = partial(self._toggle_top_checkbox)
         tree = self.tree.nametowidget(self.tree)
 
         all_leaf_rows = TreeUtils.get_all_leaf_items_recursive(tree)
+        all_usable_rows = [i for i in all_leaf_rows if "disabled" not in tree.item(i, "tags")]
         selected_rows = self.selected_items
         title = self.title
         checkbox_var = self.checkbox_var
@@ -578,7 +612,7 @@ class ActionableTreeView(ABC):
         rest_btn_dicts = self.rest_btn_dicts
 
         # 根据列表是否有可选设置复选框相关事件的绑定
-        if len(all_leaf_rows) == 0:
+        if len(all_usable_rows) == 0:
             title.unbind("<Button-1>")
             for child in title.winfo_children():
                 child.unbind("<Button-1>")
@@ -588,15 +622,15 @@ class ActionableTreeView(ABC):
                 child.bind("<Button-1>", toggle, add="+")
 
             # 根据子列表的状态来更新顶部复选框
-            if len(selected_rows) == len(all_leaf_rows):
+            if len(selected_rows) == len(all_usable_rows):
                 checkbox_var.set(1)
-            elif 0 < len(selected_rows) < len(all_leaf_rows):
+            elif 0 < len(selected_rows) < len(all_usable_rows):
                 checkbox_var.set(-1)
             else:
                 checkbox_var.set(0)
 
         # 控件的状态设置和提示设置
-        widget_utils.enable_widget_with_condition(checkbox, (len(all_leaf_rows), [(1, None)]))
+        widget_utils.enable_widget_with_condition(checkbox, (len(all_usable_rows), [(1, None)]))
 
         # 使用 chain 合并 major_btn_dict 和 btn_dicts，并进行遍历
         for btn_dict in chain([major_btn_dict] if major_btn_dict is not None else [], rest_btn_dicts or []):
@@ -607,89 +641,134 @@ class ActionableTreeView(ABC):
                     tooltips, btn_dict["btn"], len(selected_rows),
                     btn_dict["tip_scopes_dict"])
 
-    def on_single_click_item(self, event=None):
-        tree = event.widget
-        selected_items = self.selected_items
-        item_id = tree.identify_row(event.y)
-
-        # 列标题不响应
-        if len(item_id) == 0:
-            return
-        # 列表未加载，跳过
-        if selected_items is None:
-            return
-
-        print("进入了单击判定")
-
-        # 只对叶子节点响应
-        if tree.get_children(item_id):
-            # print(tree.item(item_id, "open"))
-            self._adjust_treeview_height(event)
-            self.parent_class.scrollable_canvas.refresh_canvas()
-            return
-
-        if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
+    def click_on_id_column(self, click_time, item_id):
+        """
+        单击id列时，执行的操作
+        :param click_time: 点击次数
+        :param item_id: 所在行id
+        :return:
+        """
+        if click_time == 1:
             self.func_of_id_col(item_id)
-            pass
-        else:
-            if item_id:
-                # 不可选的行不触发
-                if "disabled" in tree.item(item_id, "tags"):
-                    return
+        elif click_time == 2:
+            subfunc_sw.switch_to_sw_account_wnd(item_id, self.root)
+
+    def click_on_col_headings(self, click_time, col_id):
+        """
+        单击列标题时，执行的操作
+        :param click_time: 点击次数
+        :param col_id: 所在列id
+        :return: 阻断继续切换
+        """
+        pass
+
+    def click_on_leaf_item(self, click_time, item_id, col_id):
+        """
+        单击叶子节点时，执行的操作
+        :param click_time: 点击次数
+        :param item_id: 所在行id
+        :param col_id: 所在列id
+        :return:
+        """
+        tree = self.tree
+        selected_items = self.selected_items
+
+        if click_time == 1:
+            # 不可选的行不触发
+            if "disabled" in tree.item(item_id, "tags"):
+                return
+
+            # 获取当前选中的所有项
+            current_selection = tree.selection()
+
+            if len(current_selection) == 1:
+                # 单选情况
+                self.last_single_item = item_id
                 if item_id in selected_items:
                     selected_items.remove(item_id)
-                    widget_utils.remove_a_tag_of_item(tree, item_id, "selected")
+                    TreeUtils.remove_a_tag_of_item(tree, item_id, "selected")
                 else:
                     selected_items.append(item_id)
-                    widget_utils.add_a_tag_to_item(tree, item_id, "selected")
-                self.get_selected_values()  # 实时更新选中行显示
-                self.update_top_title()
+                    TreeUtils.add_a_tag_to_item(tree, item_id, "selected")
+            else:
+                # 多选情况，以last_single_item的状态为准
+                all_need_to_be_selected = self.last_single_item in selected_items
+                for sel_id in current_selection:
+                    if all_need_to_be_selected:
+                        if sel_id not in selected_items:
+                            selected_items.append(sel_id)
+                            TreeUtils.add_a_tag_to_item(tree, sel_id, "selected")
+                    else:
+                        if sel_id in selected_items:
+                            selected_items.remove(sel_id)
+                            TreeUtils.remove_a_tag_of_item(tree, sel_id, "selected")
 
-    def on_double_click_item(self, event=None):
-        double_click_func = lambda: self.major_btn_dict["func"](self.selected_items)
+        elif click_time == 2:
+            # 取消所有选择
+            selected_items.clear()
+            for i in tree.get_children():
+                TreeUtils.remove_a_tag_of_item(tree, i, "selected")
+            # 只选择当前行
+            selected_items.append(item_id)
+            TreeUtils.add_a_tag_to_item(tree, item_id, "selected")
+            self.major_btn_dict["func"](selected_items)
 
-        tree = self.tree.nametowidget(self.tree)
-        selected_items = self.selected_items
+    def click_on_parent_item(self, click_time, item_id, col_id):
+        """
+        单击父节点时，执行的操作
+        :param click_time: 点击次数
+        :param item_id: 所在行id
+        :param col_id: 所在列id
+        :return:
+        """
+        pass
+
+    def _on_click_in_tree(self, click_time, event):
+        """
+        单击树时，执行的操作
+        :param click_time: 点击次数
+        :param event: 事件
+        :return
+        """
+        tree = event.widget
         item_id = tree.identify_row(event.y)
-        # print(f"item_id: {item_id}")
+        column_id = tree.identify_column(event.x)
+        print(f"{click_time}击({item_id}, {column_id})")
 
-        # 对列标题不触发
+        # 列标题
         if len(item_id) == 0:
-            return
-        # 不可选的不触发
-        if "disabled" in tree.item(item_id, "tags"):
-            return
-
-        # 如果节点有子节点，则不触发双击；只对叶子节点触发
-        if tree.get_children(item_id):
-            # print(tree.item(item_id, "open"))
-            self._adjust_treeview_height(event)
-            self.parent_class.scrollable_canvas.refresh_canvas()
-            return
-
-        # 图片列双击切换窗口
-        if tree.identify_column(event.x) == "#0":  # 检查是否点击了图片列
-            subfunc_sw.switch_to_sw_account_wnd(item_id, self.root)
+            self.click_on_col_headings(click_time, column_id)
         else:
-            if item_id:
-                # 取消所有选择
-                selected_items.clear()
-                for i in tree.get_children():
-                    widget_utils.remove_a_tag_of_item(tree, i, "selected")
-                # 只选择当前行
-                selected_items.append(item_id)
-                widget_utils.add_a_tag_to_item(tree, item_id, "selected")
+            # id列
+            if column_id == "#0":  # 检查是否点击了图片列
+                self.click_on_id_column(click_time, item_id)
+            else:
+                # 父节点
+                if tree.get_children(item_id):
+                    self.click_on_parent_item(click_time, item_id, column_id)
+                else:
+                    # 叶子节点
+                    self.click_on_leaf_item(click_time, item_id, column_id)
 
-                self.get_selected_values()  # 实时更新选中行显示
-                self.update_top_title()
-                double_click_func()
+        self._adjust_table()
+        self._get_selected_values()  # 实时更新选中行显示
 
-    def on_leave(self, _event):
+    def _on_leave_tree(self, _event):
+        """
+        鼠标离开树时，执行的操作
+        :param _event:
+        :return:
+        """
         if self.hovered_item is not None:
-            widget_utils.remove_a_tag_of_item(self.hovered_item[0], self.hovered_item[1], "hover")
+            TreeUtils.remove_a_tag_of_item(self.hovered_item[0], self.hovered_item[1], "hover")
             self.hovered_item = None
 
-    def on_mouse_motion(self, event):
+    def _moving_on_tree(self, event):
+        """
+        鼠标移动时，执行的操作
+        :param event:
+        :return:
+        """
         tree = event.widget
 
         # 获取当前鼠标所在的行 ID
@@ -698,32 +777,48 @@ class ActionableTreeView(ABC):
         # 检查是否是新的悬停行
         if self.hovered_item is not None:
             if self.hovered_item[0] != tree or self.hovered_item[1] != item:
-                widget_utils.remove_a_tag_of_item(tree, self.hovered_item[1], "hover")
-                widget_utils.add_a_tag_to_item(tree, item, "hover")
+                TreeUtils.remove_a_tag_of_item(tree, self.hovered_item[1], "hover")
+                TreeUtils.add_a_tag_to_item(tree, item, "hover")
                 # 更新当前悬停行
                 self.hovered_item = (tree, item)
         else:
-            widget_utils.add_a_tag_to_item(tree, item, "hover")
+            TreeUtils.add_a_tag_to_item(tree, item, "hover")
             # 更新当前悬停行
             self.hovered_item = (tree, item)
 
-    def adjust_columns_on_maximize_(self, event, wnd, col_width_to_show, columns_to_hide=None):
-        # print("触发列宽调整")
-        tree = self.tree.nametowidget(event.widget)
+    def on_tree_configure(self, event):
+        """
+        表格配置时，执行的操作
+        :param event:
+        :return:
+        """
 
-        if wnd.state() != "zoomed":
-            # 非最大化时隐藏列和标题
-            tree["show"] = "tree"  # 隐藏标题
-            for col in columns_to_hide:
-                if col in tree["columns"]:
-                    tree.column(col, width=0, stretch=False)
-        else:
-            # 最大化时显示列和标题
-            width = col_width_to_show
-            tree["show"] = "tree headings"  # 显示标题
-            for col in columns_to_hide:
-                if col in tree["columns"]:
-                    tree.column(col, width=width)  # 设置合适的宽度
+    def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
+        """
+        自适应调整列宽的方法
+        :param event:
+        :param wnd:
+        :param col_width_to_show:
+        :param columns_to_hide:
+        :return:
+        """
+        pass
+        # # print("触发列宽调整")
+        # tree = self.tree.nametowidget(event.widget)
+        #
+        # if wnd.state() != "zoomed":
+        #     # 非最大化时隐藏列和标题
+        #     tree["show"] = "tree"  # 隐藏标题
+        #     for col in columns_to_hide:
+        #         if col in tree["columns"]:
+        #             tree.column(col, width=0, stretch=False)
+        # else:
+        #     # 最大化时显示列和标题
+        #     width = col_width_to_show
+        #     tree["show"] = "tree headings"  # 显示标题
+        #     for col in columns_to_hide:
+        #         if col in tree["columns"]:
+        #             tree.column(col, width=width)  # 设置合适的宽度
 
     def _adjust_treeview_height(self, event):
         # print("触发表高调整")
@@ -804,35 +899,6 @@ class ActionableTreeView(ABC):
         else:
             subfunc_file.save_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
 
-    def _adjust_table(self):
-        """
-        绑定事件以实现自适应调整表格
-        :return: 结束
-        """
-        self.quick_refresh_failed = False
-        tree = self.tree.nametowidget(self.tree)
-
-        if len(tree.get_children()) == 0:
-            # 如果条目数量为 0，隐藏控件
-            self.tree_frame.pack_forget()
-        else:
-            # 如果条目数量不为 0，且控件未显示，则显示控件
-            if not self.tree_frame.winfo_ismapped():
-                # 摆烂，直接标准刷新吧
-                # print(f"{tree}这里出现问题")
-                self.quick_refresh_failed = True
-
-        self.update_top_title()
-        widget_utils.UnlimitedClickHandler(
-            self.root,
-            tree,
-            partial(self.on_single_click_item),
-            partial(self.on_double_click_item)
-        )
-        tree.bind("<Leave>", partial(self.on_leave))
-        tree.bind("<Motion>", partial(self.on_mouse_motion))
-        self._apply_or_switch_col_order()
-
     def quick_refresh_items(self, data_src):
         """
         快速刷新，需要传入display方法所需要的数据列表
@@ -847,15 +913,13 @@ class ActionableTreeView(ABC):
             tree.delete(i)
 
         self.display_table()
-        self._adjust_treeview_height(None)
         self._adjust_table()
         if self.quick_refresh_failed is True:
             # self.quick_refresh_failed = False
             raise Exception("快速刷新失败")
         self.selected_items.clear()
-        self.update_top_title()
+        self._update_top_title()
         # self.selected_values.clear()
-
 
 
 class SubToolWnd(ABC):

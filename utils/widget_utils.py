@@ -2,6 +2,7 @@ import re
 import tkinter as tk
 import webbrowser
 from functools import partial
+from typing import Tuple, List, Optional
 
 
 class UnlimitedClickHandler:
@@ -171,6 +172,25 @@ class TreeUtils:
 
         return leaf_items
 
+    @staticmethod
+    def remove_a_tag_of_item(tree, item_id, tag_to_remove):
+        current_tags = tree.item(item_id, "tags")
+        if isinstance(current_tags, str) and current_tags == "":
+            current_tags = ()  # 将空字符串转换为元组
+        new_tags = tuple(tag for tag in current_tags if tag != tag_to_remove)
+        tree.item(item_id, tags=list(new_tags))
+        # print(current_tags, new_tags, tree.item(item_id, "tags"))
+
+    @staticmethod
+    def add_a_tag_to_item(tree, item_id, tag_to_add):
+        current_tags = tree.item(item_id, "tags")
+        if isinstance(current_tags, str) and current_tags == "":
+            current_tags = ()  # 将空字符串转换为元组
+        current_tags = tuple(tag for tag in current_tags if tag != tag_to_add)  # 先去除，再添加
+        new_tags = current_tags + (tag_to_add,)
+        tree.item(item_id, tags=list(new_tags))
+        # print(current_tags, new_tags, tree.item(item_id, "tags"))
+
 
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
@@ -250,7 +270,8 @@ def insert_two_lines(text_widget, line_list):
     text_widget.see(tk.END)  # 确保插入的文本可以显示在视图中
 
 
-def enable_widget_with_condition(widget, condition):
+def enable_widget_with_condition(
+        widget, condition: Tuple[int, List[Tuple[Optional[int], Optional[int]]]]):
     """
     根据条件动态启用控件。
 
@@ -341,21 +362,3 @@ def enable_button_and_unbind_tip(tooltips, button):
         tooltips[button].widget.unbind("<Enter>")
         tooltips[button].widget.unbind("<Leave>")
         del tooltips[button]
-
-
-def remove_a_tag_of_item(tree, item_id, tag_to_remove):
-    current_tags = tree.item(item_id, "tags")
-    if isinstance(current_tags, str) and current_tags == "":
-        current_tags = ()  # 将空字符串转换为元组
-    new_tags = tuple(tag for tag in current_tags if tag != tag_to_remove)
-    tree.item(item_id, tags=list(new_tags))
-    # print(current_tags, new_tags, tree.item(item_id, "tags"))
-
-
-def add_a_tag_to_item(tree, item_id, tag_to_add):
-    current_tags = tree.item(item_id, "tags")
-    if isinstance(current_tags, str) and current_tags == "":
-        current_tags = ()  # 将空字符串转换为元组
-    new_tags = current_tags + (tag_to_add,)
-    tree.item(item_id, tags=list(new_tags))
-    # print(current_tags, new_tags, tree.item(item_id, "tags"))

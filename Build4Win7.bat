@@ -36,7 +36,7 @@ if exist "dist\微信多开管理器By37\微信多开管理器\微信多开管�
 )
 
 :: 复制快捷方式创建脚本到打包文件夹
-xcopy "click_me_to_create_lnk.bat" "dist\微信多开管理器By37\微信多开管理器\点我创建快捷方式.bat" /Y
+xcopy "click_me_to_create_lnk.bat" "dist\微信多开管理器By37\微信多开管理器\管理员身份创建快捷方式.bat" /Y
 
 echo 打包完成！
 

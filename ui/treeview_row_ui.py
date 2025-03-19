@@ -4,12 +4,13 @@ from collections.abc import Sized
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_account, subfunc_file
+from functions import func_config, func_account, subfunc_file, subfunc_sw
 from public_class import reusable_widget
 from public_class.global_members import GlobalMembers
 from resources import Constants, Strings
-from utils import widget_utils, string_utils
+from utils import string_utils
 from utils.logger_utils import mylogger as logger
+from utils.widget_utils import TreeUtils
 
 
 class TreeviewRowUI:
@@ -89,7 +90,6 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
         self.root = self.parent_class.root
         self.acc_tab_ui = self.acc_tab_ui
         self.sw = self.acc_tab_ui.sw
-        self.func_of_id_col = self.acc_tab_ui.to_open_acc_detail
 
         self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.data_dir = self.root_class.sw_classes[self.sw].data_dir
@@ -114,12 +114,6 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
         tree.column("原始id", anchor='center')
         tree.column("当前id", anchor='center')
         tree.column("昵称", anchor='center')
-
-        # 在非全屏时，隐藏特定列
-        columns_to_hide = ["原始id", "当前id", "昵称"]
-        col_width_to_show = int(self.root.winfo_screenwidth() / 5)
-        self.tree.bind("<Configure>", lambda e: self.adjust_columns_on_maximize_(
-            e, self.root, col_width_to_show, columns_to_hide), add='+')
 
     def display_table(self):
         tree = self.tree.nametowidget(self.tree)
@@ -170,10 +164,47 @@ class AccLoginTreeView(reusable_widget.ActionableTreeView, ABC):
                                 display_name, config_status, pid, account, alias, nickname))
 
             if config_status == "无配置" and login_status == "logout":
-                widget_utils.add_a_tag_to_item(tree, iid, "disabled")
+                TreeUtils.add_a_tag_to_item(tree, iid, "disabled")
 
         self.can_quick_refresh = True
         self.root_class.quick_refresh = True
+
+    def click_on_id_column(self, click_time, item_id):
+        """
+        单击id列时，执行的操作
+        :param click_time: 点击次数
+        :param item_id: 所在行id
+        :return:
+        """
+        if click_time == 1:
+            self.acc_tab_ui.to_open_acc_detail(item_id)
+        elif click_time == 2:
+            subfunc_sw.switch_to_sw_account_wnd(item_id, self.root)
+
+    def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
+        # print("触发列宽调整")
+        tree = self.tree.nametowidget(event.widget)
+
+        if wnd.state() != "zoomed":
+            # 非最大化时隐藏列和标题
+            tree["show"] = "tree"  # 隐藏标题
+            for col in columns_to_hide:
+                if col in tree["columns"]:
+                    tree.column(col, width=0, stretch=False)
+        else:
+            # 最大化时显示列和标题
+            width = col_width_to_show
+            tree["show"] = "tree headings"  # 显示标题
+            for col in columns_to_hide:
+                if col in tree["columns"]:
+                    tree.column(col, width=width)  # 设置合适的宽度
+
+    def on_tree_configure(self, event):
+        # 在非全屏时，隐藏特定列
+        columns_to_hide = ["原始id", "当前id", "昵称"]
+        col_width_to_show = int(self.root.winfo_screenwidth() / 5)
+        self.tree.bind("<Configure>", lambda e: self.adjust_columns(
+            e, self.root, col_width_to_show, columns_to_hide), add='+')
 
 
 

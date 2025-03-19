@@ -3,7 +3,7 @@ from abc import ABC
 
 from PIL import Image, ImageTk
 
-from functions import subfunc_file, func_account
+from functions import subfunc_file, func_account, subfunc_sw
 from public_class import reusable_widget
 from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
@@ -197,7 +197,6 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
         self.columns = (" ", "快捷键", "隐藏", "自启动", "原始id", "昵称")
         sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
         self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
-        self.func_of_id_col = self.parent_class.to_open_acc_detail
 
     def set_table_style(self):
         super().set_table_style()
@@ -216,12 +215,6 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
                     width=Constants.COLUMN_WIDTH["隐藏"], anchor='center', stretch=tk.NO)
         tree.column("原始id", anchor='center')
         tree.column("昵称", anchor='center')
-
-        # 在非全屏时，隐藏特定列
-        columns_to_hide = ["原始id", "当前id", "昵称"]
-        col_width_to_show = int(self.root.winfo_screenwidth() / 5)
-        self.tree.bind("<Configure>", lambda e: self.adjust_columns_on_maximize_(
-            e, self.wnd, col_width_to_show, columns_to_hide), add='+')
 
     def display_table(self):
         tree = self.tree.nametowidget(self.tree)
@@ -281,7 +274,7 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
                                 values=string_utils.clean_texts(
                                     display_name, hotkey, hidden, auto_start, acc, nickname))
 
-    def adjust_columns_on_maximize_(self, event, wnd, col_width_to_show, columns_to_hide=None):
+    def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
         # print("触发列宽调整")
         tree = self.tree.nametowidget(event.widget)
 
@@ -298,6 +291,28 @@ class AccManageTreeView(reusable_widget.ActionableTreeView, ABC):
             for col in columns_to_hide:
                 if col in tree["columns"]:
                     tree.column(col, width=width)  # 设置合适的宽度
+
+    def click_on_id_column(self, click_time, item_id):
+        """
+        单击id列时，执行的操作
+        :param click_time: 点击次数
+        :param item_id: 所在行id
+        :return:
+        """
+        if click_time == 1:
+            self.parent_class.to_open_acc_detail(item_id)
+
+    def on_tree_configure(self, event):
+        """
+        表格配置时，执行的操作
+        :param event:
+        :return:
+        """
+        # 在非全屏时，隐藏特定列
+        columns_to_hide = ["原始id", "当前id", "昵称"]
+        col_width_to_show = int(self.root.winfo_screenwidth() / 5)
+        self.tree.bind("<Configure>", lambda e: self.adjust_columns(
+            e, self.wnd, col_width_to_show, columns_to_hide), add='+')
 
 
 class AccEntity:

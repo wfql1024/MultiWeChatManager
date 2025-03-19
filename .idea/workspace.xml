@@ -4,21 +4,14 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="优化数据存取方法">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="优化数据存取方法，拾起侧栏视图，修复快速刷新bug">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_new_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_new_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_unit.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_unit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_account.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_account.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_login.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_login.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_sw.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_sw.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public_class/enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/enums.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Build4Win10+.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Build4Win10+.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Build4Win7.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Build4Win7.bat" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/public_class/reusable_widget.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/reusable_widget.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/acc_manager_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/acc_manager_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/acc_tab_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/acc_tab_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/setting_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/setting_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/sidebar_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/sidebar_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/treeview_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/treeview_row_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/widget_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/widget_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -170,7 +163,7 @@
     &quot;ShowUsagesActions.previewPropertyKey&quot;: &quot;true&quot;,
     &quot;com.codeium.enabled&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/SpaceDev/MyProj/DirTree&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/SpaceDev/MyProj/MultiWeChatManager&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
@@ -182,9 +175,9 @@
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\user_files" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\ui" />
-      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\decrypt\impl" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\Demo" />
     </key>
@@ -651,15 +644,7 @@
       <workItem from="1741706705819" duration="460000" />
       <workItem from="1742055673834" duration="5286000" />
       <workItem from="1742103268357" duration="99566000" />
-      <workItem from="1742296759056" duration="2028000" />
-    </task>
-    <task id="LOCAL-00214" summary="规整hwnd工具类中的方法排布，优化登录的点击按钮过程">
-      <option name="closed" value="true" />
-      <created>1736619296463</created>
-      <option name="number" value="00214" />
-      <option name="presentableId" value="LOCAL-00214" />
-      <option name="project" value="LOCAL" />
-      <updated>1736619296464</updated>
+      <workItem from="1742296759056" duration="33409000" />
     </task>
     <task id="LOCAL-00215" summary="规整hwnd工具类中的方法排布，优化清理字符方法，新增隐藏账号功能，重构TreeViewUI代码，优化配置显示，重构路径获取方法，利用抽象出来的类优化统计窗口代码，修复IDE编译条件下没有识别出使用低版本python导致载入溢出字符而出错的问题，重构控件状态及提示显示的代码……">
       <option name="closed" value="true" />
@@ -1045,7 +1030,15 @@
       <option name="project" value="LOCAL" />
       <updated>1742226459852</updated>
     </task>
-    <option name="localTasksCounter" value="263" />
+    <task id="LOCAL-00263" summary="优化数据存取方法，拾起侧栏视图，修复快速刷新bug">
+      <option name="closed" value="true" />
+      <created>1742298875439</created>
+      <option name="number" value="00263" />
+      <option name="presentableId" value="LOCAL-00263" />
+      <option name="project" value="LOCAL" />
+      <updated>1742298875440</updated>
+    </task>
+    <option name="localTasksCounter" value="264" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1110,7 +1103,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="测试不同方案的录制快捷键的实现" />
     <MESSAGE value="已实现快捷键的录制与应用" />
     <MESSAGE value="实机测试并修复遇见的问题" />
     <MESSAGE value="发布2.15.0.1458-Beta" />
@@ -1135,7 +1127,8 @@
     <MESSAGE value="测试适配3.9.12.51，4.0.2.26，4.0.2.28多开及防撤回" />
     <MESSAGE value="优化变量，优化方法" />
     <MESSAGE value="优化数据存取方法" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化数据存取方法" />
+    <MESSAGE value="优化数据存取方法，拾起侧栏视图，修复快速刷新bug" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化数据存取方法，拾起侧栏视图，修复快速刷新bug" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1150,7 +1143,7 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_multiple.coverage" NAME="wechat_multiple Coverage Results" MODIFIED="1726457491071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/mutex" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1742297375454" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1742394012793" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$hwnd_utils.coverage" NAME="hwnd_utils Coverage Results" MODIFIED="1732812542774" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_wechat_dll.coverage" NAME="func_wechat_dll Coverage Results" MODIFIED="1727833508675" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
