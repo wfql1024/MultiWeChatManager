@@ -51,6 +51,11 @@ class SW(str, Enum):
     WEIXIN = "Weixin"
     QQ = "QQ"
 
+class OnlineStatus(str, Enum):
+    LOGIN = "login"
+    LOGOUT = "logout"
+    UNKNOWN = "unknown"
+
 if __name__ == '__main__':
     print(Keywords.GLOBAL_SECTION)
     print(Keywords.GLOBAL_SECTION == "global")

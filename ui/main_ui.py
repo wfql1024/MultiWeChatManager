@@ -111,6 +111,7 @@ class MainWindow:
         style.configure("RowTreeview", background="#FFFFFF", foreground="black",
                         rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended")
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
+        style.configure("Mutex.TLabel", foreground="red")
 
         # 创建状态栏
         if self.statusbar_class is None or not self.statusbar_class.status_bar.winfo_exists():

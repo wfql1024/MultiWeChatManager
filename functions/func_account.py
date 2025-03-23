@@ -1,5 +1,4 @@
 import base64
-import itertools
 import os
 import subprocess
 import sys
@@ -11,6 +10,7 @@ import psutil
 from PIL import Image
 
 from functions import subfunc_file, func_config
+from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from resources import Constants
 from resources.config import Config
@@ -170,11 +170,14 @@ def silent_get_nickname(sw, acc_list, data_dir):
     return changed1 or changed2
 
 
-def silent_get_and_config(sw, login, logout):
+def silent_get_and_config(sw):
     root_class = GlobalMembers.root_class
     acc_tab_ui = root_class.acc_tab_ui
     root = root_class.root
     data_dir = root_class.sw_classes[sw].data_dir
+    # while True:
+    #     print("静默处理...")
+    #     time.sleep(1)
 
     # 悄悄执行检测昵称和头像
     need_to_notice = False
@@ -182,8 +185,12 @@ def silent_get_and_config(sw, login, logout):
     # 1. 获取所有账号节点的url和昵称，将空的账号返回
     accounts_need_to_get_avatar = []
     accounts_need_to_get_nickname = []
+
+    sw_data = subfunc_file.get_sw_acc_data(sw)
     # print(login, logout)
-    for acc in itertools.chain(login, logout):
+    for acc in sw_data:
+        if acc == Keywords.PID_MUTEX:
+            continue
         avatar_url, nickname = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None, nickname=None)
         if avatar_url is None:
             accounts_need_to_get_avatar.append(acc)
@@ -261,7 +268,7 @@ def get_sw_acc_list(_root, root_class, sw):
                         if wx_id not in excluded_dir_list:
                             proc_dict.append((wx_id, process_id))
                             logged_in_ids.add(wx_id)
-                            print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
+                            # print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
                             return
                     except Exception as e:
                         logger.error(e)
@@ -282,7 +289,7 @@ def get_sw_acc_list(_root, root_class, sw):
                         if wx_id not in ["all_users"]:
                             proc_dict.append((wx_id, process_id))
                             logged_in_ids.add(wx_id)
-                            print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
+                            # print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
                             return
                     except Exception as e:
                         logger.error(e)
@@ -305,11 +312,11 @@ def get_sw_acc_list(_root, root_class, sw):
         return False, "该平台未适配"
     pids = process_utils.get_process_ids_by_name(exe)
     pids = process_utils.remove_child_pids(pids)
-    print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
+    # print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
     if isinstance(pids, Iterable):
         for pid in pids:
             update_acc_list_by_pid(pid)
-    print(f"完成判断进程对应账号，用时：{time.time() - start_time:.4f} 秒")
+    # print(f"完成判断进程对应账号，用时：{time.time() - start_time:.4f} 秒")
 
     # print(proc_dict)
     # print(logged_in_ids)
@@ -322,16 +329,16 @@ def get_sw_acc_list(_root, root_class, sw):
     login = list(logged_in_ids & folders)
     logout = list(folders - logged_in_ids)
 
-    print(f"{sw}已登录：{login}")
-    print(f"{sw}未登录：{logout}")
-    print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
+    # print(f"{sw}已登录：{login}")
+    # print(f"{sw}未登录：{logout}")
+    # print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
 
     # 更新数据
     has_mutex = True
     pid_dict = dict(proc_dict)
     multiple_status = sw_class.multiple_state
     if multiple_status == "已开启":
-        print(f"由于是全局多开模式，直接所有has_mutex都为false")
+        # print(f"由于是全局多开模式，直接所有has_mutex都为false")
         for acc in login + logout:
             subfunc_file.update_sw_acc_data(sw, acc, pid=pid_dict.get(acc, None), has_mutex=False)
     else:
@@ -343,7 +350,7 @@ def get_sw_acc_list(_root, root_class, sw):
         # 更新json表中各微信进程的互斥体情况
         success, has_mutex = subfunc_file.update_has_mutex_from_all_acc(sw)
 
-    print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
+    # print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
     acc_list_dict = {
         "login": login,
         "logout": logout

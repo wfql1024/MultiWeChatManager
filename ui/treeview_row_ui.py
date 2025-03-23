@@ -5,10 +5,9 @@ from collections.abc import Sized
 from PIL import ImageTk, Image
 
 from functions import func_config, func_account, subfunc_file, subfunc_sw
-from public_class import reusable_widgets
 from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import ActionableTreeView
+from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants, Strings
 from utils import string_utils
 from utils.logger_utils import mylogger as logger
@@ -37,10 +36,10 @@ class TreeviewRowUI:
                 "btn": None,
                 "func": self.acc_tab_ui.to_quit_accounts,
                 "enable_scopes":
-                    Condition(None, Condition.ConditionType.OR_SCOPE,[(1, None)]),
+                    Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要退出的账号":
-                        Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)])
+                        Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
                 }
             },
             "auto_login_btn": {
@@ -49,10 +48,10 @@ class TreeviewRowUI:
                 "tip": "请选择要登录的账号",
                 "func": self.acc_tab_ui.to_auto_login,
                 "enable_scopes":
-                    Condition(None, Condition.ConditionType.OR_SCOPE,[(1, None)]),
+                    Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要登录的账号":
-                        Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)])
+                        Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
                 }
             },
             "config_btn": {
@@ -60,12 +59,12 @@ class TreeviewRowUI:
                 "btn": None,
                 "func": self.acc_tab_ui.to_create_config,
                 "enable_scopes":
-                    Condition(None, Condition.ConditionType.OR_SCOPE,[(1, 1)]),
+                    Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, 1)]),
                 "tip_scopes_dict": {
                     "请选择一个账号进行配置，伴有符号为推荐配置账号":
-                        Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)]),
+                        Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)]),
                     "只能配置一个账号哦~":
-                        Condition(None, Condition.ConditionType.OR_SCOPE,[(2, None)])
+                        Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(2, None)])
                 }
             }
         }

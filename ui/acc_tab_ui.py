@@ -6,6 +6,7 @@ from tkinter import ttk, messagebox
 
 from functions import subfunc_file, func_account, func_config, func_login
 from public_class import reusable_widgets
+from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
 from resources import Constants, Config, Strings
 from ui import treeview_row_ui, classic_row_ui, menu_ui
@@ -18,6 +19,7 @@ class AccTabUI:
 
     def __init__(self):
         # IDE初始化
+        self.acc_list_dict = None
         self.sw_class = None
         self.detail_ui_class = None
         self.settings_button = None
@@ -28,6 +30,7 @@ class AccTabUI:
         self.root_menu = None
         self.tab_frame = None
         self.sw = None
+        self.get_data_thread = None
 
         self.root_class = GlobalMembers.root_class
         self.sw_classes = self.root_class.sw_classes
@@ -58,18 +61,12 @@ class AccTabUI:
             self.root.destroy()
 
         # 刷新界面
-        def reload_func():
-            try:
-                self.root.after(0, self.refresh_frame, self.sw)
-            except Exception as e_reload:
-                logger.error(e_reload)
-                self.root.after(5000, self.refresh_frame, self.sw)
-
         try:
-            # 线程启动获取登录情况和渲染列表
-            threading.Thread(target=reload_func).start()
+            self.root.after(0, self.refresh_frame, self.sw)
         except Exception as e:
             logger.error(e)
+            self.root.after(3000, self.refresh_frame, self.sw)
+
 
     def refresh_frame(self, sw=None):
         """加载或刷新主界面"""
@@ -77,33 +74,33 @@ class AccTabUI:
         if sw != self.sw:
             return
 
-        print(f"锁定刷新按钮...")
-        self.root_menu.edit_menu.entryconfig("刷新", state="disabled")
+        def _get_data_thread(callback):
+            result = func_account.get_sw_acc_list(self.root, self, self.sw)
+            callback(result)
+
         self.start_time = time.time()
         print(f"计时开始：{time.time() - self.start_time:.4f}秒")
-        # 使用ThreadManager异步获取账户列表
-        print(f"获取登录状态...")
-        try:
-            # 线程启动获取登录情况和渲染列表
-            def thread_func():
-                self.root.after(0, self.create_main_ui)
+        _get_data_thread(self._update_result_from_result)
 
-            threading.Thread(target=thread_func).start()
-        except Exception as e:
-            logger.error(e)
+        print(f"锁定刷新按钮...")
+        self.root_menu.edit_menu.entryconfig("刷新", state="disabled")
+        print(f"获取登录状态...")
+        # self.create_main_ui()
+        self.root.after(0, self.create_main_ui)
+
+    def _update_result_from_result(self, result):
+        self.get_acc_list_answer = result
 
     def create_main_ui(self):
         """渲染主界面账号列表"""
         # 检测是否路径错误
         if self.root_menu.path_error is True:
             self.show_setting_error()
-
+        success, result = self.get_acc_list_answer
+        if success is not True:
+            self.show_setting_error()
         else:
-            success, result = func_account.get_sw_acc_list(self.root, self, self.sw)
-            if success is not True:
-                self.show_setting_error()
-            else:
-                self.create_account_list_ui(result)
+            self.create_account_list_ui()
 
         # print("创建完成，无论是错误界面还是正常界面，下面代码都要进行")
 
@@ -117,8 +114,10 @@ class AccTabUI:
         # 重新绑定标签切换事件
         self.sw_notebook.bind('<<NotebookTabChanged>>', self.root_class.on_tab_change)
 
-    def create_account_list_ui(self, result):
+    def create_account_list_ui(self):
         """账号列表获取成功，加载列表"""
+        success, result = self.get_acc_list_answer
+
         def slowly_create():
             printer.vital("刷新")
             print(f"清除旧界面...")
@@ -141,6 +140,7 @@ class AccTabUI:
 
         print(f"渲染账号列表...")
         acc_list_dict, _, mutex = result
+        self.acc_list_dict = acc_list_dict
         logins = self.sw_class.login_accounts = acc_list_dict["login"]
         logouts = self.sw_class.logout_accounts = acc_list_dict["logout"]
 
@@ -157,6 +157,8 @@ class AccTabUI:
                     acc_list_dict, _, _ = result
                     tree_class = self.sw_class.tree_ui.tree_class
                     if all(tree_class[t].can_quick_refresh for t in tree_class):
+                        # self.root.update_idletasks()
+                        # time.sleep(5)
                         # 快速刷新
                         for t in tree_class:
                             tree_class[t].quick_refresh_items(acc_list_dict[t])
@@ -176,22 +178,8 @@ class AccTabUI:
             self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(logins)), time.time() - self.start_time)
         printer.normal(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
 
-        # 获取已登录的窗口hwnd
-        func_account.get_main_hwnd_of_accounts(logins, self.sw)
-
-        # 进行静默获取头像及配置
-        def func():
-            func_account.silent_get_and_config(self.sw, logins, logouts)
-        threading.Thread(target=func).start()
-
-        # 先停止旧的监听线程
-        self.hotkey_manager.stop_hotkey_listener()
-        # 更新快捷键
-        self.hotkey_manager.load_hotkeys_from_json(Config.TAB_ACC_JSON_PATH)
-        # 开启监听线程
-        self.hotkey_manager.start_hotkey_listener()
-
         self.after_success_create_acc_ui_when_start()
+        self.after_success_create_acc_ui()
 
     def show_setting_error(self):
         """出错的话，选择已经有的界面中创建错误信息显示"""
@@ -219,6 +207,25 @@ class AccTabUI:
         self.root_class.to_login_auto_start_accounts()
 
         self.root_class.first_created_acc_ui = True
+
+    def after_success_create_acc_ui(self):
+        """成功创建账号列表才会执行"""
+        # 获取已登录的窗口hwnd
+        logins = self.acc_list_dict[OnlineStatus.LOGIN]
+        func_account.get_main_hwnd_of_accounts(logins, self.sw)
+
+        # 进行静默获取头像及配置
+        def func():
+            func_account.silent_get_and_config(self.sw)
+
+        threading.Thread(target=func).start()
+
+        # 先停止旧的监听线程
+        self.hotkey_manager.stop_hotkey_listener()
+        # 更新快捷键
+        self.hotkey_manager.load_hotkeys_from_json(Config.TAB_ACC_JSON_PATH)
+        # 开启监听线程
+        self.hotkey_manager.start_hotkey_listener()
 
     """功能区"""
 

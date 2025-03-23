@@ -8,7 +8,8 @@ from public_class import reusable_widgets
 from public_class.custom_classes import Condition
 from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWnd, ActionableTreeView
+from public_class.widget_frameworks import ActionableTreeView
+from public_class.reusable_widgets import SubToolWnd
 from resources import Constants, Config
 from utils import string_utils
 from utils.file_utils import JsonUtils
@@ -53,18 +54,18 @@ class AccManagerUI:
                 "text": "取消隐藏",
                 "btn": None,
                 "func": self.to_cancel_hiding_of_,
-                "enable_scopes": Condition(None, Condition.ConditionType.OR_SCOPE,[(1, None)]),
+                "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
-                    "请选择要取消隐藏的账号": Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)])
+                    "请选择要取消隐藏的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
                 }
             },
             "cancel_auto_start_btn": {
                 "text": "取消自启",
                 "btn": None,
                 "func": self.to_cancel_auto_start_of_,
-                "enable_scopes": Condition(None, Condition.ConditionType.OR_SCOPE,[(1, None)]),
+                "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
-                    "请选择要取消自启的账号": Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)])
+                    "请选择要取消自启的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
                 },
             },
             "add_hiding_btn": {
@@ -72,9 +73,9 @@ class AccManagerUI:
                 "btn": None,
                 "tip": "请选择要隐藏的账号",
                 "func": self.to_add_hiding_of_,
-                "enable_scopes": Condition(None, Condition.ConditionType.OR_SCOPE,[(1, None)]),
+                "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
-                    "请选择要隐藏的账号": Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)]),
+                    "请选择要隐藏的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)]),
                 },
             },
             "add_auto_start_btn": {
@@ -82,9 +83,9 @@ class AccManagerUI:
                 "btn": None,
                 "tip": "请选择要自启的账号",
                 "func": self.to_add_auto_start_of_,
-                "enable_scopes": Condition(None, Condition.ConditionType.OR_SCOPE,[(1, None)]),
+                "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
-                    "请选择要自启的账号": Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)])
+                    "请选择要自启的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
                 },
             },
             "add_hotkey_btn": {
@@ -92,10 +93,10 @@ class AccManagerUI:
                 "btn": None,
                 "tip": "请选择一个要添加热键的账号",
                 "func": self.to_add_hotkey_of_,
-                "enable_scopes": Condition(None, Condition.ConditionType.OR_SCOPE,[(1, 1)]),
+                "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, 1)]),
                 "tip_scopes_dict": {
-                    "请选择一个要添加热键的账号": Condition(None, Condition.ConditionType.OR_SCOPE,[(0, 0)]),
-                    "一个一个来啦~": Condition(None, Condition.ConditionType.OR_SCOPE,[(2, None)])
+                    "请选择一个要添加热键的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)]),
+                    "一个一个来啦~": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(2, None)])
                 },
             }
         }

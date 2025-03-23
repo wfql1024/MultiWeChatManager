@@ -12,6 +12,7 @@ from PIL import Image, ImageTk
 
 from functions import func_detail, subfunc_file
 from public_class import reusable_widgets
+from public_class.custom_classes import Condition
 from public_class.reusable_widgets import SubToolWnd
 from resources import Constants
 from resources.config import Config
@@ -22,6 +23,7 @@ from utils.logger_utils import myprinter as printer
 
 class DetailWnd(SubToolWnd, ABC):
     def __init__(self, wnd, title, sw, account, tab_class):
+        self.pid = None
         self.fetch_button = None
         self.auto_start_var = None
         self.hidden_var = None
@@ -134,13 +136,13 @@ class DetailWnd(SubToolWnd, ABC):
 
         print(f"加载控件完成")
 
-        self.load_data_label()
+        self.load_data()
 
     def set_wnd(self):
         # 禁用窗口大小调整
         self.wnd.resizable(False, False)
 
-    def load_data_label(self):
+    def load_data(self):
         print(f"加载数据...")
 
         # 构建头像文件路径
@@ -168,6 +170,7 @@ class DetailWnd(SubToolWnd, ABC):
             nickname="请获取数据",
             pid=None
         )
+        self.pid = pid
         self.load_avatar(avatar_path, avatar_url)
         self.cur_id_lbl.config(text=f"现id: {alias}")
         try:
@@ -177,7 +180,8 @@ class DetailWnd(SubToolWnd, ABC):
             self.nickname_lbl.config(text=f"昵称: {string_utils.clean_texts(nickname)}")
         self.pid_label.config(text=f"PID: {pid}")
         if not pid:
-            widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
+            widget_utils.enable_widget_when_(self.fetch_button, False)
+            widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"请登录后获取": True})
             self.pid_label.config(text=f"PID: 未登录")
             subfunc_file.update_sw_acc_data(self.sw, self.account, has_mutex=True)
         else:
@@ -187,7 +191,8 @@ class DetailWnd(SubToolWnd, ABC):
                 self.pid_label.config(text=f"PID: {pid}(有互斥体)\nHWND: {main_hwnd}")
             else:
                 self.pid_label.config(text=f"PID: {pid}(无互斥体)\nHWND: {main_hwnd}")
-            widget_utils.enable_button_and_unbind_tip(self.tooltips, self.fetch_button)
+            widget_utils.enable_widget_when_(self.fetch_button, True)
+            widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"请登录后获取": False})
         print(f"载入数据完成")
 
     def load_avatar(self, avatar_path, avatar_url):
@@ -213,27 +218,27 @@ class DetailWnd(SubToolWnd, ABC):
             self.avatar_label.config(text="无头像")
 
     def fetch_data(self):
-        pid, = subfunc_file.get_sw_acc_data(self.sw, self.account, pid=None)
-        if not pid:
-            widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
-            messagebox.showinfo("提示", "未检测到该账号登录")
-            return
+        pid = self.pid
         try:
             psutil.Process(pid)
         except psutil.NoSuchProcess:
-            print(f"No process found with PID: {pid}")
-            widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, "请登录后获取")
+            # 用户在此过程偷偷把账号退了...
+            logger.warning(f"该进程已不存在: {pid}")
+            widget_utils.enable_widget_when_(self.fetch_button, False)
+            widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"请登录后获取": True})
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
 
         # 线程启动获取详情
         threading.Thread(target=func_detail.fetch_acc_detail_by_pid,
                          args=(self.sw, pid, self.account, self.after_fetch)).start()
-        widget_utils.disable_button_and_add_tip(self.tooltips, self.fetch_button, text="获取中...")
+        widget_utils.enable_widget_when_(self.fetch_button, False)
+        widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"获取中...": True})
 
     def after_fetch(self):
-        widget_utils.enable_button_and_unbind_tip(self.tooltips, self.fetch_button)
-        self.load_data_label()
+        widget_utils.enable_widget_when_(self.fetch_button, True)
+        widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"获取中...": False})
+        self.load_data()
 
     def save_acc_settings(self):
         """

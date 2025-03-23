@@ -2,9 +2,9 @@ import re
 import tkinter as tk
 import webbrowser
 from functools import partial
-from typing import Tuple, List, Optional, Dict
+from typing import Dict, Union
 
-from public_class.custom_classes import Condition
+from public_class.custom_classes import Condition, Conditions
 
 
 class UnlimitedClickHandler:
@@ -255,7 +255,7 @@ def auto_scroll_text(tasks, direction_key, text_widget, root, gap=50, scroll_dis
     tasks.append(scroll_task)
 
 
-def insert_two_lines(text_widget, line_list):
+def insert_as_two_per_line(text_widget, line_list):
     """在Text中插入每行两个元素，并且居中显示"""
     for i in range(0, len(line_list), 2):  # 每两个元素作为一对
         left_text = line_list[i]
@@ -272,24 +272,42 @@ def insert_two_lines(text_widget, line_list):
     text_widget.see(tk.END)  # 确保插入的文本可以显示在视图中
 
 
-def enable_widget_with_condition(widget, condition: Condition):
+def bind_event_to_frame_when_(widget, event, func, condition: Union[Condition, Conditions, bool]):
+    """
+    当条件满足时，绑定事件到控件范围内所有位置
+    :param widget: 控件
+    :param event: 事件
+    :param func: 函数
+    :param condition: 条件
+    :return: None
+    """
+    # 初始化解绑已有的事件
+    widget.nametowidget(widget).unbind(event)
+    for child in widget.winfo_children():
+        child.unbind(event)
 
+    if condition is True or hasattr(condition, "check") and condition.check():
+        widget.bind(event, func, add=True)
+        for child in widget.winfo_children():
+            child.bind(event, func, add=True)
+
+
+def enable_widget_when_(widget, condition: Union[Condition, Conditions, bool]):
     # 设置控件状态
-    if condition.check():
+    if condition is True or hasattr(condition, "check") and condition.check():
         widget.config(state="normal")
     else:
         widget.config(state="disabled")
 
 
-def set_widget_tip_with_condition(tooltips, widget, tip_condition_dict: Dict[str, Condition]):
-
+def set_widget_tip_when_(tooltips, widget, tip_condition_dict: Dict[str, Union[Condition, Conditions, bool]]):
     # 初始化解绑已有的提示
     widget.nametowidget(widget).unbind("<Enter>")
     widget.nametowidget(widget).unbind("<Leave>")
 
     for tip, condition in tip_condition_dict.items():
         # # 根据条件判断是否绑定或解绑提示
-        if condition.check():
+        if condition is True or hasattr(condition, "check") and condition.check():
             if widget not in tooltips:
                 tooltips[widget] = dict()
             tooltips[widget][tip] = Tooltip(widget, tip)
@@ -298,24 +316,3 @@ def set_widget_tip_with_condition(tooltips, widget, tip_condition_dict: Dict[str
                 del tooltips[widget][tip]
                 if len(tooltips[widget]) == 0:
                     del tooltips[widget]
-
-
-def disable_button_and_add_tip(tooltips, button, text):
-    """
-    禁用按钮，启用提示
-    :return: None
-    """
-    button.state(['disabled'])
-    tooltips[button] = Tooltip(button, text)
-
-
-def enable_button_and_unbind_tip(tooltips, button):
-    """
-    启用按钮，去除提示
-    :return: None
-    """
-    button.state(['!disabled'])
-    if button in tooltips:
-        tooltips[button].widget.unbind("<Enter>")
-        tooltips[button].widget.unbind("<Leave>")
-        del tooltips[button]
