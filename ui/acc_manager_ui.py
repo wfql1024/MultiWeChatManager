@@ -10,9 +10,8 @@ from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableTreeView
 from public_class.reusable_widgets import SubToolWnd
-from resources import Constants, Config
-from utils import string_utils
-from utils.file_utils import JsonUtils
+from resources import Constants
+from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
 
 
@@ -106,7 +105,7 @@ class AccManagerUI:
         self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
-        self.acc_data = JsonUtils.load_json(Config.TAB_ACC_JSON_PATH)
+        self.acc_data = subfunc_file.get_sw_acc_data()
         # 加载已隐藏列表
         self.tree_class["hidden"] = AccManageTreeView(
             self,
@@ -237,10 +236,9 @@ class AccManageTreeView(ActionableTreeView, ABC):
                     continue
 
                 display_name = "  " + func_account.get_acc_origin_display_name(sw, acc)
-                avatar_url, hotkey, hidden, auto_start, nickname = subfunc_file.get_sw_acc_data(
+                hotkey, hidden, auto_start, nickname = subfunc_file.get_sw_acc_data(
                     sw,
                     acc,
-                    avatar_url=None,
                     hotkey="-",
                     hidden="-",
                     auto_start="-",
@@ -273,7 +271,7 @@ class AccManageTreeView(ActionableTreeView, ABC):
                 except Exception as ec:
                     logger.warning(ec)
                     tree.insert(sw_node_id, "end", iid=f"{sw}/{acc}", image=photo,
-                                values=string_utils.clean_texts(
+                                values=StringUtils.clean_texts(
                                     display_name, hotkey, hidden, auto_start, acc, nickname))
 
     def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):

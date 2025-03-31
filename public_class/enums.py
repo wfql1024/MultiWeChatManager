@@ -1,6 +1,11 @@
 # 定义对齐方式的枚举类
 from enum import Enum
 
+class NotebookDirection(Enum):
+    TOP = "top"
+    BOTTOM = "bottom"
+    LEFT = "left"
+    RIGHT = "right"
 
 class Position(Enum):
     CENTER = "center"

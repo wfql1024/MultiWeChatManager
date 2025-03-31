@@ -227,7 +227,7 @@ def fetch_sw_setting_or_set_default_or_none(sw, setting_key):
 """账号数据相关，该文件记录账号及登录时期的互斥体情况"""
 
 
-def load_acc_data():
+def load_acc_data() -> dict:
     """
     加载账号数据，请在这个方法中修改账号数据的加载方式，如格式、文件位置
     :return: 账号数据字典
@@ -236,27 +236,31 @@ def load_acc_data():
     return data
 
 
-def save_acc_data(data):
+def save_acc_data(data) -> bool:
     """
     保存账号数据，请在这个方法中修改账号数据的保存方式，如格式、文件位置
     :param data: 账号数据字典
     """
-    JsonUtils.save_json(Config.TAB_ACC_JSON_PATH, data)
+    return JsonUtils.save_json(Config.TAB_ACC_JSON_PATH, data)
 
 
-def clear_some_acc_data(*addr):
+def clear_some_acc_data(*addr) -> bool:
     """
     清空某平台的账号记录，在对平台重新设置后触发
     :return: 是否成功
     """
-    print(f"清理{addr}处数据...")
-    data = load_acc_data()
-    DictUtils.clear_nested_values(data, *addr)
-    save_acc_data(data)
-    return True
+    try:
+        print(f"清理{addr}处数据...")
+        data = load_acc_data()
+        DictUtils.clear_nested_values(data, *addr)
+        save_acc_data(data)
+        return True
+    except Exception as e:
+        logger.error(e)
+        return False
 
 
-def update_sw_acc_data(*front_addr, **kwargs):
+def update_sw_acc_data(*front_addr, **kwargs) -> bool:
     """更新账户信息到 JSON"""
     try:
         data = load_acc_data()

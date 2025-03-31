@@ -193,6 +193,16 @@ class TreeUtils:
         tree.item(item_id, tags=list(new_tags))
         # print(current_tags, new_tags, tree.item(item_id, "tags"))
 
+    @staticmethod
+    def get_all_items(tree, parent=""):
+        items = []
+        children = tree.get_children(parent)
+        for child in children:
+            items.append(child)
+            items.extend(TreeUtils.get_all_items(tree, child))
+        return items
+
+
 
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""

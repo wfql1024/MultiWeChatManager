@@ -10,7 +10,8 @@ from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_u
 from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
-from ui import about_ui, rewards_ui, sidebar_ui, statistic_ui, setting_ui, update_log_ui, acc_manager_ui
+from ui import sidebar_ui, acc_manager_ui
+from ui.wnd_ui import UpdateLogWnd, StatisticWnd, SettingWnd, RewardsWnd, AboutWnd
 from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
@@ -19,6 +20,8 @@ from utils.logger_utils import myprinter as printer
 class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
+        self.sidebar_wnd_class = None
+        self.sidebar_wnd = None
         self.call_mode_menu = None
         self.auto_start_menu = None
         self.path_error = None
@@ -413,7 +416,7 @@ class MenuUI:
     def open_statistic(self):
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.root)
-        statistic_ui.StatisticWnd(statistic_window, f"{self.sw}统计数据", self.sw)
+        StatisticWnd(statistic_window, f"{self.sw}统计数据", self.sw)
 
     def to_quick_refresh(self):
         self.root_class.quick_refresh = True
@@ -436,10 +439,14 @@ class MenuUI:
         subfunc_file.save_sw_setting(self.sw, "view", "tree", self.root_class.acc_tab_ui.refresh)
 
     def change_sidebar_view(self):
-        # 清除窗口中的所有控件
-        for widget in self.root.winfo_children():
-            widget.destroy()
-        sidebar_ui.SidebarUI()
+        if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists():
+            if self.sidebar_wnd_class is not None:
+                self.sidebar_wnd_class.listener_running = False
+                self.sidebar_wnd_class = None
+            self.sidebar_wnd.destroy()
+        else:
+            self.sidebar_wnd = tk.Toplevel(self.root)
+            self.sidebar_wnd_class = sidebar_ui.SidebarWnd(self.sidebar_wnd, "导航条")
 
     def open_acc_setting(self):
         acc_manager_wnd = tk.Toplevel(self.root)
@@ -448,7 +455,7 @@ class MenuUI:
     def open_settings(self, sw):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
-        setting_ui.SettingWnd(settings_window, sw, self.sw_class.multiple_state,
+        SettingWnd(settings_window, sw, self.sw_class.multiple_state,
                               self.root_class.acc_tab_ui.refresh, f"{sw}设置")
 
     def toggle_patch_mode(self, mode):
@@ -474,7 +481,7 @@ class MenuUI:
     def open_rewards(self):
         """打开赞赏窗口"""
         rewards_window = tk.Toplevel(self.root)
-        rewards_ui.RewardsWnd(rewards_window, "我来赏你！", Config.REWARDS_PNG_PATH)
+        RewardsWnd(rewards_window, "我来赏你！", Config.REWARDS_PNG_PATH)
 
     def open_update_log(self):
         """打开版本日志窗口"""
@@ -482,14 +489,14 @@ class MenuUI:
         if success is True:
             new_versions, old_versions = result
             update_log_window = tk.Toplevel(self.root)
-            update_log_ui.UpdateLogWnd(update_log_window, "", old_versions)
+            UpdateLogWnd(update_log_window, "", old_versions)
         else:
             messagebox.showerror("错误", result)
 
     def open_about(self, app_info):
         """打开关于窗口"""
         about_wnd = tk.Toplevel(self.root)
-        about_ui.AboutWnd(about_wnd, "关于", app_info)
+        AboutWnd(about_wnd, "关于", app_info)
 
     def to_enable_new_func(self, event=None):
         if event is None:

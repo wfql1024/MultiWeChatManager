@@ -50,6 +50,43 @@ IsWindowVisible = user32.IsWindowVisible
 IsWindowVisible.argtypes = [wintypes.HWND]
 IsWindowVisible.restype = wintypes.BOOL
 
+class HwndUtils:
+    @staticmethod
+    def bring_wnd_to_front(hwnd: int):
+        """
+        将指定的 Tkinter 窗口（hwnd）移动到前台。
+        :param hwnd: 要移动到前台的窗口句柄。
+        """
+        # 使用 win32gui 库将窗口移动到前台
+        win32gui.SetForegroundWindow(hwnd)
+
+
+class TkWndUtils:
+    @staticmethod
+    def bring_wnd_to_front(root, wnd, use_delay=True):
+        """
+        将指定的 Tkinter 窗口（wnd）移动到前台。
+        注意：此方法可能会在某些情况下失效，因为 Tkinter 窗口的刷新可能会导致窗口位置不正确。
+        可以考虑使用 root.after() 方法延迟执行，以确保窗口刷新完成后再执行。
+        :param root: root窗口，用于延迟执行
+        :param wnd: 要移动到前台的 Tkinter 窗口。
+        :param use_delay: 是否使用延迟执行，默认为 True。
+        :return:
+        """
+        if not isinstance(wnd, (tk.Tk, tk.Toplevel)):
+            raise ValueError("wnd 必须是 Tk 或 Toplevel 窗口实例")
+
+        if use_delay:
+            root.after(200, lambda: wnd.lift())
+            root.after(300, lambda: wnd.attributes('-topmost', True))
+            root.after(400, lambda: wnd.attributes('-topmost', False))
+            root.after(500, lambda: wnd.focus_force())
+        else:
+            wnd.lift()
+            wnd.attributes('-topmost', True)
+            wnd.attributes('-topmost', False)
+            wnd.focus_force()
+
 """hwnd获取"""
 
 
@@ -356,10 +393,13 @@ def maximize_window(hwnd):
 
 def restore_window(hwnd):
     """
-    恢复窗口。
+    恢复窗口并置顶显示。
+    新增窗口置顶逻辑，处理最小化窗口的恢复问题。
     :param hwnd: 窗口句柄
     """
-    ShowWindow(hwnd, SW_SHOWNORMAL)
+    # win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
+    # time.sleep(0.1)
+    win32gui.ShowWindow(hwnd, win32con.SW_SHOWNORMAL)
 
 
 def hide_window(hwnd):

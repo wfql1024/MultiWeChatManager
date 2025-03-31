@@ -9,9 +9,8 @@ import keyboard
 from public_class.custom_classes import QueueWithUpdate
 from public_class.global_members import GlobalMembers
 from resources import Constants
-from utils import debug_utils, hwnd_utils
-from utils.logger_utils import mylogger as logger
-
+from utils import hwnd_utils
+from utils.logger_utils import mylogger as logger, RedirectText
 
 
 class HotkeyEntry4Keyboard:
@@ -217,7 +216,7 @@ class StatusBar:
         # 创建状态栏
         self.create_status_bar()
         self.message_queue = QueueWithUpdate(self.update_status)  # 创建消息队列
-        sys.stdout = debug_utils.RedirectText(self.statusbar_output_var, self.message_queue, self.debug)  # 重定向 stdout
+        sys.stdout = RedirectText(self.statusbar_output_var, self.message_queue, self.debug)  # 重定向 stdout
         self.update_status()
 
     def create_status_bar(self):

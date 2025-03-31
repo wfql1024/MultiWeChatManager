@@ -9,7 +9,7 @@ from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants, Strings
-from utils import string_utils
+from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
 from utils.widget_utils import TreeUtils
 
@@ -169,7 +169,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
             except Exception as ec:
                 logger.warning(ec)
                 tree.insert("", "end", iid=iid, image=photo,
-                            values=string_utils.clean_texts(
+                            values=StringUtils.clean_texts(
                                 display_name, config_status, pid, account, alias, nickname))
 
             if config_status == "无配置" and login_status == "logout":

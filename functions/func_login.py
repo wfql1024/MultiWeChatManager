@@ -13,6 +13,7 @@ from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from resources import Config
 from utils import hwnd_utils, handle_utils
+from utils.hwnd_utils import TkWndUtils
 from utils.logger_utils import mylogger as logger
 
 
@@ -131,7 +132,7 @@ def manual_login(sw):
 
     # 刷新菜单和窗口前置
     root_class.root.after(0, acc_tab_ui.refresh_frame, sw)
-    hwnd_utils.bring_tk_wnd_to_front(root, root)
+    TkWndUtils.bring_wnd_to_front(root, root)
 
 
 def auto_login_accounts(login_dict: Dict[str, List]):

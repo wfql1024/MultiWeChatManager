@@ -73,6 +73,7 @@ class Constants:
     DETAIL_WND_SIZE = (int(240 * SF), int(360 * SF))  # 详情窗口尺寸
     STATISTIC_WND_SIZE = (int(360 * SF), int(432 * SF))  # 统计窗口尺寸
     ACC_MNG_WND_SIZE = (int(400 * SF), int(550 * SF))  # 账号管理窗口尺寸
+    SIDEBAR_WIDTH = int(60 * SF)  # 侧边栏宽度
 
     LOADING_PRG_LEN = int(200 * SF)  # 加载进度条长度
 

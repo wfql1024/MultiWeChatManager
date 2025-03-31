@@ -306,8 +306,10 @@ class JsonUtils:
             with open(account_data_file, 'w', encoding='utf-8') as f:
                 json_string = json.dumps(account_data, ensure_ascii=False, indent=4)
                 f.write(json_string)
+            return True
         except Exception as e:
             logger.error(e)
+            return False
 
 
 class IniUtils:
@@ -482,6 +484,13 @@ def move_files_to_recycle_bin(file_paths):
 
 
 def get_recent_folders_from_dir(directory, minutes=720):
+    """
+    获取指定目录下最近修改的文件夹列表。
+    只返回最近修改的文件夹，不包括文件。
+    :param directory: 指定文件夹
+    :param minutes: 在最近的n分钟之内
+    :return:
+    """
     now = dt.datetime.now()
     some_minutes_ago = now - dt.timedelta(minutes=minutes)
     recent_folders = []
@@ -503,7 +512,7 @@ def calculate_md5(file_path, chunk_size=4096):
     return md5.hexdigest()
 
 
-def is_latest_file_by_day(file_path):
+def is_latest_file_by_day(file_path) -> bool:
     # 获取文件的修改时间（时间戳）
     modification_time = os.path.getmtime(file_path)
     # 转换为日期格式

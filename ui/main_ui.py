@@ -10,7 +10,8 @@ from public_class import reusable_widgets
 from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
 from resources import Config, Constants
-from ui import loading_ui, menu_ui, acc_tab_ui, debug_ui, detail_ui, acc_manager_ui
+from ui import menu_ui, acc_tab_ui, acc_manager_ui
+from ui.wnd_ui import LoadingWnd, DebugWnd, DetailWnd
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
@@ -51,7 +52,7 @@ class MainWindow:
         self.root.withdraw()  # 初始化时隐藏主窗口
         # 渲染加载窗口
         self.loading_wnd = tk.Toplevel(self.root)
-        self.loading_wnd_class = loading_ui.LoadingWnd(self.loading_wnd, "加载中...")
+        self.loading_wnd_class = LoadingWnd(self.loading_wnd, "加载中...")
 
         # try:
         # 初次使用
@@ -111,6 +112,10 @@ class MainWindow:
         style.configure("RowTreeview", background="#FFFFFF", foreground="black",
                         rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended")
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
+        style.configure("SidebarTreeview", background="#FFFFFF", foreground="black",
+                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended",
+                        borderwidth=0, highlightthickness=0)
+        style.layout("SidebarTreeview", style.layout("Treeview"))  # 继承默认布局
         style.configure("Mutex.TLabel", foreground="red")
 
         # 创建状态栏
@@ -228,7 +233,7 @@ class MainWindow:
     def open_debug_window(self):
         """打开调试窗口，显示所有输出日志"""
         debug_window = tk.Toplevel(self.root)
-        debug_ui.DebugWnd(debug_window, "调试窗口")
+        DebugWnd(debug_window, "调试窗口")
 
     @staticmethod
     def to_login_auto_start_accounts():
@@ -242,7 +247,7 @@ class MainWindow:
             pass
         sw, acc = item.split("/")
         detail_window = tk.Toplevel(self.root)
-        self.detail_ui_class = detail_ui.DetailWnd(detail_window, f"属性 - {acc}", sw, acc, tab_class)
+        self.detail_ui_class = DetailWnd(detail_window, f"属性 - {acc}", sw, acc, tab_class)
         self.detail_ui_class.set_focus_to_(widget_tag)
 
     def to_switch_to_sw_account_wnd(self, item, event=None):

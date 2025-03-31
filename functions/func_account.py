@@ -15,7 +15,8 @@ from public_class.global_members import GlobalMembers
 from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
-from utils import process_utils, image_utils, string_utils, hwnd_utils
+from utils import process_utils, image_utils, hwnd_utils
+from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
 
 
@@ -24,7 +25,7 @@ def quit_selected_accounts(sw, accounts_selected):
     for acc in accounts_selected:
         pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
         display_name = get_acc_origin_display_name(sw, acc)
-        cleaned_display_name = string_utils.clean_texts(display_name)
+        cleaned_display_name = StringUtils.clean_texts(display_name)
         accounts_to_quit.append(f"[{pid}: {cleaned_display_name}]")
     accounts_to_quit_str = "\n".join(accounts_to_quit)
     if messagebox.askokcancel("提示",
@@ -45,7 +46,7 @@ def quit_accounts(sw, accounts):
         try:
             pid, = subfunc_file.get_sw_acc_data(sw, account, pid=None)
             display_name = get_acc_origin_display_name(sw, account)
-            cleaned_display_name = string_utils.clean_texts(display_name)
+            cleaned_display_name = StringUtils.clean_texts(display_name)
             executable_name, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
             process = psutil.Process(pid)
             if process_utils.process_exists(pid) and process.name() == executable_name:
@@ -138,7 +139,7 @@ def get_acc_wrapped_display_name(sw, account) -> str:
     :param account: 微信账号
     :return: 展示在界面的折叠好的名字
     """
-    return string_utils.balanced_wrap_text(
+    return StringUtils.balanced_wrap_text(
         get_acc_origin_display_name(sw, account),
         10
     )

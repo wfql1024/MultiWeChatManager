@@ -142,7 +142,6 @@ class AccTabUI:
         acc_list_dict, _, mutex = result
         self.acc_list_dict = acc_list_dict
         logins = self.sw_class.login_accounts = acc_list_dict["login"]
-        logouts = self.sw_class.logout_accounts = acc_list_dict["logout"]
 
         self.sw_class.view = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, "view")
 
