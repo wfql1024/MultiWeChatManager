@@ -16,6 +16,7 @@ from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
+# TODO: 标签页布局优化
 
 class MainWindow:
     """构建主窗口的类"""

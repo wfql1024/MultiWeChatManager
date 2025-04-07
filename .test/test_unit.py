@@ -1,4 +1,5 @@
 import ctypes
+import random
 from datetime import datetime
 from unittest import TestCase
 
@@ -191,3 +192,8 @@ class Test(TestCase):
         # file_utils.DictUtils.set_nested_value(data, "a/b/c/d", "/", "/")
         file_utils.DictUtils.clear_nested_values(data, *(), "a", "b/c")
         print(data)
+
+
+    def test_six_randoms(self):
+        for i in range(6):
+            print(random.randint(0,3))

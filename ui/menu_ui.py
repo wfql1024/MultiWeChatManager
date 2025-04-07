@@ -16,10 +16,14 @@ from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
+#TODO：刷新菜单增加热更新功能
+#TODO: 增加个全局设置
+#TODO: 用户可以自定义多开的全流程
 
 class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
+
         self.sidebar_wnd_class = None
         self.sidebar_wnd = None
         self.call_mode_menu = None
@@ -440,12 +444,14 @@ class MenuUI:
 
     def change_sidebar_view(self):
         if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists():
+            print("销毁", self.sidebar_wnd)
             if self.sidebar_wnd_class is not None:
                 self.sidebar_wnd_class.listener_running = False
                 self.sidebar_wnd_class = None
             self.sidebar_wnd.destroy()
         else:
             self.sidebar_wnd = tk.Toplevel(self.root)
+            print("创建", self.sidebar_wnd)
             self.sidebar_wnd_class = sidebar_ui.SidebarWnd(self.sidebar_wnd, "导航条")
 
     def open_acc_setting(self):

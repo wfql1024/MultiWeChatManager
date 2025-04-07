@@ -2,13 +2,40 @@ import subprocess
 import time
 
 import psutil
+import win32con
 import win32gui
 
 from functions import func_setting, subfunc_file
-from public_class.enums import Position, Keywords
+from public_class.enums import Position, Keywords, SW
 from resources import Config
 from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
+
+
+# TODO: 完善4.0的python模式
+
+
+def is_hwnd_a_main_wnd_of_sw(hwnd, sw):
+    """
+    检测窗口是否是某个账号的主窗口
+    :param hwnd:
+    :param sw:
+    :return:
+    """
+    expected_class, = subfunc_file.get_details_from_remote_setting_json(sw, main_wnd_class=None)
+    class_name = win32gui.GetClassName(hwnd)
+    print(expected_class, class_name)
+    if sw == SW.WECHAT:
+        # 旧版微信可直接通过窗口类名确定主窗口
+        return class_name == expected_class
+    elif sw == SW.WEIXIN:
+        if class_name != expected_class:
+            return False
+        # 新版微信需要通过窗口控件判定
+        style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+        # 检查是否有最大化按钮
+        has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
+        return has_maximize
 
 
 def switch_to_sw_account_wnd(item_id, root):
@@ -198,11 +225,11 @@ def get_login_size(tab, status):
 def create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
     if (sys_utils.get_sys_major_version_name() == "win11" or
             sys_utils.get_sys_major_version_name() == "win10"):
-        return process_utils.create_process_with_logon(
-            "2535912997@qq.com", "1314@zhihui", executable, args, creation_flags)
+        # return process_utils.create_process_with_logon(
+        #     "xxxxx@xx.com", "xxxxxxxxx", executable, args, creation_flags)
         # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
         # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
-        # return process_utils.create_process_with_medium_il(executable, args, creation_flags)
+        return process_utils.create_process_with_re_token_handle(executable, args, creation_flags)
         # return process_utils.create_process_for_win7(executable, args, creation_flags)
     else:
         return process_utils.create_process_for_win7(executable, args, creation_flags)

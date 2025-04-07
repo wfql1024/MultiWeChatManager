@@ -22,6 +22,8 @@ from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUt
 
 
 class DetailWnd(SubToolWnd, ABC):
+    #TODO: 通过详情框可以重新连接窗口
+    #TODO: 所有行都使用文本框
     def __init__(self, wnd, title, sw, account, tab_class):
         self.pid = None
         self.fetch_button = None
@@ -472,6 +474,7 @@ class Direction:
 
 
 class AboutWnd(SubToolWnd, ABC):
+    # TODO：加入bug反馈渠道
     def __init__(self, wnd, title, app_info):
         self.logo_img = None
         self.scroll_text_str = None
