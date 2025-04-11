@@ -193,7 +193,7 @@ class MainWindow:
         selected_sw = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
         if selected_sw:
             # 是平台选项卡
-            subfunc_file.save_global_setting("tab", selected_sw)
+            subfunc_file.save_a_global_setting("tab", selected_sw)
             printer.vital(f"当前选项卡: {selected_sw}")
             self.acc_tab_ui = acc_tab_ui.AccTabUI()
             self.acc_tab_ui.refresh()

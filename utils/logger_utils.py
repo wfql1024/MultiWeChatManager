@@ -1,13 +1,186 @@
 # logger_utils.py
 # 这个是很底层的工具类，不要导入项目其他的模块
-import inspect
 import io
 import logging
 import os
+import colorlog
 import sys
 
-import colorlog
+import time
+import functools
+import inspect
+import traceback
+from typing import Optional, Callable, Any, List, Tuple
+from dataclasses import dataclass
 
+
+@dataclass
+class MethodCall:
+    method_name: str
+    start_time: float
+    end_time: float
+    depth: int
+
+
+class PerformanceDebugger:
+    """
+    This is an advanced performance debugging tool that can help you track down the bottlenecks in your code.
+    It can be used to measure the time taken by each method call and the time taken by each line of code.
+    """
+    def __init__(self, name: str = "Performance Testing", auto_break: bool = False):
+        self.name = name
+        self.auto_break = auto_break
+        self.start_time: Optional[float] = None
+        self.last_checkpoint: Optional[float] = None
+        self.checkpoints: List[Tuple[str, float]] = []
+        self.method_calls: List[MethodCall] = []
+        self._current_method: Optional[MethodCall] = None
+        self._base_depth: int = 0
+        self._last_method_time: float = 0  # 新增：记录上一个方法的结束时间
+
+    def start(self) -> None:
+        """开始计时"""
+        self.start_time = time.time()
+        self.last_checkpoint = self.start_time
+        self._last_method_time = self.start_time  # 初始化上一个方法的结束时间
+        self.checkpoints = [("start", self.start_time)]
+        self.method_calls = []
+        self._current_method = None
+        self._base_depth = len(inspect.stack())
+        print(f"\n[{self.name}] start timing!")
+        print("--------output--------")
+
+    def checkpoint(self, name: Optional[str] = None) -> None:
+        """记录检查点"""
+        if self.start_time is None:
+            raise RuntimeError("Please call the start() method first.")
+
+        current_time = time.time()
+        since_last = current_time - self.last_checkpoint
+        since_start = current_time - self.start_time
+
+        if name is None:
+            frame = inspect.currentframe()
+            if frame is not None:
+                frame = frame.f_back
+                if frame is not None:
+                    name = f"行号 {frame.f_lineno}"
+
+        self.checkpoints.append((name or "Unnamed checkpoint", current_time))
+        self.last_checkpoint = current_time
+
+        print(f"[{self.name}] {name}:")
+        print(f"[{since_last:.4f}s/{since_start:.4f}s]")
+
+    def end(self) -> None:
+        """结束计时并打印总结"""
+        if self.start_time is None:
+            raise RuntimeError("Please call the start() method first.")
+
+        total_time = time.time() - self.start_time
+        print("--------result--------")
+
+        if len(self.checkpoints) > 1:
+            print("Manual checkpoints:")
+            for i in range(1, len(self.checkpoints)):
+                name, time_point = self.checkpoints[i]
+                prev_name, prev_time = self.checkpoints[i - 1]
+                since_last = time_point - prev_time
+                since_start = time_point - self.start_time
+                percentage = since_last/total_time*100
+                indent = ' ' if percentage < 10 else ''
+                print(f"[{indent}{percentage:.1f}%/{since_last:.4f}s/{since_start:.4f}s] {prev_name} -> {name}")
+
+        if self.auto_break and self.method_calls:
+            print("Automatic breakpoints:")
+            for call in self.method_calls:
+                since_last = call.start_time - self._last_method_time
+                since_start = call.start_time - self.start_time
+                percentage = since_last/total_time*100
+                indent = ' ' if percentage < 10 else ''
+                print(f"[{indent}{percentage:.1f}%/{since_last:.4f}s/{since_start:.4f}s] {call.method_name}")
+                self._last_method_time = call.end_time
+
+        print(f"Total: {total_time:.4f}秒")
+        print("----------------------")
+        print("Testing completed.\n")
+
+        self.start_time = None
+        self.last_checkpoint = None
+        self.checkpoints = []
+        self.method_calls = []
+        self._current_method = None
+        self._base_depth = 0
+        self._last_method_time = 0
+
+    @classmethod
+    def measure_method(cls, name: Optional[str] = None, auto_break: bool = False):
+        """装饰器：测量方法执行时间"""
+
+        def decorator(func: Callable) -> Callable:
+            @functools.wraps(func)
+            def wrapper(*args, **kwargs) -> Any:
+                debugger = cls(name or func.__name__, auto_break)
+                debugger.start()
+
+                if auto_break:
+                    def method_wrapper(method):
+                        def wrapped(*args, **kwargs):
+                            current_depth = len(inspect.stack())
+                            if current_depth > debugger._base_depth:
+                                start_time = time.time()
+                                current_method = MethodCall(
+                                    method.__name__,
+                                    start_time,
+                                    start_time,
+                                    current_depth
+                                )
+                                debugger._current_method = current_method
+                                try:
+                                    result = method(*args, **kwargs)
+                                    return result
+                                finally:
+                                    if debugger._current_method is not None:
+                                        debugger._current_method.end_time = time.time()
+                                        debugger.method_calls.append(debugger._current_method)
+                                        debugger._current_method = None
+                            else:
+                                return method(*args, **kwargs)
+
+                        return wrapped
+
+                    for attr_name in dir(args[0]):
+                        if not attr_name.startswith('__'):
+                            attr = getattr(args[0], attr_name)
+                            if callable(attr):
+                                setattr(args[0], attr_name, method_wrapper(attr))
+
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                except Exception as e:
+                    print(f"错误：方法执行失败: {str(e)}")
+                    print("详细错误信息:")
+                    traceback.print_exc()
+                    raise
+                finally:
+                    debugger.end()
+
+            return wrapper
+
+        return decorator
+
+    @classmethod
+    def measure_block(cls, name: str, auto_break: bool = False):
+        """上下文管理器：测量代码块执行时间"""
+        return cls(name, auto_break)
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end()
 
 class DebugUtils:
     def __init__(self):

@@ -12,19 +12,20 @@ class Config:
     VER_STATUS = 'Beta'
 
     INI_DEFAULT_VALUE = {
-        Keywords.SCREEN_SIZE: f"1920*1080",
-        Keywords.HIDE_WND: "False",
-        Keywords.ENABLE_NEW_FUNC: "True",
-        Keywords.TAB: SW.WECHAT,
-        Keywords.SCALE: "auto",
-        Keywords.SIGN_VISIBLE: "True",
-        Keywords.HIDDEN_SORT: "#0,True",
-        Keywords.AUTO_START_SORT: "#0,True",
-        Keywords.ALL_SORT: "#0,True",
-        Keywords.AUTO_PRESS: "True",
-        Keywords.CALL_MODE: "HANDLE",
-        Keywords.NEXT_CHECK_TIME: None,
-
+        Keywords.GLOBAL_SECTION:{
+            Keywords.SCREEN_SIZE: f"1920*1080",
+            Keywords.HIDE_WND: "False",
+            Keywords.ENABLE_NEW_FUNC: "True",
+            Keywords.TAB: SW.WECHAT,
+            Keywords.SCALE: "auto",
+            Keywords.SIGN_VISIBLE: "True",
+            Keywords.HIDDEN_SORT: "#0,True",
+            Keywords.AUTO_START_SORT: "#0,True",
+            Keywords.ALL_SORT: "#0,True",
+            Keywords.AUTO_PRESS: "True",
+            Keywords.CALL_MODE: "HANDLE",
+            Keywords.NEXT_CHECK_TIME: None,
+        },
         SW.WECHAT: {
             Keywords.VIEW: "tree",
             Keywords.LOGIN_SORT: "配置,True",

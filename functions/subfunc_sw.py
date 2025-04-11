@@ -194,9 +194,9 @@ def open_sw(sw, status, has_mutex_dictionary=None):
     return sub_exe_process, multiple_mode
 
 
-def get_login_size(tab, status):
+def get_login_size(sw, status):
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
-        tab, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
+        sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
     print(login_wnd_class)
     hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
 
@@ -204,9 +204,9 @@ def get_login_size(tab, status):
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
-    kill_sw_multiple_processes(tab)
-    has_mutex_dict = get_mutex_dict(tab)
-    sub_exe_process, sub_exe = open_sw(tab, status, has_mutex_dict)
+    kill_sw_multiple_processes(sw)
+    has_mutex_dict = get_mutex_dict(sw)
+    sub_exe_process, sub_exe = open_sw(sw, status, has_mutex_dict)
     wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")
@@ -226,7 +226,7 @@ def create_process_without_admin(executable, args=None, creation_flags=subproces
     if (sys_utils.get_sys_major_version_name() == "win11" or
             sys_utils.get_sys_major_version_name() == "win10"):
         # return process_utils.create_process_with_logon(
-        #     "xxxxx@xx.com", "xxxxxxxxx", executable, args, creation_flags)
+        #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)
         # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
         # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
         return process_utils.create_process_with_re_token_handle(executable, args, creation_flags)

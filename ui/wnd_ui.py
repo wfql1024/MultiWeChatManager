@@ -1253,7 +1253,7 @@ class SettingWnd(SubToolWnd, ABC):
         self.version_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
 
         ver_get_button = ttk.Button(wnd, text="获取",
-                                    command=partial(self.get_cur_sw_ver, self.sw))
+                                    command=partial(self.get_cur_sw_ver, self.sw, True))
         ver_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第五行 - 屏幕大小
@@ -1349,7 +1349,7 @@ class SettingWnd(SubToolWnd, ABC):
             if sw_utils.is_valid_sw_install_path(sw, path):
                 self.inst_path_var.set(path)
                 self.inst_path = path
-                subfunc_file.save_sw_setting(self.sw, 'inst_path', self.inst_path)
+                subfunc_file.save_a_setting_and_callback(self.sw, 'inst_path', self.inst_path)
                 if self.inst_path != self.origin_values["inst_path"]:
                     self.changed["inst_path"] = True
                 break
@@ -1367,30 +1367,36 @@ class SettingWnd(SubToolWnd, ABC):
         else:
             self.data_dir_var.set("获取失败，请手动选择存储文件夹（可在平台设置中查看）")
 
+    def ask_for_directory(self):
+        try:
+            # 尝试使用 `filedialog.askdirectory` 方法
+            path = filedialog.askdirectory()
+            if not path:  # 用户取消选择
+                return None
+            return path
+        except Exception as e:
+            logger.error(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
+            try:
+                # 异常处理部分，使用 `win32com.client`
+                shell = win32com.client.Dispatch("Shell.Application")
+                folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
+                if not folder:  # 用户取消选择
+                    return None
+                return folder.Self.Path.replace('\\', '/')
+            except Exception as e:
+                logger.error(f"win32com.client 也失败了: {e}")
+                return None
+
     def choose_sw_data_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
         while True:
-            try:
-                # 尝试使用 `filedialog.askdirectory` 方法
-                path = filedialog.askdirectory()
-                if not path:  # 用户取消选择
-                    return
-            except Exception as e:
-                logger.error(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
-                try:
-                    # 异常处理部分，使用 `win32com.client`
-                    shell = win32com.client.Dispatch("Shell.Application")
-                    folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
-                    if not folder:  # 用户取消选择
-                        return
-                    path = folder.Self.Path.replace('\\', '/')
-                except Exception as e:
-                    logger.error(f"win32com.client 也失败了: {e}")
-                    return
+            path = self.ask_for_directory()
+            if not path:
+                return
             if sw_utils.is_valid_sw_data_dir(sw, path):
                 self.data_dir_var.set(path)
                 self.data_dir = path
-                subfunc_file.save_sw_setting(self.sw, 'data_dir', self.data_dir)
+                subfunc_file.save_a_setting_and_callback(self.sw, 'data_dir', self.data_dir)
                 if self.data_dir != self.origin_values["data_dir"]:
                     self.changed["data_dir"] = True
                 break
@@ -1411,27 +1417,13 @@ class SettingWnd(SubToolWnd, ABC):
     def choose_sw_dll_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
         while True:
-            try:
-                # 尝试使用 `filedialog.askdirectory` 方法
-                path = filedialog.askdirectory()
-                if not path:  # 用户取消选择
-                    return
-            except Exception as e:
-                print(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
-                try:
-                    # 异常处理部分，使用 `win32com.client`
-                    shell = win32com.client.Dispatch("Shell.Application")
-                    folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
-                    if not folder:  # 用户取消选择
-                        return
-                    path = folder.Self.Path.replace('\\', '/')
-                except Exception as e:
-                    print(f"win32com.client 也失败了: {e}")
-                    return
+            path = self.ask_for_directory()
+            if not path:
+                return
             if sw_utils.is_valid_sw_dll_dir(sw, path):
                 self.dll_dir_var.set(path)
                 self.dll_dir = path
-                subfunc_file.save_sw_setting(self.sw, 'dll_dir', self.dll_dir)
+                subfunc_file.save_a_setting_and_callback(self.sw, 'dll_dir', self.dll_dir)
                 if self.dll_dir != self.origin_values["dll_dir"]:
                     self.changed["dll_dir"] = True
                 break
@@ -1450,7 +1442,7 @@ class SettingWnd(SubToolWnd, ABC):
         screen_width = self.wnd.winfo_screenwidth()
         screen_height = self.wnd.winfo_screenheight()
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        subfunc_file.save_global_setting('screen_size', f"{screen_width}*{screen_height}")
+        subfunc_file.save_a_global_setting('screen_size', f"{screen_width}*{screen_height}")
 
     def to_get_login_size(self, status):
         if status is None:
@@ -1459,7 +1451,73 @@ class SettingWnd(SubToolWnd, ABC):
         if result:
             login_width, login_height = result
             if 0.734 < login_width / login_height < 0.740:
-                subfunc_file.save_sw_setting(self.sw, 'login_size', f"{login_width}*{login_height}")
+                subfunc_file.save_a_setting_and_callback(self.sw, 'login_size', f"{login_width}*{login_height}")
                 self.login_size_var.set(f"{login_width}*{login_height}")
             else:
                 self.login_size_var.set(f"350*475")
+
+class GlobalSettingWnd(SubToolWnd, ABC):
+    def __init__(self, wnd, title):
+        self.main_frame = wnd
+        self.remote_config_var = None
+        self.screen_size_var = None
+        super().__init__(wnd, title)
+
+    def initialize_members_in_init(self):
+        self.remote_config_var = tk.StringVar()
+        self.screen_size_var = tk.StringVar()
+
+    def load_content(self):
+        # 远程配置源
+        remote_config_frame = ttk.Frame(self.main_frame)
+        remote_config_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Label(remote_config_frame, text="远程配置源:").pack(side=tk.LEFT)
+        remote_config_entry = ttk.Entry(remote_config_frame, textvariable=self.remote_config_var)
+        remote_config_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        
+        def select_remote_config():
+            try:
+                path = filedialog.askdirectory(title="选择远程配置源文件夹")
+                if not path:  # 用户取消选择
+                    return
+            except Exception as e:
+                print(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
+                try:
+                    shell = win32com.client.Dispatch("Shell.Application")
+                    folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
+                    if not folder:  # 用户取消选择
+                        return
+                    path = folder.Self.Path.replace('\\', '/')
+                except Exception as e:
+                    print(f"win32com.client 也失败了: {e}")
+                    return
+            self.remote_config_var.set(path)
+            subfunc_file.save_a_global_setting('remote_config', path)
+
+        ttk.Button(remote_config_frame, text="选择", command=select_remote_config).pack(side=tk.LEFT)
+
+        # 屏幕尺寸
+        screen_size_frame = ttk.Frame(self.main_frame)
+        screen_size_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Label(screen_size_frame, text="屏幕尺寸:").pack(side=tk.LEFT)
+        screen_size_entry = ttk.Entry(screen_size_frame, textvariable=self.screen_size_var)
+        screen_size_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        
+        ttk.Button(screen_size_frame, text="获取", command=self.get_screen_size).pack(side=tk.LEFT)
+
+    def get_screen_size(self):
+        screen_width = self.wnd.winfo_screenwidth()
+        screen_height = self.wnd.winfo_screenheight()
+        self.screen_size_var.set(f"{screen_width}*{screen_height}")
+        subfunc_file.save_a_global_setting('screen_size', f"{screen_width}*{screen_height}")
+
+    def load_settings(self):
+        self.remote_config_var.set(subfunc_file.get_global_setting('remote_config', ''))
+        self.screen_size_var.set(subfunc_file.get_global_setting('screen_size', ''))
+
+    def save_settings(self):
+        subfunc_file.save_a_global_setting('remote_config', self.remote_config_var.get())
+        subfunc_file.save_a_global_setting('screen_size', self.screen_size_var.get())
+

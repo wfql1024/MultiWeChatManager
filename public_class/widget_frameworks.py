@@ -13,7 +13,7 @@ from public_class.global_members import GlobalMembers
 from resources import Constants
 from utils import widget_utils
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, PerformanceDebugger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import TreeUtils
 
@@ -534,7 +534,7 @@ class ActionableTreeView(ABC):
                 # print(f"{tree}这里出现问题")
                 self.quick_refresh_failed = True
 
-        self._update_top_title()
+        # self._update_top_title()
         widget_utils.UnlimitedClickHandler(
             self.root,
             tree,
@@ -931,34 +931,30 @@ class ActionableTreeView(ABC):
         # 保存排序状态
         self.sort[col] = is_asc_after
         if self.sw is not None:
-            subfunc_file.save_sw_setting(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
+            subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
         else:
-            subfunc_file.save_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
+            subfunc_file.save_a_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
 
+    # @PerformanceDebugger.measure_method("测试快速刷新", auto_break=True)
     def quick_refresh_items(self, data_src):
         """
         快速刷新，需要传入display方法所需要的数据列表
         :param data_src: 数据列表
         :return:
         """
-        self.root.update_idletasks()
-        printer.vital("快速刷新")
-        tree = self.tree.nametowidget(self.tree)
+        printer.vital(f"快速刷新")
         self.data_src = data_src
+        self.tree.configure(displaycolumns=())  # 临时隐藏列
 
-        for i in tree.get_children():
-            tree.delete(i)
-
+        self.tree.delete(*self.tree.get_children())
         self.display_table()
+
+        self.tree.configure(displaycolumns=self.columns)
+
         self._adjust_table()
-        if self.quick_refresh_failed is True:
-            # self.quick_refresh_failed = False
-            print("界面丢失，快速刷新失败")
-            raise Exception("快速刷新失败")
+
         self.selected_items.clear()
         self._update_top_title()
-        # self.selected_values.clear()
-
 
 class RadioTreeView(ABC):
     def __init__(self, parent_class, parent_frame, table_tag, title_text=None):
@@ -1381,9 +1377,9 @@ class RadioTreeView(ABC):
         # 保存排序状态
         self.sort[col] = is_asc_after
         if self.sw is not None:
-            subfunc_file.save_sw_setting(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
+            subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
         else:
-            subfunc_file.save_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
+            subfunc_file.save_a_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
 
     def quick_refresh_items(self, data_src):
         """

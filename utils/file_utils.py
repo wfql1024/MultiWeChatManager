@@ -25,6 +25,7 @@ logger = logger_utils.mylogger
 
 class DictUtils:
     SEPARATOR = '/'
+
     @staticmethod
     def _get_nested_value(data: Any, key_path: Optional[str],
                           default_value: Any = None) -> Any:
@@ -303,10 +304,10 @@ class JsonUtils:
             return {}
 
     @staticmethod
-    def save_json(account_data_file, account_data):
+    def save_json(json_file, data):
         try:
-            with open(account_data_file, 'w', encoding='utf-8') as f:
-                json_string = json.dumps(account_data, ensure_ascii=False, indent=4)
+            with open(json_file, 'w', encoding='utf-8') as f:
+                json_string = json.dumps(data, ensure_ascii=False, indent=4)
                 f.write(json_string)
             return True
         except Exception as e:
@@ -316,68 +317,65 @@ class JsonUtils:
 
 class IniUtils:
     @staticmethod
-    def get_setting_from_ini(ini_path, section, key, default_value=None, validation_func=None):
+    def load_ini_as_dict(ini_path):
+        try:
+            # 检查文件是否存在
+            if not os.path.exists(ini_path):
+                logger.warning(f"文件不存在: {ini_path}，创建空文件")
+                open(ini_path, 'w', encoding='utf-8').close()  # 创建空文件
+                return {}
+
+            # 读取配置文件
+            config = configparser.ConfigParser()
+            config.read(ini_path, encoding='utf-8')
+
+            # 将ConfigParser对象转换为字典
+            result_dict = {}
+            for section in config.sections():
+                result_dict[section] = {}
+                for key, value in config[section].items():
+                    result_dict[section][key] = value
+
+            return result_dict
+
+        except Exception as e:
+            logger.error(f"读取配置文件失败: {ini_path}, 错误: {e}")
+            return {}
+
+    @staticmethod
+    def save_ini_from_dict(ini_path, data_dict):
+        """
+        将字典数据保存到ini文件
+        :param ini_path: ini文件路径
+        :param data_dict: 要保存的字典数据
+        :return: bool 是否保存成功
+        """
         try:
             # 检查文件是否存在
             if not os.path.exists(ini_path):
                 logger.warning(f"文件不存在: {ini_path}，创建空文件")
                 open(ini_path, 'w').close()  # 创建空文件
-                return None
 
-            # 读取配置文件
+            # 读取现有配置
             config = configparser.ConfigParser()
             config.read(ini_path)
 
-            # 检查节和键是否存在
-            if section in config and key in config[section]:
-                current_value = config[section][key]
-                # 验证配置值
-                if validation_func is None or validation_func(current_value):
-                    # logger.info(f"读取 {ini_path}[{section}]{key} = {current_value}")
-                    return current_value
+            # 遍历字典并更新配置
+            for section, items in data_dict.items():
+                if not config.has_section(section):
+                    config.add_section(section)
+                for key, value in items.items():
+                    config[section][key] = str(value)
 
-            # 如果节或键不存在，返回默认值
-            logger.warning(f"配置项不存在: {ini_path}[{section}]{key}")
-            return default_value
+            # 保存配置
+            with open(ini_path, 'w', encoding='utf-8') as f:
+                f: IO[str] = f
+                config.write(f) # type: ignore
+            return True
 
         except Exception as e:
-            logger.error(f"读取配置文件失败: {ini_path}, 错误: {e}")
-            return None
-
-    @staticmethod
-    def save_setting_to_ini(ini_path, section, key, value):
-        config = configparser.ConfigParser()
-
-        ini_path = ini_path.replace('\\', '/')
-        # 先确保目录存在，如果不存在则创建
-        ini_dir = os.path.dirname(ini_path)
-        if not os.path.exists(ini_dir):
-            os.makedirs(ini_dir, exist_ok=True)  # 创建文件夹
-            logger.warning(f"文件夹不存在，已创建: {ini_dir}")
-
-        # 确保目录存在后再读取文件
-        if os.path.exists(ini_path):
-            try:
-                files_read = config.read(ini_path)
-                if not files_read:
-                    logger.warning(f"Unable to read {ini_path}")
-            except Exception as e:
-                logger.error(f"Failed to read {ini_path}: {e}")
-
-        # 检查 section 是否存在
-        if section not in config:
-            config[section] = {}
-
-        config[section][key] = str(value)
-
-        # 写入配置文件
-        try:
-            with open(ini_path, 'w') as configfile:
-                configfile: IO[str] = configfile
-                config.write(configfile)  # type: ignore
-                # logger.info(f"写入{value} -----> {os.path.basename(ini_path)}[{section}]{key}")
-        except IOError as e:
-            logger.error(f"Failed to write to {ini_path}: {e}")
+            logger.error(f"保存配置文件失败: {ini_path}, 错误: {e}")
+            return False
 
 
 class DllUtils:

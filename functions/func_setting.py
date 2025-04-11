@@ -50,7 +50,7 @@ def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders: list, che
             if check_sw_path_func(sw, path):
                 print(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果 {path}")
                 standardized_path = os.path.abspath(path).replace('\\', '/')
-                changed = subfunc_file.save_sw_setting(sw, path_type, standardized_path)
+                changed = subfunc_file.save_a_setting_and_callback(sw, path_type, standardized_path)
                 result = standardized_path
                 success = True
                 break
@@ -82,7 +82,7 @@ def get_sw_install_path_by_tuple(sw: str, ignore_local_record=False) \
     """
     path_finders = [
         sw_utils.get_sw_install_path_from_process,
-        (lambda lsw: []) if ignore_local_record else create_path_finder_of_(Keywords.INST_PATH),
+        (lambda sw: []) if ignore_local_record else create_path_finder_of_(Keywords.INST_PATH),
         sw_utils.get_sw_install_path_from_machine_register,
         sw_utils.get_sw_install_path_from_user_register,
         sw_utils.get_sw_install_path_by_guess,
@@ -115,7 +115,7 @@ def get_sw_data_dir_to_tuple(sw: str, ignore_local_record=False) \
     :return: 成功，是否改变，结果
     """
     path_finders = [
-        (lambda lsw: []) if ignore_local_record else create_path_finder_of_(Keywords.DATA_DIR),
+        (lambda sw: []) if ignore_local_record else create_path_finder_of_(Keywords.DATA_DIR),
         sw_utils.get_sw_data_dir_from_user_register,
         sw_utils.get_sw_data_dir_by_guess,
         get_sw_data_dir_from_other_sw,
@@ -136,7 +136,7 @@ def get_sw_dll_dir(sw: str, ignore_local_record=False):
 def get_sw_dll_dir_to_tuple(sw: str, ignore_local_record=False):
     """获取微信dll所在文件夹"""
     path_finders = [
-        (lambda lsw: []) if ignore_local_record else create_path_finder_of_(Keywords.DLL_DIR),
+        (lambda sw: []) if ignore_local_record else create_path_finder_of_(Keywords.DLL_DIR),
         sw_utils.get_sw_dll_dir_by_memo_maps,
         get_sw_dll_dir_by_files,
     ]
@@ -179,7 +179,7 @@ def set_wnd_scale(after, scale=None):
             after()
             return
 
-    subfunc_file.save_global_setting(
+    subfunc_file.save_a_global_setting(
         Keywords.GLOBAL_SECTION,
         Keywords.SCALE,
         str(scale)

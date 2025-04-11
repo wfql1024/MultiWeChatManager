@@ -115,7 +115,7 @@ def read_remote_cfg_in_rules():
             # 更新 next_check_time 为明天
             next_check_time = today + dt.timedelta(days=1)
             next_check_time_str = next_check_time.strftime("%Y-%m-%d")
-            save_global_setting("next_check_time", next_check_time_str)
+            save_a_global_setting("next_check_time", next_check_time_str)
             return config_data
         else:
             return try_read_remote_cfg_locally()
@@ -137,7 +137,6 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
         for key, default in kwargs.items():
             value = info.get(key, default)
             result += (value,)
-            # logger.info(f"从json获取[{account}][{key}]：{string_utils.clean_display_name(str(value))}")
         return result
     except Exception as e:
         logger.error(e)
@@ -146,33 +145,99 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
 
 """本地设置"""
 
+def load_setting():
+    """
+    加载设置
+    :return:
+    """
+    data = IniUtils.load_ini_as_dict(Config.SETTING_INI_PATH)
+    return data
 
-def save_sw_setting(sw, key, value, after=None):
-    changed = False
-    origin_value = IniUtils.get_setting_from_ini(Config.SETTING_INI_PATH, sw, key)
-    IniUtils.save_setting_to_ini(Config.SETTING_INI_PATH, sw, key, value)
-    if after is not None:
-        after()
-    if value != origin_value:
-        print(f"成功修改{sw}的{key}为{value}！")
-        changed = True
-    else:
-        print(f"一致的值：{sw}的{key}为{value}！")
-    return changed
+def save_setting(data):
+    """
+    保存设置
+    :return:
+    """
+    return IniUtils.save_ini_from_dict(Config.SETTING_INI_PATH, data)
 
 
-def save_global_setting(key, value, after=None):
-    changed = False
-    origin_value = IniUtils.get_setting_from_ini(Config.SETTING_INI_PATH, Keywords.GLOBAL_SECTION, key)
-    IniUtils.save_setting_to_ini(Config.SETTING_INI_PATH, Keywords.GLOBAL_SECTION, key, value)
-    if after is not None:
-        after()
-    if value != origin_value:
-        print(f"成功修改{key}为{value}！")
-        changed = True
-    else:
-        print(f"一致的值：{key}为{value}！")
-    return changed
+def clear_some_setting(*addr) -> bool:
+    """
+    清空某平台的账号记录，在对平台重新设置后触发
+    :return: 是否成功
+    """
+    try:
+        print(f"清理{addr}处数据...")
+        data = load_setting()
+        DictUtils.clear_nested_values(data, *addr)
+        save_setting(data)
+        return True
+    except Exception as e:
+        logger.error(e)
+        return False
+
+
+def update_settings(*front_addr, **kwargs) -> bool:
+    """更新账户信息到 JSON"""
+    try:
+        data = load_setting()
+        success = DictUtils.set_nested_values(data, None, *front_addr, **kwargs)
+        save_setting(data)
+        return success
+    except Exception as e:
+        logger.error(e)
+        return False
+
+
+def get_settings(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
+    """
+    根据用户输入的变量名，获取对应的账户信息
+    :param front_addr: 前置地址，如：("wechat", "account1")
+    :param kwargs: 需要获取的键地址及其默认值（如 note="", nickname=None）
+    :return: 包含所请求数据的元组
+    """
+    try:
+        data = load_setting()
+        return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
+    except Exception as e:
+        logger.error(e)
+        return tuple()
+
+
+def save_a_setting_and_callback(section, key, value, callback=None):
+    """
+    保存设置并回调
+    :param section: 配置文件中的section
+    :param key: 配置文件中的key
+    :param value: 配置文件中的value
+    :param callback: 回调函数
+    :return:
+    """
+    try:
+        changed = False
+        data = load_setting()
+        origin_value = DictUtils.get_nested_values(data, None, section, key)
+        DictUtils.set_nested_values(data, value, section, key)
+        save_setting(data)
+
+        data = load_setting()
+        new_value = DictUtils.get_nested_values(data, None, section, key)
+
+        if callback is not None:
+            callback()
+        if new_value != origin_value:
+            print(f"成功修改{section}的{key}为{value}！")
+            changed = True
+        else:
+            print(f"一致的值：{section}的{key}为{value}！")
+        return changed
+    except Exception as e:
+        logger.error(e)
+        return False
+
+
+def save_a_global_setting(key, value, callback=None):
+    return save_a_setting_and_callback(Keywords.GLOBAL_SECTION, key, value, callback)
 
 
 def fetch_global_setting_or_set_default_or_none(setting_key):
@@ -180,23 +245,7 @@ def fetch_global_setting_or_set_default_or_none(setting_key):
     获取配置项，若没有则添加默认，若没有默认则返回None
     :return: 已选择的子程序
     """
-    value = IniUtils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        Keywords.GLOBAL_SECTION,
-        setting_key,
-    )
-    if not value or value == "" or value == "None" or value == "none":
-        try:
-            value = Config.INI_DEFAULT_VALUE[setting_key]
-            IniUtils.save_setting_to_ini(
-                Config.SETTING_INI_PATH,
-                Keywords.GLOBAL_SECTION,
-                setting_key,
-                value
-            )
-        except KeyError:
-            return None
-    return value
+    return fetch_sw_setting_or_set_default_or_none(Keywords.GLOBAL_SECTION, setting_key)
 
 
 def fetch_sw_setting_or_set_default_or_none(sw, setting_key):
@@ -204,23 +253,14 @@ def fetch_sw_setting_or_set_default_or_none(sw, setting_key):
     获取配置项，若没有则设置默认值，若没有默认值则返回None
     :return: 已选择的子程序
     """
-    value = IniUtils.get_setting_from_ini(
-        Config.SETTING_INI_PATH,
-        sw,
-        setting_key,
-    )
+    data = load_setting()
+    value = DictUtils.get_nested_values(data, None, sw, setting_key)
     if not value or value == "" or value == "None" or value == "none":
         try:
             value = Config.INI_DEFAULT_VALUE[sw][setting_key]
-            IniUtils.save_setting_to_ini(
-                Config.SETTING_INI_PATH,
-                sw,
-                setting_key,
-                value
-            )
+            DictUtils.set_nested_values(data, value, sw, setting_key)
         except KeyError:
             return None
-    # print(f"获取{sw}平台的{setting_key}配置项为{value}")
     return value
 
 

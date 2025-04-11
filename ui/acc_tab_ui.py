@@ -97,6 +97,7 @@ class AccTabUI:
         if self.root_menu.path_error is True:
             self.show_setting_error()
         success, result = self.get_acc_list_answer
+        printer.normal(f"[{time.time() - self.start_time:.4f}s] 数据收集完成！")
         if success is not True:
             self.show_setting_error()
         else:
@@ -175,7 +176,7 @@ class AccTabUI:
 
         subfunc_file.update_statistic_data(
             self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(logins)), time.time() - self.start_time)
-        printer.normal(f"加载完成！用时：{time.time() - self.start_time:.4f}秒")
+        printer.normal(f"[{time.time() - self.start_time:.4f}s] 加载完成！")
 
         self.after_success_create_acc_ui_when_start()
         self.after_success_create_acc_ui()

@@ -239,7 +239,7 @@ def get_sw_acc_list(_root, root_class, sw):
 
     data_dir = sw_class.data_dir
     # print(data_dir)
-    if os.path.isdir(data_dir) is False:
+    if data_dir is None or os.path.isdir(data_dir) is False:
         return False, "数据路径不存在"
 
     def update_acc_list_by_pid(process_id: int):

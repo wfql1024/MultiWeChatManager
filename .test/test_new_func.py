@@ -3,6 +3,7 @@ from unittest import TestCase
 from functions import subfunc_file
 from resources import Config
 from utils import handle_utils
+from utils.file_utils import IniUtils
 from utils.patch_utils import *
 
 
@@ -132,3 +133,7 @@ class Test(TestCase):
 
             # 设置检查间隔（100ms）
             time.sleep(0.02)
+
+    def test_get_ini_config(self):
+        config = IniUtils.load_ini_as_dict(Config.SETTING_INI_PATH)
+        print(config.__dict__)
