@@ -7,45 +7,45 @@ from utils.encoding_utils import ColorUtils
 
 class CustomLabelBtn(tk.Label):
     def __init__(self, parent, text, selected_bg='#00FF00', *args, **kwargs):
-        super().__init__(parent, text=text, bg='white', relief='flat', padx=2, pady=2, *args, **kwargs)
+        super().__init__(parent, text=text, bg='white', relief='flat', *args, **kwargs)
         self.selected_bg = selected_bg
         self.hover_bg = ColorUtils.lighten_color(selected_bg, 0.8)
         self.click_command = None
-        
+
         # 绑定悬浮和点击事件
         self.bind('<Enter>', self._on_enter)
         self.bind('<Leave>', self._on_leave)
         self.bind('<Button-1>', self._on_button_down)
         self.bind('<ButtonRelease-1>', self._on_button_up)
-        
+
     def set_selected(self, selected=True):
         """设置标签的选中状态"""
         self.configure(bg=self.selected_bg if selected else 'white')
-        
+
     def _on_enter(self, event=None):
         """设置标签的悬浮状态"""
         if not self.cget('bg') == self.selected_bg:  # 未选中时才显示悬浮效果
             self.configure(bg=self.hover_bg)
-            
+
     def _on_leave(self, event=None):
         """设置标签的悬浮状态"""
         if not self.cget('bg') == self.selected_bg:  # 未选中时才显示悬浮效果
             self.configure(bg='white')
-            
+
     def on_click(self, command):
         """设置点击事件的回调函数"""
         self.click_command = command
-        
+
     def _on_button_down(self, event=None):
         """按下按钮时的效果"""
         self.configure(bg=self.selected_bg)
-        
+
     def _on_button_up(self, event=None):
         """松开按钮时的效果"""
         self.configure(bg=self.hover_bg)
         if self.click_command:
             self.click_command()
-            
+
     def set_colors(self, selected_bg):
         """更新标签的颜色方案"""
         self.selected_bg = selected_bg
@@ -126,7 +126,7 @@ class CustomNotebook(ttk.Frame):
 
         label = CustomLabelBtn(tab, text=display_text, selected_bg=self.selected_bg)
         label.pack(fill=tk.BOTH, expand=True)
-        
+
         # 设置点击事件
         label.on_click(lambda t=text: self.select(t))
 
@@ -160,6 +160,7 @@ class CustomNotebook(ttk.Frame):
                 tab_info['frame'].pack(fill=tk.BOTH, expand=True)
             else:
                 tab_info['frame'].pack_forget()
+
 
 if __name__ == '__main__':
     root = tk.Tk()

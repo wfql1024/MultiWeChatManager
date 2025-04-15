@@ -1,11 +1,13 @@
 # 定义对齐方式的枚举类
 from enum import Enum
 
+
 class NotebookDirection(Enum):
     TOP = "top"
     BOTTOM = "bottom"
     LEFT = "left"
     RIGHT = "right"
+
 
 class Position(Enum):
     CENTER = "center"
@@ -13,6 +15,7 @@ class Position(Enum):
     RIGHT = "right"
     TOP = "top"
     BOTTOM = "bottom"
+
 
 class Keywords(str, Enum):
     GLOBAL_SECTION = "global"
@@ -56,10 +59,12 @@ class SW(str, Enum):
     WEIXIN = "Weixin"
     QQ = "QQ"
 
+
 class OnlineStatus(str, Enum):
     LOGIN = "login"
     LOGOUT = "logout"
     UNKNOWN = "unknown"
+
 
 if __name__ == '__main__':
     print(Keywords.GLOBAL_SECTION)

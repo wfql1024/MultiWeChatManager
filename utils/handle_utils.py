@@ -58,7 +58,6 @@ def close_handles_by_matches(handle_exe, matches):
                                     '-p', str(wechat_pid), '-y'])
                 printer.normal(f"指令：{command}")
 
-
                 # 使用 Popen 启动子程序并捕获输出
                 process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                                            shell=True)

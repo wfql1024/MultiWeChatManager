@@ -6,7 +6,7 @@ import win32con
 import win32gui
 
 from functions import func_setting, subfunc_file
-from public_class.enums import Position, Keywords, SW
+from public_class.enums import Keywords, SW
 from resources import Config
 from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
@@ -15,13 +15,14 @@ from utils.logger_utils import mylogger as logger
 # TODO: 完善4.0的python模式
 
 
-def is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-    """
-    检测窗口是否是某个账号的主窗口
-    :param hwnd:
-    :param sw:
-    :return:
-    """
+def is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
+    """检测窗口是否是某个账号的主窗口"""
+    pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
+    if pid is None:
+        return False
+    # 判断hwnd是否属于指定的pid
+    if hwnd_utils.get_hwnd_details_of_(hwnd)["pid"] != pid:
+        return False
     expected_class, = subfunc_file.get_details_from_remote_setting_json(sw, main_wnd_class=None)
     class_name = win32gui.GetClassName(hwnd)
     print(expected_class, class_name)
@@ -38,19 +39,23 @@ def is_hwnd_a_main_wnd_of_sw(hwnd, sw):
         return has_maximize
 
 
-def switch_to_sw_account_wnd(item_id, root):
+def switch_to_sw_account_wnd(item_id):
+    """切换到指定的账号窗口"""
     sw, acc = item_id.split("/")
-    main_wnd_class, = subfunc_file.get_details_from_remote_setting_json(
-        sw, main_wnd_class=None)
-    classes = [main_wnd_class]
     main_hwnd, = subfunc_file.get_sw_acc_data(sw, acc, main_hwnd=None)
-
-    # 程序主窗口左移
-    hwnd_utils.set_size_and_bring_tk_wnd_to_(root, None, None, Position.LEFT)
-    # 隐藏所有平台主窗口
-    hwnd_utils.hide_all_by_wnd_classes(classes)
     # 恢复平台指定主窗口
-    hwnd_utils.restore_window(main_hwnd)
+    if sw == SW.WECHAT:
+        hwnd_utils.restore_window(main_hwnd)
+    elif sw == SW.WEIXIN:
+        # 如果微信没有被隐藏到后台
+        if hwnd_utils.is_window_visible(main_hwnd):
+            hwnd_utils.restore_window(main_hwnd)
+        else:
+            # 先恢复窗口，再模拟双击以激活窗口
+            hwnd_utils.restore_window(main_hwnd)
+            time.sleep(0.2)
+            hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+            hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
 
 
 def kill_sw_multiple_processes(sw):
@@ -69,7 +74,7 @@ def kill_sw_multiple_processes(sw):
     print(f"清理{sw}Multiple_***子程序完成!")
 
 
-def get_mutex_dict(sw):
+def organize_sw_mutex_dict(sw):
     """拿到当前时间下系统中所有微信进程的互斥体情况"""
     print("获取互斥体情况...")
     executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
@@ -158,11 +163,13 @@ def open_sw(sw, status, has_mutex_dictionary=None):
         # ————————————————————————————————python[强力]————————————————————————————————
         elif multiple_mode == "python[S]":
             pids = process_utils.get_process_ids_by_name(executable_name)
+            handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+            handle_names = [handle["handle_name"] for handle in handle_regex_list]
             if len(pids) > 0:
                 success = pywinhandle.close_handles(
                     pywinhandle.find_handles(
                         pids,
-                        ['_WeChat_App_Instance_Identity_Mutex_Name']
+                        handle_names
                     )
                 )
                 if success:
@@ -175,13 +182,15 @@ def open_sw(sw, status, has_mutex_dictionary=None):
             create_process_without_admin(wechat_path, None)
         # ————————————————————————————————python————————————————————————————————
         elif multiple_mode == "python":
+            handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+            handle_names = [handle["handle_name"] for handle in handle_regex_list]
             if len(has_mutex_dictionary) > 0:
-                print(has_mutex_dictionary)
+                print("互斥体列表：", has_mutex_dictionary)
                 pids, values = zip(*has_mutex_dictionary.items())
                 success = pywinhandle.close_handles(
                     pywinhandle.find_handles(
                         pids,
-                        ['_WeChat_App_Instance_Identity_Mutex_Name']
+                        handle_names
                     )
                 )
                 if success:
@@ -205,7 +214,7 @@ def get_login_size(sw, status):
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
     kill_sw_multiple_processes(sw)
-    has_mutex_dict = get_mutex_dict(sw)
+    has_mutex_dict = organize_sw_mutex_dict(sw)
     sub_exe_process, sub_exe = open_sw(sw, status, has_mutex_dict)
     wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
     if wechat_hwnd:
@@ -223,38 +232,15 @@ def get_login_size(sw, status):
 
 
 def create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
-    if (sys_utils.get_sys_major_version_name() == "win11" or
-            sys_utils.get_sys_major_version_name() == "win10"):
+    """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
+    cur_sys_ver = sys_utils.get_sys_major_version_name()
+    if cur_sys_ver == "win11" or cur_sys_ver == "win10":
         # return process_utils.create_process_with_logon(
-        #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)
+        #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
         # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
+        # # 拿默认令牌通过资源管理器身份创建
         # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
+        # # 拿Handle令牌通过资源管理器身份创建
         return process_utils.create_process_with_re_token_handle(executable, args, creation_flags)
-        # return process_utils.create_process_for_win7(executable, args, creation_flags)
     else:
         return process_utils.create_process_for_win7(executable, args, creation_flags)
-
-
-def logging_in_listener():
-    handles = set()
-    flag = False
-
-    while True:
-        handle = win32gui.FindWindow("WeChatLoginWndForPC", None)
-        if handle:
-            handles.add(handle)
-            flag = True
-        print(f"当前有微信窗口：{handles}")
-        for handle in list(handles):
-            if win32gui.IsWindow(handle):
-                wechat_wnd_details = hwnd_utils.get_hwnd_details_of_(handle)
-                wechat_width = wechat_wnd_details["width"]
-                wechat_height = wechat_wnd_details["height"]
-                hwnd_utils.do_click_in_wnd(handle, int(wechat_width * 0.5), int(wechat_height * 0.75))
-            else:
-                handles.remove(handle)
-
-        time.sleep(5)
-        # 检测到出现开始，直接列表再次为空结束
-        if flag and len(handles) == 0:
-            return

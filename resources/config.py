@@ -1,7 +1,7 @@
 import os
 
-from resources import constants
 from public_class.enums import Keywords, SW
+from resources import constants
 
 # 获取屏幕缩放因子
 SCALE_FACTOR = constants.get_scale_factor()
@@ -12,7 +12,7 @@ class Config:
     VER_STATUS = 'Beta'
 
     INI_DEFAULT_VALUE = {
-        Keywords.GLOBAL_SECTION:{
+        Keywords.GLOBAL_SECTION: {
             Keywords.SCREEN_SIZE: f"1920*1080",
             Keywords.HIDE_WND: "False",
             Keywords.ENABLE_NEW_FUNC: "True",

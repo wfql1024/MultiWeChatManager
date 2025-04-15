@@ -29,12 +29,11 @@ class HotkeyEntry4Keyboard:
         "left shift": "Shift", "right shift": "Shift",
     }
 
-    def __init__(self, set_hotkey, hotkey_frame):
+    def __init__(self, hotkey_entry, hotkey_var):
         self.last_valid_hotkey = ""
         self.current_keys = set()
-        self.hotkey_var = tk.StringVar(value="") if set_hotkey is None else tk.StringVar(value=set_hotkey)
-        self.hotkey_entry = ttk.Entry(hotkey_frame, textvariable=self.hotkey_var, width=30)
-        self.hotkey_entry.pack(side=tk.LEFT)
+        self.hotkey_entry = hotkey_entry
+        self.hotkey_var = hotkey_var
 
         # 绑定焦点事件
         self.hotkey_entry.bind("<FocusIn>", self.start_recording)

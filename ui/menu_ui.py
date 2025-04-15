@@ -16,10 +16,11 @@ from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
-#TODO：刷新菜单增加热更新功能√
-#TODO: 增加个全局设置
-#TODO: 用户可以自定义多开的全流程
-#TODO: 主题色选择
+
+# TODO：刷新菜单增加热更新功能√
+# TODO: 增加个全局设置
+# TODO: 用户可以自定义多开的全流程
+# TODO: 主题色选择
 
 class MenuUI:
     def __init__(self):
@@ -180,7 +181,8 @@ class MenuUI:
 
         # 缩放
         self.view_menu.add_separator()  # ————————————————分割线————————————————
-        scale_value = self.global_settings_value.scale = subfunc_file.fetch_global_setting_or_set_default_or_none("scale")
+        scale_value = self.global_settings_value.scale = subfunc_file.fetch_global_setting_or_set_default_or_none(
+            "scale")
         scale_var = self.global_settings_var.scale = tk.StringVar(value=scale_value)
         self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
@@ -404,7 +406,8 @@ class MenuUI:
 
         # ————————————————————————————作者标签————————————————————————————
         new_func_value = self.global_settings_value.new_func = \
-            True if subfunc_file.fetch_global_setting_or_set_default_or_none(Keywords.ENABLE_NEW_FUNC) == "True" else False
+            True if subfunc_file.fetch_global_setting_or_set_default_or_none(
+                Keywords.ENABLE_NEW_FUNC) == "True" else False
         author_str = self.app_info.author
         hint_str = self.app_info.hint
         author_str_without_hint = f"by {author_str}"
@@ -480,7 +483,7 @@ class MenuUI:
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
         SettingWnd(settings_window, sw, self.sw_class.multiple_state,
-                              self.root_class.acc_tab_ui.refresh, f"{sw}设置")
+                   self.root_class.acc_tab_ui.refresh, f"{sw}设置")
 
     def open_global_setting_wnd(self):
         """打开设置窗口"""

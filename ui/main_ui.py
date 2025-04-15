@@ -16,6 +16,7 @@ from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
+
 # TODO: 标签页布局优化
 
 class MainWindow:
@@ -254,7 +255,7 @@ class MainWindow:
     def to_switch_to_sw_account_wnd(self, item, event=None):
         if event:
             pass
-        subfunc_sw.switch_to_sw_account_wnd(item, self.root)
+        subfunc_sw.switch_to_sw_account_wnd(item)
 
 
 class SoftwareInfo:

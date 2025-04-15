@@ -6,6 +6,7 @@ class QueueWithUpdate(queue.Queue):
     """
     带有更新功能的队列
     """
+
     def __init__(self, update_callback):
         super().__init__()
         self.update_callback = update_callback  # 更新状态栏的回调函数

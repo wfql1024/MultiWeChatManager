@@ -104,7 +104,7 @@ class DirTreeCreator:
         formatted_dirs = []  # 存放文件夹的列表
         formatted_files = []  # 存放文件的列表
 
-        indent:str = str(self.indent_prefix) * level + str(self.indent_suffix)
+        indent: str = str(self.indent_prefix) * level + str(self.indent_suffix)
 
         # 解析忽略项的相关参数
         ignore_dot_dir = self.ignore_dot_dir

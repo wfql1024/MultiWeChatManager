@@ -1,43 +1,44 @@
-import tkinter as tk
-from enum import Enum
-from tkinter import ttk
-from abc import ABC
 import ctypes
 import threading
 import time
+import tkinter as tk
+from abc import ABC
+from enum import Enum
+from tkinter import ttk
 
+import win32con
+import win32gui
 from PIL import Image, ImageTk
 
 from functions import subfunc_file, func_account, subfunc_sw
 from public_class.custom_widget import CustomLabelBtn
-from public_class.enums import Keywords, OnlineStatus, SW
+from public_class.enums import Keywords, OnlineStatus
+from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import RadioTreeView
 from resources import Constants
-from utils.logger_utils import mylogger as logger
-
-import win32con
-import win32gui
-
-from public_class.global_members import GlobalMembers
 from utils import hwnd_utils
 from utils.hwnd_utils import TkWndUtils
+from utils.logger_utils import mylogger as logger
 from utils.widget_utils import TreeUtils
+
 
 class WndProperties(str, Enum):
     """
     窗口状态枚举类
     """
+    IS_HIDDEN = "hidden"
     IS_MAXIMIZED = "maximized"
     IS_MINIMIZED = "minimized"
     IS_FOREGROUND = "foreground"
     IS_DEF_MAXIMIZED = "def_maximized"
     RECT = "rect"
 
+
 class SidebarWnd:
-    #TODO: 若无法找到窗口，联动详情窗口来获取窗口句柄
-    #TODO: 列表选中状态应该是根据目前已经链接的窗口来确定
-    #TODO: 增加最大化判断
-    #TODO: 完善侧栏功能：手动登录，自动登录
+    # TODO: 若无法找到窗口，联动详情窗口来获取窗口句柄
+    # TODO: 列表选中状态应该是根据目前已经链接的窗口来确定
+    # TODO: 增加最大化判断
+    # TODO: 完善侧栏功能：手动登录，自动登录
 
     def __init__(self, wnd, title):
         self.thread_result = None
@@ -103,7 +104,7 @@ class SidebarWnd:
         # 中间框架
         self.middle_frame = ttk.Frame(self.bar_frame)
         self.middle_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-        
+
         self.tip_label = tk.Label(
             self.middle_frame,
             text=" ",
@@ -161,6 +162,7 @@ class SidebarWnd:
             WndProperties.IS_MINIMIZED: bool(window_style & win32con.WS_MINIMIZE),
             WndProperties.IS_MAXIMIZED: bool(window_style & win32con.WS_MAXIMIZE),
             WndProperties.IS_FOREGROUND: win32gui.GetForegroundWindow() == hwnd,
+            WndProperties.IS_HIDDEN: not bool(window_style & win32con.WS_VISIBLE),
             WndProperties.RECT: linked_rect
         }
         return current_state
@@ -232,6 +234,7 @@ class SidebarWnd:
                           f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
                           f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
                           f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
+                          f"隐藏={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]},"
                           f"位置={curr_linked_wnd_state[WndProperties.RECT]}，"
                           f"“最大化”={is_def_max_wnd}，"
                           f"记录的“非最大化”位置：{self.last_linked_rect}")  # 每次监听都打印状态
@@ -262,18 +265,18 @@ class SidebarWnd:
                     #     if not curr_linked_wnd_state[1]:
                     #         self.wnd.deiconify()  # 还原窗口
 
-                        # # 更新“最大化”状态
-                        # if is_maximized:
-                        #     # 这里用户双击了窗口，需要切换窗口状态
-                        #     self.set_linked_wnd_maximized(is_def_max_wnd)
-                        #
-                        # else:
-                        #     if curr_linked_wnd_state[4] != last_linked_wnd_state[4]:  # 如果窗口位置发生变化
-                        #         is_def_max_wnd = False
+                    # # 更新“最大化”状态
+                    # if is_maximized:
+                    #     # 这里用户双击了窗口，需要切换窗口状态
+                    #     self.set_linked_wnd_maximized(is_def_max_wnd)
+                    #
+                    # else:
+                    #     if curr_linked_wnd_state[4] != last_linked_wnd_state[4]:  # 如果窗口位置发生变化
+                    #         is_def_max_wnd = False
 
-                        # # 对链接窗口进行操作后，更新下窗口状态
-                        # curr_linked_wnd_state = self.get_linked_wnd_state(self.linked_hwnd)
-                        # last_linked_wnd_state = curr_linked_wnd_state
+                    # # 对链接窗口进行操作后，更新下窗口状态
+                    # curr_linked_wnd_state = self.get_linked_wnd_state(self.linked_hwnd)
+                    # last_linked_wnd_state = curr_linked_wnd_state
 
                     # 状态有变，则操作链接窗口后，更新信息后更新工具栏
                     if self._update_linked_wnd_from_states(last_linked_wnd_state, curr_linked_wnd_state):
@@ -375,7 +378,7 @@ class SidebarWnd:
             new_linked_wnd_rect = win32gui.GetWindowRect(new_linked_hwnd)
             try:
                 win32gui.SetWindowPos(
-                new_linked_hwnd,
+                    new_linked_hwnd,
                     win32con.HWND_TOP,
                     new_linked_wnd_rect[0],
                     new_linked_wnd_rect[1],
@@ -524,16 +527,18 @@ class SidebarWnd:
         :return: 窗口句柄或None(超时)
         """
         start_time = time.time()
+
         def on_tip_click(e):
             nonlocal last_time
             last_time = 0
+
         # print(start_time)
-        self.root.after(0, lambda :self.tip_label.bind("<Button-1>", on_tip_click))
+        self.root.after(0, lambda: self.tip_label.bind("<Button-1>", on_tip_click))
 
         while True:
             hwnd = win32gui.GetForegroundWindow()
             # print(hwnd)
-            if hwnd and win32gui.IsWindow(hwnd) and subfunc_sw.is_hwnd_a_main_wnd_of_sw(hwnd, sw):
+            if hwnd and win32gui.IsWindow(hwnd) and subfunc_sw.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw):
                 self.thread_result = hwnd
                 return
 
@@ -542,12 +547,13 @@ class SidebarWnd:
             last_time = int(timeout - elapsed_time)
 
             if last_time <= 0:
-                self.root.after(0, lambda :self.tip_label.config(text=" "))
+                self.root.after(0, lambda: self.tip_label.config(text=" "))
                 self.thread_result = None
                 return
 
             # 更新提示信息
-            self.root.after(0, lambda :self.tip_label.config(text=f"（点击可取消）窗口丢失，请{last_time}秒内打开对应窗口..."))
+            self.root.after(0, lambda: self.tip_label.config(
+                text=f"（点击可取消）窗口丢失，请{last_time}秒内打开对应窗口..."))
             time.sleep(0.02)
 
 

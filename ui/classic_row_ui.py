@@ -51,10 +51,11 @@ class ClassicRowUI:
 
         # 加载登录列表
         self.classic_table_class["login"] = AccLoginClassicTable(
-                self, self.main_frame, "login", "已登录：", self.btn_dict["auto_quit_btn"])
+            self, self.main_frame, "login", "已登录：", self.btn_dict["auto_quit_btn"])
 
         self.classic_table_class["logout"] = AccLoginClassicTable(
-                self, self.main_frame, "logout", "未登录：", self.btn_dict["auto_login_btn"])
+            self, self.main_frame, "logout", "未登录：", self.btn_dict["auto_login_btn"])
+
 
 class AccLoginRowCheckbox(CheckboxItemRow, ABC):
     def __init__(self, parent_class, item, table_tag):
@@ -79,6 +80,7 @@ class AccLoginRowCheckbox(CheckboxItemRow, ABC):
             avatar_label = ttk.Label(self.row_frame, image=photo)
         avatar_label.image = photo  # 保持对图像的引用
         return avatar_label
+
 
 class AccLoginClassicTable(ActionableClassicTable, ABC):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):

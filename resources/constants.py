@@ -80,7 +80,9 @@ class Constants:
     ERR_LBL_PAD_X = int(20 * SF)  # 错误标签内边距
     ERR_LBL_PAD_Y = int(20 * SF)  # 错误标签内边距
     BTN_FRAME_PAD = (int(4 * SF), int(4 * SF))  # 按钮框架内边距
-    CUS_BTN_PAD = (int(4 * SF), int(4 * SF))  # 普通按钮内边距
+    CUS_BTN_PAD_X = int(4 * SF)  # 定制按钮内边距x
+    CUS_BTN_PAD_Y = int(4 * SF)  # 定制按钮内边距y
+    CUS_BTN_PAD = (CUS_BTN_PAD_X, CUS_BTN_PAD_Y)  # 普通按钮内边距
     CUS_BTN_WIDTH = int(
         10 * ((SF - 1) / 3 + 1) if SF > 1 else 10 * (1 - (1 - SF) / 3))  # 普通按钮宽度
 

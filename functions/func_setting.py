@@ -17,10 +17,13 @@ def create_path_finder_of_(path_key):
     :param path_key: 路径类型
     :return: 路径查找函数
     """
+
     def get_sw_path_from_local_cfg(sw: str) -> list:
         path = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, path_key)
         return [path] if path is not None else []
+
     return get_sw_path_from_local_cfg
+
 
 def cycle_get_a_path_with_funcs(path_type: str, sw: str, path_finders: list, check_sw_path_func) \
         -> Union[Tuple[bool, bool, Union[None, str]]]:

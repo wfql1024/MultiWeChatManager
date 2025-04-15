@@ -1,6 +1,6 @@
 import time
-from abc import ABC, abstractmethod
 import tkinter as tk
+from abc import ABC, abstractmethod
 from functools import partial
 from tkinter import ttk
 from typing import Dict
@@ -13,7 +13,7 @@ from public_class.global_members import GlobalMembers
 from resources import Constants
 from utils import widget_utils
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger, PerformanceDebugger
+from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import TreeUtils
 
@@ -158,7 +158,7 @@ class CheckboxItemRow:
             self.root,
             self.avatar_label,
             partial(self.acc_tab_ui.to_open_acc_detail, iid),
-            partial(subfunc_sw.switch_to_sw_account_wnd, iid, self.root)
+            partial(subfunc_sw.switch_to_sw_account_wnd, iid)
         )
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
@@ -740,7 +740,7 @@ class ActionableTreeView(ABC):
             print(f"所有条目：{TreeUtils.get_all_items(tree)}")
             for i in TreeUtils.get_all_items(tree):
                 TreeUtils.remove_a_tag_of_item(tree, i, "selected")
-                
+
             # 只选择当前行
             selected_items.append(item_id)
             TreeUtils.add_a_tag_to_item(tree, item_id, "selected")
@@ -955,6 +955,7 @@ class ActionableTreeView(ABC):
 
         self.selected_items.clear()
         self._update_top_title()
+
 
 class RadioTreeView(ABC):
     def __init__(self, parent_class, parent_frame, table_tag, title_text=None):

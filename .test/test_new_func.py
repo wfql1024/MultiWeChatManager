@@ -1,8 +1,10 @@
+import time
 from unittest import TestCase
 
 from functions import subfunc_file
 from resources import Config
-from utils import handle_utils
+from ui.sidebar_ui import SidebarWnd, WndProperties
+from utils import handle_utils, hwnd_utils
 from utils.file_utils import IniUtils
 from utils.patch_utils import *
 
@@ -137,3 +139,21 @@ class Test(TestCase):
     def test_get_ini_config(self):
         config = IniUtils.load_ini_as_dict(Config.SETTING_INI_PATH)
         print(config.__dict__)
+
+    def test_get_wnd_state(self):
+        hwnd = 334080
+        while True:
+            curr_linked_wnd_state = SidebarWnd.get_linked_wnd_state(hwnd)
+            print(f"{hwnd}当前状态: "
+                  f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
+                  f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
+                  f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
+                  f"隐藏={curr_linked_wnd_state[WndProperties.IS_HIDDEN]},"
+                  f"位置={curr_linked_wnd_state[WndProperties.RECT]}")  # 每次监听都打印状态
+
+    def test_get_widget_by_name(self):
+        main_hwnd = 93198856
+        hwnd_utils.restore_window(main_hwnd)
+        time.sleep(0.2)
+        hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+        hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)

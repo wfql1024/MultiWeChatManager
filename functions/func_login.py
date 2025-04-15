@@ -43,19 +43,19 @@ def login_auto_start_accounts():
     # 获取已经登录的账号
     for sw in all_sw:
         # try:
-            if sw == acc_tab_ui.sw:
-                logins = root_class.sw_classes[sw].login_accounts
-            else:
-                success, result = func_account.get_sw_acc_list(root, root_class, sw)
-                if success is not True:
-                    continue
-                acc_list_dict, _, _ = result
-                logins = acc_list_dict["login"]
-            for acc in logins:
-                can_auto_start[sw].discard(acc)
-        # except Exception as e:
-        #     logger.error(e.with_traceback())
-        #     continue
+        if sw == acc_tab_ui.sw:
+            logins = root_class.sw_classes[sw].login_accounts
+        else:
+            success, result = func_account.get_sw_acc_list(root, root_class, sw)
+            if success is not True:
+                continue
+            acc_list_dict, _, _ = result
+            logins = acc_list_dict["login"]
+        for acc in logins:
+            can_auto_start[sw].discard(acc)
+    # except Exception as e:
+    #     logger.error(e.with_traceback())
+    #     continue
 
     if any(len(sw_set) != 0 for sw, sw_set in can_auto_start.items()):
         print(f"排除已登录之后需要登录：{can_auto_start}")
@@ -113,7 +113,7 @@ def manual_login(sw):
 
     state = root_class.sw_classes[sw].multiple_state
     logger.info(f"当前模式是：{state}")
-    has_mutex_dict = subfunc_sw.get_mutex_dict(sw)
+    has_mutex_dict = subfunc_sw.organize_sw_mutex_dict(sw)
     sub_exe_process, mode = subfunc_sw.open_sw(sw, state, has_mutex_dict)
     wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 20)
     if wechat_hwnd:
@@ -216,7 +216,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
                 break
 
             # 打开微信
-            has_mutex_dict = subfunc_sw.get_mutex_dict(sw)
+            has_mutex_dict = subfunc_sw.organize_sw_mutex_dict(sw)
             sub_exe_process, sub_exe = subfunc_sw.open_sw(sw, status, has_mutex_dict)
 
             # 等待打开窗口
@@ -286,8 +286,9 @@ def auto_login_accounts(login_dict: Dict[str, List]):
                 inner_start_time = time.time()
                 for i in range(1):
                     for h in hwnd_list:
-                        cx = int(hwnd_utils.get_hwnd_details_of_(h)["width"] * 0.5)
-                        cy = int(hwnd_utils.get_hwnd_details_of_(h)["height"] * 0.75)
+                        hwnd_details = hwnd_utils.get_hwnd_details_of_(h)
+                        cx = int(hwnd_details["width"] * 0.5)
+                        cy = int(hwnd_details["height"] * 0.75)
                         hwnd_utils.do_click_in_wnd(h, cx, cy)
                         time.sleep(0.2)
                     print(f"通过位置查找，用时：{time.time() - inner_start_time:.4f}s")
@@ -353,3 +354,18 @@ def get_max_dimensions_from_sw_list(sw_list):
                 continue
 
     return (max_width, max_height) if max_width > 0 else None
+
+
+def run_auto_login_in_thread(login_dict: Dict[str, List]):
+    """
+    开启一个线程来执行登录操作
+    :param login_dict: 登录列表字典
+    :return: None
+    """
+    try:
+        threading.Thread(
+            target=auto_login_accounts,
+            args=(login_dict,)
+        ).start()
+    except Exception as e:
+        logger.error(e)

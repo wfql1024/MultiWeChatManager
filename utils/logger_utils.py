@@ -1,17 +1,17 @@
 # logger_utils.py
 # 这个是很底层的工具类，不要导入项目其他的模块
+import functools
+import inspect
 import io
 import logging
 import os
-import colorlog
 import sys
-
 import time
-import functools
-import inspect
 import traceback
-from typing import Optional, Callable, Any, List, Tuple
 from dataclasses import dataclass
+from typing import Optional, Callable, Any, List, Tuple
+
+import colorlog
 
 
 @dataclass
@@ -27,6 +27,7 @@ class PerformanceDebugger:
     This is an advanced performance debugging tool that can help you track down the bottlenecks in your code.
     It can be used to measure the time taken by each method call and the time taken by each line of code.
     """
+
     def __init__(self, name: str = "Performance Testing", auto_break: bool = False):
         self.name = name
         self.auto_break = auto_break
@@ -87,7 +88,7 @@ class PerformanceDebugger:
                 prev_name, prev_time = self.checkpoints[i - 1]
                 since_last = time_point - prev_time
                 since_start = time_point - self.start_time
-                percentage = since_last/total_time*100
+                percentage = since_last / total_time * 100
                 indent = ' ' if percentage < 10 else ''
                 print(f"[{indent}{percentage:.1f}%/{since_last:.4f}s/{since_start:.4f}s] {prev_name} -> {name}")
 
@@ -96,7 +97,7 @@ class PerformanceDebugger:
             for call in self.method_calls:
                 since_last = call.start_time - self._last_method_time
                 since_start = call.start_time - self.start_time
-                percentage = since_last/total_time*100
+                percentage = since_last / total_time * 100
                 indent = ' ' if percentage < 10 else ''
                 print(f"[{indent}{percentage:.1f}%/{since_last:.4f}s/{since_start:.4f}s] {call.method_name}")
                 self._last_method_time = call.end_time
@@ -181,6 +182,7 @@ class PerformanceDebugger:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.end()
+
 
 class DebugUtils:
     def __init__(self):

@@ -7,9 +7,9 @@
 # TODO: 特征码匹配加入项目
 
 import os
+import pathlib
 import re
 import shutil
-import pathlib
 from typing import Union
 
 if os.name == "nt":
@@ -35,7 +35,7 @@ def wxbasepath():
 
     try:
         with winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER, r"Software\Tencent\Weixin"
+                winreg.HKEY_CURRENT_USER, r"Software\Tencent\Weixin"
         ) as key:
             return path(winreg.QueryValueEx(key, "InstallPath")[0])
     except FileNotFoundError:

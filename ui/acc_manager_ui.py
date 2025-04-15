@@ -8,8 +8,8 @@ from public_class import reusable_widgets
 from public_class.custom_classes import Condition
 from public_class.enums import Keywords
 from public_class.global_members import GlobalMembers
-from public_class.widget_frameworks import ActionableTreeView
 from public_class.reusable_widgets import SubToolWnd
+from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
@@ -17,6 +17,7 @@ from utils.logger_utils import mylogger as logger
 
 class AccManagerWnd(SubToolWnd, ABC):
     """账号管理窗口"""
+
     def __init__(self, wnd, title):
         self.acc_manager_ui = None
         self.sw = None
@@ -30,7 +31,6 @@ class AccManagerWnd(SubToolWnd, ABC):
     def load_content(self):
         self.acc_manager_ui.refresh_frame()
         pass
-
 
 
 class AccManagerUI:

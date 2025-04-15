@@ -1,4 +1,5 @@
 import base64
+import datetime as dt
 import json
 import math
 import os
@@ -17,7 +18,6 @@ from resources import Config, Strings
 from utils import file_utils, image_utils, sys_utils
 from utils.file_utils import IniUtils, JsonUtils, DictUtils
 from utils.logger_utils import mylogger as logger
-import datetime as dt
 
 """获取远程配置，此配置只读，不提供修改方法"""
 
@@ -145,6 +145,7 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
 
 """本地设置"""
 
+
 def load_setting():
     """
     加载设置
@@ -152,6 +153,7 @@ def load_setting():
     """
     data = IniUtils.load_ini_as_dict(Config.SETTING_INI_PATH)
     return data
+
 
 def save_setting(data):
     """

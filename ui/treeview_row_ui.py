@@ -188,7 +188,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         if click_time == 1:
             self.acc_tab_ui.to_open_acc_detail(item_id)
         elif click_time == 2:
-            subfunc_sw.switch_to_sw_account_wnd(item_id, self.root)
+            subfunc_sw.switch_to_sw_account_wnd(item_id)
 
     def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
         # print("触发列宽调整")
@@ -214,6 +214,3 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         col_width_to_show = int(self.root.winfo_screenwidth() / 5)
         self.tree.bind("<Configure>", lambda e: self.adjust_columns(
             e, self.root, col_width_to_show, columns_to_hide), add='+')
-
-
-

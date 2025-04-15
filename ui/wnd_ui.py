@@ -1,17 +1,29 @@
-import base64, os, re, sys, tempfile, threading, uuid, webbrowser
-import psutil, win32com, winshell
-import win32com.client
+import base64
+import os
+import re
+import sys
+import tempfile
+import threading
 import tkinter as tk
+import uuid
+import webbrowser
 from abc import ABC
 from datetime import datetime
 from functools import partial
 from tkinter import filedialog, scrolledtext, ttk, messagebox
 from tkinter.font import Font
 from typing import Dict, Union
+
+import psutil
+import win32com
+import win32com.client
+import winshell
 from PIL import Image, ImageTk
 
-from functions import func_detail, subfunc_file, func_setting, func_sw_dll, subfunc_sw, func_update
+from functions import func_detail, subfunc_file, func_setting, func_sw_dll, subfunc_sw, func_update, func_account, \
+    func_login
 from public_class import reusable_widgets
+from public_class.custom_widget import CustomLabelBtn
 from public_class.enums import Keywords
 from public_class.reusable_widgets import SubToolWnd
 from resources import Constants, Config, Strings
@@ -22,18 +34,23 @@ from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUt
 
 
 class DetailWnd(SubToolWnd, ABC):
-    #TODO: 通过详情框可以重新连接窗口
-    #TODO: 所有行都使用文本框
+    # TODO: 通过详情框可以重新连接窗口
+    # TODO: 所有行都使用文本框
     def __init__(self, wnd, title, sw, account, tab_class):
+        self.mutex_label = None
+        self.hwnd_label = None
+        self.login_status_frame = None
+        self.hotkey_entry = None
+        self.hotkey_var = None
+        self.nickname_var = None
+        self.cur_id_var = None
+        self.origin_id_var = None
         self.pid = None
         self.fetch_button = None
         self.auto_start_var = None
         self.hidden_var = None
-        self.hotkey_entry_class = None
         self.note_entry = None
         self.note_var = None
-        self.nickname_lbl = None
-        self.cur_id_lbl = None
         self.pid_label = None
         self.avatar_status_label = None
         self.avatar_label = None
@@ -51,7 +68,7 @@ class DetailWnd(SubToolWnd, ABC):
         self.tooltips = {}  # 初始化 tooltip 属性
         self.last_valid_hotkey = ""  # 记录上一个有效的快捷键
         self.current_keys = set()  # 当前按下的键
-        self.wnd_width, self.wnd_height = Constants.DETAIL_WND_SIZE
+        # self.wnd_width, self.wnd_height = Constants.DETAIL_WND_SIZE
 
     def load_content(self):
         wnd = self.wnd
@@ -61,73 +78,103 @@ class DetailWnd(SubToolWnd, ABC):
         frame = ttk.Frame(wnd, padding=Constants.FRM_PAD)
         frame.pack(**Constants.FRM_PACK)
 
-        # 头像
-        top_frame = ttk.Frame(frame, padding=Constants.T_FRM_PAD)
-        top_frame.pack(**Constants.T_FRM_PACK)
-        avatar_frame = ttk.Frame(top_frame, padding=Constants.L_FRM_PAD)
-        avatar_frame.pack(**Constants.L_FRM_PACK)
-        self.avatar_label = ttk.Label(avatar_frame)
-        self.avatar_label.pack(**Constants.T_WGT_PACK)
-        self.avatar_status_label = ttk.Label(avatar_frame, text="")
-        self.avatar_status_label.pack(**Constants.B_WGT_PACK)
+        # 基本信息网格布局
+        basic_info_grid = ttk.Frame(frame)
+        basic_info_grid.pack()
 
-        # PID
-        self.pid_label = ttk.Label(top_frame)
-        self.pid_label.pack(anchor="w", **Constants.T_WGT_PACK)
+        # 头像
+        avatar_frame = ttk.Frame(basic_info_grid, padding=Constants.L_FRM_PAD)
+        avatar_frame.grid(row=0, column=0, **Constants.W_GRID_PACK)
+        # 登录状态=pid+hwnd
+        login_status_frame = ttk.Frame(basic_info_grid)
+        login_status_frame.grid(row=0, column=1, **Constants.W_GRID_PACK)
+
+        avatar_label = ttk.Label(avatar_frame)
+        avatar_label.pack()
+        avatar_status_label = ttk.Label(avatar_frame, text="")
+        avatar_status_label.pack(**Constants.B_WGT_PACK)
+
+        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.3)
+        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 0.3)
+
+        def _create_btn_in_(frame_of_btn, text):
+            btn = CustomLabelBtn(frame_of_btn, text=text, padx=customized_btn_ipad, pady=customized_btn_ipad)
+            return btn
+
+        def _pack_btn(btn):
+            btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
+
+        # pid
+        pid_frame = ttk.Frame(login_status_frame)
+        pid_frame.pack(side=tk.TOP, anchor=tk.W)
+        pid_label = ttk.Label(pid_frame)
+        pid_label.pack(side=tk.LEFT)
+        re_login_btn = _create_btn_in_(pid_frame, "重登")
+        re_login_btn.on_click(partial(func_login.run_auto_login_in_thread, {sw: [account]}))
+        _pack_btn(re_login_btn)
+        kill_pid_btn = _create_btn_in_(pid_frame, "退登")
+        kill_pid_btn.on_click(partial(func_account.quit_selected_accounts, sw, [account]))
+        _pack_btn(kill_pid_btn)
+        # mutex
+        mutex_frame = ttk.Frame(login_status_frame)
+        mutex_frame.pack(side=tk.TOP, anchor=tk.W)
+        mutex_label = ttk.Label(mutex_frame)
+        mutex_label.pack(side=tk.LEFT)
+        mutex_btn = _create_btn_in_(mutex_frame, "清除")
+        mutex_btn.on_click(None)
+        _pack_btn(mutex_btn)
+        # hwnd
+        hwnd_frame = ttk.Frame(login_status_frame)
+        hwnd_frame.pack(side=tk.TOP, anchor=tk.W)
+        hwnd_label = ttk.Label(hwnd_frame)
+        hwnd_label.pack(side=tk.LEFT)
+        relink_hwnd_btn = _create_btn_in_(hwnd_frame, "重绑")
+        relink_hwnd_btn.on_click(None)
+        _pack_btn(relink_hwnd_btn)
+        hidden_hwnd_btn = _create_btn_in_(hwnd_frame, "隐藏")
+        hidden_hwnd_btn.on_click(None)
+        _pack_btn(hidden_hwnd_btn)
+        unlink_hwnd_btn = _create_btn_in_(hwnd_frame, "解绑")
+        unlink_hwnd_btn.on_click(partial(func_detail.unlink_hwnd_of_account, sw, account))
+        _pack_btn(unlink_hwnd_btn)
 
         # 原始微信号
-        origin_id_lbl = ttk.Label(frame, text=f"原id: {self.account}")
-        origin_id_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
-
+        _, _, origin_id_var = DetailWnd._create_label_entry_grid(
+            basic_info_grid, "账号标识", f"{account}", readonly=True)
         # 当前微信号
-        self.cur_id_lbl = ttk.Label(frame)
-        self.cur_id_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
-
+        _, _, cur_id_var = DetailWnd._create_label_entry_grid(
+            basic_info_grid, "平台账号", "", readonly=True)
         # 昵称
-        self.nickname_lbl = ttk.Label(frame)
-        self.nickname_lbl.pack(anchor="w", **Constants.T_WGT_PACK)
-
+        _, _, nickname_var = DetailWnd._create_label_entry_grid(
+            basic_info_grid, "昵称", "", readonly=True)
         # 备注
-        note, = subfunc_file.get_sw_acc_data(self.sw, self.account, note=None)
-        self.note_var = tk.StringVar(value="") if note is None else tk.StringVar(value=note)
-        note_frame = ttk.Frame(frame)
-        note_frame.pack(anchor="w", **Constants.T_WGT_PACK)
-        note_label = ttk.Label(note_frame, text="备注：")
-        note_label.pack(side=tk.LEFT, anchor="w")
-        self.note_entry = ttk.Entry(note_frame, textvariable=self.note_var, width=30)
-        self.note_entry.pack(side=tk.LEFT)
-
+        note, = subfunc_file.get_sw_acc_data(sw, account, note=None)
+        _, note_entry, note_var = DetailWnd._create_label_entry_grid(
+            basic_info_grid, "备注", "" if note is None else note)
         # 热键
-        hotkey, = subfunc_file.get_sw_acc_data(self.sw, self.account, hotkey=None)
-        hotkey_frame = ttk.Frame(frame)
-        hotkey_frame.pack(anchor="w", **Constants.T_WGT_PACK)
-        hotkey_label = ttk.Label(hotkey_frame, text="热键：")
-        hotkey_label.pack(side=tk.LEFT, anchor="w")
-        self.hotkey_entry_class = reusable_widgets.HotkeyEntry4Keyboard(hotkey, hotkey_frame)
-
+        hotkey, = subfunc_file.get_sw_acc_data(sw, account, hotkey=None)
+        _, hotkey_entry, hotkey_var = DetailWnd._create_label_entry_grid(
+            basic_info_grid, "热键", "" if hotkey is None else hotkey)
+        reusable_widgets.HotkeyEntry4Keyboard(hotkey_entry, hotkey_var)
         # 隐藏账号
         hidden_frame = ttk.Frame(frame)
         hidden, = subfunc_file.get_sw_acc_data(sw, account, hidden=False)
-        self.hidden_var = tk.BooleanVar(value=hidden)
-        hidden_checkbox = tk.Checkbutton(hidden_frame, text="未登录时隐藏", variable=self.hidden_var)
+        hidden_var = tk.BooleanVar(value=hidden)
+        hidden_checkbox = tk.Checkbutton(hidden_frame, text="未登录时隐藏", variable=hidden_var)
         hidden_checkbox.pack(side=tk.LEFT)
-
         # 账号自启动
         auto_start_frame = ttk.Frame(frame)
         auto_start, = subfunc_file.get_sw_acc_data(sw, account, auto_start=False)
-        self.auto_start_var = tk.BooleanVar(value=auto_start)
+        auto_start_var = tk.BooleanVar(value=auto_start)
         auto_start_checkbox = tk.Checkbutton(
-            auto_start_frame, text="进入软件时自启动", variable=self.auto_start_var)
+            auto_start_frame, text="进入软件时自启动", variable=auto_start_var)
         auto_start_checkbox.pack(side=tk.LEFT)
-
         # 按钮区域
         button_frame = ttk.Frame(frame, padding=Constants.B_FRM_PAD)
-        ttk.Frame(button_frame).pack(side=tk.LEFT, expand=True)  # 占位
-        ttk.Frame(button_frame).pack(side=tk.RIGHT, expand=True)  # 占位
-        self.fetch_button = ttk.Button(button_frame, text="获取", command=self.fetch_data)
-        self.fetch_button.pack(**Constants.L_WGT_PACK)
         save_button = ttk.Button(button_frame, text="保存", command=self.save_acc_settings)
         save_button.pack(**Constants.R_WGT_PACK)
+        self.fetch_button = ttk.Button(button_frame, text="获取", command=self.fetch_newest_data)
+        self.fetch_button.pack(**Constants.R_WGT_PACK)
 
         # 底部区域按从下至上的顺序pack
         button_frame.pack(**Constants.B_FRM_PACK)
@@ -138,109 +185,154 @@ class DetailWnd(SubToolWnd, ABC):
 
         print(f"加载控件完成")
 
-        self.load_data()
+        self.avatar_label = avatar_label
+        self.avatar_status_label = avatar_status_label
+        self.pid_label = pid_label
+        self.mutex_label = mutex_label
+        self.hwnd_label = hwnd_label
+        self.origin_id_var = origin_id_var
+        self.cur_id_var = cur_id_var
+        self.nickname_var = nickname_var
+        self.note_entry = note_entry
+        self.note_var = note_var
+        self.hotkey_entry = hotkey_entry
+        self.hotkey_var = hotkey_var
+        self.hidden_var = hidden_var
+        self.auto_start_var = auto_start_var
+
+        # 更新数据
+        self._update_data_to_ui()
 
     def set_wnd(self):
         # 禁用窗口大小调整
         self.wnd.resizable(False, False)
 
-    def load_data(self):
-        print(f"加载数据...")
+    def _update_data_to_ui(self):
+        # 将实例变量存储为局部变量
+        sw = self.sw
+        account = self.account
+        pid_label = self.pid_label
+        mutex_label = self.mutex_label
+        hwnd_label = self.hwnd_label
+        origin_id_var = self.origin_id_var
+        cur_id_var = self.cur_id_var
+        nickname_var = self.nickname_var
+        fetch_button = self.fetch_button
+        tooltips = self.tooltips
 
-        # 构建头像文件路径
-        avatar_path = os.path.join(Config.PROJ_USER_PATH, self.sw, f"{self.account}", f"{self.account}.jpg")
-        print(f"加载对应头像...")
+        printer.vital(f"加载账号详情...")
 
-        # 加载头像
+        # 获取信息
+        printer.normal(f"加载对应头像...")
+        avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
+        # 获取其余信息
+        has_mutex, main_hwnd = subfunc_file.get_sw_acc_data(
+            sw, account, has_mutex=True, main_hwnd=None)
+        avatar_url, alias, nickname, pid = subfunc_file.get_sw_acc_data(
+            sw, account, avatar_url=None, alias="请获取数据", nickname="请获取数据", pid=None)
+
+        # 刷新页面头像
         if os.path.exists(avatar_path):
-            print(f"对应头像存在...")
+            printer.normal(f"对应头像存在...")
         else:
             # 如果没有，检查default.jpg
-            print(f"没有对应头像，加载默认头像...")
+            printer.normal(f"没有对应头像，加载默认头像...")
             default_path = os.path.join(Config.PROJ_USER_PATH, f"default.jpg")
             base64_string = Strings.DEFAULT_AVATAR_BASE64
             image_data = base64.b64decode(base64_string)
             with open(default_path, "wb") as f:
                 f.write(image_data)
-            print(f"默认头像已保存到 {default_path}")
+            printer.normal(f"默认头像已保存到 {default_path}")
             avatar_path = default_path
-        avatar_url, alias, nickname, pid = subfunc_file.get_sw_acc_data(
-            self.sw,
-            self.account,
-            avatar_url=None,
-            alias="请获取数据",
-            nickname="请获取数据",
-            pid=None
-        )
-        self.pid = pid
-        self.load_avatar(avatar_path, avatar_url)
-        self.cur_id_lbl.config(text=f"现id: {alias}")
+        self._update_avatar_and_bind(avatar_path, avatar_url)
+        # 刷新其他信息
+        pid_mutex_str = f"{pid}" if pid is not None else "未登录"
+        pid_label.config(text=f"进程: {pid_mutex_str}")
+        mutex_label.config(text=f"互斥体: {has_mutex}")
+        hwnd_label.config(text=f"窗口: {main_hwnd}")
+        origin_id_var.set(account)
+        cur_id_var.set(alias)
         try:
-            self.nickname_lbl.config(text=f"昵称: {nickname}")
+            nickname_var.set(nickname)
         except Exception as e:
             logger.warning(e)
-            self.nickname_lbl.config(text=f"昵称: {StringUtils.clean_texts(nickname)}")
-        self.pid_label.config(text=f"PID: {pid}")
-        if not pid:
-            widget_utils.enable_widget_when_(self.fetch_button, False)
-            widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"请登录后获取": True})
-            self.pid_label.config(text=f"PID: 未登录")
-            subfunc_file.update_sw_acc_data(self.sw, self.account, has_mutex=True)
-        else:
-            has_mutex, main_hwnd = subfunc_file.get_sw_acc_data(
-                self.sw, self.account, has_mutex=True, main_hwnd=None)
-            if has_mutex:
-                self.pid_label.config(text=f"PID: {pid}(有互斥体)\nHWND: {main_hwnd}")
-            else:
-                self.pid_label.config(text=f"PID: {pid}(无互斥体)\nHWND: {main_hwnd}")
-            widget_utils.enable_widget_when_(self.fetch_button, True)
-            widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"请登录后获取": False})
-        print(f"载入数据完成")
+            nickname_var.set(StringUtils.clean_texts(nickname))
 
-    def load_avatar(self, avatar_path, avatar_url):
+        widget_utils.enable_widget_when_(fetch_button, pid is not None)
+        widget_utils.set_widget_tip_when_(tooltips, fetch_button, {"请登录后获取": pid is None})
+        if not pid:
+            subfunc_file.update_sw_acc_data(sw, account, has_mutex=True)
+        printer.normal(f"载入数据完成")
+
+        # 将局部变量赋值回实例变量
+        self.pid = pid
+
+    @staticmethod
+    def _create_label_entry_grid(grid_frame, label_text, var_value, readonly=False):
+        """内部使用的批量方法：创建一个标签和一个输入框，并返回标签和输入框的变量"""
+        # 获取当前frame中已布局的组件数量，作为新组件的行号
+        current_row = max([widget.grid_info().get('row', -1) for widget in grid_frame.grid_slaves()],
+                          default=-1) + 1
+        # print(f"当前行号：{current_row}")
+
+        label = ttk.Label(grid_frame, text=label_text)
+        label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
+
+        var = tk.StringVar(value=var_value)
+        entry = ttk.Entry(grid_frame, width=30, textvariable=var, state="readonly" if readonly else "normal")
+        entry.grid(row=current_row, column=1, **Constants.W_GRID_PACK)
+
+        return label, entry, var
+
+    def _update_avatar_and_bind(self, avatar_path, avatar_url):
         try:
             img = Image.open(avatar_path)
-            img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+            new_size = tuple(int(dim * 1.8) for dim in Constants.AVT_SIZE)
+            img = img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
             photo = ImageTk.PhotoImage(img)
             self.avatar_label.config(image=photo)
             self.avatar_label.image = photo
+            self.avatar_label.bind("<Leave>", lambda event: self.avatar_label.config(cursor=""))
 
             if avatar_url:
                 self.avatar_label.bind("<Enter>", lambda event: self.avatar_label.config(cursor="hand2"))
-                self.avatar_label.bind("<Leave>", lambda event: self.avatar_label.config(cursor=""))
                 self.avatar_label.bind("<Button-1>", lambda event: webbrowser.open(avatar_url))
                 self.avatar_status_label.forget()
             else:
                 self.avatar_label.bind("<Enter>", lambda event: self.avatar_label.config(cursor=""))
-                self.avatar_label.bind("<Leave>", lambda event: self.avatar_label.config(cursor=""))
                 self.avatar_label.unbind("<Button-1>")
                 self.avatar_status_label.config(text="未更新")
         except Exception as e:
             print(f"Error loading avatar: {e}")
             self.avatar_label.config(text="无头像")
 
-    def fetch_data(self):
+    def fetch_newest_data(self):
+        fetch_button = self.fetch_button
+        tooltips = self.tooltips
+        sw = self.sw
+        account = self.account
         pid = self.pid
+
         try:
             psutil.Process(pid)
         except psutil.NoSuchProcess:
             # 用户在此过程偷偷把账号退了...
             logger.warning(f"该进程已不存在: {pid}")
-            widget_utils.enable_widget_when_(self.fetch_button, False)
-            widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"请登录后获取": True})
+            widget_utils.enable_widget_when_(fetch_button, False)
+            widget_utils.set_widget_tip_when_(tooltips, fetch_button, {"请登录后获取": True})
             messagebox.showinfo("提示", "未检测到该账号登录")
             return
 
         # 线程启动获取详情
         threading.Thread(target=func_detail.fetch_acc_detail_by_pid,
-                         args=(self.sw, pid, self.account, self.after_fetch)).start()
-        widget_utils.enable_widget_when_(self.fetch_button, False)
-        widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"获取中...": True})
+                         args=(sw, pid, account, self.after_fetch)).start()
+        widget_utils.enable_widget_when_(fetch_button, False)
+        widget_utils.set_widget_tip_when_(tooltips, fetch_button, {"获取中...": True})
 
     def after_fetch(self):
         widget_utils.enable_widget_when_(self.fetch_button, True)
         widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"获取中...": False})
-        self.load_data()
+        self._update_data_to_ui()
 
     def save_acc_settings(self):
         """
@@ -256,7 +348,7 @@ class DetailWnd(SubToolWnd, ABC):
         subfunc_file.update_sw_acc_data(self.sw, self.account, hidden=hidden)
         auto_start = self.auto_start_var.get()
         subfunc_file.update_sw_acc_data(self.sw, self.account, auto_start=auto_start)
-        hotkey = self.hotkey_entry_class.hotkey_var.get().strip()
+        hotkey = self.hotkey_var.get().strip()
         subfunc_file.update_sw_acc_data(self.sw, self.account, hotkey=hotkey)
         printer.vital("账号设置成功")
         self.tab_class.refresh_frame(self.sw)
@@ -266,7 +358,7 @@ class DetailWnd(SubToolWnd, ABC):
         if widget_tag == "note":
             self.note_entry.focus_set()
         elif widget_tag == "hotkey":
-            self.hotkey_entry_class.hotkey_entry.focus_set()
+            self.hotkey_entry.focus_set()
 
 
 class DebugWnd(SubToolWnd, ABC):
@@ -1367,7 +1459,8 @@ class SettingWnd(SubToolWnd, ABC):
         else:
             self.data_dir_var.set("获取失败，请手动选择存储文件夹（可在平台设置中查看）")
 
-    def ask_for_directory(self):
+    @staticmethod
+    def _ask_for_directory():
         try:
             # 尝试使用 `filedialog.askdirectory` 方法
             path = filedialog.askdirectory()
@@ -1390,7 +1483,7 @@ class SettingWnd(SubToolWnd, ABC):
     def choose_sw_data_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
         while True:
-            path = self.ask_for_directory()
+            path = SettingWnd._ask_for_directory()
             if not path:
                 return
             if sw_utils.is_valid_sw_data_dir(sw, path):
@@ -1417,7 +1510,7 @@ class SettingWnd(SubToolWnd, ABC):
     def choose_sw_dll_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
         while True:
-            path = self.ask_for_directory()
+            path = SettingWnd._ask_for_directory()
             if not path:
                 return
             if sw_utils.is_valid_sw_dll_dir(sw, path):
@@ -1456,6 +1549,7 @@ class SettingWnd(SubToolWnd, ABC):
             else:
                 self.login_size_var.set(f"350*475")
 
+
 class GlobalSettingWnd(SubToolWnd, ABC):
     def __init__(self, wnd, title):
         self.main_frame = wnd
@@ -1471,11 +1565,11 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         # 远程配置源
         remote_config_frame = ttk.Frame(self.main_frame)
         remote_config_frame.pack(fill=tk.X, padx=5, pady=5)
-        
+
         ttk.Label(remote_config_frame, text="远程配置源:").pack(side=tk.LEFT)
         remote_config_entry = ttk.Entry(remote_config_frame, textvariable=self.remote_config_var)
         remote_config_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        
+
         def select_remote_config():
             try:
                 path = filedialog.askdirectory(title="选择远程配置源文件夹")
@@ -1500,11 +1594,11 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         # 屏幕尺寸
         screen_size_frame = ttk.Frame(self.main_frame)
         screen_size_frame.pack(fill=tk.X, padx=5, pady=5)
-        
+
         ttk.Label(screen_size_frame, text="屏幕尺寸:").pack(side=tk.LEFT)
         screen_size_entry = ttk.Entry(screen_size_frame, textvariable=self.screen_size_var)
         screen_size_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-        
+
         ttk.Button(screen_size_frame, text="获取", command=self.get_screen_size).pack(side=tk.LEFT)
 
     def get_screen_size(self):
@@ -1520,4 +1614,3 @@ class GlobalSettingWnd(SubToolWnd, ABC):
     def save_settings(self):
         subfunc_file.save_a_global_setting('remote_config', self.remote_config_var.get())
         subfunc_file.save_a_global_setting('screen_size', self.screen_size_var.get())
-

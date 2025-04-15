@@ -203,7 +203,6 @@ class TreeUtils:
         return items
 
 
-
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
 

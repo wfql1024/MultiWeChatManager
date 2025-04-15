@@ -140,19 +140,22 @@ class Test(TestCase):
                         if default_dict is None:
                             result = file_utils.DictUtils.get_nested_values(data, default_value, separator)
                         else:
-                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator, **default_dict)
+                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator,
+                                                                            **default_dict)
                         # 输出参数和结果
-                        print(f"data: {data}, front_addr_list: {front_addr_list}, default_dict: {default_dict}, result: {result}")
+                        print(
+                            f"data: {data}, front_addr_list: {front_addr_list}, default_dict: {default_dict}, result: {result}")
                 else:
                     for default_dict in default_dicts:
                         if default_dict is None:
-                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator, *front_addr_list)
+                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator,
+                                                                            *front_addr_list)
                         else:
-                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator, *front_addr_list, **default_dict)
+                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator,
+                                                                            *front_addr_list, **default_dict)
                         # 输出参数和结果
-                        print(f"data: {data}, front_addr_list: {front_addr_list}, default_dict: {default_dict}, result: {result}")
-
-
+                        print(
+                            f"data: {data}, front_addr_list: {front_addr_list}, default_dict: {default_dict}, result: {result}")
 
         # 修改嵌套值
         data = {"a": {"b": {"c": 1}}}
@@ -193,7 +196,6 @@ class Test(TestCase):
         file_utils.DictUtils.clear_nested_values(data, *(), "a", "b/c")
         print(data)
 
-
     def test_six_randoms(self):
         for i in range(6):
-            print(random.randint(0,3))
+            print(random.randint(0, 3))

@@ -322,6 +322,7 @@ def create_process_with_task_scheduler(executable, args):
 
 
 def create_process_for_win7(executable, args=None, creation_flags=0):
+    """win7以下使用Popen方法启动进程并不会继承父进程的权限，因此直接使用"""
     command = [executable]  # 添加可执行文件路径到命令列表中
     if args:
         command.extend(args)  # 添加额外的参数

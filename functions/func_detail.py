@@ -20,7 +20,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
     :return: 无
     """
     try:
-        decrypt_impl = get_decrypt_utils(sw)
+        decrypt_impl = _get_decrypt_utils(sw)
     except Exception as e:
         logger.error(e)
         messagebox.showerror("错误", f"{e}")
@@ -108,7 +108,7 @@ def fetch_acc_detail_by_pid(sw, pid, account, after):
         after()
 
 
-def get_decrypt_utils(platform):
+def _get_decrypt_utils(platform):
     module_name = None
     class_name = None
     try:
@@ -129,7 +129,7 @@ def get_decrypt_utils(platform):
 def decrypt_db_and_return(sw, pid, account):
     # 加载对应平台的解密工具
     try:
-        decrypt_impl = get_decrypt_utils(sw)
+        decrypt_impl = _get_decrypt_utils(sw)
     except ValueError as e:
         logger.error(e)
         return False, f"{sw}平台不支持, {e}"
@@ -157,3 +157,13 @@ def decrypt_db_and_return(sw, pid, account):
 
     if success is True:
         return True, result
+
+
+def unlink_hwnd_of_account(sw, account):
+    """
+    解除账号与hwnd的绑定
+    :param sw: 软件标签
+    :param account: 账号列表
+    :return:
+    """
+    subfunc_file.update_sw_acc_data(sw, account, main_hwnd=None)

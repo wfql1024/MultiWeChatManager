@@ -11,6 +11,7 @@ import uiautomation as auto
 import win32api
 import win32con
 import win32gui
+import win32process
 
 from public_class.enums import Position
 from utils.logger_utils import mylogger as logger
@@ -50,6 +51,7 @@ IsWindowVisible = user32.IsWindowVisible
 IsWindowVisible.argtypes = [wintypes.HWND]
 IsWindowVisible.restype = wintypes.BOOL
 
+
 class HwndUtils:
     @staticmethod
     def bring_wnd_to_front(hwnd: int):
@@ -86,6 +88,7 @@ class TkWndUtils:
             wnd.attributes('-topmost', True)
             wnd.attributes('-topmost', False)
             wnd.focus_force()
+
 
 """hwnd获取"""
 
@@ -326,10 +329,12 @@ def list_child_windows(hwnd):
 
 def get_hwnd_details_of_(hwnd):
     """通过句柄获取窗口的尺寸和位置"""
+    _, pid = win32process.GetWindowThreadProcessId(hwnd)
     w = HwndWrapper(hwnd)
     if w.handle == hwnd:
         # print(f"{w.handle}")
         return {
+            "pid": pid,
             "window": w,
             "class": win32gui.GetClassName(w.handle),
             "handle": w.handle,
@@ -397,9 +402,10 @@ def restore_window(hwnd):
     新增窗口置顶逻辑，处理最小化窗口的恢复问题。
     :param hwnd: 窗口句柄
     """
-    # win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
-    # time.sleep(0.1)
+    # # win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
+    # # time.sleep(0.1)
     win32gui.ShowWindow(hwnd, win32con.SW_SHOWNORMAL)
+    win32gui.SetForegroundWindow(hwnd)
 
 
 def hide_window(hwnd):

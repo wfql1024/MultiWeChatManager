@@ -1,27 +1,29 @@
+import configparser
 import ctypes
 import datetime as dt
 import hashlib
 import json
 import mmap
+import os
 import re
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
-from Crypto.Util.Padding import unpad
 from pathlib import Path
+from typing import Any, Optional
+from typing import IO
+
 import win32api
 import win32com.client
 import winshell
-import configparser
-import os
-from typing import IO
-from utils import logger_utils
 import yaml
-from typing import Any, Optional
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+from Crypto.Util.Padding import unpad
+
+from utils import logger_utils
 
 logger = logger_utils.mylogger
 
 
-#TODO: 配置文件打算转yaml
+# TODO: 配置文件打算转yaml
 
 class DictUtils:
     SEPARATOR = '/'
@@ -370,7 +372,7 @@ class IniUtils:
             # 保存配置
             with open(ini_path, 'w', encoding='utf-8') as f:
                 f: IO[str] = f
-                config.write(f) # type: ignore
+                config.write(f)  # type: ignore
             return True
 
         except Exception as e:
