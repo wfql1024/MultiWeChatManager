@@ -42,69 +42,63 @@ def close_handles_by_matches(handle_exe, matches):
     返回:
         list: 成功关闭的句柄列表，格式为 [(wechat_pid, handle), ...]
     """
-    # 用于存储成功关闭的句柄
-    successful_closes = []
+    # 用于存储成功关闭的句柄和成功元组
+    handles_closed = []
+    successes = []
 
     # 遍历所有匹配项，尝试关闭每个句柄
     for wechat_pid, handle in matches:
         printer.normal(f"hwnd:{handle}, pid:{wechat_pid}")
+        stdout = None
+        # 尝试执行命令获取输出
         try:
-            stdout = None
-            try:
-                # 构建命令
-                formatted_handle_exe = handle_exe.replace("\\", "/")
-                formatted_handle = handle.replace("\\", "/")
-                command = " ".join([f'"{formatted_handle_exe}"', '-c', f'"{formatted_handle}"',
-                                    '-p', str(wechat_pid), '-y'])
-                printer.normal(f"指令：{command}")
-
-                # 使用 Popen 启动子程序并捕获输出
-                process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                                           shell=True)
-
-                # 检查子进程是否具有管理员权限
-                if process_utils.is_process_admin(process.pid):
-                    printer.normal(f"子进程 {process.pid} 以管理员权限运行")
-                else:
-                    printer.normal(f"子进程 {process.pid} 没有管理员权限")
-
-                # 获取输出结果
-                stdout, stderr = process.communicate()
-
-                # 检查返回的 stdout 和 stderr
-                if stdout:
-                    printer.normal(f"输出：{stdout}完毕。")
-                if stderr:
-                    printer.normal(f"错误：{stderr}")
-            except subprocess.CalledProcessError as e:
-                logger.error(f"命令执行失败，退出码 {e.returncode}")
-            except Exception as e:
-                logger.error(f"发生异常: {e}")
-
-            # 如果stdout包含"Error closing handle"，跳过该句柄
-            if stdout is None or "Error closing handle:" in stdout:
-                continue
-
-            printer.normal(f"成功关闭句柄: hwnd:{handle}, pid:{wechat_pid}")
-            successful_closes.append((wechat_pid, handle))
+            # 构建命令
+            formatted_handle_exe = handle_exe.replace("\\", "/")
+            formatted_handle = handle.replace("\\", "/")
+            command = " ".join([f'"{formatted_handle_exe}"', '-c', f'"{formatted_handle}"',
+                                '-p', str(wechat_pid), '-y'])
+            printer.normal(f"指令：{command}")
+            # 使用 Popen 启动子程序并捕获输出
+            process = subprocess.Popen(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
+            # 检查子进程是否具有管理员权限
+            if process_utils.is_process_admin(process.pid):
+                printer.normal(f"子进程 {process.pid} 以管理员权限运行")
+            else:
+                printer.normal(f"子进程 {process.pid} 没有管理员权限")
+            # 获取输出结果
+            stdout, stderr = process.communicate()
+            # 检查返回的 stdout 和 stderr
+            if stdout:
+                printer.normal(f"输出：{stdout}完毕。")
+            if stderr:
+                printer.normal(f"错误：{stderr}")
         except subprocess.CalledProcessError as e:
-            logger.error(f"无法关闭句柄 PID: {wechat_pid}, 错误信息: {e}")
+            logger.error(f"命令执行失败，退出码 {e.returncode}")
         except Exception as e:
             logger.error(f"发生异常: {e}")
 
-    printer.normal(f"成功关闭的句柄列表: {successful_closes}")
-    return successful_closes
+        # 如果stdout包含"Error closing handle"，则失败，下一个
+        if stdout is None or "Error closing handle:" in stdout:
+            printer.normal(f"句柄关闭失败: hwnd:{handle}, pid:{wechat_pid}")
+            successes.append(False)
+            continue
+
+        printer.normal(f"成功关闭句柄: hwnd:{handle}, pid:{wechat_pid}")
+        handles_closed.append((wechat_pid, handle))
+        successes.append(True)
+
+    printer.normal(f"成功关闭的句柄列表: {handles_closed}")
+    return all(successes), handles_closed
 
 
 def close_sw_mutex_by_handle(handle_exe, exe, handle_regex_dicts):
-    """
-    通过微信进程id查找互斥体并关闭
-    :return: 是否成功
-    """
+    """通过handle，根据规则字典对指定程序查找互斥体并关闭"""
     if handle_regex_dicts is None or len(handle_regex_dicts) == 0:
-        return []
+        return False, []
 
-    success_lists = []
+    handles_closed_lists = []
+    successes = []
     for handle_regex_dict in handle_regex_dicts:
         try:
             handle_name, regex = handle_regex_dict.get("handle_name"), handle_regex_dict.get("regex")
@@ -122,24 +116,26 @@ def close_sw_mutex_by_handle(handle_exe, exe, handle_regex_dicts):
                                    f'"{formatted_exe}"', f'"{formatted_handle_name}"'])
             printer.vital(f"handle-查找句柄")
             printer.normal(f"指令：{handle_cmd}")
-            handle_info = subprocess.check_output(handle_cmd,
+            handle_output = subprocess.check_output(handle_cmd,
                                                   creationflags=subprocess.CREATE_NO_WINDOW,
                                                   text=True)
-            printer.normal(f"信息：{handle_info}")
+            printer.normal(f"信息：{handle_output}")
             printer.normal(f"用时：{time.time() - start_time:.4f}秒")
 
             # 匹配所有 PID 和句柄信息
             printer.vital(f"handle-匹配句柄")
-            matches = re.findall(regex, handle_info)
+            matches = re.findall(regex, handle_output)
             if matches:
                 printer.normal(f"含互斥体：{matches}")
                 printer.vital("handle-关闭句柄")
-                success_lists.append(close_handles_by_matches(Config.HANDLE_EXE_PATH, matches))
+                success, handles_closed = close_handles_by_matches(Config.HANDLE_EXE_PATH, matches)
+                handles_closed_lists.append(close_handles_by_matches(Config.HANDLE_EXE_PATH, matches))
+                successes.append(success)
             else:
                 printer.normal(f"无互斥体")
         except Exception as e:
             logger.error(f"关闭句柄失败：{e}")
-    return success_lists
+    return all(successes), handles_closed_lists
 
 
 if __name__ == '__main__':

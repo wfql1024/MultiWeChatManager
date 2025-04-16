@@ -6,6 +6,7 @@ from unittest import TestCase
 import psutil
 
 from functions import func_setting, subfunc_file
+from public_class.enums import MultirunMode
 from resources import Config
 from utils import hwnd_utils, handle_utils, process_utils, file_utils
 
@@ -199,3 +200,6 @@ class Test(TestCase):
     def test_six_randoms(self):
         for i in range(6):
             print(random.randint(0, 3))
+
+    def test_equals(self):
+        print(MultirunMode.PYTHON == "python")

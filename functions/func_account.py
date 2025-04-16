@@ -337,7 +337,7 @@ def get_sw_acc_list(_root, root_class, sw):
     # 更新数据
     has_mutex = True
     pid_dict = dict(proc_dict)
-    multiple_status = sw_class.multiple_state
+    multiple_status = sw_class.freely_multirun
     if multiple_status == "已开启":
         # print(f"由于是全局多开模式，直接所有has_mutex都为false")
         for acc in login + logout:

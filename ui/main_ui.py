@@ -264,8 +264,9 @@ class SoftwareInfo:
         self.name = None
         self.frame = None
         self.view = None
-        self.multiple_state = None
-        self.revoke = None
+        self.freely_multirun = None
+        self.multirun_mode = None
+        self.anti_revoke = None
         self.classic_ui = None
         self.tree_ui = None
         self.inst_path = None

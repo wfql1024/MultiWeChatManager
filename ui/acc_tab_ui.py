@@ -261,7 +261,7 @@ class AccTabUI:
         """按钮：创建或重新配置"""
         accounts = [items.split("/")[1] for items in items]
         threading.Thread(target=func_config.test,
-                         args=(self.sw, accounts[0], self.sw_classes[self.sw].multiple_state)).start()
+                         args=(self.sw, accounts[0], self.sw_classes[self.sw].multirun_mode)).start()
 
     def to_quit_accounts(self, items):
         """退出所选账号"""

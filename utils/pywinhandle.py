@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+#!/usr/bin/env python3
+# ------------------------------------------------------------------
+# 包含来自 pywinhandle (https://github.com/yihleego/pywinhandle) 的查杀线程的python实现
+# 原始代码未附带任何许可证声明
+# 本文件的全部内容（包括后续修改部分）特此声明放弃所有版权，贡献给公共领域
+# ------------------------------------------------------------------
 import time
 from ctypes import *
 from ctypes.wintypes import *

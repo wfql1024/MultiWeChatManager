@@ -111,14 +111,12 @@ def manual_login(sw):
     subfunc_file.clear_some_acc_data(sw, Keywords.PID_MUTEX)
     subfunc_file.update_all_acc_in_acc_json(sw)
 
-    state = root_class.sw_classes[sw].multiple_state
-    logger.info(f"当前模式是：{state}")
-    has_mutex_dict = subfunc_sw.organize_sw_mutex_dict(sw)
-    sub_exe_process, mode = subfunc_sw.open_sw(sw, state, has_mutex_dict)
+    multirun_mode = root_class.sw_classes[sw].multirun_mode
+    sub_exe_process = subfunc_sw.open_sw(sw, multirun_mode)
     wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 20)
     if wechat_hwnd:
         subfunc_file.set_all_acc_values_to_false(sw)
-        subfunc_file.update_statistic_data(sw, 'manual', '_', mode, time.time() - start_time)
+        subfunc_file.update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
         print(f"打开了登录窗口{wechat_hwnd}")
         if sub_exe_process:
             sub_exe_process.terminate()
@@ -182,8 +180,6 @@ def auto_login_accounts(login_dict: Dict[str, List]):
         if not isinstance(accounts, list) or len(accounts) == 0:
             continue
 
-        status = root_class.sw_classes[sw].multiple_state
-
         # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
             subfunc_file.get_details_from_remote_setting_json(
@@ -194,10 +190,8 @@ def auto_login_accounts(login_dict: Dict[str, List]):
         subfunc_file.clear_some_acc_data(sw, Keywords.PID_MUTEX)
         subfunc_file.update_all_acc_in_acc_json(sw)
 
-        if status == "已开启":
-            multiple_mode = "全局多开"
-        else:
-            multiple_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, 'rest_mode')
+        multirun_mode = root_class.sw_classes[sw].multirun_mode
+
         # 开始遍历登录账号过程
         start_time = time.time()
         # 使用一个set存储不重复的handle
@@ -216,8 +210,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
                 break
 
             # 打开微信
-            has_mutex_dict = subfunc_sw.organize_sw_mutex_dict(sw)
-            sub_exe_process, sub_exe = subfunc_sw.open_sw(sw, status, has_mutex_dict)
+            sub_exe_process = subfunc_sw.open_sw(sw, multirun_mode)
 
             # 等待打开窗口
             end_time = time.time() + 20
@@ -263,12 +256,12 @@ def auto_login_accounts(login_dict: Dict[str, List]):
                 logger.error(e)
 
             # 逐次统计时间
-            subfunc_file.update_statistic_data(sw, 'auto', str(j + 1), sub_exe, time.time() - start_time)
+            subfunc_file.update_statistic_data(sw, 'auto', str(j + 1), multirun_mode, time.time() - start_time)
 
             acc_turn += 1
 
         # 统计平均时间
-        subfunc_file.update_statistic_data(sw, 'auto', 'avg', multiple_mode,
+        subfunc_file.update_statistic_data(sw, 'auto', 'avg', multirun_mode,
                                            (time.time() - start_time) / acc_cnt)
 
         # 循环登录完成

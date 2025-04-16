@@ -61,14 +61,14 @@ def check_dll(sw, mode, dll_dir):
     """检查当前的dll状态，判断是否为全局多开或者不可用"""
     patch_dll, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll="WeChatWin.dll")
     if patch_dll is None:
-        return "错误：该平台未适配", None, None
+        return None, "错误：该平台未适配", None, None
 
     dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
     cur_sw_ver = file_utils.get_file_version(dll_path)
     config_data = subfunc_file.read_remote_cfg_in_rules()
 
     if not config_data:
-        return "错误：没有数据", None, None
+        return None, "错误：没有数据", None, None
 
     try:
         result1 = config_data[sw][mode][cur_sw_ver]["STABLE"]["pattern"]
@@ -77,19 +77,19 @@ def check_dll(sw, mode, dll_dir):
         pattern2_hex_list = result2.split(',')
     except Exception as e:
         logger.error(e)
-        return f"错误：未找到版本{cur_sw_ver}的适配", None, None
+        return None, f"错误：未找到版本{cur_sw_ver}的适配", None, None
 
     try:
         for pattern1_hex, pattern2_hex in zip(pattern1_hex_list, pattern2_hex_list):
             has_pattern1 = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, pattern1_hex)
             has_pattern2 = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, pattern2_hex)
             if has_pattern1 and not has_pattern2:
-                return "未开启", pattern1_hex, pattern2_hex
+                return False, "未开启", pattern1_hex, pattern2_hex
             elif has_pattern2 and not has_pattern1:
-                return "已开启", pattern1_hex, pattern2_hex
+                return True, "已开启", pattern1_hex, pattern2_hex
             elif has_pattern1 and has_pattern2:
-                return "错误，非独一无二的特征码", None, None
-        return "不可用", None, None
+                return None, "错误，非独一无二的特征码", None, None
+        return None, "不可用", None, None
     except (PermissionError, FileNotFoundError, KeyError, TimeoutError, RuntimeError, Exception) as e:
         error_msg = {
             PermissionError: "权限不足，无法检查 DLL 文件。",
@@ -99,7 +99,7 @@ def check_dll(sw, mode, dll_dir):
             RuntimeError: "运行时错误。",
             Exception: "发生错误。"
         }.get(type(e), "发生未知错误。")
-        return f"错误：{error_msg}{str(e)}", None, None
+        return None, f"错误：{error_msg}{str(e)}", None, None
 
 
 def switch_dll(sw, mode, dll_dir):
@@ -128,11 +128,11 @@ def switch_dll(sw, mode, dll_dir):
         return
 
     # 定义目标路径和文件名
-    current_mode, hex_stable_pattern, hex_patch_pattern = check_dll(sw, mode, dll_dir)
+    current_mode, info, hex_stable_pattern, hex_patch_pattern = check_dll(sw, mode, dll_dir)
     # print(current_mode, hex_stable_pattern, hex_patch_pattern)
     dll_path = os.path.join(dll_dir, patch_dll)
     try:
-        if current_mode == "已开启":
+        if current_mode is True:
             print(f"当前：{mode}已开启")
             success = DllUtils.edit_patterns_in_dll_in_hexadecimal(
                 dll_path, **{hex_patch_pattern: hex_stable_pattern})
@@ -140,7 +140,7 @@ def switch_dll(sw, mode, dll_dir):
                 messagebox.showinfo("提示", f"成功关闭:{mode_text}")
                 return
 
-        elif current_mode == "未开启":
+        elif current_mode is False:
             print(f"当前：{mode}未开启")
             backup_dll(sw, dll_dir)
 

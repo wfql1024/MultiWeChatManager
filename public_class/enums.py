@@ -2,6 +2,13 @@
 from enum import Enum
 
 
+class MultirunMode(str, Enum):
+    HANDLE = "handle"
+    PYTHON = "python"
+    SUPER_PYTHON = "*python"
+    FREELY_MULTIRUN = "全局多开"
+
+
 class NotebookDirection(Enum):
     TOP = "top"
     BOTTOM = "bottom"
@@ -38,11 +45,12 @@ class Keywords(str, Enum):
     # 设置项中的平台设置
     VIEW = "view"
     LOGIN_SIZE = "login_size"
-    REST_MODE = "rest_mode"
+    REST_MULTIRUN_MODE = "rest_mode"
+    MULTIRUN_MODE = "multirun_mode"
     LOGIN_SORT = "login_sort"
     LOGOUT_SORT = "logout_sort"
 
-    # 账号数据中的平台字段
+    # 平台字段
     PID_MUTEX = "pid_mutex"
     # 账号数据中的平台字段
     NICKNAME = "nickname"

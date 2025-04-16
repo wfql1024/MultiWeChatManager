@@ -35,7 +35,7 @@ from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUt
 
 class DetailWnd(SubToolWnd, ABC):
     # TODO: 通过详情框可以重新连接窗口
-    # TODO: 所有行都使用文本框
+    # TODO: 所有行都使用文本框√
     def __init__(self, wnd, title, sw, account, tab_class):
         self.mutex_label = None
         self.hwnd_label = None
@@ -1242,6 +1242,7 @@ class StatisticWnd(SubToolWnd, ABC):
 
 class SettingWnd(SubToolWnd, ABC):
     def __init__(self, wnd, sw, status, after, title):
+        self.multirun_mode = None
         self.origin_values = None
         self.changed = None
         self.login_size_entry = None
@@ -1284,6 +1285,7 @@ class SettingWnd(SubToolWnd, ABC):
             "dll_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "dll_dir"),
             "login_size": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "login_size")
         }
+        self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
 
     def load_content(self):
         wnd = self.wnd
@@ -1539,8 +1541,8 @@ class SettingWnd(SubToolWnd, ABC):
 
     def to_get_login_size(self, status):
         if status is None:
-            status, _, _ = func_sw_dll.check_dll(self.sw, "multiple", self.dll_dir)
-        result = subfunc_sw.get_login_size(self.sw, status)
+            status, info, _, _ = func_sw_dll.check_dll(self.sw, "multiple", self.dll_dir)
+        result = subfunc_sw.get_login_size(self.sw, self.multirun_mode)
         if result:
             login_width, login_height = result
             if 0.734 < login_width / login_height < 0.740:

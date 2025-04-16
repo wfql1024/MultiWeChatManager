@@ -7,7 +7,7 @@ from pathlib import Path
 from tkinter import messagebox
 
 from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_update
-from public_class.enums import Keywords
+from public_class.enums import Keywords, MultirunMode
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
 from ui import sidebar_ui, acc_manager_ui
@@ -53,7 +53,6 @@ class MenuUI:
         self.global_settings_var = self.root_class.global_settings_var
         self.app_info = self.root_class.app_info
         self.sw_classes = self.root_class.sw_classes
-        # self.remote_cfg_data = self.root_class.remote_cfg_data
 
         self.acc_tab_ui = self.root_class.acc_tab_ui
         self.sw = self.acc_tab_ui.sw
@@ -120,7 +119,7 @@ class MenuUI:
                                                         self.create_root_menu_bar))
         # -打开主dll所在文件夹
         self.file_menu.add_command(label="查看DLL目录", command=partial(func_file.open_dll_dir, self.sw))
-        if self.sw_class.data_dir is None:
+        if self.sw_class.dll_dir is None:
             self.file_menu.entryconfig(f"查看DLL目录", state="disable")
 
         # -创建软件快捷方式
@@ -131,7 +130,7 @@ class MenuUI:
         # print(f"支持快捷启动：{quick_start_sp}")
         self.file_menu.add_command(label="创建快捷启动",
                                    command=partial(func_file.create_multiple_lnk,
-                                                   self.sw, self.sw_class.multiple_state, self.create_root_menu_bar),
+                                                   self.sw, self.sw_class.freely_multirun, self.create_root_menu_bar),
                                    state="normal" if quick_start_sp is True else "disabled")
 
         # ————————————————————————————编辑菜单————————————————————————————
@@ -227,50 +226,55 @@ class MenuUI:
         # self.settings_menu.add_command(label=f"账号管理", command=self.open_acc_setting)
         # self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
-        # 防撤回和全局多开需要依赖存储路径，因此判断若无路径直接跳过菜单创建
-        if self.sw_class.data_dir is not None:
+        # 防撤回和全局多开需要依赖dll路径，因此判断若无路径直接跳过菜单创建
+        if self.sw_class.dll_dir is not None:
             # -防撤回
-            self.sw_class.revoke_state, _, _ = func_sw_dll.check_dll(
+            self.sw_class.anti_revoke, info, _, _ = func_sw_dll.check_dll(
                 self.sw, "revoke", self.sw_class.dll_dir)
-            revoke_state = self.sw_class.revoke_state
-            if revoke_state == "不可用":
-                self.settings_menu.add_command(label=f"防撤回      {revoke_state}", state="disabled")
-            elif revoke_state.startswith("错误"):
-                self.revoke_err = tk.Menu(self.settings_menu, tearoff=False)
-                self.settings_menu.add_cascade(label="防撤回      错误!", menu=self.revoke_err, foreground="red")
-                self.revoke_err.add_command(label=f"[点击复制]{revoke_state}", foreground="red",
-                                            command=lambda: self.root.clipboard_append(revoke_state))
+            anti_revoke = self.sw_class.anti_revoke
+            if anti_revoke is None:
+                if info == "不可用":
+                    self.settings_menu.add_command(label=f"防撤回      {info}", state="disabled")
+                elif info.startswith("错误"):
+                    self.revoke_err = tk.Menu(self.settings_menu, tearoff=False)
+                    self.settings_menu.add_cascade(label="防撤回      错误!", menu=self.revoke_err, foreground="red")
+                    self.revoke_err.add_command(label=f"[点击复制]{info}", foreground="red",
+                                                command=lambda i=info: self.root.clipboard_append(i))
             else:
-                self.settings_menu.add_command(label=f"防撤回      {revoke_state}",
+                self.settings_menu.add_command(label=f"防撤回      {anti_revoke}",
                                                command=partial(self.toggle_patch_mode, mode="revoke"))
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
             # -全局多开
-            self.sw_class.multiple_state, _, _ = func_sw_dll.check_dll(
+            self.sw_class.freely_multirun, info, _, _ = func_sw_dll.check_dll(
                 self.sw, "multiple", self.sw_class.dll_dir)
-            multiple_state = self.sw_class.multiple_state
-            if multiple_state == "不可用":
-                self.settings_menu.add_command(label=f"全局多开  {multiple_state}", state="disabled")
-            elif multiple_state.startswith("错误"):
-                self.multiple_err = tk.Menu(self.settings_menu, tearoff=False)
-                self.settings_menu.add_cascade(label="全局多开  错误!", menu=self.multiple_err, foreground="red")
-                self.multiple_err.add_command(label=f"[点击复制]{multiple_state}", foreground="red",
-                                              command=lambda: self.root.clipboard_append(multiple_state))
+            freely_multirun = self.sw_class.freely_multirun
+            if freely_multirun is None:
+                if info == "不可用":
+                    self.settings_menu.add_command(label=f"全局多开  {info}", state="disabled")
+                elif info.startswith("错误"):
+                    self.multiple_err = tk.Menu(self.settings_menu, tearoff=False)
+                    self.settings_menu.add_cascade(label="全局多开  错误!", menu=self.multiple_err, foreground="red")
+                    self.multiple_err.add_command(label=f"[点击复制]{info}", foreground="red",
+                                                  command=lambda i=info: self.root.clipboard_append(i))
             else:
-                self.settings_menu.add_command(label=f"全局多开  {multiple_state}",
+                self.settings_menu.add_command(label=f"全局多开  {freely_multirun}",
                                                command=partial(self.toggle_patch_mode, mode="multiple"))
         else:
-            self.sw_class.multiple_state = multiple_state = "不可用"
-            self.sw_class.revoke_state = "不可用"
+            self.sw_class.freely_multirun = freely_multirun = "不可用"
+            self.sw_class.anti_revoke = "不可用"
 
         # >多开子程序选择
         # 检查状态
-        if multiple_state == "已开启":
+        if freely_multirun is True:
+            self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN
             self.settings_menu.add_command(label="其余模式", state="disabled")
         else:
             self.rest_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
             self.settings_menu.add_cascade(label="其余模式", menu=self.rest_mode_menu)
             rest_mode_value = self.global_settings_value.rest_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(
-                self.sw, Keywords.REST_MODE)
+                self.sw, Keywords.REST_MULTIRUN_MODE)
+            print("当前项", rest_mode_value)
+            self.sw_class.multirun_mode = rest_mode_value
             rest_mode_var = self.global_settings_var.rest_mode = tk.StringVar(value=rest_mode_value)  # 设置初始选中的子程序
             python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
                 self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
@@ -279,27 +283,24 @@ class MenuUI:
                 label='python',
                 value='python',
                 variable=rest_mode_var,
-                command=partial(subfunc_file.save_a_setting_and_callback,
-                                self.sw, Keywords.REST_MODE, "python", self.create_root_menu_bar),
+                command=partial(self._calc_multirun_mode_and_save, MultirunMode.PYTHON.value),
                 state='disabled' if not python_sp else 'normal'
             )
-            # 添加 强力Python 的单选按钮
-            self.rest_mode_menu.add_radiobutton(
-                label='python[S]',
-                value='python[S]',
-                variable=rest_mode_var,
-                command=partial(subfunc_file.save_a_setting_and_callback,
-                                self.sw, Keywords.REST_MODE, "python[S]", self.create_root_menu_bar),
-                state='disabled' if not python_s_sp else 'normal'
-            )
-            self.rest_mode_menu.add_separator()  # ————————————————分割线————————————————
+            # # 添加 强力Python 的单选按钮
+            # self.rest_mode_menu.add_radiobutton(
+            #     label='*python',
+            #     value='*python',
+            #     variable=rest_mode_var,
+            #     command=partial(self._calc_multirun_mode_and_save, MultirunMode.SUPER_PYTHON.value),
+            #     state='disabled' if not python_s_sp else 'normal'
+            # )
+            # self.rest_mode_menu.add_separator()  # ————————————————分割线————————————————
             # 添加 Handle 的单选按钮
             self.rest_mode_menu.add_radiobutton(
                 label='handle',
                 value='handle',
                 variable=rest_mode_var,
-                command=partial(subfunc_file.save_a_setting_and_callback,
-                                self.sw, Keywords.REST_MODE, "handle", self.create_root_menu_bar),
+                command=partial(self._calc_multirun_mode_and_save, MultirunMode.HANDLE.value),
                 state='disabled' if not handle_sp else 'normal'
             )
             # 动态添加外部子程序
@@ -315,8 +316,7 @@ class MenuUI:
                         label=right_part,
                         value=exe_name,
                         variable=rest_mode_var,
-                        command=partial(subfunc_file.save_a_setting_and_callback,
-                                        self.sw, Keywords.REST_MODE, exe_name, self.create_root_menu_bar),
+                        command=partial(self._calc_multirun_mode_and_save, exe_name),
                     )
 
         hide_wnd_value = self.global_settings_value.hide_wnd = \
@@ -427,6 +427,18 @@ class MenuUI:
             )
             self.menu_bar.entryconfigure(author_str_with_hint, command=handler.on_click)
 
+        print(self.sw_class)
+        print(self.sw_class.__dict__)
+
+    def _calc_multirun_mode_and_save(self, mode):
+        """计算多开模式并保存"""
+        subfunc_file.save_a_setting_and_callback(
+            self.sw, Keywords.REST_MULTIRUN_MODE, mode, self.create_root_menu_bar)
+        self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN if self.sw_class.freely_multirun is True else mode
+        # print("修改后：", self.sw_class)
+        # print("修改后：", self.sw_class.__dict__)
+
+
     def open_statistic(self):
         """打开统计窗口"""
         statistic_window = tk.Toplevel(self.root)
@@ -482,7 +494,7 @@ class MenuUI:
     def open_settings(self, sw):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
-        SettingWnd(settings_window, sw, self.sw_class.multiple_state,
+        SettingWnd(settings_window, sw, self.sw_class.freely_multirun,
                    self.root_class.acc_tab_ui.refresh, f"{sw}设置")
 
     def open_global_setting_wnd(self):

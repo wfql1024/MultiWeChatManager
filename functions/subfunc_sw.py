@@ -6,13 +6,13 @@ import win32con
 import win32gui
 
 from functions import func_setting, subfunc_file
-from public_class.enums import Keywords, SW
+from public_class.enums import Keywords, SW, MultirunMode
 from resources import Config
 from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 
 
-# TODO: 完善4.0的python模式
+# TODO: 完善4.0的python模式√
 
 
 def is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
@@ -93,117 +93,130 @@ def organize_sw_mutex_dict(sw):
     return has_mutex_dict
 
 
-def open_sw(sw, status, has_mutex_dictionary=None):
+def open_sw(sw, multirun_mode):
     """
     根据状态以不同方式打开微信
     :param sw: 选择软件标签
-    :param status: 状态
-    :param has_mutex_dictionary: 有互斥体账号的列表
+    :param multirun_mode: 多开模式
     :return: 微信窗口句柄
     """
-    # print(f"传入{sw}")
-    if has_mutex_dictionary is None:
-        has_mutex_dictionary = dict()
     print(f"进入了打开微信的方法...")
-    start_time = time.time()
     sub_exe_process = None
     wechat_path = func_setting.get_sw_install_path(sw)
-    executable_name, lock_handles, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
-        sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
     if not wechat_path:
         return None
 
-    if status == "已开启":
+    if multirun_mode == "全局多开":
         print(f"当前是全局多开模式")
-        multiple_mode = "全局多开"
         create_process_without_admin(wechat_path)
-        time.sleep(0.1)
     else:
-        # 获取当前选择的多开子程序
-        multiple_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, 'rest_mode')
-        # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
-        if multiple_mode == "WeChatMultiple_Anhkgg.exe":
-            sub_exe_process = create_process_without_admin(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multiple_mode}",
-                creation_flags=subprocess.CREATE_NO_WINDOW
-            )
-        # ————————————————————————————————WeChatMultiple_wfql.exe————————————————————————————————
-        elif multiple_mode == "WeChatMultiple_wfql.exe":
-            sub_exe_process = create_process_without_admin(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multiple_mode}",
-                creation_flags=subprocess.CREATE_NO_WINDOW
-            )
-        # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
-        elif multiple_mode == "WeChatMultiple_lyie15.exe":
-            sub_exe_process = create_process_without_admin(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multiple_mode}"
-            )
-            sub_exe_hwnd = hwnd_utils.wait_open_to_get_hwnd("WTWindow", 8)
-            print(f"子程序窗口：{sub_exe_hwnd}")
-            if sub_exe_hwnd:
-                button_handle = hwnd_utils.get_child_hwnd_list_of_(
-                    sub_exe_hwnd
-                )[1]
-                if button_handle:
-                    button_details = hwnd_utils.get_hwnd_details_of_(button_handle)
-                    button_cx = int(button_details["width"] / 2)
-                    button_cy = int(button_details["height"] / 2)
-                    hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
-        # ————————————————————————————————handle————————————————————————————————
-        elif multiple_mode == "handle":
-            success_lists = handle_utils.close_sw_mutex_by_handle(
-                Config.HANDLE_EXE_PATH, executable_name, lock_handles)
-            if success_lists:
-                # 更新 has_mutex 为 False 并保存
-                print(f"成功关闭{success_lists}：{time.time() - start_time:.4f}秒")
+        sub_exe_process = _open_sw_without_freely_multirun(sw, multirun_mode)
 
-            # 所有操作完成后，执行创建进程的操作
-            print(f"打开：{wechat_path}")
-            create_process_without_admin(wechat_path, None)
-        # ————————————————————————————————python[强力]————————————————————————————————
-        elif multiple_mode == "python[S]":
-            pids = process_utils.get_process_ids_by_name(executable_name)
-            handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
-            handle_names = [handle["handle_name"] for handle in handle_regex_list]
-            if len(pids) > 0:
-                success = pywinhandle.close_handles(
-                    pywinhandle.find_handles(
-                        pids,
-                        handle_names
-                    )
+    return sub_exe_process
+
+
+def _open_sw_without_freely_multirun(sw, multirun_mode):
+    """非全局多开模式下打开微信"""
+    start_time = time.time()
+    sub_exe_process = None
+    wechat_path = func_setting.get_sw_install_path(sw)
+    # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
+    if multirun_mode == "WeChatMultiple_Anhkgg.exe":
+        sub_exe_process = create_process_without_admin(
+            f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}",
+            creation_flags=subprocess.CREATE_NO_WINDOW
+        )
+    # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
+    elif multirun_mode == "WeChatMultiple_lyie15.exe":
+        sub_exe_process = create_process_without_admin(
+            f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}"
+        )
+        sub_exe_hwnd = hwnd_utils.wait_open_to_get_hwnd("WTWindow", 8)
+        print(f"子程序窗口：{sub_exe_hwnd}")
+        if sub_exe_hwnd:
+            button_handle = hwnd_utils.get_child_hwnd_list_of_(
+                sub_exe_hwnd
+            )[1]
+            if button_handle:
+                button_details = hwnd_utils.get_hwnd_details_of_(button_handle)
+                button_cx = int(button_details["width"] / 2)
+                button_cy = int(button_details["height"] / 2)
+                hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
+    # ————————————————————————————————handle————————————————————————————————
+    elif multirun_mode == MultirunMode.HANDLE or multirun_mode == MultirunMode.PYTHON:
+        success = kill_mutex_by_inner_mode(sw, multirun_mode)
+        if success:
+            # 更新 has_mutex 为 False 并保存
+            print(f"成功关闭：{time.time() - start_time:.4f}秒")
+        else:
+            print(f"关闭互斥体失败！")
+        create_process_without_admin(wechat_path, None)
+
+    return sub_exe_process
+
+def kill_mutex_by_forced_inner_mode(sw, multirun_mode):
+    executable_name, lock_handles, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+        sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
+    # ————————————————————————————————python[强力]————————————————————————————————
+    if multirun_mode == MultirunMode.PYTHON:
+        pids = process_utils.get_process_ids_by_name(executable_name)
+        handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+        handle_names = [handle["handle_name"] for handle in handle_regex_list]
+        if len(pids) > 0:
+            success = pywinhandle.close_handles(
+                pywinhandle.find_handles(
+                    pids,
+                    handle_names
                 )
-                if success:
-                    # 更新 has_mutex 为 False 并保存
-                    print(f"成功关闭：{time.time() - start_time:.4f}秒")
-                else:
-                    print(f"关闭互斥体失败: {str(pids)}")
+            )
+            return success
+    # ————————————————————————————————handle————————————————————————————————
+    else:
+        success, success_lists = handle_utils.close_sw_mutex_by_handle(
+            Config.HANDLE_EXE_PATH, executable_name, lock_handles)
+        if len(success_lists) > 0:
+            print(f"成功关闭：{success_lists}")
+        return success
 
-            # 所有操作完成后，执行创建进程的操作
-            create_process_without_admin(wechat_path, None)
-        # ————————————————————————————————python————————————————————————————————
-        elif multiple_mode == "python":
-            handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
-            handle_names = [handle["handle_name"] for handle in handle_regex_list]
-            if len(has_mutex_dictionary) > 0:
-                print("互斥体列表：", has_mutex_dictionary)
-                pids, values = zip(*has_mutex_dictionary.items())
-                success = pywinhandle.close_handles(
-                    pywinhandle.find_handles(
-                        pids,
-                        handle_names
-                    )
+def kill_mutex_by_inner_mode(sw, multirun_mode):
+    """关闭平台进程的所有互斥体，如果不选择python模式，则使用handle模式"""
+    executable_name, lock_handles, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+        sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
+    # ————————————————————————————————python————————————————————————————————
+    if multirun_mode == "python":
+        handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+        handle_names = [handle["handle_name"] for handle in handle_regex_list]
+        has_mutex_dict = organize_sw_mutex_dict(sw)
+        if len(has_mutex_dict) > 0:
+            print("互斥体列表：", has_mutex_dict)
+            pids, values = zip(*has_mutex_dict.items())
+            success = pywinhandle.close_handles(
+                pywinhandle.find_handles(
+                    pids,
+                    handle_names
                 )
-                if success:
-                    # 更新 has_mutex 为 False 并保存
-                    print(f"成功关闭：{time.time() - start_time:.4f}秒")
-                else:
-                    print(f"关闭互斥体失败: {str(pids)}")
-            create_process_without_admin(wechat_path, None)
+            )
+            return success
+    # ————————————————————————————————handle————————————————————————————————
+    else:
+        success, success_lists = handle_utils.close_sw_mutex_by_handle(
+            Config.HANDLE_EXE_PATH, executable_name, lock_handles)
+        if len(success_lists) > 0:
+            print(f"成功关闭：{success_lists}")
+        return success
 
-    return sub_exe_process, multiple_mode
+def kill_mutex_of_pid(sw, pid):
+    handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+    handle_names = [handle["handle_name"] for handle in handle_regex_list]
+    success = pywinhandle.close_handles(
+        pywinhandle.find_handles(
+            pid,
+            handle_names
+        )
+    )
+    return success
 
-
-def get_login_size(sw, status):
+def get_login_size(sw, multirun_mode):
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
         sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
     print(login_wnd_class)
@@ -214,8 +227,7 @@ def get_login_size(sw, status):
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
     kill_sw_multiple_processes(sw)
-    has_mutex_dict = organize_sw_mutex_dict(sw)
-    sub_exe_process, sub_exe = open_sw(sw, status, has_mutex_dict)
+    sub_exe_process = open_sw(sw, multirun_mode)
     wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
     if wechat_hwnd:
         print(f"打开了登录窗口{wechat_hwnd}")

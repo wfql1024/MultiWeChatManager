@@ -31,14 +31,14 @@ class Config:
             Keywords.LOGIN_SORT: "配置,True",
             Keywords.LOGOUT_SORT: "配置,True",
             Keywords.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            Keywords.REST_MODE: "python",
+            Keywords.REST_MULTIRUN_MODE: "python",
         },
         SW.WEIXIN: {
             Keywords.VIEW: "tree",
             Keywords.LOGIN_SORT: "配置,True",
             Keywords.LOGOUT_SORT: "配置,True",
             Keywords.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            Keywords.REST_MODE: "handle",
+            Keywords.REST_MULTIRUN_MODE: "handle",
         },
     }
 
