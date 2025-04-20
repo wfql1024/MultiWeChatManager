@@ -1,0 +1,2145 @@
+{
+    "global": {
+        "app_name": "微信多开管理器",
+        "app_author": "吾峰起浪",
+        "new_func_hint": "狂按",
+        "all_sw": {
+            "WeChat": {
+                "text": "微信",
+                "name": "微信",
+                "frame": ""
+            },
+            "Weixin": {
+                "text": "微信4.0",
+                "name": "微信4.0",
+                "frame": ""
+            }
+        },
+        "all_login_status": {
+            "login": {
+                "text": "已登录",
+                "frame": ""
+            },
+            "logout": {
+                "text": "未登录",
+                "frame": ""
+            }
+        },
+        "about": {
+            "reference": [
+                {
+                    "title": "通过python解密微信3.x数据库",
+                    "link": "https://www.52pojie.cn/thread-1950632-1-1.html"
+                },
+                {
+                    "title": "如何通过python窗口句柄、后台鼠标点击",
+                    "link": "https://blog.csdn.net/weixin_43407838/article/details/125255441"
+                },
+                {
+                    "title": "python通过句柄值移动窗口的位置",
+                    "link": "https://blog.51cto.com/u_16213427/7225602"
+                },
+                {
+                    "title": "Python - tkinter之filedialog.askdirectory() 某个情况下无法运行的解决办法",
+                    "link": "https://www.cnblogs.com/flyinghou/p/14606383.html"
+                },
+                {
+                    "title": "微信逆向之自己动手去除微信多开限制，小白也能看懂",
+                    "link": "https://www.52pojie.cn/thread-1951224-1-1.html"
+                },
+                {
+                    "title": "管理员权限程序以普通用户的权限运行不需要管理员权限的程序",
+                    "link": "https://blog.csdn.net/qq411633267/article/details/56291270"
+                },
+                {
+                    "title": "查看程序的所有句柄的对象类型和名称，或关闭程序的任何句柄",
+                    "link": "https://github.com/yihleego/pywinhandle"
+                },
+                {
+                    "title": "使用x64dbg实现微信私聊与群消息防撤回",
+                    "link": "https://www.52pojie.cn/thread-1777652-1-1.html"
+                },
+                {
+                    "title": "微信4.0及之前版本的多开与防撤回的实现",
+                    "link": "https://github.com/huiyadanli/RevokeMsgPatcher"
+                },
+                {
+                    "title": "微信多开与防撤回的实现各版本特征码收集",
+                    "link": "https://www.52pojie.cn/thread-1964251-1-1.html"
+                },
+                {
+                    "title": "微信4.0及之前版本的数据库解密（rust版本）",
+                    "link": "https://github.com/0xlane/wechat-dump-rs"
+                }
+            ],
+            "sponsor": [
+                {
+                    "date": "24-09-13",
+                    "currency": "￥",
+                    "amount": "0.10",
+                    "user": "*械"
+                },
+                {
+                    "date": "24-09-30",
+                    "currency": "￥",
+                    "amount": "6.66",
+                    "user": "绚*9"
+                },
+                {
+                    "date": "24-10-21",
+                    "currency": "￥",
+                    "amount": "1.00",
+                    "user": "*叶"
+                },
+                {
+                    "date": "24-10-22",
+                    "currency": "￥",
+                    "amount": "8.88",
+                    "user": "*."
+                },
+                {
+                    "date": "24-10-22",
+                    "currency": "￥",
+                    "amount": "18.88",
+                    "user": "*."
+                },
+                {
+                    "date": "24-11-29",
+                    "currency": "￥",
+                    "amount": "8.88",
+                    "user": "*子"
+                },
+                {
+                    "date": "24-12-14",
+                    "currency": "￥",
+                    "amount": "20.00",
+                    "user": "*华"
+                },
+                {
+                    "date": "25-01-03",
+                    "currency": "luckin coffee(29)",
+                    "amount": "*1.00",
+                    "user": "*子"
+                },
+                {
+                    "date": "25-01-19",
+                    "currency": "￥",
+                    "amount": "66.66",
+                    "user": "**江"
+                },
+                {
+                    "date": "25-02-09",
+                    "currency": "￥",
+                    "amount": "8.80",
+                    "user": "*财"
+                },
+                {
+                    "date": "25-02-14",
+                    "currency": "￥",
+                    "amount": "20.00",
+                    "user": "*人"
+                },
+                {
+                    "date": "25-03-03",
+                    "currency": "￥",
+                    "amount": "8.88",
+                    "user": "*制"
+                },
+                {
+                    "date": "25-03-08",
+                    "currency": "￥",
+                    "amount": "0.66",
+                    "user": "*源"
+                },
+                {
+                    "date": "25-04-18",
+                    "currency": "￥",
+                    "amount": "8.88",
+                    "user": "*”"
+                }
+            ],
+            "author": {
+                "52pj": {
+                    "text": "吾爱破解主页",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=2279503&do=thread&view=me&from=space"
+                    }
+                },
+                "bilibili": {
+                    "text": "哔哩哔哩主页",
+                    "links": {
+                        "bilibili": "https://space.bilibili.com/3546733357304606"
+                    }
+                },
+                "Github": {
+                    "text": "GitHub主页",
+                    "links": {
+                        "Github": "https://github.com/wfql1024"
+                    }
+                },
+                "Gitee": {
+                    "text": "Gitee主页",
+                    "links": {
+                        "Gitee": "https://gitee.com/wfql1024"
+                    }
+                }
+            },
+            "project": {
+                "52pj": {
+                    "text": "吾爱破解主页",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/thread-1949078-1-1.html"
+                    }
+                },
+                "Github": {
+                    "text": "GitHub",
+                    "links": {
+                        "Github": "https://github.com/wfql1024/MultiWeChatManager"
+                    }
+                },
+                "Gitee": {
+                    "text": "Gitee",
+                    "links": {
+                        "Gitee": "https://gitee.com/wfql1024/MultiWeChatManager"
+                    }
+                }
+            },
+            "thanks": {
+                "lyie15": {
+                    "text": "lyie15",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=2030303"
+                    }
+                },
+                "windion": {
+                    "text": "windion",
+                    "links": {
+                        "bilibili": "https://space.bilibili.com/256019141",
+                        "52pj": "https://www.52pojie.cn/home.php?mod=follow&uid=1529783&do=view&from=space"
+                    }
+                },
+                "JackLSQ": {
+                    "text": "JackLSQ",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=1784521"
+                    }
+                },
+                "Anhkgg": {
+                    "text": "Anhkgg",
+                    "links": {
+                        "github": "https://github.com/anhkgg"
+                    }
+                },
+                "de52": {
+                    "text": "de52",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=1703408"
+                    }
+                },
+                "yihleego": {
+                    "text": "yihleego",
+                    "links": {
+                        "github": "https://github.com/yihleego"
+                    }
+                },
+                "cherub0507": {
+                    "text": "cherub0507",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=681049"
+                    }
+                },
+                "tnxts": {
+                    "text": "tnxts",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=1705928"
+                    }
+                },
+                "huiyadanli": {
+                    "text": "huiyadanli",
+                    "links": {
+                        "github": "https://github.com/huiyadanli"
+                    }
+                },
+                "zetaloop": {
+                    "text": "zetaloop",
+                    "links": {
+                        "github": "https://github.com/zetaloop"
+                    }
+                },
+                "0xlane": {
+                    "text": "0xlane",
+                    "links": {
+                        "github": "https://github.com/0xlane"
+                    }
+                }
+            }
+        },
+        "update": {
+            "v2.15.0.1458-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win7_x64_v2.15.0.1458-Beta.zip",
+                            "md5": "7aa3246b9a64779ffca1cbeadff481bc",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win10%20_x64_v2.15.0.1458-Beta.zip",
+                            "md5": "7ca85d3179f13f33d23fdc04c7fc8e8f",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win10%20_x64_v2.15.0.1458-Beta.zip",
+                            "md5": "7ca85d3179f13f33d23fdc04c7fc8e8f",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win7_x64_v2.15.0.1458-Beta.zip",
+                            "md5": "7aa3246b9a64779ffca1cbeadff481bc",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增自启动功能：软件自启动，以及设置自动登录的账号",
+                        "新增隐藏账号功能：设置在未登录时隐藏的账号",
+                        "新增快捷键功能：可以对账号设置显示的快捷键，唤起窗口",
+                        "新增任务栏窗口标题显示账号名的功能"
+                    ],
+                    "修复": [
+                        "修复若干问题"
+                    ]
+                }
+            },
+            "v2.11.1.911-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win7_x64_v2.11.1.911-Beta.zip",
+                            "md5": "5fc3a5d0ae5aa72c31a291d9ddae3a22",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win10%20_x64_v2.11.1.911-Beta.zip",
+                            "md5": "3c63cd2d88d247f930bb3e970ec73043",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win10%20_x64_v2.11.1.911-Beta.zip",
+                            "md5": "3c63cd2d88d247f930bb3e970ec73043",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win7_x64_v2.11.1.911-Beta.zip",
+                            "md5": "5fc3a5d0ae5aa72c31a291d9ddae3a22",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增对微信4.0的适配",
+                        "新增高分屏适配"
+                    ],
+                    "修复": [
+                        "修复若干问题"
+                    ]
+                }
+            },
+            "v2.9.1.698-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                            "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                            "md5": "19758698771099dfdf57d4230217d30b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                            "md5": "19758698771099dfdf57d4230217d30b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                            "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增新增自动配置未配置的账号"
+                    ],
+                    "修复": [
+                        "修复列表视图下配置失败等的问题"
+                    ]
+                }
+            },
+            "v2.8.7.668-Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "ad73222d3069e2a60c9aad3318012110",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "75e7cb3e7610df3c911a0bd520bb0397",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "75e7cb3e7610df3c911a0bd520bb0397",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "ad73222d3069e2a60c9aad3318012110",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增“列表”视图",
+                        "新增“在线升级”功能",
+                        "新增自动静默获取头像昵称的功能"
+                    ],
+                    "修复": [
+                        "修复Python模式下多开微信失败的问题",
+                        "修复某些表情符号溢出无法显示的问题",
+                        "修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题"
+                    ],
+                    "优化": [
+                        "防撤回功能已默认显示",
+                        "优化按钮点击逻辑",
+                        "优化日志显示",
+                        "优化在线升级，避免重复下载"
+                    ]
+                }
+            },
+            "v2.6.0.420-test": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "测试在线升级"
+                    ]
+                }
+            },
+            "v2.5.0.411.Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "适配": [
+                        "适配win7系统"
+                    ],
+                    "优化": [
+                        "为了适配win7，降低python版本：3.12->3.7，由此安装包体积大幅缩减"
+                    ]
+                }
+            },
+            "v2.4.0.365.Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增防撤回"
+                    ]
+                }
+            },
+            "v2.3.3.333.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增调试窗口",
+                        "新增原生多开（加入互斥体概念，可在主界面和账号详情中查看是否含有互斥体）",
+                        "新增统计面板，可以用来统计对比各个多开器的性能"
+                    ],
+                    "修复": [
+                        "修复设置界面仍会出现的打不开选择文件夹的问题",
+                        "修复获取dll文件夹和版本号的逻辑会因为用户文件结构不同而可能出现错误的问题",
+                        "修复多选登录可能出现窗口错位的问题（延长了等待新登录窗口的时间）"
+                    ],
+                    "优化": [
+                        "优化微信更新适配全局多开的方式，由源码修改改为从网站获取",
+                        "优化常规模式和调试模式的实现方式，由两个程序改为快捷方式是否携带“--debug”参数来区分模式"
+                    ]
+                }
+            },
+            "v2.0.8.208.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "修复": [
+                        "修复初次使用时未获取到路径无处设置的问题",
+                        "修复无法拖动文件发送到微信的问题"
+                    ],
+                    "优化": [
+                        "优化微信新版本的适配，目前支持微信 3.9.11.25、3.9.12.9、3.9.12.11 多开",
+                        "优化获取登录窗口尺寸的逻辑"
+                    ],
+                    "新增": [
+                        "新增打赏（你懂的~）"
+                    ]
+                }
+            },
+            "v2.0.0.200.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增全局多开模式和多种子多开器",
+                        "新增多选自动登录",
+                        "新增状态栏",
+                        "新增快捷启动",
+                        "新的UI界面，新增头像、昵称等详情显示"
+                    ]
+                }
+            },
+            "v1.0.79.100.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增全局多开模式和多种子多开器",
+                        "新增多选自动登录",
+                        "新增状态栏",
+                        "新增快捷启动",
+                        "新的UI界面，新增头像、昵称等详情显示"
+                    ]
+                }
+            }
+        }
+    },
+    "WeChat": {
+        "multirun": {
+            "3.9.12.51": [
+                {
+                    "pre_ver": "3.9.12.45",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 44 D5 6D 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.12.45",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 44 D5 6D 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.45": [
+                {
+                    "pre_ver": "3.9.12.37",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 F4 C3 6D 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.12.37",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 F4 C3 6D 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.37": [
+                {
+                    "pre_ver": "3.9.12.31",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 A4 FD 6D 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.12.31",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 A4 FD 6D 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.31": [
+                {
+                    "pre_ver": "3.9.12.19",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 24 00 6E 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.12.19",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 24 00 6E 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.19": [
+                {
+                    "pre_ver": "3.9.12.17",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 94 AE 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.12.17",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 94 AE 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.17": [
+                {
+                    "pre_ver": "3.9.12.15",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 C4 A8 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.12.15",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 C4 A8 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.15": [
+                {
+                    "pre_ver": "3.9.12.11",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 A4 64 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.12.11",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 A4 64 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.11": [
+                {
+                    "pre_ver": "3.9.12.9",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 84 5F 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.12.9",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 84 5F 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.9": [
+                {
+                    "pre_ver": "3.9.11.25",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 24 65 65 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 24 65 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.11.25",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 24 65 65 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 24 65 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.11.25": [
+                {
+                    "pre_ver": "3.9.11.23",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 F4 24 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                },
+                {
+                    "pre_ver": "3.9.11.23",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 F4 24 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.11.23": [
+                {
+                    "pre_ver": "3.9.11.19",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 64 1F 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                },
+                {
+                    "pre_ver": "3.9.11.19",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 64 1F 65 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.11.19": [
+                {
+                    "pre_ver": "3.9.11.17",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 24 99 63 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 24 99 63 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                },
+                {
+                    "pre_ver": "3.9.11.17",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 24 99 63 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 24 99 63 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.11.17": [
+                {
+                    "pre_ver": "3.9.11.9",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 14 99 63 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 14 99 63 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                },
+                {
+                    "pre_ver": "3.9.11.9",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 14 99 63 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 14 99 63 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.11.9": [
+                {
+                    "pre_ver": "3.9.10.27",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 D4 58 62 01"
+                    ],
+                    "ver_diff": [
+                        "?? ?? -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁（猜测）"
+                },
+                {
+                    "pre_ver": "3.9.10.27",
+                    "original": [
+                        "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 D4 58 62 01"
+                    ],
+                    "ver_diff": [
+                        "?? ?? -- -- -- -- -- -- ?? ?? ?? --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁（猜测）"
+                }
+            ],
+            "3.9.10.27": [
+                {
+                    "pre_ver": "3.9.10.19",
+                    "original": [
+                        "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 8F 6F D7 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁（猜测）"
+                },
+                {
+                    "pre_ver": "3.9.10.19",
+                    "original": [
+                        "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 8F 6F D7 01"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁（猜测）"
+                }
+            ],
+            "3.9.10.19": [
+                {
+                    "pre_ver": null,
+                    "original": [
+                        "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
+                    ],
+                    "modified": [
+                        "E9 BE 00 00 00 00 FF 15 8F 76 D7 01"
+                    ],
+                    "ver_diff": [
+                        "0F 84 BD 00 00 00 FF 15 ** ** ** 01"
+                    ],
+                    "mod_diff": [
+                        "E9 BE 00 -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁（猜测）"
+                },
+                {
+                    "pre_ver": null,
+                    "original": [
+                        "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
+                    ],
+                    "modified": [
+                        "90 E9 BD 00 00 00 FF 15 8F 76 D7 01"
+                    ],
+                    "ver_diff": [
+                        "0F 84 BD 00 00 00 FF 15 ** ** ** 01"
+                    ],
+                    "mod_diff": [
+                        "90 E9 -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁（猜测）"
+                }
+            ]
+        },
+        "anti-revoke": {
+            "3.9.12.51": [
+                {
+                    "pre_ver": "3.9.12.45",
+                    "original": [
+                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.45": [
+                {
+                    "pre_ver": "3.9.12.37",
+                    "original": [
+                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.37": [
+                {
+                    "pre_ver": "3.9.12.31",
+                    "original": [
+                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.31": [
+                {
+                    "pre_ver": "3.9.12.19",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.19": [
+                {
+                    "pre_ver": "3.9.12.17",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.17": [
+                {
+                    "pre_ver": "3.9.12.15",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.15": [
+                {
+                    "pre_ver": "3.9.12.11",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.12.11": [
+                {
+                    "pre_ver": "3.9.12.9",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁（猜测）"
+                }
+            ],
+            "3.9.12.9": [
+                {
+                    "pre_ver": "3.9.11.25",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- ?? -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁（猜测）"
+                }
+            ],
+            "3.9.11.25": [
+                {
+                    "pre_ver": "3.9.11.23",
+                    "original": [
+                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- ?? -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "3.9.11.23": [
+                {
+                    "pre_ver": "3.9.11.19",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.11.19": [
+                {
+                    "pre_ver": "3.9.11.17",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- ?? -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.11.17": [
+                {
+                    "pre_ver": "3.9.11.9",
+                    "original": [
+                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.11.9": [
+                {
+                    "pre_ver": "3.9.10.27",
+                    "original": [
+                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- ?? -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.10.27": [
+                {
+                    "pre_ver": "3.9.10.19",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.10.19": [
+                {
+                    "pre_ver": "3.9.9.43",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.9.43": [
+                {
+                    "pre_ver": "3.9.9.35",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.9.35": [
+                {
+                    "pre_ver": "3.9.9.27",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.9.27": [
+                {
+                    "pre_ver": "3.9.8.25",
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ],
+            "3.9.8.25": [
+                {
+                    "pre_ver": null,
+                    "original": [
+                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "modified": [
+                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                    ],
+                    "ver_diff": [
+                        "C0 0F 84 3* FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版（猜测），补丁"
+                }
+            ]
+        },
+        "redundant_wnd_class": [
+            "WeChatLoginWndForPC"
+        ],
+        "executable": "WeChat.exe",
+        "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
+        "data_dir_guess_suffix": "Tencent\\WeChat",
+        "data_dir_check_suffix": "All Users",
+        "dll_dir_check_suffix": "WeChatWin.dll",
+        "patch_dll": "WeChatWin.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",
+        "user_reg_sub_key": "Software\\Tencent\\WeChat",
+        "data_dir_name": "WeChat Files",
+        "lock_handle_regex_list": [
+            {
+                "handle_name": "_WeChat_App_Instance_Identity_Mutex_Name",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+            }
+        ],
+        "cfg_handle_regex_list": [
+        ],
+        "login_wnd_class": "WeChatLoginWndForPC",
+        "main_wnd_class": "WeChatMainWndForPC",
+        "config_path_suffix": "All Users/config",
+        "config_file_list": [
+            "config.data"
+        ],
+        "excluded_dir_list": [
+            "All Users",
+            "Applet",
+            "Plugins",
+            "WMPF",
+            "all_users"
+        ],
+        "cut_to_compatible_id": [
+            0,
+            0
+        ],
+        "support_python_mode": true,
+        "support_python_s_mode": true,
+        "support_handle_mode": true,
+        "support_quick_start": true
+    },
+    "Weixin": {
+        "multirun": {
+            "4.0.3.42": [
+                {
+                    "pre_ver": "4.0.3.22",
+                    "original": [
+                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                    ],
+                    "modified": [
+                        "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "C3 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.3.22": [
+                {
+                    "pre_ver": "4.0.3.19",
+                    "original": [
+                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                    ],
+                    "modified": [
+                        "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "C3 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.3.19": [
+                {
+                    "pre_ver": "4.0.2.28",
+                    "original": [
+                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                    ],
+                    "modified": [
+                        "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "C3 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.28": [
+                {
+                    "pre_ver": "4.0.2.26",
+                    "original": [
+                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "modified": [
+                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "C3 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.26": [
+                {
+                    "pre_ver": "4.0.2.20",
+                    "original": [
+                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "modified": [
+                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "C3 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.20": [
+                {
+                    "pre_ver": "4.0.2.17",
+                    "original": [
+                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "modified": [
+                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "C3 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.17": [
+                {
+                    "pre_ver": "4.0.2.13",
+                    "original": [
+                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "modified": [
+                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "C3 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.13": [
+                {
+                    "pre_ver": "4.0.1.20",
+                    "original": [
+                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "modified": [
+                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "C3 -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.1.20": [
+                {
+                    "pre_ver": "4.0.1.13",
+                    "original": [
+                        "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 75 0F"
+                    ],
+                    "modified": [
+                        "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 EB 0F"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- !! !! !! ?? -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- EB --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.1.13": [
+                {
+                    "pre_ver": "4.0.1.11",
+                    "original": [
+                        "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 75 0F"
+                    ],
+                    "modified": [
+                        "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 EB 0F"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? !! ?? ?? -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- EB --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.1.11": [
+                {
+                    "pre_ver": null,
+                    "original": [
+                        "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 75 0F"
+                    ],
+                    "modified": [
+                        "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 EB 0F"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- ?? ?? ?? ?? -- -- -- --"
+                    ],
+                    "mod_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- EB --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ]
+        },
+        "anti-revoke": {
+            "4.0.3.42": [
+                {
+                    "pre_ver": "4.0.3.22",
+                    "original": [
+                        "74 6E 48 8D 8D 28 04 00 00 E8 B0 65 E8 FD 48 8B"
+                    ],
+                    "modified": [
+                        "EB 6E 48 8D 8D 28 04 00 00 E8 B0 65 E8 FD 48 8B"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.3.22": [
+                {
+                    "pre_ver": "4.0.3.19",
+                    "original": [
+                        "74 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
+                    ],
+                    "modified": [
+                        "EB 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.3.19": [
+                {
+                    "pre_ver": "4.0.2.28",
+                    "original": [
+                        "74 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
+                    ],
+                    "modified": [
+                        "EB 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.28": [
+                {
+                    "pre_ver": "4.0.2.26",
+                    "original": [
+                        "74 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
+                    ],
+                    "modified": [
+                        "EB 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.26": [
+                {
+                    "pre_ver": "4.0.2.20",
+                    "original": [
+                        "74 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
+                    ],
+                    "modified": [
+                        "EB 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
+                    ],
+                    "ver_diff": [
+                        "?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ??"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.20": [
+                {
+                    "pre_ver": "4.0.2.17",
+                    "original": [
+                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
+                    ],
+                    "modified": [
+                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- -- -- ?? ?? ?? ?? -- -- -- -- ?? ?? ?? ?? -- -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.17": [
+                {
+                    "pre_ver": "4.0.2.13",
+                    "original": [
+                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
+                    ],
+                    "modified": [
+                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- -- -- ?? ?? ?? ?? -- -- -- -- ?? ?? ?? ?? -- -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.2.13": [
+                {
+                    "pre_ver": "4.0.1.20",
+                    "original": [
+                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
+                    ],
+                    "modified": [
+                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- -- -- ?? ?? ?? ?? -- -- -- -- ?? ?? ?? ?? -- -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.1.20": [
+                {
+                    "pre_ver": "4.0.1.13",
+                    "original": [
+                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
+                    ],
+                    "modified": [
+                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.1.13": [
+                {
+                    "pre_ver": "4.0.1.11",
+                    "original": [
+                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
+                    ],
+                    "modified": [
+                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ],
+            "4.0.1.11": [
+                {
+                    "pre_ver": null,
+                    "original": [
+                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
+                    ],
+                    "modified": [
+                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
+                    ],
+                    "ver_diff": [
+                        "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- ?? ?? ?? ?? -- -- --"
+                    ],
+                    "mod_diff": [
+                        "EB -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --"
+                    ],
+                    "note": "原版，补丁"
+                }
+            ]
+        },
+        "redundant_wnd_class": [
+            "Qt51514QWindowIcon"
+        ],
+        "executable": "Weixin.exe",
+        "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
+        "data_dir_guess_suffix": "Tencent\\Weixin",
+        "data_dir_check_suffix": "all_users",
+        "dll_dir_check_suffix": "Weixin.dll",
+        "patch_dll": "Weixin.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Weixin",
+        "user_reg_sub_key": "Software\\Tencent\\Weixin",
+        "data_dir_name": "xwechat_files",
+        "lock_handle_regex_list": [
+            {
+                "handle_name": "lock.ini",
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):"
+            },
+            {
+                "handle_name": "XWeChat_App_Instance_Identity_Mutex_Name",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+            }
+        ],
+        "cfg_handle_regex_list": [
+            {
+                "handle_name": "global_config",
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):"
+            }
+        ],
+        "login_wnd_class": "Qt51514QWindowIcon",
+        "main_wnd_class": "Qt51514QWindowIcon",
+        "config_path_suffix": "all_users",
+        "config_file_list": [
+            "config"
+        ],
+        "excluded_dir_list": [
+            "All Users",
+            "Applet",
+            "Plugins",
+            "WMPF",
+            "all_users"
+        ],
+        "cut_to_compatible_id": [
+            0,
+            5
+        ],
+        "support_python_mode": true,
+        "support_python_s_mode": true,
+        "support_handle_mode": true,
+        "support_quick_start": false
+    }
+}
