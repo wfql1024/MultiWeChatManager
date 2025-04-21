@@ -3,6 +3,8 @@ import shutil
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
+import secrets
+import string
 
 
 def encrypt_and_append_key(input_file, output_file, key):
@@ -29,10 +31,16 @@ def encrypt_and_append_key(input_file, output_file, key):
 
 
 # 使用方法
-my_key = "n3kxCc2yu9FoRQc="
-encrypt_and_append_key('origin_remote_setting_v3.json', '../remote_setting', my_key)
+
+# 生成15个随机字符（大小写字母+数字）
+random_part = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(15))
+# 组合成最终key（最后补=）
+secure_key = random_part + "="
+print(secure_key)  # 例如：k8DpLmQwXz5RtN=
+
+encrypt_and_append_key('origin_remote_setting_v3.json', '../remote_setting', secure_key)
 print(f"文件已加密并保存为 remote_setting（无后缀名）")
-encrypt_and_append_key('origin_remote_setting_v4.json', '../remote_setting_v4', my_key)
+encrypt_and_append_key('origin_remote_setting_v4.json', '../remote_setting_v4', secure_key)
 print(f"文件已加密并保存为 remote_setting_v4（无后缀名）")
 # 复制上级目录中的.old/version_config_v1.json到上上级的version_config.json
 shutil.copy('../.old/version_config_v1.json', '../../version_config.json')
