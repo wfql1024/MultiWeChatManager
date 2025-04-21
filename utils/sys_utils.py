@@ -1,8 +1,10 @@
 import ctypes
+import os
 import platform
 import winreg
 from ctypes import wintypes
 from pathlib import Path
+from contextlib import contextmanager
 
 # 定义常量
 MDT_EFFECTIVE_DPI = 0  # 有效 DPI（当前缩放）
@@ -10,6 +12,37 @@ PROCESS_PER_MONITOR_DPI_AWARE = 2  # 进程 DPI 感知模式
 
 # 定义常量
 SPI_GETICONTITLELOGFONT = 0x001F
+
+
+@contextmanager
+def disable_proxy_temporarily():
+    # 保存原始环境变量
+    old_http = os.environ.get('http_proxy')
+    old_https = os.environ.get('https_proxy')
+    old_noproxy = os.environ.get('no_proxy')
+
+    try:
+        os.environ['http_proxy'] = ''
+        os.environ['https_proxy'] = ''
+        os.environ['no_proxy'] = '*'
+        yield
+    finally:
+        # 恢复原始代理设置
+        if old_http is not None:
+            os.environ['http_proxy'] = old_http
+        else:
+            os.environ.pop('http_proxy', None)
+
+        if old_https is not None:
+            os.environ['https_proxy'] = old_https
+        else:
+            os.environ.pop('https_proxy', None)
+
+        if old_noproxy is not None:
+            os.environ['no_proxy'] = old_noproxy
+        else:
+            os.environ.pop('no_proxy', None)
+
 
 
 def get_win7_scaling_from_registry():

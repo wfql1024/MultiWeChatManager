@@ -25,6 +25,7 @@ class Config:
             LocalCfg.AUTO_PRESS: "True",
             LocalCfg.CALL_MODE: "HANDLE",
             LocalCfg.NEXT_CHECK_TIME: None,
+            LocalCfg.DISABLE_PROXY: "True",
         },
         SW.WECHAT: {
             LocalCfg.VIEW: "tree",

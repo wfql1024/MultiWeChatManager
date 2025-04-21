@@ -386,6 +386,14 @@ class MenuUI:
             label="测试登录自启动账号", command=partial(self.root_class.to_login_auto_start_accounts))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        disable_proxy_value = self.global_settings_value.disable_proxy = \
+            True if subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.DISABLE_PROXY) == "True" else False
+        disable_proxy_var = self.global_settings_var.disable_proxy = tk.BooleanVar(value=disable_proxy_value)
+        self.settings_menu.add_checkbutton(
+            label="禁用代理", variable=disable_proxy_var,
+            command=partial(self.apply_proxy_setting_and_save,not disable_proxy_value))
+
+        self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(
             label="重置", command=partial(func_file.reset, self.root_class.initialize_in_init))
 
@@ -524,6 +532,11 @@ class MenuUI:
             print("操作失败！")
         else:
             print(f"已添加自启动！" if value is True else f"已关闭自启动！")
+
+    def apply_proxy_setting_and_save(self, disable_proxy: bool):
+        self.root_class.apply_proxy_setting(disable_proxy)
+        subfunc_file.save_a_global_setting(LocalCfg.DISABLE_PROXY, disable_proxy, self.create_root_menu_bar)
+
 
     def open_rewards(self):
         """打开赞赏窗口"""

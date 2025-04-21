@@ -84,6 +84,11 @@ class MainWindow:
         subfunc_file.swap_cnt_and_mode_levels_in_auto()
         subfunc_file.downgrade_item_lvl_under_manual()
 
+        disable_proxy_value = self.global_settings_value.disable_proxy = \
+            True if subfunc_file.fetch_global_setting_or_set_default_or_none(
+                LocalCfg.DISABLE_PROXY) == "True" else False
+        self.apply_proxy_setting(disable_proxy_value)
+
         # 获取远程配置文件
         try:
             self.remote_cfg_data = subfunc_file.try_read_remote_cfg_locally()
@@ -257,6 +262,22 @@ class MainWindow:
             pass
         subfunc_sw.switch_to_sw_account_wnd(item)
 
+    @staticmethod
+    def apply_proxy_setting(disable_proxy: bool):
+        if disable_proxy:
+            # 强制不使用任何代理
+            os.environ['http_proxy'] = ''
+            os.environ['https_proxy'] = ''
+            os.environ['no_proxy'] = '*'
+            print("已禁用代理！")
+        else:
+            # 清除你之前手动设置的禁用内容，恢复为系统默认（可能为空，也可能有代理）
+            os.environ.pop('http_proxy', None)
+            os.environ.pop('https_proxy', None)
+            os.environ.pop('no_proxy', None)
+            print("已恢复代理！")
+
+
 
 class SoftwareInfo:
     def __init__(self, sw):
@@ -296,3 +317,4 @@ class GlobalSettings:
         self.call_mode = None
         self.new_func = None
         self.auto_press = None
+        self.disable_proxy = None

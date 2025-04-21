@@ -49,6 +49,7 @@ class LocalCfg(str, Enum):
     AUTO_PRESS = "auto_press"
     CALL_MODE = "call_mode"
     NEXT_CHECK_TIME = "next_check_time"
+    DISABLE_PROXY = "disable_proxy"
     # 设置项中的平台设置
     INST_PATH = "inst_path"
     DATA_DIR = "data_dir"

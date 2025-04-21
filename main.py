@@ -57,11 +57,6 @@ def is_admin():
 
 
 def main():
-    # 设置环境变量，告诉 Python 不使用代理
-    os.environ['http_proxy'] = ''
-    os.environ['https_proxy'] = ''
-    os.environ['no_proxy'] = '*'
-
     # # 启动键盘监听器线程
     # keyboard_thread = threading.Thread(target=start_keyboard_listener, daemon=True)
     # keyboard_thread.start()
