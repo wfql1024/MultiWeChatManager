@@ -167,3 +167,8 @@ def unlink_hwnd_of_account(sw, account):
     :return:
     """
     subfunc_file.update_sw_acc_data(sw, account, main_hwnd=None)
+    messagebox.showinfo("成功", "已解绑，账号列表刷新将尝试重新绑定！")
+
+
+def relink_hwnd_of_account(sw, account):
+    pass

@@ -4,7 +4,8 @@ from collections.abc import Sized
 
 from PIL import ImageTk, Image
 
-from functions import func_config, func_account, subfunc_file, subfunc_sw
+from functions import func_config, subfunc_file, subfunc_sw
+from functions.func_account import FuncAccInfo
 from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableTreeView
@@ -138,7 +139,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
             if hidden is True and login_status == "logout":
                 continue
 
-            display_name = "  " + func_account.get_acc_origin_display_name(self.sw, account)
+            display_name = "  " + FuncAccInfo.get_acc_origin_display_name(self.sw, account)
             config_status = func_config.get_sw_acc_login_cfg(self.sw, account, self.data_dir)
             avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_sw_acc_data(
                 self.sw,
@@ -150,7 +151,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
                 has_mutex=None
             )
 
-            img = func_account.get_acc_avatar_from_files(account, self.sw)
+            img = FuncAccInfo.get_acc_avatar_from_files(self.sw, account)
             img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
 

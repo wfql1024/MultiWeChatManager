@@ -5,6 +5,7 @@ from functools import partial
 from tkinter import ttk, messagebox
 
 from functions import subfunc_file, func_account, func_config, func_login
+from functions.func_account import FuncAccInfo
 from public_class import reusable_widgets
 from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
@@ -74,7 +75,7 @@ class AccTabUI:
             return
 
         def _get_data_thread(callback):
-            result = func_account.get_sw_acc_list(self.root, self, self.sw)
+            result = FuncAccInfo.get_sw_acc_list(self.root, self, self.sw)
             callback(result)
 
         self.start_time = time.time()
@@ -211,11 +212,11 @@ class AccTabUI:
         """成功创建账号列表才会执行"""
         # 获取已登录的窗口hwnd
         logins = self.acc_list_dict[OnlineStatus.LOGIN]
-        func_account.get_main_hwnd_of_accounts(logins, self.sw)
+        FuncAccInfo.get_main_hwnd_of_accounts(self.sw, logins)
 
         # 进行静默获取头像及配置
         def func():
-            func_account.silent_get_and_config(self.sw)
+            FuncAccInfo.silent_get_and_config(self.sw)
 
         threading.Thread(target=func).start()
 

@@ -2,6 +2,7 @@ import mmap
 
 from utils.file_utils import DllUtils
 
+
 def identify_dll_of_ver_by_dict(data, cur_sw_ver, dll_path):
     ver_adaptation = data.get(cur_sw_ver, None)
     if ver_adaptation is None:

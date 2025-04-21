@@ -6,7 +6,7 @@ from typing import Union, Tuple
 import yaml
 
 from functions import subfunc_file
-from public_class.enums import Keywords, SW
+from public_class.enums import LocalCfg, SW
 from utils import sw_utils, file_utils
 from utils.logger_utils import mylogger as logger
 
@@ -85,14 +85,14 @@ def get_sw_install_path_by_tuple(sw: str, ignore_local_record=False) \
     """
     path_finders = [
         sw_utils.get_sw_install_path_from_process,
-        (lambda sw: []) if ignore_local_record else create_path_finder_of_(Keywords.INST_PATH),
+        (lambda sw: []) if ignore_local_record else create_path_finder_of_(LocalCfg.INST_PATH),
         sw_utils.get_sw_install_path_from_machine_register,
         sw_utils.get_sw_install_path_from_user_register,
         sw_utils.get_sw_install_path_by_guess,
     ]
 
     check_func = sw_utils.is_valid_sw_install_path
-    path_type = Keywords.INST_PATH
+    path_type = LocalCfg.INST_PATH
 
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
@@ -118,13 +118,13 @@ def get_sw_data_dir_to_tuple(sw: str, ignore_local_record=False) \
     :return: 成功，是否改变，结果
     """
     path_finders = [
-        (lambda sw: []) if ignore_local_record else create_path_finder_of_(Keywords.DATA_DIR),
+        (lambda sw: []) if ignore_local_record else create_path_finder_of_(LocalCfg.DATA_DIR),
         sw_utils.get_sw_data_dir_from_user_register,
         sw_utils.get_sw_data_dir_by_guess,
         get_sw_data_dir_from_other_sw,
     ]
     check_func = sw_utils.is_valid_sw_data_dir
-    path_type = Keywords.DATA_DIR
+    path_type = LocalCfg.DATA_DIR
 
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
@@ -139,12 +139,12 @@ def get_sw_dll_dir(sw: str, ignore_local_record=False):
 def get_sw_dll_dir_to_tuple(sw: str, ignore_local_record=False):
     """获取微信dll所在文件夹"""
     path_finders = [
-        (lambda sw: []) if ignore_local_record else create_path_finder_of_(Keywords.DLL_DIR),
+        (lambda sw: []) if ignore_local_record else create_path_finder_of_(LocalCfg.DLL_DIR),
         sw_utils.get_sw_dll_dir_by_memo_maps,
         get_sw_dll_dir_by_files,
     ]
     check_func = sw_utils.is_valid_sw_dll_dir
-    path_type = Keywords.DLL_DIR
+    path_type = LocalCfg.DLL_DIR
 
     return cycle_get_a_path_with_funcs(path_type, sw, path_finders, check_func)
 
@@ -183,8 +183,8 @@ def set_wnd_scale(after, scale=None):
             return
 
     subfunc_file.save_a_global_setting(
-        Keywords.GLOBAL_SECTION,
-        Keywords.SCALE,
+        LocalCfg.GLOBAL_SECTION,
+        LocalCfg.SCALE,
         str(scale)
     )
 
@@ -202,7 +202,7 @@ def get_sw_data_dir_from_other_sw(sw: str) -> list:
     if data_dir_name is None or data_dir_name == "":
         paths = []
     if sw == SW.WEIXIN:
-        other_path = create_path_finder_of_(Keywords.DATA_DIR)(SW.WECHAT)
+        other_path = create_path_finder_of_(LocalCfg.DATA_DIR)(SW.WECHAT)
         if other_path and len(other_path) != 0:
             paths = [os.path.join(os.path.dirname(other_path[0]), data_dir_name).replace('\\', '/')]
         else:

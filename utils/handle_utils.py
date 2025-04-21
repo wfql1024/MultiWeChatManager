@@ -117,8 +117,8 @@ def close_sw_mutex_by_handle(handle_exe, exe, handle_regex_dicts):
             printer.vital(f"handle-查找句柄")
             printer.normal(f"指令：{handle_cmd}")
             handle_output = subprocess.check_output(handle_cmd,
-                                                  creationflags=subprocess.CREATE_NO_WINDOW,
-                                                  text=True)
+                                                    creationflags=subprocess.CREATE_NO_WINDOW,
+                                                    text=True)
             printer.normal(f"信息：{handle_output}")
             printer.normal(f"用时：{time.time() - start_time:.4f}秒")
 

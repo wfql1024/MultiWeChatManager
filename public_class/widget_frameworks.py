@@ -7,7 +7,8 @@ from typing import Dict
 
 from PIL import ImageTk, Image
 
-from functions import func_account, subfunc_file, subfunc_sw, func_config
+from functions import subfunc_file, subfunc_sw, func_config
+from functions.func_account import FuncAccInfo
 from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
 from resources import Constants
@@ -83,7 +84,7 @@ class CheckboxItemRow:
         # print(f"加载头像区域用时{time.time() - self.start_time:.4f}秒")
 
         # 账号标签
-        wrapped_display_name = func_account.get_acc_wrapped_display_name(self.sw, account)
+        wrapped_display_name = FuncAccInfo.get_acc_wrapped_display_name(self.sw, account)
         has_mutex, = subfunc_file.get_sw_acc_data(self.sw, account, has_mutex=None)
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
         if has_mutex and self.sign_visible:

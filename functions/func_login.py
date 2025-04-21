@@ -8,8 +8,9 @@ from typing import Dict, List
 import win32con
 import win32gui
 
-from functions import func_config, subfunc_sw, subfunc_file, func_account
-from public_class.enums import Keywords
+from functions import func_config, subfunc_sw, subfunc_file
+from functions.func_account import FuncAccInfo
+from public_class.enums import LocalCfg, AccKeys
 from public_class.global_members import GlobalMembers
 from resources import Config
 from utils import hwnd_utils, handle_utils
@@ -22,7 +23,7 @@ def login_auto_start_accounts():
     root = root_class.root
     acc_tab_ui = root_class.acc_tab_ui
 
-    all_sw_dict, = subfunc_file.get_details_from_remote_setting_json(Keywords.GLOBAL_SECTION, all_sw=None)
+    all_sw_dict, = subfunc_file.get_details_from_remote_setting_json(LocalCfg.GLOBAL_SECTION, all_sw=None)
     all_sw = [key for key in all_sw_dict.keys()]
     print("所有平台：", all_sw)
 
@@ -46,7 +47,7 @@ def login_auto_start_accounts():
         if sw == acc_tab_ui.sw:
             logins = root_class.sw_classes[sw].login_accounts
         else:
-            success, result = func_account.get_sw_acc_list(root, root_class, sw)
+            success, result = FuncAccInfo.get_sw_acc_list(root, root_class, sw)
             if success is not True:
                 continue
             acc_list_dict, _, _ = result
@@ -108,7 +109,7 @@ def manual_login(sw):
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
     subfunc_sw.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
-    subfunc_file.clear_some_acc_data(sw, Keywords.PID_MUTEX)
+    subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
     subfunc_file.update_all_acc_in_acc_json(sw)
 
     multirun_mode = root_class.sw_classes[sw].multirun_mode
@@ -159,7 +160,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
     screen_width = int(tk.Tk().winfo_screenwidth())
     screen_height = int(tk.Tk().winfo_screenheight())
     if not screen_height or not screen_width:
-        size = subfunc_file.fetch_global_setting_or_set_default_or_none(Keywords.SCREEN_SIZE).split('*')
+        size = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SCREEN_SIZE).split('*')
         screen_width, screen_height = int(size[0]), int(size[1])
     if not screen_width or screen_width == "":
         messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
@@ -187,7 +188,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
         hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
         subfunc_sw.kill_sw_multiple_processes(sw)
         time.sleep(0.5)
-        subfunc_file.clear_some_acc_data(sw, Keywords.PID_MUTEX)
+        subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
         subfunc_file.update_all_acc_in_acc_json(sw)
 
         multirun_mode = root_class.sw_classes[sw].multirun_mode

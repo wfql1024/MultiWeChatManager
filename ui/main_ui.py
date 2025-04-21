@@ -7,7 +7,7 @@ from tkinter import ttk, messagebox
 
 from functions import func_file, subfunc_file, func_setting, subfunc_sw, func_login, func_hotkey
 from public_class import reusable_widgets
-from public_class.enums import Keywords
+from public_class.enums import LocalCfg
 from public_class.global_members import GlobalMembers
 from resources import Config, Constants
 from ui import menu_ui, acc_tab_ui, acc_manager_ui
@@ -176,7 +176,7 @@ class MainWindow:
 
             self.sw_notebook.add(self.sw_classes[sw].frame, text=self.sw_classes[sw].text)
         # 选择一个选项卡并触发事件
-        current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(Keywords.TAB)
+        current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.TAB)
         self.sw_notebook.select(self.sw_classes[current_sw].frame)
         # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
         self.on_tab_change(_event=None)

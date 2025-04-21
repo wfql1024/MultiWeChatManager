@@ -13,7 +13,7 @@ import requests
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
-from public_class.enums import Keywords
+from public_class.enums import LocalCfg, AccKeys
 from resources import Config, Strings
 from utils import file_utils, image_utils, sys_utils
 from utils.file_utils import IniUtils, JsonUtils, DictUtils
@@ -106,7 +106,6 @@ def read_remote_cfg_in_rules():
         # 将字符串日期解析为日期对象
         next_check_time = dt.datetime.strptime(next_check_time_str, "%Y-%m-%d").date()
         today = dt.datetime.today().date()
-
     # 如果今天的日期大于等于 next_check_time，执行代码并更新 next_check_time
     if today >= next_check_time:
         # 强制获取远程配置
@@ -118,9 +117,20 @@ def read_remote_cfg_in_rules():
             save_a_global_setting("next_check_time", next_check_time_str)
             return config_data
         else:
+            # 失败加载本地
             return try_read_remote_cfg_locally()
     else:
+        # 不到时间直接加载本地
         return try_read_remote_cfg_locally()
+
+
+def load_remote_cfg():
+    """
+    加载远程配置
+    :return:
+    """
+    data = JsonUtils.load_json(Config.REMOTE_SETTING_JSON_PATH)
+    return data
 
 
 def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
@@ -131,13 +141,8 @@ def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
     :return:
     """
     try:
-        data = JsonUtils.load_json(Config.REMOTE_SETTING_JSON_PATH)
-        info = data.get(tab, {})
-        result = tuple()
-        for key, default in kwargs.items():
-            value = info.get(key, default)
-            result += (value,)
-        return result
+        data = load_remote_cfg()
+        return DictUtils.get_nested_values(data, None, tab, **kwargs)
     except Exception as e:
         logger.error(e)
         return tuple()
@@ -239,7 +244,7 @@ def save_a_setting_and_callback(section, key, value, callback=None):
 
 
 def save_a_global_setting(key, value, callback=None):
-    return save_a_setting_and_callback(Keywords.GLOBAL_SECTION, key, value, callback)
+    return save_a_setting_and_callback(LocalCfg.GLOBAL_SECTION, key, value, callback)
 
 
 def fetch_global_setting_or_set_default_or_none(setting_key):
@@ -247,7 +252,7 @@ def fetch_global_setting_or_set_default_or_none(setting_key):
     获取配置项，若没有则添加默认，若没有默认则返回None
     :return: 已选择的子程序
     """
-    return fetch_sw_setting_or_set_default_or_none(Keywords.GLOBAL_SECTION, setting_key)
+    return fetch_sw_setting_or_set_default_or_none(LocalCfg.GLOBAL_SECTION, setting_key)
 
 
 def fetch_sw_setting_or_set_default_or_none(sw, setting_key):
@@ -347,13 +352,13 @@ def update_all_acc_in_acc_json(sw):
     # 遍历所有的账户，从有pid的账户中获取pid和has_mutex，并存入pid_mutex
     for account, details in sw_data.items():
         if isinstance(details, dict):
-            pid = details.get(Keywords.PID)
+            pid = details.get(AccKeys.PID)
             # 检查 pid 是否为整数
             if isinstance(pid, int):
-                has_mutex = details.get(Keywords.HAS_MUTEX, False)
+                has_mutex = details.get(AccKeys.HAS_MUTEX, False)
                 pid_mutex[str(pid)] = has_mutex
                 print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
-    update_sw_acc_data(sw, Keywords.PID_MUTEX, **pid_mutex)
+    update_sw_acc_data(sw, AccKeys.PID_MUTEX, **pid_mutex)
     return True
 
 
@@ -364,13 +369,13 @@ def set_all_acc_values_to_false(sw):
     :return: 是否成功
     """
     # 加载当前账户数据
-    pid_mutex_data = get_sw_acc_data(sw, Keywords.PID_MUTEX)
+    pid_mutex_data = get_sw_acc_data(sw, AccKeys.PID_MUTEX)
     if pid_mutex_data is None:
         return False
 
     # 将所有字段的值设置为 False
     for pid in pid_mutex_data:
-        update_sw_acc_data(sw, Keywords.PID_MUTEX, **{pid: False})
+        update_sw_acc_data(sw, AccKeys.PID_MUTEX, **{pid: False})
     return True
 
 
@@ -383,15 +388,15 @@ def update_has_mutex_from_all_acc(sw):
     sw_data = get_sw_acc_data(sw)
     if sw_data is None:
         return False, has_mutex
-    pid_mutex_data = get_sw_acc_data(sw, Keywords.PID_MUTEX)
+    pid_mutex_data = get_sw_acc_data(sw, AccKeys.PID_MUTEX)
     if pid_mutex_data is None:
         return False, has_mutex
 
     for acc, acc_details in sw_data.items():
-        if acc == Keywords.PID_MUTEX:
+        if acc == AccKeys.PID_MUTEX:
             continue
         if isinstance(acc_details, dict):
-            pid = acc_details.get(Keywords.PID, None)
+            pid = acc_details.get(AccKeys.PID, None)
             if pid is not None:
                 acc_mutex = pid_mutex_data.get(f"{pid}", True)
                 if acc_mutex is True:

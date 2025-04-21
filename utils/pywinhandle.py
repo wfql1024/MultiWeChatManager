@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 # ------------------------------------------------------------------
 # 包含来自 pywinhandle (https://github.com/yihleego/pywinhandle) 的查杀线程的python实现
 # 原始代码未附带任何许可证声明

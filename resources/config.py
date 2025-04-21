@@ -1,6 +1,6 @@
 import os
 
-from public_class.enums import Keywords, SW
+from public_class.enums import LocalCfg, SW
 from resources import constants
 
 # 获取屏幕缩放因子
@@ -12,33 +12,33 @@ class Config:
     VER_STATUS = 'Beta'
 
     INI_DEFAULT_VALUE = {
-        Keywords.GLOBAL_SECTION: {
-            Keywords.SCREEN_SIZE: f"1920*1080",
-            Keywords.HIDE_WND: "False",
-            Keywords.ENABLE_NEW_FUNC: "True",
-            Keywords.TAB: SW.WECHAT,
-            Keywords.SCALE: "auto",
-            Keywords.SIGN_VISIBLE: "True",
-            Keywords.HIDDEN_SORT: "#0,True",
-            Keywords.AUTO_START_SORT: "#0,True",
-            Keywords.ALL_SORT: "#0,True",
-            Keywords.AUTO_PRESS: "True",
-            Keywords.CALL_MODE: "HANDLE",
-            Keywords.NEXT_CHECK_TIME: None,
+        LocalCfg.GLOBAL_SECTION: {
+            LocalCfg.SCREEN_SIZE: f"1920*1080",
+            LocalCfg.HIDE_WND: "False",
+            LocalCfg.ENABLE_NEW_FUNC: "True",
+            LocalCfg.TAB: SW.WECHAT,
+            LocalCfg.SCALE: "auto",
+            LocalCfg.SIGN_VISIBLE: "True",
+            LocalCfg.HIDDEN_SORT: "#0,True",
+            LocalCfg.AUTO_START_SORT: "#0,True",
+            LocalCfg.ALL_SORT: "#0,True",
+            LocalCfg.AUTO_PRESS: "True",
+            LocalCfg.CALL_MODE: "HANDLE",
+            LocalCfg.NEXT_CHECK_TIME: None,
         },
         SW.WECHAT: {
-            Keywords.VIEW: "tree",
-            Keywords.LOGIN_SORT: "配置,True",
-            Keywords.LOGOUT_SORT: "配置,True",
-            Keywords.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            Keywords.REST_MULTIRUN_MODE: "python",
+            LocalCfg.VIEW: "tree",
+            LocalCfg.LOGIN_SORT: "配置,True",
+            LocalCfg.LOGOUT_SORT: "配置,True",
+            LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
+            LocalCfg.REST_MULTIRUN_MODE: "python",
         },
         SW.WEIXIN: {
-            Keywords.VIEW: "tree",
-            Keywords.LOGIN_SORT: "配置,True",
-            Keywords.LOGOUT_SORT: "配置,True",
-            Keywords.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            Keywords.REST_MULTIRUN_MODE: "handle",
+            LocalCfg.VIEW: "tree",
+            LocalCfg.LOGIN_SORT: "配置,True",
+            LocalCfg.LOGOUT_SORT: "配置,True",
+            LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
+            LocalCfg.REST_MULTIRUN_MODE: "handle",
         },
     }
 

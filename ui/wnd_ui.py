@@ -24,7 +24,7 @@ from functions import func_detail, subfunc_file, func_setting, func_sw_dll, subf
     func_login
 from public_class import reusable_widgets
 from public_class.custom_widget import CustomLabelBtn
-from public_class.enums import Keywords
+from public_class.enums import LocalCfg
 from public_class.reusable_widgets import SubToolWnd
 from resources import Constants, Config, Strings
 from utils import file_utils, sys_utils, widget_utils, sw_utils
@@ -68,7 +68,6 @@ class DetailWnd(SubToolWnd, ABC):
         self.tooltips = {}  # 初始化 tooltip 属性
         self.last_valid_hotkey = ""  # 记录上一个有效的快捷键
         self.current_keys = set()  # 当前按下的键
-        # self.wnd_width, self.wnd_height = Constants.DETAIL_WND_SIZE
 
     def load_content(self):
         wnd = self.wnd
@@ -78,24 +77,21 @@ class DetailWnd(SubToolWnd, ABC):
         frame = ttk.Frame(wnd, padding=Constants.FRM_PAD)
         frame.pack(**Constants.FRM_PACK)
 
-        # 基本信息网格布局
+        # 使用网格布局
         basic_info_grid = ttk.Frame(frame)
         basic_info_grid.pack()
 
         # 头像
         avatar_frame = ttk.Frame(basic_info_grid, padding=Constants.L_FRM_PAD)
         avatar_frame.grid(row=0, column=0, **Constants.W_GRID_PACK)
-        # 登录状态=pid+hwnd
-        login_status_frame = ttk.Frame(basic_info_grid)
-        login_status_frame.grid(row=0, column=1, **Constants.W_GRID_PACK)
-
         avatar_label = ttk.Label(avatar_frame)
         avatar_label.pack()
         avatar_status_label = ttk.Label(avatar_frame, text="")
         avatar_status_label.pack(**Constants.B_WGT_PACK)
 
-        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.3)
-        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 0.3)
+        # 登录状态=pid+hwnd
+        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
+        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 0.2)
 
         def _create_btn_in_(frame_of_btn, text):
             btn = CustomLabelBtn(frame_of_btn, text=text, padx=customized_btn_ipad, pady=customized_btn_ipad)
@@ -104,6 +100,8 @@ class DetailWnd(SubToolWnd, ABC):
         def _pack_btn(btn):
             btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
 
+        login_status_frame = ttk.Frame(basic_info_grid)
+        login_status_frame.grid(row=0, column=1, **Constants.W_GRID_PACK)
         # pid
         pid_frame = ttk.Frame(login_status_frame)
         pid_frame.pack(side=tk.TOP, anchor=tk.W)
@@ -113,30 +111,30 @@ class DetailWnd(SubToolWnd, ABC):
         re_login_btn.on_click(partial(func_login.run_auto_login_in_thread, {sw: [account]}))
         _pack_btn(re_login_btn)
         kill_pid_btn = _create_btn_in_(pid_frame, "退登")
-        kill_pid_btn.on_click(partial(func_account.quit_selected_accounts, sw, [account]))
+        kill_pid_btn.on_click(self.click_btn_to_(partial(func_account.quit_selected_accounts, sw, [account])))
         _pack_btn(kill_pid_btn)
         # mutex
         mutex_frame = ttk.Frame(login_status_frame)
         mutex_frame.pack(side=tk.TOP, anchor=tk.W)
         mutex_label = ttk.Label(mutex_frame)
         mutex_label.pack(side=tk.LEFT)
-        mutex_btn = _create_btn_in_(mutex_frame, "清除")
-        mutex_btn.on_click(None)
+        mutex_btn = _create_btn_in_(mutex_frame, " × ")
+        mutex_btn.on_click(self.click_btn_to_(partial(subfunc_sw.kill_mutex_of_pid, sw, self.pid)))
         _pack_btn(mutex_btn)
         # hwnd
         hwnd_frame = ttk.Frame(login_status_frame)
         hwnd_frame.pack(side=tk.TOP, anchor=tk.W)
         hwnd_label = ttk.Label(hwnd_frame)
         hwnd_label.pack(side=tk.LEFT)
+        unlink_hwnd_btn = _create_btn_in_(hwnd_frame, " × ")
+        unlink_hwnd_btn.on_click(self.click_btn_to_(partial(func_detail.unlink_hwnd_of_account, sw, account)))
+        _pack_btn(unlink_hwnd_btn)
         relink_hwnd_btn = _create_btn_in_(hwnd_frame, "重绑")
-        relink_hwnd_btn.on_click(None)
+        relink_hwnd_btn.on_click(self.click_btn_to_(partial(func_detail.relink_hwnd_of_account, sw, account)))
         _pack_btn(relink_hwnd_btn)
         hidden_hwnd_btn = _create_btn_in_(hwnd_frame, "隐藏")
         hidden_hwnd_btn.on_click(None)
         _pack_btn(hidden_hwnd_btn)
-        unlink_hwnd_btn = _create_btn_in_(hwnd_frame, "解绑")
-        unlink_hwnd_btn.on_click(partial(func_detail.unlink_hwnd_of_account, sw, account))
-        _pack_btn(unlink_hwnd_btn)
 
         # 原始微信号
         _, _, origin_id_var = DetailWnd._create_label_entry_grid(
@@ -156,6 +154,7 @@ class DetailWnd(SubToolWnd, ABC):
         _, hotkey_entry, hotkey_var = DetailWnd._create_label_entry_grid(
             basic_info_grid, "热键", "" if hotkey is None else hotkey)
         reusable_widgets.HotkeyEntry4Keyboard(hotkey_entry, hotkey_var)
+
         # 隐藏账号
         hidden_frame = ttk.Frame(frame)
         hidden, = subfunc_file.get_sw_acc_data(sw, account, hidden=False)
@@ -169,11 +168,12 @@ class DetailWnd(SubToolWnd, ABC):
         auto_start_checkbox = tk.Checkbutton(
             auto_start_frame, text="进入软件时自启动", variable=auto_start_var)
         auto_start_checkbox.pack(side=tk.LEFT)
+
         # 按钮区域
         button_frame = ttk.Frame(frame, padding=Constants.B_FRM_PAD)
-        save_button = ttk.Button(button_frame, text="保存", command=self.save_acc_settings)
+        save_button = ttk.Button(button_frame, text="保存", command=self._save_acc_settings)
         save_button.pack(**Constants.R_WGT_PACK)
-        self.fetch_button = ttk.Button(button_frame, text="获取", command=self.fetch_newest_data)
+        self.fetch_button = ttk.Button(button_frame, text="获取", command=self._fetch_newest_data)
         self.fetch_button.pack(**Constants.R_WGT_PACK)
 
         # 底部区域按从下至上的顺序pack
@@ -306,7 +306,11 @@ class DetailWnd(SubToolWnd, ABC):
             print(f"Error loading avatar: {e}")
             self.avatar_label.config(text="无头像")
 
-    def fetch_newest_data(self):
+    def click_btn_to_(self, method):
+        method()
+        self._fetch_newest_data()
+
+    def _fetch_newest_data(self):
         fetch_button = self.fetch_button
         tooltips = self.tooltips
         sw = self.sw
@@ -325,16 +329,16 @@ class DetailWnd(SubToolWnd, ABC):
 
         # 线程启动获取详情
         threading.Thread(target=func_detail.fetch_acc_detail_by_pid,
-                         args=(sw, pid, account, self.after_fetch)).start()
+                         args=(sw, pid, account, self._after_fetch)).start()
         widget_utils.enable_widget_when_(fetch_button, False)
         widget_utils.set_widget_tip_when_(tooltips, fetch_button, {"获取中...": True})
 
-    def after_fetch(self):
+    def _after_fetch(self):
         widget_utils.enable_widget_when_(self.fetch_button, True)
         widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"获取中...": False})
         self._update_data_to_ui()
 
-    def save_acc_settings(self):
+    def _save_acc_settings(self):
         """
         保存账号设置
         :return:
@@ -351,8 +355,8 @@ class DetailWnd(SubToolWnd, ABC):
         hotkey = self.hotkey_var.get().strip()
         subfunc_file.update_sw_acc_data(self.sw, self.account, hotkey=hotkey)
         printer.vital("账号设置成功")
-        self.tab_class.refresh_frame(self.sw)
         self.wnd.destroy()
+        self.tab_class.refresh_frame(self.sw)
 
     def set_focus_to_(self, widget_tag):
         if widget_tag == "note":
@@ -385,76 +389,62 @@ class DebugWnd(SubToolWnd, ABC):
         # 刷新按钮
         refresh_button = tk.Button(toolbar, text="刷新", command=self.refresh_text)
         refresh_button.pack(side=tk.LEFT)
-
         # 打印日志按钮
-        print_log_button = tk.Button(toolbar, text="生成日志文件", command=self.write_log_to_txt)
+        print_log_button = tk.Button(toolbar, text="生成日志文件", command=self.save_log_to_desktop)
         print_log_button.pack(side=tk.LEFT)
-
         # 缩进复选框
         self.indent_var = tk.BooleanVar(value=True)
-        indent_checkbox = tk.Checkbutton(toolbar, text="缩进", variable=self.indent_var,
-                                         command=self.refresh_text)
+        indent_checkbox = tk.Checkbutton(toolbar, text="缩进", variable=self.indent_var, command=self.refresh_text)
         indent_checkbox.pack(side=tk.LEFT)
-
         # 创建Frame用于包含两个滑块
         indent_frame = tk.Frame(toolbar)
         indent_frame.pack(side=tk.LEFT)
-
         # 最小缩进尺
         min_indent_label = tk.Label(indent_frame, text="最小缩进:")
         min_indent_label.pack(side=tk.LEFT)
         self.min_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
-                                         command=lambda x: self.update_indent_scales())
+                                         command=lambda x: self._update_indent_scales())
         self.min_indent_scale.set(0)  # 设置默认最小缩进
         self.min_indent_scale.pack(side=tk.LEFT)
-
         # 最大缩进尺
         max_indent_label = tk.Label(indent_frame, text="最大缩进:")
         max_indent_label.pack(side=tk.LEFT)
         self.max_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
-                                         command=lambda x: self.update_indent_scales())
+                                         command=lambda x: self._update_indent_scales())
         self.max_indent_scale.set(20)  # 设置默认最大缩进
         self.max_indent_scale.pack(side=tk.LEFT)
-
         # 调用复选框
         self.callstack_var = tk.BooleanVar(value=True)
         callstack_checkbox = tk.Checkbutton(toolbar, text="调用栈", variable=self.callstack_var,
-                                            command=self.update_simplify_checkbox)
+                                            command=self._update_simplify_checkbox)
         callstack_checkbox.pack(side=tk.LEFT)
-
         # 简化复选框
         self.simplify_var = tk.BooleanVar(value=True)
         self.simplify_checkbox = tk.Checkbutton(toolbar, text="简化调用栈",
                                                 variable=self.simplify_var, command=self.refresh_text)
         self.simplify_checkbox.pack(side=tk.LEFT)
-
         # 创建带滚动条的文本框
         self.text_area = scrolledtext.ScrolledText(wnd, wrap=tk.NONE)
         self.text_area.pack(fill=tk.BOTH, expand=True)
         self.text_area.tag_configure("unimportant", foreground="grey")
-
         # 设置字体
         font = Font(family="JetBrains Mono", size=10)
         self.text_area.config(font=font)
-
         # 初始化显示日志
         self.refresh_text()
 
-    # 更新缩进滑块逻辑
-    def update_indent_scales(self):
+    def _update_indent_scales(self):
         """缩进滑块的更新"""
         min_indent = self.min_indent_scale.get()
         max_indent = self.max_indent_scale.get()
-
         # 确保最小缩进小于最大缩进
         if min_indent > max_indent:
             self.min_indent_scale.set(max_indent)
             self.max_indent_scale.set(min_indent)
-
         # 调用refresh_text更新显示
         self.refresh_text()
 
-    def update_simplify_checkbox(self):
+    def _update_simplify_checkbox(self):
         """刷新简化复选框"""
         if self.callstack_var.get():
             self.simplify_checkbox.config(state=tk.NORMAL)  # 启用
@@ -467,7 +457,6 @@ class DebugWnd(SubToolWnd, ABC):
         self.text_area.config(state=tk.NORMAL)
         current_scroll_position = self.text_area.yview()  # 保存当前滚动位置
         self.text_area.delete(1.0, tk.END)
-
         logs = sys.stdout.get_logs()
         for log in logs:
             if len(log['output_prefix']) < self.min_indent_scale.get() or len(
@@ -497,34 +486,23 @@ class DebugWnd(SubToolWnd, ABC):
                 output_content = log['output_content'] + "\n"
             else:
                 output_content = log['output_content'] + "\n"
-
             self.text_area.insert(tk.END, stack_prefix, "unimportant")
             self.text_area.insert(tk.END, call_stack, "unimportant")
             self.text_area.insert(tk.END, output_prefix, "unimportant")
             self.text_area.insert(tk.END, output_content)
-
         self.text_area.update_idletasks()  # 确保插入文本后所有更新完成
         self.text_area.yview_moveto(current_scroll_position[0])  # 恢复滚动条位置
-
         self.text_area.config(state=tk.DISABLED)
 
-    def write_log_to_txt(self):
-        # 获取桌面路径
+    def save_log_to_desktop(self):
         desktop = winshell.desktop()
-
-        # 根据当前日期时间生成文件名
         current_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = f"mwm_log_{current_time}.txt"
         file_path = os.path.join(desktop, file_name)
-
         try:
-            # 获取文本框内容
             content = self.text_area.get("1.0", "end").strip()  # 获取从第一行到末尾的内容，并移除多余空白
-
-            # 写入文件
             with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
-
             print(f"日志已成功保存到：{file_path}")
         except Exception as e:
             print(f"保存日志时发生错误：{e}")
@@ -534,7 +512,6 @@ class LoadingWnd(SubToolWnd, ABC):
     def __init__(self, wnd, title):
         self.progress = None
         self.label = None
-
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
@@ -549,7 +526,6 @@ class LoadingWnd(SubToolWnd, ABC):
         self.label.pack(pady=Constants.T_PAD_Y)
         self.progress = ttk.Progressbar(self.wnd, mode="determinate", length=Constants.LOADING_PRG_LEN)
         self.progress.pack(pady=Constants.T_PAD_Y)
-
         self.progress.start(15)
 
     def auto_close(self):
@@ -567,6 +543,7 @@ class Direction:
 
 class AboutWnd(SubToolWnd, ABC):
     # TODO：加入bug反馈渠道
+    # TODO: 提取滚动文本的公共方法
     def __init__(self, wnd, title, app_info):
         self.logo_img = None
         self.scroll_text_str = None
@@ -611,8 +588,8 @@ class AboutWnd(SubToolWnd, ABC):
             self.display_main_content()
 
     def display_main_content(self):
-        self.app_name = self.remote_cfg_data[Keywords.GLOBAL_SECTION]["app_name"]
-        self.about_info = self.remote_cfg_data[Keywords.GLOBAL_SECTION]["about"]
+        self.app_name = self.remote_cfg_data[LocalCfg.GLOBAL_SECTION]["app_name"]
+        self.about_info = self.remote_cfg_data[LocalCfg.GLOBAL_SECTION]["about"]
 
         self.main_frame = ttk.Frame(self.wnd, padding=Constants.FRM_PAD)
         self.main_frame.pack(**Constants.FRM_PACK)
@@ -1541,7 +1518,7 @@ class SettingWnd(SubToolWnd, ABC):
 
     def to_get_login_size(self, status):
         if status is None:
-            status, info, _, _ = func_sw_dll.check_dll(self.sw, "multiple", self.dll_dir)
+            status, info = func_sw_dll.identify_dll(self.sw, "multiple", self.dll_dir)
         result = subfunc_sw.get_login_size(self.sw, self.multirun_mode)
         if result:
             login_width, login_height = result

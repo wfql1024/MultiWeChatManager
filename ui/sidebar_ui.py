@@ -10,9 +10,10 @@ import win32con
 import win32gui
 from PIL import Image, ImageTk
 
-from functions import subfunc_file, func_account, subfunc_sw
+from functions import subfunc_file, subfunc_sw
+from functions.func_account import FuncAccInfo
 from public_class.custom_widget import CustomLabelBtn
-from public_class.enums import Keywords, OnlineStatus
+from public_class.enums import OnlineStatus, AccKeys
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import RadioTreeView
 from resources import Constants
@@ -587,16 +588,16 @@ class SidebarTree(RadioTreeView, ABC):
         for sw in sw_acc_data:
             sw_data = sw_acc_data[sw]
             for acc in sw_data.keys():
-                if acc == Keywords.PID_MUTEX:
+                if acc == AccKeys.PID_MUTEX:
                     continue
                 if table_tag == OnlineStatus.LOGIN and sw_data[acc].get("pid", None) is None:
                     continue
                 if table_tag == OnlineStatus.LOGOUT and sw_data[acc].get("pid", None) is not None:
                     continue
 
-                display_name = "  " + func_account.get_acc_origin_display_name(sw, acc)
+                display_name = "  " + FuncAccInfo.get_acc_origin_display_name(sw, acc)
                 # 获取头像图像
-                img = func_account.get_acc_avatar_from_files(acc, sw)
+                img = FuncAccInfo.get_acc_avatar_from_files(sw, acc)
                 img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)

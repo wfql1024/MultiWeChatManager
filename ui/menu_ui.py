@@ -7,7 +7,7 @@ from pathlib import Path
 from tkinter import messagebox
 
 from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_update
-from public_class.enums import Keywords, MultirunMode
+from public_class.enums import LocalCfg, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
 from ui import sidebar_ui, acc_manager_ui
@@ -229,8 +229,8 @@ class MenuUI:
         # 防撤回和全局多开需要依赖dll路径，因此判断若无路径直接跳过菜单创建
         if self.sw_class.dll_dir is not None:
             # -防撤回
-            self.sw_class.anti_revoke, info, _, _ = func_sw_dll.check_dll(
-                self.sw, "revoke", self.sw_class.dll_dir)
+            self.sw_class.anti_revoke, info = func_sw_dll.identify_dll(
+                self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
             anti_revoke = self.sw_class.anti_revoke
             if anti_revoke is None:
                 if info == "不可用":
@@ -242,11 +242,11 @@ class MenuUI:
                                                 command=lambda i=info: self.root.clipboard_append(i))
             else:
                 self.settings_menu.add_command(label=f"防撤回      {anti_revoke}",
-                                               command=partial(self.toggle_patch_mode, mode="revoke"))
+                                               command=partial(self.toggle_patch_mode, mode=RemoteCfg.REVOKE))
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
             # -全局多开
-            self.sw_class.freely_multirun, info, _, _ = func_sw_dll.check_dll(
-                self.sw, "multiple", self.sw_class.dll_dir)
+            self.sw_class.freely_multirun, info = func_sw_dll.identify_dll(
+                self.sw, RemoteCfg.MULTI, self.sw_class.dll_dir)
             freely_multirun = self.sw_class.freely_multirun
             if freely_multirun is None:
                 if info == "不可用":
@@ -258,7 +258,7 @@ class MenuUI:
                                                   command=lambda i=info: self.root.clipboard_append(i))
             else:
                 self.settings_menu.add_command(label=f"全局多开  {freely_multirun}",
-                                               command=partial(self.toggle_patch_mode, mode="multiple"))
+                                               command=partial(self.toggle_patch_mode, mode=RemoteCfg.MULTI))
         else:
             self.sw_class.freely_multirun = freely_multirun = "不可用"
             self.sw_class.anti_revoke = "不可用"
@@ -272,7 +272,7 @@ class MenuUI:
             self.rest_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
             self.settings_menu.add_cascade(label="其余模式", menu=self.rest_mode_menu)
             rest_mode_value = self.global_settings_value.rest_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(
-                self.sw, Keywords.REST_MULTIRUN_MODE)
+                self.sw, LocalCfg.REST_MULTIRUN_MODE)
             print("当前项", rest_mode_value)
             self.sw_class.multirun_mode = rest_mode_value
             rest_mode_var = self.global_settings_var.rest_mode = tk.StringVar(value=rest_mode_value)  # 设置初始选中的子程序
@@ -407,7 +407,7 @@ class MenuUI:
         # ————————————————————————————作者标签————————————————————————————
         new_func_value = self.global_settings_value.new_func = \
             True if subfunc_file.fetch_global_setting_or_set_default_or_none(
-                Keywords.ENABLE_NEW_FUNC) == "True" else False
+                LocalCfg.ENABLE_NEW_FUNC) == "True" else False
         author_str = self.app_info.author
         hint_str = self.app_info.hint
         author_str_without_hint = f"by {author_str}"
@@ -433,11 +433,10 @@ class MenuUI:
     def _calc_multirun_mode_and_save(self, mode):
         """计算多开模式并保存"""
         subfunc_file.save_a_setting_and_callback(
-            self.sw, Keywords.REST_MULTIRUN_MODE, mode, self.create_root_menu_bar)
+            self.sw, LocalCfg.REST_MULTIRUN_MODE, mode, self.create_root_menu_bar)
         self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN if self.sw_class.freely_multirun is True else mode
         # print("修改后：", self.sw_class)
         # print("修改后：", self.sw_class.__dict__)
-
 
     def open_statistic(self):
         """打开统计窗口"""
@@ -505,7 +504,11 @@ class MenuUI:
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
         try:
-            func_sw_dll.switch_dll(self.sw, mode, self.sw_class.dll_dir)  # 执行切换操作
+            success, msg = func_sw_dll.switch_dll(self.sw, mode, self.sw_class.dll_dir)  # 执行切换操作
+            if success:
+                messagebox.showinfo("提示", f"{msg}")
+            else:
+                messagebox.showerror("错误", f"{msg}")
         except Exception as e:
             messagebox.showerror("错误", f"操作失败: {str(e)}")
             logger.error(f"发生错误: {str(e)}")

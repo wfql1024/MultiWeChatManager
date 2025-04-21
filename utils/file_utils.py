@@ -391,49 +391,112 @@ class DllUtils:
         """
         with open(dll_path, 'rb') as f:
             dll_content = f.read()
-
         # 将所有传入的 hex_patterns 转换为字节模式
         patterns = [bytes.fromhex(pattern) for pattern in hex_patterns]
-
-        # 如果只有一个模式，直接返回布尔值
-        if len(patterns) == 1:
-            return patterns[0] in dll_content
-
-        # 如果有多个模式，返回布尔列表
+        # 返回布尔列表
         return [pattern in dll_content for pattern in patterns]
 
     @staticmethod
-    def edit_patterns_in_dll_in_hexadecimal(dll_path, **hex_patterns_dicts):
+    def batch_atomic_replace_hex_patterns(dll_path, *hex_patterns_tuples):
         """
-        在 DLL 文件中查找指定的十六进制模式，并替换为新的十六进制模式。
+        在 DLL 文件中批量查找并替换指定的十六进制模式（高效版本）。
         :param dll_path: DLL 文件的路径
-        :param hex_patterns_dicts: 一个或多个十六进制模式的字典，每个字典包含旧模式和新模式
+        :param hex_patterns_tuples: 一个或多个十六进制模式的元组列表，每个元组包含旧模式列表和新模式列表
         :return: 一个布尔列表，每个元素对应一个模式，True 表示替换成功，False 表示未找到对应模式
         """
-        print(hex_patterns_dicts)
         results = []
+        try:
+            with open(dll_path, 'r+b') as f:
+                # 创建内存映射（整个批量操作只创建一次）
+                mmap_file = mmap.mmap(f.fileno(), 0)
+                try:
+                    for hex_patterns_tuple in hex_patterns_tuples:
+                        success, msg = DllUtils._atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple)
+                        results.append(success)
+                finally:
+                    # 确保无论如何都会关闭 mmap
+                    mmap_file.close()
+        except Exception as e:
+            print(f"发生错误: {str(e)}")
+            return [False] * len(hex_patterns_tuples)
 
-        with open(dll_path, 'r+b') as f:
-            # 使用 mmap 来更高效地操作文件内容
-            mmap_file = mmap.mmap(f.fileno(), 0)
-            # 遍历所有传入的旧模式和新模式
-            for old_pattern, new_pattern in hex_patterns_dicts.items():
+        return results if len(results) > 1 else results[0]
+
+    @staticmethod
+    def _atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple):
+        """
+        单次处理dll的多处替换（高效版本，使用已打开的mmap文件）
+        :param mmap_file: 已打开的mmap文件对象
+        :param hex_patterns_tuple: 元组列表：每个元组包含旧模式列表和新模式列表
+        :return: (success, message) 元组
+        """
+        backup_data = None
+        success = True
+        old_patterns, new_patterns = hex_patterns_tuple
+
+        # 确保两个列表长度相同
+        if len(old_patterns) != len(new_patterns):
+            return False, "错误：旧模式和新模式的数量不匹配。"
+
+        # 备份当前位置
+        original_pos = mmap_file.tell()
+
+        try:
+            # 先备份原始数据（只备份当前原子操作相关的部分）
+            backup_data = bytearray()
+            for old_pattern in old_patterns:
+                old = bytes.fromhex(old_pattern)
+                pos = mmap_file.find(old)
+                if pos != -1:
+                    backup_data.extend(mmap_file[pos:pos + len(old)])
+                else:
+                    return False, f"错误：未找到模式 {old_pattern}"
+
+            # 重置位置准备写入
+            mmap_file.seek(original_pos)
+
+            # 遍历所有模式对
+            for old_pattern, new_pattern in zip(old_patterns, new_patterns):
                 old, new = bytes.fromhex(old_pattern), bytes.fromhex(new_pattern)
                 pos = mmap_file.find(old)
-                # 查找并替换模式
+
                 if pos != -1:
                     mmap_file[pos: pos + len(old)] = new
-                    print(f"替换完成：{old_pattern} -> {new_pattern}")
-                    results.append(True)  # 替换成功
+                    print(f"找到并替换：{old_pattern} -> {new_pattern}")
                 else:
-                    print(f"未找到对应的HEX模式：{old_pattern}")
-                    results.append(False)  # 替换失败
+                    print(f"错误：未找到模式 {old_pattern}")
+                    success = False
+                    break  # 遇到第一个失败立即跳出循环
 
-            mmap_file.flush()
-            mmap_file.close()
+            # 如果成功则提交更改
+            if success:
+                mmap_file.flush()
+                return True, "替换成功"
+            else:
+                # 回滚当前原子操作的所有更改
+                mmap_file.seek(original_pos)
+                for old_pattern in old_patterns:
+                    old = bytes.fromhex(old_pattern)
+                    pos = mmap_file.find(old)
+                    if pos != -1:
+                        mmap_file[pos:pos + len(old)] = backup_data[:len(old)]
+                        backup_data = backup_data[len(old):]
+                mmap_file.flush()
+                return False, "部分模式替换失败，已回滚。"
 
-        # 如果传入多个模式，返回布尔列表；如果只有一个，返回单一布尔值
-        return results if len(results) > 1 else results[0]
+        except Exception as e:
+            print(f"发生错误: {str(e)}")
+            # 尝试回滚
+            if 'backup_data' in locals() and backup_data:
+                mmap_file.seek(original_pos)
+                for old_pattern in old_patterns:
+                    old = bytes.fromhex(old_pattern)
+                    pos = mmap_file.find(old)
+                    if pos != -1:
+                        mmap_file[pos:pos + len(old)] = backup_data[:len(old)]
+                        backup_data = backup_data[len(old):]
+                mmap_file.flush()
+            return False, f"发生错误: {str(e)}"
 
 
 # Windows API 常量

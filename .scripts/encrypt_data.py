@@ -40,5 +40,3 @@ print(f"文件已复制项目目录的version_config.json")
 # 复制上级目录中的.old/version_adaptation_v2.json到上上级的version_adaptation.json
 shutil.copy('../.old/version_adaptation_v2.json', '../../version_adaptation.json')
 print(f"文件已复制项目目录的version_adaptation.json")
-
-

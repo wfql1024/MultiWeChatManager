@@ -24,12 +24,19 @@ class Position(Enum):
     BOTTOM = "bottom"
 
 
-class Keywords(str, Enum):
+class RemoteCfg(str, Enum):
+    """远程配置中的字段"""
+    REVOKE = "anti-revoke"
+    MULTI = "multirun"
+    # dll模式字段
+    ORIGINAL = "original"
+    MODIFIED = "modified"
+
+
+class LocalCfg(str, Enum):
+    """本地设置中的字段"""
     GLOBAL_SECTION = "global"
     # 设置项中的全局设置
-    INST_PATH = "inst_path"
-    DATA_DIR = "data_dir"
-    DLL_DIR = "dll_dir"
     SCREEN_SIZE = "screen_size"
     HIDE_WND = "hide_wnd"
     ENABLE_NEW_FUNC = "enable_new_func"
@@ -43,6 +50,9 @@ class Keywords(str, Enum):
     CALL_MODE = "call_mode"
     NEXT_CHECK_TIME = "next_check_time"
     # 设置项中的平台设置
+    INST_PATH = "inst_path"
+    DATA_DIR = "data_dir"
+    DLL_DIR = "dll_dir"
     VIEW = "view"
     LOGIN_SIZE = "login_size"
     REST_MULTIRUN_MODE = "rest_mode"
@@ -50,6 +60,9 @@ class Keywords(str, Enum):
     LOGIN_SORT = "login_sort"
     LOGOUT_SORT = "logout_sort"
 
+
+class AccKeys(str, Enum):
+    """账号数据中的字段"""
     # 平台字段
     PID_MUTEX = "pid_mutex"
     # 账号数据中的平台字段
@@ -72,8 +85,3 @@ class OnlineStatus(str, Enum):
     LOGIN = "login"
     LOGOUT = "logout"
     UNKNOWN = "unknown"
-
-
-if __name__ == '__main__':
-    print(Keywords.GLOBAL_SECTION)
-    print(Keywords.GLOBAL_SECTION == "global")

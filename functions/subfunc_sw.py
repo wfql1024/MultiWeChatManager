@@ -6,7 +6,7 @@ import win32con
 import win32gui
 
 from functions import func_setting, subfunc_file
-from public_class.enums import Keywords, SW, MultirunMode
+from public_class.enums import SW, MultirunMode, AccKeys
 from resources import Config
 from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_utils
 from utils.logger_utils import mylogger as logger
@@ -85,9 +85,9 @@ def organize_sw_mutex_dict(sw):
     has_mutex_dict = dict()
     for pid in pids:
         # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
-        has_mutex, = subfunc_file.get_sw_acc_data(sw, Keywords.PID_MUTEX, **{f"{pid}": True})
+        has_mutex, = subfunc_file.get_sw_acc_data(sw, AccKeys.PID_MUTEX, **{f"{pid}": True})
         if has_mutex:
-            subfunc_file.update_sw_acc_data(sw, Keywords.PID_MUTEX, **{f"{pid}": True})
+            subfunc_file.update_sw_acc_data(sw, AccKeys.PID_MUTEX, **{f"{pid}": True})
             has_mutex_dict.update({pid: has_mutex})
     print(f"获取互斥体情况完成!互斥体列表：{has_mutex_dict}")
     return has_mutex_dict
@@ -154,6 +154,7 @@ def _open_sw_without_freely_multirun(sw, multirun_mode):
 
     return sub_exe_process
 
+
 def kill_mutex_by_forced_inner_mode(sw, multirun_mode):
     executable_name, lock_handles, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
         sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
@@ -177,6 +178,7 @@ def kill_mutex_by_forced_inner_mode(sw, multirun_mode):
         if len(success_lists) > 0:
             print(f"成功关闭：{success_lists}")
         return success
+
 
 def kill_mutex_by_inner_mode(sw, multirun_mode):
     """关闭平台进程的所有互斥体，如果不选择python模式，则使用handle模式"""
@@ -205,6 +207,7 @@ def kill_mutex_by_inner_mode(sw, multirun_mode):
             print(f"成功关闭：{success_lists}")
         return success
 
+
 def kill_mutex_of_pid(sw, pid):
     handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
     handle_names = [handle["handle_name"] for handle in handle_regex_list]
@@ -215,6 +218,7 @@ def kill_mutex_of_pid(sw, pid):
         )
     )
     return success
+
 
 def get_login_size(sw, multirun_mode):
     redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
