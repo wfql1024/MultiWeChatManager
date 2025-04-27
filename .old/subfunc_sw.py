@@ -5,7 +5,8 @@ import psutil
 import win32con
 import win32gui
 
-from functions import func_setting, subfunc_file
+import func_setting
+from functions import subfunc_file
 from public_class.enums import SW, MultirunMode, AccKeys
 from resources import Config
 from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_utils
@@ -111,7 +112,6 @@ def open_sw(sw, multirun_mode):
         create_process_without_admin(wechat_path)
     else:
         sub_exe_process = _open_sw_without_freely_multirun(sw, multirun_mode)
-
     return sub_exe_process
 
 
@@ -213,7 +213,7 @@ def kill_mutex_of_pid(sw, pid):
     handle_names = [handle["handle_name"] for handle in handle_regex_list]
     success = pywinhandle.close_handles(
         pywinhandle.find_handles(
-            pid,
+            [pid],
             handle_names
         )
     )

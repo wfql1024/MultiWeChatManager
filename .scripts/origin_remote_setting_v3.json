@@ -1527,7 +1527,9 @@
             "Applet",
             "Plugins",
             "WMPF",
-            "all_users"
+            "all_users",
+            "Backup",
+            "old_backup"
         ],
         "cut_to_compatible_id": [
             0,

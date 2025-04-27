@@ -1,11 +1,18 @@
 # main_ui.py
+import json
 import os
 import sys
 import threading
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from functions import func_file, subfunc_file, func_setting, subfunc_sw, func_login, func_hotkey
+import keyboard
+
+from functions import subfunc_file
+from functions.acc_func import AccOperator
+from functions.app_func import AppFunc
+from functions.main_func import MainFunc
+from functions.sw_func import SwInfoFunc
 from public_class import reusable_widgets
 from public_class.enums import LocalCfg
 from public_class.global_members import GlobalMembers
@@ -60,7 +67,7 @@ class MainWindow:
         # 初次使用
         if self.new is True:
             self.root.after(3000, menu_ui.MenuUI.open_update_log)
-            self.root.after(3000, lambda: func_file.mov_backup(new=self.new))
+            self.root.after(3000, lambda: AppFunc.mov_backup(new=self.new))
         # 关闭加载窗口
         print("2秒后关闭加载窗口...")
         self.root.after(2000, self.wait_for_loading_close_and_bind)
@@ -86,8 +93,8 @@ class MainWindow:
 
         disable_proxy_value = self.global_settings_value.disable_proxy = \
             True if subfunc_file.fetch_global_setting_or_set_default_or_none(
-                LocalCfg.DISABLE_PROXY) == "True" else False
-        self.apply_proxy_setting(disable_proxy_value)
+                LocalCfg.USE_PROXY) == "True" else False
+        self.apply_proxy_setting()
 
         # 获取远程配置文件
         try:
@@ -108,9 +115,9 @@ class MainWindow:
         # 统一管理style
         style = ttk.Style()
         style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
-                        width=Constants.CUS_BTN_WIDTH)
+                        width=Constants.CUS_BTN_WIDTH, relief="flat", borderwidth=0)
         style.configure("Treeview")
-        style.configure('Tool.TButton', width=2)
+        # style.configure('Tool.TButton', width=2)
         style.configure('FirstTitle.TLabel', font=("", Constants.FIRST_TITLE_FONTSIZE, "bold"))
         style.configure('Link.TLabel', font=("", Constants.LINK_FONTSIZE), foreground="grey")
         style.configure('SecondTitle.TLabel', font=("", Constants.SECOND_TITLE_FONTSIZE))
@@ -128,7 +135,7 @@ class MainWindow:
         # 创建状态栏
         if self.statusbar_class is None or not self.statusbar_class.status_bar.winfo_exists():
             self.statusbar_class = reusable_widgets.StatusBar(self.root, self, self.debug)
-        self.hotkey_manager = func_hotkey.HotkeyManager()
+        self.hotkey_manager = HotkeyManager()
 
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE
 
@@ -170,9 +177,9 @@ class MainWindow:
         for sw in tab_dict.keys():
             self.sw_classes[sw] = SoftwareInfo(sw)
             print(f"创建{sw}的信息体...")
-            self.sw_classes[sw].data_dir = func_setting.get_sw_data_dir(sw)
-            self.sw_classes[sw].inst_path, self.sw_classes[sw].ver = func_setting.get_sw_inst_path_and_ver(sw)
-            self.sw_classes[sw].dll_dir = func_setting.get_sw_dll_dir(sw)
+            self.sw_classes[sw].data_dir = SwInfoFunc.get_sw_data_dir(sw)
+            self.sw_classes[sw].inst_path, self.sw_classes[sw].ver = SwInfoFunc.get_sw_inst_path_and_ver(sw)
+            self.sw_classes[sw].dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
             self.sw_classes[sw].frame = ttk.Frame(self.sw_notebook)
             # print(self.sw_classes[sw].frame)
             self.sw_classes[sw].frame.var = sw
@@ -245,37 +252,40 @@ class MainWindow:
     @staticmethod
     def to_login_auto_start_accounts():
         """启动程序后自动登录"""
-        thread = threading.Thread(target=func_login.login_auto_start_accounts)
-        thread.start()
+        MainFunc.thread_to_login_auto_start_accounts()
 
-    def open_acc_detail(self, item, tab_class, widget_tag=None, event=None):
+    def open_acc_detail(self, item, tab_class, widget_to_focus=None, event=None):
         """打开详情窗口"""
         if event is None:
             pass
         sw, acc = item.split("/")
         detail_window = tk.Toplevel(self.root)
         self.detail_ui_class = DetailWnd(detail_window, f"属性 - {acc}", sw, acc, tab_class)
-        self.detail_ui_class.set_focus_to_(widget_tag)
+        self.detail_ui_class.set_focus_to_(widget_to_focus)
 
     def to_switch_to_sw_account_wnd(self, item, event=None):
         if event:
             pass
-        subfunc_sw.switch_to_sw_account_wnd(item)
+        AccOperator.switch_to_sw_account_wnd(item)
 
     @staticmethod
-    def apply_proxy_setting(disable_proxy: bool):
-        if disable_proxy:
+    def apply_proxy_setting():
+        use_proxy = True if subfunc_file.fetch_global_setting_or_set_default_or_none(
+            LocalCfg.USE_PROXY) == "true" else False
+        if use_proxy is True:
             # 强制不使用任何代理
+            proxy_ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
+            proxy_port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)
+            os.environ['http_proxy'] = f"{proxy_ip}:{proxy_port}"
+            os.environ['https_proxy'] = f"{proxy_ip}:{proxy_port}"
+            # 可选：清空 no_proxy
+            os.environ['no_proxy'] = ''
+            print("已启用代理！")
+        else:
             os.environ['http_proxy'] = ''
             os.environ['https_proxy'] = ''
             os.environ['no_proxy'] = '*'
             print("已禁用代理！")
-        else:
-            # 清除你之前手动设置的禁用内容，恢复为系统默认（可能为空，也可能有代理）
-            os.environ.pop('http_proxy', None)
-            os.environ.pop('https_proxy', None)
-            os.environ.pop('no_proxy', None)
-            print("已恢复代理！")
 
 
 
@@ -318,3 +328,73 @@ class GlobalSettings:
         self.new_func = None
         self.auto_press = None
         self.disable_proxy = None
+
+class HotkeyManager:
+    def __init__(self):
+        self.listener_thread = None
+        self.stop_event = None
+
+        self.hotkey_map = {
+        }
+        self.root_class = GlobalMembers.root_class
+
+        self.listener_thread = None  # 监听线程
+        self.stop_event = threading.Event()  # 用于控制线程退出
+
+        # 在子线程中运行监听
+        listener_thread = threading.Thread(target=self.start_hotkey_listener, daemon=True)
+        listener_thread.start()
+
+    def load_hotkeys_from_json(self, json_path):
+        """ 从 JSON 文件加载快捷键映射 """
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        hotkey_map = {}
+        for sw, accounts in data.items():
+            for acc, details in accounts.items():
+                if isinstance(details, dict) and "hotkey" in details:
+                    hotkey = details["hotkey"]
+                    if hotkey is not None and hotkey != "":  # 确保 hotkey 不是 None 或 空字符串
+                        hotkey_map[hotkey] = \
+                            lambda software=sw, account=acc: AccOperator.switch_to_sw_account_wnd(
+                                f"{software}/{account}")
+
+        # 更新映射
+        self.hotkey_map = hotkey_map
+        # print(self.hotkey_map)
+
+    def start_hotkey_listener(self):
+        """ 启动全局快捷键监听 """
+        if self.listener_thread and self.listener_thread.is_alive():
+            return  # 避免重复启动
+
+        # 先清除之前的快捷键绑定
+        keyboard.unhook_all()
+
+        # 注册新的快捷键
+        for hk in self.hotkey_map:
+            keyboard.add_hotkey(hk, lambda hotkey=hk: self.execute_task(hotkey))
+
+        # 启动监听线程
+        self.stop_event.clear()
+        self.listener_thread = threading.Thread(target=self._hotkey_listener, daemon=True)
+        self.listener_thread.start()
+
+    def _hotkey_listener(self):
+        """ 热键监听线程，等待退出信号 """
+        while not self.stop_event.is_set():
+            logger.info("监听快捷键中...")
+            keyboard.wait()  # 等待快捷键事件，直到 stop_event 触发
+
+    def stop_hotkey_listener(self):
+        """ 停止全局快捷键监听 """
+        if self.listener_thread and self.listener_thread.is_alive():
+            self.stop_event.set()  # 设置退出信号
+            keyboard.unhook_all()  # 取消所有快捷键监听
+            self.listener_thread = None  # 清除线程引用
+
+    def execute_task(self, hotkey):
+        if hotkey in self.hotkey_map:
+            self.hotkey_map[hotkey]()  # 执行绑定的任务
+

@@ -4,9 +4,11 @@ import tkinter as tk
 import webbrowser
 from functools import partial
 from pathlib import Path
-from tkinter import messagebox
+from tkinter import messagebox, simpledialog
 
-from functions import func_file, subfunc_file, func_setting, func_sw_dll, func_update
+from functions import subfunc_file
+from functions.app_func import AppFunc
+from functions.sw_func import SwInfoFunc, SwOperator
 from public_class.enums import LocalCfg, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
@@ -16,9 +18,8 @@ from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
-
 # TODO：刷新菜单增加热更新功能√
-# TODO: 增加个全局设置
+# TODO: 增加个全局设置√
 # TODO: 用户可以自定义多开的全流程
 # TODO: 主题色选择
 
@@ -26,6 +27,8 @@ class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
 
+        self.freely_multirun_var = None
+        self.anti_revoke_var = None
         self.sidebar_wnd_class = None
         self.sidebar_wnd = None
         self.call_mode_menu = None
@@ -62,9 +65,9 @@ class MenuUI:
         """创建菜单栏"""
         if self.root_class.finish_started is True:
             # 路径检查
-            self.sw_class.data_dir = func_setting.get_sw_data_dir(self.sw)
-            self.sw_class.inst_path, self.sw_class.ver = func_setting.get_sw_inst_path_and_ver(self.sw)
-            self.sw_class.dll_dir = func_setting.get_sw_dll_dir(self.sw)
+            self.sw_class.data_dir = SwInfoFunc.get_sw_data_dir(self.sw)
+            self.sw_class.inst_path, self.sw_class.ver = SwInfoFunc.get_sw_inst_path_and_ver(self.sw)
+            self.sw_class.dll_dir = SwInfoFunc.get_sw_dll_dir(self.sw)
 
         # 传递错误信息给主窗口
         if self.sw_class.inst_path is None or self.sw_class.data_dir is None or self.sw_class.dll_dir is None:
@@ -88,9 +91,29 @@ class MenuUI:
         # >用户文件
         self.user_file_menu = tk.Menu(self.file_menu, tearoff=False)
         self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
-        self.user_file_menu.add_command(label="打开", command=func_file.open_user_file)
+        self.user_file_menu.add_command(label="打开", command=AppFunc.open_user_file)
         self.user_file_menu.add_command(label="清除", command=partial(
-            func_file.clear_user_file, self.root_class.initialize_in_init))
+            AppFunc.clear_user_file, self.root_class.initialize_in_init))
+        # >程序目录
+        self.program_file_menu = tk.Menu(self.file_menu, tearoff=False)
+        self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
+        self.program_file_menu.add_command(label="打开", command=AppFunc.open_program_file)
+        self.program_file_menu.add_command(label="删除旧版备份",
+                                           command=partial(AppFunc.mov_backup))
+
+        # >统计数据
+        self.statistic_menu = tk.Menu(self.file_menu, tearoff=False)
+        self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
+        self.statistic_menu.add_command(label="查看", command=self.open_statistic)
+        self.statistic_menu.add_command(label="清除",
+                                        command=partial(AppFunc.clear_statistic_data,
+                                                        self.create_root_menu_bar))
+
+        # -创建软件快捷方式
+        self.file_menu.add_command(label="创建程序快捷方式", command=AppFunc.create_app_lnk)
+
+        self.file_menu.add_separator()  # ————————————————分割线————————————————
+
         # >配置文件
         self.config_file_menu = tk.Menu(self.file_menu, tearoff=False)
         if not self.sw_class.data_dir:
@@ -99,37 +122,20 @@ class MenuUI:
         else:
             self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
             self.config_file_menu.add_command(label="打开",
-                                              command=partial(func_file.open_config_file, self.sw))
+                                              command=partial(SwOperator.open_config_file, self.sw))
             self.config_file_menu.add_command(label="清除",
-                                              command=partial(func_file.clear_config_file, self.sw,
+                                              command=partial(SwOperator.clear_config_file, self.sw,
                                                               self.root_class.acc_tab_ui.refresh))
-        # >程序目录
-        self.program_file_menu = tk.Menu(self.file_menu, tearoff=False)
-        self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
-        self.program_file_menu.add_command(label="打开", command=func_file.open_program_file)
-        self.program_file_menu.add_command(label="删除旧版备份",
-                                           command=partial(func_file.mov_backup))
-
-        # >统计数据
-        self.statistic_menu = tk.Menu(self.file_menu, tearoff=False)
-        self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
-        self.statistic_menu.add_command(label="查看", command=self.open_statistic)
-        self.statistic_menu.add_command(label="清除",
-                                        command=partial(func_file.clear_statistic_data,
-                                                        self.create_root_menu_bar))
         # -打开主dll所在文件夹
-        self.file_menu.add_command(label="查看DLL目录", command=partial(func_file.open_dll_dir, self.sw))
+        self.file_menu.add_command(label="查看DLL目录", command=partial(SwOperator.open_dll_dir, self.sw))
         if self.sw_class.dll_dir is None:
             self.file_menu.entryconfig(f"查看DLL目录", state="disable")
-
-        # -创建软件快捷方式
-        self.file_menu.add_command(label="创建程序快捷方式", command=func_file.create_app_lnk)
 
         # -创建快捷启动
         quick_start_sp, = subfunc_file.get_details_from_remote_setting_json(self.sw, support_quick_start=None)
         # print(f"支持快捷启动：{quick_start_sp}")
         self.file_menu.add_command(label="创建快捷启动",
-                                   command=partial(func_file.create_multiple_lnk,
+                                   command=partial(SwOperator.create_multiple_lnk,
                                                    self.sw, self.sw_class.freely_multirun, self.create_root_menu_bar),
                                    state="normal" if quick_start_sp is True else "disabled")
 
@@ -186,30 +192,43 @@ class MenuUI:
         self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
         self.wnd_scale_menu.add_radiobutton(label="跟随系统", variable=scale_var, value="auto",
-                                            command=partial(func_setting.set_wnd_scale,
+                                            command=partial(self.set_wnd_scale,
                                                             self.create_root_menu_bar, "auto"))
         options = ["100", "125", "150", "175", "200"]
         for option in options:
             self.wnd_scale_menu.add_radiobutton(label=f"{option}%", variable=scale_var, value=option,
-                                                command=partial(func_setting.set_wnd_scale,
+                                                command=partial(self.set_wnd_scale,
                                                                 self.create_root_menu_bar, option))
         if scale_value != "auto" and scale_value not in options:
             self.wnd_scale_menu.add_radiobutton(label=f"自定义:{scale_value}%",
                                                 variable=scale_var, value=scale_value,
-                                                command=partial(func_setting.set_wnd_scale,
+                                                command=partial(self.set_wnd_scale,
                                                                 self.create_root_menu_bar))
         else:
             self.wnd_scale_menu.add_radiobutton(label=f"自定义",
                                                 variable=scale_var, value="0",
-                                                command=partial(func_setting.set_wnd_scale,
+                                                command=partial(self.set_wnd_scale,
                                                                 self.create_root_menu_bar))
 
         # ————————————————————————————设置菜单————————————————————————————
         self.settings_menu = tk.Menu(self.menu_bar, tearoff=False)
 
+        # -全局设置
         self.settings_menu.add_command(label=f"全局设置", command=self.open_global_setting_wnd)
+        _, self.global_settings_value.auto_start = subfunc_file.check_auto_start_or_toggle_to_()
+        auto_start_value = self.global_settings_value.auto_start
+        auto_start_var = self.global_settings_var.auto_start = tk.BooleanVar(value=auto_start_value)
+        self.auto_start_menu = tk.Menu(self.settings_menu, tearoff=False)
+        self.settings_menu.add_cascade(label="自启动", menu=self.auto_start_menu)
+        self.auto_start_menu.add_checkbutton(
+            label="开机自启动", variable=auto_start_var,
+            command=partial(self.toggle_auto_start,
+                            not self.global_settings_value.auto_start))
+        self.auto_start_menu.add_command(
+            label="测试登录自启动账号", command=partial(self.root_class.to_login_auto_start_accounts))
 
         # -应用设置
+        self.settings_menu.add_separator()  # ————————————————分割线————————————————
         login_size = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, "login_size")
         # print(f"登录窗口大小：{login_size}")
         warning_sign = Strings.WARNING_SIGN
@@ -221,7 +240,6 @@ class MenuUI:
             self.menu_bar.add_cascade(label="设置", menu=self.settings_menu)
             self.settings_menu.add_command(label="平台设置",
                                            command=partial(self.open_settings, self.sw))
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
         # self.settings_menu.add_command(label=f"账号管理", command=self.open_acc_setting)
         # self.settings_menu.add_separator()  # ————————————————分割线————————————————
@@ -229,39 +247,40 @@ class MenuUI:
         # 防撤回和全局多开需要依赖dll路径，因此判断若无路径直接跳过菜单创建
         if self.sw_class.dll_dir is not None:
             # -防撤回
-            self.sw_class.anti_revoke, info = func_sw_dll.identify_dll(
+            self.sw_class.anti_revoke, info = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
             anti_revoke = self.sw_class.anti_revoke
             if anti_revoke is None:
                 if info == "不可用":
-                    self.settings_menu.add_command(label=f"防撤回      {info}", state="disabled")
+                    self.settings_menu.add_command(label=f"防撤回", state="disabled")
                 elif info.startswith("错误"):
                     self.revoke_err = tk.Menu(self.settings_menu, tearoff=False)
-                    self.settings_menu.add_cascade(label="防撤回      错误!", menu=self.revoke_err, foreground="red")
+                    self.settings_menu.add_cascade(label="！防撤回", menu=self.revoke_err, foreground="red")
                     self.revoke_err.add_command(label=f"[点击复制]{info}", foreground="red",
                                                 command=lambda i=info: self.root.clipboard_append(i))
             else:
-                self.settings_menu.add_command(label=f"防撤回      {anti_revoke}",
-                                               command=partial(self.toggle_patch_mode, mode=RemoteCfg.REVOKE))
-            self.settings_menu.add_separator()  # ————————————————分割线————————————————
+                self.anti_revoke_var = tk.BooleanVar(value=anti_revoke)
+                self.settings_menu.add_checkbutton(label=f"防撤回", variable=self.anti_revoke_var,
+                                                   command=partial(self.toggle_patch_mode, mode=RemoteCfg.REVOKE))
             # -全局多开
-            self.sw_class.freely_multirun, info = func_sw_dll.identify_dll(
+            self.sw_class.freely_multirun, info = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.MULTI, self.sw_class.dll_dir)
             freely_multirun = self.sw_class.freely_multirun
             if freely_multirun is None:
                 if info == "不可用":
-                    self.settings_menu.add_command(label=f"全局多开  {info}", state="disabled")
+                    self.settings_menu.add_command(label=f"全局多开", state="disabled")
                 elif info.startswith("错误"):
                     self.multiple_err = tk.Menu(self.settings_menu, tearoff=False)
-                    self.settings_menu.add_cascade(label="全局多开  错误!", menu=self.multiple_err, foreground="red")
+                    self.settings_menu.add_cascade(label="！全局多开", menu=self.multiple_err, foreground="red")
                     self.multiple_err.add_command(label=f"[点击复制]{info}", foreground="red",
                                                   command=lambda i=info: self.root.clipboard_append(i))
             else:
-                self.settings_menu.add_command(label=f"全局多开  {freely_multirun}",
+                self.freely_multirun_var = tk.BooleanVar(value=freely_multirun)
+                self.settings_menu.add_checkbutton(label=f"全局多开", variable=self.freely_multirun_var,
                                                command=partial(self.toggle_patch_mode, mode=RemoteCfg.MULTI))
         else:
-            self.sw_class.freely_multirun = freely_multirun = "不可用"
-            self.sw_class.anti_revoke = "不可用"
+            self.sw_class.freely_multirun = freely_multirun = None
+            self.sw_class.anti_revoke = None
 
         # >多开子程序选择
         # 检查状态
@@ -286,15 +305,6 @@ class MenuUI:
                 command=partial(self._calc_multirun_mode_and_save, MultirunMode.PYTHON.value),
                 state='disabled' if not python_sp else 'normal'
             )
-            # # 添加 强力Python 的单选按钮
-            # self.rest_mode_menu.add_radiobutton(
-            #     label='*python',
-            #     value='*python',
-            #     variable=rest_mode_var,
-            #     command=partial(self._calc_multirun_mode_and_save, MultirunMode.SUPER_PYTHON.value),
-            #     state='disabled' if not python_s_sp else 'normal'
-            # )
-            # self.rest_mode_menu.add_separator()  # ————————————————分割线————————————————
             # 添加 Handle 的单选按钮
             self.rest_mode_menu.add_radiobutton(
                 label='handle',
@@ -319,6 +329,7 @@ class MenuUI:
                         command=partial(self._calc_multirun_mode_and_save, exe_name),
                     )
 
+        self.settings_menu.add_separator()  # ————————————————分割线————————————————
         hide_wnd_value = self.global_settings_value.hide_wnd = \
             True if subfunc_file.fetch_global_setting_or_set_default_or_none("hide_wnd") == "True" else False
         hide_wnd_var = self.global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)
@@ -372,36 +383,23 @@ class MenuUI:
             command=partial(subfunc_file.save_a_global_setting,
                             "auto_press", not auto_press_value, self.create_root_menu_bar))
 
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        _, self.global_settings_value.auto_start = subfunc_file.check_auto_start_or_toggle_to_()
-        auto_start_value = self.global_settings_value.auto_start
-        auto_start_var = self.global_settings_var.auto_start = tk.BooleanVar(value=auto_start_value)
-        self.auto_start_menu = tk.Menu(self.settings_menu, tearoff=False)
-        self.settings_menu.add_cascade(label="自启动", menu=self.auto_start_menu)
-        self.auto_start_menu.add_checkbutton(
-            label="开机自启动", variable=auto_start_var,
-            command=partial(self.toggle_auto_start,
-                            not self.global_settings_value.auto_start))
-        self.auto_start_menu.add_command(
-            label="测试登录自启动账号", command=partial(self.root_class.to_login_auto_start_accounts))
-
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        disable_proxy_value = self.global_settings_value.disable_proxy = \
-            True if subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.DISABLE_PROXY) == "True" else False
-        disable_proxy_var = self.global_settings_var.disable_proxy = tk.BooleanVar(value=disable_proxy_value)
-        self.settings_menu.add_checkbutton(
-            label="禁用代理", variable=disable_proxy_var,
-            command=partial(self.apply_proxy_setting_and_save,not disable_proxy_value))
+        # self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        # disable_proxy_value = self.global_settings_value.disable_proxy = \
+        #     True if subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.DISABLE_PROXY) == "True" else False
+        # disable_proxy_var = self.global_settings_var.disable_proxy = tk.BooleanVar(value=disable_proxy_value)
+        # self.settings_menu.add_checkbutton(
+        #     label="禁用代理", variable=disable_proxy_var,
+        #     command=partial(self.apply_proxy_setting_and_save,not disable_proxy_value))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(
-            label="重置", command=partial(func_file.reset, self.root_class.initialize_in_init))
+            label="重置", command=partial(AppFunc.reset, self.root_class.initialize_in_init))
 
         # ————————————————————————————帮助菜单————————————————————————————
         # 检查版本表是否当天已更新
         subfunc_file.read_remote_cfg_in_rules()
         surprise_sign = Strings.SURPRISE_SIGN
-        self.app_info.need_update = func_update.has_newer_version(self.app_info.curr_full_ver)
+        self.app_info.need_update = AppFunc.has_newer_version(self.app_info.curr_full_ver)
         prefix = surprise_sign if self.app_info.need_update is True else ""
         self.help_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label=f"{prefix}帮助", menu=self.help_menu)
@@ -494,6 +492,39 @@ class MenuUI:
             print("创建", self.sidebar_wnd)
             self.sidebar_wnd_class = sidebar_ui.SidebarWnd(self.sidebar_wnd, "导航条")
 
+    @staticmethod
+    def set_wnd_scale(after, scale=None):
+        if scale is None:
+            # 创建输入框
+            try:
+                user_input = simpledialog.askstring(
+                    title="输入 Scale",
+                    prompt="请输入一个 75-500 之间的数字（含边界）："
+                )
+                if user_input is None:  # 用户取消或关闭输入框
+                    after()
+                    return
+
+                # 尝试将输入转换为整数并验证范围
+                scale = int(user_input)
+                if not (75 <= scale <= 500):
+                    raise ValueError("输入值不在 75-500 范围内")
+            except (ValueError, TypeError):
+                messagebox.showerror("错误", "无效输入，操作已取消")
+                after()
+                return
+
+        subfunc_file.save_a_global_setting(
+            LocalCfg.GLOBAL_SECTION,
+            LocalCfg.SCALE,
+            str(scale)
+        )
+
+        messagebox.showinfo("提示", "修改成功，将在重新启动程序后生效！")
+        after()
+        print(f"成功设置窗口缩放比例为 {scale}！")
+        return
+
     def open_acc_setting(self):
         acc_manager_wnd = tk.Toplevel(self.root)
         acc_manager_ui.AccManagerWnd(acc_manager_wnd, "账号管理")
@@ -512,7 +543,7 @@ class MenuUI:
     def toggle_patch_mode(self, mode):
         """切换是否全局多开或防撤回"""
         try:
-            success, msg = func_sw_dll.switch_dll(self.sw, mode, self.sw_class.dll_dir)  # 执行切换操作
+            success, msg = SwOperator.switch_dll(self.sw, mode, self.sw_class.dll_dir)  # 执行切换操作
             if success:
                 messagebox.showinfo("提示", f"{msg}")
             else:
@@ -533,10 +564,9 @@ class MenuUI:
         else:
             print(f"已添加自启动！" if value is True else f"已关闭自启动！")
 
-    def apply_proxy_setting_and_save(self, disable_proxy: bool):
-        self.root_class.apply_proxy_setting(disable_proxy)
-        subfunc_file.save_a_global_setting(LocalCfg.DISABLE_PROXY, disable_proxy, self.create_root_menu_bar)
-
+    # def apply_proxy_setting_and_save(self, disable_proxy: bool):
+    #     self.root_class.apply_proxy_setting()
+    #     subfunc_file.save_a_global_setting(LocalCfg.USE_PROXY, disable_proxy, self.create_root_menu_bar)
 
     def open_rewards(self):
         """打开赞赏窗口"""
@@ -545,7 +575,7 @@ class MenuUI:
 
     def open_update_log(self):
         """打开版本日志窗口"""
-        success, result = func_update.split_vers_by_cur_from_local(self.app_info.curr_full_ver)
+        success, result = AppFunc.split_vers_by_cur_from_local(self.app_info.curr_full_ver)
         if success is True:
             new_versions, old_versions = result
             update_log_window = tk.Toplevel(self.root)

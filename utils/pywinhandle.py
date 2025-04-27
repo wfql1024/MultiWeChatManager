@@ -158,7 +158,7 @@ def query_system_handle_information():
         return_length = c_ulong(current_length)
         status = ntdll.NtQuerySystemInformation(SystemExtendedHandleInformation, byref(buf), return_length,
                                                 byref(return_length))
-        print(f"{current_length}:{time.time() - start_time}")
+        # print(f"{current_length}:{time.time() - start_time}")
         if status == STATUS_SUCCESS:
             return buf
         elif status == STATUS_INFO_LENGTH_MISMATCH:

@@ -1,12 +1,14 @@
 import tkinter as tk
+from tkinter import ttk
 from abc import ABC
 from collections.abc import Sized
 
 from PIL import ImageTk, Image
 
-from functions import func_config, subfunc_file, subfunc_sw
-from functions.func_account import FuncAccInfo
+from functions import subfunc_file
+from functions.acc_func import AccInfoFunc, AccOperator
 from public_class.custom_classes import Condition
+from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants, Strings
@@ -69,6 +71,12 @@ class TreeviewRowUI:
                 }
             }
         }
+        self.ui_frame = dict()
+        # 添加占位控件
+        self.ui_frame[OnlineStatus.LOGIN] = ttk.Frame(self.main_frame)
+        self.ui_frame[OnlineStatus.LOGIN].pack(side=tk.TOP, fill=tk.X)
+        self.ui_frame[OnlineStatus.LOGOUT] = ttk.Frame(self.main_frame)
+        self.ui_frame[OnlineStatus.LOGOUT].pack(side=tk.TOP, fill=tk.X)
 
         # 加载登录列表
         if isinstance(logins, Sized):
@@ -100,6 +108,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         self.root = self.root_class.root
         self.acc_tab_ui = self.root_class.acc_tab_ui
         self.sw = self.acc_tab_ui.sw
+        self.main_frame = self.parent_class.ui_frame[self.table_tag]
 
         self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.data_dir = self.root_class.sw_classes[self.sw].data_dir
@@ -139,8 +148,8 @@ class AccLoginTreeView(ActionableTreeView, ABC):
             if hidden is True and login_status == "logout":
                 continue
 
-            display_name = "  " + FuncAccInfo.get_acc_origin_display_name(self.sw, account)
-            config_status = func_config.get_sw_acc_login_cfg(self.sw, account, self.data_dir)
+            display_name = "  " + AccInfoFunc.get_acc_origin_display_name(self.sw, account)
+            config_status = AccInfoFunc.get_sw_acc_login_cfg(self.sw, account, self.data_dir)
             avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_sw_acc_data(
                 self.sw,
                 account,
@@ -151,7 +160,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
                 has_mutex=None
             )
 
-            img = FuncAccInfo.get_acc_avatar_from_files(self.sw, account)
+            img = AccInfoFunc.get_acc_avatar_from_files(self.sw, account)
             img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
 
@@ -189,7 +198,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         if click_time == 1:
             self.acc_tab_ui.to_open_acc_detail(item_id)
         elif click_time == 2:
-            subfunc_sw.switch_to_sw_account_wnd(item_id)
+            AccOperator.switch_to_sw_account_wnd(item_id)
 
     def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
         # print("触发列宽调整")

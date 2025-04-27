@@ -13,9 +13,6 @@ from utils.file_utils import DllUtils
 from utils.logger_utils import mylogger as logger
 
 
-class SwOperator:
-    pass
-
 
 def ask_for_manual_terminate_or_force(executable):
     processes = []
@@ -74,7 +71,7 @@ def identify_dll(sw, mode, dll_dir):
         return None, f"错误：{mode}平台未适配"
     ver_dict = config_data.get(sw, {}).get(mode, None)
     dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-    tag, msg, _, _ = SwOperatorUtils.identify_dll_of_ver_by_dict(ver_dict, dll_path)
+    tag, msg, _, _ = identify_dll_of_ver_by_dict(ver_dict, dll_path)
     return tag, msg
 
 
@@ -111,7 +108,7 @@ def switch_dll(sw, mode, dll_dir) -> Tuple[Optional[bool], str]:
     dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
     ver_dict = config_data.get(sw, {}).get(mode, None)
     # 定义目标路径和文件名
-    tag, msg, original_patterns, modified_patterns = SwOperatorUtils.identify_dll_of_ver_by_dict(
+    tag, msg, original_patterns, modified_patterns = identify_dll_of_ver_by_dict(
         ver_dict, dll_path)
     dll_path = os.path.join(dll_dir, patch_dll)
     try:
@@ -140,46 +137,32 @@ def switch_dll(sw, mode, dll_dir) -> Tuple[Optional[bool], str]:
         logger.error(f"切换{mode_text}时发生错误: {str(e)}")
         return False, f"切换{mode_text}时发生错误: {str(e)}\n{error_msg}"
 
+def identify_dll_of_ver_by_dict(data, dll_path) \
+        -> Tuple[Optional[bool], str, Optional[list], Optional[list]]:
+    cur_sw_ver = file_utils.get_file_version(dll_path)
+    ver_adaptation = data.get(cur_sw_ver, None)
+    print(ver_adaptation)
+    if ver_adaptation is None:
+        return None, f"错误：未找到版本{cur_sw_ver}的适配", None, None
 
-class SwOperatorUtils:
-    @staticmethod
-    def identify_dll_of_ver_by_dict(data, dll_path) \
-            -> Tuple[Optional[bool], str, Optional[list], Optional[list]]:
-        cur_sw_ver = file_utils.get_file_version(dll_path)
-        ver_adaptation = data.get(cur_sw_ver, None)
-        print(ver_adaptation)
-        if ver_adaptation is None:
-            return None, f"错误：未找到版本{cur_sw_ver}的适配", None, None
+    # 一个版本可能有多个匹配，只要有一个匹配成功就返回
+    for match in ver_adaptation:
+        original_list = match["original"]
+        modified_list = match["modified"]
+        has_original_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *original_list)
+        has_modified_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *modified_list)
+        # list转成集合，集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
+        has_original_set = set(has_original_list)
+        has_modified_set = set(has_modified_list)
+        if len(has_original_set) != 1 or len(has_modified_set) != 1:
+            continue
+        all_original = True if True in has_original_set else False if False in has_original_set else None
+        all_modified = True if True in has_modified_set else False if False in has_modified_set else None
+        if all_original is True and all_modified is False:
+            return False, "未开启", original_list, modified_list
+        elif all_original is False and all_modified is True:
+            return True, "已开启", original_list, modified_list
+        elif all_original is True or all_modified is True:
+            return None, "错误，非独一无二的特征码", None, None
+    return None, "不可用", None, None
 
-        # 一个版本可能有多个匹配，只要有一个匹配成功就返回
-        for match in ver_adaptation:
-            original_list = match["original"]
-            modified_list = match["modified"]
-            has_original_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *original_list)
-            has_modified_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *modified_list)
-            # list转成集合，集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
-            has_original_set = set(has_original_list)
-            has_modified_set = set(has_modified_list)
-            if len(has_original_set) != 1 or len(has_modified_set) != 1:
-                continue
-            all_original = True if True in has_original_set else False if False in has_original_set else None
-            all_modified = True if True in has_modified_set else False if False in has_modified_set else None
-            if all_original is True and all_modified is False:
-                return False, "未开启", original_list, modified_list
-            elif all_original is False and all_modified is True:
-                return True, "已开启", original_list, modified_list
-            elif all_original is True or all_modified is True:
-                return None, "错误，非独一无二的特征码", None, None
-        return None, "不可用", None, None
-        # try:
-        # except (PermissionError, FileNotFoundError, KeyError, TimeoutError, RuntimeError, Exception) as e:
-        #     logger.error(e)
-        #     error_msg = {
-        #         PermissionError: "权限不足，无法检查 DLL 文件。",
-        #         FileNotFoundError: "未找到文件，请检查路径。",
-        #         KeyError: "未找到该版本的适配：",
-        #         TimeoutError: "请求超时。",
-        #         RuntimeError: "运行时错误。",
-        #         Exception: "发生错误。"
-        #     }.get(type(e), "发生未知错误。")
-        #     return None, f"错误：{error_msg}{str(e)}", None, None

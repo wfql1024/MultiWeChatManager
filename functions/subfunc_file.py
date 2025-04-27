@@ -133,16 +133,16 @@ def load_remote_cfg():
     return data
 
 
-def get_details_from_remote_setting_json(tab: str, **kwargs) -> Tuple[Any, ...]:
+def get_details_from_remote_setting_json(*pre_nodes: str, **kwargs) -> Tuple[Any, ...]:
     """
     从远程设置json中获取数据
-    :param tab: 选择的软件标签
+    :param pre_nodes: 选择的软件标签
     :param kwargs: 传入要获取的参数及其默认值
     :return:
     """
     try:
         data = load_remote_cfg()
-        return DictUtils.get_nested_values(data, None, tab, **kwargs)
+        return DictUtils.get_nested_values(data, None, *pre_nodes, **kwargs)
     except Exception as e:
         logger.error(e)
         return tuple()

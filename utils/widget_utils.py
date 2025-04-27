@@ -2,9 +2,11 @@ import re
 import tkinter as tk
 import webbrowser
 from functools import partial
+from tkinter import ttk
 from typing import Dict, Union
 
 from public_class.custom_classes import Condition, Conditions
+from public_class.custom_widget import CustomWidget
 
 
 class UnlimitedClickHandler:
@@ -302,6 +304,7 @@ def bind_event_to_frame_when_(widget, event, func, condition: Union[Condition, C
 
 
 def enable_widget_when_(widget, condition: Union[Condition, Conditions, bool]):
+    """有条件地启用控件"""
     # 设置控件状态
     if condition is True or hasattr(condition, "check") and condition.check():
         widget.config(state="normal")
@@ -310,6 +313,7 @@ def enable_widget_when_(widget, condition: Union[Condition, Conditions, bool]):
 
 
 def set_widget_tip_when_(tooltips, widget, tip_condition_dict: Dict[str, Union[Condition, Conditions, bool]]):
+    """有条件地设置控件提示"""
     # 初始化解绑已有的提示
     widget.nametowidget(widget).unbind("<Enter>")
     widget.nametowidget(widget).unbind("<Leave>")
@@ -325,3 +329,40 @@ def set_widget_tip_when_(tooltips, widget, tip_condition_dict: Dict[str, Union[C
                 del tooltips[widget][tip]
                 if len(tooltips[widget]) == 0:
                     del tooltips[widget]
+
+def set_all_children_in_frame_to_state(frame, state):
+    """
+    设置指定框架及其所有子控件的启用/禁用状态
+    :param frame: 要操作的框架（tk.Frame 或 ttk.Frame）
+    :param state: 要设置的状态（'normal' 或 'disabled'）
+    """
+    for widget in frame.winfo_children():
+        # 如果是Frame，递归设置子控件
+        if isinstance(widget, (tk.Frame, ttk.Frame)):
+            set_all_children_in_frame_to_state(widget, state)
+        else:
+            # 处理其他控件，如自创的
+            if isinstance(widget, CustomWidget):
+                widget.set_state(state)
+                continue
+            try:
+                widget.config(state=state)
+            except Exception as e:
+                print(e)
+
+
+def set_all_custom_widgets_in_frame_to_state(frame, state: CustomWidget.State):
+    """
+    将指定框架内所有继承自 CustomWidget 的控件设置为指定状态（递归子控件）
+
+    :param frame: 要处理的 Frame 或控件容器
+    :param state: CustomWidget.State 中的状态值
+    """
+    for child in frame.winfo_children():
+        if isinstance(child, CustomWidget):
+            child.set_state(state)
+        # 如果子控件也是容器（比如 Frame），递归处理
+        if isinstance(child, (tk.Frame, ttk.Frame)):
+            set_all_custom_widgets_in_frame_to_state(child, state)
+
+

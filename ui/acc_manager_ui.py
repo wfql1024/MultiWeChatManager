@@ -4,7 +4,7 @@ from abc import ABC
 from PIL import Image, ImageTk
 
 from functions import subfunc_file
-from functions.func_account import FuncAccInfo
+from functions.acc_func import AccInfoFunc
 from public_class import reusable_widgets
 from public_class.custom_classes import Condition
 from public_class.enums import AccKeys
@@ -22,16 +22,18 @@ class AccManagerWnd(SubToolWnd, ABC):
     def __init__(self, wnd, title):
         self.acc_manager_ui = None
         self.sw = None
-
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
         self.wnd_width, self.wnd_height = Constants.ACC_MNG_WND_SIZE
         self.acc_manager_ui = AccManagerUI(self.wnd, self.wnd)
 
-    def load_content(self):
+    def load_ui(self):
         self.acc_manager_ui.refresh_frame()
         pass
+
+    def update_content(self):
+        self.acc_manager_ui.display_ui()
 
 
 class AccManagerUI:
@@ -236,7 +238,7 @@ class AccManageTreeView(ActionableTreeView, ABC):
                 if table_tag == "auto_start" and sw_data[acc].get("auto_start", None) != True:
                     continue
 
-                display_name = "  " + FuncAccInfo.get_acc_origin_display_name(sw, acc)
+                display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
                 hotkey, hidden, auto_start, nickname = subfunc_file.get_sw_acc_data(
                     sw,
                     acc,
@@ -250,7 +252,7 @@ class AccManageTreeView(ActionableTreeView, ABC):
                 auto_start = "√" if auto_start is True else "-"
 
                 # 获取头像图像
-                img = FuncAccInfo.get_acc_avatar_from_files(sw, acc)
+                img = AccInfoFunc.get_acc_avatar_from_files(sw, acc)
                 img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)

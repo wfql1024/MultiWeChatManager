@@ -6,6 +6,7 @@ from unittest import TestCase
 import psutil
 
 from functions import func_setting, subfunc_file
+from functions.sw_func import SwInfoFunc
 from public_class.enums import MultirunMode
 from resources import Config
 from utils import hwnd_utils, handle_utils, process_utils, file_utils
@@ -21,7 +22,7 @@ class Test(TestCase):
         print(details['class'])
 
     def test_get_sw_data_dir(self):
-        print(func_setting.get_sw_data_dir(sw="Weixin"))
+        print(SwInfoFunc.get_sw_data_dir(sw="Weixin"))
 
     def test_wait_for_wnd_open(self):
         hwnd_utils.wait_open_to_get_hwnd("Qt51514QWindowIcon")

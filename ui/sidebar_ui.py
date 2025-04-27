@@ -10,8 +10,8 @@ import win32con
 import win32gui
 from PIL import Image, ImageTk
 
-from functions import subfunc_file, subfunc_sw
-from functions.func_account import FuncAccInfo
+from functions import subfunc_file
+from functions.acc_func import AccInfoFunc
 from public_class.custom_widget import CustomLabelBtn
 from public_class.enums import OnlineStatus, AccKeys
 from public_class.global_members import GlobalMembers
@@ -539,7 +539,7 @@ class SidebarWnd:
         while True:
             hwnd = win32gui.GetForegroundWindow()
             # print(hwnd)
-            if hwnd and win32gui.IsWindow(hwnd) and subfunc_sw.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw):
+            if hwnd and win32gui.IsWindow(hwnd) and AccInfoFunc.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw):
                 self.thread_result = hwnd
                 return
 
@@ -595,9 +595,9 @@ class SidebarTree(RadioTreeView, ABC):
                 if table_tag == OnlineStatus.LOGOUT and sw_data[acc].get("pid", None) is not None:
                     continue
 
-                display_name = "  " + FuncAccInfo.get_acc_origin_display_name(sw, acc)
+                display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
                 # 获取头像图像
-                img = FuncAccInfo.get_acc_avatar_from_files(sw, acc)
+                img = AccInfoFunc.get_acc_avatar_from_files(sw, acc)
                 img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)

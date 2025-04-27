@@ -7,7 +7,8 @@ import win32com
 import winshell
 from win32com.client import Dispatch
 
-from functions import func_setting, subfunc_file
+from functions import subfunc_file
+from functions.sw_func import SwInfoFunc
 from resources import Config
 from utils import image_utils, file_utils
 from utils.logger_utils import mylogger as logger
@@ -42,55 +43,6 @@ def clear_user_file(after):
             return
 
 
-def open_config_file(sw):
-    """打开配置文件夹"""
-    data_path = func_setting.get_sw_data_dir(sw)
-    if os.path.exists(data_path):
-        config_path_suffix, = subfunc_file.get_details_from_remote_setting_json(sw, config_path_suffix=None)
-        if config_path_suffix is None:
-            messagebox.showinfo("提醒", f"{sw}平台还没有适配")
-            return
-        config_path = os.path.join(data_path, config_path_suffix)
-        if os.path.exists(config_path):
-            os.startfile(config_path)
-
-
-def clear_config_file(sw, after):
-    """清除配置文件"""
-    confirm = messagebox.askokcancel(
-        "确认清除",
-        f"该操作将会清空{sw}登录配置文件，请确认是否需要清除？"
-    )
-    if confirm:
-        data_path = func_setting.get_sw_data_dir(sw)
-        config_path_suffix, config_file_list = subfunc_file.get_details_from_remote_setting_json(
-            sw, config_path_suffix=None, config_file_list=None)
-        if (config_path_suffix is None or config_file_list is None or
-                not isinstance(config_file_list, list) or len(config_file_list) == 0):
-            messagebox.showinfo("提醒", f"{sw}平台还没有适配")
-            return
-
-        files_to_delete = []
-
-        for file in config_file_list:
-            config_path = os.path.join(data_path, str(config_path_suffix))
-            # 获取所有 `.data` 文件，除了 `config.data`
-            file_suffix = file.split(".")[-1]
-            data_files = glob.glob(os.path.join(config_path, f'*.{file_suffix}').replace("\\", "/"))
-            files_to_delete.extend([f for f in data_files if not os.path.split(config_path) == config_path_suffix])
-            # print(file_suffix)
-            # print(data_files)
-            # print(files_to_delete)
-        if len(files_to_delete) > 0:
-            # 删除这些文件
-            try:
-                file_utils.move_files_to_recycle_bin(files_to_delete)
-                print(f"已删除: {files_to_delete}")
-            except Exception as e:
-                logger.error(f"无法删除 {files_to_delete}: {e}")
-        after(message=f"清除{sw}登录配置完成！")
-
-
 def open_program_file():
     if getattr(sys, 'frozen', False):  # 打包环境
         executable_path = sys.executable
@@ -122,7 +74,6 @@ def mov_backup(new=None):
         )
 
     items_to_delete = []
-
     if answer:
         # 移动文件夹到回收站
         for item in os.listdir(executable_dir):
@@ -155,20 +106,6 @@ def clear_statistic_data(after):
             logger.error(e)
         after()
         print("成功清除统计数据！")
-
-
-def open_dll_dir(sw):
-    """打开注册表所在文件夹，并将光标移动到文件"""
-    dll_dir = func_setting.get_sw_dll_dir(sw)
-    if os.path.exists(dll_dir):
-        dll_file, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None)
-        if dll_file is None:
-            messagebox.showinfo("提醒", f"{sw}平台还没有适配")
-            return
-        # 打开文件夹
-        shell = win32com.client.Dispatch("WScript.Shell")
-        shell.CurrentDirectory = dll_dir
-        shell.Run(f'explorer /select,{dll_file}')
 
 
 def create_app_lnk():
@@ -211,6 +148,126 @@ def create_app_lnk():
     # 打印所有创建成功信息
     messagebox.showinfo("成功", "\n".join(notice))
 
+def reset(after):
+    """
+    重置应用设置和删除部分用户文件
+    :param after: 结束后执行的方法：初始化
+    :return: 无
+    """
+    # 显示确认对话框
+    confirm = messagebox.askokcancel(
+        "确认重置",
+        "该操作需要关闭所有微信进程，将清空除配置文件外的所有文件及设置，请确认是否需要重置？"
+    )
+
+    if not confirm:
+        messagebox.showinfo("操作取消", "重置操作已取消。")
+    else:
+        items_to_del = []
+        try:
+            # 恢复每个平台的补丁dll
+            all_sw, = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
+            # print(all_sw)
+            for sw in all_sw:
+                dll_dir_path = SwInfoFunc.get_sw_dll_dir(sw)
+                patch_dll, = subfunc_file.get_details_from_remote_setting_json(
+                    sw, patch_dll=None)
+                if patch_dll is None:
+                    continue
+                dll_path = os.path.join(dll_dir_path, patch_dll)
+                bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
+                del_path = os.path.join(dll_dir_path, f"{patch_dll}.del")
+                try:
+                    # 检查 .bak 文件是否存在
+                    if os.path.exists(bak_path):
+                        # 如果 ?.dll 存在，准备删除它
+                        if os.path.exists(dll_path):
+                            os.rename(dll_path, del_path)
+                            items_to_del.append(del_path)
+                            print(f"加入待删列表：{del_path}")
+                        # 将 ?.dll.bak 文件重命名为 ?.dll
+                        os.rename(bak_path, dll_path)
+                        print(f"已恢复: {dll_path} from {bak_path}")
+                except Exception as e:
+                    logger.error(e)
+
+            # 删除用户文件
+            user_dir = Config.PROJ_USER_PATH
+            items = [os.path.join(user_dir, item) for item in os.listdir(user_dir)]
+            items_to_del.extend(items)
+            try:
+                file_utils.move_files_to_recycle_bin(items_to_del)
+            except Exception as e:
+                logger.error(e)
+
+            messagebox.showinfo("重置完成", "目录已成功重置。")
+            after()
+        except Exception as e:
+            logger.error(e)
+            messagebox.showinfo("拒绝访问", "请确保微信已全部退出。")
+
+def open_config_file(sw):
+    """打开配置文件夹"""
+    data_path = SwInfoFunc.get_sw_data_dir(sw)
+    if os.path.exists(data_path):
+        config_path_suffix, = subfunc_file.get_details_from_remote_setting_json(sw, config_path_suffix=None)
+        if config_path_suffix is None:
+            messagebox.showinfo("提醒", f"{sw}平台还没有适配")
+            return
+        config_path = os.path.join(data_path, config_path_suffix)
+        if os.path.exists(config_path):
+            os.startfile(config_path)
+
+
+def clear_config_file(sw, after):
+    """清除配置文件"""
+    confirm = messagebox.askokcancel(
+        "确认清除",
+        f"该操作将会清空{sw}登录配置文件，请确认是否需要清除？"
+    )
+    if confirm:
+        data_path = SwInfoFunc.get_sw_data_dir(sw)
+        config_path_suffix, config_file_list = subfunc_file.get_details_from_remote_setting_json(
+            sw, config_path_suffix=None, config_file_list=None)
+        if (config_path_suffix is None or config_file_list is None or
+                not isinstance(config_file_list, list) or len(config_file_list) == 0):
+            messagebox.showinfo("提醒", f"{sw}平台还没有适配")
+            return
+
+        files_to_delete = []
+
+        for file in config_file_list:
+            config_path = os.path.join(data_path, str(config_path_suffix))
+            # 获取所有 `.data` 文件，除了 `config.data`
+            file_suffix = file.split(".")[-1]
+            data_files = glob.glob(os.path.join(config_path, f'*.{file_suffix}').replace("\\", "/"))
+            files_to_delete.extend([f for f in data_files if not os.path.split(config_path) == config_path_suffix])
+            # print(file_suffix)
+            # print(data_files)
+            # print(files_to_delete)
+        if len(files_to_delete) > 0:
+            # 删除这些文件
+            try:
+                file_utils.move_files_to_recycle_bin(files_to_delete)
+                print(f"已删除: {files_to_delete}")
+            except Exception as e:
+                logger.error(f"无法删除 {files_to_delete}: {e}")
+        after(message=f"清除{sw}登录配置完成！")
+
+def open_dll_dir(sw):
+    """打开注册表所在文件夹，并将光标移动到文件"""
+    dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
+    if os.path.exists(dll_dir):
+        dll_file, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None)
+        if dll_file is None:
+            messagebox.showinfo("提醒", f"{sw}平台还没有适配")
+            return
+        # 打开文件夹
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shell.CurrentDirectory = dll_dir
+        shell.Run(f'explorer /select,{dll_file}')
+
+
 
 def create_lnk_for_account(sw, account, multiple_status):
     """
@@ -221,8 +278,8 @@ def create_lnk_for_account(sw, account, multiple_status):
     :return: 是否成功
     """
     # 确保可以创建快捷启动
-    data_path = func_setting.get_sw_data_dir(sw)
-    wechat_path = func_setting.get_sw_install_path(sw)
+    data_path = SwInfoFunc.get_sw_data_dir(sw)
+    wechat_path = SwInfoFunc.get_sw_install_path(sw)
     if not data_path or not wechat_path:
         messagebox.showerror("错误", "无法获取数据路径")
         return False
@@ -318,7 +375,6 @@ def create_lnk_for_account(sw, account, multiple_status):
     print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
     return True
 
-
 def create_multiple_lnk(sw, status, after):
     """
     创建快捷多开
@@ -330,7 +386,7 @@ def create_multiple_lnk(sw, status, after):
         获取已经配置的账号列表
         :return: 已经配置的账号列表
         """
-        target_path = os.path.join(func_setting.get_sw_data_dir(sw), 'All Users', 'config')
+        target_path = os.path.join(SwInfoFunc.get_sw_data_dir(sw), 'All Users', 'config')
         all_configs = []
         # 遍历目标目录中的所有文件
         for file_name in os.listdir(target_path):
@@ -359,63 +415,7 @@ def create_multiple_lnk(sw, status, after):
     return True
 
 
-def reset(after):
-    """
-    重置应用设置和删除部分用户文件
-    :param after: 结束后执行的方法：初始化
-    :return: 无
-    """
-    # 显示确认对话框
-    confirm = messagebox.askokcancel(
-        "确认重置",
-        "该操作需要关闭所有微信进程，将清空除配置文件外的所有文件及设置，请确认是否需要重置？"
-    )
 
-    if not confirm:
-        messagebox.showinfo("操作取消", "重置操作已取消。")
-    else:
-        items_to_del = []
-        try:
-            # 恢复每个平台的补丁dll
-            all_sw, = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
-            # print(all_sw)
-            for sw in all_sw:
-                dll_dir_path = func_setting.get_sw_dll_dir(sw)
-                patch_dll, = subfunc_file.get_details_from_remote_setting_json(
-                    sw, patch_dll=None)
-                if patch_dll is None:
-                    continue
-                dll_path = os.path.join(dll_dir_path, patch_dll)
-                bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
-                del_path = os.path.join(dll_dir_path, f"{patch_dll}.del")
-                try:
-                    # 检查 .bak 文件是否存在
-                    if os.path.exists(bak_path):
-                        # 如果 ?.dll 存在，准备删除它
-                        if os.path.exists(dll_path):
-                            os.rename(dll_path, del_path)
-                            items_to_del.append(del_path)
-                            print(f"加入待删列表：{del_path}")
-                        # 将 ?.dll.bak 文件重命名为 ?.dll
-                        os.rename(bak_path, dll_path)
-                        print(f"已恢复: {dll_path} from {bak_path}")
-                except Exception as e:
-                    logger.error(e)
-
-            # 删除用户文件
-            user_dir = Config.PROJ_USER_PATH
-            items = [os.path.join(user_dir, item) for item in os.listdir(user_dir)]
-            items_to_del.extend(items)
-            try:
-                file_utils.move_files_to_recycle_bin(items_to_del)
-            except Exception as e:
-                logger.error(e)
-
-            messagebox.showinfo("重置完成", "目录已成功重置。")
-            after()
-        except Exception as e:
-            logger.error(e)
-            messagebox.showinfo("拒绝访问", "请确保微信已全部退出。")
 
 
 if __name__ == '__main__':

@@ -8,8 +8,9 @@ from typing import Dict, List
 import win32con
 import win32gui
 
-from functions import func_config, subfunc_sw, subfunc_file
-from functions.func_account import FuncAccInfo
+from functions import subfunc_file
+from functions.acc_func import AccInfoFunc, AccOperator
+from functions.sw_func import SwOperator
 from public_class.enums import LocalCfg, AccKeys
 from public_class.global_members import GlobalMembers
 from resources import Config
@@ -47,7 +48,7 @@ def login_auto_start_accounts():
         if sw == acc_tab_ui.sw:
             logins = root_class.sw_classes[sw].login_accounts
         else:
-            success, result = FuncAccInfo.get_sw_acc_list(root, root_class, sw)
+            success, result = AccInfoFunc.get_sw_acc_list(root, root_class, sw)
             if success is not True:
                 continue
             acc_list_dict, _, _ = result
@@ -107,13 +108,13 @@ def manual_login(sw):
     # 关闭配置文件锁
     handle_utils.close_sw_mutex_by_handle(
         Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-    subfunc_sw.kill_sw_multiple_processes(sw)
+    SwOperator.kill_sw_multiple_processes(sw)
     time.sleep(0.5)
     subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
     subfunc_file.update_all_acc_in_acc_json(sw)
 
     multirun_mode = root_class.sw_classes[sw].multirun_mode
-    sub_exe_process = subfunc_sw.open_sw(sw, multirun_mode)
+    sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
     wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 20)
     if wechat_hwnd:
         subfunc_file.set_all_acc_values_to_false(sw)
@@ -186,7 +187,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
             subfunc_file.get_details_from_remote_setting_json(
                 sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
         hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
-        subfunc_sw.kill_sw_multiple_processes(sw)
+        SwOperator.kill_sw_multiple_processes(sw)
         time.sleep(0.5)
         subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
         subfunc_file.update_all_acc_in_acc_json(sw)
@@ -203,7 +204,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
                 Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
             # 读取配置
-            success, _ = func_config.operate_config('use', sw, accounts[j])
+            success, _ = AccOperator.operate_acc_config('use', sw, accounts[j])
             if success:
                 print(f"{accounts[j]}:复制配置文件成功")
             else:
@@ -211,7 +212,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
                 break
 
             # 打开微信
-            sub_exe_process = subfunc_sw.open_sw(sw, multirun_mode)
+            sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
 
             # 等待打开窗口
             end_time = time.time() + 20
@@ -267,7 +268,7 @@ def auto_login_accounts(login_dict: Dict[str, List]):
 
         # 循环登录完成
         # 如果有，关掉多余的多开器
-        subfunc_sw.kill_sw_multiple_processes(sw)
+        SwOperator.kill_sw_multiple_processes(sw)
 
         # 定义点击按钮并等待成功的线程，启动线程
         def click_all_login_button():

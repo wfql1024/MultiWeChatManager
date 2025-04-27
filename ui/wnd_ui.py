@@ -14,27 +14,29 @@ from tkinter import filedialog, scrolledtext, ttk, messagebox
 from tkinter.font import Font
 from typing import Dict, Union
 
-import psutil
 import win32com
 import win32com.client
 import winshell
 from PIL import Image, ImageTk
 
-from functions import func_detail, subfunc_file, func_setting, func_sw_dll, subfunc_sw, func_update, func_account, \
-    func_login
+from functions import subfunc_file
+from functions.acc_func import AccInfoFunc, AccOperator
+from functions.app_func import AppFunc
+from functions.sw_func import SwOperator, SwInfoFunc, SwInfoUtils
+from functions.wnd_func import DetailWndFunc, UpdateLogWndFunc
 from public_class import reusable_widgets
-from public_class.custom_widget import CustomLabelBtn
-from public_class.enums import LocalCfg
+from public_class.custom_widget import CustomLabelBtn, CustomWidget
+from public_class.enums import LocalCfg, RemoteCfg
 from public_class.reusable_widgets import SubToolWnd
 from resources import Constants, Config, Strings
-from utils import file_utils, sys_utils, widget_utils, sw_utils
+from utils import file_utils, sys_utils, widget_utils
 from utils.encoding_utils import StringUtils
 from utils.file_utils import JsonUtils
 from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUtils
 
 
 class DetailWnd(SubToolWnd, ABC):
-    # TODO: 通过详情框可以重新连接窗口
+    # TODO: 通过详情框可以重新连接窗口√
     # TODO: 所有行都使用文本框√
     def __init__(self, wnd, title, sw, account, tab_class):
         self.mutex_label = None
@@ -69,7 +71,7 @@ class DetailWnd(SubToolWnd, ABC):
         self.last_valid_hotkey = ""  # 记录上一个有效的快捷键
         self.current_keys = set()  # 当前按下的键
 
-    def load_content(self):
+    def load_ui(self):
         wnd = self.wnd
         sw = self.sw
         account = self.account
@@ -107,19 +109,19 @@ class DetailWnd(SubToolWnd, ABC):
         pid_frame.pack(side=tk.TOP, anchor=tk.W)
         pid_label = ttk.Label(pid_frame)
         pid_label.pack(side=tk.LEFT)
-        re_login_btn = _create_btn_in_(pid_frame, "重登")
-        re_login_btn.on_click(partial(func_login.run_auto_login_in_thread, {sw: [account]}))
-        _pack_btn(re_login_btn)
-        kill_pid_btn = _create_btn_in_(pid_frame, "退登")
-        kill_pid_btn.on_click(self.click_btn_to_(partial(func_account.quit_selected_accounts, sw, [account])))
+        kill_pid_btn = _create_btn_in_(pid_frame, " × ")
+        kill_pid_btn.on_click(lambda: self.do_and_update_ui(partial(AccOperator.quit_selected_accounts, sw, [account])))
         _pack_btn(kill_pid_btn)
+        re_login_btn = _create_btn_in_(pid_frame, "重登")
+        re_login_btn.on_click(partial(AccOperator.thread_to_auto_login_accounts, {sw: [account]}))
+        _pack_btn(re_login_btn)
         # mutex
         mutex_frame = ttk.Frame(login_status_frame)
         mutex_frame.pack(side=tk.TOP, anchor=tk.W)
         mutex_label = ttk.Label(mutex_frame)
         mutex_label.pack(side=tk.LEFT)
         mutex_btn = _create_btn_in_(mutex_frame, " × ")
-        mutex_btn.on_click(self.click_btn_to_(partial(subfunc_sw.kill_mutex_of_pid, sw, self.pid)))
+        mutex_btn.on_click(lambda: self.do_and_update_ui(partial(SwOperator.kill_mutex_of_pid, sw, account)))
         _pack_btn(mutex_btn)
         # hwnd
         hwnd_frame = ttk.Frame(login_status_frame)
@@ -127,14 +129,18 @@ class DetailWnd(SubToolWnd, ABC):
         hwnd_label = ttk.Label(hwnd_frame)
         hwnd_label.pack(side=tk.LEFT)
         unlink_hwnd_btn = _create_btn_in_(hwnd_frame, " × ")
-        unlink_hwnd_btn.on_click(self.click_btn_to_(partial(func_detail.unlink_hwnd_of_account, sw, account)))
+        unlink_hwnd_btn.on_click(lambda: self.do_and_update_ui(partial(AccInfoFunc.unlink_hwnd_of_account, sw, account)))
         _pack_btn(unlink_hwnd_btn)
-        relink_hwnd_btn = _create_btn_in_(hwnd_frame, "重绑")
-        relink_hwnd_btn.on_click(self.click_btn_to_(partial(func_detail.relink_hwnd_of_account, sw, account)))
+        relink_hwnd_btn = _create_btn_in_(hwnd_frame, "获取")
+        relink_hwnd_btn.on_click(lambda: self.do_and_update_ui(partial(AccInfoFunc.relink_hwnd_of_account, sw, account)))
         _pack_btn(relink_hwnd_btn)
+        manual_link_hwnd_btn = _create_btn_in_(hwnd_frame, "手绑")
+        manual_link_hwnd_btn.on_click(lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_link_hwnd_of_account, sw, account)))
+        _pack_btn(manual_link_hwnd_btn)
         hidden_hwnd_btn = _create_btn_in_(hwnd_frame, "隐藏")
         hidden_hwnd_btn.on_click(None)
         _pack_btn(hidden_hwnd_btn)
+        hidden_hwnd_btn.set_state(CustomLabelBtn.State.DISABLED)
 
         # 原始微信号
         _, _, origin_id_var = DetailWnd._create_label_entry_grid(
@@ -200,8 +206,13 @@ class DetailWnd(SubToolWnd, ABC):
         self.hidden_var = hidden_var
         self.auto_start_var = auto_start_var
 
+    def update_content(self):
         # 更新数据
         self._update_data_to_ui()
+        widget_utils.enable_widget_when_(self.fetch_button, self.pid is not None)
+        widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button,
+                                          {"请登录后获取": self.pid is None})
+
 
     def set_wnd(self):
         # 禁用窗口大小调整
@@ -211,14 +222,6 @@ class DetailWnd(SubToolWnd, ABC):
         # 将实例变量存储为局部变量
         sw = self.sw
         account = self.account
-        pid_label = self.pid_label
-        mutex_label = self.mutex_label
-        hwnd_label = self.hwnd_label
-        origin_id_var = self.origin_id_var
-        cur_id_var = self.cur_id_var
-        nickname_var = self.nickname_var
-        fetch_button = self.fetch_button
-        tooltips = self.tooltips
 
         printer.vital(f"加载账号详情...")
 
@@ -246,26 +249,24 @@ class DetailWnd(SubToolWnd, ABC):
             avatar_path = default_path
         self._update_avatar_and_bind(avatar_path, avatar_url)
         # 刷新其他信息
-        pid_mutex_str = f"{pid}" if pid is not None else "未登录"
-        pid_label.config(text=f"进程: {pid_mutex_str}")
-        mutex_label.config(text=f"互斥体: {has_mutex}")
-        hwnd_label.config(text=f"窗口: {main_hwnd}")
-        origin_id_var.set(account)
-        cur_id_var.set(alias)
+        pid_str = f"{pid}" if pid is not None else "未登录"
+        self.pid_label.config(text=f"进程: {pid_str}")
+        self.mutex_label.config(text=f"互斥体: {has_mutex}")
+        self.hwnd_label.config(text=f"窗口: {main_hwnd}")
+        self.origin_id_var.set(account)
+        self.cur_id_var.set(alias)
         try:
-            nickname_var.set(nickname)
+            self.nickname_var.set(nickname)
         except Exception as e:
             logger.warning(e)
-            nickname_var.set(StringUtils.clean_texts(nickname))
-
-        widget_utils.enable_widget_when_(fetch_button, pid is not None)
-        widget_utils.set_widget_tip_when_(tooltips, fetch_button, {"请登录后获取": pid is None})
+            self.nickname_var.set(StringUtils.clean_texts(nickname))
         if not pid:
             subfunc_file.update_sw_acc_data(sw, account, has_mutex=True)
         printer.normal(f"载入数据完成")
 
         # 将局部变量赋值回实例变量
         self.pid = pid
+        self.main_hwnd = main_hwnd
 
     @staticmethod
     def _create_label_entry_grid(grid_frame, label_text, var_value, readonly=False):
@@ -306,37 +307,15 @@ class DetailWnd(SubToolWnd, ABC):
             print(f"Error loading avatar: {e}")
             self.avatar_label.config(text="无头像")
 
-    def click_btn_to_(self, method):
+    def do_and_update_ui(self, method):
         method()
-        self._fetch_newest_data()
+        self.update_content()
 
     def _fetch_newest_data(self):
-        fetch_button = self.fetch_button
-        tooltips = self.tooltips
-        sw = self.sw
-        account = self.account
-        pid = self.pid
-
-        try:
-            psutil.Process(pid)
-        except psutil.NoSuchProcess:
-            # 用户在此过程偷偷把账号退了...
-            logger.warning(f"该进程已不存在: {pid}")
-            widget_utils.enable_widget_when_(fetch_button, False)
-            widget_utils.set_widget_tip_when_(tooltips, fetch_button, {"请登录后获取": True})
-            messagebox.showinfo("提示", "未检测到该账号登录")
-            return
-
-        # 线程启动获取详情
-        threading.Thread(target=func_detail.fetch_acc_detail_by_pid,
-                         args=(sw, pid, account, self._after_fetch)).start()
-        widget_utils.enable_widget_when_(fetch_button, False)
-        widget_utils.set_widget_tip_when_(tooltips, fetch_button, {"获取中...": True})
-
-    def _after_fetch(self):
-        widget_utils.enable_widget_when_(self.fetch_button, True)
-        widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"获取中...": False})
-        self._update_data_to_ui()
+        self.fetching = True
+        widget_utils.enable_widget_when_(self.fetch_button, False)
+        widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button, {"获取中...": True})
+        DetailWndFunc.thread_to_fetch_acc_detail_by_pid(self.sw, self.pid, self.account, self.update_content)
 
     def _save_acc_settings(self):
         """
@@ -349,11 +328,10 @@ class DetailWnd(SubToolWnd, ABC):
         else:
             subfunc_file.update_sw_acc_data(self.sw, self.account, note=new_note)
         hidden = self.hidden_var.get()
-        subfunc_file.update_sw_acc_data(self.sw, self.account, hidden=hidden)
         auto_start = self.auto_start_var.get()
-        subfunc_file.update_sw_acc_data(self.sw, self.account, auto_start=auto_start)
         hotkey = self.hotkey_var.get().strip()
-        subfunc_file.update_sw_acc_data(self.sw, self.account, hotkey=hotkey)
+        subfunc_file.update_sw_acc_data(self.sw, self.account,
+                                        hidden=hidden, auto_start=auto_start, hotkey=hotkey)
         printer.vital("账号设置成功")
         self.wnd.destroy()
         self.tab_class.refresh_frame(self.sw)
@@ -379,7 +357,7 @@ class DebugWnd(SubToolWnd, ABC):
     def initialize_members_in_init(self):
         self.wnd_width, self.wnd_height = Constants.DEBUG_WND_SIZE
 
-    def load_content(self):
+    def load_ui(self):
         wnd = self.wnd
 
         # 创建工具栏
@@ -430,6 +408,8 @@ class DebugWnd(SubToolWnd, ABC):
         # 设置字体
         font = Font(family="JetBrains Mono", size=10)
         self.text_area.config(font=font)
+
+    def update_content(self):
         # 初始化显示日志
         self.refresh_text()
 
@@ -521,11 +501,13 @@ class LoadingWnd(SubToolWnd, ABC):
         self.wnd.resizable(False, False)
         self.wnd.overrideredirect(True)  # 去除窗口标题栏
 
-    def load_content(self):
+    def load_ui(self):
         self.label = ttk.Label(self.wnd, text="正在载入，请稍等……")
         self.label.pack(pady=Constants.T_PAD_Y)
         self.progress = ttk.Progressbar(self.wnd, mode="determinate", length=Constants.LOADING_PRG_LEN)
         self.progress.pack(pady=Constants.T_PAD_Y)
+
+    def update_content(self):
         self.progress.start(15)
 
     def auto_close(self):
@@ -578,7 +560,7 @@ class AboutWnd(SubToolWnd, ABC):
     def set_wnd(self):
         self.wnd.resizable(False, False)
 
-    def load_content(self):
+    def load_ui(self):
         self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
         if self.remote_cfg_data is None:
             messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
@@ -749,7 +731,7 @@ class AboutWnd(SubToolWnd, ABC):
         if config_data is None:
             messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
             return False
-        success, result = func_update.split_vers_by_cur_from_local(current_full_version)
+        success, result = AppFunc.split_vers_by_cur_from_local(current_full_version)
         if success is True:
             new_versions, old_versions = result
             if len(new_versions) != 0:
@@ -813,7 +795,7 @@ class RewardsWnd(SubToolWnd, ABC):
         # 设置窗口大小为图片的大小
         self.wnd_width, self.wnd_height = self.img.size
 
-    def load_content(self):
+    def load_ui(self):
         # 创建Frame并填充
         frame = ttk.Frame(self.wnd)
         frame.pack(fill=tk.BOTH, expand=True)
@@ -846,12 +828,11 @@ class UpdateLogWnd(SubToolWnd, ABC):
         self.wnd.resizable(False, False)
         self.wnd.title("版本日志" if not self.new_versions else "发现新版本")
 
-    def load_content(self):
+    def load_ui(self):
         new_versions = self.new_versions
         old_versions = self.old_versions
 
-        main_frame = ttk.Frame(self.wnd, padding="5")
-        main_frame.pack(fill="both", expand=True)
+        main_frame = self.wnd_frame
 
         # 更新日志(标题)
         log_label = ttk.Label(main_frame, text="更新日志", font=("", 11))
@@ -989,7 +970,7 @@ class UpdateLogWnd(SubToolWnd, ABC):
 
         # 关闭并更新按钮
         close_and_update_btn = ttk.Button(download_window, text="关闭并更新", style='Custom.TButton',
-                                          command=partial(func_update.close_and_update, tmp_path=download_path))
+                                          command=partial(UpdateLogWndFunc.close_and_update, tmp_path=download_path))
         progress_bar.pack(pady=5)
         close_and_update_btn.pack(pady=5)
         close_and_update_btn.config(state="disabled")
@@ -1006,7 +987,7 @@ class UpdateLogWnd(SubToolWnd, ABC):
         else:
             print("没有找到匹配的文件")
             # 开始下载文件（多线程）
-            t = threading.Thread(target=func_update.download_files,
+            t = threading.Thread(target=UpdateLogWndFunc.download_files,
                                  args=(ver_dicts, download_path, update_progress,
                                        lambda: close_and_update_btn.config(state="normal"), status))
             t.start()
@@ -1042,7 +1023,7 @@ class StatisticWnd(SubToolWnd, ABC):
             }
         }
 
-    def load_content(self):
+    def load_ui(self):
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
         self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.wnd)
         self.main_frame = self.scrollable_canvas.main_frame
@@ -1051,6 +1032,7 @@ class StatisticWnd(SubToolWnd, ABC):
         self.create_auto_table()
         self.create_refresh_table()
 
+    def update_content(self):
         self.display_table()
 
     def create_manual_table(self):
@@ -1219,6 +1201,7 @@ class StatisticWnd(SubToolWnd, ABC):
 
 class SettingWnd(SubToolWnd, ABC):
     def __init__(self, wnd, sw, status, after, title):
+        self.main_frame = None
         self.multirun_mode = None
         self.origin_values = None
         self.changed = None
@@ -1264,99 +1247,101 @@ class SettingWnd(SubToolWnd, ABC):
         }
         self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
 
-    def load_content(self):
-        wnd = self.wnd
+    def load_ui(self):
+        main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
+        main_frame.pack(**Constants.FRM_PACK)
 
         # 第一行 - 安装路径
-        install_label = tk.Label(wnd, text="程序路径：")
+        install_label = tk.Label(main_frame, text="程序路径：")
         install_label.grid(row=0, column=0, **Constants.W_GRID_PACK)
 
         self.inst_path_var = tk.StringVar()
-        self.install_path_entry = tk.Entry(wnd, textvariable=self.inst_path_var, state='readonly', width=70)
+        self.install_path_entry = tk.Entry(main_frame, textvariable=self.inst_path_var, state='readonly', width=70)
         self.install_path_entry.grid(row=0, column=1, **Constants.WE_GRID_PACK)
 
-        install_get_button = ttk.Button(wnd, text="获取",
+        install_get_button = ttk.Button(main_frame, text="获取",
                                         command=partial(self.load_or_get_sw_inst_path, self.sw, True))
         install_get_button.grid(row=0, column=2, **Constants.WE_GRID_PACK)
 
-        install_choose_button = ttk.Button(wnd, text="选择路径",
+        install_choose_button = ttk.Button(main_frame, text="选择路径",
                                            command=partial(self.choose_sw_inst_path, self.sw))
         install_choose_button.grid(row=0, column=3, **Constants.WE_GRID_PACK)
 
         # 第二行 - 数据存储路径
-        data_label = tk.Label(wnd, text="存储路径：")
+        data_label = tk.Label(main_frame, text="存储路径：")
         data_label.grid(row=1, column=0, **Constants.W_GRID_PACK)
 
         self.data_dir_var = tk.StringVar()
-        self.data_path_entry = tk.Entry(wnd, textvariable=self.data_dir_var, state='readonly', width=70)
+        self.data_path_entry = tk.Entry(main_frame, textvariable=self.data_dir_var, state='readonly', width=70)
         self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
 
-        data_get_button = ttk.Button(wnd, text="获取",
+        data_get_button = ttk.Button(main_frame, text="获取",
                                      command=partial(self.load_or_get_sw_data_dir, self.sw, True))
         data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
 
-        data_choose_button = ttk.Button(wnd, text="选择路径",
+        data_choose_button = ttk.Button(main_frame, text="选择路径",
                                         command=partial(self.choose_sw_data_dir, self.sw))
         data_choose_button.grid(row=1, column=3, **Constants.WE_GRID_PACK)
 
         # 新增第三行 - dll路径
-        dll_label = tk.Label(wnd, text="DLL所在路径：")
+        dll_label = tk.Label(main_frame, text="DLL所在路径：")
         dll_label.grid(row=2, column=0, **Constants.W_GRID_PACK)
 
         self.dll_dir_var = tk.StringVar()
-        self.dll_path_entry = tk.Entry(wnd, textvariable=self.dll_dir_var, state='readonly', width=70)
+        self.dll_path_entry = tk.Entry(main_frame, textvariable=self.dll_dir_var, state='readonly', width=70)
         self.dll_path_entry.grid(row=2, column=1, **Constants.WE_GRID_PACK)
 
-        dll_get_button = ttk.Button(wnd, text="获取",
+        dll_get_button = ttk.Button(main_frame, text="获取",
                                     command=partial(self.load_or_get_sw_dll_dir, self.sw, True))
         dll_get_button.grid(row=2, column=2, **Constants.WE_GRID_PACK)
 
-        dll_choose_button = ttk.Button(wnd, text="选择路径",
+        dll_choose_button = ttk.Button(main_frame, text="选择路径",
                                        command=partial(self.choose_sw_dll_dir, self.sw))
         dll_choose_button.grid(row=2, column=3, **Constants.WE_GRID_PACK)
 
         # 新增第四行 - 当前版本
-        version_label = tk.Label(wnd, text="应用版本：")
+        version_label = tk.Label(main_frame, text="应用版本：")
         version_label.grid(row=3, column=0, **Constants.W_GRID_PACK)
 
         self.version_var = tk.StringVar()
-        self.version_entry = tk.Entry(wnd, textvariable=self.version_var, state='readonly', width=70)
+        self.version_entry = tk.Entry(main_frame, textvariable=self.version_var, state='readonly', width=70)
         self.version_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
 
-        ver_get_button = ttk.Button(wnd, text="获取",
+        ver_get_button = ttk.Button(main_frame, text="获取",
                                     command=partial(self.get_cur_sw_ver, self.sw, True))
         ver_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第五行 - 屏幕大小
-        screen_size_label = tk.Label(wnd, text="屏幕大小：")
+        screen_size_label = tk.Label(main_frame, text="屏幕大小：")
         screen_size_label.grid(row=4, column=0, **Constants.W_GRID_PACK)
 
         self.screen_size_var = tk.StringVar()
-        self.screen_size_entry = tk.Entry(wnd, textvariable=self.screen_size_var, state='readonly', width=70)
+        self.screen_size_entry = tk.Entry(main_frame, textvariable=self.screen_size_var, state='readonly', width=70)
         self.screen_size_entry.grid(row=4, column=1, **Constants.WE_GRID_PACK)
 
-        screen_size_get_button = ttk.Button(wnd, text="获取", command=self.get_screen_size)
+        screen_size_get_button = ttk.Button(main_frame, text="获取", command=self.get_screen_size)
         screen_size_get_button.grid(row=4, column=2, **Constants.WE_GRID_PACK)
 
         # 新增第六行 - 登录窗口大小
-        login_size_label = tk.Label(wnd, text="登录尺寸：")
+        login_size_label = tk.Label(main_frame, text="登录尺寸：")
         login_size_label.grid(row=5, column=0, **Constants.W_GRID_PACK)
 
         self.login_size_var = tk.StringVar()
-        self.login_size_entry = tk.Entry(wnd, textvariable=self.login_size_var, state='readonly', width=70)
+        self.login_size_entry = tk.Entry(main_frame, textvariable=self.login_size_var, state='readonly', width=70)
         self.login_size_entry.grid(row=5, column=1, **Constants.WE_GRID_PACK)
 
-        login_size_get_button = ttk.Button(wnd, text="获取",
-                                           command=partial(self.to_get_login_size, self.status))
+        login_size_get_button = ttk.Button(main_frame, text="获取", command=self.to_get_login_size)
         login_size_get_button.grid(row=5, column=2, **Constants.WE_GRID_PACK)
 
         # 修改确定按钮，从第4行到第6行
-        ok_button = ttk.Button(wnd, text="确定", command=self.on_ok)
+        ok_button = ttk.Button(main_frame, text="确定", command=self.on_ok)
         ok_button.grid(row=3, column=3, rowspan=3, **Constants.NEWS_GRID_PACK)
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
-        wnd.grid_columnconfigure(1, weight=1)
+        main_frame.grid_columnconfigure(1, weight=1)
+        self.main_frame = main_frame
 
+    def update_content(self):
         # 初始加载已经配置的，或是没有配置的话自动获取
         self.load_or_get_sw_inst_path(self.sw, False)
         self.load_or_get_sw_data_dir(self.sw, False)
@@ -1401,7 +1386,7 @@ class SettingWnd(SubToolWnd, ABC):
 
     def load_or_get_sw_inst_path(self, sw, click=False):
         """获取路径，若成功会进行保存"""
-        path = func_setting.get_sw_install_path(sw, click)  # 此函数会保存路径
+        path = SwInfoFunc.get_sw_install_path(sw, click)  # 此函数会保存路径
         if path:
             self.inst_path_var.set(path.replace('\\', '/'))
             self.inst_path = path
@@ -1417,7 +1402,7 @@ class SettingWnd(SubToolWnd, ABC):
             if not path:  # 用户取消选择
                 return
             path = path.replace('\\', '/')
-            if sw_utils.is_valid_sw_install_path(sw, path):
+            if SwInfoUtils.is_valid_sw_path(LocalCfg.INST_PATH, sw, path):
                 self.inst_path_var.set(path)
                 self.inst_path = path
                 subfunc_file.save_a_setting_and_callback(self.sw, 'inst_path', self.inst_path)
@@ -1429,7 +1414,7 @@ class SettingWnd(SubToolWnd, ABC):
 
     def load_or_get_sw_data_dir(self, sw, click=False):
         """获取路径，若成功会进行保存"""
-        path = func_setting.get_sw_data_dir(sw, click)  # 此函数会保存路径
+        path = SwInfoFunc.get_sw_data_dir(sw, click)  # 此函数会保存路径
         if path:
             self.data_dir_var.set(path.replace('\\', '/'))
             self.data_dir = path
@@ -1465,7 +1450,7 @@ class SettingWnd(SubToolWnd, ABC):
             path = SettingWnd._ask_for_directory()
             if not path:
                 return
-            if sw_utils.is_valid_sw_data_dir(sw, path):
+            if SwInfoUtils.is_valid_sw_path(LocalCfg.DATA_DIR, sw, path):
                 self.data_dir_var.set(path)
                 self.data_dir = path
                 subfunc_file.save_a_setting_and_callback(self.sw, 'data_dir', self.data_dir)
@@ -1477,7 +1462,7 @@ class SettingWnd(SubToolWnd, ABC):
 
     def load_or_get_sw_dll_dir(self, sw, click=False):
         """获取路径，若成功会进行保存"""
-        path = func_setting.get_sw_dll_dir(sw, click)  # 此函数会保存路径
+        path = SwInfoFunc.get_sw_dll_dir(sw, click)  # 此函数会保存路径
         if path:
             self.dll_dir_var.set(path.replace('\\', '/'))
             self.dll_dir = path
@@ -1492,7 +1477,7 @@ class SettingWnd(SubToolWnd, ABC):
             path = SettingWnd._ask_for_directory()
             if not path:
                 return
-            if sw_utils.is_valid_sw_dll_dir(sw, path):
+            if SwInfoUtils.is_valid_sw_path(LocalCfg.DLL_DIR, sw, path):
                 self.dll_dir_var.set(path)
                 self.dll_dir = path
                 subfunc_file.save_a_setting_and_callback(self.sw, 'dll_dir', self.dll_dir)
@@ -1504,7 +1489,7 @@ class SettingWnd(SubToolWnd, ABC):
 
     def get_cur_sw_ver(self, sw, click):
         print("获取版本号")
-        _, version = func_setting.get_sw_inst_path_and_ver(sw, click)
+        _, version = SwInfoFunc.get_sw_inst_path_and_ver(sw, click)
         if version is not None:
             self.version_var.set(version)
             self.ver = version
@@ -1516,10 +1501,8 @@ class SettingWnd(SubToolWnd, ABC):
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
         subfunc_file.save_a_global_setting('screen_size', f"{screen_width}*{screen_height}")
 
-    def to_get_login_size(self, status):
-        if status is None:
-            status, info = func_sw_dll.identify_dll(self.sw, "multiple", self.dll_dir)
-        result = subfunc_sw.get_login_size(self.sw, self.multirun_mode)
+    def to_get_login_size(self):
+        result = SwOperator.get_login_size(self.sw, self.multirun_mode)
         if result:
             login_width, login_height = result
             if 0.734 < login_width / login_height < 0.740:
@@ -1531,6 +1514,11 @@ class SettingWnd(SubToolWnd, ABC):
 
 class GlobalSettingWnd(SubToolWnd, ABC):
     def __init__(self, wnd, title):
+        self.proxy_detail_occ = None
+        self.proxy_detail_frame = None
+        self.port_var = None
+        self.addr_var = None
+        self.use_proxy_var = None
         self.main_frame = wnd
         self.remote_config_var = None
         self.screen_size_var = None
@@ -1539,46 +1527,61 @@ class GlobalSettingWnd(SubToolWnd, ABC):
     def initialize_members_in_init(self):
         self.remote_config_var = tk.StringVar()
         self.screen_size_var = tk.StringVar()
+        self.use_proxy_var = tk.BooleanVar()
+        self.addr_var = tk.StringVar()
+        self.port_var = tk.StringVar()
 
-    def load_content(self):
-        # 远程配置源
-        remote_config_frame = ttk.Frame(self.main_frame)
-        remote_config_frame.pack(fill=tk.X, padx=5, pady=5)
+    def load_ui(self):
+        """加载主要控件"""
+        # 总框架
+        main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
+        main_frame.pack(**Constants.FRM_PACK)
 
-        ttk.Label(remote_config_frame, text="远程配置源:").pack(side=tk.LEFT)
-        remote_config_entry = ttk.Entry(remote_config_frame, textvariable=self.remote_config_var)
-        remote_config_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        # 代理框架=使用代理复选框+代理设置框架
+        proxy_frame = ttk.Frame(main_frame)
+        proxy_frame.pack(side=tk.TOP, fill=tk.X)
+        # 使用代理复选框
+        proxy_checkbox = ttk.Checkbutton(
+            proxy_frame, text="使用代理", variable=self.use_proxy_var,
+            command=lambda: self.do_and_update(
+                partial(subfunc_file.save_a_global_setting, LocalCfg.USE_PROXY, self.use_proxy_var.get())))
+        proxy_checkbox.pack(side=tk.TOP, fill=tk.X)
+        # 代理设置框架，将会根据是否使用代理而显示或隐藏
+        proxy_detail_frame = ttk.Frame(proxy_frame)
+        proxy_detail_frame.pack(side=tk.TOP, fill=tk.X)
+        # 使用方法创建地址和端口的grid
+        _, ip_btn_frame, _, ip_var = self._create_label_btn_entry_grid(proxy_detail_frame, "地址:", "")
+        _, port_btn_frame, _, port_var = self._create_label_btn_entry_grid(proxy_detail_frame, "端口:", "")
+        # 添加预设按钮
+        ip_presets, port_presets = subfunc_file.get_details_from_remote_setting_json(RemoteCfg.GLOBAL, "proxy",
+                                                                       ip_presets=None, port_presets=None)
+        customized_btn_ipad = int(Constants.CUS_BTN_PAD_X * 0.2)
+        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
+        def _create_btn_in_(frame_of_btn, text):
+            btn = CustomLabelBtn(frame_of_btn, text=text, padx=customized_btn_ipad, pady=customized_btn_ipad)
+            return btn
+        def _pack_btn(btn):
+            btn.pack(side=tk.LEFT, padx=customized_btn_pad*2, pady=customized_btn_pad)
+        for ip in ip_presets:
+            b = _create_btn_in_(ip_btn_frame, ip["name"])
+            b.on_click(lambda v=ip["value"]: ip_var.set(v))
+            _pack_btn(b)
+        for port in port_presets:
+            b = _create_btn_in_(port_btn_frame, port["name"])
+            b.on_click(lambda v=port["value"]: port_var.set(v))
+            _pack_btn(b)
 
-        def select_remote_config():
-            try:
-                path = filedialog.askdirectory(title="选择远程配置源文件夹")
-                if not path:  # 用户取消选择
-                    return
-            except Exception as e:
-                print(f"filedialog.askdirectory 失败，尝试使用 win32com.client: {e}")
-                try:
-                    shell = win32com.client.Dispatch("Shell.Application")
-                    folder = shell.BrowseForFolder(0, "Select Folder", 0, 0)
-                    if not folder:  # 用户取消选择
-                        return
-                    path = folder.Self.Path.replace('\\', '/')
-                except Exception as e:
-                    print(f"win32com.client 也失败了: {e}")
-                    return
-            self.remote_config_var.set(path)
-            subfunc_file.save_a_global_setting('remote_config', path)
+        self.proxy_detail_frame = proxy_detail_frame
 
-        ttk.Button(remote_config_frame, text="选择", command=select_remote_config).pack(side=tk.LEFT)
+    def update_content(self):
+        self.use_proxy_var.set(subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_PROXY))
+        # 若为True，则显示代理设置框架
+        if self.use_proxy_var.get():
+            # 将内部的控件设为可用
+            widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomWidget.State.NORMAL)
+        else:
+            widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomWidget.State.DISABLED)
 
-        # 屏幕尺寸
-        screen_size_frame = ttk.Frame(self.main_frame)
-        screen_size_frame.pack(fill=tk.X, padx=5, pady=5)
-
-        ttk.Label(screen_size_frame, text="屏幕尺寸:").pack(side=tk.LEFT)
-        screen_size_entry = ttk.Entry(screen_size_frame, textvariable=self.screen_size_var)
-        screen_size_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
-
-        ttk.Button(screen_size_frame, text="获取", command=self.get_screen_size).pack(side=tk.LEFT)
 
     def get_screen_size(self):
         screen_width = self.wnd.winfo_screenwidth()
@@ -1586,10 +1589,109 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
         subfunc_file.save_a_global_setting('screen_size', f"{screen_width}*{screen_height}")
 
-    def load_settings(self):
-        self.remote_config_var.set(subfunc_file.get_global_setting('remote_config', ''))
-        self.screen_size_var.set(subfunc_file.get_global_setting('screen_size', ''))
-
     def save_settings(self):
         subfunc_file.save_a_global_setting('remote_config', self.remote_config_var.get())
         subfunc_file.save_a_global_setting('screen_size', self.screen_size_var.get())
+
+    def do_and_update(self, func):
+        func()
+        self.update_content()
+
+    @staticmethod
+    def _create_label_btn_entry_grid(grid_frame, label_text, var_value, readonly=False):
+        """内部使用的批量方法：创建一个标签和一个输入框，并返回标签和输入框的变量"""
+        # 获取当前frame中已布局的组件数量，作为新组件的行号
+        current_row = max([widget.grid_info().get('row', -1) for widget in grid_frame.grid_slaves()],
+                          default=-1) + 1
+        w_grid_pack = Constants.W_GRID_PACK
+        # (0,0)标签
+        label = ttk.Label(grid_frame, text=label_text)
+        label.grid(row=current_row, column=0, **w_grid_pack)
+        # (0,1)按钮区域
+        btn_frame = ttk.Frame(grid_frame)
+        btn_frame.grid(row=current_row, column=1, **w_grid_pack)
+        # (1,0)为空，(1,1)输入框
+        var = tk.StringVar(value=var_value)
+        entry = ttk.Entry(grid_frame, width=30, textvariable=var, state="readonly" if readonly else "normal")
+        entry.grid(row=current_row + 1, column=1, **w_grid_pack)
+
+        return label, btn_frame, entry, var
+
+
+class ProxySettingWindow(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("代理设置")
+        self.resizable(False, False)
+
+        self.use_proxy_var = tk.BooleanVar()
+        self.addr_var = tk.StringVar()
+        self.port_var = tk.StringVar()
+
+        # 总框架
+        main_frame = ttk.Frame(self)
+        main_frame.pack(padx=10, pady=10, fill="both", expand=True)
+
+        # 使用代理复选框
+        self.check = ttk.Checkbutton(main_frame, text="使用代理", variable=self.use_proxy_var, command=self.toggle_proxy)
+        self.check.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 10))
+
+        # 地址区域
+        addr_label = ttk.Label(main_frame, text="地址:")
+        addr_label.grid(row=1, column=0, sticky="ne")
+
+        addr_button_frame = ttk.Frame(main_frame)
+        addr_button_frame.grid(row=1, column=1, sticky="w")
+        addr_presets = [
+            ("本地回环", "http://127.0.0.1"),
+            ("localhost", "http://localhost"),
+            ("局域网网关", "http://192.168.1.1")
+        ]
+        for label, value in addr_presets:
+            b = ttk.Button(addr_button_frame, text=label, width=12, command=lambda v=value: self.addr_var.set(v))
+            b.pack(side="left", padx=2)
+
+        self.addr_entry = ttk.Entry(main_frame, textvariable=self.addr_var, width=40)
+        self.addr_entry.grid(row=2, column=1, sticky="w", pady=5)
+
+        # 端口区域
+        port_label = ttk.Label(main_frame, text="端口:")
+        port_label.grid(row=3, column=0, sticky="ne", pady=(10, 0))
+
+        port_button_frame = ttk.Frame(main_frame)
+        port_button_frame.grid(row=3, column=1, sticky="w", pady=(10, 0))
+        port_presets = [
+            ("Clash", "7890"),
+            ("v2rayN", "10809"),
+            ("Shadowsocks", "1080")
+        ]
+        for label, value in port_presets:
+            b = ttk.Button(port_button_frame, text=label, width=12, command=lambda v=value: self.port_var.set(v))
+            b.pack(side="left", padx=2)
+
+        self.port_entry = ttk.Entry(main_frame, textvariable=self.port_var, width=40)
+        self.port_entry.grid(row=4, column=1, sticky="w", pady=5)
+
+        self.toggle_proxy()
+
+    def toggle_proxy(self):
+        state = "normal" if self.use_proxy_var.get() else "disabled"
+        widgets = [
+            self.addr_entry,
+            self.port_entry,
+        ]
+        # 启用/禁用输入框
+        for widget in widgets:
+            widget.config(state=state)
+
+        # 启用/禁用所有按钮框架里的按钮
+        for frame in [child for child in self.winfo_children()[0].winfo_children() if isinstance(child, ttk.Frame)]:
+            for widget in frame.winfo_children():
+                if isinstance(widget, ttk.Button):
+                    widget.config(state=state)
+
+# 测试运行
+if __name__ == "__main__":
+    app = ProxySettingWindow()
+    app.mainloop()
+

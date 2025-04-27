@@ -3,7 +3,7 @@ from tkinter import ttk
 
 from PIL import ImageTk, Image
 
-from functions.func_account import FuncAccInfo
+from functions.acc_func import AccInfoFunc
 from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableClassicTable, CheckboxItemRow
@@ -68,7 +68,7 @@ class AccLoginRowCheckbox(CheckboxItemRow, ABC):
         :return: 头像标签 -> Label
         """
         try:
-            img = FuncAccInfo.get_acc_avatar_from_files(self.sw, account)
+            img = AccInfoFunc.get_acc_avatar_from_files(self.sw, account)
             img = img.resize(Constants.AVT_SIZE)
             photo = ImageTk.PhotoImage(img)
             avatar_label = ttk.Label(self.row_frame, image=photo)

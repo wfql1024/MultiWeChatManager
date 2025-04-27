@@ -351,8 +351,11 @@ class SubToolWnd(ABC):
         # 设置窗口
         wnd.title(self.title)
         wnd.attributes('-toolwindow', True)
+        self.wnd_frame = tk.Frame(wnd)
+        self.wnd_frame.pack(fill=tk.BOTH, expand=True)
         self.set_wnd()
-        self.load_content()
+        self.load_ui()
+        self.update_content()
         wnd.update_idletasks()
         hwnd_utils.set_size_and_bring_tk_wnd_to_(wnd, self.wnd_width, self.wnd_height, self.position)
 
@@ -380,7 +383,10 @@ class SubToolWnd(ABC):
         """
         pass
 
-    def load_content(self):
+    def load_ui(self):
+        pass
+
+    def update_content(self):
         pass
 
     def finally_do(self):

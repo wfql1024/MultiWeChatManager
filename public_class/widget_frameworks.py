@@ -7,13 +7,13 @@ from typing import Dict
 
 from PIL import ImageTk, Image
 
-from functions import subfunc_file, subfunc_sw, func_config
-from functions.func_account import FuncAccInfo
+from functions import subfunc_file
+from functions.acc_func import AccInfoFunc, AccOperator
 from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
 from resources import Constants
 from utils import widget_utils
-from utils.encoding_utils import StringUtils
+from utils.encoding_utils import StringUtils, ColorUtils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import TreeUtils
@@ -49,7 +49,7 @@ class CheckboxItemRow:
         self.item = item
         self.parent_frame = self.parent_class.classic_frame
 
-        self.config_status = func_config.get_sw_acc_login_cfg(self.sw, item, self.data_path)
+        self.config_status = AccInfoFunc.get_sw_acc_login_cfg(self.sw, item, self.data_path)
         self.tooltips = {}
         self.update_top_title = self.parent_class._update_top_title
         self.iid = f"{self.sw}/{self.item}"
@@ -84,7 +84,7 @@ class CheckboxItemRow:
         # print(f"加载头像区域用时{time.time() - self.start_time:.4f}秒")
 
         # 账号标签
-        wrapped_display_name = FuncAccInfo.get_acc_wrapped_display_name(self.sw, account)
+        wrapped_display_name = AccInfoFunc.get_acc_wrapped_display_name(self.sw, account)
         has_mutex, = subfunc_file.get_sw_acc_data(self.sw, account, has_mutex=None)
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
         if has_mutex and self.sign_visible:
@@ -159,7 +159,7 @@ class CheckboxItemRow:
             self.root,
             self.avatar_label,
             partial(self.acc_tab_ui.to_open_acc_detail, iid),
-            partial(subfunc_sw.switch_to_sw_account_wnd, iid)
+            partial(AccOperator.switch_to_sw_account_wnd, iid)
         )
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
@@ -498,7 +498,7 @@ class ActionableTreeView(ABC):
 
         # 默认情况下
         selected_bg = "#B2E0F7"
-        hover_bg = "#E5F5FD"
+        hover_bg = ColorUtils.lighten_color(selected_bg, 0.8)
         tree.tag_configure("disabled", background="#F5F7FA", foreground="grey")
         tree.tag_configure("selected", background=selected_bg, foreground="black")
         tree.tag_configure("hover", background=hover_bg, foreground="black")
@@ -527,13 +527,15 @@ class ActionableTreeView(ABC):
 
         if len(tree.get_children()) == 0:
             # 如果条目数量为 0，隐藏控件
+            print("应该隐藏列表")
             self.tree_frame.pack_forget()
+            self.main_frame.pack_propagate(False)  # 不自动调整自身大小
+            self.main_frame.config(height=1)
         else:
-            # 如果条目数量不为 0，且控件未显示，则显示控件
-            if not self.tree_frame.winfo_ismapped():
-                # 摆烂，直接标准刷新吧
-                # print(f"{tree}这里出现问题")
-                self.quick_refresh_failed = True
+            # 如果条目数量不为 0则显示控件
+            print("应该恢复显示列表")
+            self.main_frame.pack_propagate(True)  # 自动调整自身大小
+            self.tree_frame.pack(side=tk.TOP, fill=tk.X)
 
         # self._update_top_title()
         widget_utils.UnlimitedClickHandler(
@@ -1093,13 +1095,12 @@ class RadioTreeView(ABC):
 
         if len(tree.get_children()) == 0:
             # 如果条目数量为 0，隐藏控件
+            print("应该隐藏列表")
             self.tree_frame.pack_forget()
         else:
-            # 如果条目数量不为 0，且控件未显示，则显示控件
-            if not self.tree_frame.winfo_ismapped():
-                # 摆烂，直接标准刷新吧
-                # print(f"{tree}这里出现问题")
-                self.quick_refresh_failed = True
+            # 如果条目数量不为 0则显示控件
+            print("应该恢复显示列表")
+            self.tree_frame.pack(side=tk.TOP, fill=tk.X)
 
         widget_utils.UnlimitedClickHandler(
             self.root,

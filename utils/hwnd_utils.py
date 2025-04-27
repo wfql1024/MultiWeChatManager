@@ -92,6 +92,20 @@ class TkWndUtils:
 
 """hwnd获取"""
 
+def get_visible_windows_sorted_by_top():
+    hwnds = []
+
+    def callback(hwnd, extra):
+        if win32gui.IsWindowVisible(hwnd):
+            rect = win32gui.GetWindowRect(hwnd)
+            left, top, right, bottom = rect
+            if right > left and bottom > top:
+                hwnds.append((top, hwnd))
+
+    win32gui.EnumWindows(callback, None)
+    hwnds.sort()  # 按 top 从小到大排序
+    return [hwnd for top, hwnd in hwnds]
+
 
 def get_a_hwnd_by_title(window_title):
     """
@@ -350,6 +364,14 @@ def get_hwnd_details_of_(hwnd):
 
 """通过hwnd操作"""
 
+
+def force_hide_wnd(hwnd):
+    SW_HIDE = 0
+    user32 = ctypes.WinDLL('user32', use_last_error=True)
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+
+    user32.ShowWindow(hwnd, SW_HIDE)
 
 def set_window_title(hwnd, new_title):
     """

@@ -1,45 +1,18 @@
 import os
 import shutil
 import time
-from datetime import datetime
 from tkinter import messagebox
 
-from functions import func_setting, subfunc_sw, subfunc_file
+import func_setting
+from functions import subfunc_file
+from functions.sw_func import SwOperator
 from public_class.global_members import GlobalMembers
 from resources import Config
 from utils import hwnd_utils, handle_utils
 from utils.logger_utils import mylogger as logger
 
 
-def get_sw_acc_login_cfg(sw, account, data_path) -> str:
-    """
-    通过账号的配置状态
-    :param sw: 选择的软件标签
-    :param data_path: 数据存储路径
-    :param account: 账号
-    :return: 配置状态
-    """
-    # print(sw, data_path, account)
-    if not data_path:
-        return "无配置路径"
-    config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
-        sw, config_path_suffix=None, config_file_list=None)
-    if not isinstance(config_files, list) or len(config_files) == 0:
-        return "无法获取配置路径"
-    file = config_files[0]
-    file_suffix = file.split(".")[-1]
-    dest_filename = f"{account}.{file_suffix}"
-    acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), dest_filename)
-                    .replace("\\", "/"))
-    if os.path.exists(acc_cfg_path):
-        mod_time = os.path.getmtime(acc_cfg_path)
-        date = datetime.fromtimestamp(mod_time)
-        return f"{date.year % 100:02}/{date.month:02}/{date.day:02} {date.hour:02}:{date.minute:02}"
-    else:
-        return "无配置"
-
-
-def operate_config(method, sw, account):
+def operate_acc_config(method, sw, account):
     """
     使用use或add操作账号对应的登录配置
     :param method: 操作方法
@@ -80,9 +53,6 @@ def operate_config(method, sw, account):
                 os.remove(p)
             elif os.path.isdir(p):
                 shutil.rmtree(p)
-            # else:
-            #     logger.error(f"配置项目异常：{p}")
-            #     return False, f"配置项目异常：{p}"
         except Exception as e:
             logger.error(e)
             return False, f"移除配置项目时发生错误：{str(e)}"
@@ -110,11 +80,12 @@ def operate_config(method, sw, account):
     return True, success_list
 
 
-def test(sw, account, multiple_status):
+def open_sw_and_ask(sw, account, multirun_mode):
     """
     尝试打开微信，让用户判断是否是对应的账号，根据用户结果去创建配置或结束
+    :param sw:
     :param account: 账号
-    :param multiple_status: 是否全局多开状态
+    :param multirun_mode: 是否全局多开状态
     :return: 是否对应
     """
     root_class = GlobalMembers.root_class
@@ -130,9 +101,9 @@ def test(sw, account, multiple_status):
         hwnd_utils.close_all_by_wnd_classes(redundant_wnd_classes)
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-        subfunc_sw.kill_sw_multiple_processes(sw)
+        SwOperator.kill_sw_multiple_processes(sw)
         time.sleep(0.5)
-        sub_exe_process = subfunc_sw.open_sw(sw, multiple_status)
+        sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
         login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(sw, login_wnd_class=None)
         wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
         print(wechat_hwnd)
@@ -142,7 +113,7 @@ def test(sw, account, multiple_status):
             time.sleep(1)
             hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(wechat_hwnd, root.winfo_id())
             if messagebox.askyesno("确认", "是否为对应的微信号？"):
-                success, result = operate_config('add', sw, account)
+                success, result = operate_acc_config('add', sw, account)
                 if success is True:
                     created_list_text = "\n".join(result)
                     messagebox.showinfo("成功", f"已生成：\n{created_list_text}")

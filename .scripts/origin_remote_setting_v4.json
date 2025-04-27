@@ -3,6 +3,36 @@
         "app_name": "微信多开管理器",
         "app_author": "吾峰起浪",
         "new_func_hint": "狂按",
+        "proxy": {
+            "ip_presets": [
+                {
+                    "name":"本地回环",
+                    "value": "http://127.0.0.1"
+                },
+                {
+                    "name":"localhost",
+                    "value": "http://localhost"
+                },
+                {
+                    "name": "局域网网关",
+                    "value": "http://192.168.1.1"
+                }
+            ],
+            "port_presets": [
+                {
+                    "name": "Clash",
+                    "value": "7890"
+                },
+                {
+                    "name": "v2rayN",
+                    "value": "10809"
+                },
+                {
+                    "name": "Shadowsocks",
+                    "value": "1080"
+                }
+            ]
+        },
         "all_sw": {
             "WeChat": {
                 "text": "微信",
@@ -2137,7 +2167,9 @@
             "Applet",
             "Plugins",
             "WMPF",
-            "all_users"
+            "all_users",
+            "Backup",
+            "old_backup"
         ],
         "cut_to_compatible_id": [
             0,

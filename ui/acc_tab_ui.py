@@ -4,8 +4,9 @@ import tkinter as tk
 from functools import partial
 from tkinter import ttk, messagebox
 
-from functions import subfunc_file, func_account, func_config, func_login
-from functions.func_account import FuncAccInfo
+from functions import subfunc_file
+from functions.acc_func import AccInfoFunc, AccOperator
+from functions.sw_func import SwOperator
 from public_class import reusable_widgets
 from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
@@ -75,7 +76,7 @@ class AccTabUI:
             return
 
         def _get_data_thread(callback):
-            result = FuncAccInfo.get_sw_acc_list(self.root, self, self.sw)
+            result = AccInfoFunc.get_sw_acc_list(self.root, self, self.sw)
             callback(result)
 
         self.start_time = time.time()
@@ -212,11 +213,11 @@ class AccTabUI:
         """成功创建账号列表才会执行"""
         # 获取已登录的窗口hwnd
         logins = self.acc_list_dict[OnlineStatus.LOGIN]
-        FuncAccInfo.get_main_hwnd_of_accounts(self.sw, logins)
+        AccInfoFunc.get_main_hwnd_of_accounts(self.sw, logins)
 
         # 进行静默获取头像及配置
         def func():
-            FuncAccInfo.silent_get_and_config(self.sw)
+            AccInfoFunc.silent_get_and_config(self.sw)
 
         threading.Thread(target=func).start()
 
@@ -232,10 +233,10 @@ class AccTabUI:
     def to_manual_login(self):
         """按钮：手动登录"""
         print("手动登录")
-        threading.Thread(
-            target=func_login.manual_login,
-            args=(self.sw,)
-        ).start()
+        try:
+            SwOperator.thread_to_manual_login(self.sw)
+        except Exception as e:
+            logger.error(e)
 
     def to_auto_login(self, items):
         """登录所选账号"""
@@ -250,24 +251,20 @@ class AccTabUI:
             self.root.iconify()  # 最小化主窗口
 
         try:
-            t = threading.Thread(
-                target=func_login.auto_login_accounts,
-                args=(login_dict,)
-            )
-            t.start()
+            AccOperator.thread_to_auto_login_accounts(login_dict)
         except Exception as e:
             logger.error(e)
 
     def to_create_config(self, items):
         """按钮：创建或重新配置"""
         accounts = [items.split("/")[1] for items in items]
-        threading.Thread(target=func_config.test,
+        threading.Thread(target=AccOperator.open_sw_and_ask,
                          args=(self.sw, accounts[0], self.sw_classes[self.sw].multirun_mode)).start()
 
     def to_quit_accounts(self, items):
         """退出所选账号"""
         accounts = [items.split("/")[1] for items in items]
-        answer = func_account.quit_selected_accounts(self.sw, accounts)
+        answer = AccOperator.quit_selected_accounts(self.sw, accounts)
         if answer is True:
             self.refresh_frame(self.sw)
 
