@@ -888,6 +888,7 @@ class SwInfoUtils:
     @staticmethod
     def _create_check_method_of_(path_type):
         """定义检查方法"""
+
         def check_sw_path_func(sw, path):
             return SwInfoUtils.is_valid_sw_path(path_type, sw, path)
 
@@ -1004,7 +1005,7 @@ class SwInfoUtils:
 class SwOperatorUtils:
     @staticmethod
     def is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-        #TODO: 需要优化
+        # TODO: 需要优化
         """检测窗口是否是某个平台的主窗口"""
         executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
         # 判断hwnd是否属于指定的程序
@@ -1025,4 +1026,5 @@ class SwOperatorUtils:
             # 检查是否有最大化按钮
             has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
             return has_maximize
+
     pass

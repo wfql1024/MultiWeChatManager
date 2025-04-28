@@ -13,7 +13,6 @@ from utils.file_utils import DllUtils
 from utils.logger_utils import mylogger as logger
 
 
-
 def ask_for_manual_terminate_or_force(executable):
     processes = []
     for proc in psutil.process_iter(['pid', 'name']):
@@ -137,6 +136,7 @@ def switch_dll(sw, mode, dll_dir) -> Tuple[Optional[bool], str]:
         logger.error(f"切换{mode_text}时发生错误: {str(e)}")
         return False, f"切换{mode_text}时发生错误: {str(e)}\n{error_msg}"
 
+
 def identify_dll_of_ver_by_dict(data, dll_path) \
         -> Tuple[Optional[bool], str, Optional[list], Optional[list]]:
     cur_sw_ver = file_utils.get_file_version(dll_path)
@@ -165,4 +165,3 @@ def identify_dll_of_ver_by_dict(data, dll_path) \
         elif all_original is True or all_modified is True:
             return None, "错误，非独一无二的特征码", None, None
     return None, "不可用", None, None
-

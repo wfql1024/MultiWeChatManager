@@ -148,6 +148,7 @@ def create_app_lnk():
     # 打印所有创建成功信息
     messagebox.showinfo("成功", "\n".join(notice))
 
+
 def reset(after):
     """
     重置应用设置和删除部分用户文件
@@ -206,6 +207,7 @@ def reset(after):
             logger.error(e)
             messagebox.showinfo("拒绝访问", "请确保微信已全部退出。")
 
+
 def open_config_file(sw):
     """打开配置文件夹"""
     data_path = SwInfoFunc.get_sw_data_dir(sw)
@@ -254,6 +256,7 @@ def clear_config_file(sw, after):
                 logger.error(f"无法删除 {files_to_delete}: {e}")
         after(message=f"清除{sw}登录配置完成！")
 
+
 def open_dll_dir(sw):
     """打开注册表所在文件夹，并将光标移动到文件"""
     dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
@@ -266,7 +269,6 @@ def open_dll_dir(sw):
         shell = win32com.client.Dispatch("WScript.Shell")
         shell.CurrentDirectory = dll_dir
         shell.Run(f'explorer /select,{dll_file}')
-
 
 
 def create_lnk_for_account(sw, account, multiple_status):
@@ -375,6 +377,7 @@ def create_lnk_for_account(sw, account, multiple_status):
     print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
     return True
 
+
 def create_multiple_lnk(sw, status, after):
     """
     创建快捷多开
@@ -413,9 +416,6 @@ def create_multiple_lnk(sw, status, after):
     after()
     print("创建快捷启动成功！")
     return True
-
-
-
 
 
 if __name__ == '__main__':

@@ -1,5 +1,12 @@
-import base64, os, re, sys, tempfile, threading, uuid, webbrowser
+import base64
+import os
+import re
+import sys
+import tempfile
+import threading
 import tkinter as tk
+import uuid
+import webbrowser
 from abc import ABC
 from datetime import datetime
 from functools import partial
@@ -120,13 +127,16 @@ class DetailWnd(SubToolWnd, ABC):
         hwnd_label = ttk.Label(hwnd_frame)
         hwnd_label.pack(side=tk.LEFT)
         unlink_hwnd_btn = _create_btn_in_(hwnd_frame, " × ")
-        unlink_hwnd_btn.on_click(lambda: self.do_and_update_ui(partial(AccInfoFunc.unlink_hwnd_of_account, sw, account)))
+        unlink_hwnd_btn.on_click(
+            lambda: self.do_and_update_ui(partial(AccInfoFunc.unlink_hwnd_of_account, sw, account)))
         _pack_btn(unlink_hwnd_btn)
         relink_hwnd_btn = _create_btn_in_(hwnd_frame, "获取")
-        relink_hwnd_btn.on_click(lambda: self.do_and_update_ui(partial(AccInfoFunc.relink_hwnd_of_account, sw, account)))
+        relink_hwnd_btn.on_click(
+            lambda: self.do_and_update_ui(partial(AccInfoFunc.relink_hwnd_of_account, sw, account)))
         _pack_btn(relink_hwnd_btn)
         manual_link_hwnd_btn = _create_btn_in_(hwnd_frame, "手绑")
-        manual_link_hwnd_btn.on_click(lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_link_hwnd_of_account, sw, account)))
+        manual_link_hwnd_btn.on_click(
+            lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_link_hwnd_of_account, sw, account)))
         _pack_btn(manual_link_hwnd_btn)
         hidden_hwnd_btn = _create_btn_in_(hwnd_frame, "隐藏")
         hidden_hwnd_btn.on_click(None)
@@ -203,7 +213,6 @@ class DetailWnd(SubToolWnd, ABC):
         widget_utils.enable_widget_when_(self.fetch_button, self.pid is not None)
         widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button,
                                           {"请登录后获取": self.pid is None})
-
 
     def set_wnd(self):
         # 禁用窗口大小调整
@@ -1548,14 +1557,17 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         _, port_btn_frame, _, port_var = self._create_label_btn_entry_grid(proxy_detail_frame, "端口:", "")
         # 添加预设按钮
         ip_presets, port_presets = subfunc_file.get_details_from_remote_setting_json(RemoteCfg.GLOBAL, "proxy",
-                                                                       ip_presets=None, port_presets=None)
+                                                                                     ip_presets=None, port_presets=None)
         customized_btn_ipad = int(Constants.CUS_BTN_PAD_X * 0.2)
         customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
+
         def _create_btn_in_(frame_of_btn, text):
             btn = CustomLabelBtn(frame_of_btn, text=text, padx=customized_btn_ipad, pady=customized_btn_ipad)
             return btn
+
         def _pack_btn(btn):
-            btn.pack(side=tk.LEFT, padx=customized_btn_pad*2, pady=customized_btn_pad)
+            btn.pack(side=tk.LEFT, padx=customized_btn_pad * 2, pady=customized_btn_pad)
+
         for ip in ip_presets:
             b = _create_btn_in_(ip_btn_frame, ip["name"])
             b.on_click(lambda v=ip["value"]: ip_var.set(v))
@@ -1572,7 +1584,7 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         # 确定按钮
         ok_btn = _create_btn_in_(bottom_btn_frame, "确定")
         ok_btn.on_click(self.save_settings)
-        ok_btn.pack(side=tk.RIGHT, padx=customized_btn_pad*2, pady=customized_btn_pad)
+        ok_btn.pack(side=tk.RIGHT, padx=customized_btn_pad * 2, pady=customized_btn_pad)
 
         self.proxy_detail_frame = proxy_detail_frame
         self.proxy_ip = ip_var
@@ -1585,14 +1597,13 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)
         self.proxy_ip.set(ip)
         self.proxy_port.set(port)
-        
+
         # 若为True，则显示代理设置框架
         if self.use_proxy_var.get():
             # 将内部的控件设为可用
             widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomWidget.State.NORMAL)
         else:
             widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomWidget.State.DISABLED)
-
 
     def get_screen_size(self):
         screen_width = self.wnd.winfo_screenwidth()

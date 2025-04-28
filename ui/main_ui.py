@@ -288,7 +288,6 @@ class MainWindow:
             print("已禁用代理！")
 
 
-
 class SoftwareInfo:
     def __init__(self, sw):
         self.sw = sw
@@ -328,6 +327,7 @@ class GlobalSettings:
         self.new_func = None
         self.auto_press = None
         self.disable_proxy = None
+
 
 class HotkeyManager:
     def __init__(self):
@@ -397,4 +397,3 @@ class HotkeyManager:
     def execute_task(self, hotkey):
         if hotkey in self.hotkey_map:
             self.hotkey_map[hotkey]()  # 执行绑定的任务
-

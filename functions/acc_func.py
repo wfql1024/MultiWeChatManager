@@ -6,10 +6,10 @@ import subprocess
 import sys
 import threading
 import time
+import tkinter as tk
 from collections.abc import Iterable
 from tkinter import messagebox
 from typing import Dict, List
-import tkinter as tk
 
 import psutil
 import win32con
@@ -27,6 +27,7 @@ from resources.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
+
 
 class AccOperator:
     @staticmethod
@@ -389,6 +390,7 @@ class AccOperator:
                 time.sleep(0.2)
                 hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
                 hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+
     @staticmethod
     def quit_selected_accounts(sw, accounts_selected):
         accounts_to_quit = []
@@ -547,6 +549,7 @@ class AccOperator:
 
         print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
         return True
+
 
 class AccInfoFunc:
     """
@@ -921,4 +924,3 @@ class AccInfoFunc:
                     display_name = AccInfoFunc.get_acc_origin_display_name(sw, account)
                     hwnd_utils.set_window_title(hwnd, f"微信 - {display_name}")
                     break
-

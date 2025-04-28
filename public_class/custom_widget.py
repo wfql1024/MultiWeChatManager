@@ -1,10 +1,11 @@
 import tkinter as tk
 from abc import ABC, abstractmethod
+from enum import Enum
 from tkinter import ttk
 
 from public_class.enums import NotebookDirection
 from utils.encoding_utils import ColorUtils
-from enum import Enum
+
 
 class CustomWidget(ABC):
     class State(str, Enum):

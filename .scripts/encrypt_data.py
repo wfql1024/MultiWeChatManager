@@ -1,10 +1,10 @@
 import base64
+import secrets
 import shutil
+import string
 
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
-import secrets
-import string
 
 
 def encrypt_and_append_key(input_file, output_file, key):
@@ -25,6 +25,7 @@ def encrypt_and_append_key(input_file, output_file, key):
         f.write(encrypted_data)
         f.write(' ')  # 添加空格
         f.write(key)  # 将密钥追加到最后一行
+
 
 # 使用方法
 # 生成15个随机字符（大小写字母+数字）

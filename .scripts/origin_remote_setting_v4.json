@@ -6,11 +6,11 @@
         "proxy": {
             "ip_presets": [
                 {
-                    "name":"本地回环",
+                    "name": "本地回环",
                     "value": "http://127.0.0.1"
                 },
                 {
-                    "name":"localhost",
+                    "name": "localhost",
                     "value": "http://localhost"
                 },
                 {

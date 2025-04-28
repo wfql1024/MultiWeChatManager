@@ -18,6 +18,7 @@ from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
+
 # TODO: 用户可以自定义多开的全流程
 # TODO: 主题色选择
 
@@ -275,7 +276,7 @@ class MenuUI:
             else:
                 self.freely_multirun_var = tk.BooleanVar(value=freely_multirun)
                 self.settings_menu.add_checkbutton(label=f"全局多开", variable=self.freely_multirun_var,
-                                               command=partial(self.toggle_patch_mode, mode=RemoteCfg.MULTI))
+                                                   command=partial(self.toggle_patch_mode, mode=RemoteCfg.MULTI))
         else:
             self.sw_class.freely_multirun = freely_multirun = None
             self.sw_class.anti_revoke = None

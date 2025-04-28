@@ -1,7 +1,7 @@
 import tkinter as tk
-from tkinter import ttk
 from abc import ABC
 from collections.abc import Sized
+from tkinter import ttk
 
 from PIL import ImageTk, Image
 

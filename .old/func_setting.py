@@ -17,6 +17,7 @@ def _create_path_finder_of_(path_tag):
     :param path_tag: 路径类型
     :return: 路径查找函数
     """
+
     def get_sw_path_from_local_cfg(sw: str) -> list:
         path = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, path_tag)
         return [path] if path is not None else []

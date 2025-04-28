@@ -17,6 +17,7 @@ from utils import image_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
+
 class DetailWndFunc:
     @staticmethod
     def thread_to_fetch_acc_detail_by_pid(sw, pid, account, after):
@@ -182,6 +183,7 @@ class DetailWndFunc:
         except AttributeError:
             raise ValueError(f"模块 {module_name} 中未找到类: {class_name}")
 
+
 class UpdateLogWndFunc:
     @staticmethod
     def download_files(ver_dicts, download_dir, progress_callback, on_complete_callback, status):
@@ -244,5 +246,3 @@ class UpdateLogWndFunc:
                                  creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
         else:
             messagebox.showinfo("提醒", "请在打包环境中执行")
-
-

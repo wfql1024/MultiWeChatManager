@@ -92,6 +92,7 @@ class TkWndUtils:
 
 """hwnd获取"""
 
+
 def get_visible_windows_sorted_by_top():
     hwnds = []
 
@@ -372,6 +373,7 @@ def force_hide_wnd(hwnd):
     user32.ShowWindow.restype = wintypes.BOOL
 
     user32.ShowWindow(hwnd, SW_HIDE)
+
 
 def set_window_title(hwnd, new_title):
     """

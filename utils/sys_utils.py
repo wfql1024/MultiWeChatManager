@@ -2,9 +2,9 @@ import ctypes
 import os
 import platform
 import winreg
+from contextlib import contextmanager
 from ctypes import wintypes
 from pathlib import Path
-from contextlib import contextmanager
 
 # 定义常量
 MDT_EFFECTIVE_DPI = 0  # 有效 DPI（当前缩放）
@@ -42,7 +42,6 @@ def disable_proxy_temporarily():
             os.environ['no_proxy'] = old_noproxy
         else:
             os.environ.pop('no_proxy', None)
-
 
 
 def get_win7_scaling_from_registry():

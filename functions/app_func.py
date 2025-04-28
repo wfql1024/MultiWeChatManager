@@ -262,5 +262,3 @@ class AppFunc:
             except Exception as e:
                 logger.error(e)
                 messagebox.showinfo("拒绝访问", "请确保微信已全部退出。")
-
-

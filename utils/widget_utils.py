@@ -330,6 +330,7 @@ def set_widget_tip_when_(tooltips, widget, tip_condition_dict: Dict[str, Union[C
                 if len(tooltips[widget]) == 0:
                     del tooltips[widget]
 
+
 def set_all_children_in_frame_to_state(frame, state):
     """
     设置指定框架及其所有子控件的启用/禁用状态
@@ -364,5 +365,3 @@ def set_all_custom_widgets_in_frame_to_state(frame, state: CustomWidget.State):
         # 如果子控件也是容器（比如 Frame），递归处理
         if isinstance(child, (tk.Frame, ttk.Frame)):
             set_all_custom_widgets_in_frame_to_state(child, state)
-
-
