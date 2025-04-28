@@ -4,20 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="重构代码结构，优化定制按钮和书签逻辑，更新微信4.0的屏蔽文件夹名">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="格式化代码">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.meta/version.txt" beforeDir="false" afterPath="$PROJECT_DIR$/.meta/version.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.old/subfunc_sw.py" beforeDir="false" afterPath="$PROJECT_DIR$/.old/subfunc_sw.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Build4Win10+.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Build4Win10+.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Build4Win7.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Build4Win7.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/click_me_to_create_lnk.bat" beforeDir="false" afterPath="$PROJECT_DIR$/click_me_to_create_lnk.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/external_res/wechat-dump-rs.exe" beforeDir="false" afterPath="$PROJECT_DIR$/external_res/wechat-dump-rs.exe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/acc_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/acc_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/treeview_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/treeview_row_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/wnd_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/wnd_ui.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -711,23 +699,7 @@
       <workItem from="1745462850432" duration="51436000" />
       <workItem from="1745564257814" duration="8617000" />
       <workItem from="1745639228401" duration="26422000" />
-      <workItem from="1745747897410" duration="25154000" />
-    </task>
-    <task id="LOCAL-00240" summary="测试适配4.0.2">
-      <option name="closed" value="true" />
-      <created>1738579056386</created>
-      <option name="number" value="00240" />
-      <option name="presentableId" value="LOCAL-00240" />
-      <option name="project" value="LOCAL" />
-      <updated>1738579056386</updated>
-    </task>
-    <task id="LOCAL-00241" summary="测试适配4.0.2.13,更新赞助列表">
-      <option name="closed" value="true" />
-      <created>1738581631629</created>
-      <option name="number" value="00241" />
-      <option name="presentableId" value="LOCAL-00241" />
-      <option name="project" value="LOCAL" />
-      <updated>1738581631629</updated>
+      <workItem from="1745747897410" duration="27673000" />
     </task>
     <task id="LOCAL-00242" summary="优化函数位置；调整状态栏更新策略，优化CPU占用；优化启动登录窗口方式">
       <option name="closed" value="true" />
@@ -1105,7 +1077,23 @@
       <option name="project" value="LOCAL" />
       <updated>1745758583950</updated>
     </task>
-    <option name="localTasksCounter" value="289" />
+    <task id="LOCAL-00289" summary="打包测试，并修复遇到的问题；移除已完成的todo">
+      <option name="closed" value="true" />
+      <created>1745857842328</created>
+      <option name="number" value="00289" />
+      <option name="presentableId" value="LOCAL-00289" />
+      <option name="project" value="LOCAL" />
+      <updated>1745857842328</updated>
+    </task>
+    <task id="LOCAL-00290" summary="格式化代码">
+      <option name="closed" value="true" />
+      <created>1745858199914</created>
+      <option name="number" value="00290" />
+      <option name="presentableId" value="LOCAL-00290" />
+      <option name="project" value="LOCAL" />
+      <updated>1745858199914</updated>
+    </task>
+    <option name="localTasksCounter" value="291" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1159,8 +1147,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="优化变量，优化方法" />
-    <MESSAGE value="优化数据存取方法" />
     <MESSAGE value="优化数据存取方法，拾起侧栏视图，修复快速刷新bug" />
     <MESSAGE value="优化列表视图交互" />
     <MESSAGE value="优化控件与提示的显示判断逻辑" />
@@ -1184,7 +1170,9 @@
     <MESSAGE value="新增选择是否禁用代理的功能" />
     <MESSAGE value="配置文件增加“代理”条目" />
     <MESSAGE value="重构代码结构，优化定制按钮和书签逻辑，更新微信4.0的屏蔽文件夹名" />
-    <option name="LAST_COMMIT_MESSAGE" value="重构代码结构，优化定制按钮和书签逻辑，更新微信4.0的屏蔽文件夹名" />
+    <MESSAGE value="打包测试，并修复遇到的问题；移除已完成的todo" />
+    <MESSAGE value="格式化代码" />
+    <option name="LAST_COMMIT_MESSAGE" value="格式化代码" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
