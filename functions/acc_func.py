@@ -889,7 +889,7 @@ class AccInfoFunc:
             style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
             # 检查是否有最大化按钮
             has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
-            print("有最大化按钮", hwnd, has_maximize)
+            # print("有最大化按钮", hwnd, has_maximize)
             return has_maximize
 
     @staticmethod
@@ -921,3 +921,4 @@ class AccInfoFunc:
                     display_name = AccInfoFunc.get_acc_origin_display_name(sw, account)
                     hwnd_utils.set_window_title(hwnd, f"微信 - {display_name}")
                     break
+

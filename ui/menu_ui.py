@@ -18,8 +18,6 @@ from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
-# TODO：刷新菜单增加热更新功能√
-# TODO: 增加个全局设置√
 # TODO: 用户可以自定义多开的全流程
 # TODO: 主题色选择
 
@@ -515,7 +513,6 @@ class MenuUI:
                 return
 
         subfunc_file.save_a_global_setting(
-            LocalCfg.GLOBAL_SECTION,
             LocalCfg.SCALE,
             str(scale)
         )

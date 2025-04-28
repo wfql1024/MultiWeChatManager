@@ -94,6 +94,7 @@ class TreeviewRowUI:
 class AccLoginTreeView(ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
+        self.global_settings_value = None
         self.can_quick_refresh = None
         self.acc_tab_ui = None
         self.root = None
@@ -109,6 +110,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         self.acc_tab_ui = self.root_class.acc_tab_ui
         self.sw = self.acc_tab_ui.sw
         self.main_frame = self.parent_class.ui_frame[self.table_tag]
+        self.global_settings_value = self.root_class.global_settings_value
 
         self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.data_dir = self.root_class.sw_classes[self.sw].data_dir
@@ -135,6 +137,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         tree.column("昵称", anchor='center')
 
     def display_table(self):
+        self.sign_visible: bool = self.root_class.global_settings_value.sign_vis
         tree = self.tree.nametowidget(self.tree)
         accounts = self.data_src
         login_status = self.table_tag

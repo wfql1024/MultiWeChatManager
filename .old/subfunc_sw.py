@@ -13,9 +13,6 @@ from utils import hwnd_utils, process_utils, pywinhandle, handle_utils, sys_util
 from utils.logger_utils import mylogger as logger
 
 
-# TODO: 完善4.0的python模式√
-
-
 def is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
     """检测窗口是否是某个账号的主窗口"""
     pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)

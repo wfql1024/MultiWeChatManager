@@ -1,12 +1,5 @@
-import base64
-import os
-import re
-import sys
-import tempfile
-import threading
+import base64, os, re, sys, tempfile, threading, uuid, webbrowser
 import tkinter as tk
-import uuid
-import webbrowser
 from abc import ABC
 from datetime import datetime
 from functools import partial
@@ -36,8 +29,6 @@ from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUt
 
 
 class DetailWnd(SubToolWnd, ABC):
-    # TODO: 通过详情框可以重新连接窗口√
-    # TODO: 所有行都使用文本框√
     def __init__(self, wnd, title, sw, account, tab_class):
         self.mutex_label = None
         self.hwnd_label = None
@@ -76,7 +67,7 @@ class DetailWnd(SubToolWnd, ABC):
         sw = self.sw
         account = self.account
 
-        frame = ttk.Frame(wnd, padding=Constants.FRM_PAD)
+        frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
         frame.pack(**Constants.FRM_PACK)
 
         # 使用网格布局
@@ -358,10 +349,8 @@ class DebugWnd(SubToolWnd, ABC):
         self.wnd_width, self.wnd_height = Constants.DEBUG_WND_SIZE
 
     def load_ui(self):
-        wnd = self.wnd
-
         # 创建工具栏
-        toolbar = tk.Frame(wnd)
+        toolbar = tk.Frame(self.wnd_frame)
         toolbar.pack(side=tk.TOP, fill=tk.X)
 
         # 刷新按钮
@@ -402,7 +391,7 @@ class DebugWnd(SubToolWnd, ABC):
                                                 variable=self.simplify_var, command=self.refresh_text)
         self.simplify_checkbox.pack(side=tk.LEFT)
         # 创建带滚动条的文本框
-        self.text_area = scrolledtext.ScrolledText(wnd, wrap=tk.NONE)
+        self.text_area = scrolledtext.ScrolledText(self.wnd_frame, wrap=tk.NONE)
         self.text_area.pack(fill=tk.BOTH, expand=True)
         self.text_area.tag_configure("unimportant", foreground="grey")
         # 设置字体
@@ -495,16 +484,19 @@ class LoadingWnd(SubToolWnd, ABC):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.LOADING_WND_SIZE
+        # self.wnd_width, self.wnd_height = Constants.LOADING_WND_SIZE
+        pass
 
     def set_wnd(self):
         self.wnd.resizable(False, False)
         self.wnd.overrideredirect(True)  # 去除窗口标题栏
 
     def load_ui(self):
-        self.label = ttk.Label(self.wnd, text="正在载入，请稍等……")
+        frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
+        frame.pack(**Constants.FRM_PACK)
+        self.label = ttk.Label(frame, text="正在载入，请稍等……")
         self.label.pack(pady=Constants.T_PAD_Y)
-        self.progress = ttk.Progressbar(self.wnd, mode="determinate", length=Constants.LOADING_PRG_LEN)
+        self.progress = ttk.Progressbar(frame, mode="determinate", length=Constants.LOADING_PRG_LEN)
         self.progress.pack(pady=Constants.T_PAD_Y)
 
     def update_content(self):
@@ -567,13 +559,13 @@ class AboutWnd(SubToolWnd, ABC):
             # 关闭wnd窗口
             self.wnd.destroy()
         else:
-            self.display_main_content()
+            self._display_main_content()
 
-    def display_main_content(self):
+    def _display_main_content(self):
         self.app_name = self.remote_cfg_data[LocalCfg.GLOBAL_SECTION]["app_name"]
         self.about_info = self.remote_cfg_data[LocalCfg.GLOBAL_SECTION]["about"]
 
-        self.main_frame = ttk.Frame(self.wnd, padding=Constants.FRM_PAD)
+        self.main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
         self.main_frame.pack(**Constants.FRM_PACK)
 
         # 图标框架（左框架）
@@ -797,7 +789,7 @@ class RewardsWnd(SubToolWnd, ABC):
 
     def load_ui(self):
         # 创建Frame并填充
-        frame = ttk.Frame(self.wnd)
+        frame = ttk.Frame(self.wnd_frame)
         frame.pack(fill=tk.BOTH, expand=True)
         # 调用方法在frame中显示图片
         self.show_image_in_frame(frame, self.img)
@@ -835,7 +827,7 @@ class UpdateLogWnd(SubToolWnd, ABC):
         main_frame = self.wnd_frame
 
         # 更新日志(标题)
-        log_label = ttk.Label(main_frame, text="更新日志", font=("", 11))
+        log_label = ttk.Label(main_frame, text="版本日志", font=("", 11))
         log_label.pack(anchor='w', pady=(10, 0))
 
         print("显示更新日志")
@@ -1025,7 +1017,7 @@ class StatisticWnd(SubToolWnd, ABC):
 
     def load_ui(self):
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.wnd)
+        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.wnd_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
         self.create_manual_table()
@@ -1514,6 +1506,8 @@ class SettingWnd(SubToolWnd, ABC):
 
 class GlobalSettingWnd(SubToolWnd, ABC):
     def __init__(self, wnd, title):
+        self.proxy_port = None
+        self.proxy_ip = None
         self.proxy_detail_occ = None
         self.proxy_detail_frame = None
         self.port_var = None
@@ -1571,10 +1565,27 @@ class GlobalSettingWnd(SubToolWnd, ABC):
             b.on_click(lambda v=port["value"]: port_var.set(v))
             _pack_btn(b)
 
+        # 底部放三个按钮：确定，取消，应用
+        bottom_btn_frame = ttk.Frame(main_frame)
+        bottom_btn_frame.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # 确定按钮
+        ok_btn = _create_btn_in_(bottom_btn_frame, "确定")
+        ok_btn.on_click(self.save_settings)
+        ok_btn.pack(side=tk.RIGHT, padx=customized_btn_pad*2, pady=customized_btn_pad)
+
         self.proxy_detail_frame = proxy_detail_frame
+        self.proxy_ip = ip_var
+        self.proxy_port = port_var
 
     def update_content(self):
-        self.use_proxy_var.set(subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_PROXY))
+        use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_PROXY)
+        self.use_proxy_var.set(use_proxy)
+        ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
+        port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)
+        self.proxy_ip.set(ip)
+        self.proxy_port.set(port)
+        
         # 若为True，则显示代理设置框架
         if self.use_proxy_var.get():
             # 将内部的控件设为可用
@@ -1590,8 +1601,14 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         subfunc_file.save_a_global_setting('screen_size', f"{screen_width}*{screen_height}")
 
     def save_settings(self):
-        subfunc_file.save_a_global_setting('remote_config', self.remote_config_var.get())
-        subfunc_file.save_a_global_setting('screen_size', self.screen_size_var.get())
+        use_proxy = self.use_proxy_var.get()
+        ip = self.proxy_ip.get()
+        port = self.proxy_port.get()
+        subfunc_file.save_a_global_setting(LocalCfg.USE_PROXY, use_proxy)
+        subfunc_file.save_a_global_setting(LocalCfg.PROXY_IP, ip)
+        subfunc_file.save_a_global_setting(LocalCfg.PROXY_PORT, port)
+        printer.vital("设置成功")
+        self.wnd.destroy()
 
     def do_and_update(self, func):
         func()
@@ -1616,82 +1633,3 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         entry.grid(row=current_row + 1, column=1, **w_grid_pack)
 
         return label, btn_frame, entry, var
-
-
-class ProxySettingWindow(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("代理设置")
-        self.resizable(False, False)
-
-        self.use_proxy_var = tk.BooleanVar()
-        self.addr_var = tk.StringVar()
-        self.port_var = tk.StringVar()
-
-        # 总框架
-        main_frame = ttk.Frame(self)
-        main_frame.pack(padx=10, pady=10, fill="both", expand=True)
-
-        # 使用代理复选框
-        self.check = ttk.Checkbutton(main_frame, text="使用代理", variable=self.use_proxy_var, command=self.toggle_proxy)
-        self.check.grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 10))
-
-        # 地址区域
-        addr_label = ttk.Label(main_frame, text="地址:")
-        addr_label.grid(row=1, column=0, sticky="ne")
-
-        addr_button_frame = ttk.Frame(main_frame)
-        addr_button_frame.grid(row=1, column=1, sticky="w")
-        addr_presets = [
-            ("本地回环", "http://127.0.0.1"),
-            ("localhost", "http://localhost"),
-            ("局域网网关", "http://192.168.1.1")
-        ]
-        for label, value in addr_presets:
-            b = ttk.Button(addr_button_frame, text=label, width=12, command=lambda v=value: self.addr_var.set(v))
-            b.pack(side="left", padx=2)
-
-        self.addr_entry = ttk.Entry(main_frame, textvariable=self.addr_var, width=40)
-        self.addr_entry.grid(row=2, column=1, sticky="w", pady=5)
-
-        # 端口区域
-        port_label = ttk.Label(main_frame, text="端口:")
-        port_label.grid(row=3, column=0, sticky="ne", pady=(10, 0))
-
-        port_button_frame = ttk.Frame(main_frame)
-        port_button_frame.grid(row=3, column=1, sticky="w", pady=(10, 0))
-        port_presets = [
-            ("Clash", "7890"),
-            ("v2rayN", "10809"),
-            ("Shadowsocks", "1080")
-        ]
-        for label, value in port_presets:
-            b = ttk.Button(port_button_frame, text=label, width=12, command=lambda v=value: self.port_var.set(v))
-            b.pack(side="left", padx=2)
-
-        self.port_entry = ttk.Entry(main_frame, textvariable=self.port_var, width=40)
-        self.port_entry.grid(row=4, column=1, sticky="w", pady=5)
-
-        self.toggle_proxy()
-
-    def toggle_proxy(self):
-        state = "normal" if self.use_proxy_var.get() else "disabled"
-        widgets = [
-            self.addr_entry,
-            self.port_entry,
-        ]
-        # 启用/禁用输入框
-        for widget in widgets:
-            widget.config(state=state)
-
-        # 启用/禁用所有按钮框架里的按钮
-        for frame in [child for child in self.winfo_children()[0].winfo_children() if isinstance(child, ttk.Frame)]:
-            for widget in frame.winfo_children():
-                if isinstance(widget, ttk.Button):
-                    widget.config(state=state)
-
-# 测试运行
-if __name__ == "__main__":
-    app = ProxySettingWindow()
-    app.mainloop()
-

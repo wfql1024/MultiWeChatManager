@@ -39,7 +39,7 @@ class Config:
             LocalCfg.LOGIN_SORT: "配置,True",
             LocalCfg.LOGOUT_SORT: "配置,True",
             LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            LocalCfg.REST_MULTIRUN_MODE: "handle",
+            LocalCfg.REST_MULTIRUN_MODE: "python",
         },
     }
 

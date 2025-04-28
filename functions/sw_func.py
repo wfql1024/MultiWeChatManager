@@ -1004,6 +1004,7 @@ class SwInfoUtils:
 class SwOperatorUtils:
     @staticmethod
     def is_hwnd_a_main_wnd_of_sw(hwnd, sw):
+        #TODO: 需要优化
         """检测窗口是否是某个平台的主窗口"""
         executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
         # 判断hwnd是否属于指定的程序

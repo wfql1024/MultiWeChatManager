@@ -38,6 +38,14 @@ if %errorlevel% neq 0 (
     goto :error
 )
 
+:: 创建新版快捷方式，添加 --new 参数
+powershell -ExecutionPolicy Bypass -Command "$WshShell = New-Object -comObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%desktopPath%\微信多开管理器_新版.lnk'); $Shortcut.TargetPath = '%currentDir%%targetFile1%'; $Shortcut.Arguments = '--new'; $Shortcut.WorkingDirectory = '%currentDir%'; $Shortcut.Save(); if ($?) { exit 0 } else { exit 1 }"
+
+if %errorlevel% neq 0 (
+    echo 创建新版快捷方式失败
+    goto :error
+)
+
 :: 如果成功，直接退出
 exit
 
