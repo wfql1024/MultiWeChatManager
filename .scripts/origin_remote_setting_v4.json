@@ -186,6 +186,12 @@
                     "currency": "￥",
                     "amount": "8.88",
                     "user": "*”"
+                },
+                {
+                    "date": "25-04-21",
+                    "currency": "￥",
+                    "amount": "88.00",
+                    "user": "*袋"
                 }
             ],
             "author": {
@@ -305,6 +311,49 @@
             }
         },
         "update": {
+            "v3.0.0.3087-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win7_x64_v3.0.0.3087-Beta.zip",
+                            "md5": "8ad4ed3e275bd1319e1fe7bbfd11247f",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win10%20_x64_v3.0.0.3087-Beta.zip",
+                            "md5": "9f3bda50aba28a2c5c54106631cfea4a",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win10%20_x64_v3.0.0.3087-Beta.zip",
+                            "md5": "9f3bda50aba28a2c5c54106631cfea4a",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win7_x64_v3.0.0.3087-Beta.zip",
+                            "md5": "8ad4ed3e275bd1319e1fe7bbfd11247f",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "大版本更新！新增侧栏工具，欢迎尝鲜，开启方式为视图->侧栏",
+                        "新增代理设置",
+                        "新增4.0微信支持python模式多开",
+                        "新增4.0微信带提示的防撤回"
+                    ],
+                    "修复": [
+                        "修复部分已知问题"
+                    ]
+                }
+            },
             "v2.15.0.1458-Beta": {
                 "pkgs": {
                     "win7": [

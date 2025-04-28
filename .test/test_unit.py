@@ -5,7 +5,7 @@ from unittest import TestCase
 
 import psutil
 
-from functions import func_setting, subfunc_file
+from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
 from public_class.enums import MultirunMode
 from resources import Config
@@ -67,7 +67,7 @@ class Test(TestCase):
         print("Found HWNDs:", test_hwnd)
 
     def test_calculate_md5(self):
-        file_path = r"E:\Now\QuickCenter\WorkBench\技术梦想\项目\MultiWeChatManager\Releases\MultiWeChatManager_win10+_x64_v2.15.0.1458-Beta.zip"
+        file_path = r"E:\Now\QuickCenter\WorkBench\技术梦想\项目\MultiWeChatManager\Releases\MultiWeChatManager_win7_x64_v3.0.0.3087-Beta.zip"
         md5 = file_utils.calculate_md5(file_path)
         print(md5)
 
