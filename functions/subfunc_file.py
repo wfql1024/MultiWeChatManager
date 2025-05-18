@@ -13,7 +13,7 @@ import requests
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 
-from public_class.enums import LocalCfg, AccKeys
+from public_class.enums import LocalCfg, AccKeys, SW
 from resources import Config, Strings
 from utils import file_utils, image_utils, sys_utils
 from utils.file_utils import IniUtils, JsonUtils, DictUtils
@@ -264,7 +264,11 @@ def fetch_sw_setting_or_set_default_or_none(sw, setting_key):
     value = DictUtils.get_nested_values(data, None, sw, setting_key)
     if not value or value == "" or value == "None" or value == "none":
         try:
-            value = Config.INI_DEFAULT_VALUE[sw][setting_key]
+            try:
+                sw_dict = Config.INI_DEFAULT_VALUE[sw]
+            except KeyError:
+                sw_dict = Config.INI_DEFAULT_VALUE[SW.DEFAULT.value]
+            value = sw_dict[setting_key]
             DictUtils.set_nested_values(data, value, sw, setting_key)
         except KeyError:
             return None

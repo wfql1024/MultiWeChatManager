@@ -1,10 +1,12 @@
 import time
 from unittest import TestCase
 
+import psutil
+
 from functions import subfunc_file
 from resources import Config
 from ui.sidebar_ui import SidebarWnd, WndProperties
-from utils import handle_utils, hwnd_utils
+from utils import handle_utils, hwnd_utils, pywinhandle
 from utils.file_utils import IniUtils
 from utils.patch_utils import *
 
@@ -157,3 +159,18 @@ class Test(TestCase):
         time.sleep(0.2)
         hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
         hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+
+    def test_get_WXWork_mmap(self):
+        for f in psutil.Process(27644).memory_maps():
+            print(f)
+
+    def test_kill_handle_in_pid(self):
+        pid = 32704
+        # pid = 35776
+        handle_names = ["Tencent.WeWork.ExclusiveObjectInstance1", "Tencent.WeWork.ExclusiveObject"]
+        # handle_names = ["_WeChat_App_Instance_Identity_Mutex_Name"]
+        result = pywinhandle.find_handles(
+            [pid],
+            handle_names
+        )
+        print(result)

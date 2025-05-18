@@ -117,7 +117,8 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
         self.columns = (" ", "配置", "pid", "原始id", "当前id", "昵称")
         sort_str = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, f"{self.table_tag}_sort")
-        self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
+        if sort_str is not None:
+            self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
 
     def set_table_style(self):
         super().set_table_style()

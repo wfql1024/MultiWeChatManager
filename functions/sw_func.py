@@ -36,10 +36,18 @@ class SwInfoFunc:
             return None, "错误：没有数据"
         patch_dll, ver_dict = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None, **{mode: None})
         if patch_dll is None or ver_dict is None:
-            return None, f"错误：{mode}平台未适配"
-        ver_dict = config_data.get(sw, {}).get(mode, None)
+            return None, f"错误：平台未适配{mode}"
+
         dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-        tag, msg, _, _ = SwInfoUtils.identify_dll_of_ver_by_dict(ver_dict, dll_path)
+        cur_sw_ver = file_utils.get_file_version(dll_path)
+        if cur_sw_ver is None:
+            exec_path = SwInfoFunc.get_sw_install_path(sw)
+            cur_sw_ver = file_utils.get_file_version(exec_path)
+
+        if cur_sw_ver not in ver_dict:
+            return None, f"错误：未找到版本{cur_sw_ver}的适配"
+        ver_adaptation = ver_dict[cur_sw_ver]
+        tag, msg, _, _ = SwInfoUtils.identify_dll_of_ver_by_dict(ver_adaptation, dll_path)
         return tag, msg
 
     @staticmethod
@@ -138,14 +146,22 @@ class SwOperator:
             return False, "用户取消操作"
 
         # 条件检查
-        patch_dll, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None)
-        if patch_dll is None:
-            return False, "该平台未适配"
+        patch_dll, ver_dict = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None, **{mode: None})
+        if patch_dll is None or ver_dict is None:
+            return False, "该平台暂未适配"
+
         dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-        ver_dict = config_data.get(sw, {}).get(mode, None)
+        cur_sw_ver = file_utils.get_file_version(dll_path)
+        if cur_sw_ver is None:
+            exec_path = SwInfoFunc.get_sw_install_path(sw)
+            cur_sw_ver = file_utils.get_file_version(exec_path)
+
+        if cur_sw_ver not in ver_dict:
+            return None, f"错误：未找到版本{cur_sw_ver}的适配"
+        ver_adaptation = ver_dict[cur_sw_ver]
         # 定义目标路径和文件名
         tag, msg, original_patterns, modified_patterns = SwInfoUtils.identify_dll_of_ver_by_dict(
-            ver_dict, dll_path)
+            ver_adaptation, dll_path)
         dll_path = os.path.join(dll_dir, patch_dll)
         try:
             if tag is True:
@@ -292,8 +308,8 @@ class SwOperator:
         print(f"清理{sw}Multiple_***子程序完成!")
 
     @staticmethod
-    def _organize_sw_mutex_dict(sw):
-        """拿到当前时间下系统中所有微信进程的互斥体情况"""
+    def _organize_sw_mutex_dict_from_record(sw):
+        """从本地记录拿到当前时间下系统中所有微信进程的互斥体情况"""
         print("获取互斥体情况...")
         executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
         if executable is None:
@@ -379,7 +395,11 @@ class SwOperator:
         if multirun_mode == MultirunMode.PYTHON:
             pids = process_utils.get_process_ids_by_name(executable_name)
             handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+            if handle_regex_list is None:
+                return True
             handle_names = [handle["handle_name"] for handle in handle_regex_list]
+            if handle_names is None or len(handle_names) == 0:
+                return True
             if len(pids) > 0:
                 success = pywinhandle.close_handles(
                     pywinhandle.find_handles(
@@ -404,8 +424,12 @@ class SwOperator:
         # ————————————————————————————————python————————————————————————————————
         if multirun_mode == "python":
             handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+            if handle_regex_list is None:
+                return True
             handle_names = [handle["handle_name"] for handle in handle_regex_list]
-            has_mutex_dict = SwOperator._organize_sw_mutex_dict(sw)
+            if handle_names is None or len(handle_names) == 0:
+                return True
+            has_mutex_dict = SwOperator._organize_sw_mutex_dict_from_record(sw)
             if len(has_mutex_dict) > 0:
                 print("互斥体列表：", has_mutex_dict)
                 pids, values = zip(*has_mutex_dict.items())
@@ -426,11 +450,16 @@ class SwOperator:
 
     @staticmethod
     def kill_mutex_of_pid(sw, acc):
+        """关闭指定进程的所有互斥体"""
         pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
         if pid is None:
             return False
         handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+        if handle_regex_list is None:
+            return True
         handle_names = [handle["handle_name"] for handle in handle_regex_list]
+        if handle_names is None or len(handle_names) == 0:
+            return True
         success = pywinhandle.close_handles(
             pywinhandle.find_handles(
                 [pid],
@@ -825,15 +854,12 @@ class SwInfoUtils:
         return results
 
     @staticmethod
-    def identify_dll_of_ver_by_dict(data, dll_path) \
+    def identify_dll_of_ver_by_dict(ver_adaptation, dll_path) \
             -> Tuple[Optional[bool], str, Optional[list], Optional[list]]:
-        cur_sw_ver = file_utils.get_file_version(dll_path)
-        ver_adaptation = data.get(cur_sw_ver, None)
-        if ver_adaptation is None:
-            return None, f"错误：未找到版本{cur_sw_ver}的适配", None, None
-
+        """使用特征码识别dll的状态"""
         # 一个版本可能有多个匹配，只要有一个匹配成功就返回
         for match in ver_adaptation:
+            print(match)
             original_list = match["original"]
             modified_list = match["modified"]
             has_original_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *original_list)

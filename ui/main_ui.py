@@ -189,6 +189,11 @@ class MainWindow:
             self.sw_notebook.add(self.sw_classes[sw].frame, text=self.sw_classes[sw].text)
         # 选择一个选项卡并触发事件
         current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.TAB)
+        # 防止选择到不存在的选项卡
+        if current_sw not in self.sw_classes:
+            # 重置选项卡为None,并重新加载
+            subfunc_file.save_a_global_setting(LocalCfg.TAB, None)
+            current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.TAB)
         self.sw_notebook.select(self.sw_classes[current_sw].frame)
         # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
         self.on_tab_change(_event=None)

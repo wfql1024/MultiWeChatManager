@@ -28,6 +28,8 @@ class MainFunc:
             if sw not in can_auto_start:
                 can_auto_start[sw] = set()
             sw_data = subfunc_file.get_sw_acc_data(sw)
+            if sw_data is None:
+                continue
             for acc in sw_data:
                 auto_start, = subfunc_file.get_sw_acc_data(sw, acc, auto_start=None)
                 if auto_start is True:

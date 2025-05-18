@@ -85,9 +85,15 @@ class AccKeys(str, Enum):
 
 
 class SW(str, Enum):
+    DEFAULT = "Default"
     WECHAT = "WeChat"
     WEIXIN = "Weixin"
     QQ = "QQ"
+    QQNT = "QQNT"
+    WXWORK = "WXWork"
+    DINGTALK = "DingTalk"
+    FEISHU = "Feishu"
+    BAIDU = "Baidu"
 
 
 class OnlineStatus(str, Enum):

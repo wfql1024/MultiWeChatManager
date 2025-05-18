@@ -27,20 +27,13 @@ class Config:
             LocalCfg.NEXT_CHECK_TIME: None,
             LocalCfg.USE_PROXY: "True",
         },
-        SW.WECHAT: {
+        SW.DEFAULT: {
             LocalCfg.VIEW: "tree",
             LocalCfg.LOGIN_SORT: "配置,True",
             LocalCfg.LOGOUT_SORT: "配置,True",
             LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
             LocalCfg.REST_MULTIRUN_MODE: "python",
-        },
-        SW.WEIXIN: {
-            LocalCfg.VIEW: "tree",
-            LocalCfg.LOGIN_SORT: "配置,True",
-            LocalCfg.LOGOUT_SORT: "配置,True",
-            LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            LocalCfg.REST_MULTIRUN_MODE: "python",
-        },
+        }
     }
 
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))

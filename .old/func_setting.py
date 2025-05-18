@@ -4,10 +4,11 @@ from tkinter import messagebox, simpledialog
 from typing import Union, Tuple
 
 import yaml
+import sw_utils
 
 from functions import subfunc_file
 from public_class.enums import LocalCfg, SW
-from utils import sw_utils, file_utils
+from utils import file_utils
 from utils.logger_utils import mylogger as logger
 
 
