@@ -1556,8 +1556,8 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         _, ip_btn_frame, _, ip_var = self._create_label_btn_entry_grid(proxy_detail_frame, "地址:", "")
         _, port_btn_frame, _, port_var = self._create_label_btn_entry_grid(proxy_detail_frame, "端口:", "")
         # 添加预设按钮
-        ip_presets, port_presets = subfunc_file.get_details_from_remote_setting_json(RemoteCfg.GLOBAL, "proxy",
-                                                                                     ip_presets=None, port_presets=None)
+        ip_presets, port_presets = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, "proxy",
+                                                               ip_presets=None, port_presets=None)
         customized_btn_ipad = int(Constants.CUS_BTN_PAD_X * 0.2)
         customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
 

@@ -80,7 +80,7 @@ class AccOperator:
 
             # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
             redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
-                subfunc_file.get_details_from_remote_setting_json(
+                subfunc_file.get_remote_cfg(
                     sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
             SwOperator.close_classes_but_sw_main_wnd(redundant_wnd_list, sw)
             SwOperator.kill_sw_multiple_processes(sw)
@@ -276,7 +276,7 @@ class AccOperator:
         data_path = SwInfoFunc.get_sw_data_dir(sw)
         if not data_path:
             return False, "无法获取WeChat数据路径"
-        config_path_suffix, cfg_items = subfunc_file.get_details_from_remote_setting_json(
+        config_path_suffix, cfg_items = subfunc_file.get_remote_cfg(
             sw, config_path_suffix=None, config_file_list=None)
 
         origin_acc_dict = dict()
@@ -346,7 +346,7 @@ class AccOperator:
                 "确认",
                 "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
         ):
-            redundant_wnd_classes, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+            redundant_wnd_classes, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
                 sw, redundant_wnd_class=None, executable=None, cfg_handle_regex_list=None)
             SwOperator.close_classes_but_sw_main_wnd(redundant_wnd_classes, sw)
             handle_utils.close_sw_mutex_by_handle(
@@ -354,7 +354,7 @@ class AccOperator:
             SwOperator.kill_sw_multiple_processes(sw)
             time.sleep(0.5)
             sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
-            login_wnd_class, = subfunc_file.get_details_from_remote_setting_json(sw, login_wnd_class=None)
+            login_wnd_class, = subfunc_file.get_remote_cfg(sw, login_wnd_class=None)
             wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
             print(wechat_hwnd)
             if wechat_hwnd:
@@ -419,7 +419,7 @@ class AccOperator:
                 pid, = subfunc_file.get_sw_acc_data(sw, account, pid=None)
                 display_name = AccInfoFunc.get_acc_origin_display_name(sw, account)
                 cleaned_display_name = StringUtils.clean_texts(display_name)
-                executable_name, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+                executable_name, = subfunc_file.get_remote_cfg(sw, executable=None)
                 process = psutil.Process(pid)
                 if process_utils.process_exists(pid) and process.name() == executable_name:
                     startupinfo = None
@@ -623,7 +623,7 @@ class AccInfoFunc:
         # print(sw, data_path, account)
         if not data_path:
             return "无配置路径"
-        config_path_suffix, config_files = subfunc_file.get_details_from_remote_setting_json(
+        config_path_suffix, config_files = subfunc_file.get_remote_cfg(
             sw, config_path_suffix=None, config_file_list=None)
         if not isinstance(config_files, list) or len(config_files) == 0:
             return "无法获取配置路径"
@@ -792,7 +792,7 @@ class AccInfoFunc:
         proc_dict = []
         logged_in_ids = set()
 
-        exe, excluded_dir_list = subfunc_file.get_details_from_remote_setting_json(
+        exe, excluded_dir_list = subfunc_file.get_remote_cfg(
             sw, executable=None, excluded_dir_list=None)
         if exe is None or excluded_dir_list is None:
             messagebox.showerror("错误", f"{sw}平台未适配")
@@ -846,7 +846,7 @@ class AccInfoFunc:
 
     @staticmethod
     def get_main_hwnd_of_accounts(sw, acc_list):
-        target_class, = subfunc_file.get_details_from_remote_setting_json(sw, main_wnd_class=None)
+        target_class, = subfunc_file.get_remote_cfg(sw, main_wnd_class=None)
         if target_class is None:
             messagebox.showerror("错误", f"{sw}平台未适配")
             return False
@@ -879,7 +879,7 @@ class AccInfoFunc:
         # 判断hwnd是否属于指定的pid
         if hwnd_utils.get_hwnd_details_of_(hwnd)["pid"] != pid:
             return False
-        expected_class, = subfunc_file.get_details_from_remote_setting_json(sw, main_wnd_class=None)
+        expected_class, = subfunc_file.get_remote_cfg(sw, main_wnd_class=None)
         class_name = win32gui.GetClassName(hwnd)
         # print(expected_class, class_name)
         if sw == SW.WECHAT:

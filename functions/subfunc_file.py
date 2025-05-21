@@ -124,16 +124,12 @@ def read_remote_cfg_in_rules():
         return try_read_remote_cfg_locally()
 
 
-def load_remote_cfg():
-    """
-    加载远程配置
-    :return:
-    """
+def load_remote_cfg() -> dict:
     data = JsonUtils.load_json(Config.REMOTE_SETTING_JSON_PATH)
     return data
 
 
-def get_details_from_remote_setting_json(*pre_nodes: str, **kwargs) -> Tuple[Any, ...]:
+def get_remote_cfg(*pre_nodes: str, **kwargs) -> Tuple[Any, ...]:
     """
     从远程设置json中获取数据
     :param pre_nodes: 选择的软件标签
@@ -143,6 +139,61 @@ def get_details_from_remote_setting_json(*pre_nodes: str, **kwargs) -> Tuple[Any
     try:
         data = load_remote_cfg()
         return DictUtils.get_nested_values(data, None, *pre_nodes, **kwargs)
+    except Exception as e:
+        logger.error(e)
+        return tuple()
+
+
+"""额外配置"""
+
+
+def load_extra_cfg() -> dict:
+    data = JsonUtils.load_json(Config.EXTRA_SETTING_JSON_PATH)
+    return data
+
+
+def save_extra_cfg(data):
+    return JsonUtils.save_json(Config.EXTRA_SETTING_JSON_PATH, data)
+
+
+def clear_some_extra_cfg(*addr) -> bool:
+    """
+    清空某平台的账号记录，在对平台重新设置后触发
+    :return: 是否成功
+    """
+    try:
+        print(f"清理{addr}处数据...")
+        data = load_extra_cfg()
+        DictUtils.clear_nested_values(data, *addr)
+        save_extra_cfg(data)
+        return True
+    except Exception as e:
+        logger.error(e)
+        return False
+
+
+def update_extra_cfg(*front_addr, **kwargs) -> bool:
+    """更新账户信息到 JSON"""
+    try:
+        data = load_extra_cfg()
+        success = DictUtils.set_nested_values(data, None, *front_addr, **kwargs)
+        save_extra_cfg(data)
+        return success
+    except Exception as e:
+        logger.error(e)
+        return False
+
+
+def get_extra_cfg(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
+    """
+    根据用户输入的变量名，获取对应的账户信息
+    :param front_addr: 前置地址，如：("wechat", "account1")
+    :param kwargs: 需要获取的键地址及其默认值（如 note="", nickname=None）
+    :return: 包含所请求数据的元组
+    """
+    try:
+        data = load_extra_cfg()
+        return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
     except Exception as e:
         logger.error(e)
         return tuple()
@@ -161,10 +212,6 @@ def load_setting():
 
 
 def save_setting(data):
-    """
-    保存设置
-    :return:
-    """
     return IniUtils.save_ini_from_dict(Config.SETTING_INI_PATH, data)
 
 
@@ -449,7 +496,7 @@ def get_avatar_url_from_file(sw, acc_list, data_dir):
 def get_avatar_url_from_other_sw(now_sw, now_acc_list):
     print("尝试用窃取法获取头像")
     changed = False
-    all_sw, = get_details_from_remote_setting_json("global", all_sw=None)
+    all_sw, = get_remote_cfg("global", all_sw=None)
     # print(all_sw)
 
     # 对所有其他软件进行遍历
@@ -459,7 +506,7 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
         if other_sw == now_sw:
             continue
 
-        other_sw_cut, = get_details_from_remote_setting_json(
+        other_sw_cut, = get_remote_cfg(
             other_sw, cut_to_compatible_id=None)
         if other_sw_cut is None:
             # 没有适配，跳过
@@ -469,7 +516,7 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
         other_sw_right_cut = (-other_sw_cut[1]) if other_sw_cut[1] != 0 else None
         # print(other_sw_left_cut, other_sw_right_cut)
 
-        now_sw_cut, = get_details_from_remote_setting_json(
+        now_sw_cut, = get_remote_cfg(
             now_sw, cut_to_compatible_id=None)
         if now_sw_cut is None:
             # 没有适配，跳过
@@ -535,7 +582,7 @@ def get_nickname_from_file(sw, acc_list, data_dir):
 def get_nickname_from_other_sw(now_sw, now_acc_list):
     print("尝试用窃取法获取昵称")
     changed = False
-    all_sw, = get_details_from_remote_setting_json("global", all_sw=None)
+    all_sw, = get_remote_cfg("global", all_sw=None)
     # print(all_sw)
 
     # 对所有其他软件进行遍历
@@ -545,7 +592,7 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
         if other_sw == now_sw:
             continue
 
-        other_sw_cut, = get_details_from_remote_setting_json(
+        other_sw_cut, = get_remote_cfg(
             other_sw, cut_to_compatible_id=None)
         if other_sw_cut is None:
             # 没有适配，跳过
@@ -555,7 +602,7 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
         other_sw_right_cut = (-other_sw_cut[1]) if other_sw_cut[1] != 0 else None
         # print(other_sw_left_cut, other_sw_right_cut)
 
-        now_sw_cut, = get_details_from_remote_setting_json(
+        now_sw_cut, = get_remote_cfg(
             now_sw, cut_to_compatible_id=None)
         if now_sw_cut is None:
             # 没有适配，跳过
@@ -591,7 +638,7 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
 
 
 def get_curr_wx_id_from_config_file(sw, data_dir):
-    config_path_suffix, config_files = get_details_from_remote_setting_json(
+    config_path_suffix, config_files = get_remote_cfg(
         sw, config_path_suffix=None, config_file_list=None)
     if config_files is None or len(config_files) == 0:
         return None

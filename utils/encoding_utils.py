@@ -1,4 +1,4 @@
-from typing import Any, Tuple, Union
+from typing import Any, Tuple, Union, Optional
 
 from utils.logger_utils import mylogger as logger
 
@@ -131,3 +131,41 @@ class ColorUtils:
         if is_hex:
             return ColorUtils.rgb_to_hex(result_rgb)
         return result_rgb
+
+
+class VersionUtils:
+    @staticmethod
+    def find_compatible_version(current_version: str, version_list: list) -> Optional[str]:
+        """
+        在版本列表中查找兼容版本（纯版本号降序匹配）
+
+        参数:
+            current_version: 当前版本号 (格式 "x.x.x.x")
+            version_list: 可用的版本号列表 (元素可能是 "x.x", "x.x.x" 或 "x.x.x.x")
+
+        返回:
+            匹配到的最大兼容版本号，如果没有则返回 None
+        """
+
+        def normalize_version(vers: str) -> tuple:
+            """将版本号转换为四位元组，不足补零"""
+            parts = list(map(int, vers.split('.')))
+            while len(parts) < 4:
+                parts.append(0)
+            return tuple(parts[:4])  # 确保只有四位
+
+        current = normalize_version(current_version)
+
+        # 过滤出所有<=当前版本的候选，并标准化
+        candidates = []
+        for ver in version_list:
+            norm_ver = normalize_version(ver)
+            if norm_ver <= current:
+                candidates.append((norm_ver, ver))
+
+        if not candidates:
+            return None
+
+        candidates.sort(reverse=True, key=lambda x: x[0])
+
+        return candidates[0][1]

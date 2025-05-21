@@ -26,15 +26,27 @@ class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
 
+        self.multirun_channel_menus_dict = {
+
+        }
+        self.multirun_channel_vars_dict = {
+
+        }
+        self.anti_revoke_channel_vars_dict = {
+
+        }
+        self.anti_revoke_channel_menus_dict = {
+
+        }
+        self.multirun_menu = None
+        self.anti_revoke_menu = None
         self.freely_multirun_var = None
-        self.anti_revoke_var = None
         self.sidebar_wnd_class = None
         self.sidebar_wnd = None
         self.call_mode_menu = None
         self.auto_start_menu = None
         self.path_error = None
         self.multiple_err = None
-        self.revoke_err = None
         self.help_menu = None
         self.rest_mode_menu = None
         self.settings_menu = None
@@ -131,7 +143,7 @@ class MenuUI:
             self.file_menu.entryconfig(f"查看DLL目录", state="disable")
 
         # -创建快捷启动
-        quick_start_sp, = subfunc_file.get_details_from_remote_setting_json(self.sw, support_quick_start=None)
+        quick_start_sp, = subfunc_file.get_remote_cfg(self.sw, support_quick_start=None)
         # print(f"支持快捷启动：{quick_start_sp}")
         self.file_menu.add_command(label="创建快捷启动",
                                    command=partial(SwOperator.create_multiple_lnk,
@@ -243,58 +255,101 @@ class MenuUI:
         # self.settings_menu.add_command(label=f"账号管理", command=self.open_acc_setting)
         # self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
-        # 防撤回和全局多开需要依赖dll路径，因此判断若无路径直接跳过菜单创建
-        if self.sw_class.dll_dir is not None:
-            # -防撤回
-            self.sw_class.anti_revoke, info = SwInfoFunc.identify_dll(
-                self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
-            anti_revoke = self.sw_class.anti_revoke
-            if anti_revoke is None:
-                if info == "不可用":
-                    self.settings_menu.add_command(label=f"防撤回", state="disabled")
-                elif info.startswith("错误"):
-                    self.revoke_err = tk.Menu(self.settings_menu, tearoff=False)
-                    self.settings_menu.add_cascade(label="！防撤回", menu=self.revoke_err, foreground="red")
-                    self.revoke_err.add_command(label=f"[点击复制]{info}", foreground="red",
-                                                command=lambda i=info: self.root.clipboard_append(i))
-            else:
-                self.anti_revoke_var = tk.BooleanVar(value=anti_revoke)
-                self.settings_menu.add_checkbutton(label=f"防撤回", variable=self.anti_revoke_var,
-                                                   command=partial(self.toggle_patch_mode, mode=RemoteCfg.REVOKE))
-            # -全局多开
-            self.sw_class.freely_multirun, info = SwInfoFunc.identify_dll(
-                self.sw, RemoteCfg.MULTI, self.sw_class.dll_dir)
-            freely_multirun = self.sw_class.freely_multirun
-            if freely_multirun is None:
-                if info == "不可用":
-                    self.settings_menu.add_command(label=f"全局多开", state="disabled")
-                elif info.startswith("错误"):
-                    self.multiple_err = tk.Menu(self.settings_menu, tearoff=False)
-                    self.settings_menu.add_cascade(label="！全局多开", menu=self.multiple_err, foreground="red")
-                    self.multiple_err.add_command(label=f"[点击复制]{info}", foreground="red",
-                                                  command=lambda i=info: self.root.clipboard_append(i))
-            else:
-                self.freely_multirun_var = tk.BooleanVar(value=freely_multirun)
-                self.settings_menu.add_checkbutton(label=f"全局多开", variable=self.freely_multirun_var,
-                                                   command=partial(self.toggle_patch_mode, mode=RemoteCfg.MULTI))
+        # >防撤回
+        res_dict, msg = SwInfoFunc.identify_dll(
+            self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
+        self.anti_revoke_menu = tk.Menu(self.settings_menu, tearoff=False)
+        if res_dict is None:
+            self.settings_menu.add_cascade(label="！防撤回", menu=self.anti_revoke_menu, foreground="red")
+            self.anti_revoke_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
+                                              command=lambda i=msg: self.root.clipboard_append(i))
         else:
-            self.sw_class.freely_multirun = freely_multirun = None
-            self.sw_class.anti_revoke = None
+            self.settings_menu.add_cascade(label="防撤回", menu=self.anti_revoke_menu)
+            for channel, res_tuple in res_dict.items():
+                if not isinstance(res_tuple, tuple) or len(res_tuple) != 4:
+                    continue
+                channel_des, = subfunc_file.get_remote_cfg(
+                    self.sw, RemoteCfg.REVOKE.value, "channel", **{channel: None})
+                print(channel_des)
+                channel_label = channel
+                channel_introduce = "暂无介绍"
+                channel_author = "未知"
+                if channel_des is not None and isinstance(channel_des, dict):
+                    if "label" in channel_des:
+                        channel_label = channel_des["label"]
+                    if "introduce" in channel_des:
+                        channel_introduce = channel_des["introduce"]
+                    if "author" in channel_des:
+                        channel_author = channel_des["author"]
+                anti_revoke, info, _, _ = res_tuple
+                if anti_revoke is None:
+                    menu = self.anti_revoke_channel_menus_dict[channel] = tk.Menu(
+                        self.anti_revoke_menu, tearoff=False)
+                    self.anti_revoke_menu.add_cascade(label=channel_label, menu=menu)
+                    menu.add_command(label=f"[点击复制]{info}", foreground="red",
+                                     command=lambda i=info: self.root.clipboard_append(i))
+                else:
+                    self.anti_revoke_channel_vars_dict[channel] = tk.BooleanVar(value=anti_revoke)
+                    self.anti_revoke_menu.add_checkbutton(
+                        label=channel_label, variable=self.anti_revoke_channel_vars_dict[channel],
+                        command=partial(self.toggle_patch_mode, mode=RemoteCfg.REVOKE, channel=channel))
+        # >全局多开
+        self.sw_class.freely_multirun = None
+        res_dict, msg = SwInfoFunc.identify_dll(
+            self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
+        self.multirun_menu = tk.Menu(self.settings_menu, tearoff=False)
+        if res_dict is None:
+            self.settings_menu.add_cascade(label="！全局多开", menu=self.multirun_menu, foreground="red")
+            self.multirun_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
+                                              command=lambda i=msg: self.root.clipboard_append(i))
+        else:
+            self.settings_menu.add_cascade(label="全局多开", menu=self.multirun_menu)
+            for channel, res_tuple in res_dict.items():
+                if not isinstance(res_tuple, tuple) or len(res_tuple) != 4:
+                    continue
+                channel_des, = subfunc_file.get_remote_cfg(
+                    self.sw, RemoteCfg.MULTI.value, "channel", **{channel: None})
+                print(channel_des)
+                channel_label = channel
+                channel_introduce = "暂无介绍"
+                channel_author = "未知"
+                if channel_des is not None and isinstance(channel_des, dict):
+                    if "label" in channel_des:
+                        channel_label = channel_des["label"]
+                    if "introduce" in channel_des:
+                        channel_introduce = channel_des["introduce"]
+                    if "author" in channel_des:
+                        channel_author = channel_des["author"]
+                channel_freely_multirun, info, _, _ = res_tuple
+                if channel_freely_multirun is None:
+                    menu = self.multirun_channel_menus_dict[channel] = tk.Menu(
+                        self.multirun_menu, tearoff=False)
+                    self.multirun_menu.add_cascade(label=channel_label, menu=menu)
+                    menu.add_command(label=f"[点击复制]{info}", foreground="red",
+                                     command=lambda i=info: self.root.clipboard_append(i))
+                else:
+                    # 只要有freely_multirun为True，就将其设为True
+                    if channel_freely_multirun is True:
+                        self.sw_class.freely_multirun = True
+                    self.multirun_channel_vars_dict[channel] = tk.BooleanVar(value=channel_freely_multirun)
+                    self.multirun_menu.add_checkbutton(
+                        label=channel_label, variable=self.multirun_channel_vars_dict[channel],
+                        command=partial(self.toggle_patch_mode, mode=RemoteCfg.MULTI, channel=channel))
 
         # >多开子程序选择
         # 检查状态
-        if freely_multirun is True:
+        if self.sw_class.freely_multirun is True:
             self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN
-            self.settings_menu.add_command(label="其余模式", state="disabled")
+            self.multirun_menu.add_command(label="其余模式", state="disabled")
         else:
-            self.rest_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
-            self.settings_menu.add_cascade(label="其余模式", menu=self.rest_mode_menu)
+            self.rest_mode_menu = tk.Menu(self.multirun_menu, tearoff=False)
+            self.multirun_menu.add_cascade(label="其余模式", menu=self.rest_mode_menu)
             rest_mode_value = self.global_settings_value.rest_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(
                 self.sw, LocalCfg.REST_MULTIRUN_MODE)
             print("当前项", rest_mode_value)
             self.sw_class.multirun_mode = rest_mode_value
             rest_mode_var = self.global_settings_var.rest_mode = tk.StringVar(value=rest_mode_value)  # 设置初始选中的子程序
-            python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
+            python_sp, python_s_sp, handle_sp = subfunc_file.get_remote_cfg(
                 self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
             # 添加 Python 的单选按钮
             self.rest_mode_menu.add_radiobutton(
@@ -344,7 +399,7 @@ class MenuUI:
             "call_mode")
         call_mode_var = self.global_settings_var.call_mode = tk.StringVar(value=call_mode_value)  # 设置初始选中的子程序
 
-        python_sp, python_s_sp, handle_sp = subfunc_file.get_details_from_remote_setting_json(
+        python_sp, python_s_sp, handle_sp = subfunc_file.get_remote_cfg(
             self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
         # 添加 HANDLE 的单选按钮
         self.call_mode_menu.add_radiobutton(
@@ -538,10 +593,10 @@ class MenuUI:
         global_setting_wnd = tk.Toplevel(self.root)
         GlobalSettingWnd(global_setting_wnd, "全局设置")
 
-    def toggle_patch_mode(self, mode):
+    def toggle_patch_mode(self, mode, channel):
         """切换是否全局多开或防撤回"""
         try:
-            success, msg = SwOperator.switch_dll(self.sw, mode, self.sw_class.dll_dir)  # 执行切换操作
+            success, msg = SwOperator.switch_dll(self.sw, mode, channel, self.sw_class.dll_dir)  # 执行切换操作
             if success:
                 messagebox.showinfo("提示", f"{msg}")
             else:

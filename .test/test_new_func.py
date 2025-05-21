@@ -4,6 +4,7 @@ from unittest import TestCase
 import psutil
 
 from functions import subfunc_file
+from functions.sw_func import SwOperatorUtils, SwInfoUtils
 from resources import Config
 from ui.sidebar_ui import SidebarWnd, WndProperties
 from utils import handle_utils, hwnd_utils, pywinhandle
@@ -13,7 +14,7 @@ from utils.patch_utils import *
 
 class Test(TestCase):
     def test_multi_new_weixin(self):
-        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
             "Weixin", redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
         # 关闭配置文件锁
         handle_utils.close_sw_mutex_by_handle(
@@ -174,3 +175,21 @@ class Test(TestCase):
             handle_names
         )
         print(result)
+
+    def test_search_from_features(self):
+        dll_path = r'D:\software\Tencent\Weixin\4.0.5.13\Weixin.dll'
+        original_features = [
+            "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+            "6b ?? ?? 73 48 89 05 3a db 7f 00 66",
+            "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+            "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+        ]
+        modified_features = [
+            "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+            "8B B5 20 04 00 00 81 C6 12 27 00 00",
+            "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 5D 00",
+            "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 BC 8C"
+        ]
+        features_tuple = (original_features, modified_features)
+        res = SwInfoUtils.search_patterns_and_replaces_by_features(dll_path, features_tuple)
+        print(res)

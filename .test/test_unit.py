@@ -29,7 +29,7 @@ class Test(TestCase):
 
     def test_close_sw_mutex_by_handle(self):
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
-            subfunc_file.get_details_from_remote_setting_json(
+            subfunc_file.get_remote_cfg(
                 "Weixin", redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)

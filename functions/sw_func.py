@@ -1,5 +1,6 @@
 import glob
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -21,34 +22,115 @@ from public_class.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Config
 from utils import file_utils, process_utils, pywinhandle, handle_utils, hwnd_utils, sys_utils, image_utils
+from utils.better_wx.inner_utils import wildcard_tokenize, patt2hex
+from utils.encoding_utils import VersionUtils
 from utils.file_utils import DllUtils
 from utils.hwnd_utils import TkWndUtils
 from utils.logger_utils import mylogger as logger
 
 
 class SwInfoFunc:
-    @staticmethod
-    def identify_dll(sw, mode, dll_dir):
-        """检查当前的dll状态，判断是否为全局多开或者不可用"""
-        # 条件检查
-        config_data = subfunc_file.read_remote_cfg_in_rules()
-        if not config_data:
-            return None, "错误：没有数据"
-        patch_dll, ver_dict = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None, **{mode: None})
-        if patch_dll is None or ver_dict is None:
-            return None, f"错误：平台未适配{mode}"
+    """
+    当前版本，所使用的适配表结构如下：
+    平台sw -> 补丁模式mode -> 分支(精确precise,特征feature,说明channel) -> 版本号 -> 频道 -> 特征码
+    其中,
+        precise: 精确版本适配，只适配当前版本. 结构为 版本号 -> 频道 -> 特征码
+        feature: 特征码适配，适配当前版本及其兼容版本. 结构为 版本号 -> 频道 -> 特征码
+        channel: 频道，区分不同特征/作者的适配. 结构为 频道 -> (标题,说明,作者)
+    """
 
-        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
+    @staticmethod
+    def _get_sw_ver(sw, dll_path):
+        """获取软件版本"""
         cur_sw_ver = file_utils.get_file_version(dll_path)
         if cur_sw_ver is None:
             exec_path = SwInfoFunc.get_sw_install_path(sw)
             cur_sw_ver = file_utils.get_file_version(exec_path)
+        return cur_sw_ver
 
-        if cur_sw_ver not in ver_dict:
+    @staticmethod
+    def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict) -> Tuple[Optional[dict], str]:
+        """通过精确版本分支进行识别"""
+        cur_sw_ver = SwInfoFunc._get_sw_ver(sw, dll_path)
+        if cur_sw_ver is None:
+            return None, f"错误：识别不到版本"
+        if "precise" not in mode_branches_dict:
+            return None, f"错误：无法通过精确版本找到适配"
+        precise_vers_dict = mode_branches_dict["precise"]
+        if cur_sw_ver not in precise_vers_dict:
             return None, f"错误：未找到版本{cur_sw_ver}的适配"
-        ver_adaptation = ver_dict[cur_sw_ver]
-        tag, msg, _, _ = SwInfoUtils.identify_dll_of_ver_by_dict(ver_adaptation, dll_path)
-        return tag, msg
+        ver_channels_dict = precise_vers_dict[cur_sw_ver]
+        res_dict = SwInfoUtils.identify_dll_of_ver_by_dict(ver_channels_dict, dll_path)
+        if len(res_dict) == 0:
+            return None, f"错误：该版本{cur_sw_ver}没有适配"
+        return res_dict, f"成功：找到版本{cur_sw_ver}的适配"
+
+    @staticmethod
+    def _update_adaptation_from_remote_to_extra(sw, mode, dll_dir):
+        """根据远程表内容更新额外表"""
+        config_data = subfunc_file.read_remote_cfg_in_rules()
+        if not config_data:
+            return
+        patch_dll, mode_branches_dict = subfunc_file.get_remote_cfg(sw, patch_dll=None, **{mode: None})
+        if patch_dll is None or mode_branches_dict is None:
+            return
+        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
+        # SwInfoFunc._search_by_precise_and_add_to_extra(sw, mode, dll_path, mode_branches_dict)
+        # 尝试寻找兼容版本并添加到额外表中
+        SwInfoFunc._search_by_feature_and_add_to_extra(sw, mode, dll_path, mode_branches_dict)
+
+    @staticmethod
+    def _identify_dll_by_extra_cfg(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:
+        config_data = subfunc_file.load_extra_cfg()
+        if not config_data:
+            return None, "错误：没有数据"
+        patch_dll, mode_branches_dict = subfunc_file.get_extra_cfg(sw, patch_dll=None, **{mode: None})
+        if patch_dll is None or mode_branches_dict is None:
+            return None, f"错误：平台未适配{mode}"
+        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
+        return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict)
+
+    @staticmethod
+    def _search_by_feature_and_add_to_extra(sw, mode, dll_path, mode_branches_dict):
+        """尝试寻找兼容版本并添加到额外表中"""
+        cur_sw_ver = SwInfoFunc._get_sw_ver(sw, dll_path)
+        subfunc_file.update_extra_cfg(sw, patch_dll=os.path.basename(dll_path))
+        if "precise" in mode_branches_dict:
+            precise_vers_dict = mode_branches_dict["precise"]
+            if cur_sw_ver in precise_vers_dict:
+                # 用精确版本特征码查找适配
+                precise_ver_adaptations = precise_vers_dict[cur_sw_ver]
+                for channel, adaptation in precise_ver_adaptations.items():
+                    subfunc_file.update_extra_cfg(
+                        sw, mode, "precise", cur_sw_ver, **{channel: adaptation})
+
+        if "feature" in mode_branches_dict:
+            feature_vers = list(mode_branches_dict["feature"].keys())
+            compatible_ver = VersionUtils.find_compatible_version(cur_sw_ver, feature_vers)
+            ver_channels_dict = subfunc_file.get_extra_cfg(sw, mode, "precise", cur_sw_ver)
+            if compatible_ver:
+                # 用兼容版本特征码查找适配
+                compatible_ver_adaptations = mode_branches_dict["feature"][compatible_ver]
+                for channel in compatible_ver_adaptations.keys():
+                    if channel in ver_channels_dict:
+                        print("已经存在精确适配,跳过")
+                        continue
+                    original_feature = compatible_ver_adaptations[channel]["original"]
+                    modified_feature = compatible_ver_adaptations[channel]["modified"]
+                    result_dict = SwInfoUtils.search_patterns_and_replaces_by_features(
+                        dll_path, (original_feature, modified_feature))
+                    if result_dict:
+                        # 添加到额外表中
+                        subfunc_file.update_extra_cfg(
+                            sw, mode, "precise", cur_sw_ver, **{channel: result_dict})
+
+    @staticmethod
+    def identify_dll(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:
+        """检查当前的dll状态，返回结果字典,若没有适配则返回None"""
+        if dll_dir is None:
+            return None, "错误：没有找到dll目录"
+        SwInfoFunc._update_adaptation_from_remote_to_extra(sw, mode, dll_dir)
+        return SwInfoFunc._identify_dll_by_extra_cfg(sw, mode, dll_dir)
 
     @staticmethod
     def get_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
@@ -119,75 +201,89 @@ class SwOperator:
                 logger.error(ex)
 
     @staticmethod
-    def switch_dll(sw, mode, dll_dir) -> Tuple[Optional[bool], str]:
+    def switch_dll(sw, mode, channel, dll_dir) -> Tuple[Optional[bool], str]:
         """
         切换全局多开状态
+        :param channel:
         :param sw: 平台
         :param mode: 修改的模式
         :param dll_dir: dll目录
         :return: 成功与否，提示信息
         """
-        if mode == RemoteCfg.MULTI:
-            mode_text = "全局多开"
-        elif mode == RemoteCfg.REVOKE:
-            mode_text = "防撤回"
-        else:
-            return False, "未知模式"
-
-        config_data = subfunc_file.read_remote_cfg_in_rules()
-        if not config_data:
-            return False, "没有数据"
-        executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
-        if executable is None:
-            return False, "该平台暂未适配"
-        # 提醒用户手动终止微信进程
-        answer = SwOperator._ask_for_manual_terminate_or_force(executable)
-        if answer is not True:
-            return False, "用户取消操作"
-
-        # 条件检查
-        patch_dll, ver_dict = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None, **{mode: None})
-        if patch_dll is None or ver_dict is None:
-            return False, "该平台暂未适配"
-
-        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-        cur_sw_ver = file_utils.get_file_version(dll_path)
-        if cur_sw_ver is None:
-            exec_path = SwInfoFunc.get_sw_install_path(sw)
-            cur_sw_ver = file_utils.get_file_version(exec_path)
-
-        if cur_sw_ver not in ver_dict:
-            return None, f"错误：未找到版本{cur_sw_ver}的适配"
-        ver_adaptation = ver_dict[cur_sw_ver]
-        # 定义目标路径和文件名
-        tag, msg, original_patterns, modified_patterns = SwInfoUtils.identify_dll_of_ver_by_dict(
-            ver_adaptation, dll_path)
-        dll_path = os.path.join(dll_dir, patch_dll)
         try:
-            if tag is True:
-                print(f"当前：{mode}已开启")
-                success = DllUtils.batch_atomic_replace_hex_patterns(
-                    dll_path, (modified_patterns, original_patterns))
-                if success:
-                    return True, f"成功关闭:{mode_text}"
+            if mode == RemoteCfg.MULTI:
+                mode_text = "全局多开"
+            elif mode == RemoteCfg.REVOKE:
+                mode_text = "防撤回"
+            else:
+                return False, "未知模式"
 
-            elif tag is False:
-                print(f"当前：{mode}未开启")
-                SwOperator._backup_dll(sw, dll_dir)
+            # 条件检查及询问用户
+            config_data = subfunc_file.read_remote_cfg_in_rules()
+            if not config_data:
+                return False, "没有数据"
+            executable, = subfunc_file.get_remote_cfg(sw, executable=None)
+            if executable is None:
+                return False, "该平台暂未适配"
+            # 提醒用户手动终止微信进程
+            answer = SwOperator._ask_for_manual_terminate_or_force(executable)
+            if answer is not True:
+                return False, "用户取消操作"
 
-                success = DllUtils.batch_atomic_replace_hex_patterns(
-                    dll_path, (original_patterns, modified_patterns))
-                if success:
-                    return True, f"成功开启:{mode_text}"
-            return False, f"切换{mode_text}失败！请稍后重试！"
-        except (psutil.AccessDenied, PermissionError, Exception) as e:
-            error_msg = {
-                PermissionError: "权限不足，无法修改 DLL 文件。",
-                psutil.AccessDenied: "无法终止微信进程，请以管理员身份运行程序。",
-                Exception: "发生错误。"
-            }.get(type(e), "发生未知错误。")
-            logger.error(f"切换{mode_text}时发生错误: {str(e)}")
-            return False, f"切换{mode_text}时发生错误: {str(e)}\n{error_msg}"
+            # 操作过程
+            res, msg = SwInfoFunc.identify_dll(sw, mode, dll_dir)
+            if res is None:
+                return False, msg
+            if channel not in res:
+                return False, f"错误：未找到频道{channel}的适配"
+            channel_result_tuple = res[channel]
+            if not isinstance(channel_result_tuple, tuple) or len(channel_result_tuple) != 4:
+                return False, f"错误：频道{channel}的适配格式不正确"
+            tag, msg, original_patterns, modified_patterns = channel_result_tuple
+            patch_dll, ver_dict = subfunc_file.get_remote_cfg(sw, patch_dll=None, **{mode: None})
+            if patch_dll is None or ver_dict is None:
+                return False, "该平台暂未适配"
+            #
+            # dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
+            # cur_sw_ver = file_utils.get_file_version(dll_path)
+            # if cur_sw_ver is None:
+            #     exec_path = SwInfoFunc.get_sw_install_path(sw)
+            #     cur_sw_ver = file_utils.get_file_version(exec_path)
+            #
+            # if cur_sw_ver not in ver_dict:
+            #     return None, f"错误：未找到版本{cur_sw_ver}的适配"
+            # ver_adaptation = ver_dict[cur_sw_ver]
+            # # 定义目标路径和文件名
+            # tag, msg, original_patterns, modified_patterns = SwInfoUtils.identify_dll_of_ver_by_dict(
+            #     ver_adaptation, dll_path)
+            dll_path = os.path.join(dll_dir, patch_dll)
+            try:
+                if tag is True:
+                    print(f"当前：{mode}已开启")
+                    success = DllUtils.batch_atomic_replace_hex_patterns(
+                        dll_path, (modified_patterns, original_patterns))
+                    if success:
+                        return True, f"成功关闭:{mode_text}"
+
+                elif tag is False:
+                    print(f"当前：{mode}未开启")
+                    SwOperator._backup_dll(sw, dll_dir)
+
+                    success = DllUtils.batch_atomic_replace_hex_patterns(
+                        dll_path, (original_patterns, modified_patterns))
+                    if success:
+                        return True, f"成功开启:{mode_text}"
+                return False, f"切换{mode_text}失败！请稍后重试！"
+            except (psutil.AccessDenied, PermissionError, Exception) as e:
+                error_msg = {
+                    PermissionError: "权限不足，无法修改 DLL 文件。",
+                    psutil.AccessDenied: "无法终止微信进程，请以管理员身份运行程序。",
+                    Exception: "发生错误。"
+                }.get(type(e), "发生未知错误。")
+                logger.error(f"切换{mode_text}时发生错误: {str(e)}")
+                return False, f"切换{mode_text}时发生错误: {str(e)}\n{error_msg}"
+        except Exception as e:
+            return False, f"{str(e)}"
 
     @staticmethod
     def _ask_for_manual_terminate_or_force(executable):
@@ -217,7 +313,7 @@ class SwOperator:
         # 获取桌面路径
         desktop_path = winshell.desktop()
 
-        patch_dll, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None)
+        patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
         dll_path = os.path.join(dll_dir, patch_dll)
 
         bak_path = os.path.join(dll_dir, f"{patch_dll}.bak")
@@ -255,7 +351,7 @@ class SwOperator:
 
         # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
         start_time = time.time()
-        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
             sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
         if redundant_wnd_list is None or login_wnd_class is None or cfg_handles is None or executable_name is None:
             messagebox.showinfo("错误", "尚未适配！")
@@ -311,7 +407,7 @@ class SwOperator:
     def _organize_sw_mutex_dict_from_record(sw):
         """从本地记录拿到当前时间下系统中所有微信进程的互斥体情况"""
         print("获取互斥体情况...")
-        executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+        executable, = subfunc_file.get_remote_cfg(sw, executable=None)
         if executable is None:
             return dict()
         pids = process_utils.get_process_ids_by_name(executable)
@@ -389,12 +485,12 @@ class SwOperator:
 
     @staticmethod
     def kill_mutex_by_forced_inner_mode(sw, multirun_mode):
-        executable_name, lock_handles, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+        executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
             sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
         # ————————————————————————————————python[强力]————————————————————————————————
         if multirun_mode == MultirunMode.PYTHON:
             pids = process_utils.get_process_ids_by_name(executable_name)
-            handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+            handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
             if handle_regex_list is None:
                 return True
             handle_names = [handle["handle_name"] for handle in handle_regex_list]
@@ -419,11 +515,11 @@ class SwOperator:
     @staticmethod
     def _kill_mutex_by_inner_mode(sw, multirun_mode):
         """关闭平台进程的所有互斥体，如果不选择python模式，则使用handle模式"""
-        executable_name, lock_handles, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+        executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
             sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
         # ————————————————————————————————python————————————————————————————————
         if multirun_mode == "python":
-            handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+            handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
             if handle_regex_list is None:
                 return True
             handle_names = [handle["handle_name"] for handle in handle_regex_list]
@@ -454,7 +550,7 @@ class SwOperator:
         pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
         if pid is None:
             return False
-        handle_regex_list, = subfunc_file.get_details_from_remote_setting_json(sw, lock_handle_regex_list=None)
+        handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
         if handle_regex_list is None:
             return True
         handle_names = [handle["handle_name"] for handle in handle_regex_list]
@@ -473,7 +569,7 @@ class SwOperator:
 
     @staticmethod
     def get_login_size(sw, multirun_mode):
-        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_details_from_remote_setting_json(
+        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
             sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
         print(login_wnd_class)
         SwOperator.close_classes_but_sw_main_wnd(redundant_wnd_list, sw)
@@ -518,7 +614,7 @@ class SwOperator:
         """打开配置文件夹"""
         data_path = SwInfoFunc.get_sw_data_dir(sw)
         if os.path.exists(data_path):
-            config_path_suffix, = subfunc_file.get_details_from_remote_setting_json(sw, config_path_suffix=None)
+            config_path_suffix, = subfunc_file.get_remote_cfg(sw, config_path_suffix=None)
             if config_path_suffix is None:
                 messagebox.showinfo("提醒", f"{sw}平台还没有适配")
                 return
@@ -535,7 +631,7 @@ class SwOperator:
         )
         if confirm:
             data_path = SwInfoFunc.get_sw_data_dir(sw)
-            config_path_suffix, config_file_list = subfunc_file.get_details_from_remote_setting_json(
+            config_path_suffix, config_file_list = subfunc_file.get_remote_cfg(
                 sw, config_path_suffix=None, config_file_list=None)
             if (config_path_suffix is None or config_file_list is None or
                     not isinstance(config_file_list, list) or len(config_file_list) == 0):
@@ -567,7 +663,7 @@ class SwOperator:
         """打开注册表所在文件夹，并将光标移动到文件"""
         dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
         if os.path.exists(dll_dir):
-            dll_file, = subfunc_file.get_details_from_remote_setting_json(sw, patch_dll=None)
+            dll_file, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
             if dll_file is None:
                 messagebox.showinfo("提醒", f"{sw}平台还没有适配")
                 return
@@ -731,20 +827,20 @@ class SwInfoUtils:
             return False
         print(path_type)
         if path_type == LocalCfg.INST_PATH:
-            executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+            executable, = subfunc_file.get_remote_cfg(sw, executable=None)
             path_ext = os.path.splitext(path)[1].lower()
             exe_ext = os.path.splitext(executable)[1].lower()
             return path_ext == exe_ext
         elif path_type == LocalCfg.DATA_DIR:
-            suffix, = subfunc_file.get_details_from_remote_setting_json(sw, data_dir_check_suffix=None)
+            suffix, = subfunc_file.get_remote_cfg(sw, data_dir_check_suffix=None)
             return os.path.isdir(os.path.join(path, suffix))
         elif path_type == LocalCfg.DLL_DIR:
-            suffix, = subfunc_file.get_details_from_remote_setting_json(sw, dll_dir_check_suffix=None)
+            suffix, = subfunc_file.get_remote_cfg(sw, dll_dir_check_suffix=None)
             return os.path.isfile(os.path.join(path, suffix))
 
     @staticmethod
     def get_sw_install_path_from_process(sw: str) -> list:
-        executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+        executable, = subfunc_file.get_remote_cfg(sw, executable=None)
         results = []
         for process in psutil.process_iter(['name', 'exe']):
             if process.name() == executable:
@@ -756,7 +852,7 @@ class SwInfoUtils:
 
     @staticmethod
     def get_sw_install_path_from_machine_register(sw: str) -> list:
-        sub_key, executable = subfunc_file.get_details_from_remote_setting_json(
+        sub_key, executable = subfunc_file.get_remote_cfg(
             sw, mac_reg_sub_key=None, executable=None)
         results = []
         try:
@@ -779,7 +875,7 @@ class SwInfoUtils:
 
     @staticmethod
     def get_sw_install_path_from_user_register(sw: str) -> list:
-        sub_key, executable = subfunc_file.get_details_from_remote_setting_json(
+        sub_key, executable = subfunc_file.get_remote_cfg(
             sw, user_reg_sub_key=None, executable=None)
         results = []
         try:
@@ -795,7 +891,7 @@ class SwInfoUtils:
 
     @staticmethod
     def get_sw_install_path_by_guess(sw: str) -> list:
-        suffix, = subfunc_file.get_details_from_remote_setting_json(sw, inst_path_guess_suffix=None)
+        suffix, = subfunc_file.get_remote_cfg(sw, inst_path_guess_suffix=None)
         guess_paths = [
             os.path.join(os.environ.get('ProgramFiles'), suffix).replace('\\', '/'),
             os.path.join(os.environ.get('ProgramFiles(x86)'), suffix).replace('\\', '/'),
@@ -804,7 +900,7 @@ class SwInfoUtils:
 
     @staticmethod
     def get_sw_data_dir_from_user_register(sw: str) -> list:
-        sub_key, dir_name = subfunc_file.get_details_from_remote_setting_json(
+        sub_key, dir_name = subfunc_file.get_remote_cfg(
             sw, user_reg_sub_key=None, data_dir_name=None)
         results = []
         try:
@@ -819,7 +915,7 @@ class SwInfoUtils:
 
     @staticmethod
     def get_sw_data_dir_by_guess(sw: str) -> list:
-        data_dir_name, data_dir_guess_suffix = subfunc_file.get_details_from_remote_setting_json(
+        data_dir_name, data_dir_guess_suffix = subfunc_file.get_remote_cfg(
             sw, data_dir_name=None, data_dir_guess_suffix=None)
         guess_paths = [
             os.path.join(os.path.expanduser('~'), 'Documents', data_dir_name).replace('\\', '/'),
@@ -828,7 +924,7 @@ class SwInfoUtils:
 
     @staticmethod
     def get_sw_dll_dir_by_memo_maps(sw: str) -> list:
-        dll_name, executable = subfunc_file.get_details_from_remote_setting_json(
+        dll_name, executable = subfunc_file.get_remote_cfg(
             sw, dll_dir_check_suffix=None, executable=None)
         results = []
         pids = process_utils.get_process_ids_by_name(executable)
@@ -854,30 +950,164 @@ class SwInfoUtils:
         return results
 
     @staticmethod
-    def identify_dll_of_ver_by_dict(ver_adaptation, dll_path) \
-            -> Tuple[Optional[bool], str, Optional[list], Optional[list]]:
-        """使用特征码识别dll的状态"""
-        # 一个版本可能有多个匹配，只要有一个匹配成功就返回
-        for match in ver_adaptation:
-            print(match)
-            original_list = match["original"]
-            modified_list = match["modified"]
+    def get_replacement_pairs(regex, repl_bytes, data):
+        matches = list(regex.finditer(data))
+        replacement_pairs = []
+
+        for match in matches:
+            original = match.group()  # 原始匹配的字节串
+            replaced = regex.sub(repl_bytes, original)  # 替换后的字节串
+            replacement_pairs.append((original, replaced))
+
+        return replacement_pairs
+
+    @staticmethod
+    def bytes_to_hex_str(byte_data: bytes) -> str:
+        """将 bytes 转换为 'xx xx xx' 形式的十六进制字符串"""
+        return ' '.join([f"{byte:02x}" for byte in byte_data])
+
+    @staticmethod
+    def search_patterns_and_replaces_by_features(dll_path, features_tuple: tuple):
+        """
+        从特征列表中搜索特征码并替换
+        :param dll_path: DLL文件
+        :param features_tuple: 特征码列表二元组(原始特征码列表，补丁特征码列表)
+        :return: 替换后的二进制数据
+        """
+        # 检查特征码长度是否一致
+        original_features, modified_features = features_tuple
+        if len(original_features) != len(modified_features):
+            print(f"[ERR] Original and modified features length mismatch")
+            return None
+
+        result_dict = {
+            "original": [],
+            "modified": []
+        }
+
+        # data = b'\x89\xF3\x12\xA0\x75\x21\x48\xB8\x72\x65\x76\x6F\x6B\x65\x6D\x73\x48\x89\x05\x3A\xDB\x7F\x00\x66\xC7\x05\x44\x12\x91\xFF\x67\x00\xC6\x05\x88\x42\x33\x11\x01\x48\x8D\xF0\xCC\x21\x9E'
+        with open(dll_path, "rb") as f:
+            data = f.read()
+        # print(f"原始数据: {SwInfoUtils.bytes_to_hex_str(data)}")
+        for original_feature, modified_feature in zip(original_features, modified_features):
+            print("--------------------------------------------------------")
+            print(f"原始特征码: {original_feature}")
+            print(f"补丁特征码: {modified_feature}")
+            # print("分词器处理:去除末尾的省略号;若开头有省略号,则识别为{省略号}")
+            listed_original_hex = wildcard_tokenize(original_feature)
+            listed_modified_hex = wildcard_tokenize(modified_feature)
+            # print("判断类型:若...在开头,则以??补充至相同长度;...仅能出现在开头或不存在,否则报错")
+            if listed_modified_hex[0] is ...:
+                listed_modified_hex = ["??"] * (
+                            len(listed_original_hex) - len(listed_modified_hex) + 1) + listed_modified_hex[1:]
+            else:
+                if ... in listed_original_hex:
+                    print(f"[ERR] Wildcard <{patt2hex(listed_original_hex)}> has invalid token ...")
+                    continue
+                elif ... in listed_modified_hex:
+                    print(f"[ERR] Wildcard <{patt2hex(listed_modified_hex)}> has invalid token ...")
+                    continue
+            # print("对...不在开头的情况,在末尾补充??至相同长度")
+            if len(listed_modified_hex) < len(listed_original_hex):
+                listed_modified_hex += ["??"] * (len(listed_original_hex) - len(listed_modified_hex))
+            if len(listed_modified_hex) != len(listed_original_hex):
+                print(f"[ERR] Pattern and listed_modified_hex length mismatch")
+                continue
+            print(f"> 特征码翻译: {patt2hex(listed_original_hex, 0)} => {patt2hex(listed_modified_hex, 0)}")
+
+            # print(f"构建正则表达式和替换模式：对原始的:将??替换为(.);对补丁和替换:非??则保持,对??的话,若原始为??,则替换为(.)和补位符号,否则摘抄原始值")
+            original_regex_bytes = b""
+            modified_regex_bytes = b""
+            repl_bytes = b""
+            group_count = 1
+            for p, r in zip(listed_original_hex, listed_modified_hex):
+                if p == "??":
+                    original_regex_bytes += b"(.)"
+                    modified_regex_bytes += b"(.)"
+                    if r == "??":
+                        repl_bytes += b"\\" + str(group_count).encode()
+                    else:
+                        repl_bytes += bytes.fromhex(r)
+                        modified_regex_bytes += re.escape(bytes.fromhex(r))
+                    group_count += 1
+                else:
+                    original_regex_bytes += re.escape(bytes.fromhex(p))
+                    if r == "??":
+                        repl_bytes += bytes.fromhex(p)
+                        modified_regex_bytes += re.escape(bytes.fromhex(p))
+                    else:
+                        repl_bytes += bytes.fromhex(r)
+                        modified_regex_bytes += re.escape(bytes.fromhex(r))
+            print("构建匹配模式：")
+            print(f"original_regex_bytes: {original_regex_bytes}")
+            print(f"modified_regex_bytes: {modified_regex_bytes}")
+            print(f"repl_bytes: {repl_bytes}")
+            # print(f"regex_hex: {bytes_to_hex_str(original_regex_bytes)}")
+            # print(f"patched_hex: {bytes_to_hex_str(modified_regex_bytes)}")
+            # print(f"repl_hex: {bytes_to_hex_str(repl_bytes)}")
+            original_regex = re.compile(original_regex_bytes, re.DOTALL)
+
+            pairs = SwInfoUtils.get_replacement_pairs(original_regex, repl_bytes, data)
+            if len(pairs) == 0:
+                print("未识别到特征码")
+                return None
+            for pair in pairs:
+                original, modified = pair
+                original_hex = SwInfoUtils.bytes_to_hex_str(original)
+                modified_hex = SwInfoUtils.bytes_to_hex_str(modified)
+                print("识别到：")
+                print(f"Original: {original_hex}")
+                print(f"Modified: {modified_hex}")
+                result_dict["original"].append(original_hex)
+                result_dict["modified"].append(modified_hex)
+
+        return result_dict
+
+    @staticmethod
+    def identify_dll_of_ver_by_dict(ver_channels_dict, dll_path) -> dict:
+        """
+        使用特征码识别dll的状态（收集所有通道的匹配结果）
+        参数:
+            ver_adaptation: 版本适配字典 {channel: {"original": [...], "modified": [...]}}
+            dll_path: DLL文件路径
+        返回:
+            {
+                channel1: (status, message, original_list, modified_list),
+                channel2: (status, message, original_list, modified_list),
+                ...
+            }
+            status: True/False/None
+            message: 状态描述字符串
+        """
+        results = {}
+        for channel in ver_channels_dict.keys():
+            original_list = ver_channels_dict[channel]["original"]
+            modified_list = ver_channels_dict[channel]["modified"]
             has_original_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *original_list)
             has_modified_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *modified_list)
-            # list转成集合，集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
+            # 转换为集合检查一致性,集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
             has_original_set = set(has_original_list)
             has_modified_set = set(has_modified_list)
-            if len(has_original_set) != 1 or len(has_modified_set) != 1:
-                continue
-            all_original = True if True in has_original_set else False if False in has_original_set else None
-            all_modified = True if True in has_modified_set else False if False in has_modified_set else None
-            if all_original is True and all_modified is False:
-                return False, "未开启", original_list, modified_list
-            elif all_original is False and all_modified is True:
-                return True, "已开启", original_list, modified_list
-            elif all_original is True or all_modified is True:
-                return None, "错误，非独一无二的特征码", None, None
-        return None, "不可用", None, None
+            # 初始化默认值
+            status = None
+            message = "未知状态"
+            # 判断匹配状态
+            if len(has_original_set) == 1 and len(has_modified_set) == 1:
+                all_original = True if True in has_original_set else False if False in has_original_set else None
+                all_modified = True if True in has_modified_set else False if False in has_modified_set else None
+                if all_original is True and all_modified is False:
+                    status = False
+                    message = "未开启"
+                elif all_original is False and all_modified is True:
+                    status = True
+                    message = "已开启"
+                elif all_original is True or all_modified is True:
+                    message = "有多处匹配，建议优化补丁替换列表"
+            else:
+                message = "匹配结果不一致"
+            # 将结果存入字典
+            results[channel] = (status, message, original_list, modified_list)
+        return results
 
     @staticmethod
     def _create_path_finders_of_(path_tag, ignore_local_record=False) -> list:
@@ -914,10 +1144,8 @@ class SwInfoUtils:
     @staticmethod
     def _create_check_method_of_(path_type):
         """定义检查方法"""
-
         def check_sw_path_func(sw, path):
             return SwInfoUtils.is_valid_sw_path(path_type, sw, path)
-
         return check_sw_path_func
 
     @staticmethod
@@ -979,7 +1207,7 @@ class SwInfoUtils:
     @staticmethod
     def _get_sw_data_dir_from_other_sw(sw: str) -> list:
         """通过其他软件的方式获取微信数据文件夹"""
-        data_dir_name, = subfunc_file.get_details_from_remote_setting_json(
+        data_dir_name, = subfunc_file.get_remote_cfg(
             sw, data_dir_name=None)
         paths = []
         if data_dir_name is None or data_dir_name == "":
@@ -1002,7 +1230,7 @@ class SwInfoUtils:
     @staticmethod
     def _get_sw_dll_dir_by_files(sw: str) -> list:
         """通过文件遍历方式获取dll文件夹"""
-        dll_name, = subfunc_file.get_details_from_remote_setting_json(
+        dll_name, = subfunc_file.get_remote_cfg(
             sw, dll_dir_check_suffix=None)
         install_path = SwInfoFunc.get_sw_install_path(sw)
         if install_path and install_path != "":
@@ -1031,14 +1259,14 @@ class SwInfoUtils:
 class SwOperatorUtils:
     @staticmethod
     def is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-        # TODO: 需要优化
+        # TODO: 窗口检测逻辑需要优化
         """检测窗口是否是某个平台的主窗口"""
-        executable, = subfunc_file.get_details_from_remote_setting_json(sw, executable=None)
+        executable, = subfunc_file.get_remote_cfg(sw, executable=None)
         # 判断hwnd是否属于指定的程序
         pid = hwnd_utils.get_hwnd_details_of_(hwnd)["pid"]
         if psutil.Process(pid).exe() != executable:
             return False
-        expected_class, = subfunc_file.get_details_from_remote_setting_json(sw, main_wnd_class=None)
+        expected_class, = subfunc_file.get_remote_cfg(sw, main_wnd_class=None)
         class_name = win32gui.GetClassName(hwnd)
         # print(expected_class, class_name)
         if sw == SW.WECHAT:

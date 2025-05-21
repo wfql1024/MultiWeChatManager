@@ -223,11 +223,11 @@ class AppFunc:
             items_to_del = []
             try:
                 # 恢复每个平台的补丁dll
-                all_sw, = subfunc_file.get_details_from_remote_setting_json('global', all_sw={})
+                all_sw, = subfunc_file.get_remote_cfg('global', all_sw={})
                 # print(all_sw)
                 for sw in all_sw:
                     dll_dir_path = SwInfoFunc.get_sw_dll_dir(sw)
-                    patch_dll, = subfunc_file.get_details_from_remote_setting_json(
+                    patch_dll, = subfunc_file.get_remote_cfg(
                         sw, patch_dll=None)
                     if patch_dll is None:
                         continue

@@ -16,7 +16,7 @@ class MainFunc:
         root = root_class.root
         acc_tab_ui = root_class.acc_tab_ui
 
-        all_sw_dict, = subfunc_file.get_details_from_remote_setting_json(LocalCfg.GLOBAL_SECTION, all_sw=None)
+        all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
         all_sw = [key for key in all_sw_dict.keys()]
         print("所有平台：", all_sw)
 
