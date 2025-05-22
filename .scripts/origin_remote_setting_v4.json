@@ -1612,7 +1612,7 @@
                     "bubble": {
                         "original": [
                             "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                            "E8 ?? ?? F6 FE 89 C6 48 85 FF 74 1D",
+                            "E8 ?? ?? ?? ?? 89 C6 48 85 FF 74 1D",
                             "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
                             "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
                         ],
