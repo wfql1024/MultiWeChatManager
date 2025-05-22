@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="测试适配4.0.5.15防撤回气泡提醒">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="优化适配4.0.3-4.0.5的静默防撤回">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.scripts/origin_remote_setting_v4.json" beforeDir="false" afterPath="$PROJECT_DIR$/.scripts/origin_remote_setting_v4.json" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
@@ -700,15 +700,7 @@
       <workItem from="1747247012865" duration="4385000" />
       <workItem from="1747494919164" duration="3272000" />
       <workItem from="1747499308753" duration="102567000" />
-      <workItem from="1747899976032" duration="11186000" />
-    </task>
-    <task id="LOCAL-00255" summary="封装子窗口类">
-      <option name="closed" value="true" />
-      <created>1740484701160</created>
-      <option name="number" value="00255" />
-      <option name="presentableId" value="LOCAL-00255" />
-      <option name="project" value="LOCAL" />
-      <updated>1740484701160</updated>
+      <workItem from="1747899976032" duration="12044000" />
     </task>
     <task id="LOCAL-00256" summary="修改下项目的备注信息和README">
       <option name="closed" value="true" />
@@ -1094,7 +1086,15 @@
       <option name="project" value="LOCAL" />
       <updated>1747907046420</updated>
     </task>
-    <option name="localTasksCounter" value="304" />
+    <task id="LOCAL-00304" summary="优化适配4.0.3-4.0.5的静默防撤回">
+      <option name="closed" value="true" />
+      <created>1747913625421</created>
+      <option name="number" value="00304" />
+      <option name="presentableId" value="LOCAL-00304" />
+      <option name="project" value="LOCAL" />
+      <updated>1747913625421</updated>
+    </task>
+    <option name="localTasksCounter" value="305" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1148,7 +1148,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="移除主动使用强力python的功能，改为清除互斥体失败时自动使用" />
     <MESSAGE value="适配4.0.3.42" />
     <MESSAGE value="提升远程配置文件版本" />
     <MESSAGE value="修改新版本配置文件格式" />
@@ -1173,7 +1172,8 @@
     <MESSAGE value="修改远程配置文件格式" />
     <MESSAGE value="测试适配4.0.5.15" />
     <MESSAGE value="测试适配4.0.5.15防撤回气泡提醒" />
-    <option name="LAST_COMMIT_MESSAGE" value="测试适配4.0.5.15防撤回气泡提醒" />
+    <MESSAGE value="优化适配4.0.3-4.0.5的静默防撤回" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化适配4.0.3-4.0.5的静默防撤回" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1240,7 +1240,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$_utils.coverage" NAME="_utils Coverage Results" MODIFIED="1747663426444" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils/better_wx" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$hwnd.coverage" NAME="hwnd Coverage Results" MODIFIED="1732032782606" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$widget_frameworks.coverage" NAME="widget_frameworks Coverage Results" MODIFIED="1743007018493" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/public_class" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$UpdateRemote.coverage" NAME="UpdateRemote Coverage Results" MODIFIED="1747907028782" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$UpdateRemote.coverage" NAME="UpdateRemote Coverage Results" MODIFIED="1747913586459" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$Main.coverage" NAME="Main Coverage Results" MODIFIED="1723322705031" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$strings.coverage" NAME="strings Coverage Results" MODIFIED="1736501554915" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/resources" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_decrypt.coverage" NAME="func_decrypt Coverage Results" MODIFIED="1724324893630" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />

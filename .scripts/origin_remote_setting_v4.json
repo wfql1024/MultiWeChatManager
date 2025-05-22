@@ -1376,7 +1376,7 @@
             },
             "feature": {
                 "4.0.5": {
-                    "default":{
+                    "default": {
                         "original": [
                             "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
                         ],
@@ -1418,43 +1418,13 @@
             },
             "precise": {
             },
-            "4.0.5": [
+            "4.0.5.15": [
                 {
                     "original": [
-                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
                     ],
                     "modified": [
-                        "C3 ..."
-                    ]
-                }
-            ],
-            "4.0.3": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ],
-                    "modified": [
-                        "C3 ..."
-                    ]
-                }
-            ],
-            "4.0.2": [
-                {
-                    "original": [
-                        "55 41 57 41 56 41 54 56 57 53 48 81 EC ?? ?? ?? ?? 48 8D AC 24 ?? ?? ?? ?? 48 C7 85 ?? ?? ?? ?? FE FF FF FF 48 C7 45 ?? 00 00 00 00"
-                    ],
-                    "modified": [
-                        "C3 ..."
-                    ]
-                }
-            ],
-            "4.0.1": [
-                {
-                    "original": [
-                        "C7 44 24 ?? FF FF FF FF 31 F6 45 31 C0 41 B9 FF FF FF FF FF 15 ?? ?? ?? ?? 85 C0 75 0F"
-                    ],
-                    "modified": [
-                        "... EB 0F"
+                        "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
                     ]
                 }
             ],
@@ -1594,17 +1564,24 @@
                 "silence": {
                     "label": "静默",
                     "introduce": "不含防撤回提示",
-                    "author": ["zetaloop"]
+                    "author": [
+                        "zetaloop"
+                    ]
                 },
                 "bubble": {
                     "label": "气泡",
                     "introduce": "通过气泡进行防撤回提示",
-                    "author": ["afaa1991"]
+                    "author": [
+                        "afaa1991"
+                    ]
                 },
                 "alert": {
                     "label": "通知",
                     "introduce": "通过通知进行防撤回提示",
-                    "author": ["EEEEhex","afaa1991"]
+                    "author": [
+                        "EEEEhex",
+                        "afaa1991"
+                    ]
                 }
             },
             "feature": {
@@ -1924,10 +1901,8 @@
     },
     "WXWork": {
         "multirun": {
-
         },
         "anti-revoke": {
-
         },
         "redundant_wnd_class": [
             ""
@@ -1952,7 +1927,6 @@
             }
         ],
         "cfg_handle_regex_list": [
-
         ],
         "login_wnd_class": "WeChatLogin",
         "main_wnd_class": "WeWorkWindow",
@@ -1985,10 +1959,8 @@
     },
     "QQNT": {
         "multirun": {
-
         },
         "anti-revoke": {
-
         },
         "redundant_wnd_class": [
             ""
@@ -2031,10 +2003,8 @@
     },
     "QQ": {
         "multirun": {
-
         },
         "anti-revoke": {
-
         },
         "redundant_wnd_class": [
             ""
@@ -2074,7 +2044,6 @@
         "support_handle_mode": true,
         "support_quick_start": false
     },
-
     "default": {
         "multirun": {
             "channel": {
