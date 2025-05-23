@@ -815,6 +815,36 @@
     },
     "WeChat": {
         "multirun": {
+            "channel": {
+                "default": {
+                    "label": "默认",
+                    "introduce": "可以在全局进行多开"
+                }
+            },
+            "feature": {
+                "3.9.11": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 ?? ?? ?? ??"
+                        ],
+                        "modified": [
+                            "90 E9 ..."
+                        ]
+                    }
+                },
+                "3.9.10": {
+                    "default": {
+                        "original": [
+                            "00 B9 BD 00 00 00 FF 15"
+                        ],
+                        "modified": [
+                            "90 E9 ..."
+                        ]
+                    }
+                }
+            },
+            "precise": {
+            },
             "3.9.12.51": [
                 {
                     "original": [
@@ -1105,6 +1135,30 @@
             ]
         },
         "anti-revoke": {
+            "channel": {
+                "alert": {
+                    "label": "通知",
+                    "introduce": "通过通知进行防撤回提示",
+                    "author": [
+                        "EEEEhex",
+                        "afaa1991"
+                    ]
+                }
+            },
+            "feature": {
+                "3.9": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 ?? FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "... 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                }
+            },
+            "precise": {
+            },
             "3.9.12.51": [
                 {
                     "original": [
