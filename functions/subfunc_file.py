@@ -494,7 +494,7 @@ def get_avatar_url_from_file(sw, acc_list, data_dir):
 
 
 def get_avatar_url_from_other_sw(now_sw, now_acc_list):
-    print("尝试用窃取法获取头像")
+    # print("尝试用窃取法获取头像")
     changed = False
     all_sw, = get_remote_cfg("global", all_sw=None)
     # print(all_sw)
@@ -580,7 +580,7 @@ def get_nickname_from_file(sw, acc_list, data_dir):
 
 
 def get_nickname_from_other_sw(now_sw, now_acc_list):
-    print("尝试用窃取法获取昵称")
+    # print("尝试用窃取法获取昵称")
     changed = False
     all_sw, = get_remote_cfg("global", all_sw=None)
     # print(all_sw)
@@ -853,7 +853,7 @@ def downgrade_item_lvl_under_manual():
     JsonUtils.save_json(Config.STATISTIC_JSON_PATH, data)
 
 
-def get_packed_executable():
+def _get_packed_executable():
     """获取打包后的可执行文件路径"""
     if getattr(sys, 'frozen', False):
         # 如果是打包后的可执行文件
@@ -866,8 +866,8 @@ def get_packed_executable():
 def check_auto_start_or_toggle_to_(target_state=None):
     startup_folder = sys_utils.get_startup_folder()
     print(startup_folder)
-    app_path = get_packed_executable()
-    print(app_path)
+    app_path = _get_packed_executable()
+    # print(app_path)
 
     if app_path is None:
         auto_start, paths = False, None

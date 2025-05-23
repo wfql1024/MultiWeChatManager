@@ -75,24 +75,7 @@ class SwInfoFunc:
         if patch_dll is None or mode_branches_dict is None:
             return
         dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-        # SwInfoFunc._search_by_precise_and_add_to_extra(sw, mode, dll_path, mode_branches_dict)
         # 尝试寻找兼容版本并添加到额外表中
-        SwInfoFunc._search_by_feature_and_add_to_extra(sw, mode, dll_path, mode_branches_dict)
-
-    @staticmethod
-    def _identify_dll_by_extra_cfg(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:
-        config_data = subfunc_file.load_extra_cfg()
-        if not config_data:
-            return None, "错误：没有数据"
-        patch_dll, mode_branches_dict = subfunc_file.get_extra_cfg(sw, patch_dll=None, **{mode: None})
-        if patch_dll is None or mode_branches_dict is None:
-            return None, f"错误：平台未适配{mode}"
-        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-        return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict)
-
-    @staticmethod
-    def _search_by_feature_and_add_to_extra(sw, mode, dll_path, mode_branches_dict):
-        """尝试寻找兼容版本并添加到额外表中"""
         cur_sw_ver = SwInfoFunc._get_sw_ver(sw, dll_path)
         subfunc_file.update_extra_cfg(sw, patch_dll=os.path.basename(dll_path))
         if "precise" in mode_branches_dict:
@@ -112,7 +95,7 @@ class SwInfoFunc:
                 # 用兼容版本特征码查找适配
                 compatible_ver_adaptations = mode_branches_dict["feature"][compatible_ver]
                 for channel in compatible_ver_adaptations.keys():
-                    if channel in ver_channels_dict:
+                    if ver_channels_dict is not None and channel in ver_channels_dict:
                         print("已经存在精确适配,跳过")
                         continue
                     original_feature = compatible_ver_adaptations[channel]["original"]
@@ -123,6 +106,17 @@ class SwInfoFunc:
                         # 添加到额外表中
                         subfunc_file.update_extra_cfg(
                             sw, mode, "precise", cur_sw_ver, **{channel: result_dict})
+
+    @staticmethod
+    def _identify_dll_by_extra_cfg(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:
+        config_data = subfunc_file.load_extra_cfg()
+        if not config_data:
+            return None, "错误：没有数据"
+        patch_dll, mode_branches_dict = subfunc_file.get_extra_cfg(sw, patch_dll=None, **{mode: None})
+        if patch_dll is None or mode_branches_dict is None:
+            return None, f"错误：平台未适配{mode}"
+        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
+        return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict)
 
     @staticmethod
     def identify_dll(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:

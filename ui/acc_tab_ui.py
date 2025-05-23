@@ -194,7 +194,7 @@ class AccTabUI:
                                 anchor=tk.CENTER)
         error_label.pack(**Constants.T_WGT_PACK)
         self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
-                                          command=partial(self.root_menu.open_settings, self.sw))
+                                          command=partial(self.root_menu.open_sw_settings, self.sw))
         self.settings_button.pack()
 
     """后处理"""
@@ -227,6 +227,9 @@ class AccTabUI:
         self.hotkey_manager.load_hotkeys_from_json(Config.TAB_ACC_JSON_PATH)
         # 开启监听线程
         self.hotkey_manager.start_hotkey_listener()
+
+        # 刷新设置菜单
+        # self.root_menu.create_setting_menu()
 
     """功能区"""
 

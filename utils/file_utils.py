@@ -17,10 +17,7 @@ import yaml
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 from Crypto.Util.Padding import unpad
-
-from utils import logger_utils
-
-logger = logger_utils.mylogger
+from utils.logger_utils import mylogger as logger
 
 
 # TODO: 配置文件打算转yaml
@@ -749,8 +746,3 @@ class CryptoUtils:
         ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
         with open(output_file, 'wb') as f:
             f.write(iv + ciphertext)
-
-
-if __name__ == '__main__':
-    # 测试
-    pass
