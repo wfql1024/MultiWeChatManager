@@ -1,6 +1,54 @@
-import queue
 from enum import Enum
 
+import queue
+import threading
+
+class TkThreadWorker:
+    """Tkinter 线程任务工具类"""
+
+    def __init__(self, root, after_interval=100):
+        """
+        :param root: Tkinter 根窗口
+        :param after_interval: 主线程轮询队列的间隔(ms)
+        """
+        self.root = root
+        self.after_interval = after_interval
+        self.task_queue = queue.Queue()
+        self.thread_method = lambda : print(
+            "请将 thread_method 替换为具体的线程方法, 方法体内可使用 main_thread_do_ 方法注册主线程任务")
+        self.main_thread_methods = {}  # 存储主线程回调方法 {id: callable}
+
+    def main_thread_do_(self, method_id, method):
+        """注册主线程任务
+        :param method_id: 任务唯一标识
+        :param method: 可调用对象（如 partial 或 lambda）
+        """
+        self.main_thread_methods[method_id] = method
+        self.task_queue.put(method_id)
+
+    def start_thread(self):
+        """启动线程并开始队列轮询"""
+        if callable(self.thread_method):
+            threading.Thread(
+                target=self.thread_method,
+                daemon=True
+            ).start()
+            self._process_queue()
+
+    def _process_queue(self):
+        """主线程处理队列任务（自动循环）"""
+        try:
+            while True:
+                try:
+                    method_id = self.task_queue.get_nowait()
+                    if method_id in self.main_thread_methods:
+                        method = self.main_thread_methods[method_id]
+                        if callable(method):
+                            method()  # 执行主线程方法
+                except queue.Empty:
+                    break
+        finally:
+            self.root.after(self.after_interval, self._process_queue)
 
 class QueueWithUpdate(queue.Queue):
     """

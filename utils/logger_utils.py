@@ -311,14 +311,34 @@ class RedirectText(io.TextIOBase):
 
 class PrinterUtils:
     def __init__(self):
-        self.vital_message = None  # 用于保存 Vital 级别的输出
+        self.vital_msg = None  # 用于保存 Vital 级别的输出
+        self.last_msg = None  # 用于存储最后一条消息
+        self.normal_msg = None
+
+    def print_vn(self, obj=None):
+        if obj is not None:
+            self.normal(obj)
+        vn_message = f"{self.vital_msg} | {self.normal_msg}" if self.vital_msg else f"{self.normal_msg}"
+        print(vn_message)
+        return vn_message
 
     def normal(self, obj):
-        print(f"{self.vital_message} | {str(obj)}" if self.vital_message else str(obj))
+        self.normal_msg = str(obj)
+        return self
 
     def vital(self, obj):
-        self.vital_message = str(obj)
+        self.vital_msg = str(obj)
+        return self
 
+    def print_last(self, obj=None):
+        if obj is not None:
+            self.last(obj)
+        print(self.last_msg)
+        return self.last_msg
+
+    def last(self, obj):
+        self.last_msg = str(obj)
+        return self
 
 class LoggerUtils:
     def __init__(self, file):

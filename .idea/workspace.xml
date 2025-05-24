@@ -4,13 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="上传旧版微信特征码">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="优化刷新效率及特征码匹配效率">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/decrypt/impl/WeChat_decrypt_impl.py" beforeDir="false" afterPath="$PROJECT_DIR$/decrypt/impl/WeChat_decrypt_impl.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public_class/custom_classes.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/custom_classes.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/acc_tab_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/acc_tab_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/wnd_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/wnd_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/handle_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/handle_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/logger_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/logger_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -704,15 +706,7 @@
       <workItem from="1747494919164" duration="3272000" />
       <workItem from="1747499308753" duration="102567000" />
       <workItem from="1747899976032" duration="17396000" />
-      <workItem from="1747983180618" duration="18974000" />
-    </task>
-    <task id="LOCAL-00259" summary="测试适配3.9.12.51多开">
-      <option name="closed" value="true" />
-      <created>1742056310005</created>
-      <option name="number" value="00259" />
-      <option name="presentableId" value="LOCAL-00259" />
-      <option name="project" value="LOCAL" />
-      <updated>1742056310005</updated>
+      <workItem from="1747983180618" duration="27709000" />
     </task>
     <task id="LOCAL-00260" summary="测试适配3.9.12.51，4.0.2.26，4.0.2.28多开及防撤回">
       <option name="closed" value="true" />
@@ -1098,7 +1092,15 @@
       <option name="project" value="LOCAL" />
       <updated>1748026152768</updated>
     </task>
-    <option name="localTasksCounter" value="308" />
+    <task id="LOCAL-00308" summary="优化刷新效率及特征码匹配效率">
+      <option name="closed" value="true" />
+      <created>1748027712604</created>
+      <option name="number" value="00308" />
+      <option name="presentableId" value="LOCAL-00308" />
+      <option name="project" value="LOCAL" />
+      <updated>1748027712604</updated>
+    </task>
+    <option name="localTasksCounter" value="309" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1152,7 +1154,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="修改新版本配置文件格式，增加旧版配置转换方法" />
     <MESSAGE value="测试防撤回" />
     <MESSAGE value="重构部分方法，优化方法归属；微信4.0新增带提示防撤回" />
     <MESSAGE value="修改加密方法，重新上传新的远程数据" />
@@ -1177,7 +1178,8 @@
     <MESSAGE value="精确适配4.0.5.15多开" />
     <MESSAGE value="精确适配4.0.5.16多开" />
     <MESSAGE value="上传旧版微信特征码" />
-    <option name="LAST_COMMIT_MESSAGE" value="上传旧版微信特征码" />
+    <MESSAGE value="优化刷新效率及特征码匹配效率" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化刷新效率及特征码匹配效率" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1192,7 +1194,7 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_multiple.coverage" NAME="wechat_multiple Coverage Results" MODIFIED="1726457491071" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/mutex" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1748026594898" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1748064656511" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$hwnd_utils.coverage" NAME="hwnd_utils Coverage Results" MODIFIED="1732812542774" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_wechat_dll.coverage" NAME="func_wechat_dll Coverage Results" MODIFIED="1727833508675" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />

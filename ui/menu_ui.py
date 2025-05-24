@@ -1,6 +1,4 @@
 import os
-import queue
-import threading
 import time
 import tkinter as tk
 import webbrowser
@@ -11,10 +9,11 @@ from tkinter import messagebox, simpledialog
 from functions import subfunc_file
 from functions.app_func import AppFunc
 from functions.sw_func import SwInfoFunc, SwOperator
+from public_class.custom_classes import TkThreadWorker
 from public_class.enums import LocalCfg, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
-from ui import sidebar_ui, acc_manager_ui
+from ui import sidebar_ui
 from ui.wnd_ui import UpdateLogWnd, StatisticWnd, SettingWnd, RewardsWnd, AboutWnd, GlobalSettingWnd
 from utils import widget_utils
 from utils.logger_utils import mylogger as logger
@@ -28,6 +27,7 @@ class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
 
+        self.menu_updater = None
         self.multirun_menu_index = None
         self.anti_revoke_menu_index = None
         self.menu_queue = None
@@ -290,7 +290,8 @@ class MenuUI:
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
         # 开启更新多开,防撤回等子菜单的更新线程
-        self._update_settings_sub_menus_in_thread()
+        # self._update_settings_sub_menus_in_thread()
+        self.update_settings_menu_thread()
 
         hide_wnd_value = self.global_settings_value.hide_wnd = \
             True if subfunc_file.fetch_global_setting_or_set_default_or_none("hide_wnd") == "True" else False
@@ -501,43 +502,7 @@ class MenuUI:
 
     """更新多开,防撤回子菜单的线程"""
 
-    def _update_settings_sub_menus_in_thread(self):
-        # 创建队列用于线程通信
-        self.menu_queue = queue.Queue()
-        threading.Thread(target=self._create_menus_thread, daemon=True).start()
-        self.root.after(100, self._process_menu_queue)
-
-    def _create_menus_thread(self):
-        try:
-            # 防撤回部分
-            res_dict, msg = SwInfoFunc.identify_dll(
-                self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
-            self.menu_queue.put(("revoke", res_dict, msg))
-            # 全局多开部分
-            res_dict, msg = SwInfoFunc.identify_dll(
-                self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
-            self.menu_queue.put(("multi", res_dict, msg))
-        except Exception as e:
-            self.menu_queue.put(("error", str(e)))
-
-    def _process_menu_queue(self):
-        try:
-            while True:
-                try:
-                    item = self.menu_queue.get_nowait()
-                    if item[0] == "revoke":
-                        # 处理防撤回菜单
-                        self._create_anti_revoke_menu(item[1], item[2])
-                    elif item[0] == "multi":
-                        # 处理多开菜单
-                        self._create_multirun_menu(item[1], item[2])
-                except queue.Empty:
-                    break
-        finally:
-            # 继续检查队列
-            self.root.after(100, self._process_menu_queue)
-
-    def _create_anti_revoke_menu(self, res_dict, msg):
+    def _update_anti_revoke_menu(self, res_dict, msg):
         # 原来的防撤回菜单创建代码
         if res_dict is None:
             self.settings_menu.entryconfig("防撤回", label="！防撤回", foreground="red")
@@ -572,8 +537,9 @@ class MenuUI:
                     self.anti_revoke_menu.add_checkbutton(
                         label=channel_label, variable=self.anti_revoke_channel_vars_dict[channel],
                         command=partial(self._toggle_patch_mode, mode=RemoteCfg.REVOKE, channel=channel))
+        printer.print_last()
 
-    def _create_multirun_menu(self, res_dict, msg):
+    def _update_multirun_menu(self, res_dict, msg):
         # 原来的多开菜单创建代码
         self.sw_class.freely_multirun = None
         if res_dict is None:
@@ -659,3 +625,29 @@ class MenuUI:
                         variable=rest_mode_var,
                         command=partial(self._calc_multirun_mode_and_save, exe_name),
                     )
+        printer.print_last()
+
+    def update_settings_menu_thread(self):
+        self.menu_updater = TkThreadWorker(self.root, after_interval=100)
+        self.menu_updater.thread_method = self._identify_dll_and_update_menu
+        self.menu_updater.start_thread()
+
+    def _identify_dll_and_update_menu(self):
+        """实现抽象方法（原_create_menus_thread逻辑）"""
+        try:
+            # 防撤回部分
+            res_dict, msg = SwInfoFunc.identify_dll(
+                self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
+            self.menu_updater.main_thread_do_("revoke",
+                partial(self._update_anti_revoke_menu, res_dict, msg)
+            )
+
+            # 全局多开部分
+            res_dict, msg = SwInfoFunc.identify_dll(
+                self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
+            self.menu_updater.main_thread_do_("multi",
+                partial(self._update_multirun_menu, res_dict, msg)
+            )
+        except Exception as e:
+            print(e)
+

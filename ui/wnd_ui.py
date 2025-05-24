@@ -226,7 +226,7 @@ class DetailWnd(SubToolWnd, ABC):
         printer.vital(f"加载账号详情...")
 
         # 获取信息
-        printer.normal(f"加载对应头像...")
+        printer.print_vn(f"加载对应头像...")
         avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
         # 获取其余信息
         has_mutex, main_hwnd = subfunc_file.get_sw_acc_data(
@@ -236,16 +236,16 @@ class DetailWnd(SubToolWnd, ABC):
 
         # 刷新页面头像
         if os.path.exists(avatar_path):
-            printer.normal(f"对应头像存在...")
+            printer.print_vn(f"对应头像存在...")
         else:
             # 如果没有，检查default.jpg
-            printer.normal(f"没有对应头像，加载默认头像...")
+            printer.print_vn(f"没有对应头像，加载默认头像...")
             default_path = os.path.join(Config.PROJ_USER_PATH, f"default.jpg")
             base64_string = Strings.DEFAULT_AVATAR_BASE64
             image_data = base64.b64decode(base64_string)
             with open(default_path, "wb") as f:
                 f.write(image_data)
-            printer.normal(f"默认头像已保存到 {default_path}")
+            printer.print_vn(f"默认头像已保存到 {default_path}")
             avatar_path = default_path
         self._update_avatar_and_bind(avatar_path, avatar_url)
         # 刷新其他信息
@@ -262,7 +262,7 @@ class DetailWnd(SubToolWnd, ABC):
             self.nickname_var.set(StringUtils.clean_texts(nickname))
         if not pid:
             subfunc_file.update_sw_acc_data(sw, account, has_mutex=True)
-        printer.normal(f"载入数据完成")
+        printer.print_vn(f"载入数据完成")
 
         # 将局部变量赋值回实例变量
         self.pid = pid

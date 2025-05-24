@@ -125,7 +125,7 @@ class WeChatDecryptImpl(DecryptInterface):
             addr_cnt = 0
             read_cnt = 0
             correct_cnt = 0
-            printer.normal(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
+            printer.print_vn(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
 
             k = 0
             while address > min_address:
@@ -146,7 +146,7 @@ class WeChatDecryptImpl(DecryptInterface):
                 try:
                     key = pm.read_bytes(key_addr, 32)
                     read_cnt += 1
-                    printer.normal(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
+                    printer.print_vn(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
                 except Exception as e:
                     if e:
                         pass
@@ -155,7 +155,7 @@ class WeChatDecryptImpl(DecryptInterface):
                 str_key = binascii.hexlify(key).decode()
                 if check_sqlite_pass(misc_db, str_key):
                     correct_cnt += 1
-                    printer.normal(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
+                    printer.print_vn(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
                     # 到这里就是找到了……
                     logger.info(f"pointer={address:X}, key_addr={key_addr:X}, key={key}")
                     logger.info(f"str_key:{str_key}")
@@ -232,7 +232,7 @@ class WeChatDecryptImpl(DecryptInterface):
             logger.error(f'验证密钥比对失败: {hmac_key}')
             return False, RuntimeError(f'验证密钥比对失败: {hmac_key}')
 
-        printer.normal("成功，数据库写入解密后的内容...")
+        printer.print_vn("成功，数据库写入解密后的内容...")
         new_blist = [blist[i:i + DEFAULT_PAGESIZE] for i in range(DEFAULT_PAGESIZE, len(blist), DEFAULT_PAGESIZE)]
 
         decrypted_mm_db_path = None
@@ -265,7 +265,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     def get_acc_id_and_alias_from_db(self, cursor, acc):
         sql = f"SELECT UserName, Alias FROM 'Contact' WHERE UserName = '{acc}';"
-        printer.normal(f"执行：{sql}")
+        printer.print_vn(f"执行：{sql}")
         try:
             cursor.execute(sql)
             results = cursor.fetchall()
@@ -276,7 +276,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     def get_acc_nickname_from_db(self, cursor, acc):
         sql = f"SELECT UserName, NickName FROM 'Contact' WHERE UserName = '{acc}';"
-        printer.normal(f"执行：{sql}")
+        printer.print_vn(f"执行：{sql}")
         try:
             cursor.execute(sql)
             results = cursor.fetchall()
@@ -287,7 +287,7 @@ class WeChatDecryptImpl(DecryptInterface):
 
     def get_acc_avatar_from_db(self, cursor, acc):
         sql = f"SELECT UsrName, bigHeadImgUrl FROM 'ContactHeadImgUrl' WHERE UsrName = '{acc}';"
-        printer.normal(f"执行：{sql}")
+        printer.print_vn(f"执行：{sql}")
         try:
             cursor.execute(sql)
             results = cursor.fetchall()
