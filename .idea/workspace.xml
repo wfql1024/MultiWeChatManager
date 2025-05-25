@@ -4,18 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="精简设置页面,平台版本号搬到登录页面下方">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/main_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/main_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public_class/enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/enums.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public_class/widget_frameworks.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/widget_frameworks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/wnd_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/wnd_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.py" afterDir="false" />
-    </list>
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="优化设置项的存取;新增平台状态:是否启用,是否显示" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -725,15 +714,7 @@
       <workItem from="1747983180618" duration="28579000" />
       <workItem from="1748065705497" duration="651000" />
       <workItem from="1748086854836" duration="11449000" />
-      <workItem from="1748115525679" duration="36452000" />
-    </task>
-    <task id="LOCAL-00262" summary="优化数据存取方法">
-      <option name="closed" value="true" />
-      <created>1742226459852</created>
-      <option name="number" value="00262" />
-      <option name="presentableId" value="LOCAL-00262" />
-      <option name="project" value="LOCAL" />
-      <updated>1742226459852</updated>
+      <workItem from="1748115525679" duration="36807000" />
     </task>
     <task id="LOCAL-00263" summary="优化数据存取方法，拾起侧栏视图，修复快速刷新bug">
       <option name="closed" value="true" />
@@ -1119,7 +1100,15 @@
       <option name="project" value="LOCAL" />
       <updated>1748150136087</updated>
     </task>
-    <option name="localTasksCounter" value="311" />
+    <task id="LOCAL-00311" summary="优化设置项的存取;新增平台状态:是否启用,是否显示">
+      <option name="closed" value="true" />
+      <created>1748204255053</created>
+      <option name="number" value="00311" />
+      <option name="presentableId" value="LOCAL-00311" />
+      <option name="project" value="LOCAL" />
+      <updated>1748204255053</updated>
+    </task>
+    <option name="localTasksCounter" value="312" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1173,7 +1162,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="修改加密方法，重新上传新的远程数据" />
     <MESSAGE value="新增选择是否禁用代理的功能" />
     <MESSAGE value="配置文件增加“代理”条目" />
     <MESSAGE value="重构代码结构，优化定制按钮和书签逻辑，更新微信4.0的屏蔽文件夹名" />
@@ -1198,7 +1186,8 @@
     <MESSAGE value="优化刷新效率及特征码匹配效率" />
     <MESSAGE value="新增线程工厂类,优化刷新效率;优化定制打印" />
     <MESSAGE value="精简设置页面,平台版本号搬到登录页面下方" />
-    <option name="LAST_COMMIT_MESSAGE" value="精简设置页面,平台版本号搬到登录页面下方" />
+    <MESSAGE value="优化设置项的存取;新增平台状态:是否启用,是否显示" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化设置项的存取;新增平台状态:是否启用,是否显示" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

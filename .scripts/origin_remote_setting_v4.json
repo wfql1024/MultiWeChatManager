@@ -1471,6 +1471,36 @@
                 }
             },
             "precise": {
+                "4.0.5.16": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ],
+                        "modified": [
+                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ]
+                    }
+                },
+                "4.0.5.15": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ],
+                        "modified": [
+                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ]
+                    }
+                },
+                "4.0.5.13": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ],
+                        "modified": [
+                            "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ]
+                    }
+                }
             },
             "4.0.5.16": [
                 {
@@ -1729,6 +1759,126 @@
                 }
             },
             "precise": {
+                "4.0.5.16": {
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 61 11 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "74 6e 48 8d 8d 28 04 00 00 e8 80 f2 d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 7d 3b 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 9a c3 31 fe 48 8d 8d b0 00 00 00 e8 7e 08 06 fe"
+                        ],
+                        "modified": [
+                            "eb 6e 48 8d 8d 28 04 00 00 e8 80 f2 d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 7d 3b 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 9a c3 31 fe 48 8d 8d b0 00 00 00 e8 7e 08 06 fe"
+                        ]
+                    }
+                },
+                "4.0.5.15": {
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 b1 31 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "74 6e 48 8d 8d 28 04 00 00 e8 40 37 d4 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 7e 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 aa 06 32 fe 48 8d 8d b0 00 00 00 e8 8e 4b 06 fe"
+                        ],
+                        "modified": [
+                            "eb 6e 48 8d 8d 28 04 00 00 e8 40 37 d4 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 7e 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 aa 06 32 fe 48 8d 8d b0 00 00 00 e8 8e 4b 06 fe"
+                        ]
+                    }
+                },
+                "4.0.5.13": {
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 41 78 f6 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "74 6e 48 8d 8d 28 04 00 00 e8 10 8a d1 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 9d e8 01 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 3a 5f 2f fe 48 8d 8d b0 00 00 00 e8 9e b5 03 fe"
+                        ],
+                        "modified": [
+                            "eb 6e 48 8d 8d 28 04 00 00 e8 10 8a d1 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 9d e8 01 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 3a 5f 2f fe 48 8d 8d b0 00 00 00 e8 9e b5 03 fe"
+                        ]
+                    }
+                },
+                "4.0.3.43": {
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 91 58 00 ff 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "74 6e 48 8d 8d 28 04 00 00 e8 b0 44 e8 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 0d b9 17 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 6a 74 44 fe 48 8d 8d b0 00 00 00 e8 ee 37 e6 fd"
+                        ],
+                        "modified": [
+                            "eb 6e 48 8d 8d 28 04 00 00 e8 b0 44 e8 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 0d b9 17 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 6a 74 44 fe 48 8d 8d b0 00 00 00 e8 ee 37 e6 fd"
+                        ]
+                    }
+                },
+                "4.0.3.42": {
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 c1 4d 00 ff 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "74 6e 48 8d 8d 28 04 00 00 e8 b0 65 e8 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 5d d3 17 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 7a 75 44 fe 48 8d 8d b0 00 00 00 e8 ee 58 e6 fd"
+                        ],
+                        "modified": [
+                            "eb 6e 48 8d 8d 28 04 00 00 e8 b0 65 e8 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 5d d3 17 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 7a 75 44 fe 48 8d 8d b0 00 00 00 e8 ee 58 e6 fd"
+                        ]
+                    }
+                }
             },
             "4.0.5.16": [
                 {
