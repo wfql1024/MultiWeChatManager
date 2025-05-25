@@ -26,7 +26,6 @@ from utils.logger_utils import myprinter as printer
 class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
-
         self.menu_updater = None
         self.multirun_menu_index = None
         self.anti_revoke_menu_index = None
@@ -75,7 +74,8 @@ class MenuUI:
         if self.root_class.finish_started is True:
             # 路径检查
             self.sw_class.data_dir = SwInfoFunc.get_sw_data_dir(self.sw)
-            self.sw_class.inst_path, self.sw_class.ver = SwInfoFunc.get_sw_inst_path_and_ver(self.sw)
+            self.sw_class.inst_path = SwInfoFunc.get_sw_install_path(self.sw)
+            self.sw_class.ver = SwInfoFunc.get_sw_ver(self.sw, self.sw_class.data_dir)
             self.sw_class.dll_dir = SwInfoFunc.get_sw_dll_dir(self.sw)
 
         # 传递错误信息给主窗口

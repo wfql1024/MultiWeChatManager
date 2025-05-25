@@ -6,7 +6,7 @@ from tkinter import ttk, messagebox
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
-from functions.sw_func import SwOperator
+from functions.sw_func import SwOperator, SwInfoFunc
 from public_class import reusable_widgets
 from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
@@ -127,14 +127,18 @@ class AccTabUI:
                 for widget in self.tab_frame.winfo_children():
                     widget.destroy()
 
-            # 底部框架=手动登录
+            # 底部框架=版本号+手动登录
             bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
             bottom_frame.pack(side=tk.BOTTOM)
+            sw_ver = SwInfoFunc.get_sw_ver(self.sw, self.sw_class.data_dir)
+            if sw_ver is not None:
+                sw_ver_label = ttk.Label(bottom_frame, text=f"{sw_ver}", foreground="grey")
+                sw_ver_label.pack(side=tk.BOTTOM)
             prefix = Strings.MUTEX_SIGN if mutex is True and self.global_settings_value.sign_vis else ""
             manual_login_text = f"{prefix}手动登录"
             manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
                                              command=self.to_manual_login, style='Custom.TButton')
-            manual_login_button.pack(side=tk.LEFT)
+            manual_login_button.pack(side=tk.BOTTOM)
 
             # 创建一个可以滚动的画布，并放置一个主框架在画布上
             self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)

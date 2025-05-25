@@ -40,18 +40,9 @@ class SwInfoFunc:
     """
 
     @staticmethod
-    def _get_sw_ver(sw, dll_path):
-        """获取软件版本"""
-        cur_sw_ver = file_utils.get_file_version(dll_path)
-        if cur_sw_ver is None:
-            exec_path = SwInfoFunc.get_sw_install_path(sw)
-            cur_sw_ver = file_utils.get_file_version(exec_path)
-        return cur_sw_ver
-
-    @staticmethod
     def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict) -> Tuple[Optional[dict], str]:
         """通过精确版本分支进行识别"""
-        cur_sw_ver = SwInfoFunc._get_sw_ver(sw, dll_path)
+        cur_sw_ver = SwInfoFunc.get_sw_ver(sw, dll_path)
         if cur_sw_ver is None:
             return None, f"错误：识别不到版本"
         if "precise" not in mode_branches_dict:
@@ -76,7 +67,7 @@ class SwInfoFunc:
             return
         dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
         # 尝试寻找兼容版本并添加到额外表中
-        cur_sw_ver = SwInfoFunc._get_sw_ver(sw, dll_path)
+        cur_sw_ver = SwInfoFunc.get_sw_ver(sw, dll_path)
         subfunc_file.update_extra_cfg(sw, patch_dll=os.path.basename(dll_path))
         if "precise" in mode_branches_dict:
             precise_vers_dict = mode_branches_dict["precise"]
@@ -158,16 +149,17 @@ class SwInfoFunc:
         return result
 
     @staticmethod
-    def get_sw_inst_path_and_ver(sw: str, ignore_local_record=False):
-        """获取当前使用的版本号"""
-        # print(sw)
-        install_path = SwInfoFunc.get_sw_install_path(sw, ignore_local_record)
-        # print(install_path)
-        if install_path is not None:
-            if os.path.exists(install_path):
-                return install_path, file_utils.get_file_version(install_path)
-            return install_path, None
-        return None, None
+    def get_sw_ver(sw, dll_path):
+        """获取软件版本"""
+        try:
+            cur_sw_ver = file_utils.get_file_version(dll_path)
+            if cur_sw_ver is None:
+                exec_path = SwInfoFunc.get_sw_install_path(sw)
+                cur_sw_ver = file_utils.get_file_version(exec_path)
+            return cur_sw_ver
+        except Exception as e:
+            print(e)
+            return None
 
 
 class SwOperator:
@@ -392,7 +384,6 @@ class SwOperator:
                 if proc.name() and proc.name().startswith(f'{sw}Multiple_'):
                     proc.kill()
                     print(f"Killed process tree for {proc.name()} (PID: {proc.pid})")
-
             except Exception as e:
                 logger.error(e)
         print(f"清理{sw}Multiple_***子程序完成!")
@@ -816,21 +807,27 @@ class SwOperator:
 
 class SwInfoUtils:
     @staticmethod
-    def is_valid_sw_path(path_type, sw, path):
-        if path is None or path == "":
+    def is_valid_sw_path(path_type, sw, path) -> bool:
+        try:
+            if path is None or path == "":
+                return False
+            print(path_type)
+            path = str(path).replace('\\', '/')
+            if path_type == LocalCfg.INST_PATH:
+                executable, = subfunc_file.get_remote_cfg(sw, executable=None)
+                path_ext = os.path.splitext(path)[1].lower()
+                exe_ext = os.path.splitext(executable)[1].lower()
+                return path_ext == exe_ext
+            elif path_type == LocalCfg.DATA_DIR:
+                suffix, = subfunc_file.get_remote_cfg(sw, data_dir_check_suffix=None)
+                return os.path.isdir(os.path.join(path, str(suffix)))
+            elif path_type == LocalCfg.DLL_DIR:
+                suffix, = subfunc_file.get_remote_cfg(sw, dll_dir_check_suffix=None)
+                return os.path.isfile(os.path.join(path, suffix))
             return False
-        print(path_type)
-        if path_type == LocalCfg.INST_PATH:
-            executable, = subfunc_file.get_remote_cfg(sw, executable=None)
-            path_ext = os.path.splitext(path)[1].lower()
-            exe_ext = os.path.splitext(executable)[1].lower()
-            return path_ext == exe_ext
-        elif path_type == LocalCfg.DATA_DIR:
-            suffix, = subfunc_file.get_remote_cfg(sw, data_dir_check_suffix=None)
-            return os.path.isdir(os.path.join(path, suffix))
-        elif path_type == LocalCfg.DLL_DIR:
-            suffix, = subfunc_file.get_remote_cfg(sw, dll_dir_check_suffix=None)
-            return os.path.isfile(os.path.join(path, suffix))
+        except Exception as e:
+            print(e)
+            return False
 
     @staticmethod
     def get_sw_install_path_from_process(sw: str) -> list:
@@ -1274,5 +1271,4 @@ class SwOperatorUtils:
             # 检查是否有最大化按钮
             has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
             return has_maximize
-
-    pass
+        return None

@@ -4,7 +4,7 @@ from unittest import TestCase
 import psutil
 
 from functions import subfunc_file
-from functions.sw_func import SwOperatorUtils, SwInfoUtils
+from functions.sw_func import SwInfoUtils
 from resources import Config
 from ui.sidebar_ui import SidebarWnd, WndProperties
 from utils import handle_utils, hwnd_utils, pywinhandle

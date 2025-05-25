@@ -70,7 +70,6 @@ class DetailWnd(SubToolWnd, ABC):
         self.current_keys = set()  # 当前按下的键
 
     def load_ui(self):
-        wnd = self.wnd
         sw = self.sw
         account = self.account
 
@@ -588,7 +587,7 @@ class AboutWnd(SubToolWnd, ABC):
         # 加载并调整图标
         try:
             icon_image = Image.open(Config.PROJ_ICO_PATH)
-            icon_image = icon_image.resize(Constants.LOGO_SIZE, Image.LANCZOS)
+            icon_image = icon_image.resize(Constants.LOGO_SIZE, Image.Resampling.LANCZOS)
             self.logo_img = ImageTk.PhotoImage(icon_image)
         except Exception as e:
             logger.error(f"无法加载图标图片: {e}")
@@ -738,6 +737,7 @@ class AboutWnd(SubToolWnd, ABC):
             if len(new_versions) != 0:
                 update_log_window = tk.Toplevel(self.wnd)
                 UpdateLogWnd(update_log_window, "", old_versions, new_versions)
+                return True
             else:
                 messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
                 return True
@@ -1202,6 +1202,7 @@ class StatisticWnd(SubToolWnd, ABC):
 
 class SettingWnd(SubToolWnd, ABC):
     def __init__(self, wnd, sw, status, after, title):
+        self.error_msg = {}
         self.main_frame = None
         self.multirun_mode = None
         self.origin_values = None
@@ -1218,10 +1219,6 @@ class SettingWnd(SubToolWnd, ABC):
         self.data_dir_var = None
         self.install_path_entry = None
         self.inst_path_var = None
-        self.ver = None
-        self.inst_path = None
-        self.data_dir = None
-        self.dll_dir = None
 
         self.sw = sw
         self.status = status
@@ -1246,6 +1243,12 @@ class SettingWnd(SubToolWnd, ABC):
             "dll_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "dll_dir"),
             "login_size": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "login_size")
         }
+        self.error_msg = {
+            "inst_path": "请选择可执行文件!",
+            "data_dir": "请选择正常的存储文件夹!",
+            "dll_dir": "请选择包含dll文件的版本号最新的文件夹!",
+            "login_size": '不符合"数字*数字"的格式'
+        }
         self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
 
     def load_ui(self):
@@ -1257,7 +1260,7 @@ class SettingWnd(SubToolWnd, ABC):
         install_label.grid(row=0, column=0, **Constants.W_GRID_PACK)
 
         self.inst_path_var = tk.StringVar()
-        self.install_path_entry = tk.Entry(main_frame, textvariable=self.inst_path_var, state='readonly', width=70)
+        self.install_path_entry = tk.Entry(main_frame, textvariable=self.inst_path_var, width=70)
         self.install_path_entry.grid(row=0, column=1, **Constants.WE_GRID_PACK)
 
         install_get_button = ttk.Button(main_frame, text="获取",
@@ -1273,7 +1276,7 @@ class SettingWnd(SubToolWnd, ABC):
         data_label.grid(row=1, column=0, **Constants.W_GRID_PACK)
 
         self.data_dir_var = tk.StringVar()
-        self.data_path_entry = tk.Entry(main_frame, textvariable=self.data_dir_var, state='readonly', width=70)
+        self.data_path_entry = tk.Entry(main_frame, textvariable=self.data_dir_var, width=70)
         self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
 
         data_get_button = ttk.Button(main_frame, text="获取",
@@ -1289,7 +1292,7 @@ class SettingWnd(SubToolWnd, ABC):
         dll_label.grid(row=2, column=0, **Constants.W_GRID_PACK)
 
         self.dll_dir_var = tk.StringVar()
-        self.dll_path_entry = tk.Entry(main_frame, textvariable=self.dll_dir_var, state='readonly', width=70)
+        self.dll_path_entry = tk.Entry(main_frame, textvariable=self.dll_dir_var, width=70)
         self.dll_path_entry.grid(row=2, column=1, **Constants.WE_GRID_PACK)
 
         dll_get_button = ttk.Button(main_frame, text="获取",
@@ -1300,43 +1303,20 @@ class SettingWnd(SubToolWnd, ABC):
                                        command=partial(self.choose_sw_dll_dir, self.sw))
         dll_choose_button.grid(row=2, column=3, **Constants.WE_GRID_PACK)
 
-        # 新增第四行 - 当前版本
-        version_label = tk.Label(main_frame, text="应用版本：")
-        version_label.grid(row=3, column=0, **Constants.W_GRID_PACK)
-
-        self.version_var = tk.StringVar()
-        self.version_entry = tk.Entry(main_frame, textvariable=self.version_var, state='readonly', width=70)
-        self.version_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
-
-        ver_get_button = ttk.Button(main_frame, text="获取",
-                                    command=partial(self.get_cur_sw_ver, self.sw, True))
-        ver_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
-
-        # 新增第五行 - 屏幕大小
-        screen_size_label = tk.Label(main_frame, text="屏幕大小：")
-        screen_size_label.grid(row=4, column=0, **Constants.W_GRID_PACK)
-
-        self.screen_size_var = tk.StringVar()
-        self.screen_size_entry = tk.Entry(main_frame, textvariable=self.screen_size_var, state='readonly', width=70)
-        self.screen_size_entry.grid(row=4, column=1, **Constants.WE_GRID_PACK)
-
-        screen_size_get_button = ttk.Button(main_frame, text="获取", command=self.get_screen_size)
-        screen_size_get_button.grid(row=4, column=2, **Constants.WE_GRID_PACK)
-
         # 新增第六行 - 登录窗口大小
         login_size_label = tk.Label(main_frame, text="登录尺寸：")
-        login_size_label.grid(row=5, column=0, **Constants.W_GRID_PACK)
+        login_size_label.grid(row=3, column=0, **Constants.W_GRID_PACK)
 
         self.login_size_var = tk.StringVar()
-        self.login_size_entry = tk.Entry(main_frame, textvariable=self.login_size_var, state='readonly', width=70)
-        self.login_size_entry.grid(row=5, column=1, **Constants.WE_GRID_PACK)
+        self.login_size_entry = tk.Entry(main_frame, textvariable=self.login_size_var, width=70)
+        self.login_size_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
 
         login_size_get_button = ttk.Button(main_frame, text="获取", command=self.to_get_login_size)
-        login_size_get_button.grid(row=5, column=2, **Constants.WE_GRID_PACK)
+        login_size_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
 
         # 修改确定按钮，从第4行到第6行
-        ok_button = ttk.Button(main_frame, text="确定", command=self.on_ok)
-        ok_button.grid(row=3, column=3, rowspan=3, **Constants.NEWS_GRID_PACK)
+        ok_button = ttk.Button(main_frame, text="保存", command=self.on_ok)
+        ok_button.grid(row=3, column=3, **Constants.NEWS_GRID_PACK)
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         main_frame.grid_columnconfigure(1, weight=1)
@@ -1347,80 +1327,108 @@ class SettingWnd(SubToolWnd, ABC):
         self.load_or_get_sw_inst_path(self.sw, False)
         self.load_or_get_sw_data_dir(self.sw, False)
         self.load_or_get_sw_dll_dir(self.sw, False)
-        self.get_cur_sw_ver(self.sw, False)
-        self.get_screen_size()
         login_size = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, 'login_size')
         self.login_size_var.set(login_size)
 
     def check_bools(self):
         # 需要检验是否更改的属性
+        self.changed[LocalCfg.INST_PATH] = self.inst_path_var.get() != self.origin_values[LocalCfg.INST_PATH]
+        self.changed[LocalCfg.DATA_DIR] = self.data_dir_var.get()!= self.origin_values[LocalCfg.DATA_DIR]
+        self.changed[LocalCfg.DLL_DIR] = self.dll_dir_var.get()!= self.origin_values[LocalCfg.DLL_DIR]
+        self.changed[LocalCfg.LOGIN_SIZE] = self.login_size_var.get()!= self.origin_values[LocalCfg.LOGIN_SIZE]
+
         keys_to_check = ["data_dir"]
         self.need_to_clear_acc = any(self.changed[key] for key in keys_to_check)
 
     def on_ok(self):
-        self.check_bools()
-        if self.validate_paths():
-            # 检查是否需要清空账号信息
-            if self.need_to_clear_acc:
-                subfunc_file.clear_some_acc_data(self.sw)
-            self.after()
-            self.wnd.destroy()
+        if not self.validate_paths():
+            return
+        inst_path = self.inst_path_var.get()
+        data_dir = self.data_dir_var.get()
+        dll_dir = self.dll_dir_var.get()
+        login_size = self.login_size_var.get()
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.INST_PATH, inst_path)
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DATA_DIR, data_dir)
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, dll_dir)
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, login_size)
 
-    def finally_do(self):
         self.check_bools()
+        # 检查是否需要清空账号信息
         if self.need_to_clear_acc:
             subfunc_file.clear_some_acc_data(self.sw)
         self.after()
+        self.wnd.destroy()
+
+    def finally_do(self):
+        # 关闭窗口的话,不保存
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.INST_PATH, self.origin_values[LocalCfg.INST_PATH])
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DATA_DIR, self.origin_values[LocalCfg.DATA_DIR])
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, self.origin_values[LocalCfg.DLL_DIR])
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, self.origin_values[LocalCfg.LOGIN_SIZE])
 
     def validate_paths(self):
-        self.inst_path = self.inst_path_var.get()
-        self.data_dir = self.data_dir_var.get()
-        self.dll_dir = self.dll_dir_var.get()
+        invalid_vars = []
+        inst_path = self.inst_path_var.get()
+        data_dir = self.data_dir_var.get()
+        dll_dir = self.dll_dir_var.get()
+        login_size = self.login_size_var.get()
 
-        if "获取失败" in self.inst_path or "获取失败" in self.data_dir or "获取失败" in self.dll_dir:
-            messagebox.showerror("错误", "请确保所有路径都已正确设置")
-            return False
-        elif not bool(re.match(r'^\d+\*\d+$', self.login_size_var.get())):
-            messagebox.showerror("错误", f"请确保填入的尺寸符合\"整数*整数\"的形式")
-            return False
-        return True
+        if not SwInfoUtils.is_valid_sw_path(LocalCfg.INST_PATH, self.sw, inst_path):
+            invalid_vars.append(LocalCfg.INST_PATH.value)
+        if not SwInfoUtils.is_valid_sw_path(LocalCfg.DATA_DIR, self.sw, data_dir):
+            invalid_vars.append(LocalCfg.DATA_DIR.value)
+        if not SwInfoUtils.is_valid_sw_path(LocalCfg.DLL_DIR, self.sw, dll_dir):
+            invalid_vars.append(LocalCfg.DLL_DIR.value)
+        if not bool(re.match(r'^\d+\*\d+$', login_size)):
+            invalid_vars.append(LocalCfg.LOGIN_SIZE.value)
 
-    def load_or_get_sw_inst_path(self, sw, click=False):
+        if not invalid_vars:
+            return True
+        # 存在无效项时询问用户
+        error_msg = "以下设置项存在问题：\n\n" + "\n".join(f"• {item}:{self.error_msg[item]}" for item in invalid_vars)
+        error_msg += "\n\n是否坚持使用当前设置？"
+
+        return messagebox.askyesno(
+            "设置验证",
+            error_msg,
+            icon="warning"
+        )
+
+    def load_or_get_sw_inst_path(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.get_sw_install_path(sw, click)  # 此函数会保存路径
+        path = SwInfoFunc.get_sw_install_path(sw, ignore_local_rec)  # 此函数会应用路径
         if path:
             self.inst_path_var.set(path.replace('\\', '/'))
-            self.inst_path = path
-            if self.inst_path != self.origin_values["inst_path"]:
-                self.changed["inst_path"] = True
         else:
             self.inst_path_var.set("获取失败，请登录后获取或手动选择路径")
 
     def choose_sw_inst_path(self, sw):
         """选择路径，若检验成功会进行保存"""
+        selected_path = None  # 用于保存最终选择的路径
         while True:
             path = filedialog.askopenfilename(filetypes=[("Executable files", "*.exe"), ("All files", "*.*")])
             if not path:  # 用户取消选择
                 return
-            path = path.replace('\\', '/')
             if SwInfoUtils.is_valid_sw_path(LocalCfg.INST_PATH, sw, path):
-                self.inst_path_var.set(path)
-                self.inst_path = path
-                subfunc_file.save_a_setting_and_callback(self.sw, 'inst_path', self.inst_path)
-                if self.inst_path != self.origin_values["inst_path"]:
-                    self.changed["inst_path"] = True
+                selected_path = path
                 break
             else:
-                messagebox.showerror("错误", "请选择可执行文件！")
+                if not messagebox.askyesno(
+                        "提醒",
+                        f"该路径可能不是有效的程序路径，{self.error_msg[LocalCfg.INST_PATH]}\n是否坚持选择该路径？",
+                        icon="warning"):
+                    continue  # 用户选择"否"，继续循环
+                selected_path = path
+                break
 
-    def load_or_get_sw_data_dir(self, sw, click=False):
+        if selected_path:
+            self.data_dir_var.set(selected_path)
+
+    def load_or_get_sw_data_dir(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.get_sw_data_dir(sw, click)  # 此函数会保存路径
+        path = SwInfoFunc.get_sw_data_dir(sw, ignore_local_rec)  # 此函数会保存路径
         if path:
             self.data_dir_var.set(path.replace('\\', '/'))
-            self.data_dir = path
-            if self.data_dir != self.origin_values["data_dir"]:
-                self.changed["data_dir"] = True
         else:
             self.data_dir_var.set("获取失败，请手动选择存储文件夹（可在平台设置中查看）")
 
@@ -1447,70 +1455,61 @@ class SettingWnd(SubToolWnd, ABC):
 
     def choose_sw_data_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
+        selected_path = None  # 用于保存最终选择的路径
         while True:
             path = SettingWnd._ask_for_directory()
-            if not path:
+            if not path:  # 用户取消选择
                 return
             if SwInfoUtils.is_valid_sw_path(LocalCfg.DATA_DIR, sw, path):
-                self.data_dir_var.set(path)
-                self.data_dir = path
-                subfunc_file.save_a_setting_and_callback(self.sw, 'data_dir', self.data_dir)
-                if self.data_dir != self.origin_values["data_dir"]:
-                    self.changed["data_dir"] = True
+                selected_path = path
                 break
             else:
-                messagebox.showerror("错误", "该路径不是有效的存储路径，可以在平台设置中查看存储路径")
+                if not messagebox.askyesno(
+                        "提醒",
+                        f"该路径可能不是有效的存储路径，{self.error_msg[LocalCfg.DATA_DIR]}\n是否坚持选择该路径？",
+                        icon="warning"):
+                    continue  # 用户选择"否"，继续循环
+                selected_path = path
+                break
 
-    def load_or_get_sw_dll_dir(self, sw, click=False):
+        if selected_path:
+            self.data_dir_var.set(selected_path)
+
+    def load_or_get_sw_dll_dir(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.get_sw_dll_dir(sw, click)  # 此函数会保存路径
+        path = SwInfoFunc.get_sw_dll_dir(sw, ignore_local_rec)  # 此函数会保存路径
         if path:
             self.dll_dir_var.set(path.replace('\\', '/'))
-            self.dll_dir = path
-            if self.dll_dir != self.origin_values["dll_dir"]:
-                self.changed["dll_dir"] = True
         else:
             self.dll_dir_var.set("获取失败，请手动选择安装目录下最新版本号文件夹")
 
     def choose_sw_dll_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
+        selected_path = None  # 用于保存最终选择的路径
         while True:
             path = SettingWnd._ask_for_directory()
-            if not path:
+            if not path:  # 用户取消选择
                 return
             if SwInfoUtils.is_valid_sw_path(LocalCfg.DLL_DIR, sw, path):
-                self.dll_dir_var.set(path)
-                self.dll_dir = path
-                subfunc_file.save_a_setting_and_callback(self.sw, 'dll_dir', self.dll_dir)
-                if self.dll_dir != self.origin_values["dll_dir"]:
-                    self.changed["dll_dir"] = True
+                selected_path = path
                 break
             else:
-                messagebox.showerror("错误", "请选择包含dll文件的版本号最新的文件夹")
+                if not messagebox.askyesno(
+                        "提醒",
+                        f"该路径可能不是有效的存储路径，{self.error_msg[LocalCfg.DLL_DIR]}\n是否坚持选择该路径？",
+                        icon="warning"):
+                    continue  # 用户选择"否"，继续循环
+                selected_path = path
+                break
 
-    def get_cur_sw_ver(self, sw, click):
-        print("获取版本号")
-        _, version = SwInfoFunc.get_sw_inst_path_and_ver(sw, click)
-        if version is not None:
-            self.version_var.set(version)
-            self.ver = version
-
-    def get_screen_size(self):
-        # 获取屏幕和登录窗口尺寸
-        screen_width = self.wnd.winfo_screenwidth()
-        screen_height = self.wnd.winfo_screenheight()
-        self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        subfunc_file.save_a_global_setting('screen_size', f"{screen_width}*{screen_height}")
+        if selected_path:
+            self.dll_dir_var.set(selected_path)
 
     def to_get_login_size(self):
         result = SwOperator.get_login_size(self.sw, self.multirun_mode)
         if result:
             login_width, login_height = result
-            if 0.734 < login_width / login_height < 0.740:
-                subfunc_file.save_a_setting_and_callback(self.sw, 'login_size', f"{login_width}*{login_height}")
-                self.login_size_var.set(f"{login_width}*{login_height}")
-            else:
-                self.login_size_var.set(f"350*475")
+            self.login_size_var.set(f"{login_width}*{login_height}")
 
 
 class GlobalSettingWnd(SubToolWnd, ABC):
