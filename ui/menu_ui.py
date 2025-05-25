@@ -179,7 +179,7 @@ class MenuUI:
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
         self.view_options_menu.add_checkbutton(
             label="显示状态标志", variable=sign_vis_var,
-            command=partial(subfunc_file.save_a_global_setting,
+            command=partial(subfunc_file.save_a_global_setting_and_callback,
                             "sign_visible", not self.global_settings_value.sign_vis, self.root_class.acc_tab_ui.refresh)
         )
         # 特有菜单
@@ -262,8 +262,8 @@ class MenuUI:
             )
             self.menu_bar.entryconfigure(author_str_with_hint, command=handler.on_click)
 
-        print(self.sw_class)
-        print(self.sw_class.__dict__)
+        # print(self.sw_class)
+        # print(self.sw_class.__dict__)
 
     def _create_setting_menu(self):
         # -全局设置
@@ -298,7 +298,7 @@ class MenuUI:
         hide_wnd_var = self.global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)
         self.settings_menu.add_checkbutton(
             label="自动登录前隐藏主窗口", variable=hide_wnd_var,
-            command=partial(subfunc_file.save_a_global_setting,
+            command=partial(subfunc_file.save_a_global_setting_and_callback,
                             "hide_wnd", not hide_wnd_value, self.create_root_menu_bar))
 
         # >调用模式
@@ -315,7 +315,7 @@ class MenuUI:
             label='HANDLE',
             value='HANDLE',
             variable=call_mode_var,
-            command=partial(subfunc_file.save_a_global_setting,
+            command=partial(subfunc_file.save_a_global_setting_and_callback,
                             "call_mode", "HANDLE", self.create_root_menu_bar),
             state='disabled' if not python_sp else 'normal'
         )
@@ -324,7 +324,7 @@ class MenuUI:
             label='DEFAULT',
             value='DEFAULT',
             variable=call_mode_var,
-            command=partial(subfunc_file.save_a_global_setting,
+            command=partial(subfunc_file.save_a_global_setting_and_callback,
                             "call_mode", "DEFAULT", self.create_root_menu_bar),
             state='disabled' if not python_s_sp else 'normal'
         )
@@ -333,7 +333,7 @@ class MenuUI:
             label='LOGON',
             value='LOGON',
             variable=call_mode_var,
-            command=partial(subfunc_file.save_a_global_setting,
+            command=partial(subfunc_file.save_a_global_setting_and_callback,
                             "call_mode", "handle", self.create_root_menu_bar),
             state='disabled' if not handle_sp else 'normal'
         )
@@ -343,7 +343,7 @@ class MenuUI:
         auto_press_var = self.global_settings_var.auto_press = tk.BooleanVar(value=auto_press_value)
         self.settings_menu.add_checkbutton(
             label="自动点击登录按钮", variable=auto_press_var,
-            command=partial(subfunc_file.save_a_global_setting,
+            command=partial(subfunc_file.save_a_global_setting_and_callback,
                             "auto_press", not auto_press_value, self.create_root_menu_bar))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
@@ -428,7 +428,7 @@ class MenuUI:
                 after()
                 return
 
-        subfunc_file.save_a_global_setting(
+        subfunc_file.save_a_global_setting_and_callback(
             LocalCfg.SCALE,
             str(scale)
         )
@@ -441,8 +441,7 @@ class MenuUI:
     def open_sw_settings(self, sw):
         """打开设置窗口"""
         settings_window = tk.Toplevel(self.root)
-        SettingWnd(settings_window, sw, self.sw_class.freely_multirun,
-                   self.root_class.acc_tab_ui.refresh, f"{sw}设置")
+        SettingWnd(settings_window, sw, f"{sw}设置")
 
     def _open_global_setting_wnd(self):
         """打开设置窗口"""
@@ -496,7 +495,7 @@ class MenuUI:
     def _to_enable_new_func(self, event=None):
         if event is None:
             pass
-        subfunc_file.save_a_global_setting('enable_new_func', True)
+        subfunc_file.save_a_global_setting_and_callback('enable_new_func', True)
         messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
         self.create_root_menu_bar()
 

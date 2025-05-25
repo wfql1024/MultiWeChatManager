@@ -68,6 +68,13 @@ class LocalCfg(str, Enum):
     MULTIRUN_MODE = "multirun_mode"
     LOGIN_SORT = "login_sort"
     LOGOUT_SORT = "logout_sort"
+    STATE = "state"
+
+class SwStates(str, Enum):
+    """平台状态"""
+    VISIBLE = "visible"
+    HIDDEN = "hidden"
+    DISABLED = "disabled"
 
 
 class AccKeys(str, Enum):
@@ -100,3 +107,6 @@ class OnlineStatus(str, Enum):
     LOGIN = "login"
     LOGOUT = "logout"
     UNKNOWN = "unknown"
+
+if __name__ == "__main__":
+    print(str(SwStates.HIDDEN.value))

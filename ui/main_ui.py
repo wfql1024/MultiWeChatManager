@@ -11,10 +11,10 @@ import keyboard
 from functions import subfunc_file
 from functions.acc_func import AccOperator
 from functions.app_func import AppFunc
-from functions.main_func import MainFunc
+from functions.main_func import MultiSwFunc
 from functions.sw_func import SwInfoFunc
 from public_class import reusable_widgets
-from public_class.enums import LocalCfg
+from public_class.enums import LocalCfg, SwStates
 from public_class.global_members import GlobalMembers
 from resources import Config, Constants
 from ui import menu_ui, acc_tab_ui, acc_manager_ui
@@ -91,9 +91,9 @@ class MainWindow:
         subfunc_file.swap_cnt_and_mode_levels_in_auto()
         subfunc_file.downgrade_item_lvl_under_manual()
 
-        disable_proxy_value = self.global_settings_value.disable_proxy = \
-            True if subfunc_file.fetch_global_setting_or_set_default_or_none(
-                LocalCfg.USE_PROXY) == "True" else False
+        # disable_proxy_value = self.global_settings_value.disable_proxy = \
+        #     True if subfunc_file.fetch_global_setting_or_set_default_or_none(
+        #         LocalCfg.USE_PROXY) == "True" else False
         self.apply_proxy_setting()
 
         # 获取远程配置文件
@@ -175,28 +175,30 @@ class MainWindow:
         tab_dict = self.remote_cfg_data["global"]["all_sw"]
         print(tab_dict)
         for sw in tab_dict.keys():
+            # 使用枚举类型保证其位于正确的状态
+            state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
+            if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
+                continue
             self.sw_classes[sw] = SoftwareInfo(sw)
             print(f"创建{sw}的信息体...")
             self.sw_classes[sw].data_dir = SwInfoFunc.get_sw_data_dir(sw)
             self.sw_classes[sw].inst_path = SwInfoFunc.get_sw_install_path(sw)
             self.sw_classes[sw].ver = SwInfoFunc.get_sw_ver(sw, self.sw_classes[sw].data_dir)
             self.sw_classes[sw].dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
-            self.sw_classes[sw].frame = ttk.Frame(self.sw_notebook)
-            # print(self.sw_classes[sw].frame)
-            self.sw_classes[sw].frame.var = sw
-            self.sw_classes[sw].text = tab_dict[sw]['text']
-            self.sw_classes[sw].name = tab_dict[sw]['name']
-
-            self.sw_notebook.add(self.sw_classes[sw].frame, text=self.sw_classes[sw].text)
+            if state == SwStates.VISIBLE:
+                self.sw_classes[sw].frame = ttk.Frame(self.sw_notebook)
+                # print(self.sw_classes[sw].frame)
+                self.sw_classes[sw].frame.var = sw
+                self.sw_classes[sw].text = tab_dict[sw]['text']
+                self.sw_classes[sw].name = tab_dict[sw]['name']
+                self.sw_notebook.add(self.sw_classes[sw].frame, text=self.sw_classes[sw].text)
         # 选择一个选项卡并触发事件
         current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.TAB)
-        # 防止选择到不存在的选项卡
-        if current_sw not in self.sw_classes:
-            # 重置选项卡为None,并重新加载
-            subfunc_file.save_a_global_setting(LocalCfg.TAB, None)
-            current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.TAB)
-        self.sw_notebook.select(self.sw_classes[current_sw].frame)
-        # self.sw_notebook.bind('<<NotebookTabChanged>>', self.on_tab_change)
+        # 检查当前平台是否在所有选项卡中,若有则选择,若无则由系统选择
+        try:
+            self.sw_notebook.select(self.sw_classes[current_sw].frame)
+        except Exception as e:
+            logger.error(e)
         self.on_tab_change(_event=None)
 
     def on_tab_change(self, _event):
@@ -212,7 +214,7 @@ class MainWindow:
         selected_sw = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
         if selected_sw:
             # 是平台选项卡
-            subfunc_file.save_a_global_setting("tab", selected_sw)
+            subfunc_file.save_a_global_setting_and_callback(LocalCfg.TAB, selected_sw)
             printer.vital(f"当前选项卡: {selected_sw}")
             self.acc_tab_ui = acc_tab_ui.AccTabUI()
             self.acc_tab_ui.refresh()
@@ -258,7 +260,7 @@ class MainWindow:
     @staticmethod
     def to_login_auto_start_accounts():
         """启动程序后自动登录"""
-        MainFunc.thread_to_login_auto_start_accounts()
+        MultiSwFunc.thread_to_login_auto_start_accounts()
 
     def open_acc_detail(self, item, tab_class, widget_to_focus=None, event=None):
         """打开详情窗口"""

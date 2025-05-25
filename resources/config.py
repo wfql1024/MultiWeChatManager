@@ -1,6 +1,6 @@
 import os
 
-from public_class.enums import LocalCfg, SW
+from public_class.enums import LocalCfg, SW, SwStates
 from resources import constants
 
 # 获取屏幕缩放因子
@@ -33,6 +33,7 @@ class Config:
             LocalCfg.LOGOUT_SORT: "配置,True",
             LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
             LocalCfg.REST_MULTIRUN_MODE: "python",
+            LocalCfg.STATE: SwStates.VISIBLE
         }
     }
 

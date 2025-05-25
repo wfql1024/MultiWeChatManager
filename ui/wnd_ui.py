@@ -26,7 +26,7 @@ from functions.sw_func import SwOperator, SwInfoFunc, SwInfoUtils
 from functions.wnd_func import DetailWndFunc, UpdateLogWndFunc
 from public_class import reusable_widgets
 from public_class.custom_widget import CustomLabelBtn, CustomWidget
-from public_class.enums import LocalCfg, RemoteCfg
+from public_class.enums import LocalCfg, RemoteCfg, SwStates
 from public_class.reusable_widgets import SubToolWnd
 from resources import Constants, Config, Strings
 from utils import file_utils, sys_utils, widget_utils
@@ -1201,7 +1201,12 @@ class StatisticWnd(SubToolWnd, ABC):
 
 
 class SettingWnd(SubToolWnd, ABC):
-    def __init__(self, wnd, sw, status, after, title):
+    def __init__(self, wnd, sw, title):
+        self.need_to_reinit = None
+        self.visible_cb = None
+        self.visible_var = None
+        self.enable_cb = None
+        self.enable_var = None
         self.error_msg = {}
         self.main_frame = None
         self.multirun_mode = None
@@ -1221,8 +1226,6 @@ class SettingWnd(SubToolWnd, ABC):
         self.inst_path_var = None
 
         self.sw = sw
-        self.status = status
-        self.after = after
         self.need_to_clear_acc = False
 
         super().__init__(wnd, title)
@@ -1234,14 +1237,16 @@ class SettingWnd(SubToolWnd, ABC):
             "inst_path": False,
             "data_dir": False,
             "dll_dir": False,
-            "login_size": False
+            "login_size": False,
+            "state": False,
         }
         sw = self.sw
         self.origin_values = {
             "inst_path": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "inst_path"),
             "data_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "data_dir"),
             "dll_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "dll_dir"),
-            "login_size": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "login_size")
+            "login_size": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "login_size"),
+            "state": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "state"),
         }
         self.error_msg = {
             "inst_path": "请选择可执行文件!",
@@ -1254,69 +1259,66 @@ class SettingWnd(SubToolWnd, ABC):
     def load_ui(self):
         main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
         main_frame.pack(**Constants.FRM_PACK)
-
         # 第一行 - 安装路径
         install_label = tk.Label(main_frame, text="程序路径：")
         install_label.grid(row=0, column=0, **Constants.W_GRID_PACK)
-
         self.inst_path_var = tk.StringVar()
         self.install_path_entry = tk.Entry(main_frame, textvariable=self.inst_path_var, width=70)
         self.install_path_entry.grid(row=0, column=1, **Constants.WE_GRID_PACK)
-
         install_get_button = ttk.Button(main_frame, text="获取",
                                         command=partial(self.load_or_get_sw_inst_path, self.sw, True))
         install_get_button.grid(row=0, column=2, **Constants.WE_GRID_PACK)
-
         install_choose_button = ttk.Button(main_frame, text="选择路径",
                                            command=partial(self.choose_sw_inst_path, self.sw))
         install_choose_button.grid(row=0, column=3, **Constants.WE_GRID_PACK)
-
         # 第二行 - 数据存储路径
         data_label = tk.Label(main_frame, text="存储路径：")
         data_label.grid(row=1, column=0, **Constants.W_GRID_PACK)
-
         self.data_dir_var = tk.StringVar()
         self.data_path_entry = tk.Entry(main_frame, textvariable=self.data_dir_var, width=70)
         self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
-
         data_get_button = ttk.Button(main_frame, text="获取",
                                      command=partial(self.load_or_get_sw_data_dir, self.sw, True))
         data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
-
         data_choose_button = ttk.Button(main_frame, text="选择路径",
                                         command=partial(self.choose_sw_data_dir, self.sw))
         data_choose_button.grid(row=1, column=3, **Constants.WE_GRID_PACK)
-
         # 新增第三行 - dll路径
         dll_label = tk.Label(main_frame, text="DLL所在路径：")
         dll_label.grid(row=2, column=0, **Constants.W_GRID_PACK)
-
         self.dll_dir_var = tk.StringVar()
         self.dll_path_entry = tk.Entry(main_frame, textvariable=self.dll_dir_var, width=70)
         self.dll_path_entry.grid(row=2, column=1, **Constants.WE_GRID_PACK)
-
         dll_get_button = ttk.Button(main_frame, text="获取",
                                     command=partial(self.load_or_get_sw_dll_dir, self.sw, True))
         dll_get_button.grid(row=2, column=2, **Constants.WE_GRID_PACK)
-
         dll_choose_button = ttk.Button(main_frame, text="选择路径",
                                        command=partial(self.choose_sw_dll_dir, self.sw))
         dll_choose_button.grid(row=2, column=3, **Constants.WE_GRID_PACK)
-
-        # 新增第六行 - 登录窗口大小
+        # 新增第四行 - 登录窗口大小
         login_size_label = tk.Label(main_frame, text="登录尺寸：")
         login_size_label.grid(row=3, column=0, **Constants.W_GRID_PACK)
-
         self.login_size_var = tk.StringVar()
         self.login_size_entry = tk.Entry(main_frame, textvariable=self.login_size_var, width=70)
         self.login_size_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
-
         login_size_get_button = ttk.Button(main_frame, text="获取", command=self.to_get_login_size)
         login_size_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
+        # 新增第五行 - 平台禁用与显示
+        stata_frame = ttk.Frame(main_frame, padding=Constants.FRM_PAD)
+        stata_frame.grid(row=4, column=0, columnspan=3, **Constants.WE_GRID_PACK)
+        # 启用复选框
+        self.enable_var = tk.BooleanVar()
+        self.enable_cb = ttk.Checkbutton(stata_frame, text="启用(所有功能,包括自启动账号功能)", variable=self.enable_var,
+                                         command=self._update_visible_state)
+        self.enable_cb.pack(**Constants.R_WGT_PACK)
+        # 显示复选框
+        self.visible_var = tk.BooleanVar()
+        self.visible_cb = ttk.Checkbutton(stata_frame, text="在主界面显示", variable=self.visible_var)
+        self.visible_cb.pack(**Constants.R_WGT_PACK)
 
-        # 修改确定按钮，从第4行到第6行
+        # 修改确定按钮，从第4行到第5行
         ok_button = ttk.Button(main_frame, text="保存", command=self.on_ok)
-        ok_button.grid(row=3, column=3, **Constants.NEWS_GRID_PACK)
+        ok_button.grid(row=3, column=3, rowspan=2, **Constants.NEWS_GRID_PACK)
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         main_frame.grid_columnconfigure(1, weight=1)
@@ -1329,16 +1331,56 @@ class SettingWnd(SubToolWnd, ABC):
         self.load_or_get_sw_dll_dir(self.sw, False)
         login_size = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, 'login_size')
         self.login_size_var.set(login_size)
+        state_code = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, LocalCfg.STATE)
+        self.set_sw_state_cb_from_(state_code)
+
+    def _update_visible_state(self):
+        """内部使用的联动逻辑"""
+        if self.enable_var.get():
+            self.visible_cb.config(state="normal")  # 启用显示复选框
+        else:
+            self.visible_cb.config(state="disabled")  # 禁用显示复选框
+            self.visible_var.set(False)  # 强制取消勾选
+
+    def set_sw_state_cb_from_(self, state_code):
+        """根据状态码设置复选框值和状态"""
+        enable_var = self.enable_var
+        visible_var = self.visible_var
+        visible_cb = self.visible_cb
+
+        if state_code == SwStates.DISABLED:
+            enable_var.set(False)
+            visible_var.set(False)
+            visible_cb.config(state="disabled")
+        elif state_code == SwStates.HIDDEN:
+            enable_var.set(True)
+            visible_var.set(False)
+            visible_cb.config(state="normal")
+        elif state_code == SwStates.VISIBLE:
+            enable_var.set(True)
+            visible_var.set(True)
+            visible_cb.config(state="normal")
+
+    def get_sw_state_from_cb(self):
+        """根据复选框值返回当前状态码"""
+        if not self.enable_var.get():
+            return SwStates.DISABLED
+        return SwStates.VISIBLE if self.visible_var.get() else SwStates.HIDDEN
 
     def check_bools(self):
         # 需要检验是否更改的属性
         self.changed[LocalCfg.INST_PATH] = self.inst_path_var.get() != self.origin_values[LocalCfg.INST_PATH]
-        self.changed[LocalCfg.DATA_DIR] = self.data_dir_var.get()!= self.origin_values[LocalCfg.DATA_DIR]
-        self.changed[LocalCfg.DLL_DIR] = self.dll_dir_var.get()!= self.origin_values[LocalCfg.DLL_DIR]
-        self.changed[LocalCfg.LOGIN_SIZE] = self.login_size_var.get()!= self.origin_values[LocalCfg.LOGIN_SIZE]
+        self.changed[LocalCfg.DATA_DIR] = self.data_dir_var.get() != self.origin_values[LocalCfg.DATA_DIR]
+        self.changed[LocalCfg.DLL_DIR] = self.dll_dir_var.get() != self.origin_values[LocalCfg.DLL_DIR]
+        self.changed[LocalCfg.LOGIN_SIZE] = self.login_size_var.get() != self.origin_values[LocalCfg.LOGIN_SIZE]
+        self.changed[LocalCfg.STATE] = self.get_sw_state_from_cb() != self.origin_values[LocalCfg.STATE]
 
+        # 需要清除平台账号数据的情况
         keys_to_check = ["data_dir"]
         self.need_to_clear_acc = any(self.changed[key] for key in keys_to_check)
+        # 需要重新初始化的情况
+        if self.changed[LocalCfg.STATE]:
+            self.need_to_reinit = True
 
     def on_ok(self):
         if not self.validate_paths():
@@ -1351,12 +1393,20 @@ class SettingWnd(SubToolWnd, ABC):
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DATA_DIR, data_dir)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, dll_dir)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, login_size)
+        state = self.get_sw_state_from_cb()
+        print(f"结束时候状态:{state}")
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.STATE, state)
 
         self.check_bools()
-        # 检查是否需要清空账号信息
-        if self.need_to_clear_acc:
-            subfunc_file.clear_some_acc_data(self.sw)
-        self.after()
+        def _do():
+            # 检查是否需要清空账号信息
+            if self.need_to_clear_acc:
+                subfunc_file.clear_some_acc_data(self.sw)
+            if self.need_to_reinit:
+                self.root_class.initialize_in_init()
+                return
+            self.root_class.acc_tab_ui.refresh()
+        _do()
         self.wnd.destroy()
 
     def finally_do(self):
@@ -1546,7 +1596,7 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         proxy_checkbox = ttk.Checkbutton(
             proxy_frame, text="使用代理", variable=self.use_proxy_var,
             command=lambda: self.do_and_update(
-                partial(subfunc_file.save_a_global_setting, LocalCfg.USE_PROXY, self.use_proxy_var.get())))
+                partial(subfunc_file.save_a_global_setting_and_callback, LocalCfg.USE_PROXY, self.use_proxy_var.get())))
         proxy_checkbox.pack(side=tk.TOP, fill=tk.X)
         # 代理设置框架，将会根据是否使用代理而显示或隐藏
         proxy_detail_frame = ttk.Frame(proxy_frame)
@@ -1590,7 +1640,7 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         self.proxy_port = port_var
 
     def update_content(self):
-        use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_PROXY)
+        use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_PROXY) == "True"
         self.use_proxy_var.set(use_proxy)
         ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
         port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)
@@ -1608,15 +1658,15 @@ class GlobalSettingWnd(SubToolWnd, ABC):
         screen_width = self.wnd.winfo_screenwidth()
         screen_height = self.wnd.winfo_screenheight()
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        subfunc_file.save_a_global_setting('screen_size', f"{screen_width}*{screen_height}")
+        subfunc_file.save_a_global_setting_and_callback('screen_size', f"{screen_width}*{screen_height}")
 
     def save_settings(self):
         use_proxy = self.use_proxy_var.get()
         ip = self.proxy_ip.get()
         port = self.proxy_port.get()
-        subfunc_file.save_a_global_setting(LocalCfg.USE_PROXY, use_proxy)
-        subfunc_file.save_a_global_setting(LocalCfg.PROXY_IP, ip)
-        subfunc_file.save_a_global_setting(LocalCfg.PROXY_PORT, port)
+        subfunc_file.save_a_global_setting_and_callback(LocalCfg.USE_PROXY, use_proxy)
+        subfunc_file.save_a_global_setting_and_callback(LocalCfg.PROXY_IP, ip)
+        subfunc_file.save_a_global_setting_and_callback(LocalCfg.PROXY_PORT, port)
         printer.vital("设置成功")
         self.wnd.destroy()
 

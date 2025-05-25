@@ -936,7 +936,7 @@ class ActionableTreeView(ABC):
         if self.sw is not None:
             subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
         else:
-            subfunc_file.save_a_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
+            subfunc_file.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
 
     # @PerformanceDebugger.measure_method("测试快速刷新", auto_break=True)
     def quick_refresh_items(self, data_src):
@@ -1382,7 +1382,7 @@ class RadioTreeView(ABC):
         if self.sw is not None:
             subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
         else:
-            subfunc_file.save_a_global_setting(f'{table_tag}_sort', f"{col},{is_asc_after}")
+            subfunc_file.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
 
     def quick_refresh_items(self, data_src):
         """

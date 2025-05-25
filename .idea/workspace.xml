@@ -4,15 +4,17 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="新增线程工厂类,优化刷新效率;优化定制打印">
-      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="精简设置页面,平台版本号搬到登录页面下方">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_new_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_new_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/acc_tab_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/acc_tab_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/main_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/main_func.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public_class/enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/enums.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public_class/widget_frameworks.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/widget_frameworks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/wnd_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/wnd_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,121 +74,122 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_get_WXWork_mmap.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_get_font.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_get_ini_config.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_get_widget_by_name.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_get_wnd_state.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_kill_handle_in_pid.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_multi_new_weixin.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_search_from_features.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_set_parent_wnd.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_new_func.Test.test_unlock.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_calculate_md5.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_close_sw_mutex_by_handle.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_dict_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_equals.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_get_factor.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_get_nested_value.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_get_nested_values.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_get_now_datetime.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_get_process_ids_by_name.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_get_sw_data_dir.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_get_wnd_details_from_hwnd.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_lowercase.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_set_nested_values.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_six_randoms.executor&quot;: &quot;Run&quot;,
-    &quot;Python tests.Python tests for test_unit.Test.test_wait_for_wnd_open.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Createlnk.executor&quot;: &quot;Run&quot;,
-    &quot;Python.Main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.MultiWeChatManager.executor&quot;: &quot;Run&quot;,
-    &quot;Python.UpdateRemote.executor&quot;: &quot;Run&quot;,
-    &quot;Python.[debug]MWM.executor&quot;: &quot;Run&quot;,
-    &quot;Python._utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.about_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.change.executor&quot;: &quot;Run&quot;,
-    &quot;Python.color_log.executor&quot;: &quot;Run&quot;,
-    &quot;Python.control_by_handle.executor&quot;: &quot;Run&quot;,
-    &quot;Python.control_in_background.executor&quot;: &quot;Run&quot;,
-    &quot;Python.create_dir_tree.executor&quot;: &quot;Run&quot;,
-    &quot;Python.custom_widget.executor&quot;: &quot;Run&quot;,
-    &quot;Python.decrypt_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.detail_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.dir_tree_creator.executor&quot;: &quot;Run&quot;,
-    &quot;Python.embed_wechat.executor&quot;: &quot;Run&quot;,
-    &quot;Python.encrypt_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.enums.executor&quot;: &quot;Run&quot;,
-    &quot;Python.file_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_account.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_account_list.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_config.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_database.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_decrypt.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_detail.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_file.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_login.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_path.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_setting.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_update.executor&quot;: &quot;Run&quot;,
-    &quot;Python.func_wechat_dll.executor&quot;: &quot;Run&quot;,
-    &quot;Python.get_path_of_data.executor&quot;: &quot;Run&quot;,
-    &quot;Python.get_path_of_wechat.executor&quot;: &quot;Run&quot;,
-    &quot;Python.get_wechat_mutex_handle.executor&quot;: &quot;Run&quot;,
-    &quot;Python.github_download.executor&quot;: &quot;Run&quot;,
-    &quot;Python.handle_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.hwnd.executor&quot;: &quot;Run&quot;,
-    &quot;Python.hwnd_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.json_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.logger_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.mainTest.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.menu_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.modify_wechat_dll.executor&quot;: &quot;Run&quot;,
-    &quot;Python.more_open.executor&quot;: &quot;Run&quot;,
-    &quot;Python.path_setting_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.process_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.pywinhandle.executor&quot;: &quot;Run&quot;,
-    &quot;Python.rewards_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.search_wechat_key.executor&quot;: &quot;Run&quot;,
-    &quot;Python.setting_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.sidebar_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.statistic_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.string_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.strings.executor&quot;: &quot;Run&quot;,
-    &quot;Python.subfunc_file.executor&quot;: &quot;Run&quot;,
-    &quot;Python.sys_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.test_high_dpi.executor&quot;: &quot;Run&quot;,
-    &quot;Python.thread_manager.executor&quot;: &quot;Run&quot;,
-    &quot;Python.treeview.executor&quot;: &quot;Run&quot;,
-    &quot;Python.treeview_row_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.update_log_ui.executor&quot;: &quot;Run&quot;,
-    &quot;Python.update_program.executor&quot;: &quot;Run&quot;,
-    &quot;Python.version_config.executor&quot;: &quot;Run&quot;,
-    &quot;Python.wechat_config.executor&quot;: &quot;Run&quot;,
-    &quot;Python.wechat_decrypt_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.wechat_multiple.executor&quot;: &quot;Run&quot;,
-    &quot;Python.wechat_utils.executor&quot;: &quot;Run&quot;,
-    &quot;Python.widget_frameworks.executor&quot;: &quot;Run&quot;,
-    &quot;Python.wnd_ui.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;ShowUsagesActions.previewPropertyKey&quot;: &quot;true&quot;,
-    &quot;com.codeium.enabled&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/SpaceDev/MyProj/MultiWeChatManager/utils/better_wx&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;vcs.Git&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "Python tests.Python tests for test_new_func.Test.test_get_WXWork_mmap.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_get_font.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_get_ini_config.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_get_widget_by_name.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_get_wnd_state.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_kill_handle_in_pid.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_multi_new_weixin.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_search_from_features.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_set_parent_wnd.executor": "Run",
+    "Python tests.Python tests for test_new_func.Test.test_unlock.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_calculate_md5.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_close_sw_mutex_by_handle.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_dict_utils.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_equals.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_get_factor.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_get_nested_value.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_get_nested_values.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_get_now_datetime.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_get_process_ids_by_name.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_get_sw_data_dir.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_get_wnd_details_from_hwnd.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_lowercase.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_set_nested_values.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_six_randoms.executor": "Run",
+    "Python tests.Python tests for test_unit.Test.test_wait_for_wnd_open.executor": "Run",
+    "Python.Createlnk.executor": "Run",
+    "Python.Main.executor": "Run",
+    "Python.MultiWeChatManager.executor": "Run",
+    "Python.UpdateRemote.executor": "Run",
+    "Python.[debug]MWM.executor": "Run",
+    "Python._utils.executor": "Run",
+    "Python.about_ui.executor": "Run",
+    "Python.change.executor": "Run",
+    "Python.color_log.executor": "Run",
+    "Python.config.executor": "Run",
+    "Python.control_by_handle.executor": "Run",
+    "Python.control_in_background.executor": "Run",
+    "Python.create_dir_tree.executor": "Run",
+    "Python.custom_widget.executor": "Run",
+    "Python.decrypt_data.executor": "Run",
+    "Python.detail_ui.executor": "Run",
+    "Python.dir_tree_creator.executor": "Run",
+    "Python.embed_wechat.executor": "Run",
+    "Python.encrypt_data.executor": "Run",
+    "Python.enums.executor": "Run",
+    "Python.file_utils.executor": "Run",
+    "Python.func_account.executor": "Run",
+    "Python.func_account_list.executor": "Run",
+    "Python.func_config.executor": "Run",
+    "Python.func_database.executor": "Run",
+    "Python.func_decrypt.executor": "Run",
+    "Python.func_detail.executor": "Run",
+    "Python.func_file.executor": "Run",
+    "Python.func_login.executor": "Run",
+    "Python.func_path.executor": "Run",
+    "Python.func_setting.executor": "Run",
+    "Python.func_update.executor": "Run",
+    "Python.func_wechat_dll.executor": "Run",
+    "Python.get_path_of_data.executor": "Run",
+    "Python.get_path_of_wechat.executor": "Run",
+    "Python.get_wechat_mutex_handle.executor": "Run",
+    "Python.github_download.executor": "Run",
+    "Python.handle_utils.executor": "Run",
+    "Python.hwnd.executor": "Run",
+    "Python.hwnd_utils.executor": "Run",
+    "Python.json_utils.executor": "Run",
+    "Python.logger_utils.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.mainTest.executor": "Run",
+    "Python.main_ui.executor": "Run",
+    "Python.menu_ui.executor": "Run",
+    "Python.modify_wechat_dll.executor": "Run",
+    "Python.more_open.executor": "Run",
+    "Python.path_setting_ui.executor": "Run",
+    "Python.process_utils.executor": "Run",
+    "Python.pywinhandle.executor": "Run",
+    "Python.rewards_ui.executor": "Run",
+    "Python.search_wechat_key.executor": "Run",
+    "Python.setting_ui.executor": "Run",
+    "Python.sidebar_ui.executor": "Run",
+    "Python.statistic_ui.executor": "Run",
+    "Python.string_utils.executor": "Run",
+    "Python.strings.executor": "Run",
+    "Python.subfunc_file.executor": "Run",
+    "Python.sys_utils.executor": "Run",
+    "Python.test_high_dpi.executor": "Run",
+    "Python.thread_manager.executor": "Run",
+    "Python.treeview.executor": "Run",
+    "Python.treeview_row_ui.executor": "Run",
+    "Python.update_log_ui.executor": "Run",
+    "Python.update_program.executor": "Run",
+    "Python.version_config.executor": "Run",
+    "Python.wechat_config.executor": "Run",
+    "Python.wechat_decrypt_utils.executor": "Run",
+    "Python.wechat_multiple.executor": "Run",
+    "Python.wechat_utils.executor": "Run",
+    "Python.widget_frameworks.executor": "Run",
+    "Python.wnd_ui.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "ShowUsagesActions.previewPropertyKey": "true",
+    "com.codeium.enabled": "true",
+    "git-widget-placeholder": "master",
+    "last_opened_file_path": "D:/SpaceDev/MyProj/MultiWeChatManager/utils/better_wx",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "vcs.Git",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\utils\better_wx" />
@@ -273,6 +276,52 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="config" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="MultiWeChatManager" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/resources" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/resources/config.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="enums" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="MultiWeChatManager" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/public_class" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/public_class/enums.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="inner_utils" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="MultiWeChatManager" />
       <option name="ENV_FILES" value="" />
@@ -320,22 +369,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for test_new_func.Test.test_get_WXWork_mmap" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
-      <module name="MultiWeChatManager" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.test" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;test_new_func.Test.test_get_WXWork_mmap&quot;" />
-      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
-      <method v="2" />
-    </configuration>
     <configuration name="Python tests for test_new_func.Test.test_kill_handle_in_pid" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="MultiWeChatManager" />
       <option name="ENV_FILES" value="" />
@@ -368,40 +401,24 @@
       <option name="_new_targetType" value="&quot;PYTHON&quot;" />
       <method v="2" />
     </configuration>
-    <configuration name="Python tests for test_unit.Test.test_calculate_md5" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
-      <module name="MultiWeChatManager" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.test" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;test_unit.Test.test_calculate_md5&quot;" />
-      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
-      <method v="2" />
-    </configuration>
     <list>
       <item itemvalue="Python.MultiWeChatManager" />
       <item itemvalue="Python.UpdateRemote" />
       <item itemvalue="Python.[debug]MWM" />
       <item itemvalue="Python.update_program" />
+      <item itemvalue="Python.config" />
+      <item itemvalue="Python.enums" />
       <item itemvalue="Python.inner_utils" />
       <item itemvalue="Python tests.Python tests for test_new_func.Test.test_search_from_features" />
-      <item itemvalue="Python tests.Python tests for test_new_func.Test.test_get_WXWork_mmap" />
       <item itemvalue="Python tests.Python tests for test_new_func.Test.test_kill_handle_in_pid" />
-      <item itemvalue="Python tests.Python tests for test_unit.Test.test_calculate_md5" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.enums" />
+        <item itemvalue="Python.config" />
         <item itemvalue="Python tests.Python tests for test_new_func.Test.test_search_from_features" />
         <item itemvalue="Python.inner_utils" />
         <item itemvalue="Python tests.Python tests for test_new_func.Test.test_kill_handle_in_pid" />
-        <item itemvalue="Python tests.Python tests for test_new_func.Test.test_get_WXWork_mmap" />
-        <item itemvalue="Python tests.Python tests for test_unit.Test.test_calculate_md5" />
       </list>
     </recent_temporary>
   </component>
@@ -708,15 +725,7 @@
       <workItem from="1747983180618" duration="28579000" />
       <workItem from="1748065705497" duration="651000" />
       <workItem from="1748086854836" duration="11449000" />
-      <workItem from="1748115525679" duration="2765000" />
-    </task>
-    <task id="LOCAL-00261" summary="优化变量，优化方法">
-      <option name="closed" value="true" />
-      <created>1742132204007</created>
-      <option name="number" value="00261" />
-      <option name="presentableId" value="LOCAL-00261" />
-      <option name="project" value="LOCAL" />
-      <updated>1742132204008</updated>
+      <workItem from="1748115525679" duration="36452000" />
     </task>
     <task id="LOCAL-00262" summary="优化数据存取方法">
       <option name="closed" value="true" />
@@ -1102,7 +1111,15 @@
       <option name="project" value="LOCAL" />
       <updated>1748064841993</updated>
     </task>
-    <option name="localTasksCounter" value="310" />
+    <task id="LOCAL-00310" summary="精简设置页面,平台版本号搬到登录页面下方">
+      <option name="closed" value="true" />
+      <created>1748150136086</created>
+      <option name="number" value="00310" />
+      <option name="presentableId" value="LOCAL-00310" />
+      <option name="project" value="LOCAL" />
+      <updated>1748150136087</updated>
+    </task>
+    <option name="localTasksCounter" value="311" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1156,7 +1173,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="重构部分方法，优化方法归属；微信4.0新增带提示防撤回" />
     <MESSAGE value="修改加密方法，重新上传新的远程数据" />
     <MESSAGE value="新增选择是否禁用代理的功能" />
     <MESSAGE value="配置文件增加“代理”条目" />
@@ -1181,7 +1197,8 @@
     <MESSAGE value="上传旧版微信特征码" />
     <MESSAGE value="优化刷新效率及特征码匹配效率" />
     <MESSAGE value="新增线程工厂类,优化刷新效率;优化定制打印" />
-    <option name="LAST_COMMIT_MESSAGE" value="新增线程工厂类,优化刷新效率;优化定制打印" />
+    <MESSAGE value="精简设置页面,平台版本号搬到登录页面下方" />
+    <option name="LAST_COMMIT_MESSAGE" value="精简设置页面,平台版本号搬到登录页面下方" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1199,7 +1216,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_account.coverage" NAME="func_account Coverage Results" MODIFIED="1730794565838" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$strings.coverage" NAME="strings Coverage Results" MODIFIED="1736501554915" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/resources" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$subfunc_file.coverage" NAME="subfunc_file Coverage Results" MODIFIED="1738833898986" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$enums.coverage" NAME="enums Coverage Results" MODIFIED="1742114029072" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/public_class" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$enums.coverage" NAME="enums Coverage Results" MODIFIED="1748195811424" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/public_class" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_database.coverage" NAME="func_database Coverage Results" MODIFIED="1723960716503" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$logger_utils.coverage" NAME="logger_utils Coverage Results" MODIFIED="1730546138538" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$treeview_row_ui.coverage" NAME="treeview_row_ui Coverage Results" MODIFIED="1731279662402" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
@@ -1225,7 +1242,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_file.coverage" NAME="func_file Coverage Results" MODIFIED="1733325233358" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_wechat.coverage" NAME="get_path_of_wechat Coverage Results" MODIFIED="1723333662145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1748116197652" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1748203548054" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_setting.coverage" NAME="func_setting Coverage Results" MODIFIED="1735011292727" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_decrypt_utils.coverage" NAME="wechat_decrypt_utils Coverage Results" MODIFIED="1723959593571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$more_open.coverage" NAME="more_open Coverage Results" MODIFIED="1724791562833" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
@@ -1243,6 +1260,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$control_by_handle.coverage" NAME="control_by_handle Coverage Results" MODIFIED="1724847253095" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$pywinhandle.coverage" NAME="pywinhandle Coverage Results" MODIFIED="1735797133311" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$version_config.coverage" NAME="version_config Coverage Results" MODIFIED="1725715646772" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/resources" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$config.coverage" NAME="config Coverage Results" MODIFIED="1748188630480" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/resources" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$update_log_ui.coverage" NAME="update_log_ui Coverage Results" MODIFIED="1731230893371" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sidebar_ui.coverage" NAME="sidebar_ui Coverage Results" MODIFIED="1743842435911" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$path_setting_ui.coverage" NAME="path_setting_ui Coverage Results" MODIFIED="1723589497932" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />

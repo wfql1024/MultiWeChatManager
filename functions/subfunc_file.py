@@ -18,6 +18,7 @@ from resources import Config, Strings
 from utils import file_utils, image_utils, sys_utils
 from utils.file_utils import IniUtils, JsonUtils, DictUtils
 from utils.logger_utils import mylogger as logger
+from enum import Enum
 
 """获取远程配置，此配置只读，不提供修改方法"""
 
@@ -114,7 +115,7 @@ def read_remote_cfg_in_rules():
             # 更新 next_check_time 为明天
             next_check_time = today + dt.timedelta(days=1)
             next_check_time_str = next_check_time.strftime("%Y-%m-%d")
-            save_a_global_setting("next_check_time", next_check_time_str)
+            save_a_global_setting_and_callback("next_check_time", next_check_time_str)
             return config_data
         else:
             # 失败加载本地
@@ -269,13 +270,13 @@ def save_a_setting_and_callback(section, key, value, callback=None):
     """
     try:
         changed = False
-        data = load_setting()
-        origin_value = DictUtils.get_nested_values(data, None, section, key)
-        DictUtils.set_nested_values(data, value, section, key)
-        save_setting(data)
+        origin_value = get_settings(section, key)
+        # 如果value是枚举类,则获取其值
+        if isinstance(value, Enum):
+            value = value.value
+        update_settings(section, **{key: value})
 
-        data = load_setting()
-        new_value = DictUtils.get_nested_values(data, None, section, key)
+        new_value = get_settings(section, key)
 
         if callback is not None:
             callback()
@@ -290,7 +291,7 @@ def save_a_setting_and_callback(section, key, value, callback=None):
         return False
 
 
-def save_a_global_setting(key, value, callback=None):
+def save_a_global_setting_and_callback(key, value, callback=None):
     return save_a_setting_and_callback(LocalCfg.GLOBAL_SECTION, key, value, callback)
 
 
@@ -302,23 +303,39 @@ def fetch_global_setting_or_set_default_or_none(setting_key):
     return fetch_sw_setting_or_set_default_or_none(LocalCfg.GLOBAL_SECTION, setting_key)
 
 
-def fetch_sw_setting_or_set_default_or_none(sw, setting_key):
+def fetch_sw_setting_or_set_default_or_none(sw: str, setting_key: str, enum_cls: Optional[Type[Enum]] = None):
     """
     获取配置项，若没有则设置默认值，若没有默认值则返回None
-    :return: 已选择的子程序
+    若传入枚举类，会严格验证值是否在枚举范围内，无效则使用枚举第一个值
+
+    :param sw: 平台标识
+    :param setting_key: 配置键名
+    :param enum_cls: 可选枚举类（用于严格验证值）
+    :return: 配置值（保证符合枚举约束）或None
     """
-    data = load_setting()
-    value = DictUtils.get_nested_values(data, None, sw, setting_key)
-    if not value or value == "" or value == "None" or value == "none":
+    # 原值
+    value, = get_settings(sw, **{setting_key: None})
+    if value in (None, "", "None", "none", "null", "NULL"):
         try:
+            # 默认值
             try:
                 sw_dict = Config.INI_DEFAULT_VALUE[sw]
             except KeyError:
-                sw_dict = Config.INI_DEFAULT_VALUE[SW.DEFAULT.value]
+                sw_dict = Config.INI_DEFAULT_VALUE[SW.DEFAULT]
             value = sw_dict[setting_key]
-            DictUtils.set_nested_values(data, value, sw, setting_key)
-        except KeyError:
-            return None
+            pass
+        except (KeyError, AttributeError):
+            # 空值
+            value = None
+    if isinstance(value, Enum):
+        value = value.value
+    # 若使用了枚举,检测值是否在枚举范围内，无效则使用枚举第一个值
+    if enum_cls is not None:
+        valid_values = {e.value for e in enum_cls}  # 保持原始大小写
+        if value not in valid_values:
+            value = next(iter(enum_cls)).value  # 使用第一个枚举值
+
+    update_settings(sw, **{setting_key: str(value)})
     return value
 
 
@@ -656,8 +673,7 @@ def get_curr_wx_id_from_config_file(sw, data_dir):
             matched_str = match.group(0)
             wx_id = matched_str.split("\\")[0]  # 获取 wxid_...... 部分
             return wx_id
-    else:
-        return None
+    return None
 
 
 """统计数据相关"""

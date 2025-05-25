@@ -4,20 +4,45 @@ from typing import Dict
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
-from public_class.enums import LocalCfg
+from public_class.enums import LocalCfg, SwStates
 from public_class.global_members import GlobalMembers
 from utils.logger_utils import mylogger as logger
 
 
-class MainFunc:
+class MultiSwFunc:
+    """多平台功能"""
+    @staticmethod
+    def get_all_enable_sw() -> list:
+        """获取所有启用的平台"""
+        all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
+        all_enable_sw = []
+        for sw in all_sw_dict:
+            state = subfunc_file.get_settings(sw, LocalCfg.STATE)
+            if state == SwStates.HIDDEN or state == SwStates.VISIBLE:
+                all_enable_sw.append(sw)
+        return all_enable_sw
+
+    @staticmethod
+    def get_all_visible_sw() -> list:
+        """获取所有可见的平台"""
+        all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
+        all_visible_sw = []
+        for sw in all_sw_dict:
+            state = subfunc_file.get_settings(sw, LocalCfg.STATE)
+            if state == SwStates.VISIBLE:
+                all_visible_sw.append(sw)
+        return all_visible_sw
+
     @staticmethod
     def _login_auto_start_accounts():
         root_class = GlobalMembers.root_class
         root = root_class.root
         acc_tab_ui = root_class.acc_tab_ui
 
-        all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
-        all_sw = [key for key in all_sw_dict.keys()]
+        # all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
+        # all_sw = [key for key in all_sw_dict.keys()]
+        all_sw = MultiSwFunc.get_all_enable_sw()
+
         print("所有平台：", all_sw)
 
         # 获取需要自启动的账号
@@ -79,6 +104,6 @@ class MainFunc:
     @staticmethod
     def thread_to_login_auto_start_accounts():
         try:
-            threading.Thread(target=MainFunc._login_auto_start_accounts).start()
+            threading.Thread(target=MultiSwFunc._login_auto_start_accounts).start()
         except Exception as e:
             logger.error(e)
