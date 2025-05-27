@@ -45,6 +45,7 @@
                 "frame": ""
             }
         },
+        "support_sw": ["WeChat", "Weixin", "WXWork", "QQNT", "QQ"],
         "all_login_status": {
             "login": {
                 "text": "已登录",
@@ -1383,6 +1384,7 @@
         "redundant_wnd_class": [
             "WeChatLoginWndForPC"
         ],
+        "label": "微信",
         "executable": "WeChat.exe",
         "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
         "data_dir_guess_suffix": "Tencent\\WeChat",
@@ -2100,6 +2102,7 @@
         "redundant_wnd_class": [
             "Qt51514QWindowIcon"
         ],
+        "label": "微信4.0",
         "executable": "Weixin.exe",
         "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
         "data_dir_guess_suffix": "Tencent\\Weixin",
@@ -2157,6 +2160,7 @@
         "redundant_wnd_class": [
             ""
         ],
+        "label": "企微",
         "executable": "WXWork.exe",
         "inst_path_guess_suffix": "Tencent\\WXWork\\WXWork.exe",
         "data_dir_guess_suffix": "Tencent\\WXWork",
@@ -2215,6 +2219,7 @@
         "redundant_wnd_class": [
             ""
         ],
+        "label": "QQNT",
         "executable": "QQ.exe",
         "inst_path_guess_suffix": "Tencent\\QQNT\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQNT",
@@ -2259,6 +2264,7 @@
         "redundant_wnd_class": [
             ""
         ],
+        "label": "QQ",
         "executable": "QQ.exe",
         "inst_path_guess_suffix": "Tencent\\QQ\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQ",
