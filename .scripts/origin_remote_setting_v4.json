@@ -45,7 +45,13 @@
                 "frame": ""
             }
         },
-        "support_sw": ["WeChat", "Weixin", "WXWork", "QQNT", "QQ"],
+        "support_sw": [
+            "WeChat",
+            "Weixin",
+            "WXWork",
+            "QQNT",
+            "QQ"
+        ],
         "all_login_status": {
             "login": {
                 "text": "已登录",
@@ -1493,6 +1499,16 @@
                 }
             },
             "precise": {
+                "4.0.5.17": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ],
+                        "modified": [
+                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ]
+                    }
+                },
                 "4.0.5.16": {
                     "default": {
                         "original": [
@@ -1524,6 +1540,16 @@
                     }
                 }
             },
+            "4.0.5.17": [
+                {
+                    "original": [
+                        "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                    ],
+                    "modified": [
+                        "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                    ]
+                }
+            ],
             "4.0.5.16": [
                 {
                     "original": [
@@ -1781,6 +1807,30 @@
                 }
             },
             "precise": {
+                "4.0.5.17": {
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 71 12 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "74 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
+                        ],
+                        "modified": [
+                            "eb 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
+                        ]
+                    }
+                },
                 "4.0.5.16": {
                     "bubble": {
                         "original": [
@@ -1902,6 +1952,22 @@
                     }
                 }
             },
+            "4.0.5.17": [
+                {
+                    "original": [
+                        "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                        "e8 71 12 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                        "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                        "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                    ],
+                    "modified": [
+                        "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                        "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                        "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                        "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                    ]
+                }
+            ],
             "4.0.5.16": [
                 {
                     "original": [
@@ -2245,7 +2311,8 @@
             "nt_data",
             "nt_db",
             "nt_qq",
-            "nt_temp"
+            "nt_temp",
+            "Tencent Files"
         ],
         "cut_to_compatible_id": [
             0,
@@ -2289,7 +2356,8 @@
             "nt_data",
             "nt_db",
             "nt_qq",
-            "nt_temp"
+            "nt_temp",
+            "Tencent Files"
         ],
         "cut_to_compatible_id": [
             0,
