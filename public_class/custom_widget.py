@@ -1,9 +1,11 @@
 import tkinter as tk
 from abc import ABC, abstractmethod
 from enum import Enum
+from functools import partial
 from tkinter import ttk
 
 from public_class.enums import NotebookDirection
+from utils import widget_utils
 from utils.encoding_utils import ColorUtils
 
 
@@ -12,6 +14,7 @@ class CustomWidget(ABC):
         NORMAL = "normal"
         DISABLED = "disabled"
         SELECTED = "selected"
+        CLICKED = "clicked"
         HOVERED = "hovered"
 
     @abstractmethod
@@ -22,6 +25,21 @@ class CustomWidget(ABC):
         """
         pass
 
+    @staticmethod
+    def set_all_custom_widgets_to_(frame, state: State):
+        """
+        将指定框架内所有继承自 CustomWidget 的控件设置为指定状态（递归子控件）
+
+        :param frame: 要处理的 Frame 或控件容器
+        :param state: CustomWidget.State 中的状态值
+        """
+        for child in frame.winfo_children():
+            if isinstance(child, CustomWidget):
+                child.set_state(state)
+            # 如果子控件也是容器（比如 Frame），递归处理
+            if isinstance(child, (tk.Frame, ttk.Frame)):
+                CustomWidget.set_all_custom_widgets_to_(child, state)
+
 
 class CustomLabelBtn(tk.Label, CustomWidget, ABC):
     def __init__(self, parent, text, *args, **kwargs):
@@ -30,6 +48,7 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
         self._shake_running = None
         self.state = self.State.NORMAL
 
+        self.down = False
         # 加载默认样式
         default_major_bg_color = '#B2E0F7'  # 主后色: 淡蓝色
         default_major_fg_color = 'black'  # 主前色: 黑色
@@ -38,6 +57,8 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
         default_normal_fg = default_major_fg_color  # 正常前景色: 黑色
         default_selected_bg = default_major_bg_color
         default_selected_fg = default_major_fg_color
+        default_clicked_bg = default_major_bg_color
+        default_clicked_fg = default_major_fg_color
         default_hovered_bg = ColorUtils.lighten_color(default_selected_bg, 0.8)
         default_hovered_fg = default_selected_fg
         default_disabled_bg = '#F5F7FA'  # 禁用背景色: 浅灰色
@@ -46,17 +67,18 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
         default_styles = {
             self.State.DISABLED: {'bg': default_disabled_bg, 'fg': default_disabled_fg},
             self.State.SELECTED: {'bg': default_selected_bg, 'fg': default_selected_fg},
+            self.State.CLICKED: {'bg': default_clicked_bg, 'fg': default_clicked_fg},
             self.State.HOVERED: {'bg': default_hovered_bg, 'fg': default_hovered_fg},
             self.State.NORMAL: {'bg': default_normal_bg, 'fg': default_normal_fg}
         }
         self.set_styles(default_styles)
 
-        self.click_command = None
+        # self.click_command = None
 
-        self.bind('<Enter>', self._on_enter)
-        self.bind('<Leave>', self._on_leave)
-        self.bind('<Button-1>', self._on_button_down)
-        self.bind('<ButtonRelease-1>', self._on_button_up)
+        self.bind('<Enter>', self._on_enter, add='+')
+        self.bind('<Leave>', self._on_leave, add='+')
+        self.bind('<Button-1>', self._on_button_down, add='+')
+        self.bind('<ButtonRelease-1>', self._on_button_up, add='+')
 
         self._update_style()
 
@@ -79,7 +101,6 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
     def set_styles(self, styles):
         """
         批量更新样式配置
-
         参数:
             styles (dict): 传入一个字典，格式例如：
                 {
@@ -107,10 +128,6 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
 
         self._update_style()
 
-    def on_click(self, command):
-        """设置点击回调"""
-        self.click_command = command
-
     def _update_style(self):
         """根据当前状态更新样式"""
         self.configure(**self.styles[self.state])
@@ -118,51 +135,47 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
     def _on_enter(self, event=None):
         if event:
             pass
-        if self.state == self.State.DISABLED:
+        if self.state == self.State.DISABLED or self.state == self.State.SELECTED:
             return
-        # 若已被长久选中，则保持选中状态
-        if self.state != self.State.SELECTED:
+        if self.down:
+            self.set_state(self.State.CLICKED)
+        else:
             self.set_state(self.State.HOVERED)
 
     def _on_leave(self, event=None):
         if event:
             pass
-        if self.state == self.State.DISABLED:
+        if self.state == self.State.DISABLED or self.state == self.State.SELECTED:
             return
-        # 若已被长久选中，则保持选中状态
-        if self.state != self.State.SELECTED:
-            self.set_state(self.State.NORMAL)
+        self.set_state(self.State.NORMAL)
 
     def _on_button_down(self, event=None):
+        self.down = True
+        print("按下")
         if event:
             pass
         if self.state == self.State.DISABLED:
             self._shake()
             return
+        if self.state == self.State.SELECTED:
+            return
         # 按下是短暂的选中状态
-        self.set_state(self.State.SELECTED)
+        self.set_state(self.State.CLICKED)
 
     def _on_button_up(self, event=None):
+        self.down = False
+        print("抬起")
         if event:
             pass
-        if self.state == self.State.DISABLED:
+        if self.state == self.State.DISABLED or self.state == self.State.SELECTED:
             return
-
         # 按下鼠标后，当抬起时位置不在按钮处，应该取消点击的状态
         x, y = self.winfo_pointerxy()
         widget = self.winfo_containing(x, y)
         if widget is not self:
             self.set_state(self.State.NORMAL)
             return
-
-        # 松开时若不是选中状态，则恢复为悬浮状态；若是长久选中状态，则保持
-        if self.state != self.State.SELECTED:
-            self.set_state(self.State.HOVERED)
-
-        # 如果有命令，则恢复为常规状态，并执行
-        if self.click_command:
-            self.set_state(self.State.NORMAL)
-            self.click_command()
+        self.set_state(self.State.HOVERED)
 
     def _shake(self):
         """禁用状态下点击，抖动一下提示，不破坏布局"""
@@ -189,46 +202,58 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
         move()
 
 
-class CustomNotebook(ttk.Frame):
-    def __init__(self, parent, direction=NotebookDirection.TOP, *args, **kwargs):
-        super().__init__(parent, *args, **kwargs)
-
+class CustomNotebook:
+    def __init__(self, root, parent_frame, direction=NotebookDirection.TOP, *args, **kwargs):
         self.direction = direction
+        self.root = root
         self.tabs = {}
-        self.current_tab = None
+        self.curr_tab_id = None
         self.selected_bg = '#00FF00'  # 默认选中颜色
+        self.select_callback = None  # 选中回调函数
 
-        # 创建标签页和内容容器
+        self.notebook_frame = ttk.Frame(parent_frame, *args, **kwargs)
+        self._pack_frame()
         self._create_containers()
+
+    def _pack_frame(self):
+        direction = self.direction
+        if direction == NotebookDirection.TOP:
+            self.notebook_frame.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
+        elif direction == NotebookDirection.BOTTOM:
+            self.notebook_frame.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
+        elif direction == NotebookDirection.LEFT:
+            self.notebook_frame.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
+        elif direction == NotebookDirection.RIGHT:
+            self.notebook_frame.pack(fill=tk.BOTH, expand=True, side=tk.RIGHT)
 
     def _create_containers(self):
         """创建标签页和内容容器"""
         # 根据方向创建容器
         if self.direction in [NotebookDirection.TOP, NotebookDirection.BOTTOM]:
             # 水平布局
-            self.tab_frame = ttk.Frame(self)
-            self.content_frame = ttk.Frame(self)
+            self.tabs_frame = ttk.Frame(self.notebook_frame)
+            self.frames_pool = ttk.Frame(self.notebook_frame)
 
             # 根据方向设置pack顺序
             if self.direction == NotebookDirection.TOP:
-                self.tab_frame.pack(side=tk.TOP, fill=tk.X)
-                self.content_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+                self.tabs_frame.pack(side=tk.TOP, fill=tk.X)
+                self.frames_pool.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
             else:
-                self.content_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-                self.tab_frame.pack(side=tk.TOP, fill=tk.X)
+                self.frames_pool.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+                self.tabs_frame.pack(side=tk.TOP, fill=tk.X)
 
         else:
             # 垂直布局
-            self.tab_frame = ttk.Frame(self)
-            self.content_frame = ttk.Frame(self)
+            self.tabs_frame = ttk.Frame(self.notebook_frame)
+            self.frames_pool = ttk.Frame(self.notebook_frame)
 
             # 根据方向设置pack顺序
             if self.direction == NotebookDirection.LEFT:
-                self.tab_frame.pack(side=tk.LEFT, fill=tk.Y)
-                self.content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+                self.tabs_frame.pack(side=tk.LEFT, fill=tk.Y)
+                self.frames_pool.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             else:
-                self.content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-                self.tab_frame.pack(side=tk.LEFT, fill=tk.Y)
+                self.frames_pool.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+                self.tabs_frame.pack(side=tk.LEFT, fill=tk.Y)
 
     def set_major_color(self, selected_bg='#00FF00'):
         """
@@ -241,112 +266,133 @@ class CustomNotebook(ttk.Frame):
             label = tab_info['label']
             label.set_major_colors(selected_bg)
 
-    def add(self, text, frame):
+    def add(self, tab_id, text, frame):
         """
         添加新的标签页
+        :param tab_id: 标签页标识
         :param text: 标签页文本
         :param frame: 标签页内容框架
         """
         # 创建标签页
-        tab = ttk.Frame(self.tab_frame)
+        print(f"添加标签页：{tab_id}")
+        tab_frame = ttk.Frame(self.tabs_frame)
         if self.direction in [NotebookDirection.TOP, NotebookDirection.BOTTOM]:
-            tab.pack(side=tk.LEFT)
+            tab_frame.pack(side=tk.LEFT)
         else:
-            tab.pack(side=tk.TOP, fill=tk.X)
+            tab_frame.pack(side=tk.TOP, fill=tk.X)
 
         # 创建标签文本，若在侧边则竖向显示
         side_directions = [NotebookDirection.LEFT, NotebookDirection.RIGHT]
         display_text = '\n'.join(text) if self.direction in side_directions else text
 
-        label = CustomLabelBtn(tab, text=display_text)
-        label.pack(fill=tk.BOTH, expand=True)
+        tab_label = CustomLabelBtn(tab_frame, text=display_text)
+        tab_label.pack(fill=tk.BOTH, expand=True)
 
         # 设置点击事件
-        label.on_click(lambda t=text: self.select(t))
+        # tab_label.on_click(lambda i=tab_id: self.select(i))
+        widget_utils.UnlimitedClickHandler(
+            self.root,
+            tab_label,
+            **{"1": partial(self.select, tab_id),
+               "2": partial(self.select, tab_id)}
+
+        )
 
         # 存储标签页信息
-        self.tabs[text] = {
+        self.tabs[tab_id] = {
+            'text': text,
+            'tab': tab_label,
             'frame': frame,
-            'tab': tab,
-            'label': label
+            'tab_frame': tab_frame,
         }
 
-        # 如果是第一个标签页，自动选中
-        if not self.current_tab:
-            self.select(text)
+        # # 如果是第一个标签页，自动选中
+        # if not self.curr_tab_id:
+        #     self.select(tab_id)
 
-    def select(self, text):
+    def select(self, tab_id):
         """
         选择指定的标签页
-        :param text: 标签页文本
+        :param tab_id: 标签页文本
         """
         # 取消当前标签页的选中状态
-        if self.current_tab:
+        if self.curr_tab_id:
             # print(f"取消标签：{self.current_tab}")
-            self.tabs[self.current_tab]['label'].set_state(CustomLabelBtn.State.NORMAL)
+            self.tabs[self.curr_tab_id]['tab'].set_state(CustomLabelBtn.State.NORMAL)
 
         # 设置新标签页的选中状态
         # print(f"选中标签：{text}")
-        self.tabs[text]['label'].set_state(CustomLabelBtn.State.SELECTED)
-        self.current_tab = text
+        self.tabs[tab_id]['tab'].set_state(CustomLabelBtn.State.SELECTED)
+        self.curr_tab_id = tab_id
 
         # 显示对应的内容
         for tab_text, tab_info in self.tabs.items():
-            if tab_text == text:
+            if tab_text == tab_id:
                 tab_info['frame'].pack(fill=tk.BOTH, expand=True)
             else:
                 tab_info['frame'].pack_forget()
+
+        if callable(self.select_callback):
+            self.select_callback()
 
 
 if __name__ == '__main__':
     root = tk.Tk()
     root.geometry("400x300")
 
+    def printer(click_time):
+        print("按钮功能:连点次数为", click_time)
+
     # 创建竖向Notebook（左侧）
-    notebook_left = CustomNotebook(root, direction=NotebookDirection.LEFT)
-    notebook_left.pack(fill=tk.BOTH, expand=True)
+    # left_nb_cls = CustomNotebook(root, direction=NotebookDirection.LEFT)
 
     # 创建横向Notebook（顶部）
-    notebook_top = CustomNotebook(root, direction=NotebookDirection.TOP)
-    # notebook_top.pack(fill=tk.BOTH, expand=True)
+    top_nb_cls = CustomNotebook(root, root, direction=NotebookDirection.TOP)
 
-    my_notebook = notebook_left
-
+    my_nb_cls = top_nb_cls
     # 设置颜色（使用正绿色）
-    my_notebook.set_major_color(selected_bg='#00FF00')
+    my_nb_cls.set_major_color(selected_bg='#00FF00')
+
+    nb_content_frame = top_nb_cls.frames_pool
+
 
     # 创建标签页
-    frame1 = ttk.Frame(my_notebook)
-    frame2 = ttk.Frame(my_notebook)
-    frame3 = ttk.Frame(my_notebook)
+    frame1 = ttk.Frame(nb_content_frame)
+    frame2 = ttk.Frame(nb_content_frame)
+    frame3 = ttk.Frame(nb_content_frame)
 
     # 在标签页1中添加CustomLabelBtn
     btn1 = CustomLabelBtn(frame1, text="标签按钮1")
-    btn1.on_click(lambda: print("按钮1被点击"))
+    # btn1.on_click(lambda: print("按钮1被点击"))
     btn1.pack(pady=10)
+    widget_utils.UnlimitedClickHandler(
+        root, btn1,
+        printer
+
+    )
     btn2 = CustomLabelBtn(frame1, text="标签按钮2")
-    btn2.on_click(lambda: print("按钮2被点击"))
+    # btn2.on_click(lambda: print("按钮2被点击"))
     btn2.pack(pady=10)
 
     # 在标签页2中添加CustomLabelBtn和标签
     ttk.Label(frame2, text="这是标签页2").pack(pady=10)
     btn3 = CustomLabelBtn(frame2, text="标签按钮3")
-    btn3.on_click(lambda: print("按钮3被点击"))
+    # btn3.on_click(lambda: print("按钮3被点击"))
     btn3.pack(pady=10)
 
     # 在标签页3中添加CustomLabelBtn组
     btn_frame = ttk.Frame(frame3)
     btn_frame.pack(pady=20)
     btn4 = CustomLabelBtn(btn_frame, text="标签按钮4")
-    btn4.on_click(lambda: print("按钮4被点击"))
+    # btn4.on_click(lambda: print("按钮4被点击"))
     btn4.pack(side=tk.LEFT, padx=5)
     btn5 = CustomLabelBtn(btn_frame, text="标签按钮5")
-    btn5.on_click(lambda: print("按钮5被点击"))
+    # btn5.on_click(lambda: print("按钮5被点击"))
     btn5.pack(side=tk.LEFT, padx=5)
 
     # 添加标签页
-    my_notebook.add("标签1", frame1)
-    my_notebook.add("标签2", frame2)
-    my_notebook.add("标签3", frame3)
+    my_nb_cls.add("tab1", "标签1", frame1)
+    my_nb_cls.add("tab2", "标签2", frame2)
+    my_nb_cls.add("tab3", "标签3", frame3)
 
     root.mainloop()

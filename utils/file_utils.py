@@ -7,7 +7,7 @@ import mmap
 import os
 import re
 from pathlib import Path
-from typing import Any, Optional, IO
+from typing import Any, Optional, Union, Tuple
 
 import win32api
 import win32com.client
@@ -17,6 +17,8 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 from Crypto.Util.Padding import unpad
 from utils.logger_utils import mylogger as logger
+from readerwriterlock import rwlock
+rw_lock = rwlock.RWLockFairD()
 
 
 # TODO: 配置文件打算转yaml
@@ -133,9 +135,10 @@ class DictUtils:
             return False
 
     @staticmethod
-    def get_nested_values(data: Any, default_value: Any, *front_addr, **kwargs):
+    def get_nested_values(data: Any, default_value: Any, *front_addr, **kwargs) -> Union[Any, Tuple[Any, ...]]:
         """
         按照地址格式获取 任意数据 中的 一个或多个 子字典或值（可以设置默认值）
+        注意: 如未传入kwargs,返回的是一个值,无需解包; 如传入了kwargs,返回的是一个元组,需要解包
         :param default_value: 若不是批量获取，则返回这个默认值
         :param data: 嵌套字典
         :param front_addr: 前置地址，如：("wechat", "account1")，可以不传入
@@ -161,17 +164,16 @@ class DictUtils:
             # 若后续地址为空，则直接返回中间根节点
             if len(kwargs) == 0:
                 return sub_data
-            result = tuple()
-            for key, default in kwargs.items():
-                value = DictUtils._get_nested_value(sub_data, key, default)
-                result += (value,)
+            result = tuple(
+                DictUtils._get_nested_value(sub_data, key, default) for key, default in kwargs.items()
+            )
             return result
         except Exception as e:
             logger.error(e)
             return tuple()
 
     @staticmethod
-    def set_nested_values(data: dict, value: Any, *front_addr: Optional[str], **kwargs):
+    def set_nested_values(data: dict, value: Any, *front_addr: Optional[str], **kwargs) -> bool:
         """
         按照地址格式更新字典中的多个子字典或值（可以设置默认值）
         :param value: 要设置的值
@@ -224,9 +226,10 @@ class DictUtils:
             return False
 
     @staticmethod
-    def clear_nested_values(data: dict, *front_addr, **kwargs):
+    def clear_nested_values(data: dict, *front_addr, **kwargs) -> bool:
         """
-        按照地址格式清空字典中的子字典或值（可以设置默认值），该方法不会对不存在的键路径进行创建
+        按照地址格式清空字典中的子字典,子列表或值，该方法不会对不存在的键路径进行创建
+        建议不传入kwargs,单次使用只清理一个位置;批量清理可能并不能达到你想要的效果
         :param data: 嵌套字典
         :param front_addr: 前置地址，如：("wechat", "account1")
         :param kwargs: 需要更新的键地址及其值（如 note="", nickname=None）
@@ -244,7 +247,7 @@ class DictUtils:
             # 没有传入前置地址，或者传入的都是None，则中间根节点为data本身
             if len(front_addr) == 0 or all(key is None for key in front_addr):
                 if len(kwargs) == 0:
-                    # 无法对自身操作
+                    # 对自身操作,清空字典
                     data.clear()
                 else:
                     # 中间根节点是data本身，进入后续处理
@@ -281,8 +284,9 @@ class YamlUtils:
     def load_yaml(file_path: str) -> Optional[dict]:
         """加载 YAML 文件"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
-                return yaml.safe_load(file)
+            with rw_lock.gen_rlock():
+                with open(file_path, 'r', encoding='utf-8') as file:
+                    return yaml.safe_load(file)
         except Exception as e:
             logger.e(f"加载 YAML 文件失败: {e}")
             return None
@@ -293,9 +297,9 @@ class JsonUtils:
     def load_json(json_file):
         try:
             if os.path.exists(json_file):
-                # print("地址没错")
-                with open(json_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                with rw_lock.gen_rlock():
+                    with open(json_file, 'r', encoding='utf-8', errors="ignore") as f:
+                        return json.load(f)
             return {}
         except Exception as e:
             logger.error(e)
@@ -304,9 +308,10 @@ class JsonUtils:
     @staticmethod
     def save_json(json_file, data):
         try:
-            with open(json_file, 'w', encoding='utf-8') as f:
-                json_string = json.dumps(data, ensure_ascii=False, indent=4)
-                f.write(json_string)
+            with rw_lock.gen_wlock():
+                with open(json_file, 'w', encoding='utf-8', errors="ignore") as f:
+                    json_string = json.dumps(data, ensure_ascii=False, indent=4)
+                    f.write(json_string)
             return True
         except Exception as e:
             logger.error(e)
@@ -320,22 +325,20 @@ class IniUtils:
             # 检查文件是否存在
             if not os.path.exists(ini_path):
                 logger.warning(f"文件不存在: {ini_path}，创建空文件")
-                open(ini_path, 'w', encoding='utf-8').close()  # 创建空文件
-                return {}
-
+                with rw_lock.gen_rlock():
+                    open(ini_path, 'w', encoding='utf-8').close()  # 创建空文件
+                    return {}
             # 读取配置文件
             config = configparser.ConfigParser()
-            config.read(ini_path, encoding='utf-8')
-
-            # 将ConfigParser对象转换为字典
-            result_dict = {}
-            for section in config.sections():
-                result_dict[section] = {}
-                for key, value in config[section].items():
-                    result_dict[section][key] = value
-
-            return result_dict
-
+            with rw_lock.gen_rlock():
+                config.read(ini_path, encoding='utf-8')
+                # 将ConfigParser对象转换为字典
+                result_dict = {}
+                for section in config.sections():
+                    result_dict[section] = {}
+                    for key, value in config[section].items():
+                        result_dict[section][key] = value
+                return result_dict
         except Exception as e:
             logger.error(f"读取配置文件失败: {ini_path}, 错误: {e}")
             return {}
@@ -352,7 +355,8 @@ class IniUtils:
             # 检查文件是否存在
             if not os.path.exists(ini_path):
                 logger.warning(f"文件不存在: {ini_path}，创建空文件")
-                open(ini_path, 'w').close()  # 创建空文件
+                with rw_lock.gen_wlock():
+                    open(ini_path, 'w').close()  # 创建空文件
             config = configparser.ConfigParser()
             config.read(ini_path)
             for section, items in data_dict.items():
@@ -360,16 +364,16 @@ class IniUtils:
                     config.add_section(section)
                 for key, value in items.items():
                     config[section][key] = str(value)
-            with open(ini_path, 'w', encoding='utf-8') as f:
-                f: IO[str] = f
-                config.write(f)  # type: ignore
+            with rw_lock.gen_wlock():
+                with open(ini_path, 'w', encoding='utf-8', errors="ignore") as f:
+                    # f: IO[str] = f
+                    config.write(f)  # type: ignore
             return True
         except Exception as e:
             logger.error(f"保存配置文件失败: {ini_path}, 错误: {e}")
             try:
                 # 终极抢救：删除文件后重建
                 os.remove(ini_path)
-                open(ini_path, 'w').close()  # 创建空文件
                 config = configparser.ConfigParser()
                 # 遍历字典并更新配置
                 for section, items in data_dict.items():
@@ -377,8 +381,9 @@ class IniUtils:
                         config.add_section(section)
                     for key, value in items.items():
                         config[section][key] = str(value)
-                with open(ini_path, 'w', encoding='utf-8') as f:
-                    config.write(f)  # type:ignore
+                with rw_lock.gen_wlock():
+                    with open(ini_path, 'w', encoding='utf-8') as f:
+                        config.write(f)  # type:ignore
                 return True
             except Exception as final_e:
                 logger.critical(f"最终保存尝试失败: {final_e}")
@@ -394,8 +399,9 @@ class DllUtils:
         :param hex_patterns: 一个或多个十六进制模式，每个模式为一个字符串
         :return: 一个布尔列表，每个元素对应一个模式，True 表示找到，False 表示未找到
         """
-        with open(dll_path, 'rb') as f:
-            dll_content = f.read()
+        with rw_lock.gen_rlock():
+            with open(dll_path, 'rb') as f:
+                dll_content = f.read()
         # 将所有传入的 hex_patterns 转换为字节模式
         patterns = [bytes.fromhex(pattern) for pattern in hex_patterns]
         # 返回布尔列表
@@ -411,16 +417,17 @@ class DllUtils:
         """
         results = []
         try:
-            with open(dll_path, 'r+b') as f:
-                # 创建内存映射（整个批量操作只创建一次）
-                mmap_file = mmap.mmap(f.fileno(), 0)
-                try:
-                    for hex_patterns_tuple in hex_patterns_tuples:
-                        success, msg = DllUtils._atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple)
-                        results.append(success)
-                finally:
-                    # 确保无论如何都会关闭 mmap
-                    mmap_file.close()
+            with rw_lock.gen_wlock():
+                with open(dll_path, 'r+b') as f:
+                    # 创建内存映射（整个批量操作只创建一次）
+                    mmap_file = mmap.mmap(f.fileno(), 0)
+                    try:
+                        for hex_patterns_tuple in hex_patterns_tuples:
+                            success, msg = DllUtils._atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple)
+                            results.append(success)
+                    finally:
+                        # 确保无论如何都会关闭 mmap
+                        mmap_file.close()
         except Exception as e:
             print(f"发生错误: {str(e)}")
             return [False] * len(hex_patterns_tuples)
@@ -729,16 +736,18 @@ class CryptoUtils:
         # 确保密钥长度为 16、24 或 32 字节
         key = key.ljust(16)[:16].encode()
 
-        with open(input_file, 'rb') as f:
-            file_data = f.read()
+        with rw_lock.gen_rlock():
+            with open(input_file, 'rb') as f:
+                file_data = f.read()
 
         iv = file_data[:16]
         ciphertext = file_data[16:]
         cipher = AES.new(key, AES.MODE_CBC, iv)
 
         plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
-        with open(output_file, 'wb') as f:
-            f.write(plaintext)
+        with rw_lock.gen_wlock():
+            with open(output_file, 'wb') as f:
+                f.write(plaintext)
 
     @staticmethod
     def encrypt_json_file(input_file, output_file, key):
@@ -747,10 +756,12 @@ class CryptoUtils:
         cipher = AES.new(key, AES.MODE_CBC)
         iv = cipher.iv
 
-        with open(input_file, 'rb') as f:
-            plaintext = f.read()
+        with rw_lock.gen_rlock():
+            with open(input_file, 'rb') as f:
+                plaintext = f.read()
 
         # 加密并写入文件
         ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
-        with open(output_file, 'wb') as f:
-            f.write(iv + ciphertext)
+        with rw_lock.gen_wlock():
+            with open(output_file, 'wb') as f:
+                f.write(iv + ciphertext)

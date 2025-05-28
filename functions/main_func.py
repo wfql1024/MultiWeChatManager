@@ -84,22 +84,23 @@ class MultiSwFunc:
             for i in range(0, 3):
                 print(f"即将自动登录：{3 - i}秒")
                 time.sleep(1)
+            login_dict = {}
+            for sw, acc_set in can_auto_start.items():
+                if not isinstance(acc_set, set) or len(acc_set) == 0:
+                    continue
+                login_dict[sw] = list(acc_set)
+            print(login_dict)
+
+            # 遍历登录需要自启但未登录的账号
+            try:
+                AccOperator.thread_to_auto_login_accounts(login_dict)
+            except Exception as e:
+                logger.error(e)
         else:
             print("自启动账号都已登录完毕！")
             return
 
-        login_dict = {}
-        for sw, acc_set in can_auto_start.items():
-            if not isinstance(acc_set, set) or len(acc_set) == 0:
-                continue
-            login_dict[sw] = list(acc_set)
-        print(login_dict)
 
-        # 遍历登录需要自启但未登录的账号
-        try:
-            AccOperator.thread_to_auto_login_accounts(login_dict)
-        except Exception as e:
-            logger.error(e)
 
     @staticmethod
     def thread_to_login_auto_start_accounts():

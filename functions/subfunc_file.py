@@ -16,7 +16,7 @@ from Crypto.Util.Padding import unpad
 from public_class.enums import LocalCfg, AccKeys, SW
 from resources import Config, Strings
 from utils import file_utils, image_utils, sys_utils
-from utils.file_utils import IniUtils, JsonUtils, DictUtils
+from utils.file_utils import JsonUtils, DictUtils
 from utils.logger_utils import mylogger as logger
 from enum import Enum
 
@@ -200,20 +200,22 @@ def get_extra_cfg(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
         return tuple()
 
 
-"""本地设置"""
+"""本地设置:为了线程安全,写方法仅在设置界面可以使用"""
 
 
-def load_setting():
+def _load_setting():
     """
     加载设置
     :return:
     """
-    data = IniUtils.load_ini_as_dict(Config.SETTING_INI_PATH)
+    # data = IniUtils.load_ini_as_dict(Config.SETTING_INI_PATH)
+    data = JsonUtils.load_json(Config.LOCAL_SETTING_JSON_PATH)
     return data
 
 
-def save_setting(data):
-    return IniUtils.save_ini_from_dict(Config.SETTING_INI_PATH, data)
+def _save_setting(data):
+    # return IniUtils.save_ini_from_dict(Config.SETTING_INI_PATH, data)
+    return JsonUtils.save_json(Config.LOCAL_SETTING_JSON_PATH, data)
 
 
 def clear_some_setting(*addr) -> bool:
@@ -223,9 +225,9 @@ def clear_some_setting(*addr) -> bool:
     """
     try:
         print(f"清理{addr}处数据...")
-        data = load_setting()
+        data = _load_setting()
         DictUtils.clear_nested_values(data, *addr)
-        save_setting(data)
+        _save_setting(data)
         return True
     except Exception as e:
         logger.error(e)
@@ -235,16 +237,16 @@ def clear_some_setting(*addr) -> bool:
 def update_settings(*front_addr, **kwargs) -> bool:
     """更新账户信息到 JSON"""
     try:
-        data = load_setting()
+        data = _load_setting()
         success = DictUtils.set_nested_values(data, None, *front_addr, **kwargs)
-        save_setting(data)
+        _save_setting(data)
         return success
     except Exception as e:
         logger.error(e)
         return False
 
 
-def get_settings(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
+def get_settings(*front_addr, **kwargs) -> Union[Any, Tuple[Any, ...]]:
     """
     根据用户输入的变量名，获取对应的账户信息
     :param front_addr: 前置地址，如：("wechat", "account1")
@@ -252,7 +254,7 @@ def get_settings(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     :return: 包含所请求数据的元组
     """
     try:
-        data = load_setting()
+        data = _load_setting()
         return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
     except Exception as e:
         logger.error(e)
@@ -313,6 +315,7 @@ def fetch_sw_setting_or_set_default_or_none(sw: str, setting_key: str, enum_cls:
     :param enum_cls: 可选枚举类（用于严格验证值）
     :return: 配置值（保证符合枚举约束）或None
     """
+    print("debug:", sw, setting_key)
     # 原值
     value, = get_settings(sw, **{setting_key: None})
     if value in (None, "", "None", "none", "null", "NULL"):
@@ -335,14 +338,14 @@ def fetch_sw_setting_or_set_default_or_none(sw: str, setting_key: str, enum_cls:
         if value not in valid_values:
             value = next(iter(enum_cls)).value  # 使用第一个枚举值
 
-    update_settings(sw, **{setting_key: str(value)})
+    update_settings(sw, **{setting_key: value})
     return value
 
 
 """账号数据相关，该文件记录账号及登录时期的互斥体情况"""
 
 
-def load_acc_data() -> dict:
+def _load_acc_data() -> dict:
     """
     加载账号数据，请在这个方法中修改账号数据的加载方式，如格式、文件位置
     :return: 账号数据字典
@@ -351,7 +354,7 @@ def load_acc_data() -> dict:
     return data
 
 
-def save_acc_data(data) -> bool:
+def _save_acc_data(data) -> bool:
     """
     保存账号数据，请在这个方法中修改账号数据的保存方式，如格式、文件位置
     :param data: 账号数据字典
@@ -366,9 +369,9 @@ def clear_some_acc_data(*addr) -> bool:
     """
     try:
         print(f"清理{addr}处数据...")
-        data = load_acc_data()
+        data = _load_acc_data()
         DictUtils.clear_nested_values(data, *addr)
-        save_acc_data(data)
+        _save_acc_data(data)
         return True
     except Exception as e:
         logger.error(e)
@@ -378,16 +381,16 @@ def clear_some_acc_data(*addr) -> bool:
 def update_sw_acc_data(*front_addr, **kwargs) -> bool:
     """更新账户信息到 JSON"""
     try:
-        data = load_acc_data()
+        data = _load_acc_data()
         success = DictUtils.set_nested_values(data, None, *front_addr, **kwargs)
-        save_acc_data(data)
+        _save_acc_data(data)
         return success
     except Exception as e:
         logger.error(e)
         return False
 
 
-def get_sw_acc_data(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
+def get_sw_acc_data(*front_addr, **kwargs) -> Union[Any, Tuple[Any, ...]]:
     """
     根据用户输入的变量名，获取对应的账户信息
     :param front_addr: 前置地址，如：("wechat", "account1")
@@ -395,7 +398,7 @@ def get_sw_acc_data(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     :return: 包含所请求数据的元组
     """
     try:
-        data = load_acc_data()
+        data = _load_acc_data()
         return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
     except Exception as e:
         logger.error(e)
@@ -405,7 +408,7 @@ def get_sw_acc_data(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
 """账号互斥体相关"""
 
 
-def update_all_acc_in_acc_json(sw):
+def update_pid_mutex_of_(sw):
     """
     清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
     :return: 是否成功
@@ -413,9 +416,8 @@ def update_all_acc_in_acc_json(sw):
     print("构建互斥体记录...")
     # 加载当前账户数据
     sw_data = get_sw_acc_data(sw)
-    if sw_data is None:
+    if not isinstance(sw_data, dict):
         return False
-
     pid_mutex = {}
     # 遍历所有的账户，从有pid的账户中获取pid和has_mutex，并存入pid_mutex
     for account, details in sw_data.items():
@@ -453,20 +455,20 @@ def update_has_mutex_from_all_acc(sw):
     :return: 是否成功
     """
     has_mutex = False
-    sw_data = get_sw_acc_data(sw)
-    if sw_data is None:
+    sw_dict = get_sw_acc_data(sw)
+    if not isinstance(sw_dict, dict):
         return False, has_mutex
-    pid_mutex_data = get_sw_acc_data(sw, AccKeys.PID_MUTEX)
-    if pid_mutex_data is None:
+    pid_mutex_dict = get_sw_acc_data(sw, AccKeys.PID_MUTEX)
+    if not isinstance(pid_mutex_dict, dict):
         return False, has_mutex
 
-    for acc, acc_details in sw_data.items():
+    for acc, acc_details in sw_dict.items():
         if acc == AccKeys.PID_MUTEX:
             continue
         if isinstance(acc_details, dict):
             pid = acc_details.get(AccKeys.PID, None)
             if pid is not None:
-                acc_mutex = pid_mutex_data.get(f"{pid}", True)
+                acc_mutex = pid_mutex_dict.get(f"{pid}", True)
                 if acc_mutex is True:
                     has_mutex = True
                 update_sw_acc_data(sw, acc, has_mutex=acc_mutex)
@@ -544,7 +546,7 @@ def get_avatar_url_from_other_sw(now_sw, now_acc_list):
         # print(now_sw_left_cut, now_sw_right_cut)
 
         # 加载其他平台的账号列表
-        data = load_acc_data()
+        data = _load_acc_data()
         other_acc_list = data.get(other_sw, {})
         for now_acc in now_acc_list:
             # 对账号进行裁剪
@@ -630,7 +632,7 @@ def get_nickname_from_other_sw(now_sw, now_acc_list):
         # print(now_sw_left_cut, now_sw_right_cut)
 
         # 加载其他平台的账号列表
-        data = load_acc_data()
+        data = _load_acc_data()
         other_acc_list = data.get(other_sw, {})
         for now_acc in now_acc_list:
             # 对账号进行裁剪

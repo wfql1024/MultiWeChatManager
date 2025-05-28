@@ -14,35 +14,36 @@ from functions.app_func import AppFunc
 from functions.main_func import MultiSwFunc
 from functions.sw_func import SwInfoFunc
 from public_class import reusable_widgets
-from public_class.enums import LocalCfg, SwStates
+from public_class.custom_widget import CustomNotebook
+from public_class.enums import LocalCfg, SwStates, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Config, Constants
-from ui import menu_ui, acc_tab_ui, acc_manager_ui
+from ui import menu_ui, acc_tab_ui, acc_manager_ui, sw_manager_ui
 from ui.wnd_ui import LoadingWnd, DebugWnd, DetailWnd
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger
-from utils.logger_utils import myprinter as printer
 
 
 # TODO: 标签页布局优化
 
-class MainWindow:
-    """构建主窗口的类"""
-
+class Root:
+    """构建主窗口的类,属于全局的成员放在这里"""
     def __init__(self, root, args=None):
         # IDE初始化
+        self.root_frame = None
+        self.root_ui = None
         self.quick_refresh = None
-        self.acc_manager_ui = None
-        self.all_acc_frame = None
         self.hotkey_manager = None
         self.acc_tab_ui = None
+        self.acc_manager_ui = None
+        self.sw_manager_ui = None
+        self.menu_ui = None
         self.window_height = None
         self.window_width = None
-        self.detail_ui_class = None
+        self.detail_ui = None
         self._initialized = None
         self.statusbar_class = None
         self.remote_cfg_data = None
-        self.sw_notebook = None
         self.first_created_acc_ui = None
         self.finish_started = None
 
@@ -64,13 +65,13 @@ class MainWindow:
         self.loading_wnd_class = LoadingWnd(self.loading_wnd, "加载中...")
 
         # try:
-        # 初次使用
+        # # 初次使用
         if self.new is True:
             self.root.after(3000, menu_ui.MenuUI.open_update_log)
             self.root.after(3000, lambda: AppFunc.mov_backup(new=self.new))
         # 关闭加载窗口
-        print("2秒后关闭加载窗口...")
-        self.root.after(2000, self.wait_for_loading_close_and_bind)
+        print("1秒后关闭加载窗口...")
+        self.root.after(1000, self.wait_for_loading_close_and_bind)
         # 其余部分
         self.initialize_in_init()
         # except Exception as e:
@@ -91,9 +92,6 @@ class MainWindow:
         subfunc_file.swap_cnt_and_mode_levels_in_auto()
         subfunc_file.downgrade_item_lvl_under_manual()
 
-        # disable_proxy_value = self.global_settings_value.disable_proxy = \
-        #     True if subfunc_file.fetch_global_setting_or_set_default_or_none(
-        #         LocalCfg.USE_PROXY) == "True" else False
         self.apply_proxy_setting()
 
         # 获取远程配置文件
@@ -139,8 +137,7 @@ class MainWindow:
 
         self.window_width, self.window_height = Constants.PROJ_WND_SIZE
 
-        # 加载标签页
-        self.init_notebook()
+        self.init_root_ui()
 
         # 设置主窗口
         try:
@@ -154,74 +151,90 @@ class MainWindow:
         self.root.after(0, hwnd_utils.set_size_and_bring_tk_wnd_to_, self.root, self.window_width, self.window_height)
         self.root.overrideredirect(False)
 
-    def init_notebook(self):
-        """集中写界面初始化方法"""
-        if hasattr(self, 'sw_notebook') and self.sw_notebook is not None:
-            if self.sw_notebook.winfo_exists():
-                sw_notebook = self.sw_notebook.nametowidget(self.sw_notebook)
-                for wdg in sw_notebook.winfo_children():
+    def init_root_ui(self):
+        if hasattr(self, 'root_frame') and self.root_frame is not None:
+            if self.root_frame.winfo_exists():
+                root_frame = self.root_frame.nametowidget(self.root_frame)
+                for wdg in root_frame.winfo_children():
                     wdg.destroy()
-                sw_notebook.destroy()
-        self.create_tab()
+                root_frame.destroy()
+        self.root_frame = tk.Frame(self.root)
+        self.root_frame.pack(expand=True, fill='both')
+        self.root_ui = RootUI(self.root, self.root_frame)
+        self.root_ui.initialize_in_init()
 
-    def create_tab(self):
-        """创建选项卡"""
-        print("创建选项卡...")
-        self.sw_notebook = ttk.Notebook(self.root)
-        self.sw_notebook.pack(expand=True, fill='both')
-        self.all_acc_frame = ttk.Frame(self.sw_notebook)
-        self.sw_notebook.add(self.all_acc_frame, text="全部")
+    # def init_notebook(self):
+    #     """集中写界面初始化方法"""
+    #     if hasattr(self, 'sw_notebook') and self.sw_notebook is not None:
+    #         if self.sw_notebook.winfo_exists():
+    #             sw_notebook = self.sw_notebook.nametowidget(self.sw_notebook)
+    #             for wdg in sw_notebook.winfo_children():
+    #                 wdg.destroy()
+    #             sw_notebook.destroy()
+    #     self.create_tab()
 
-        tab_dict = self.remote_cfg_data["global"]["all_sw"]
-        print(tab_dict)
-        for sw in tab_dict.keys():
-            # 使用枚举类型保证其位于正确的状态
-            state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
-            if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
-                continue
-            self.sw_classes[sw] = SoftwareInfo(sw)
-            print(f"创建{sw}的信息体...")
-            self.sw_classes[sw].data_dir = SwInfoFunc.get_sw_data_dir(sw)
-            self.sw_classes[sw].inst_path = SwInfoFunc.get_sw_install_path(sw)
-            self.sw_classes[sw].ver = SwInfoFunc.get_sw_ver(sw, self.sw_classes[sw].data_dir)
-            self.sw_classes[sw].dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
-            if state == SwStates.VISIBLE:
-                self.sw_classes[sw].frame = ttk.Frame(self.sw_notebook)
-                # print(self.sw_classes[sw].frame)
-                self.sw_classes[sw].frame.var = sw
-                self.sw_classes[sw].text = tab_dict[sw]['text']
-                self.sw_classes[sw].name = tab_dict[sw]['name']
-                self.sw_notebook.add(self.sw_classes[sw].frame, text=self.sw_classes[sw].text)
-        # 选择一个选项卡并触发事件
-        current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.TAB)
-        # 检查当前平台是否在所有选项卡中,若有则选择,若无则由系统选择
-        try:
-            self.sw_notebook.select(self.sw_classes[current_sw].frame)
-        except Exception as e:
-            logger.error(e)
-        self.on_tab_change(_event=None)
+    # def create_tab(self):
+    #     """创建选项卡"""
+    #     print("创建选项卡...")
+    #     self.sw_notebook = ttk.Notebook(self.root)
+    #     self.sw_notebook.pack(expand=True, fill='both')
+    #     self.all_acc_frame = ttk.Frame(self.sw_notebook)
+    #     self.sw_notebook.add(self.all_acc_frame, text="临时")
+    #
+    #     tab_dict = self.remote_cfg_data["global"]["all_sw"]
+    #     print(tab_dict)
+    #     for sw in tab_dict.keys():
+    #         # 使用枚举类型保证其位于正确的状态
+    #         state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
+    #         if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
+    #             continue
+    #         self.sw_classes[sw] = SoftwareInfo(sw)
+    #         print(f"创建{sw}的信息体...")
+    #         self.sw_classes[sw].data_dir = SwInfoFunc.get_sw_data_dir(sw)
+    #         self.sw_classes[sw].inst_path = SwInfoFunc.get_sw_install_path(sw)
+    #         self.sw_classes[sw].ver = SwInfoFunc.get_sw_ver(sw, self.sw_classes[sw].data_dir)
+    #         self.sw_classes[sw].dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
+    #         if state == SwStates.VISIBLE:
+    #             self.sw_classes[sw].frame = ttk.Frame(self.sw_notebook)
+    #             # print(self.sw_classes[sw].frame)
+    #             self.sw_classes[sw].frame.var = sw
+    #             self.sw_classes[sw].text = tab_dict[sw]['text']
+    #             self.sw_classes[sw].name = tab_dict[sw]['name']
+    #             self.sw_notebook.add(self.sw_classes[sw].frame, text=self.sw_classes[sw].text)
+    #     # 选择一个选项卡并触发事件
+    #     current_sw = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.TAB)
+    #     # 检查当前平台是否在所有选项卡中,若有则选择,若无则由系统选择
+    #     try:
+    #         self.sw_notebook.select(self.sw_classes[current_sw].frame)
+    #     except Exception as e:
+    #         logger.error(e)
+    #     self.on_tab_change(_event=None)
 
-    def on_tab_change(self, _event):
-        """处理选项卡变化事件，排除特殊选项卡"""
-        print("切换选项卡响应中...")
-        self.sw_notebook.unbind('<<NotebookTabChanged>>')  # 暂时取消绑定
-        if not hasattr(self, '_initialized'):
-            self._initialized = True
-            return  # 忽略初始化触发
-        if self.sw_notebook.select() == "!disabled":
-            return
-        selected_frame = self.sw_notebook.nametowidget(self.sw_notebook.select())  # 获取当前选中的Frame
-        selected_sw = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
-        if selected_sw:
-            # 是平台选项卡
-            subfunc_file.save_a_global_setting_and_callback(LocalCfg.TAB, selected_sw)
-            printer.vital(f"当前选项卡: {selected_sw}")
-            self.acc_tab_ui = acc_tab_ui.AccTabUI()
-            self.acc_tab_ui.refresh()
-        else:
-            # 不是平台选项卡
-            self.acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, selected_frame)
-            self.acc_manager_ui.refresh_frame()
+    # def on_tab_change(self, _event):
+    #     """处理选项卡变化事件，排除特殊选项卡"""
+    #     print("切换选项卡响应中...")
+    #     self.sw_notebook.unbind('<<NotebookTabChanged>>')  # 暂时取消绑定
+    #     if not hasattr(self, '_initialized'):
+    #         self._initialized = True
+    #         return  # 忽略初始化触发
+    #     if self.sw_notebook.select() == "!disabled":
+    #         return
+    #     selected_frame = self.sw_notebook.nametowidget(self.sw_notebook.select())  # 获取当前选中的Frame
+    #     selected_sw = getattr(selected_frame, 'var', None)  # 获取与当前选项卡相关的变量
+    #     if selected_sw:
+    #         # 是平台选项卡
+    #         subfunc_file.save_a_global_setting_and_callback(LocalCfg.TAB, selected_sw)
+    #         printer.vital(f"当前选项卡: {selected_sw}")
+    #         self.sw_notebook.bind('<<NotebookTabChanged>>', self.root_class.on_tab_change)
+    #         # self.acc_tab_ui = acc_tab_ui.AccTabUI()
+    #         # self.acc_tab_ui.refresh()
+    #     else:
+    #         # 不是平台选项卡
+    #         # self.acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, selected_frame)
+    #         # self.acc_manager_ui.refresh_frame()
+    #         # 全新选项卡
+    #         self.root_ui = RootFrame(self.root, selected_frame)
+    #         self.root_ui.initialize_in_init()
 
     def wait_for_loading_close_and_bind(self):
         """启动时关闭等待窗口，绑定事件"""
@@ -246,10 +259,8 @@ class MainWindow:
         """首次启动后，无论是否成功创建账号列表，都执行"""
         if self.finish_started is True:
             return
-
         # 需要进行的操作
         pass
-
         self.finish_started = True
 
     def open_debug_window(self):
@@ -268,13 +279,8 @@ class MainWindow:
             pass
         sw, acc = item.split("/")
         detail_window = tk.Toplevel(self.root)
-        self.detail_ui_class = DetailWnd(detail_window, f"属性 - {acc}", sw, acc, tab_class)
-        self.detail_ui_class.set_focus_to_(widget_to_focus)
-
-    def to_switch_to_sw_account_wnd(self, item, event=None):
-        if event:
-            pass
-        AccOperator.switch_to_sw_account_wnd(item)
+        self.detail_ui = DetailWnd(detail_window, f"属性 - {acc}", sw, acc, tab_class)
+        self.detail_ui.set_focus_to_(widget_to_focus)
 
     @staticmethod
     def apply_proxy_setting():
@@ -405,3 +411,162 @@ class HotkeyManager:
     def execute_task(self, hotkey):
         if hotkey in self.hotkey_map:
             self.hotkey_map[hotkey]()  # 执行绑定的任务
+
+
+class RootUI:
+    def __init__(self, wnd, frame):
+        self.sw_classes = {}
+        self.root_nb_cls = None
+        self.manage_nb_cls = None
+        self.login_frm_pool = None
+        self.login_nb_cls = None
+        self.sw = None
+        self.acc_mng_frame = None
+        self.sw_mng_frame = None
+        self.main_frame = None
+        self.scrollable_canvas = None
+
+        self.root_class = GlobalMembers.root_class
+        self.root = self.root_class.root
+        self.wnd = wnd
+        self.root_frame = frame
+
+        self.load_ui()
+
+    def load_ui(self):
+        """
+        每一级标签有三重包裹,分别为:所在的框架xxx_frame,标签栏xxx_nb,框架池区域xxx_frame_pool
+        因此,子级标签应该先在父级的框架池之下创建好其所属的框架xxx_frame,以此类推
+        """
+
+        # 主页面="管理"+"登录"
+        self.root_nb_cls = root_nb_cls = CustomNotebook(self.root, self.root_frame)
+        root_nb_cls.set_major_color(selected_bg='#00FF00')
+        root_nb_frm_pool = root_nb_cls.frames_pool
+        login_nb_frame = ttk.Frame(root_nb_frm_pool)
+        manager_nb_frame = ttk.Frame(root_nb_frm_pool)
+        root_nb_cls.add("manage", "管理", manager_nb_frame)
+        root_nb_cls.add("login", "登录", login_nb_frame)
+
+        # "登录"=∑各平台
+        self.login_nb_cls = login_nb_cls = CustomNotebook(self.root, login_nb_frame)
+        login_frm_pool = login_nb_cls.frames_pool
+
+        # "管理"="平台"+"账号"
+        self.manage_nb_cls = manage_nb_cls = CustomNotebook(self.root, manager_nb_frame)
+        manage_frm_pool = manage_nb_cls.frames_pool
+        sw_mng_frame = ttk.Frame(manage_frm_pool)
+        acc_mng_frame = ttk.Frame(manage_frm_pool)
+        manage_nb_cls.add("acc", "账号", acc_mng_frame)
+        manage_nb_cls.add("sw", "平台", sw_mng_frame)
+
+        self.login_frm_pool = login_frm_pool
+        self.sw_mng_frame = sw_mng_frame
+        self.acc_mng_frame = acc_mng_frame
+
+        # 各级的细节加载
+        self._load_root_nb_frame()
+        # 启动线程完成sw的路径获取
+        threading.Thread(target=self._get_path_thread).start()
+        self._load_all_sw_frame()
+        self._load_manage_frame()
+
+    def _load_root_nb_frame(self):
+        self.root_nb_cls.select_callback = self._on_tab_change_in_root
+
+    def _load_all_sw_frame(self):
+        sp_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
+        if not isinstance(sp_sw, list):
+            return
+        if len(sp_sw) == 0:
+            sp_sw = ["WeChat"]
+        for sw in sp_sw:
+            # 使用枚举类型保证其位于正确的状态
+            state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
+            if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
+                continue
+            try:
+                sw_cls = self.sw_classes[sw]
+                if not isinstance(sw_cls, SoftwareInfo):
+                    sw_cls = SoftwareInfo(sw)
+            except Exception as e:
+                logger.warning(e)
+                sw_cls = SoftwareInfo(sw)
+                self.sw_classes[sw] = sw_cls
+            print(f"更新{sw}的信息体...")
+            if state == SwStates.VISIBLE:
+                sw_cls.frame = ttk.Frame(self.login_frm_pool)
+                # print(sw_cls.frame)
+                label, = subfunc_file.get_remote_cfg(sw, label="未知")
+                sw_cls.label = label
+                self.login_nb_cls.add(sw, sw_cls.label, sw_cls.frame)
+            self.root_class.sw_classes[sw] = sw_cls
+            self.sw_classes[sw] = sw_cls
+
+        self.login_nb_cls.select_callback = self._on_tab_change_in_login
+
+    def _get_path_thread(self):
+        sp_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
+        if not isinstance(sp_sw, list):
+            return
+        for sw in sp_sw:
+            # 使用枚举类型保证其位于正确的状态
+            state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
+            if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
+                continue
+            print(f"创建{sw}的信息体...")
+            sw_cls = SoftwareInfo(sw)
+            sw_cls.data_dir = SwInfoFunc.get_sw_data_dir(sw)
+            sw_cls.inst_path = SwInfoFunc.get_sw_install_path(sw)
+            sw_cls.ver = SwInfoFunc.get_sw_ver(sw, sw_cls.data_dir)
+            sw_cls.dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
+        print("载入完成,所有信息体:", [sw.__dict__ for sw in self.sw_classes.values()])
+
+    def _load_manage_frame(self):
+        self.manage_nb_cls.select_callback = self._on_tab_change_in_manage
+
+    def initialize_in_init(self):
+        root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
+        self.root_nb_cls.select(root_tab)
+
+    def _on_tab_change_in_root(self):
+        root_tab = self.root_nb_cls.curr_tab_id
+        subfunc_file.save_a_global_setting_and_callback(LocalCfg.ROOT_TAB, root_tab)
+        if root_tab == "manage":
+            manage_tab = self.manage_nb_cls.curr_tab_id
+            if not manage_tab:
+                manage_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.MNG_TAB)
+            try:
+                self.manage_nb_cls.select(manage_tab)
+            except Exception as e:
+                logger.warning(e)
+                self.manage_nb_cls.select(next(iter(self.manage_nb_cls.tabs.keys())))
+        elif root_tab == "login":
+            login_tab = self.login_nb_cls.curr_tab_id
+            if not login_tab:
+                login_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.LOGIN_TAB)
+            try:
+                self.login_nb_cls.select(login_tab)
+            except Exception as e:
+                logger.warning(e)
+                self.login_nb_cls.select(next(iter(self.login_nb_cls.tabs)))
+
+    def _on_tab_change_in_login(self):
+        self.sw = self.login_nb_cls.curr_tab_id
+        print(f"当前是{self.sw}的标签页")
+        self.root_class.sw = self.sw
+        subfunc_file.save_a_global_setting_and_callback(LocalCfg.LOGIN_TAB, self.sw)
+        self.root_class.acc_tab_ui = acc_tab_ui.AccTabUI()
+        self.root_class.acc_tab_ui.refresh()
+
+    def _on_tab_change_in_manage(self):
+        self.manage_tab = self.manage_nb_cls.curr_tab_id
+        subfunc_file.save_a_global_setting_and_callback(LocalCfg.MNG_TAB, self.manage_tab)
+        if self.manage_tab == "acc":
+            if self.root_class.acc_manager_ui is None:
+                self.root_class.acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, self.acc_mng_frame)
+                self.root_class.acc_manager_ui.refresh()
+        elif self.manage_tab == "sw":
+            if self.root_class.sw_manager_ui is None:
+                self.root_class.sw_manager_ui = sw_manager_ui.SwManagerUI(self.root, self.sw_mng_frame)
+                self.root_class.sw_manager_ui.refresh()

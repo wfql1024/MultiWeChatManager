@@ -64,7 +64,7 @@ SCALE_FACTOR = get_scale_factor()
 class Constants:
     SF = SCALE_FACTOR
     # 尺寸定义
-    PROJ_WND_SIZE = (int(400 * SF), int(550 * SF))  # 程序窗口尺寸
+    PROJ_WND_SIZE = (int(500 * SF), int(700 * SF))  # 程序窗口尺寸
     LOADING_WND_SIZE = (int(240 * SF), int(80 * SF))  # 登录窗口尺寸
     SETTING_WND_SIZE = (int(600 * SF), int(210 * SF))  # 设置窗口尺寸
     UPDATE_LOG_WND_SIZE = (int(480 * SF), int(400 * SF))  # 更新日志窗口尺寸
@@ -108,6 +108,11 @@ class Constants:
         "隐藏": int(64 * SF),
         "自启动": int(64 * SF),
         "快捷键": int(64 * SF),
+        "状态": int(64 * SF),
+        "版本": int(100 * SF),
+        "安装路径": int(160 * SF),
+        "存储路径": int(160 * SF),
+        "DLL路径": int(160 * SF),
     }
     COLUMN_MIN_WIDTH = {
         "ID": int(45 * SF),
@@ -118,6 +123,11 @@ class Constants:
         "隐藏": int(64 * SF),
         "自启动": int(64 * SF),
         "快捷键": int(64 * SF),
+        "状态": int(64 * SF),
+        "版本": int(100 * SF),
+        "安装路径": int(160 * SF),
+        "存储路径": int(160 * SF),
+        "DLL路径": int(160 * SF),
     }
 
     TREE_ID_MIN_WIDTH = int(45 * SF)  # 列表视图ID列最小宽度

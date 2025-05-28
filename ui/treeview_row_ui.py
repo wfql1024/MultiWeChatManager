@@ -48,7 +48,6 @@ class TreeviewRowUI:
             "auto_login_btn": {
                 "text": "一键登录",
                 "btn": None,
-                "tip": "请选择要登录的账号",
                 "func": self.acc_tab_ui.to_auto_login,
                 "enable_scopes":
                     Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),

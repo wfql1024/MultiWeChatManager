@@ -1,37 +1,106 @@
+import inspect
 import re
 import tkinter as tk
 import webbrowser
-from functools import partial
+from functools import partial, wraps
 from tkinter import ttk
 from typing import Dict, Union
 
 from public_class.custom_classes import Condition, Conditions
-from public_class.custom_widget import CustomWidget
 
 
 class UnlimitedClickHandler:
-    def __init__(self, root, widget, *funcs):
+    def __init__(self, root, widget, click_func=None, **click_map):
         """
         初始化 ClickHandler 类，接收 root 和外部提供的点击处理函数。
-
-        :param root: 主窗口对象
-        :param widget: 要绑定事件的 Tkinter 小部件
-        :param funcs: 任意数量的点击事件处理函数，从单击到 n 击
+        :param click_func: 通用点击处理函数，接受参数 click_time 和 event
+        :param click_map: 若指定每次点击对应的函数，可传入字典形式，如 1=func1, 2=func2
         """
+        self.down = False
         self.root = root
         self.widget = widget
-        self.funcs = funcs  # 点击事件的处理函数列表，这些都还没有传入event
-        self.click_count = 0  # 记录点击次数
+        print("待绑定:", widget.nametowidget(widget))
+        self.is_menu = isinstance(widget.nametowidget(widget), tk.Menu)
+        print(self.is_menu)
+        self.click_func = self._wrap_click_func(click_func) if click_func else None
+        self.click_count = 0
         self.single_click_id = None
 
-        # 绑定单击事件
-        widget.bind("<Button-1>", self.on_click)
+        self.func_map = {}
+        for k, func in click_map.items():
+            try:
+                click_num = int(k)
+                if click_num >= 1:
+                    self.func_map[click_num] = self._wrap_func(func)
+            except (ValueError, TypeError):
+                # 跳过无法转换为整数的 key
+                pass
 
-    def on_click(self, event=None):
+        # 绑定鼠标点击事件
+        widget.bind("<ButtonRelease-1>", self.on_click_up, add=True)
+        widget.bind("<Button-1>", self.on_click_down, add=True)
+
+
+    @staticmethod
+    def _wrap_click_func(func):
+        """包装通用 click_func，保证接受 click_time 和 event"""
+        if not callable(func):
+            return lambda click_time, event=None: None
+
+        sig = inspect.signature(func)
+        params = list(sig.parameters)
+
+        if len(params) == 1:
+            # 只接受 click_time
+            def wrapper(click_time, event=None):
+                return func(click_time)
+
+            return wrapper
+        elif len(params) == 2:
+            # 接受 click_time 和 event
+            return func
+        else:
+            # 参数不匹配，返回空函数
+            return lambda click_time, event=None: None
+
+    @staticmethod
+    def _wrap_func(func):
+        """包装函数，保证接受 event 参数，即便原函数不需要"""
+        if callable(func):
+            sig = inspect.signature(func)
+            if len(sig.parameters) == 0:
+                # 原函数不接受参数，包装为带 event 参数的版本
+                @wraps(func)
+                def wrapper(event=None):
+                    if event:
+                        pass
+                    return func()
+
+                return wrapper
+            else:
+                # 原函数接受 event 参数，原样返回
+                return func
+        else:
+            # 返回一个空的 event 接收函数，避免程序崩溃
+            def noop(event=None):
+                if event:
+                    pass
+
+            return noop
+
+    def on_click_up(self, event=None):
         """处理点击事件（单击、双击、三击等）"""
+        print("抬起了")
+        self.down = False
+
+    def on_click_down(self, event=None):
+        """处理点击事件（单击、双击、三击等）"""
+        print("按下了")
+        print("控件:", self.widget)
+        self.down = True
         self.click_count += 1  # 增加点击次数
         # print(f"点击了控件：{event.widget}")
-
+        print(f"点击次数：{self.click_count}")
         # 取消之前的延时处理（如果有）
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
@@ -40,18 +109,20 @@ class UnlimitedClickHandler:
         self.single_click_id = self.root.after(200, self.handle_click, event)
 
     def handle_click(self, event=None):
-        """根据点击次数调用对应的处理函数"""
         click_count = self.click_count
-        # print("重置次数")
         self.click_count = 0
-        if click_count <= len(self.funcs):
-            # 如果点击次数在函数范围内，调用对应的函数
-            # print(f"用户{click_count}击")
-            partial(self.funcs[click_count - 1], event=event)()
+        if not self.is_menu and self.down:
+            print("仍在按下，不处理点击事件")
+            return
+        if self.click_func:
+            self.click_func(click_count, event)
         else:
-            # 如果点击次数超出定义的函数范围，调用最后一个函数
-            # print(f"用户{click_count}击，实际触发{len(self.funcs)}击")
-            partial(self.funcs[-1], event=event)()
+            matched_count = max(
+                (k for k in self.func_map if k <= click_count),
+                default=None
+            )
+            if matched_count:
+                partial(self.func_map[matched_count], event=event)()
 
 
 class Tooltip:
@@ -342,26 +413,8 @@ def set_all_children_in_frame_to_state(frame, state):
         if isinstance(widget, (tk.Frame, ttk.Frame)):
             set_all_children_in_frame_to_state(widget, state)
         else:
-            # 处理其他控件，如自创的
-            if isinstance(widget, CustomWidget):
-                widget.set_state(state)
-                continue
             try:
                 widget.config(state=state)
             except Exception as e:
                 print(e)
 
-
-def set_all_custom_widgets_in_frame_to_state(frame, state: CustomWidget.State):
-    """
-    将指定框架内所有继承自 CustomWidget 的控件设置为指定状态（递归子控件）
-
-    :param frame: 要处理的 Frame 或控件容器
-    :param state: CustomWidget.State 中的状态值
-    """
-    for child in frame.winfo_children():
-        if isinstance(child, CustomWidget):
-            child.set_state(state)
-        # 如果子控件也是容器（比如 Frame），递归处理
-        if isinstance(child, (tk.Frame, ttk.Frame)):
-            set_all_custom_widgets_in_frame_to_state(child, state)

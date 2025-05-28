@@ -16,11 +16,15 @@ class Config:
             LocalCfg.SCREEN_SIZE: f"1920*1080",
             LocalCfg.HIDE_WND: "False",
             LocalCfg.ENABLE_NEW_FUNC: "True",
-            LocalCfg.TAB: SW.WECHAT,
+            LocalCfg.ROOT_TAB: "login",
+            LocalCfg.MNG_TAB: "acc",
+            LocalCfg.LOGIN_TAB: SW.WECHAT,
             LocalCfg.SCALE: "auto",
             LocalCfg.SIGN_VISIBLE: "True",
             LocalCfg.HIDDEN_SORT: "#0,True",
             LocalCfg.AUTO_START_SORT: "#0,True",
+            LocalCfg.ENABLE_SORT: "#0,True",
+            LocalCfg.DISABLE_SORT: "#0,True",
             LocalCfg.ALL_SORT: "#0,True",
             LocalCfg.AUTO_PRESS: "True",
             LocalCfg.CALL_MODE: "HANDLE",
@@ -54,4 +58,4 @@ class Config:
     VER_ADAPTATION_JSON_PATH = fr'{PROJ_USER_PATH}/version_adaptation.json'
     REMOTE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/remote_setting.json'
     EXTRA_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/extra_setting.json'
-    LOCAL_SETTING_YML_PATH = fr'{PROJ_USER_PATH}/local_setting.yml'
+    LOCAL_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/local_setting.json'

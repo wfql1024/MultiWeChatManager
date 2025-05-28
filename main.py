@@ -74,7 +74,7 @@ def main():
     print("调试模式：" + str(args.debug))
 
     root = tk.Tk()
-    main_ui.MainWindow(
+    main_ui.Root(
         root,
         args=args
     )

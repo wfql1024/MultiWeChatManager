@@ -1,5 +1,6 @@
 import tkinter as tk
 from abc import ABC
+from tkinter import messagebox
 
 from PIL import Image, ImageTk
 
@@ -12,6 +13,7 @@ from public_class.global_members import GlobalMembers
 from public_class.reusable_widgets import SubToolWnd
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants
+from ui import menu_ui
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
 
@@ -40,16 +42,16 @@ class AccManagerUI:
     """账号管理UI"""
 
     def __init__(self, wnd, frame):
+        self.root_menu = None
         self.main_frame = None
         self.scrollable_canvas = None
         self.acc_data = None
         self.tree_class = {}
 
         self.root_class = GlobalMembers.root_class
-        self.sw_notebook = self.root_class.sw_notebook
+        self.root = self.root_class.root
         self.wnd = wnd
         self.tab_frame = frame
-        self.sw = None
 
         self.btn_dict = {
             "cancel_hiding_btn": {
@@ -73,7 +75,6 @@ class AccManagerUI:
             "add_hiding_btn": {
                 "text": "隐藏",
                 "btn": None,
-                "tip": "请选择要隐藏的账号",
                 "func": self.to_add_hiding_of_,
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
@@ -83,7 +84,6 @@ class AccManagerUI:
             "add_auto_start_btn": {
                 "text": "自启",
                 "btn": None,
-                "tip": "请选择要自启的账号",
                 "func": self.to_add_auto_start_of_,
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
@@ -93,7 +93,6 @@ class AccManagerUI:
             "add_hotkey_btn": {
                 "text": "添加热键",
                 "btn": None,
-                "tip": "请选择一个要添加热键的账号",
                 "func": self.to_add_hotkey_of_,
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, 1)]),
                 "tip_scopes_dict": {
@@ -103,6 +102,34 @@ class AccManagerUI:
             }
         }
 
+    def refresh(self):
+        """刷新菜单和界面"""
+        print(f"刷新菜单与界面...")
+        # self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
+        # self.sw_class = self.sw_classes[self.sw]
+        #
+        # self.tab_frame = self.sw_class.frame
+
+        # 刷新菜单
+        self.root_menu = menu_ui.MenuUI()
+        config_data = subfunc_file.read_remote_cfg_in_rules()
+        if config_data is None:
+            messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
+            self.root.destroy()
+        try:
+            self.root.after(0, self.root_menu.create_root_menu_bar)
+        except Exception as re:
+            logger.error(re)
+            messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
+            self.root.destroy()
+
+        # 刷新界面
+        try:
+            self.root.after(0, self.refresh_frame)
+        except Exception as e:
+            logger.error(e)
+            self.root.after(3000, self.refresh_frame)
+
     def display_ui(self):
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
         self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
@@ -110,15 +137,15 @@ class AccManagerUI:
 
         self.acc_data = subfunc_file.get_sw_acc_data()
         # 加载已隐藏列表
-        self.tree_class["hidden"] = AccManageTreeView(
+        self.tree_class["hidden"] = AccManagerTreeView(
             self,
             "hidden", "已隐藏：", self.btn_dict["cancel_hiding_btn"],
         )
         # 加载已自启列表
-        self.tree_class["auto_start"] = AccManageTreeView(
+        self.tree_class["auto_start"] = AccManagerTreeView(
             self, "auto_start", "已自启：", self.btn_dict["cancel_auto_start_btn"])
         # 加载所有
-        self.tree_class["all"] = AccManageTreeView(
+        self.tree_class["all"] = AccManagerTreeView(
             self, "all", "所有账号：", None,
             self.btn_dict["add_auto_start_btn"],
             self.btn_dict["add_hiding_btn"],
@@ -130,9 +157,6 @@ class AccManagerUI:
         # 加载完成后更新一下界面并且触发事件
         if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
             self.scrollable_canvas.refresh_canvas()
-
-        # 重新绑定标签切换事件
-        self.sw_notebook.bind('<<NotebookTabChanged>>', self.root_class.on_tab_change)
 
     def to_cancel_hiding_of_(self, items):
         print(f"进入取消隐藏方法")
@@ -184,23 +208,23 @@ class AccManagerUI:
         self.root_class.open_acc_detail(item, self, widget_tag, event)
 
 
-class AccManageTreeView(ActionableTreeView, ABC):
+class AccManagerTreeView(ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.data_src = None
         self.wnd = None
         self.photo_images = []
-        self.sign_visible = None
         super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
         self.wnd = self.parent_class.wnd
         # print(f"self.wnd={self.wnd}")
         self.data_src = self.parent_class.acc_data
-        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
         self.columns = (" ", "快捷键", "隐藏", "自启动", "原始id", "昵称")
         sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
-        self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
+        if isinstance(sort_str, str):
+            if len(sort_str.split(",")) == 2:
+                self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
 
     def set_table_style(self):
         super().set_table_style()
@@ -242,14 +266,15 @@ class AccManageTreeView(ActionableTreeView, ABC):
                 hotkey, hidden, auto_start, nickname = subfunc_file.get_sw_acc_data(
                     sw,
                     acc,
-                    hotkey="-",
-                    hidden="-",
-                    auto_start="-",
-                    nickname="请获取数据",
+                    hotkey=None,
+                    hidden=None,
+                    auto_start=None,
+                    nickname=None,
                 )
-
+                hotkey = hotkey if hotkey != "" else "-"
                 hidden = "√" if hidden is True else "-"
                 auto_start = "√" if auto_start is True else "-"
+                nickname = nickname if nickname else "请获取数据"
 
                 # 获取头像图像
                 img = AccInfoFunc.get_acc_avatar_from_files(sw, acc)

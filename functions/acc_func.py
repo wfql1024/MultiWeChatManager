@@ -86,7 +86,7 @@ class AccOperator:
             SwOperator.kill_sw_multiple_processes(sw)
             time.sleep(0.5)
             subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
-            subfunc_file.update_all_acc_in_acc_json(sw)
+            subfunc_file.update_pid_mutex_of_(sw)
 
             multirun_mode = root_class.sw_classes[sw].multirun_mode
 
@@ -443,113 +443,6 @@ class AccOperator:
                 pass
         return quited_accounts
 
-    @staticmethod
-    def create_lnk_for_account(sw, account, multiple_status):
-        """
-        为账号创建快捷开启
-        :param sw: 选择的软件标签
-        :param account: 账号
-        :param multiple_status: 是否多开状态
-        :return: 是否成功
-        """
-        # 确保可以创建快捷启动
-        data_path = SwInfoFunc.get_sw_data_dir(sw)
-        wechat_path = SwInfoFunc.get_sw_install_path(sw)
-        if not data_path or not wechat_path:
-            messagebox.showerror("错误", "无法获取数据路径")
-            return False
-        avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
-        if not os.path.exists(avatar_path):
-            avatar_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
-
-        # 构建源文件和目标文件路径
-        source_file = os.path.join(data_path, "All Users", "config", f"{account}.data").replace('/', '\\')
-        target_file = os.path.join(data_path, "All Users", "config", "config.data").replace('/', '\\')
-        close_mutex_executable = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, "WeChatMultiple_Anhkgg.exe")
-        if multiple_status == "已开启":
-            close_mutex_code = ""
-            prefix = "[要开全局] - "
-            exe_path = wechat_path
-        else:
-            close_mutex_code = \
-                f"""
-                                \n{close_mutex_executable}
-                            """
-            prefix = ""
-            # 判断环境
-            if getattr(sys, 'frozen', False):  # 打包环境
-                exe_path = sys.executable  # 当前程序的 exe
-            else:  # PyCharm 或其他开发环境
-                exe_path = close_mutex_executable  # 使用 handle_path
-
-        bat_content = f"""
-                        @echo off
-                        chcp 65001
-                        REM 复制配置文件
-                        copy "{source_file}" "{target_file}"
-                        if errorlevel 1 (
-                            echo 复制配置文件失败
-                            exit /b 1
-                        )
-                        echo 复制配置文件成功
-
-                        REM 根据状态启动微信
-                        @echo off{close_mutex_code}
-                        cmd /u /c "start "" "{wechat_path}""
-                        if errorlevel 1 (
-                        echo 启动微信失败，请检查路径是否正确。
-                        pause
-                        exit /b 1
-                        )
-                        """
-
-        # 确保路径存在
-        account_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}')
-        if not os.path.exists(account_file_path):
-            os.makedirs(account_file_path)
-        # 保存为批处理文件
-        bat_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}', f'{prefix}{account}.bat')
-        # 以带有BOM的UTF-8格式写入bat文件
-        with open(bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
-            bat_file.write(bat_content)
-        print(f"批处理文件已生成: {bat_file_path}")
-
-        # 获取桌面路径
-        desktop = winshell.desktop()
-        # 获取批处理文件名并去除后缀
-        bat_file_name = os.path.splitext(os.path.basename(bat_file_path))[0]
-        # 构建快捷方式路径
-        shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
-
-        # 图标文件路径
-        acc_dir = os.path.join(Config.PROJ_USER_PATH, str(sw), f"{account}")
-        exe_name = os.path.splitext(os.path.basename(exe_path))[0]
-
-        # 步骤1：提取图标为图片
-        extracted_exe_png_path = os.path.join(acc_dir, f"{exe_name}_extracted.png")
-        image_utils.extract_icon_to_png(exe_path, extracted_exe_png_path)
-
-        # 步骤2：合成图片
-        ico_jpg_path = os.path.join(acc_dir, f"{account}_{exe_name}.png")
-        image_utils.add_diminished_se_corner_mark_to_image(avatar_path, extracted_exe_png_path, ico_jpg_path)
-
-        # 步骤3：对图片转格式
-        ico_path = os.path.join(acc_dir, f"{account}_{exe_name}.ico")
-        image_utils.png_to_ico(ico_jpg_path, ico_path)
-
-        # 清理临时文件
-        os.remove(extracted_exe_png_path)
-
-        # 创建快捷方式
-        with winshell.shortcut(shortcut_path) as shortcut:
-            shortcut.path = bat_file_path
-            shortcut.working_directory = os.path.dirname(bat_file_path)
-            # 修正icon_location的传递方式，传入一个包含路径和索引的元组
-            shortcut.icon_location = (ico_path, 0)
-
-        print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
-        return True
-
 
 class AccInfoFunc:
     """
@@ -868,6 +761,9 @@ class AccInfoFunc:
                 subfunc_file.update_sw_acc_data(sw, acc, main_hwnd=correct_hwnd)
                 display_name = AccInfoFunc.get_acc_origin_display_name(sw, acc)
                 hwnd_utils.set_window_title(correct_hwnd, f"微信 - {display_name}")
+                return None
+            return None
+        return None
 
     @staticmethod
     def is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):

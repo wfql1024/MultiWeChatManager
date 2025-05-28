@@ -1,3 +1,4 @@
+import base64
 import glob
 import os
 import re
@@ -15,12 +16,13 @@ import win32com
 import win32con
 import win32gui
 import winshell
+from PIL import Image
 from win32com.client import Dispatch
 
 from functions import subfunc_file
 from public_class.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
-from resources import Config
+from resources import Config, Strings, Constants
 from utils import file_utils, process_utils, pywinhandle, handle_utils, hwnd_utils, sys_utils, image_utils
 from utils.better_wx.inner_utils import wildcard_tokenize, patt2hex
 from utils.encoding_utils import VersionUtils
@@ -41,7 +43,7 @@ class SwInfoFunc:
 
     @staticmethod
     def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict) -> Tuple[Optional[dict], str]:
-        """通过精确版本分支进行识别"""
+        """通过精确版本分支进行识别dll状态"""
         cur_sw_ver = SwInfoFunc.get_sw_ver(sw, dll_path)
         if cur_sw_ver is None:
             return None, f"错误：识别不到版本"
@@ -77,7 +79,6 @@ class SwInfoFunc:
                 for channel, adaptation in precise_ver_adaptations.items():
                     subfunc_file.update_extra_cfg(
                         sw, mode, "precise", cur_sw_ver, **{channel: adaptation})
-
         if "feature" in mode_branches_dict:
             feature_vers = list(mode_branches_dict["feature"].keys())
             compatible_ver = VersionUtils.find_compatible_version(cur_sw_ver, feature_vers)
@@ -100,6 +101,7 @@ class SwInfoFunc:
 
     @staticmethod
     def _identify_dll_by_extra_cfg(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:
+        """从额外表中获取"""
         config_data = subfunc_file.load_extra_cfg()
         if not config_data:
             return None, "错误：没有数据"
@@ -119,31 +121,21 @@ class SwInfoFunc:
 
     @staticmethod
     def get_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
-        """
-        获取微信安装路径
-        :param sw: 平台
-        :param ignore_local_record: 是否忽略本地记录
-        :return: 路径
-        """
+        """获取微信安装路径,ignore_local_record为True时忽略本地记录"""
         print("获取安装路径...")
         _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.INST_PATH, ignore_local_record)
         return result
 
     @staticmethod
     def get_sw_data_dir(sw: str, ignore_local_record=False):
-        """
-        获取微信数据路径
-        :param sw: 平台
-        :param ignore_local_record: 是否忽略本地记录
-        :return: 路径
-        """
+        """获取微信数据路径,ignore_local_record为True时忽略本地记录"""
         print("获取数据存储路径...")
         _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DATA_DIR, ignore_local_record)
         return result
 
     @staticmethod
     def get_sw_dll_dir(sw: str, ignore_local_record=False):
-        """获取微信dll所在文件夹"""
+        """获取微信dll所在文件夹,ignore_local_record为True时忽略本地记录"""
         print("获取dll目录...")
         _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DLL_DIR, ignore_local_record)
         return result
@@ -161,11 +153,78 @@ class SwInfoFunc:
             print(e)
             return None
 
+    @staticmethod
+    def get_sw_logo(sw):
+        """
+        从本地缓存或json文件中的url地址获取头像，失败则默认头像
+        """
+        # 构建头像文件路径
+        user_sw_dir = os.path.join(Config.PROJ_USER_PATH, sw)
+        if not os.path.exists(user_sw_dir):
+            os.makedirs(user_sw_dir)
+        avatar_path = os.path.join(user_sw_dir, f"{sw}.png")
+
+        # 检查是否存在对应account的头像
+        if os.path.exists(avatar_path):
+            return Image.open(avatar_path)
+
+        # 从图标中提取
+        try:
+            executable = subfunc_file.get_settings(sw, LocalCfg.INST_PATH)
+            if executable:
+                image_utils.extract_icon_to_png(executable, avatar_path)
+        except Exception as e:
+            print(e)
+
+        # # 如果没有，从网络下载
+        # url, = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None)
+        # if url is not None and url.endswith("/0"):
+        #     image_utils.download_image(url, avatar_path)
+
+        # 第二次检查是否存在对应account的头像
+        if os.path.exists(avatar_path):
+            return Image.open(avatar_path)
+
+        # 如果没有，检查default.jpg
+        default_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
+        if os.path.exists(default_path):
+            return Image.open(default_path)
+
+        # 如果default.jpg也不存在，则将从字符串转换出来
+        try:
+            base64_string = Strings.DEFAULT_AVATAR_BASE64
+            image_data = base64.b64decode(base64_string)
+            with open(default_path, "wb") as f:
+                f.write(image_data)
+            return Image.open(default_path)
+        except FileNotFoundError as e:
+            print("文件路径无效或无法创建文件:", e)
+            return None
+        except IOError as e:
+            print("图像文件读取失败:", e)
+            return None
+        except Exception as e:
+            print("所有方法都失败，创建空白头像:", e)
+            return Image.new('RGB', Constants.AVT_SIZE, color='white')
+
+    @staticmethod
+    def get_acc_origin_display_name(sw, acc) -> str:
+        """获取账号的展示名"""
+        # 依次查找 note, nickname, alias，找到第一个不为 None 的值
+        display_name = str(acc)  # 默认值为 account
+        for key in ("note", "nickname", "alias"):
+            value, = subfunc_file.get_sw_acc_data(sw, acc, **{key: None})
+            if value is not None:
+                display_name = str(value)
+                break
+        return display_name
+
 
 class SwOperator:
     @staticmethod
     def close_classes_but_sw_main_wnd(wnd_classes, sw):
         """关闭某些类名的窗口，但排除主窗口"""
+        # TODO: 优化排除逻辑
         if wnd_classes is None:
             return
         if len(wnd_classes) == 0:
@@ -188,14 +247,7 @@ class SwOperator:
 
     @staticmethod
     def switch_dll(sw, mode, channel, dll_dir) -> Tuple[Optional[bool], str]:
-        """
-        切换全局多开状态
-        :param channel:
-        :param sw: 平台
-        :param mode: 修改的模式
-        :param dll_dir: dll目录
-        :return: 成功与否，提示信息
-        """
+        """切换sw平台中,mode模式下,channel频道的dll状态,返回成功与否及携带信息"""
         try:
             if mode == RemoteCfg.MULTI:
                 mode_text = "全局多开"
@@ -229,19 +281,7 @@ class SwOperator:
             patch_dll, ver_dict = subfunc_file.get_remote_cfg(sw, patch_dll=None, **{mode: None})
             if patch_dll is None or ver_dict is None:
                 return False, "该平台暂未适配"
-            #
-            # dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-            # cur_sw_ver = file_utils.get_file_version(dll_path)
-            # if cur_sw_ver is None:
-            #     exec_path = SwInfoFunc.get_sw_install_path(sw)
-            #     cur_sw_ver = file_utils.get_file_version(exec_path)
-            #
-            # if cur_sw_ver not in ver_dict:
-            #     return None, f"错误：未找到版本{cur_sw_ver}的适配"
-            # ver_adaptation = ver_dict[cur_sw_ver]
-            # # 定义目标路径和文件名
-            # tag, msg, original_patterns, modified_patterns = SwInfoUtils.identify_dll_of_ver_by_dict(
-            #     ver_adaptation, dll_path)
+
             dll_path = os.path.join(dll_dir, patch_dll)
             try:
                 if tag is True:
@@ -273,6 +313,7 @@ class SwOperator:
 
     @staticmethod
     def _ask_for_manual_terminate_or_force(executable):
+        """询问手动退出,否则强制退出"""
         processes = []
         for proc in psutil.process_iter(['pid', 'name']):
             if proc.name().lower() == executable.lower():
@@ -280,41 +321,35 @@ class SwOperator:
         if processes:
             answer = messagebox.askokcancel(
                 "警告",
-                f"检测到正在使用{executable}。该操作需要退出进程，请先手动退出，否则将会强制关闭。是否继续？"
+                f"检测到正在使用{executable}。该操作需要退出进程，请先手动退出，直接继续将会强制关闭。是否继续？"
             )
             if answer is not True:
-                return
-
+                return None
             still_running = process_utils.try_terminate_executable(executable)
             if len(still_running) != 0:
                 messagebox.showerror("错误", f"无法终止微信进程：{still_running}")
                 return False
             return True
-
         return True
 
     @staticmethod
     def _backup_dll(sw, dll_dir):
         """备份当前的dll"""
-        # 获取桌面路径
         desktop_path = winshell.desktop()
-
         patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
         dll_path = os.path.join(dll_dir, patch_dll)
-
-        bak_path = os.path.join(dll_dir, f"{patch_dll}.bak")
+        dll_bak_path = os.path.join(dll_dir, f"{patch_dll}.bak")
         bak_desktop_path = os.path.join(desktop_path, f"{patch_dll}.bak")
         curr_ver = file_utils.get_file_version(dll_path)
         not_same_version = True
-        if os.path.exists(bak_path):
-            not_same_version = file_utils.get_file_version(bak_path) != curr_ver
-
-        if not os.path.exists(bak_path) or (
-                os.path.exists(bak_path) and not_same_version):
+        if os.path.exists(dll_bak_path):
+            not_same_version = file_utils.get_file_version(dll_bak_path) != curr_ver
+        if not os.path.exists(dll_bak_path) or (
+                os.path.exists(dll_bak_path) and not_same_version):
             print("没有备份")
             messagebox.showinfo("提醒",
                                 "当前是您该版本首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
-            shutil.copyfile(dll_path, bak_path)
+            shutil.copyfile(dll_path, dll_bak_path)
             shutil.copyfile(dll_path, bak_desktop_path)
 
     @staticmethod
@@ -326,15 +361,10 @@ class SwOperator:
 
     @staticmethod
     def _manual_login(sw):
-        """
-        根据状态进行手动登录过程
-        :param sw: 选择的软件标签
-        :return: 成功与否
-        """
+        """手动登录"""
         root_class = GlobalMembers.root_class
         root = root_class.root
         acc_tab_ui = root_class.acc_tab_ui
-
         # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
         start_time = time.time()
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
@@ -342,15 +372,14 @@ class SwOperator:
         if redundant_wnd_list is None or login_wnd_class is None or cfg_handles is None or executable_name is None:
             messagebox.showinfo("错误", "尚未适配！")
             return
-
-        # hwnd_utils.close_all_by_wnd_classes(redundant_wnd_list)
         # 关闭配置文件锁
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
+
         SwOperator.kill_sw_multiple_processes(sw)
         time.sleep(0.5)
         subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
-        subfunc_file.update_all_acc_in_acc_json(sw)
+        subfunc_file.update_pid_mutex_of_(sw)
 
         multirun_mode = root_class.sw_classes[sw].multirun_mode
         sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
@@ -877,7 +906,7 @@ class SwInfoUtils:
             if found_path:
                 results.append(os.path.join(found_path, executable).replace('\\', '/'))
         except Exception as we:
-            logger.error(we)
+            logger.warning(we)
         return results
 
     @staticmethod
@@ -901,7 +930,7 @@ class SwInfoUtils:
             value = os.path.join(value, dir_name).replace('\\', '/')
             results.append(value)
         except Exception as we:
-            logger.error(we)
+            logger.warning(we)
         return results
 
     @staticmethod

@@ -26,6 +26,10 @@ from utils.logger_utils import myprinter as printer
 class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
+        self.sw_class = None
+        self.sw = None
+        self.acc_tab_ui = None
+        self.is_login_menu = None
         self.menu_updater = None
         self.multirun_menu_index = None
         self.anti_revoke_menu_index = None
@@ -65,23 +69,24 @@ class MenuUI:
         self.app_info = self.root_class.app_info
         self.sw_classes = self.root_class.sw_classes
 
-        self.acc_tab_ui = self.root_class.acc_tab_ui
-        self.sw = self.acc_tab_ui.sw
-        self.sw_class = self.sw_classes[self.sw]
-
     def create_root_menu_bar(self):
         """创建菜单栏"""
-        if self.root_class.finish_started is True:
+        root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
+        self.is_login_menu = root_tab == "login"
+        if self.is_login_menu:
+            self.acc_tab_ui = self.root_class.acc_tab_ui
+            self.sw = self.acc_tab_ui.sw
+            self.sw_class = self.sw_classes[self.sw]
             # 路径检查
             self.sw_class.data_dir = SwInfoFunc.get_sw_data_dir(self.sw)
             self.sw_class.inst_path = SwInfoFunc.get_sw_install_path(self.sw)
             self.sw_class.ver = SwInfoFunc.get_sw_ver(self.sw, self.sw_class.data_dir)
             self.sw_class.dll_dir = SwInfoFunc.get_sw_dll_dir(self.sw)
 
-        # 传递错误信息给主窗口
-        if self.sw_class.inst_path is None or self.sw_class.data_dir is None or self.sw_class.dll_dir is None:
-            print("路径设置错误...")
-            self.path_error = True
+            # 传递错误信息给主窗口
+            if self.sw_class.inst_path is None or self.sw_class.data_dir is None or self.sw_class.dll_dir is None:
+                print("路径设置错误...")
+                self.acc_tab_ui.path_error = True
 
         print("创建菜单栏...")
         self.start_time = time.time()
@@ -104,45 +109,42 @@ class MenuUI:
         self.program_file_menu.add_command(label="打开", command=AppFunc.open_program_file)
         self.program_file_menu.add_command(label="删除旧版备份",
                                            command=partial(AppFunc.mov_backup))
-
-        # >统计数据
-        self.statistic_menu = tk.Menu(self.file_menu, tearoff=False)
-        self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
-        self.statistic_menu.add_command(label="查看", command=self._open_statistic)
-        self.statistic_menu.add_command(label="清除",
-                                        command=partial(AppFunc.clear_statistic_data,
-                                                        self.create_root_menu_bar))
-
         # -创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=AppFunc.create_app_lnk)
 
-        self.file_menu.add_separator()  # ————————————————分割线————————————————
-
-        # >配置文件
-        self.config_file_menu = tk.Menu(self.file_menu, tearoff=False)
-        if not self.sw_class.data_dir:
-            self.file_menu.add_command(label="配置文件  未获取")
-            self.file_menu.entryconfig(f"配置文件  未获取", state="disable")
-        else:
-            self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
-            self.config_file_menu.add_command(label="打开",
-                                              command=partial(SwOperator.open_config_file, self.sw))
-            self.config_file_menu.add_command(label="清除",
-                                              command=partial(SwOperator.clear_config_file, self.sw,
-                                                              self.root_class.acc_tab_ui.refresh))
-        # -打开主dll所在文件夹
-        self.file_menu.add_command(label="查看DLL目录", command=partial(SwOperator.open_dll_dir, self.sw))
-        if self.sw_class.dll_dir is None:
-            self.file_menu.entryconfig(f"查看DLL目录", state="disable")
-
-        # -创建快捷启动
-        quick_start_sp, = subfunc_file.get_remote_cfg(self.sw, support_quick_start=None)
-        # print(f"支持快捷启动：{quick_start_sp}")
-        self.file_menu.add_command(label="创建快捷启动",
-                                   command=partial(SwOperator.create_multiple_lnk,
-                                                   self.sw, self.sw_class.freely_multirun, self.create_root_menu_bar),
-                                   state="normal" if quick_start_sp is True else "disabled")
-        print(f"文件菜单用时：{time.time() - self.start_time:.4f}秒")
+        if self.is_login_menu:
+            self.file_menu.add_separator()  # ————————————————分割线————————————————
+            # >统计数据
+            self.statistic_menu = tk.Menu(self.file_menu, tearoff=False)
+            self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
+            self.statistic_menu.add_command(label="查看", command=self._open_statistic)
+            self.statistic_menu.add_command(label="清除",
+                                            command=partial(AppFunc.clear_statistic_data,
+                                                            self.create_root_menu_bar))
+            # >配置文件
+            self.config_file_menu = tk.Menu(self.file_menu, tearoff=False)
+            if not self.sw_class.data_dir:
+                self.file_menu.add_command(label="配置文件  未获取")
+                self.file_menu.entryconfig(f"配置文件  未获取", state="disable")
+            else:
+                self.file_menu.add_cascade(label="配置文件", menu=self.config_file_menu)
+                self.config_file_menu.add_command(label="打开",
+                                                  command=partial(SwOperator.open_config_file, self.sw))
+                self.config_file_menu.add_command(label="清除",
+                                                  command=partial(SwOperator.clear_config_file, self.sw,
+                                                                  self.root_class.acc_tab_ui.refresh))
+            # -打开主dll所在文件夹
+            self.file_menu.add_command(label="查看DLL目录", command=partial(SwOperator.open_dll_dir, self.sw))
+            if self.sw_class.dll_dir is None:
+                self.file_menu.entryconfig(f"查看DLL目录", state="disable")
+            # -创建快捷启动
+            quick_start_sp, = subfunc_file.get_remote_cfg(self.sw, support_quick_start=None)
+            # print(f"支持快捷启动：{quick_start_sp}")
+            self.file_menu.add_command(label="创建快捷启动",
+                                       command=partial(SwOperator.create_multiple_lnk,
+                                                       self.sw, self.sw_class.freely_multirun, self.create_root_menu_bar),
+                                       state="normal" if quick_start_sp is True else "disabled")
+            print(f"文件菜单用时：{time.time() - self.start_time:.4f}秒")
 
         # ————————————————————————————编辑菜单————————————————————————————
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
@@ -157,41 +159,35 @@ class MenuUI:
         print(f"编辑菜单用时：{time.time() - self.start_time:.4f}秒")
 
         # ————————————————————————————视图菜单————————————————————————————
-        # 视图单选
-        view_value = self.global_settings_value.view = subfunc_file.fetch_sw_setting_or_set_default_or_none(
-            self.sw, "view")
-        view_var = self.global_settings_var.view = tk.StringVar(value=view_value)
         self.view_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="视图", menu=self.view_menu)
+        if self.is_login_menu:
+            # 视图单选
+            view_value = self.global_settings_value.view = subfunc_file.fetch_sw_setting_or_set_default_or_none(
+                self.sw, "view")
+            view_var = self.global_settings_var.view = tk.StringVar(value=view_value)
 
-        self.view_menu.add_radiobutton(label="经典", variable=view_var, value="classic",
-                                       command=self._switch_to_classic_view)
-        self.view_menu.add_radiobutton(label="列表", variable=view_var, value="tree",
-                                       command=self._switch_to_tree_view)
-        self.view_menu.add_radiobutton(label="侧栏", variable=view_var, value="sidebar",
-                                       command=self._open_sidebar)
-
-        # 视图选项
-        sign_vis_value = self.global_settings_value.sign_vis = \
-            True if subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True" else False
-        sign_vis_var = self.global_settings_var.sign_vis = tk.BooleanVar(value=sign_vis_value)
-        self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
-        self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
-        self.view_options_menu.add_checkbutton(
-            label="显示状态标志", variable=sign_vis_var,
-            command=partial(subfunc_file.save_a_global_setting_and_callback,
-                            "sign_visible", not self.global_settings_value.sign_vis, self.root_class.acc_tab_ui.refresh)
-        )
-        # 特有菜单
-        if view_value == "classic":
-            # 添加经典视图的菜单项
-            pass
-        elif view_value == "tree":
-            # 添加列表视图的菜单项
-            pass
-
-        # 缩放
+            self.view_menu.add_radiobutton(label="经典", variable=view_var, value="classic",
+                                           command=self._switch_to_classic_view)
+            self.view_menu.add_radiobutton(label="列表", variable=view_var, value="tree",
+                                           command=self._switch_to_tree_view)
+            # 视图选项
+            sign_vis_value = self.global_settings_value.sign_vis = \
+                True if subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True" else False
+            sign_vis_var = self.global_settings_var.sign_vis = tk.BooleanVar(value=sign_vis_value)
+            self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
+            self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
+            self.view_options_menu.add_checkbutton(
+                label="显示状态标志", variable=sign_vis_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                "sign_visible", not self.global_settings_value.sign_vis,
+                                self.root_class.acc_tab_ui.refresh)
+            )
+        # 全局菜单:缩放+侧栏
         self.view_menu.add_separator()  # ————————————————分割线————————————————
+        sidebar_var = tk.BooleanVar(value=False)
+        self.view_menu.add_checkbutton(label="侧栏", variable=sidebar_var,
+                                       command=self._open_sidebar)
         scale_value = self.global_settings_value.scale = subfunc_file.fetch_global_setting_or_set_default_or_none(
             "scale")
         scale_var = self.global_settings_var.scale = tk.StringVar(value=scale_value)
@@ -241,8 +237,8 @@ class MenuUI:
 
         # ————————————————————————————作者标签————————————————————————————
         new_func_value = self.global_settings_value.new_func = \
-            True if subfunc_file.fetch_global_setting_or_set_default_or_none(
-                LocalCfg.ENABLE_NEW_FUNC) == "True" else False
+            subfunc_file.fetch_global_setting_or_set_default_or_none(
+                LocalCfg.ENABLE_NEW_FUNC)
         author_str = self.app_info.author
         hint_str = self.app_info.hint
         author_str_without_hint = f"by {author_str}"
@@ -256,11 +252,9 @@ class MenuUI:
             handler = widget_utils.UnlimitedClickHandler(
                 self.root,
                 self.menu_bar,
-                lambda *args, **kwargs: None,  # 第一次点击，不执行任何操作
-                lambda *args, **kwargs: None,  # 第二次点击，不执行任何操作
-                partial(self._to_enable_new_func)  # 第三次点击，执行 to_enable_new_func
+                **{"3": partial(self._to_enable_new_func)}
             )
-            self.menu_bar.entryconfigure(author_str_with_hint, command=handler.on_click)
+            self.menu_bar.entryconfigure(author_str_with_hint, command=handler.on_click_down)
 
         # print(self.sw_class)
         # print(self.sw_class.__dict__)
@@ -280,71 +274,72 @@ class MenuUI:
         self.auto_start_menu.add_command(
             label="测试登录自启动账号", command=partial(self.root_class.to_login_auto_start_accounts))
 
-        # -应用设置
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
-        self.settings_menu.add_command(label="平台设置", command=partial(self.open_sw_settings, self.sw))
-        self.anti_revoke_menu = tk.Menu(self.settings_menu, tearoff=False)
-        self.anti_revoke_menu_index = self.settings_menu.add_cascade(label="防撤回", menu=self.anti_revoke_menu)
-        self.multirun_menu = tk.Menu(self.settings_menu, tearoff=False)
-        self.multirun_menu_index = self.settings_menu.add_cascade(label="全局多开", menu=self.multirun_menu)
-        self.settings_menu.add_separator()  # ————————————————分割线————————————————
+        if self.is_login_menu:
+            # -应用设置
+            self.settings_menu.add_separator()  # ————————————————分割线————————————————
+            self.settings_menu.add_command(label="平台设置", command=partial(self.open_sw_settings, self.sw))
+            self.anti_revoke_menu = tk.Menu(self.settings_menu, tearoff=False)
+            self.anti_revoke_menu_index = self.settings_menu.add_cascade(label="防撤回", menu=self.anti_revoke_menu)
+            self.multirun_menu = tk.Menu(self.settings_menu, tearoff=False)
+            self.multirun_menu_index = self.settings_menu.add_cascade(label="全局多开", menu=self.multirun_menu)
+            self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
-        # 开启更新多开,防撤回等子菜单的更新线程
-        # self._update_settings_sub_menus_in_thread()
-        self.update_settings_menu_thread()
+            # 开启更新多开,防撤回等子菜单的更新线程
+            # self._update_settings_sub_menus_in_thread()
+            self.update_settings_menu_thread()
 
-        hide_wnd_value = self.global_settings_value.hide_wnd = \
-            True if subfunc_file.fetch_global_setting_or_set_default_or_none("hide_wnd") == "True" else False
-        hide_wnd_var = self.global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)
-        self.settings_menu.add_checkbutton(
-            label="自动登录前隐藏主窗口", variable=hide_wnd_var,
-            command=partial(subfunc_file.save_a_global_setting_and_callback,
-                            "hide_wnd", not hide_wnd_value, self.create_root_menu_bar))
+            hide_wnd_value = self.global_settings_value.hide_wnd = \
+                True if subfunc_file.fetch_global_setting_or_set_default_or_none("hide_wnd") == "True" else False
+            hide_wnd_var = self.global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)
+            self.settings_menu.add_checkbutton(
+                label="自动登录前隐藏主窗口", variable=hide_wnd_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                "hide_wnd", not hide_wnd_value, self.create_root_menu_bar))
 
-        # >调用模式
-        self.call_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
-        self.settings_menu.add_cascade(label="调用模式", menu=self.call_mode_menu)
-        call_mode_value = self.global_settings_value.call_mode = subfunc_file.fetch_global_setting_or_set_default_or_none(
-            "call_mode")
-        call_mode_var = self.global_settings_var.call_mode = tk.StringVar(value=call_mode_value)  # 设置初始选中的子程序
+            # >调用模式
+            self.call_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
+            self.settings_menu.add_cascade(label="调用模式", menu=self.call_mode_menu)
+            call_mode_value = self.global_settings_value.call_mode = subfunc_file.fetch_global_setting_or_set_default_or_none(
+                "call_mode")
+            call_mode_var = self.global_settings_var.call_mode = tk.StringVar(value=call_mode_value)  # 设置初始选中的子程序
 
-        python_sp, python_s_sp, handle_sp = subfunc_file.get_remote_cfg(
-            self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
-        # 添加 HANDLE 的单选按钮
-        self.call_mode_menu.add_radiobutton(
-            label='HANDLE',
-            value='HANDLE',
-            variable=call_mode_var,
-            command=partial(subfunc_file.save_a_global_setting_and_callback,
-                            "call_mode", "HANDLE", self.create_root_menu_bar),
-            state='disabled' if not python_sp else 'normal'
-        )
-        # 添加 DEFAULT 的单选按钮
-        self.call_mode_menu.add_radiobutton(
-            label='DEFAULT',
-            value='DEFAULT',
-            variable=call_mode_var,
-            command=partial(subfunc_file.save_a_global_setting_and_callback,
-                            "call_mode", "DEFAULT", self.create_root_menu_bar),
-            state='disabled' if not python_s_sp else 'normal'
-        )
-        # 添加 LOGON 的单选按钮
-        self.call_mode_menu.add_radiobutton(
-            label='LOGON',
-            value='LOGON',
-            variable=call_mode_var,
-            command=partial(subfunc_file.save_a_global_setting_and_callback,
-                            "call_mode", "handle", self.create_root_menu_bar),
-            state='disabled' if not handle_sp else 'normal'
-        )
+            python_sp, python_s_sp, handle_sp = subfunc_file.get_remote_cfg(
+                self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
+            # 添加 HANDLE 的单选按钮
+            self.call_mode_menu.add_radiobutton(
+                label='HANDLE',
+                value='HANDLE',
+                variable=call_mode_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                "call_mode", "HANDLE", self.create_root_menu_bar),
+                state='disabled' if not python_sp else 'normal'
+            )
+            # 添加 DEFAULT 的单选按钮
+            self.call_mode_menu.add_radiobutton(
+                label='DEFAULT',
+                value='DEFAULT',
+                variable=call_mode_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                "call_mode", "DEFAULT", self.create_root_menu_bar),
+                state='disabled' if not python_s_sp else 'normal'
+            )
+            # 添加 LOGON 的单选按钮
+            self.call_mode_menu.add_radiobutton(
+                label='LOGON',
+                value='LOGON',
+                variable=call_mode_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                "call_mode", "handle", self.create_root_menu_bar),
+                state='disabled' if not handle_sp else 'normal'
+            )
 
-        auto_press_value = self.global_settings_value.auto_press = \
-            True if subfunc_file.fetch_global_setting_or_set_default_or_none("auto_press") == "True" else False
-        auto_press_var = self.global_settings_var.auto_press = tk.BooleanVar(value=auto_press_value)
-        self.settings_menu.add_checkbutton(
-            label="自动点击登录按钮", variable=auto_press_var,
-            command=partial(subfunc_file.save_a_global_setting_and_callback,
-                            "auto_press", not auto_press_value, self.create_root_menu_bar))
+            auto_press_value = self.global_settings_value.auto_press = \
+                True if subfunc_file.fetch_global_setting_or_set_default_or_none("auto_press") == "True" else False
+            auto_press_var = self.global_settings_var.auto_press = tk.BooleanVar(value=auto_press_value)
+            self.settings_menu.add_checkbutton(
+                label="自动点击登录按钮", variable=auto_press_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                "auto_press", not auto_press_value, self.create_root_menu_bar))
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(
@@ -492,9 +487,7 @@ class MenuUI:
         about_wnd = tk.Toplevel(self.root)
         AboutWnd(about_wnd, "关于", app_info)
 
-    def _to_enable_new_func(self, event=None):
-        if event is None:
-            pass
+    def _to_enable_new_func(self):
         subfunc_file.save_a_global_setting_and_callback('enable_new_func', True)
         messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
         self.create_root_menu_bar()

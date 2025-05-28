@@ -27,6 +27,8 @@ class Position(Enum):
 class RemoteCfg(str, Enum):
     """远程配置中的字段"""
     GLOBAL = "global"
+    ALL_SW = "all_sw"
+    SP_SW = "support_sw"
 
     REVOKE = "anti-revoke"
     MULTI = "multirun"
@@ -43,7 +45,11 @@ class LocalCfg(str, Enum):
     SCREEN_SIZE = "screen_size"
     HIDE_WND = "hide_wnd"
     ENABLE_NEW_FUNC = "enable_new_func"
-    TAB = "tab"
+    DISABLE_SORT = "disable_sort"
+    ENABLE_SORT = "enable_sort"
+    ROOT_TAB = "root_tab"
+    MNG_TAB = "mng_tab"
+    LOGIN_TAB = "login_tab"
     SCALE = "scale"
     SIGN_VISIBLE = "sign_visible"
     HIDDEN_SORT = "hidden_sort"
@@ -69,6 +75,7 @@ class LocalCfg(str, Enum):
     LOGIN_SORT = "login_sort"
     LOGOUT_SORT = "logout_sort"
     STATE = "state"
+
 
 class SwStates(str, Enum):
     """平台状态"""
@@ -107,6 +114,7 @@ class OnlineStatus(str, Enum):
     LOGIN = "login"
     LOGOUT = "logout"
     UNKNOWN = "unknown"
+
 
 if __name__ == "__main__":
     print(str(SwStates.HIDDEN.value))

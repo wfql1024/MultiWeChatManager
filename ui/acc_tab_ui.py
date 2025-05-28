@@ -21,6 +21,7 @@ class AccTabUI:
 
     def __init__(self):
         # IDE初始化
+        self.path_error = None
         self.acc_list_dict = None
         self.sw_class = None
         self.detail_ui_class = None
@@ -37,14 +38,13 @@ class AccTabUI:
         self.root_class = GlobalMembers.root_class
         self.sw_classes = self.root_class.sw_classes
         self.root = self.root_class.root
-        self.sw_notebook = self.root_class.sw_notebook
         self.global_settings_value = self.root_class.global_settings_value
         self.hotkey_manager = self.root_class.hotkey_manager
 
     def refresh(self):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
-        self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("tab")
+        self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
         self.sw_class = self.sw_classes[self.sw]
 
         self.tab_frame = self.sw_class.frame
@@ -95,7 +95,7 @@ class AccTabUI:
     def create_main_ui(self):
         """渲染主界面账号列表"""
         # 检测是否路径错误
-        if self.root_menu.path_error is True:
+        if self.path_error is True:
             self.show_setting_error()
         success, result = self.get_acc_list_answer
         printer.print_vn(f"[{time.time() - self.start_time:.4f}s] 数据收集完成！")
@@ -112,9 +112,6 @@ class AccTabUI:
         # 加载完成后更新一下界面并且触发事件
         if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
             self.scrollable_canvas.refresh_canvas()
-
-        # 重新绑定标签切换事件
-        self.sw_notebook.bind('<<NotebookTabChanged>>', self.root_class.on_tab_change)
 
     def create_account_list_ui(self):
         """账号列表获取成功，加载列表"""

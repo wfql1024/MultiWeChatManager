@@ -51,7 +51,7 @@ class CheckboxItemRow:
 
         self.config_status = AccInfoFunc.get_sw_acc_login_cfg(self.sw, item, self.data_path)
         self.tooltips = {}
-        self.update_top_title = self.parent_class._update_top_title
+        self.update_top_title = self.parent_class.update_top_title
         self.iid = f"{self.sw}/{self.item}"
 
         self.start_time = time.time()
@@ -158,8 +158,8 @@ class CheckboxItemRow:
         widget_utils.UnlimitedClickHandler(
             self.root,
             self.avatar_label,
-            partial(self.acc_tab_ui.to_open_acc_detail, iid),
-            partial(AccOperator.switch_to_sw_account_wnd, iid)
+            **{"1": partial(self.acc_tab_ui.to_open_acc_detail, iid),
+            "2": partial(AccOperator.switch_to_sw_account_wnd, iid)}
         )
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
@@ -229,7 +229,7 @@ class ActionableClassicTable(ABC):
         for item in self.data_src[table_tag]:
             self.create_rows(item)
         self.get_usable_rows()
-        self._update_top_title()
+        self.update_top_title()
 
     @abstractmethod
     def initialize_members_in_init(self):
@@ -304,11 +304,11 @@ class ActionableClassicTable(ABC):
 
         for row in usable_rows_dict.values():
             row.checkbox_var.set(not checkbox_var.get())
-        self._update_top_title()
+        self.update_top_title()
 
         return "break"
 
-    def _update_top_title(self):
+    def update_top_title(self):
         """根据AccountRow实例的复选框状态更新顶行复选框状态"""
         self._get_selected_idd_list()
 
@@ -375,6 +375,7 @@ class ActionableTreeView(ABC):
         self.data_src = None
         self.hovered_item = None
         self.tooltips = {}
+        self.btn_dict = {}
         self.selected_items = []
         self.sw = None
         self.quick_refresh_failed = None
@@ -464,7 +465,6 @@ class ActionableTreeView(ABC):
             major_btn.pack(side=tk.RIGHT)
 
         # 加载其他按钮
-        # print(self.rest_btn_dicts)
         if self.rest_btn_dicts is not None and len(self.rest_btn_dicts) != 0:
             for btn_dict in self.rest_btn_dicts:
                 btn = ttk.Button(
@@ -520,7 +520,6 @@ class ActionableTreeView(ABC):
         绑定事件以实现自适应调整表格
         :return: 结束
         """
-        self._adjust_treeview_height(None)
 
         self.quick_refresh_failed = False
         tree = self.tree.nametowidget(self.tree)
@@ -529,25 +528,28 @@ class ActionableTreeView(ABC):
             # 如果条目数量为 0，隐藏控件
             print("应该隐藏列表")
             self.tree_frame.pack_forget()
-            self.main_frame.pack_propagate(False)  # 不自动调整自身大小
             self.main_frame.config(height=1)
+            # self.main_frame.pack_propagate(False)  # 不自动调整自身大小
         else:
             # 如果条目数量不为 0则显示控件
             print("应该恢复显示列表")
             self.main_frame.pack_propagate(True)  # 自动调整自身大小
             self.tree_frame.pack(side=tk.TOP, fill=tk.X)
 
-        # self._update_top_title()
+        self._adjust_treeview_height(None)
+        # 排序+调整列宽
+        self._apply_or_switch_col_order()
+        self.on_tree_configure(None)
+        # 触发以更新标题区
+        self._update_top_title()
+        # 绑定事件
         widget_utils.UnlimitedClickHandler(
             self.root,
             tree,
-            partial(self._on_click_in_tree, 1),
-            partial(self._on_click_in_tree, 2)
+            self._on_click_in_tree
         )
         tree.bind("<Leave>", partial(self._on_leave_tree))
         tree.bind("<Motion>", partial(self._moving_on_tree))
-        self._apply_or_switch_col_order()
-        self.on_tree_configure(None)
 
     def _get_selected_values(self):
         # 获取选中行的“账号”列数据
@@ -932,6 +934,7 @@ class ActionableTreeView(ABC):
         tree.configure(height=len(copied_data.items))
 
         # 保存排序状态
+        col:str = str(col)
         self.sort[col] = is_asc_after
         if self.sw is not None:
             subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
@@ -1105,8 +1108,7 @@ class RadioTreeView(ABC):
         widget_utils.UnlimitedClickHandler(
             self.root,
             tree,
-            partial(self._on_click_in_tree, 1),
-            partial(self._on_click_in_tree, 2)
+            self._on_click_in_tree
         )
         tree.bind("<Leave>", partial(self._on_leave_tree))
         tree.bind("<Motion>", partial(self._moving_on_tree))

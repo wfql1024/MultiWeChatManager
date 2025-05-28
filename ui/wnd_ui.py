@@ -1197,7 +1197,7 @@ class StatisticWnd(SubToolWnd, ABC):
         self.tree_dict[tree_type]['sort'] = not is_ascending  # 切换排序顺序
 
 
-# TODO:修改下获取程序路径，程序版本以及程序版本文件夹的逻辑
+# TODO:修改下获取程序路径，程序版本以及程序版本文件夹的逻辑√
 
 
 class SettingWnd(SubToolWnd, ABC):
@@ -1383,19 +1383,23 @@ class SettingWnd(SubToolWnd, ABC):
             self.need_to_reinit = True
 
     def on_ok(self):
-        if not self.validate_paths():
+        if not self.validate_paths_and_ask():
             return
         inst_path = self.inst_path_var.get()
         data_dir = self.data_dir_var.get()
         dll_dir = self.dll_dir_var.get()
         login_size = self.login_size_var.get()
+        inst_path = None if inst_path.startswith("获取失败") else inst_path
+        data_dir = None if data_dir.startswith("获取失败") else data_dir
+        dll_dir = None if dll_dir.startswith("获取失败") else dll_dir
+        state = self.get_sw_state_from_cb()
+        print(f"结束时候状态:{state}")
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.INST_PATH, inst_path)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DATA_DIR, data_dir)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, dll_dir)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, login_size)
-        state = self.get_sw_state_from_cb()
-        print(f"结束时候状态:{state}")
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.STATE, state)
+        self.wnd.destroy()
 
         self.check_bools()
         def _do():
@@ -1407,7 +1411,6 @@ class SettingWnd(SubToolWnd, ABC):
                 return
             self.root_class.acc_tab_ui.refresh()
         _do()
-        self.wnd.destroy()
 
     def finally_do(self):
         # 关闭窗口的话,不保存
@@ -1416,7 +1419,7 @@ class SettingWnd(SubToolWnd, ABC):
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, self.origin_values[LocalCfg.DLL_DIR])
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, self.origin_values[LocalCfg.LOGIN_SIZE])
 
-    def validate_paths(self):
+    def validate_paths_and_ask(self):
         invalid_vars = []
         inst_path = self.inst_path_var.get()
         data_dir = self.data_dir_var.get()
@@ -1472,7 +1475,7 @@ class SettingWnd(SubToolWnd, ABC):
                 break
 
         if selected_path:
-            self.data_dir_var.set(selected_path)
+            self.inst_path_var.set(selected_path)
 
     def load_or_get_sw_data_dir(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
