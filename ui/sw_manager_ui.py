@@ -1,6 +1,7 @@
+import os
 import tkinter as tk
 from abc import ABC
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 from PIL import Image, ImageTk
 
@@ -10,14 +11,16 @@ from public_class import reusable_widgets
 from public_class.custom_classes import Condition
 from public_class.enums import RemoteCfg, LocalCfg, SwStates
 from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWnd
+from public_class.reusable_widgets import SubToolWndUI
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants
-from ui import menu_ui
+from ui.menu_ui import MenuUI
+from ui.wnd_ui import WndCreator
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
 
 
-class SwManagerWnd(SubToolWnd, ABC):
+class SwManagerWndUI(SubToolWndUI, ABC):
     """账号管理窗口"""
 
     def __init__(self, wnd, title):
@@ -39,12 +42,15 @@ class SwManagerWnd(SubToolWnd, ABC):
 
 class SwManagerUI:
     """平台管理UI"""
+
     def __init__(self, wnd, frame):
-        self.root_menu = None
+        print("构建平台管理ui...")
+        self.quick_refresh_mode = None
         self.main_frame = None
         self.scrollable_canvas = None
         self.sw_list = None
         self.tree_class = {}
+        self.frame_dict = {}
 
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
@@ -55,7 +61,7 @@ class SwManagerUI:
             "visible": {
                 "text": "显示",
                 "btn": None,
-                "func": self.to_visible_,
+                "func": self._create_set_state_method(SwStates.VISIBLE),
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要显示的平台": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
@@ -64,7 +70,7 @@ class SwManagerUI:
             "hidden": {
                 "text": "隐藏",
                 "btn": None,
-                "func": self.to_hidden_,
+                "func": self._create_set_state_method(SwStates.HIDDEN),
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要隐藏的平台": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)]),
@@ -73,7 +79,7 @@ class SwManagerUI:
             "disable": {
                 "text": "禁用",
                 "btn": None,
-                "func": self.to_disable_,
+                "func": self._create_set_state_method(SwStates.DISABLED),
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要禁用的平台": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
@@ -82,7 +88,7 @@ class SwManagerUI:
             "enable": {
                 "text": "启用",
                 "btn": None,
-                "func": self.to_enable_,
+                "func": self._create_set_state_method(SwStates.VISIBLE),
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要启用的平台": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
@@ -101,11 +107,18 @@ class SwManagerUI:
         }
 
     def display_ui(self):
+        print("创建平台管理界面...")
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
         self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
         self.sw_list, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
+        # 添加占位控件
+        self.frame_dict["enable"] = ttk.Frame(self.main_frame)
+        self.frame_dict["enable"].pack(side=tk.TOP, fill=tk.X)
+        self.frame_dict["disable"] = ttk.Frame(self.main_frame)
+        self.frame_dict["disable"].pack(side=tk.TOP, fill=tk.X)
+
         # 加载已启用列表
         self.tree_class["enable"] = SwManagerTreeView(
             self,
@@ -131,15 +144,15 @@ class SwManagerUI:
     def refresh(self):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
-
         # 刷新菜单
-        self.root_menu = menu_ui.MenuUI()
+        if not isinstance(self.root_class.menu_ui, MenuUI):
+            self.root_class.menu_ui = MenuUI()
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if config_data is None:
             messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
             self.root.destroy()
         try:
-            self.root.after(0, self.root_menu.create_root_menu_bar)
+            self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
         except Exception as re:
             logger.error(re)
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
@@ -152,47 +165,46 @@ class SwManagerUI:
             logger.error(e)
             self.root.after(3000, self.refresh_frame)
 
+    def _create_set_state_method(self, state):
+        def set_state(items):
+            for sw in items:
+                subfunc_file.update_settings(sw, **{LocalCfg.STATE: state})
+            self.refresh_frame()
 
-    def to_visible_(self, items):
-        for sw in items:
-            subfunc_file.update_settings(sw, **{LocalCfg.STATE: SwStates.VISIBLE})
-        self.refresh_frame()
-        pass
+        return set_state
 
-    def to_disable_(self, items):
-        for sw in items:
-            subfunc_file.update_settings(sw, **{LocalCfg.STATE: SwStates.DISABLED})
-        self.refresh_frame()
-        pass
-
-    def to_hidden_(self, items):
-        for sw in items:
-            subfunc_file.update_settings(sw, **{LocalCfg.STATE: SwStates.HIDDEN})
-        self.refresh_frame()
-        pass
-
-    def to_enable_(self, items):
-        for sw in items:
-            subfunc_file.update_settings(sw, **{LocalCfg.STATE: SwStates.VISIBLE})
-        self.refresh_frame()
-        pass
-
-    def to_setting_(self, items):
+    @staticmethod
+    def to_setting_(items):
         item = items[0]
-        self.root_menu.open_sw_settings(item)
-        pass
-
-    def to_open_sw_detail(self, item):
-        """打开详情窗口"""
-        self.root_menu.open_sw_settings(item)
+        WndCreator.open_sw_settings(item)
 
     def refresh_frame(self, sw=None):
+        print("进入平台管理刷新")
         if sw:
             pass
-        print("清理平台管理界面...")
-        for widget in self.tab_frame.winfo_children():
-            widget.destroy()
-        self.display_ui()
+
+        def slowly_refresh():
+            if isinstance(self.tab_frame, ttk.Frame) and self.tab_frame.winfo_exists():
+                printer.vital("刷新页面")
+                for widget in self.tab_frame.winfo_children():
+                    widget.destroy()
+            self.display_ui()
+
+        if self.quick_refresh_mode is True:
+            try:
+                # 不要忘记更新数据
+                self.sw_list, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
+                tree_class = self.tree_class
+                if all(tree_class[t].can_quick_refresh for t in tree_class):
+                    for t in tree_class:
+                        tree_class[t].quick_refresh_items(self.sw_list)
+            except Exception as e:
+                logger.warning(e)
+                self.quick_refresh_mode = False
+                slowly_refresh()
+        else:
+            slowly_refresh()
+        printer.print_vn("加载完成!")
 
 
 class SwManagerTreeView(ActionableTreeView, ABC):
@@ -201,6 +213,7 @@ class SwManagerTreeView(ActionableTreeView, ABC):
         self.data_src = None
         self.wnd = None
         self.photo_images = []
+        self.can_quick_refresh = None
         super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
@@ -211,7 +224,7 @@ class SwManagerTreeView(ActionableTreeView, ABC):
         sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
-                self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
+                self.sort["col"], self.sort["is_asc"] = sort_str.split(",")
 
     def set_table_style(self):
         super().set_table_style()
@@ -242,9 +255,9 @@ class SwManagerTreeView(ActionableTreeView, ABC):
             if sw == "global":
                 continue
             state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
-            if table_tag == "enable" and (state != SwStates.VISIBLE and state!= SwStates.HIDDEN):
+            if table_tag == "enable" and (state != SwStates.VISIBLE and state != SwStates.HIDDEN):
                 continue
-            if table_tag == "disable" and state!= SwStates.DISABLED:
+            if table_tag == "disable" and state != SwStates.DISABLED:
                 continue
 
             display_name = " " + sw
@@ -254,7 +267,13 @@ class SwManagerTreeView(ActionableTreeView, ABC):
                 data_dir=None,
                 dll_dir=None
             )
-            version = SwInfoFunc.get_sw_ver(sw, dll_dir)
+            dll_path = dll_dir
+            try:
+                patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
+                dll_path = os.path.join(dll_dir, patch_dll)
+            except Exception as e:
+                logger.warning(e)
+            version = SwInfoFunc.get_sw_ver(sw, dll_path)
             # 获取平台图像
             img = SwInfoFunc.get_sw_logo(sw)
             img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
@@ -269,6 +288,9 @@ class SwManagerTreeView(ActionableTreeView, ABC):
 
             tree.insert("", "end", iid=f"{sw}", image=photo,
                         values=(display_name, state, version, inst_path, data_dir, dll_dir))
+
+        self.can_quick_refresh = True
+        self.parent_class.quick_refresh_mode = True
 
     def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
         # print("触发列宽调整")
@@ -296,7 +318,7 @@ class SwManagerTreeView(ActionableTreeView, ABC):
         :return:
         """
         if click_time == 1:
-            self.parent_class.to_open_sw_detail(item_id)
+            WndCreator.open_sw_settings(item_id)
 
     def on_tree_configure(self, event):
         """
@@ -309,5 +331,3 @@ class SwManagerTreeView(ActionableTreeView, ABC):
         col_width_to_show = int(self.root.winfo_screenwidth() / 5)
         self.tree.bind("<Configure>", lambda e: self.adjust_columns(
             e, self.wnd, col_width_to_show, columns_to_hide), add='+')
-
-

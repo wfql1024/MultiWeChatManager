@@ -13,11 +13,11 @@ matches = search(data, WAV_PATTERN)
 print(f"\n> Export files")
 for i, idx in enumerate(matches):
     length_offset = idx - 4
-    length_data = data[length_offset : length_offset + 4]
+    length_data = data[length_offset: length_offset + 4]
     wav_length = int.from_bytes(length_data, "big")
     if wav_length > len(data):
         print(f"{YELLOW}[WARN] Invalid WAV length: {wav_length:X}{RESET}")
-    wav_data = data[idx : idx + wav_length]
+    wav_data = data[idx: idx + wav_length]
     outpath = f"Sound_{i}_{wav_length:08X}.wav"
     try:
         with open(outpath, "wb") as f:

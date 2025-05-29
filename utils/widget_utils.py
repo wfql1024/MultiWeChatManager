@@ -40,7 +40,6 @@ class UnlimitedClickHandler:
         widget.bind("<ButtonRelease-1>", self.on_click_up, add=True)
         widget.bind("<Button-1>", self.on_click_down, add=True)
 
-
     @staticmethod
     def _wrap_click_func(func):
         """包装通用 click_func，保证接受 click_time 和 event"""
@@ -417,4 +416,3 @@ def set_all_children_in_frame_to_state(frame, state):
                 widget.config(state=state)
             except Exception as e:
                 print(e)
-

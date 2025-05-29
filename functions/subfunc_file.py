@@ -7,6 +7,7 @@ import re
 import subprocess
 import sys
 import time
+from enum import Enum
 from typing import *
 
 import requests
@@ -18,7 +19,6 @@ from resources import Config, Strings
 from utils import file_utils, image_utils, sys_utils
 from utils.file_utils import JsonUtils, DictUtils
 from utils.logger_utils import mylogger as logger
-from enum import Enum
 
 """获取远程配置，此配置只读，不提供修改方法"""
 
@@ -315,7 +315,7 @@ def fetch_sw_setting_or_set_default_or_none(sw: str, setting_key: str, enum_cls:
     :param enum_cls: 可选枚举类（用于严格验证值）
     :return: 配置值（保证符合枚举约束）或None
     """
-    print("debug:", sw, setting_key)
+    # print("debug:", sw, setting_key)
     # 原值
     value, = get_settings(sw, **{setting_key: None})
     if value in (None, "", "None", "none", "null", "NULL"):

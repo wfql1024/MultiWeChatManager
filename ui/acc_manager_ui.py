@@ -1,6 +1,6 @@
 import tkinter as tk
 from abc import ABC
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 from PIL import Image, ImageTk
 
@@ -10,15 +10,17 @@ from public_class import reusable_widgets
 from public_class.custom_classes import Condition
 from public_class.enums import AccKeys
 from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWnd
+from public_class.reusable_widgets import SubToolWndUI
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants
-from ui import menu_ui
+from ui.menu_ui import MenuUI
+from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
 
 
-class AccManagerWnd(SubToolWnd, ABC):
+class AccManagerWndUI(SubToolWndUI, ABC):
     """账号管理窗口"""
 
     def __init__(self, wnd, title):
@@ -42,22 +44,24 @@ class AccManagerUI:
     """账号管理UI"""
 
     def __init__(self, wnd, frame):
+        print("构建账号管理ui...")
+        self.quick_refresh_mode = None
         self.root_menu = None
         self.main_frame = None
         self.scrollable_canvas = None
         self.acc_data = None
         self.tree_class = {}
+        self.frame_dict = {}
 
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
         self.wnd = wnd
         self.tab_frame = frame
-
         self.btn_dict = {
             "cancel_hiding_btn": {
                 "text": "取消隐藏",
                 "btn": None,
-                "func": self.to_cancel_hiding_of_,
+                "func": self._create_set_acc_method(AccKeys.HIDDEN, False),
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要取消隐藏的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
@@ -66,7 +70,7 @@ class AccManagerUI:
             "cancel_auto_start_btn": {
                 "text": "取消自启",
                 "btn": None,
-                "func": self.to_cancel_auto_start_of_,
+                "func": self._create_set_acc_method(AccKeys.AUTO_START, False),
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要取消自启的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
@@ -75,7 +79,7 @@ class AccManagerUI:
             "add_hiding_btn": {
                 "text": "隐藏",
                 "btn": None,
-                "func": self.to_add_hiding_of_,
+                "func": self._create_set_acc_method(AccKeys.HIDDEN, True),
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要隐藏的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)]),
@@ -84,7 +88,7 @@ class AccManagerUI:
             "add_auto_start_btn": {
                 "text": "自启",
                 "btn": None,
-                "func": self.to_add_auto_start_of_,
+                "func": self._create_set_acc_method(AccKeys.AUTO_START, True),
                 "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
                     "请选择要自启的账号": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
@@ -105,19 +109,15 @@ class AccManagerUI:
     def refresh(self):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
-        # self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
-        # self.sw_class = self.sw_classes[self.sw]
-        #
-        # self.tab_frame = self.sw_class.frame
-
         # 刷新菜单
-        self.root_menu = menu_ui.MenuUI()
+        if not isinstance(self.root_class.menu_ui, MenuUI):
+            self.root_class.menu_ui = MenuUI()
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if config_data is None:
             messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
             self.root.destroy()
         try:
-            self.root.after(0, self.root_menu.create_root_menu_bar)
+            self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
         except Exception as re:
             logger.error(re)
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
@@ -135,15 +135,21 @@ class AccManagerUI:
         self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
+        # 添加占位控件
+        self.frame_dict["auto_start"] = ttk.Frame(self.main_frame)
+        self.frame_dict["auto_start"].pack(side=tk.TOP, fill=tk.X)
+        self.frame_dict["hidden"] = ttk.Frame(self.main_frame)
+        self.frame_dict["hidden"].pack(side=tk.TOP, fill=tk.X)
+        self.frame_dict["all"] = ttk.Frame(self.main_frame)
+        self.frame_dict["all"].pack(side=tk.TOP, fill=tk.X)
+
         self.acc_data = subfunc_file.get_sw_acc_data()
-        # 加载已隐藏列表
-        self.tree_class["hidden"] = AccManagerTreeView(
-            self,
-            "hidden", "已隐藏：", self.btn_dict["cancel_hiding_btn"],
-        )
         # 加载已自启列表
         self.tree_class["auto_start"] = AccManagerTreeView(
             self, "auto_start", "已自启：", self.btn_dict["cancel_auto_start_btn"])
+        # 加载已隐藏列表
+        self.tree_class["hidden"] = AccManagerTreeView(
+            self, "hidden", "已隐藏：", self.btn_dict["cancel_hiding_btn"])
         # 加载所有
         self.tree_class["all"] = AccManagerTreeView(
             self, "all", "所有账号：", None,
@@ -152,65 +158,57 @@ class AccManagerUI:
             self.btn_dict["add_hotkey_btn"],
         )
 
-        print("列表都加载完，已经在这里了")
+        print("账号管理页面列表都加载完...")
 
         # 加载完成后更新一下界面并且触发事件
         if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
             self.scrollable_canvas.refresh_canvas()
 
-    def to_cancel_hiding_of_(self, items):
-        print(f"进入取消隐藏方法")
-        for item in items:
-            sw, acc = item.split("/")
-            subfunc_file.update_sw_acc_data(sw, acc, hidden=False)
-        self.refresh_frame()
-        pass
+    def _create_set_acc_method(self, key, value):
+        def set_acc_method(items):
+            for item in items:
+                sw, acc = item.split("/")
+                subfunc_file.update_sw_acc_data(sw, acc, **{key: value})
+            self.refresh_frame()
 
-    def to_cancel_auto_start_of_(self, items):
-        print(f"进入取消自启方法")
-        for item in items:
-            sw, acc = item.split("/")
-            subfunc_file.update_sw_acc_data(sw, acc, auto_start=False)
-        self.refresh_frame()
-        pass
-
-    def to_add_hiding_of_(self, items):
-        print(f"进入隐藏方法")
-        for item in items:
-            sw, acc = item.split("/")
-            subfunc_file.update_sw_acc_data(sw, acc, hidden=True)
-        self.refresh_frame()
-        pass
-
-    def to_add_auto_start_of_(self, items):
-        print(f"进入自启方法")
-        for item in items:
-            sw, acc = item.split("/")
-            subfunc_file.update_sw_acc_data(sw, acc, auto_start=True)
-        self.refresh_frame()
-        pass
+        return set_acc_method
 
     def to_add_hotkey_of_(self, items):
-        print(f"进入添加热键方法")
-        self.to_open_acc_detail(items[0], "hotkey")
-        pass
+        WndCreator.open_acc_detail(items[0], self, "hotkey")
 
     def refresh_frame(self, sw=None):
+        print("进入账号管理刷新")
         if sw:
             pass
-        print("清理账号管理界面")
-        for widget in self.tab_frame.winfo_children():
-            widget.destroy()
-        self.display_ui()
 
-    def to_open_acc_detail(self, item, widget_tag=None, event=None):
-        """打开详情窗口"""
-        self.root_class.open_acc_detail(item, self, widget_tag, event)
+        def slowly_refresh():
+            if isinstance(self.tab_frame, ttk.Frame) and self.tab_frame.winfo_exists():
+                printer.vital("刷新页面")
+                for widget in self.tab_frame.winfo_children():
+                    widget.destroy()
+            self.display_ui()
+
+        if self.quick_refresh_mode is True:
+            try:
+                # 不要忘记更新数据
+                self.acc_data = subfunc_file.get_sw_acc_data()
+                tree_class = self.tree_class
+                if all(tree_class[t].can_quick_refresh for t in tree_class):
+                    for t in tree_class:
+                        tree_class[t].quick_refresh_items(self.acc_data)
+            except Exception as e:
+                logger.warning(e)
+                self.quick_refresh_mode = False
+                slowly_refresh()
+        else:
+            slowly_refresh()
+        printer.print_vn("加载完成!")
 
 
 class AccManagerTreeView(ActionableTreeView, ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
+        self.can_quick_refresh = None
         self.data_src = None
         self.wnd = None
         self.photo_images = []
@@ -221,6 +219,7 @@ class AccManagerTreeView(ActionableTreeView, ABC):
         # print(f"self.wnd={self.wnd}")
         self.data_src = self.parent_class.acc_data
         self.columns = (" ", "快捷键", "隐藏", "自启动", "原始id", "昵称")
+        self.main_frame = self.parent_class.frame_dict[self.table_tag]
         sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
@@ -302,6 +301,9 @@ class AccManagerTreeView(ActionableTreeView, ABC):
                                 values=StringUtils.clean_texts(
                                     display_name, hotkey, hidden, auto_start, acc, nickname))
 
+        self.can_quick_refresh = True
+        self.parent_class.quick_refresh_mode = True
+
     def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
         # print("触发列宽调整")
         tree = self.tree.nametowidget(event.widget)
@@ -328,7 +330,7 @@ class AccManagerTreeView(ActionableTreeView, ABC):
         :return:
         """
         if click_time == 1:
-            self.parent_class.to_open_acc_detail(item_id)
+            WndCreator.open_acc_detail(item_id, self.parent_class)
 
     def on_tree_configure(self, event):
         """
@@ -341,11 +343,3 @@ class AccManagerTreeView(ActionableTreeView, ABC):
         col_width_to_show = int(self.root.winfo_screenwidth() / 5)
         self.tree.bind("<Configure>", lambda e: self.adjust_columns(
             e, self.wnd, col_width_to_show, columns_to_hide), add='+')
-
-
-class AccEntity:
-    def __init__(self, sw, acc):
-        self.sw = sw
-        self.acc = acc
-
-    pass

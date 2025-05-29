@@ -11,6 +11,7 @@ from utils.logger_utils import mylogger as logger
 
 class MultiSwFunc:
     """多平台功能"""
+
     @staticmethod
     def get_all_enable_sw() -> list:
         """获取所有启用的平台"""
@@ -37,7 +38,7 @@ class MultiSwFunc:
     def _login_auto_start_accounts():
         root_class = GlobalMembers.root_class
         root = root_class.root
-        acc_tab_ui = root_class.acc_tab_ui
+        login_ui = root_class.login_ui
 
         # all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
         # all_sw = [key for key in all_sw_dict.keys()]
@@ -64,7 +65,7 @@ class MultiSwFunc:
         # 获取已经登录的账号
         for sw in all_sw:
             # try:
-            if sw == acc_tab_ui.sw:
+            if sw == login_ui.sw:
                 logins = root_class.sw_classes[sw].login_accounts
             else:
                 success, result = AccInfoFunc.get_sw_acc_list(root, root_class, sw)
@@ -99,8 +100,6 @@ class MultiSwFunc:
         else:
             print("自启动账号都已登录完毕！")
             return
-
-
 
     @staticmethod
     def thread_to_login_auto_start_accounts():

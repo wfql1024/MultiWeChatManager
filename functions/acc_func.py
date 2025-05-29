@@ -14,7 +14,6 @@ from typing import Dict, List
 import psutil
 import win32con
 import win32gui
-import winshell
 from PIL import Image
 
 from functions import subfunc_file
@@ -39,7 +38,7 @@ class AccOperator:
         """
         root_class = GlobalMembers.root_class
         root = root_class.root
-        acc_tab_ui = root_class.acc_tab_ui
+        login_ui = root_class.login_ui
 
         # print(login_dict)
 
@@ -215,7 +214,7 @@ class AccOperator:
                         break
                     if time.time() > ddl_time:
                         break
-                root.after(0, acc_tab_ui.refresh_frame, sw)
+                root.after(0, login_ui.refresh_frame, sw)
 
             threading.Thread(target=click_all_login_button).start()
 
@@ -340,7 +339,7 @@ class AccOperator:
         """
         root_class = GlobalMembers.root_class
         root = root_class.root
-        acc_tab_ui = root_class.acc_tab_ui
+        login_ui = root_class.login_ui
 
         if messagebox.askyesno(
                 "确认",
@@ -370,7 +369,7 @@ class AccOperator:
                 hwnd_utils.close_by_wnd_class(login_wnd_class)
             else:
                 messagebox.showerror("错误", "打开登录窗口失败")
-        root.after(0, acc_tab_ui.refresh_frame, sw)
+        root.after(0, login_ui.refresh_frame, sw)
 
     @staticmethod
     def switch_to_sw_account_wnd(item_id):
@@ -558,7 +557,7 @@ class AccInfoFunc:
     def silent_get_and_config(sw):
         """后台静默获取账号配置"""
         root_class = GlobalMembers.root_class
-        acc_tab_ui = root_class.acc_tab_ui
+        login_ui = root_class.login_ui
         root = root_class.root
         data_dir = root_class.sw_classes[sw].data_dir
 
@@ -604,7 +603,7 @@ class AccInfoFunc:
         # 5. 通知
         if need_to_notice is True:
             messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")
-            root.after(0, acc_tab_ui.refresh_frame, sw)
+            root.after(0, login_ui.refresh_frame, sw)
 
     @staticmethod
     def get_sw_acc_list(_root, root_class, sw):

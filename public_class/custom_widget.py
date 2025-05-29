@@ -340,8 +340,10 @@ if __name__ == '__main__':
     root = tk.Tk()
     root.geometry("400x300")
 
+
     def printer(click_time):
         print("按钮功能:连点次数为", click_time)
+
 
     # 创建竖向Notebook（左侧）
     # left_nb_cls = CustomNotebook(root, direction=NotebookDirection.LEFT)
@@ -354,7 +356,6 @@ if __name__ == '__main__':
     my_nb_cls.set_major_color(selected_bg='#00FF00')
 
     nb_content_frame = top_nb_cls.frames_pool
-
 
     # 创建标签页
     frame1 = ttk.Frame(nb_content_frame)

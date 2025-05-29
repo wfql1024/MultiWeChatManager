@@ -200,7 +200,7 @@ class HotkeyEntry4Tkinter:
         return "break"
 
 
-class StatusBar:
+class StatusBarUI:
     """对print即时更新的状态栏"""
 
     def __init__(self, root, r_class, debug):
@@ -225,9 +225,6 @@ class StatusBar:
         self.status_bar = tk.Label(self.root, textvariable=self.statusbar_output_var, bd=Constants.STATUS_BAR_BD,
                                    relief=tk.SUNKEN, anchor=tk.W, height=Constants.STATUS_BAR_HEIGHT)
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
-        # 绑定点击事件
-        if self.debug:
-            self.status_bar.bind("<Button-1>", lambda event: self.r_class.open_debug_window())
 
     def update_status(self):
         """即时更新状态栏"""
@@ -242,8 +239,6 @@ class StatusBar:
         except Exception as e:
             print(e)
             pass
-        # 每 1 毫秒检查一次队列
-        # self.root.after(1, self.update_status)
 
 
 class ScrollableCanvas:
@@ -327,7 +322,7 @@ class ScrollableCanvas:
         pass
 
 
-class SubToolWnd(ABC):
+class SubToolWndUI(ABC):
     def __init__(self, wnd, title):
         """
         这是一个层级敏感的窗口类，当关闭时，会自动恢复父窗口的焦点

@@ -1,3 +1,4 @@
+import tkinter as tk
 from abc import ABC
 from tkinter import ttk
 
@@ -5,29 +6,35 @@ from PIL import ImageTk, Image
 
 from functions.acc_func import AccInfoFunc
 from public_class.custom_classes import Condition
+from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableClassicTable, CheckboxItemRow
 from resources import Constants
 
 
-class ClassicRowUI:
+class ClassicLoginUI:
     def __init__(self, result):
         self.classic_table_class = {}
 
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
-        self.acc_tab_ui = self.root_class.acc_tab_ui
-        self.sw = self.acc_tab_ui.sw
+        self.login_ui = self.root_class.login_ui
+        self.sw = self.login_ui.sw
 
         self.acc_list_dict, _, _ = result
-        self.frames = {}
+        self.ui_frame = dict()
+        self.main_frame = self.login_ui.main_frame
+        # 添加占位控件
+        self.ui_frame[OnlineStatus.LOGIN] = ttk.Frame(self.main_frame)
+        self.ui_frame[OnlineStatus.LOGIN].pack(side=tk.TOP, fill=tk.X)
+        self.ui_frame[OnlineStatus.LOGOUT] = ttk.Frame(self.main_frame)
+        self.ui_frame[OnlineStatus.LOGOUT].pack(side=tk.TOP, fill=tk.X)
 
-        self.main_frame = self.acc_tab_ui.main_frame
         self.btn_dict = {
             "auto_quit_btn": {
                 "text": "一键退出",
                 "btn": None,
-                "func": self.acc_tab_ui.to_quit_accounts,
+                "func": self.login_ui.to_quit_accounts,
                 "enable_scopes":
                     Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
@@ -39,7 +46,7 @@ class ClassicRowUI:
                 "text": "一键登录",
                 "btn": None,
                 "tip": "请选择要登录的账号",
-                "func": self.acc_tab_ui.to_auto_login,
+                "func": self.login_ui.to_auto_login,
                 "enable_scopes":
                     Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
@@ -51,10 +58,10 @@ class ClassicRowUI:
 
         # 加载登录列表
         self.classic_table_class["login"] = AccLoginClassicTable(
-            self, self.main_frame, "login", "已登录：", self.btn_dict["auto_quit_btn"])
+            self, self.ui_frame[OnlineStatus.LOGIN], "login", "已登录：", self.btn_dict["auto_quit_btn"])
 
         self.classic_table_class["logout"] = AccLoginClassicTable(
-            self, self.main_frame, "logout", "未登录：", self.btn_dict["auto_login_btn"])
+            self, self.ui_frame[OnlineStatus.LOGOUT], "logout", "未登录：", self.btn_dict["auto_login_btn"])
 
 
 class AccLoginRowCheckbox(CheckboxItemRow, ABC):

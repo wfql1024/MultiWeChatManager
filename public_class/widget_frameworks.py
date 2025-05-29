@@ -3,7 +3,7 @@ import tkinter as tk
 from abc import ABC, abstractmethod
 from functools import partial
 from tkinter import ttk
-from typing import Dict
+from typing import Dict, Optional
 
 from PIL import ImageTk, Image
 
@@ -12,6 +12,7 @@ from functions.acc_func import AccInfoFunc, AccOperator
 from public_class.custom_classes import Condition
 from public_class.global_members import GlobalMembers
 from resources import Constants
+from ui.wnd_ui import WndCreator
 from utils import widget_utils
 from utils.encoding_utils import StringUtils, ColorUtils
 from utils.logger_utils import mylogger as logger
@@ -38,8 +39,8 @@ class CheckboxItemRow:
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
 
-        self.acc_tab_ui = self.root_class.acc_tab_ui
-        self.sw = self.acc_tab_ui.sw
+        self.login_ui = self.root_class.login_ui
+        self.sw = self.login_ui.sw
         self.sw_class = self.root_class.sw_classes[self.sw]
         self.data_path = self.sw_class.data_dir
 
@@ -119,7 +120,7 @@ class CheckboxItemRow:
 
         # 登录/配置按钮
         btn_text = "自动登录" if login_status != "login" else "配 置"
-        btn_cmd = self.acc_tab_ui.to_auto_login if login_status != "login" else self.acc_tab_ui.to_create_config
+        btn_cmd = self.login_ui.to_auto_login if login_status != "login" else self.login_ui.to_create_config
         self.btn = ttk.Button(
             self.btn_frame, text=btn_text, style='Custom.TButton',
             command=partial(btn_cmd, [iid])
@@ -158,8 +159,8 @@ class CheckboxItemRow:
         widget_utils.UnlimitedClickHandler(
             self.root,
             self.avatar_label,
-            **{"1": partial(self.acc_tab_ui.to_open_acc_detail, iid),
-            "2": partial(AccOperator.switch_to_sw_account_wnd, iid)}
+            **{"1": partial(WndCreator.open_acc_detail, iid, self.login_ui),
+               "2": partial(AccOperator.switch_to_sw_account_wnd, iid)}
         )
 
         print(f"加载{account}界面用时{time.time() - self.start_time:.4f}秒")
@@ -365,12 +366,24 @@ class ActionableTreeView(ABC):
     def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """
         创建一个TreeView列表，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
+        按钮信息格式为：
+        "visible(id)": {
+                "text": "显示",  # 按钮文本
+                "btn": None,  # 按钮实例,在按钮生成后再设置
+                "func": self.to_visible_,  # 按钮的功能,注意参数只能是一个列表,作用是对Tree中的选中的项目进行操作
+                "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),  # 启用条件
+                "tip_scopes_dict": {
+                    "请选择要显示的平台": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])  # 提示条件
+                }
+                # 条件范围请查看Condition类的说明
+            },
         :param parent_class: 实例该列表的类
         :param table_tag: 表标识
         :param title_text: 列表标题
         :param major_btn_dict: 主按钮信息
         :param rest_btn_dicts: 其他按钮信息
         """
+        self.tree_has_bind = False
         self.last_single_item = None
         self.data_src = None
         self.hovered_item = None
@@ -378,9 +391,8 @@ class ActionableTreeView(ABC):
         self.btn_dict = {}
         self.selected_items = []
         self.sw = None
-        self.quick_refresh_failed = None
 
-        self.tree_frame = None
+        self.treeview_frame = None
         self.title_frame = None
         self.title = None
         self.checkbox = None
@@ -388,12 +400,10 @@ class ActionableTreeView(ABC):
         self.label = None
         self.button_frame = None
 
-        self.sort: Dict[str, bool] = {
-
-        }
+        self.sort: Dict[str, bool] = {}
         self.default_sort = {
             "col": "#0",
-            "is_asc": True
+            "is_asc": "True"
         }
         self.columns: tuple = ("子类请传入列的元组self.columns", "该列全屏不隐藏", "set_table_style中调列宽")
         self.selected_values: Dict[str, Dict] = {
@@ -411,7 +421,7 @@ class ActionableTreeView(ABC):
         # 其他的成员变量
         self.root_class = self.parent_class.root_class
         self.root = self.root_class.root
-        self.main_frame = self.parent_class.main_frame
+        self.main_frame = self.parent_class.main_frame  # 默认使用父类的main_frame
 
         self.initialize_members_in_init()
 
@@ -420,6 +430,7 @@ class ActionableTreeView(ABC):
         self.display_table()
         self.set_table_style()
         self._adjust_table()
+        self._update_top_title()
 
     @abstractmethod
     def initialize_members_in_init(self):
@@ -428,9 +439,9 @@ class ActionableTreeView(ABC):
 
     def create_title(self):
         # 框架=标题+列表
-        self.tree_frame = ttk.Frame(self.main_frame)
-        self.tree_frame.pack(side=tk.TOP, fill=tk.X)
-        self.title_frame = ttk.Frame(self.tree_frame)
+        self.treeview_frame = ttk.Frame(self.main_frame)
+        self.treeview_frame.pack(side=tk.TOP, fill=tk.X)
+        self.title_frame = ttk.Frame(self.treeview_frame)
         self.title_frame.pack(side=tk.TOP, fill=tk.X,
                               padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
 
@@ -475,7 +486,7 @@ class ActionableTreeView(ABC):
 
     def create_table(self, columns: tuple = ()):
         """定义表格，根据表格类型选择手动或自动登录表格"""
-        tree = ttk.Treeview(self.tree_frame, columns=columns, show='tree', height=1, style="RowTreeview")
+        tree = ttk.Treeview(self.treeview_frame, columns=columns, show='tree', height=1, style="RowTreeview")
 
         # 设置列标题和排序功能
         for col in columns:
@@ -520,36 +531,33 @@ class ActionableTreeView(ABC):
         绑定事件以实现自适应调整表格
         :return: 结束
         """
-
-        self.quick_refresh_failed = False
         tree = self.tree.nametowidget(self.tree)
 
         if len(tree.get_children()) == 0:
             # 如果条目数量为 0，隐藏控件
-            print("应该隐藏列表")
-            self.tree_frame.pack_forget()
+            print(f"应该隐藏{self.table_tag}列表")
+            self.treeview_frame.pack_forget()
             self.main_frame.config(height=1)
             # self.main_frame.pack_propagate(False)  # 不自动调整自身大小
         else:
             # 如果条目数量不为 0则显示控件
-            print("应该恢复显示列表")
+            print(f"应该显示{self.table_tag}列表")
             self.main_frame.pack_propagate(True)  # 自动调整自身大小
-            self.tree_frame.pack(side=tk.TOP, fill=tk.X)
-
-        self._adjust_treeview_height(None)
-        # 排序+调整列宽
-        self._apply_or_switch_col_order()
-        self.on_tree_configure(None)
-        # 触发以更新标题区
-        self._update_top_title()
-        # 绑定事件
-        widget_utils.UnlimitedClickHandler(
-            self.root,
-            tree,
-            self._on_click_in_tree
-        )
-        tree.bind("<Leave>", partial(self._on_leave_tree))
-        tree.bind("<Motion>", partial(self._moving_on_tree))
+            self.treeview_frame.pack(side=tk.TOP, fill=tk.X)
+            self._adjust_treeview_height(None)
+            # 排序+调整列宽
+            self._apply_or_switch_col_order()
+            self.on_tree_configure(None)
+            if self.tree_has_bind is False:
+                # 绑定事件
+                widget_utils.UnlimitedClickHandler(
+                    self.root,
+                    tree,
+                    self._on_click_in_tree
+                )
+                tree.bind("<Leave>", partial(self._on_leave_tree))
+                tree.bind("<Motion>", partial(self._moving_on_tree))
+                self.tree_has_bind = True
 
     def _get_selected_values(self):
         # 获取选中行的“账号”列数据
@@ -884,6 +892,7 @@ class ActionableTreeView(ABC):
         :param col: 列
         :return: 无
         """
+        print(f"当前排序:{self.default_sort}")
         table_tag = self.table_tag
         tree = self.tree.nametowidget(self.tree)
 
@@ -934,8 +943,11 @@ class ActionableTreeView(ABC):
         tree.configure(height=len(copied_data.items))
 
         # 保存排序状态
-        col:str = str(col)
+        col: str = str(col)
         self.sort[col] = is_asc_after
+        self.default_sort["col"] = col
+        self.default_sort["is_asc"] = str(is_asc_after)
+        print(f"保存时排序:{self.default_sort}")
         if self.sw is not None:
             subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
         else:
@@ -949,7 +961,9 @@ class ActionableTreeView(ABC):
         :return:
         """
         printer.vital(f"快速刷新")
+        # print("快速刷新:", data_src)
         self.data_src = data_src
+
         self.tree.configure(displaycolumns=())  # 临时隐藏列
 
         self.tree.delete(*self.tree.get_children())
@@ -971,13 +985,13 @@ class RadioTreeView(ABC):
         :param table_tag: 表标识
         :param title_text: 列表标题
         """
+        self.tree_has_bind = None
         self.data_src = None
         self.hovered_item = None
         self.photo_images = []
         self.tooltips = {}
         self.selected_item = []
         self.sw = None
-        self.quick_refresh_failed = None
 
         self.tree_frame = None
         self.title_frame = None
@@ -1091,29 +1105,28 @@ class RadioTreeView(ABC):
         绑定事件以实现自适应调整表格
         :return: 结束
         """
-        self.adjust_treeview_height(None)
-
-        self.quick_refresh_failed = False
         tree = self.tree.nametowidget(self.tree)
 
         if len(tree.get_children()) == 0:
             # 如果条目数量为 0，隐藏控件
-            print("应该隐藏列表")
+            print(f"应该隐藏{self.table_tag}列表")
             self.tree_frame.pack_forget()
         else:
             # 如果条目数量不为 0则显示控件
-            print("应该恢复显示列表")
+            print(f"应该显示{self.table_tag}列表")
             self.tree_frame.pack(side=tk.TOP, fill=tk.X)
-
-        widget_utils.UnlimitedClickHandler(
-            self.root,
-            tree,
-            self._on_click_in_tree
-        )
-        tree.bind("<Leave>", partial(self._on_leave_tree))
-        tree.bind("<Motion>", partial(self._moving_on_tree))
-        self._apply_or_switch_col_order()
-        self.on_tree_configure(None)
+            if self.tree_has_bind is False:
+                widget_utils.UnlimitedClickHandler(
+                    self.root,
+                    tree,
+                    self._on_click_in_tree
+                )
+                tree.bind("<Leave>", partial(self._on_leave_tree))
+                tree.bind("<Motion>", partial(self._moving_on_tree))
+                self.tree_has_bind = True
+            self.adjust_treeview_height(None)
+            self._apply_or_switch_col_order()
+            self.on_tree_configure(None)
 
     def _get_selected_values(self):
         # 获取选中行的“账号”列数据
@@ -1325,7 +1338,7 @@ class RadioTreeView(ABC):
 
         # return "break"
 
-    def _apply_or_switch_col_order(self, col=None):
+    def _apply_or_switch_col_order(self, col: Optional[str] = None):
         """
         切换列排序或应用列排序，支持多级 TreeView，若不传入 col，则应用列排序
         :param col: 列
@@ -1402,9 +1415,4 @@ class RadioTreeView(ABC):
 
         self.display_table()
         self._adjust_table()
-        if self.quick_refresh_failed is True:
-            # self.quick_refresh_failed = False
-            print("界面丢失，快速刷新失败")
-            raise Exception("快速刷新失败")
         self.selected_item.clear()
-        # self.selected_values.clear()

@@ -27,7 +27,8 @@ from functions.wnd_func import DetailWndFunc, UpdateLogWndFunc
 from public_class import reusable_widgets
 from public_class.custom_widget import CustomLabelBtn, CustomWidget
 from public_class.enums import LocalCfg, RemoteCfg, SwStates
-from public_class.reusable_widgets import SubToolWnd
+from public_class.global_members import GlobalMembers
+from public_class.reusable_widgets import SubToolWndUI
 from resources import Constants, Config, Strings
 from utils import file_utils, sys_utils, widget_utils
 from utils.encoding_utils import StringUtils
@@ -35,7 +36,68 @@ from utils.file_utils import JsonUtils
 from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUtils
 
 
-class DetailWnd(SubToolWnd, ABC):
+class WndCreator:
+
+    @staticmethod
+    def open_sw_settings(sw):
+        """打开设置窗口"""
+        settings_window = tk.Toplevel(GlobalMembers.root_class.root)
+        SettingWndUI(settings_window, sw, f"{sw}设置")
+
+    @staticmethod
+    def open_update_log():
+        """打开版本日志窗口"""
+        root_class = GlobalMembers.root_class
+        success, result = AppFunc.split_vers_by_cur_from_local(root_class.app_info.curr_full_ver)
+        if success is True:
+            new_versions, old_versions = result
+            update_log_window = tk.Toplevel(root_class.root)
+            UpdateLogWndUI(update_log_window, "", old_versions)
+        else:
+            messagebox.showerror("错误", result)
+
+    @staticmethod
+    def open_debug_window():
+        """打开调试窗口，显示所有输出日志"""
+        debug_window = tk.Toplevel(GlobalMembers.root_class.root)
+        DebugWndUI(debug_window, "调试窗口")
+
+    @staticmethod
+    def open_acc_detail(item, tab_class, widget_to_focus=None, event=None):
+        """打开详情窗口"""
+        if event is None:
+            pass
+        sw, acc = item.split("/")
+        detail_window = tk.Toplevel(GlobalMembers.root_class.root)
+        detail_ui = DetailUI(detail_window, f"属性 - {acc}", sw, acc, tab_class)
+        detail_ui.set_focus_to_(widget_to_focus)
+
+    @staticmethod
+    def open_statistic(sw):
+        """打开统计窗口"""
+        statistic_window = tk.Toplevel(GlobalMembers.root_class.root)
+        StatisticWndUI(statistic_window, f"{sw}统计数据", sw)
+
+    @staticmethod
+    def open_global_setting_wnd():
+        """打开设置窗口"""
+        global_setting_wnd = tk.Toplevel(GlobalMembers.root_class.root)
+        GlobalSettingWndUI(global_setting_wnd, "全局设置")
+
+    @staticmethod
+    def open_rewards():
+        """打开赞赏窗口"""
+        rewards_window = tk.Toplevel(GlobalMembers.root_class.root)
+        RewardsWndUI(rewards_window, "我来赏你！", Config.REWARDS_PNG_PATH)
+
+    @staticmethod
+    def open_about(app_info):
+        """打开关于窗口"""
+        about_wnd = tk.Toplevel(GlobalMembers.root_class.root)
+        AboutWndUI(about_wnd, "关于", app_info)
+
+
+class DetailUI(SubToolWndUI, ABC):
     def __init__(self, wnd, title, sw, account, tab_class):
         self.mutex_label = None
         self.hwnd_label = None
@@ -143,21 +205,21 @@ class DetailWnd(SubToolWnd, ABC):
         hidden_hwnd_btn.set_state(CustomLabelBtn.State.DISABLED)
 
         # 原始微信号
-        _, _, origin_id_var = DetailWnd._create_label_entry_grid(
+        _, _, origin_id_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "账号标识", f"{account}", readonly=True)
         # 当前微信号
-        _, _, cur_id_var = DetailWnd._create_label_entry_grid(
+        _, _, cur_id_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "平台账号", "", readonly=True)
         # 昵称
-        _, _, nickname_var = DetailWnd._create_label_entry_grid(
+        _, _, nickname_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "昵称", "", readonly=True)
         # 备注
         note, = subfunc_file.get_sw_acc_data(sw, account, note=None)
-        _, note_entry, note_var = DetailWnd._create_label_entry_grid(
+        _, note_entry, note_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "备注", "" if note is None else note)
         # 热键
         hotkey, = subfunc_file.get_sw_acc_data(sw, account, hotkey=None)
-        _, hotkey_entry, hotkey_var = DetailWnd._create_label_entry_grid(
+        _, hotkey_entry, hotkey_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "热键", "" if hotkey is None else hotkey)
         reusable_widgets.HotkeyEntry4Keyboard(hotkey_entry, hotkey_var)
 
@@ -342,7 +404,7 @@ class DetailWnd(SubToolWnd, ABC):
             self.hotkey_entry.focus_set()
 
 
-class DebugWnd(SubToolWnd, ABC):
+class DebugWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, title):
         self.text_area = None
         self.simplify_checkbox = None
@@ -485,7 +547,7 @@ class DebugWnd(SubToolWnd, ABC):
             print(f"保存日志时发生错误：{e}")
 
 
-class LoadingWnd(SubToolWnd, ABC):
+class LoadingWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, title):
         self.progress = None
         self.label = None
@@ -523,7 +585,7 @@ class Direction:
         self.value = initial
 
 
-class AboutWnd(SubToolWnd, ABC):
+class AboutWndUI(SubToolWndUI, ABC):
     # TODO：加入bug反馈渠道
     # TODO: 提取滚动文本的公共方法
     def __init__(self, wnd, title, app_info):
@@ -736,7 +798,7 @@ class AboutWnd(SubToolWnd, ABC):
             new_versions, old_versions = result
             if len(new_versions) != 0:
                 update_log_window = tk.Toplevel(self.wnd)
-                UpdateLogWnd(update_log_window, "", old_versions, new_versions)
+                UpdateLogWndUI(update_log_window, "", old_versions, new_versions)
                 return True
             else:
                 messagebox.showinfo("提醒", f"当前版本{current_full_version}已是最新版本。")
@@ -762,7 +824,7 @@ class AboutWnd(SubToolWnd, ABC):
                 urls.append(link)
 
             # 绑定点击事件
-            item.bind("<Button-1>", partial(lambda event, urls2open: AboutWnd.open_urls(urls2open), urls2open=urls))
+            item.bind("<Button-1>", partial(lambda event, urls2open: AboutWndUI.open_urls(urls2open), urls2open=urls))
 
     @staticmethod
     def open_urls(urls):
@@ -783,7 +845,7 @@ class AboutWnd(SubToolWnd, ABC):
                     logger.error(f"Error cancelling task: {e}")
 
 
-class RewardsWnd(SubToolWnd, ABC):
+class RewardsWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, title, image_path):
         self.img = None
         self.image_path = image_path
@@ -814,7 +876,7 @@ class RewardsWnd(SubToolWnd, ABC):
         label.pack()
 
 
-class UpdateLogWnd(SubToolWnd, ABC):
+class UpdateLogWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, title, old_versions, new_versions=None):
         self.log_text = None
         self.old_versions = old_versions
@@ -994,7 +1056,7 @@ class UpdateLogWnd(SubToolWnd, ABC):
             t.start()
 
 
-class StatisticWnd(SubToolWnd, ABC):
+class StatisticWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, title, sw):
         self.refresh_mode_combobox = None
         self.refresh_tree = None
@@ -1200,7 +1262,7 @@ class StatisticWnd(SubToolWnd, ABC):
 # TODO:修改下获取程序路径，程序版本以及程序版本文件夹的逻辑√
 
 
-class SettingWnd(SubToolWnd, ABC):
+class SettingWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, sw, title):
         self.need_to_reinit = None
         self.visible_cb = None
@@ -1308,7 +1370,8 @@ class SettingWnd(SubToolWnd, ABC):
         stata_frame.grid(row=4, column=0, columnspan=3, **Constants.WE_GRID_PACK)
         # 启用复选框
         self.enable_var = tk.BooleanVar()
-        self.enable_cb = ttk.Checkbutton(stata_frame, text="启用(所有功能,包括自启动账号功能)", variable=self.enable_var,
+        self.enable_cb = ttk.Checkbutton(stata_frame, text="启用(所有功能,包括自启动账号功能)",
+                                         variable=self.enable_var,
                                          command=self._update_visible_state)
         self.enable_cb.pack(**Constants.R_WGT_PACK)
         # 显示复选框
@@ -1402,14 +1465,16 @@ class SettingWnd(SubToolWnd, ABC):
         self.wnd.destroy()
 
         self.check_bools()
+
         def _do():
             # 检查是否需要清空账号信息
             if self.need_to_clear_acc:
                 subfunc_file.clear_some_acc_data(self.sw)
             if self.need_to_reinit:
-                self.root_class.initialize_in_init()
+                self.root_class.initialize_in_root()
                 return
-            self.root_class.acc_tab_ui.refresh()
+            self.root_class.login_ui.refresh()
+
         _do()
 
     def finally_do(self):
@@ -1510,7 +1575,7 @@ class SettingWnd(SubToolWnd, ABC):
         """选择路径，若检验成功会进行保存"""
         selected_path = None  # 用于保存最终选择的路径
         while True:
-            path = SettingWnd._ask_for_directory()
+            path = SettingWndUI._ask_for_directory()
             if not path:  # 用户取消选择
                 return
             if SwInfoUtils.is_valid_sw_path(LocalCfg.DATA_DIR, sw, path):
@@ -1540,7 +1605,7 @@ class SettingWnd(SubToolWnd, ABC):
         """选择路径，若检验成功会进行保存"""
         selected_path = None  # 用于保存最终选择的路径
         while True:
-            path = SettingWnd._ask_for_directory()
+            path = SettingWndUI._ask_for_directory()
             if not path:  # 用户取消选择
                 return
             if SwInfoUtils.is_valid_sw_path(LocalCfg.DLL_DIR, sw, path):
@@ -1565,7 +1630,7 @@ class SettingWnd(SubToolWnd, ABC):
             self.login_size_var.set(f"{login_width}*{login_height}")
 
 
-class GlobalSettingWnd(SubToolWnd, ABC):
+class GlobalSettingWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, title):
         self.proxy_port = None
         self.proxy_ip = None

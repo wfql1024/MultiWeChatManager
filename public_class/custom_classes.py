@@ -1,7 +1,7 @@
-from enum import Enum
-
 import queue
 import threading
+from enum import Enum
+
 
 class TkThreadWorker:
     """Tkinter 线程任务工具类"""
@@ -14,7 +14,7 @@ class TkThreadWorker:
         self.root = root
         self.after_interval = after_interval
         self.task_queue = queue.Queue()
-        self.thread_method = lambda : print(
+        self.thread_method = lambda: print(
             "请将 thread_method 替换为具体的线程方法, 方法体内可使用 main_thread_do_ 方法注册主线程任务")
         self.main_thread_methods = {}  # 存储主线程回调方法 {id: callable}
 
@@ -49,6 +49,7 @@ class TkThreadWorker:
                     break
         finally:
             self.root.after(self.after_interval, self._process_queue)
+
 
 class QueueWithUpdate(queue.Queue):
     """

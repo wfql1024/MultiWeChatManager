@@ -6,20 +6,25 @@ from tkinter import ttk, messagebox
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
+from functions.main_func import MultiSwFunc
 from functions.sw_func import SwOperator, SwInfoFunc
 from public_class import reusable_widgets
 from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
 from resources import Constants, Config, Strings
-from ui import treeview_row_ui, classic_row_ui, menu_ui
+from ui import treeview_row_ui, classic_row_ui
+from ui.menu_ui import MenuUI
+from ui.wnd_ui import WndCreator
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
 
-class AccTabUI:
+class LoginUI:
     """构建主窗口的类"""
 
     def __init__(self):
+        self.quick_refresh_mode = None
+        print("构建登录管理ui...")
         # IDE初始化
         self.path_error = None
         self.acc_list_dict = None
@@ -30,7 +35,6 @@ class AccTabUI:
         self.main_frame = None
         self.scrollable_canvas = None
         self.start_time = None
-        self.root_menu = None
         self.tab_frame = None
         self.sw = None
         self.get_data_thread = None
@@ -43,20 +47,28 @@ class AccTabUI:
 
     def refresh(self):
         """刷新菜单和界面"""
-        print(f"刷新菜单与界面...")
+        print(f"登录页:刷新菜单与界面...")
         self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
         self.sw_class = self.sw_classes[self.sw]
 
         self.tab_frame = self.sw_class.frame
 
         # 刷新菜单
-        self.root_menu = menu_ui.MenuUI()
+        if not isinstance(self.root_class.menu_ui, MenuUI):
+            self.root_class.menu_ui = MenuUI()
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if config_data is None:
             messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
             self.root.destroy()
+
+        # 路径检查
+        self.sw_class.data_dir = SwInfoFunc.get_sw_data_dir(self.sw)
+        self.sw_class.inst_path = SwInfoFunc.get_sw_install_path(self.sw)
+        self.sw_class.ver = SwInfoFunc.get_sw_ver(self.sw, self.sw_class.data_dir)
+        self.sw_class.dll_dir = SwInfoFunc.get_sw_dll_dir(self.sw)
+
         try:
-            self.root.after(0, self.root_menu.create_root_menu_bar)
+            self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
         except Exception as re:
             logger.error(re)
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
@@ -83,10 +95,9 @@ class AccTabUI:
         print(f"计时开始：{time.time() - self.start_time:.4f}秒")
         _get_data_thread(self._update_result_from_result)
 
-        print(f"锁定刷新按钮...")
-        self.root_menu.edit_menu.entryconfig("刷新", state="disabled")
+        # print(f"锁定刷新按钮...")
+        # self.root_menu.edit_menu.entryconfig("刷新", state="disabled")
         print(f"获取登录状态...")
-        # self.create_main_ui()
         self.root.after(0, self.create_main_ui)
 
     def _update_result_from_result(self, result):
@@ -95,9 +106,10 @@ class AccTabUI:
     def create_main_ui(self):
         """渲染主界面账号列表"""
         # 检测是否路径错误
-        if self.path_error is True:
-            self.show_setting_error()
+        # if self.path_error is True:
+        #     self.show_setting_error()
         success, result = self.get_acc_list_answer
+        print(success, result)
         printer.print_vn(f"[{time.time() - self.start_time:.4f}s] 数据收集完成！")
         if success is not True:
             self.show_setting_error()
@@ -107,7 +119,7 @@ class AccTabUI:
         # print("创建完成，无论是错误界面还是正常界面，下面代码都要进行")
 
         # 恢复刷新可用性
-        self.root_menu.edit_menu.entryconfig("刷新", state="normal")
+        # self.root_menu.edit_menu.entryconfig("刷新", state="normal")
 
         # 加载完成后更新一下界面并且触发事件
         if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
@@ -151,10 +163,10 @@ class AccTabUI:
         if self.sw_class.view == "classic":
             # 经典视图没有做快速刷新功能
             slowly_create()
-            self.sw_class.classic_ui = classic_row_ui.ClassicRowUI(result)
+            self.sw_class.classic_ui = classic_row_ui.ClassicLoginUI(result)
 
         elif self.sw_class.view == "tree":
-            if self.root_class.quick_refresh is True:
+            if self.quick_refresh_mode is True:
                 try:
                     acc_list_dict, _, _ = result
                     tree_class = self.sw_class.tree_ui.tree_class
@@ -166,13 +178,12 @@ class AccTabUI:
                             tree_class[t].quick_refresh_items(acc_list_dict[t])
                 except Exception as e:
                     logger.warning(e)
-                    self.root_class.quick_refresh = False
+                    self.quick_refresh_mode = False
                     slowly_create()
-                    self.sw_class.tree_ui = treeview_row_ui.TreeviewRowUI(result)
+                    self.sw_class.tree_ui = treeview_row_ui.TreeviewLoginUI(result)
             else:
                 slowly_create()
-                self.sw_class.tree_ui = treeview_row_ui.TreeviewRowUI(result)
-
+                self.sw_class.tree_ui = treeview_row_ui.TreeviewLoginUI(result)
         else:
             pass
 
@@ -196,7 +207,7 @@ class AccTabUI:
                                 anchor=tk.CENTER)
         error_label.pack(**Constants.T_WGT_PACK)
         self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
-                                          command=partial(self.root_menu.open_sw_settings, self.sw))
+                                          command=partial(WndCreator.open_sw_settings, self.sw))
         self.settings_button.pack()
 
     """后处理"""
@@ -207,7 +218,7 @@ class AccTabUI:
             return
 
         # 需要进行的操作
-        self.root_class.to_login_auto_start_accounts()
+        MultiSwFunc.thread_to_login_auto_start_accounts()
 
         self.root_class.first_created_acc_ui = True
 
@@ -272,7 +283,3 @@ class AccTabUI:
         answer = AccOperator.quit_selected_accounts(self.sw, accounts)
         if answer is True:
             self.refresh_frame(self.sw)
-
-    def to_open_acc_detail(self, item, widget_tag=None, event=None):
-        """打开详情窗口"""
-        self.root_class.open_acc_detail(item, self, widget_tag, event)

@@ -16,8 +16,10 @@ import yaml
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
 from Crypto.Util.Padding import unpad
-from utils.logger_utils import mylogger as logger
 from readerwriterlock import rwlock
+
+from utils.logger_utils import mylogger as logger
+
 rw_lock = rwlock.RWLockFairD()
 
 

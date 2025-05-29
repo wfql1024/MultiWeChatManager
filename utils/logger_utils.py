@@ -340,6 +340,7 @@ class PrinterUtils:
         self.last_msg = str(obj)
         return self
 
+
 class LoggerUtils:
     def __init__(self, file):
         self.logger = self.get_logger(file)

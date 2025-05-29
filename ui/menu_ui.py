@@ -8,13 +8,14 @@ from tkinter import messagebox, simpledialog
 
 from functions import subfunc_file
 from functions.app_func import AppFunc
+from functions.main_func import MultiSwFunc
 from functions.sw_func import SwInfoFunc, SwOperator
 from public_class.custom_classes import TkThreadWorker
 from public_class.enums import LocalCfg, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
 from ui import sidebar_ui
-from ui.wnd_ui import UpdateLogWnd, StatisticWnd, SettingWnd, RewardsWnd, AboutWnd, GlobalSettingWnd
+from ui.wnd_ui import WndCreator
 from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
@@ -26,6 +27,7 @@ from utils.logger_utils import myprinter as printer
 class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
+        print("构建菜单ui...")
         self.sw_class = None
         self.sw = None
         self.acc_tab_ui = None
@@ -74,14 +76,9 @@ class MenuUI:
         root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
         self.is_login_menu = root_tab == "login"
         if self.is_login_menu:
-            self.acc_tab_ui = self.root_class.acc_tab_ui
+            self.acc_tab_ui = self.root_class.login_ui
             self.sw = self.acc_tab_ui.sw
             self.sw_class = self.sw_classes[self.sw]
-            # 路径检查
-            self.sw_class.data_dir = SwInfoFunc.get_sw_data_dir(self.sw)
-            self.sw_class.inst_path = SwInfoFunc.get_sw_install_path(self.sw)
-            self.sw_class.ver = SwInfoFunc.get_sw_ver(self.sw, self.sw_class.data_dir)
-            self.sw_class.dll_dir = SwInfoFunc.get_sw_dll_dir(self.sw)
 
             # 传递错误信息给主窗口
             if self.sw_class.inst_path is None or self.sw_class.data_dir is None or self.sw_class.dll_dir is None:
@@ -91,9 +88,11 @@ class MenuUI:
         print("创建菜单栏...")
         self.start_time = time.time()
 
-        self.menu_bar = tk.Menu(self.root)
-        self.root.config(menu=self.menu_bar)
+        if not isinstance(self.menu_bar, tk.Menu):
+            self.menu_bar = tk.Menu(self.root)
+            self.root.config(menu=self.menu_bar)
 
+        self.menu_bar.delete(0, tk.END)
         # ————————————————————————————文件菜单————————————————————————————
         self.file_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="文件", menu=self.file_menu)
@@ -102,7 +101,7 @@ class MenuUI:
         self.file_menu.add_cascade(label="用户文件", menu=self.user_file_menu)
         self.user_file_menu.add_command(label="打开", command=AppFunc.open_user_file)
         self.user_file_menu.add_command(label="清除", command=partial(
-            AppFunc.clear_user_file, self.root_class.initialize_in_init))
+            AppFunc.clear_user_file, self.root_class.initialize_in_root))
         # >程序目录
         self.program_file_menu = tk.Menu(self.file_menu, tearoff=False)
         self.file_menu.add_cascade(label="程序目录", menu=self.program_file_menu)
@@ -117,7 +116,7 @@ class MenuUI:
             # >统计数据
             self.statistic_menu = tk.Menu(self.file_menu, tearoff=False)
             self.file_menu.add_cascade(label="统计", menu=self.statistic_menu)
-            self.statistic_menu.add_command(label="查看", command=self._open_statistic)
+            self.statistic_menu.add_command(label="查看", command=partial(WndCreator.open_statistic, self.sw))
             self.statistic_menu.add_command(label="清除",
                                             command=partial(AppFunc.clear_statistic_data,
                                                             self.create_root_menu_bar))
@@ -132,7 +131,7 @@ class MenuUI:
                                                   command=partial(SwOperator.open_config_file, self.sw))
                 self.config_file_menu.add_command(label="清除",
                                                   command=partial(SwOperator.clear_config_file, self.sw,
-                                                                  self.root_class.acc_tab_ui.refresh))
+                                                                  self.root_class.login_ui.refresh))
             # -打开主dll所在文件夹
             self.file_menu.add_command(label="查看DLL目录", command=partial(SwOperator.open_dll_dir, self.sw))
             if self.sw_class.dll_dir is None:
@@ -142,7 +141,8 @@ class MenuUI:
             # print(f"支持快捷启动：{quick_start_sp}")
             self.file_menu.add_command(label="创建快捷启动",
                                        command=partial(SwOperator.create_multiple_lnk,
-                                                       self.sw, self.sw_class.freely_multirun, self.create_root_menu_bar),
+                                                       self.sw, self.sw_class.freely_multirun,
+                                                       self.create_root_menu_bar),
                                        state="normal" if quick_start_sp is True else "disabled")
             print(f"文件菜单用时：{time.time() - self.start_time:.4f}秒")
 
@@ -181,10 +181,10 @@ class MenuUI:
                 label="显示状态标志", variable=sign_vis_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
                                 "sign_visible", not self.global_settings_value.sign_vis,
-                                self.root_class.acc_tab_ui.refresh)
+                                self.root_class.login_ui.refresh)
             )
+            self.view_menu.add_separator()  # ————————————————分割线————————————————
         # 全局菜单:缩放+侧栏
-        self.view_menu.add_separator()  # ————————————————分割线————————————————
         sidebar_var = tk.BooleanVar(value=False)
         self.view_menu.add_checkbutton(label="侧栏", variable=sidebar_var,
                                        command=self._open_sidebar)
@@ -227,12 +227,12 @@ class MenuUI:
         prefix = surprise_sign if self.app_info.need_update is True else ""
         self.help_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label=f"{prefix}帮助", menu=self.help_menu)
-        self.help_menu.add_command(label="我来赏你！", command=self._open_rewards)
+        self.help_menu.add_command(label="我来赏你！", command=WndCreator.open_rewards)
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
-        self.help_menu.add_command(label="更新日志", command=self.open_update_log)
+        self.help_menu.add_command(label="更新日志", command=WndCreator.open_update_log)
         self.help_menu.add_command(label=f"{prefix}关于",
-                                   command=partial(self._open_about, self.app_info))
+                                   command=partial(WndCreator.open_about, self.app_info))
         print(f"帮助菜单用时：{time.time() - self.start_time:.4f}秒")
 
         # ————————————————————————————作者标签————————————————————————————
@@ -256,12 +256,9 @@ class MenuUI:
             )
             self.menu_bar.entryconfigure(author_str_with_hint, command=handler.on_click_down)
 
-        # print(self.sw_class)
-        # print(self.sw_class.__dict__)
-
     def _create_setting_menu(self):
         # -全局设置
-        self.settings_menu.add_command(label=f"全局设置", command=self._open_global_setting_wnd)
+        self.settings_menu.add_command(label=f"全局设置", command=WndCreator.open_global_setting_wnd)
         _, self.global_settings_value.auto_start = subfunc_file.check_auto_start_or_toggle_to_()
         auto_start_value = self.global_settings_value.auto_start
         auto_start_var = self.global_settings_var.auto_start = tk.BooleanVar(value=auto_start_value)
@@ -272,16 +269,16 @@ class MenuUI:
             command=partial(self._toggle_auto_start,
                             not self.global_settings_value.auto_start))
         self.auto_start_menu.add_command(
-            label="测试登录自启动账号", command=partial(self.root_class.to_login_auto_start_accounts))
+            label="测试登录自启动账号", command=MultiSwFunc.thread_to_login_auto_start_accounts)
 
         if self.is_login_menu:
             # -应用设置
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
-            self.settings_menu.add_command(label="平台设置", command=partial(self.open_sw_settings, self.sw))
+            self.settings_menu.add_command(label="平台设置", command=partial(WndCreator.open_sw_settings, self.sw))
             self.anti_revoke_menu = tk.Menu(self.settings_menu, tearoff=False)
-            self.anti_revoke_menu_index = self.settings_menu.add_cascade(label="防撤回", menu=self.anti_revoke_menu)
+            self.settings_menu.add_cascade(label="防撤回", menu=self.anti_revoke_menu)
             self.multirun_menu = tk.Menu(self.settings_menu, tearoff=False)
-            self.multirun_menu_index = self.settings_menu.add_cascade(label="全局多开", menu=self.multirun_menu)
+            self.settings_menu.add_cascade(label="全局多开", menu=self.multirun_menu)
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
             # 开启更新多开,防撤回等子菜单的更新线程
@@ -343,29 +340,55 @@ class MenuUI:
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(
-            label="重置", command=partial(AppFunc.reset, self.root_class.initialize_in_init))
+            label="重置", command=partial(AppFunc.reset, self.root_class.initialize_in_root))
 
     def _calc_multirun_mode_and_save(self, mode):
         """计算多开模式并保存"""
         subfunc_file.save_a_setting_and_callback(
             self.sw, LocalCfg.REST_MULTIRUN_MODE, mode, self.create_root_menu_bar)
         self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN if self.sw_class.freely_multirun is True else mode
-        # print("修改后：", self.sw_class)
-        # print("修改后：", self.sw_class.__dict__)
 
-    def _open_statistic(self):
-        """打开统计窗口"""
-        statistic_window = tk.Toplevel(self.root)
-        StatisticWnd(statistic_window, f"{self.sw}统计数据", self.sw)
+    def get_now_tab(self):
+        root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
+        if root_tab == "login":
+            return "login"
+        if root_tab == "manage":
+            manage_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.MNG_TAB)
+            if manage_tab == "acc":
+                return "acc"
+            if manage_tab == "sw":
+                return "sw"
+        return "login"
 
     def _to_quick_refresh(self):
-        self.root_class.quick_refresh = True
-        self.root_class.acc_tab_ui.refresh()
+        tab = self.get_now_tab()
+        print(f"尝试快速刷新{tab}")
+        if tab == "login":
+            self.root_class.login_ui.quick_refresh_mode = True
+            self.root_class.login_ui.refresh()
+        elif tab == "acc":
+            self.root_class.acc_manager_ui.quick_refresh_mode = True
+            self.root_class.acc_manager_ui.refresh()
+        elif tab == "sw":
+            self.root_class.sw_manager_ui.quick_refresh_mode = True
+            self.root_class.sw_manager_ui.refresh()
+        else:
+            pass
 
     def _to_refresh(self):
-        printer.vital("常规刷新")
-        self.root_class.quick_refresh = False
-        self.root_class.acc_tab_ui.refresh()
+        tab = self.get_now_tab()
+        print(f"尝试页面刷新{tab}")
+        if tab == "login":
+            self.root_class.login_ui.quick_refresh_mode = False
+            self.root_class.login_ui.refresh()
+        elif tab == "acc":
+            self.root_class.acc_manager_ui.quick_refresh_mode = False
+            self.root_class.acc_manager_ui.refresh()
+        elif tab == "sw":
+            self.root_class.sw_manager_ui.quick_refresh_mode = False
+            self.root_class.sw_manager_ui.refresh()
+        else:
+            pass
 
     def _to_update_remote_cfg(self):
         printer.vital("更新远程配置")
@@ -374,20 +397,19 @@ class MenuUI:
             messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
             return False
         messagebox.showinfo("提示", "更新成功")
-        self.root_class.quick_refresh = True
-        self.root_class.acc_tab_ui.refresh()
+        self._to_quick_refresh()
         return True
 
     def _to_initialize(self):
         printer.vital("初始化")
-        self.root_class.initialize_in_init()
+        self.root_class.initialize_in_root()
 
     def _switch_to_classic_view(self):
         self.root.unbind("<Configure>")
-        subfunc_file.save_a_setting_and_callback(self.sw, "view", "classic", self.root_class.acc_tab_ui.refresh)
+        subfunc_file.save_a_setting_and_callback(self.sw, "view", "classic", self.root_class.login_ui.refresh)
 
     def _switch_to_tree_view(self):
-        subfunc_file.save_a_setting_and_callback(self.sw, "view", "tree", self.root_class.acc_tab_ui.refresh)
+        subfunc_file.save_a_setting_and_callback(self.sw, "view", "tree", self.root_class.login_ui.refresh)
 
     def _open_sidebar(self):
         if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists():
@@ -401,8 +423,7 @@ class MenuUI:
             print("创建", self.sidebar_wnd)
             self.sidebar_wnd_class = sidebar_ui.SidebarWnd(self.sidebar_wnd, "导航条")
 
-    @staticmethod
-    def _set_wnd_scale(after, scale=None):
+    def _set_wnd_scale(self, scale=None):
         if scale is None:
             # 创建输入框
             try:
@@ -411,37 +432,22 @@ class MenuUI:
                     prompt="请输入一个 75-500 之间的数字（含边界）："
                 )
                 if user_input is None:  # 用户取消或关闭输入框
-                    after()
                     return
-
                 # 尝试将输入转换为整数并验证范围
                 scale = int(user_input)
                 if not (75 <= scale <= 500):
                     raise ValueError("输入值不在 75-500 范围内")
             except (ValueError, TypeError):
                 messagebox.showerror("错误", "无效输入，操作已取消")
-                after()
                 return
-
         subfunc_file.save_a_global_setting_and_callback(
             LocalCfg.SCALE,
             str(scale)
         )
-
         messagebox.showinfo("提示", "修改成功，将在重新启动程序后生效！")
-        after()
+        self.create_root_menu_bar()
         print(f"成功设置窗口缩放比例为 {scale}！")
         return
-
-    def open_sw_settings(self, sw):
-        """打开设置窗口"""
-        settings_window = tk.Toplevel(self.root)
-        SettingWnd(settings_window, sw, f"{sw}设置")
-
-    def _open_global_setting_wnd(self):
-        """打开设置窗口"""
-        global_setting_wnd = tk.Toplevel(self.root)
-        GlobalSettingWnd(global_setting_wnd, "全局设置")
 
     def _toggle_patch_mode(self, mode, channel):
         """切换是否全局多开或防撤回"""
@@ -455,7 +461,7 @@ class MenuUI:
             messagebox.showerror("错误", f"操作失败: {str(e)}")
             logger.error(f"发生错误: {str(e)}")
         finally:
-            self.root_class.acc_tab_ui.refresh()
+            self.root_class.login_ui.refresh()
 
     def _toggle_auto_start(self, value):
         """切换是否开机自启动"""
@@ -466,26 +472,6 @@ class MenuUI:
             print("操作失败！")
         else:
             print(f"已添加自启动！" if value is True else f"已关闭自启动！")
-
-    def _open_rewards(self):
-        """打开赞赏窗口"""
-        rewards_window = tk.Toplevel(self.root)
-        RewardsWnd(rewards_window, "我来赏你！", Config.REWARDS_PNG_PATH)
-
-    def open_update_log(self):
-        """打开版本日志窗口"""
-        success, result = AppFunc.split_vers_by_cur_from_local(self.app_info.curr_full_ver)
-        if success is True:
-            new_versions, old_versions = result
-            update_log_window = tk.Toplevel(self.root)
-            UpdateLogWnd(update_log_window, "", old_versions)
-        else:
-            messagebox.showerror("错误", result)
-
-    def _open_about(self, app_info):
-        """打开关于窗口"""
-        about_wnd = tk.Toplevel(self.root)
-        AboutWnd(about_wnd, "关于", app_info)
 
     def _to_enable_new_func(self):
         subfunc_file.save_a_global_setting_and_callback('enable_new_func', True)
@@ -631,15 +617,13 @@ class MenuUI:
             res_dict, msg = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
             self.menu_updater.main_thread_do_("revoke",
-                partial(self._update_anti_revoke_menu, res_dict, msg)
-            )
-
+                                              partial(self._update_anti_revoke_menu, res_dict, msg)
+                                              )
             # 全局多开部分
             res_dict, msg = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
             self.menu_updater.main_thread_do_("multi",
-                partial(self._update_multirun_menu, res_dict, msg)
-            )
+                                              partial(self._update_multirun_menu, res_dict, msg)
+                                              )
         except Exception as e:
             print(e)
-

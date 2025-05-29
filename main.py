@@ -2,7 +2,6 @@ import argparse
 import ctypes
 import os
 import sys
-import tkinter as tk
 
 import pygetwindow as gw
 from pynput import keyboard
@@ -73,13 +72,7 @@ def main():
     print("权限：" + "管理员身份" if ctypes.windll.shell32.IsUserAnAdmin() == 1 else "非管理员身份")
     print("调试模式：" + str(args.debug))
 
-    root = tk.Tk()
-    main_ui.Root(
-        root,
-        args=args
-    )
-
-    root.mainloop()
+    main_ui.RootClass(args)
 
 
 if __name__ == "__main__":

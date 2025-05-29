@@ -27,7 +27,7 @@ matches = search(data, WAV_PATTERN)
 print(f"\n> Replace sound files")
 for i, idx in enumerate(matches):
     length_offset = idx - 4
-    length_data = data[length_offset : length_offset + 4]
+    length_data = data[length_offset: length_offset + 4]
     wav_length = int.from_bytes(length_data, "big")
     if wav_length > len(data):
         print(f"{YELLOW}[WARN] Invalid WAV length: {wav_length:X}{RESET}")
@@ -58,7 +58,7 @@ for i, idx in enumerate(matches):
         count = wav_length - len(wav_data)
         print(f"{BLUE}[i] Sound file too short, filling {count:X} zero bytes{RESET}")
         wav_data += b"\x00" * count
-    data[idx : idx + wav_length] = wav_data
+    data[idx: idx + wav_length] = wav_data
     print(
         f"{GREEN}[√] Replaced Weixin.dll[{idx:08X}:{idx + wav_length:08X}] with <- {wav.name}{RESET}"
     )

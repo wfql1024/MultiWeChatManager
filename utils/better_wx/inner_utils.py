@@ -5,9 +5,9 @@
 # ------------------------------------------------------------------
 
 import os
+import pathlib
 import re
 import shutil
-import pathlib
 from typing import Union, List
 
 if os.name == "nt":
@@ -309,6 +309,7 @@ def wildcard_replace(data: bytes, pattern: Union[str, list], replace: Union[str,
 
 def debugged_wildcard_replace(data: bytes, pattern: Union[str, list], replace: Union[str, list]):
     """这个方法详细解释了替换过程，便于调试"""
+
     def bytes_to_hex_str(byte_data: bytes) -> str:
         """将 bytes 转换为 'xx xx xx' 形式的十六进制字符串"""
         return ' '.join([f"{byte:02x}" for byte in byte_data])

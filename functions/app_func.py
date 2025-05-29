@@ -10,12 +10,32 @@ from win32com.client import Dispatch
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
+from public_class.enums import LocalCfg
 from resources import Config
 from utils import file_utils
 from utils.logger_utils import mylogger as logger
 
 
 class AppFunc:
+    @staticmethod
+    def apply_proxy_setting():
+        use_proxy = True if subfunc_file.fetch_global_setting_or_set_default_or_none(
+            LocalCfg.USE_PROXY) == "true" else False
+        if use_proxy is True:
+            # 强制不使用任何代理
+            proxy_ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
+            proxy_port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)
+            os.environ['http_proxy'] = f"{proxy_ip}:{proxy_port}"
+            os.environ['https_proxy'] = f"{proxy_ip}:{proxy_port}"
+            # 可选：清空 no_proxy
+            os.environ['no_proxy'] = ''
+            print("已启用代理！")
+        else:
+            os.environ['http_proxy'] = ''
+            os.environ['https_proxy'] = ''
+            os.environ['no_proxy'] = '*'
+            print("已禁用代理！")
+
     @staticmethod
     def has_newer_version(curr_ver) -> bool:
         """

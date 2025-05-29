@@ -12,32 +12,30 @@ from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants, Strings
+from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
 from utils.widget_utils import TreeUtils
 
 
-class TreeviewRowUI:
+class TreeviewLoginUI:
     def __init__(self, result):
-        self.tree_class = {
-
-        }
-
+        self.tree_class = {}
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
-        self.acc_tab_ui = self.root_class.acc_tab_ui
+        self.login_ui = self.root_class.login_ui
 
         self.acc_list_dict, _, _ = result
 
         logins = self.acc_list_dict["login"]
         logouts = self.acc_list_dict["logout"]
 
-        self.main_frame = self.acc_tab_ui.main_frame
+        self.main_frame = self.login_ui.main_frame
         self.btn_dict = {
             "auto_quit_btn": {
                 "text": "一键退出",
                 "btn": None,
-                "func": self.acc_tab_ui.to_quit_accounts,
+                "func": self.login_ui.to_quit_accounts,
                 "enable_scopes":
                     Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
@@ -48,7 +46,7 @@ class TreeviewRowUI:
             "auto_login_btn": {
                 "text": "一键登录",
                 "btn": None,
-                "func": self.acc_tab_ui.to_auto_login,
+                "func": self.login_ui.to_auto_login,
                 "enable_scopes":
                     Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
@@ -59,7 +57,7 @@ class TreeviewRowUI:
             "config_btn": {
                 "text": "❐配 置",
                 "btn": None,
-                "func": self.acc_tab_ui.to_create_config,
+                "func": self.login_ui.to_create_config,
                 "enable_scopes":
                     Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, 1)]),
                 "tip_scopes_dict": {
@@ -95,7 +93,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         """用于展示不同登录状态列表的表格"""
         self.global_settings_value = None
         self.can_quick_refresh = None
-        self.acc_tab_ui = None
+        self.login_ui = None
         self.root = None
         self.photo_images = []
         self.sign_visible = None
@@ -106,8 +104,8 @@ class AccLoginTreeView(ActionableTreeView, ABC):
     def initialize_members_in_init(self):
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
-        self.acc_tab_ui = self.root_class.acc_tab_ui
-        self.sw = self.acc_tab_ui.sw
+        self.login_ui = self.root_class.login_ui
+        self.sw = self.login_ui.sw
         self.main_frame = self.parent_class.ui_frame[self.table_tag]
         self.global_settings_value = self.root_class.global_settings_value
 
@@ -116,8 +114,9 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
         self.columns = (" ", "配置", "pid", "原始id", "当前id", "昵称")
         sort_str = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, f"{self.table_tag}_sort")
-        if sort_str is not None:
-            self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
+        if isinstance(sort_str, str):
+            if len(sort_str.split(",")) == 2:
+                self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
 
     def set_table_style(self):
         super().set_table_style()
@@ -189,7 +188,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
                 TreeUtils.add_a_tag_to_item(tree, iid, "disabled")
 
         self.can_quick_refresh = True
-        self.root_class.quick_refresh = True
+        self.login_ui.quick_refresh_mode = True
 
     def click_on_id_column(self, click_time, item_id):
         """
@@ -199,7 +198,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         :return:
         """
         if click_time == 1:
-            self.acc_tab_ui.to_open_acc_detail(item_id)
+            WndCreator.open_acc_detail(item_id, self.login_ui)
         elif click_time == 2:
             AccOperator.switch_to_sw_account_wnd(item_id)
 

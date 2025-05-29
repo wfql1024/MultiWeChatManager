@@ -364,7 +364,7 @@ class SwOperator:
         """手动登录"""
         root_class = GlobalMembers.root_class
         root = root_class.root
-        acc_tab_ui = root_class.acc_tab_ui
+        login_ui = root_class.login_ui
         # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
         start_time = time.time()
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
@@ -399,7 +399,7 @@ class SwOperator:
             messagebox.showerror("错误", "手动登录失败，请重试")
 
         # 刷新菜单和窗口前置
-        root_class.root.after(0, acc_tab_ui.refresh_frame, sw)
+        root_class.root.after(0, login_ui.refresh_frame, sw)
         TkWndUtils.bring_wnd_to_front(root, root)
 
     @staticmethod
@@ -1019,7 +1019,7 @@ class SwInfoUtils:
             # print("判断类型:若...在开头,则以??补充至相同长度;...仅能出现在开头或不存在,否则报错")
             if listed_modified_hex[0] is ...:
                 listed_modified_hex = ["??"] * (
-                            len(listed_original_hex) - len(listed_modified_hex) + 1) + listed_modified_hex[1:]
+                        len(listed_original_hex) - len(listed_modified_hex) + 1) + listed_modified_hex[1:]
             else:
                 if ... in listed_original_hex:
                     print(f"[ERR] Wildcard <{patt2hex(listed_original_hex)}> has invalid token ...")
@@ -1164,8 +1164,10 @@ class SwInfoUtils:
     @staticmethod
     def _create_check_method_of_(path_type):
         """定义检查方法"""
+
         def check_sw_path_func(sw, path):
             return SwInfoUtils.is_valid_sw_path(path_type, sw, path)
+
         return check_sw_path_func
 
     @staticmethod
