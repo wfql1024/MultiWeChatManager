@@ -29,7 +29,7 @@ from utils.logger_utils import myprinter as printer
 # main_ui > 基本ui > 窗口ui > func > utils > public_class > resources
 # ------------------------------------------------------------------
 
-# TODO: 标签页布局优化
+# TODO: 标签页布局优化√
 
 
 class RootWnd:
@@ -340,7 +340,7 @@ class RootUI:
         root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
         self.root_nb_cls.select(root_tab)
 
-    def _on_tab_in_root_selected(self):
+    def _on_tab_in_root_selected(self, click_time):
         """根标签切换时,将自动选择下一级的标签"""
         root_tab = self.root_nb_cls.curr_tab_id
         subfunc_file.save_a_global_setting_and_callback(LocalCfg.ROOT_TAB, root_tab)
@@ -353,6 +353,7 @@ class RootUI:
             except Exception as e:
                 logger.warning(e)
                 self.manage_nb_cls.select(next(iter(self.manage_nb_cls.tabs.keys())))
+
         elif root_tab == "login":
             login_tab = self.login_nb_cls.curr_tab_id
             if not login_tab:
@@ -363,28 +364,48 @@ class RootUI:
                 logger.warning(e)
                 self.login_nb_cls.select(next(iter(self.login_nb_cls.tabs)))
 
-    def _on_tab_in_login_selected(self):
-        self.sw = self.login_nb_cls.curr_tab_id
-        print(f"当前是{self.sw}的标签页")
-        self.root_class.sw = self.sw
-        subfunc_file.save_a_global_setting_and_callback(LocalCfg.LOGIN_TAB, self.sw)
+    def _on_tab_in_login_selected(self, click_time):
         if self.root_class.login_ui is None:
             self.root_class.login_ui = login_ui.LoginUI()
-        self.root_class.login_ui.refresh()
+        self.root_class.login_ui.sw = self.login_nb_cls.curr_tab_id
+        tab_dict = self.login_nb_cls.tabs[self.root_class.login_ui.sw]
+        tab_text = tab_dict["text"]
+        print(f"当前是{self.sw}的标签页")
+        subfunc_file.save_a_global_setting_and_callback(LocalCfg.LOGIN_TAB, self.root_class.login_ui.sw)
+        if click_time <= 1:
+            self.root_class.login_ui.init_login_ui()
+        elif click_time >= 2:
+            tab_dict["tab"].config(text=f"⟳{tab_text}")
+            self.root.update_idletasks()
+            self.root_class.login_ui.refresh()
+            tab_dict["tab"].config(text=tab_text)
 
-    def _on_tab_in_manage_selected(self):
+    def _on_tab_in_manage_selected(self, click_time):
         self.manage_tab = self.manage_nb_cls.curr_tab_id
         subfunc_file.save_a_global_setting_and_callback(LocalCfg.MNG_TAB, self.manage_tab)
+        tab_dict = self.manage_nb_cls.tabs[self.manage_tab]
+        tab_text = tab_dict["text"]
         if self.manage_tab == "acc":
             if self.root_class.acc_manager_ui is None:
                 self.root_class.acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, self.acc_mng_frame)
-            print("刷新账号管理界面和菜单...")
-            self.root_class.acc_manager_ui.refresh()
+            if click_time <= 1:
+                self.root_class.acc_manager_ui.init_acc_manager_ui()
+            elif click_time >= 2:
+                tab_dict["tab"].config(text=f"⟳{tab_text}")
+                self.root.update_idletasks()
+                self.root_class.acc_manager_ui.refresh()
+                tab_dict["tab"].config(text=tab_text)
+
         elif self.manage_tab == "sw":
             if self.root_class.sw_manager_ui is None:
                 self.root_class.sw_manager_ui = sw_manager_ui.SwManagerUI(self.root, self.sw_mng_frame)
-            print("刷新软件管理界面和菜单...")
-            self.root_class.sw_manager_ui.refresh()
+            if click_time <= 1:
+                self.root_class.sw_manager_ui.init_sw_manager_ui()
+            elif click_time >= 2:
+                tab_dict["tab"].config(text=f"⟳{tab_text}")
+                self.root.update_idletasks()
+                self.root_class.sw_manager_ui.refresh()
+                tab_dict["tab"].config(text=tab_text)
 
 
 class SoftwareInfo:

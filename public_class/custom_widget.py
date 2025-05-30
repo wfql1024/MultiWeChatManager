@@ -7,6 +7,7 @@ from tkinter import ttk
 from public_class.enums import NotebookDirection
 from utils import widget_utils
 from utils.encoding_utils import ColorUtils
+from utils.widget_utils import UnlimitedClickHandler
 
 
 class CustomWidget(ABC):
@@ -44,6 +45,9 @@ class CustomWidget(ABC):
 class CustomLabelBtn(tk.Label, CustomWidget, ABC):
     def __init__(self, parent, text, *args, **kwargs):
         super().__init__(parent, text=text, relief='flat', *args, **kwargs)
+        self.click_map = {}
+        self.click_func = None
+        self.click_time = 0
         self.styles = {}
         self._shake_running = None
         self.state = self.State.NORMAL
@@ -81,6 +85,29 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
         self.bind('<ButtonRelease-1>', self._on_button_up, add='+')
 
         self._update_style()
+
+    def apply_bind(self, tk_root):
+        """可以多次应用,每次应用不覆盖之前绑定的事件,注意不要重复,最好是在所有set_bind之后才apply_bind"""
+        UnlimitedClickHandler(
+            tk_root,
+            self,
+            self.click_func,
+            **self.click_map
+        )
+        # 绑定后清空map和func
+        self.click_map = {}
+        self.click_func = None
+
+    def set_bind_map(self, **kwargs):
+        """传入格式: **{"数字": 回调函数, ...},添加后需要apply_bind()才能生效"""
+        for key, value in kwargs.items():
+            self.click_map[key] = value
+        return self
+
+    def set_bind_func(self, func):
+        """传入带有click_time参数的方法,变量名必须是click_time"""
+        self.click_func = func
+        return self
 
     def set_state(self, state):
         """设置状态"""
@@ -151,7 +178,7 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
 
     def _on_button_down(self, event=None):
         self.down = True
-        print("按下")
+        # print("定制按钮监听:按下")
         if event:
             pass
         if self.state == self.State.DISABLED:
@@ -164,7 +191,7 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
 
     def _on_button_up(self, event=None):
         self.down = False
-        print("抬起")
+        # print("定制按钮监听:抬起")
         if event:
             pass
         if self.state == self.State.DISABLED or self.state == self.State.SELECTED:
@@ -203,7 +230,8 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
 
 
 class CustomNotebook:
-    def __init__(self, root, parent_frame, direction=NotebookDirection.TOP, *args, **kwargs):
+    def __init__(self, root, parent_frame, direction:NotebookDirection=NotebookDirection.TOP, *args, **kwargs):
+        self.click_time = 0
         self.direction = direction
         self.root = root
         self.tabs = {}
@@ -275,11 +303,15 @@ class CustomNotebook:
         """
         # 创建标签页
         print(f"添加标签页：{tab_id}")
-        tab_frame = ttk.Frame(self.tabs_frame)
+        tab_frame = ttk.Frame(self.tabs_frame, relief="solid")
+        now_index = len(self.tabs)  # 现有的标签数量刚好是新标签的索引
         if self.direction in [NotebookDirection.TOP, NotebookDirection.BOTTOM]:
-            tab_frame.pack(side=tk.LEFT)
+            # tab_frame.pack(side=tk.LEFT)
+            tab_frame.grid(row=0, column=now_index, sticky="nsew", padx=2, pady=2)
+            self.tabs_frame.grid_columnconfigure(now_index, weight=1)
         else:
-            tab_frame.pack(side=tk.TOP, fill=tk.X)
+            tab_frame.grid(row=now_index, column=0, sticky="nsew", padx=2, pady=2)
+            self.tabs_frame.grid_rowconfigure(now_index, weight=1)
 
         # 创建标签文本，若在侧边则竖向显示
         side_directions = [NotebookDirection.LEFT, NotebookDirection.RIGHT]
@@ -288,15 +320,11 @@ class CustomNotebook:
         tab_label = CustomLabelBtn(tab_frame, text=display_text)
         tab_label.pack(fill=tk.BOTH, expand=True)
 
-        # 设置点击事件
-        # tab_label.on_click(lambda i=tab_id: self.select(i))
-        widget_utils.UnlimitedClickHandler(
-            self.root,
-            tab_label,
-            **{"1": partial(self.select, tab_id),
-               "2": partial(self.select, tab_id)}
-
-        )
+        # 内部默认绑定事件: 记录点击次数, 点击大于一次时候切换标签页
+        (tab_label
+         .set_bind_map(**{"1": partial(self.select, tab_id), })
+         .set_bind_func(self._set_click_time)
+         .apply_bind(self.root))
 
         # 存储标签页信息
         self.tabs[tab_id] = {
@@ -304,26 +332,64 @@ class CustomNotebook:
             'tab': tab_label,
             'frame': frame,
             'tab_frame': tab_frame,
+            'index': now_index
         }
 
-        # # 如果是第一个标签页，自动选中
-        # if not self.curr_tab_id:
-        #     self.select(tab_id)
+    def _set_click_time(self, click_time):
+        self.click_time = click_time
+
+    def all_set_bind_map(self, **kwargs):
+        """
+        传入格式: **{"数字": 回调函数,...},添加后需要apply_bind()才能生效
+        注意:为!!当前!!所有标签添加事件,后添加的标签页不会生效.
+        """
+        for tab_id, tab_info in self.tabs.items():
+            tab_label = tab_info['tab']
+            tab_label.set_bind_map(**kwargs)
+        return self
+
+    def all_set_bind_func(self, func):
+        """
+        传入带有click_time参数的方法,变量名必须是click_time
+        注意:为!!当前!!所有标签添加事件,后添加的标签页不会生效.
+        """
+        for tab_id, tab_info in self.tabs.items():
+            tab_label = tab_info['tab']
+            tab_label.set_bind_func(func)
+        return self
+
+    def all_apply_bind(self, event):
+        """
+        可以多次应用,每次应用不覆盖之前绑定的事件,注意不要重复,最好是在所有set_bind之后才apply_bind
+        注意:为!!当前!!所有标签添加事件,后添加的标签页不会生效.
+        """
+        for tab_id, tab_info in self.tabs.items():
+            tab_label = tab_info['tab']
+            tab_label.apply_bind(event)
 
     def select(self, tab_id):
         """
         选择指定的标签页
         :param tab_id: 标签页文本
         """
+        print(f"选择标签页：{tab_id}")
         # 取消当前标签页的选中状态
         if self.curr_tab_id:
-            # print(f"取消标签：{self.current_tab}")
             self.tabs[self.curr_tab_id]['tab'].set_state(CustomLabelBtn.State.NORMAL)
+            if self.direction in [NotebookDirection.TOP, NotebookDirection.BOTTOM]:
+                self.tabs_frame.grid_columnconfigure(self.tabs[self.curr_tab_id]['index'], weight=1)
+            elif self.direction in [NotebookDirection.LEFT, NotebookDirection.RIGHT]:
+                self.tabs_frame.grid_rowconfigure(self.tabs[self.curr_tab_id]['index'], weight=1)
 
         # 设置新标签页的选中状态
         # print(f"选中标签：{text}")
         self.tabs[tab_id]['tab'].set_state(CustomLabelBtn.State.SELECTED)
         self.curr_tab_id = tab_id
+
+        if self.direction in [NotebookDirection.TOP, NotebookDirection.BOTTOM]:
+            self.tabs_frame.grid_columnconfigure(self.tabs[self.curr_tab_id]['index'], weight=3)
+        elif self.direction in [NotebookDirection.LEFT, NotebookDirection.RIGHT]:
+            self.tabs_frame.grid_rowconfigure(self.tabs[self.curr_tab_id]['index'], weight=3)
 
         # 显示对应的内容
         for tab_text, tab_info in self.tabs.items():
@@ -333,7 +399,7 @@ class CustomNotebook:
                 tab_info['frame'].pack_forget()
 
         if callable(self.select_callback):
-            self.select_callback()
+            self.select_callback(self.click_time)
 
 
 if __name__ == '__main__':
@@ -346,21 +412,21 @@ if __name__ == '__main__':
 
 
     # 创建竖向Notebook（左侧）
-    # left_nb_cls = CustomNotebook(root, direction=NotebookDirection.LEFT)
+    my_nb_cls = CustomNotebook(root, root, direction=NotebookDirection.LEFT)
 
     # 创建横向Notebook（顶部）
-    top_nb_cls = CustomNotebook(root, root, direction=NotebookDirection.TOP)
+    # my_nb_cls = CustomNotebook(root, root, direction=NotebookDirection.TOP)
 
-    my_nb_cls = top_nb_cls
     # 设置颜色（使用正绿色）
     my_nb_cls.set_major_color(selected_bg='#00FF00')
 
-    nb_content_frame = top_nb_cls.frames_pool
+    nb_frm_pools = my_nb_cls.frames_pool
 
     # 创建标签页
-    frame1 = ttk.Frame(nb_content_frame)
-    frame2 = ttk.Frame(nb_content_frame)
-    frame3 = ttk.Frame(nb_content_frame)
+    frame1 = ttk.Frame(nb_frm_pools)
+    frame2 = ttk.Frame(nb_frm_pools)
+    frame3 = ttk.Frame(nb_frm_pools)
+    frame4 = ttk.Frame(nb_frm_pools)
 
     # 在标签页1中添加CustomLabelBtn
     btn1 = CustomLabelBtn(frame1, text="标签按钮1")
@@ -395,5 +461,8 @@ if __name__ == '__main__':
     my_nb_cls.add("tab1", "标签1", frame1)
     my_nb_cls.add("tab2", "标签2", frame2)
     my_nb_cls.add("tab3", "标签3", frame3)
+    my_nb_cls.all_set_bind_func(printer).all_apply_bind(root)
+
+    my_nb_cls.add("tab4", "标签4", frame4)
 
     root.mainloop()

@@ -10,18 +10,22 @@ from public_class.custom_classes import Condition, Conditions
 
 
 class UnlimitedClickHandler:
+    _widget_events_map = {}
     def __init__(self, root, widget, click_func=None, **click_map):
         """
         初始化 ClickHandler 类，接收 root 和外部提供的点击处理函数。
-        :param click_func: 通用点击处理函数，接受参数 click_time 和 event
-        :param click_map: 若指定每次点击对应的函数，可传入字典形式，如 1=func1, 2=func2
+        :param click_func: 通用点击处理函数，接受参数 click_time 和 event,不能有其他参数名
+        :param click_map: 若指定每次点击对应的函数，可传入字典杰宝形式，如 **{"1":func1, "2":func2}
         """
         self.down = False
         self.root = root
         self.widget = widget
-        print("待绑定:", widget.nametowidget(widget))
+        if widget not in self._widget_events_map:
+            self._widget_events_map[widget] = 1
+        else:
+            self._widget_events_map[widget] += 1
+        self.turn = self._widget_events_map[widget]
         self.is_menu = isinstance(widget.nametowidget(widget), tk.Menu)
-        print(self.is_menu)
         self.click_func = self._wrap_click_func(click_func) if click_func else None
         self.click_count = 0
         self.single_click_id = None
@@ -52,8 +56,9 @@ class UnlimitedClickHandler:
         if len(params) == 1:
             # 只接受 click_time
             def wrapper(click_time, event=None):
+                if event:
+                    pass
                 return func(click_time)
-
             return wrapper
         elif len(params) == 2:
             # 接受 click_time 和 event
@@ -89,39 +94,40 @@ class UnlimitedClickHandler:
 
     def on_click_up(self, event=None):
         """处理点击事件（单击、双击、三击等）"""
-        print("抬起了")
+        if event:
+            pass
+        # print("事件处理器监听:抬起")
         self.down = False
 
     def on_click_down(self, event=None):
         """处理点击事件（单击、双击、三击等）"""
-        print("按下了")
-        print("控件:", self.widget)
+        # print("事件处理器监听:按下")
         self.down = True
         self.click_count += 1  # 增加点击次数
-        # print(f"点击了控件：{event.widget}")
-        print(f"点击次数：{self.click_count}")
         # 取消之前的延时处理（如果有）
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
-
         # 设置一个延时，等待是否有更多的点击
         self.single_click_id = self.root.after(200, self.handle_click, event)
 
     def handle_click(self, event=None):
+        print(f"{self.widget}第{self.turn}份事件处理器监听:连续点击{self.click_count}次")
         click_count = self.click_count
         self.click_count = 0
-        if not self.is_menu and self.down:
-            print("仍在按下，不处理点击事件")
+        if not self.is_menu and self.down and click_count == 1:
+            print("  单击但仍在按下，不处理点击事件")
             return
+        # 执行操作
         if self.click_func:
+            print(f"  执行{click_count}次点击的任意次数方法")
             self.click_func(click_count, event)
-        else:
-            matched_count = max(
-                (k for k in self.func_map if k <= click_count),
-                default=None
-            )
-            if matched_count:
-                partial(self.func_map[matched_count], event=event)()
+        matched_count = max(
+            (k for k in self.func_map if k <= click_count),
+            default=None
+        )
+        if matched_count:
+            print(f"  执行{matched_count}次点击的指定方法")
+            partial(self.func_map[matched_count], event=event)()
 
 
 class Tooltip:
@@ -279,9 +285,8 @@ def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
 
     def open_url(url_to_open):
-        if url_to_open is None or url_to_open == "":
-            return
-        webbrowser.open_new(url_to_open)
+        if isinstance(url_to_open, str):
+            webbrowser.open_new(url_to_open)
 
     urls = re.findall(r'(https?://\S+)', text_content)  # 使用正则表达式提取URL
     for url in urls:

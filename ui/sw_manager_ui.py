@@ -106,6 +106,11 @@ class SwManagerUI:
             }
         }
 
+    def init_sw_manager_ui(self):
+        """初始化账号管理UI"""
+        if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
+            self.refresh()
+
     def display_ui(self):
         print("创建平台管理界面...")
         # 创建一个可以滚动的画布，并放置一个主框架在画布上

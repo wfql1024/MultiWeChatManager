@@ -22,9 +22,6 @@ from utils.logger_utils import mylogger as logger
 
 rw_lock = rwlock.RWLockFairD()
 
-
-# TODO: 配置文件打算转yaml
-
 class DictUtils:
     SEPARATOR = '/'
 

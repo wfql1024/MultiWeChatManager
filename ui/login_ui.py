@@ -45,12 +45,19 @@ class LoginUI:
         self.global_settings_value = self.root_class.global_settings_value
         self.hotkey_manager = self.root_class.hotkey_manager
 
+    def init_login_ui(self):
+        # 如果界面没有元素则自动刷新
+        self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
+        self.sw_class = self.sw_classes[self.sw]
+        self.tab_frame = self.sw_class.frame
+        if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
+            self.refresh()
+
     def refresh(self):
         """刷新菜单和界面"""
         print(f"登录页:刷新菜单与界面...")
         self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
         self.sw_class = self.sw_classes[self.sw]
-
         self.tab_frame = self.sw_class.frame
 
         # 刷新菜单
@@ -133,6 +140,7 @@ class LoginUI:
             printer.vital("刷新")
             print(f"清除旧界面...")
             if self.tab_frame is not None and self.tab_frame.winfo_exists():
+                print(self.tab_frame.winfo_children())
                 for widget in self.tab_frame.winfo_children():
                     widget.destroy()
 

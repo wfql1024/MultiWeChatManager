@@ -106,6 +106,11 @@ class AccManagerUI:
             }
         }
 
+    def init_acc_manager_ui(self):
+        """初始化账号管理UI"""
+        if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
+            self.refresh()
+
     def refresh(self):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")

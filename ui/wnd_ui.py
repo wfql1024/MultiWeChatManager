@@ -169,10 +169,14 @@ class DetailUI(SubToolWndUI, ABC):
         pid_label = ttk.Label(pid_frame)
         pid_label.pack(side=tk.LEFT)
         kill_pid_btn = _create_btn_in_(pid_frame, " × ")
-        kill_pid_btn.on_click(lambda: self.do_and_update_ui(partial(AccOperator.quit_selected_accounts, sw, [account])))
+        (kill_pid_btn
+         .set_bind_map(
+            **{"1": lambda: self.do_and_update_ui(partial(AccOperator.quit_selected_accounts, sw, [account]))})
+         .apply_bind(self.root))
         _pack_btn(kill_pid_btn)
         re_login_btn = _create_btn_in_(pid_frame, "重登")
-        re_login_btn.on_click(partial(AccOperator.thread_to_auto_login_accounts, {sw: [account]}))
+        re_login_btn.set_bind_map(
+            **{"1": partial(AccOperator.thread_to_auto_login_accounts, {sw: [account]})}).apply_bind(self.root)
         _pack_btn(re_login_btn)
         # mutex
         mutex_frame = ttk.Frame(login_status_frame)
@@ -180,7 +184,9 @@ class DetailUI(SubToolWndUI, ABC):
         mutex_label = ttk.Label(mutex_frame)
         mutex_label.pack(side=tk.LEFT)
         mutex_btn = _create_btn_in_(mutex_frame, " × ")
-        mutex_btn.on_click(lambda: self.do_and_update_ui(partial(SwOperator.kill_mutex_of_pid, sw, account)))
+        (mutex_btn.set_bind_map(
+            **{"1": lambda: self.do_and_update_ui(partial(SwOperator.kill_mutex_of_pid, sw, account))})
+         .apply_bind(self.root))
         _pack_btn(mutex_btn)
         # hwnd
         hwnd_frame = ttk.Frame(login_status_frame)
@@ -188,19 +194,21 @@ class DetailUI(SubToolWndUI, ABC):
         hwnd_label = ttk.Label(hwnd_frame)
         hwnd_label.pack(side=tk.LEFT)
         unlink_hwnd_btn = _create_btn_in_(hwnd_frame, " × ")
-        unlink_hwnd_btn.on_click(
-            lambda: self.do_and_update_ui(partial(AccInfoFunc.unlink_hwnd_of_account, sw, account)))
+        (unlink_hwnd_btn.set_bind_map(
+            **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.unlink_hwnd_of_account, sw, account))})
+         .apply_bind(self.root))
         _pack_btn(unlink_hwnd_btn)
         relink_hwnd_btn = _create_btn_in_(hwnd_frame, "获取")
-        relink_hwnd_btn.on_click(
-            lambda: self.do_and_update_ui(partial(AccInfoFunc.relink_hwnd_of_account, sw, account)))
+        (relink_hwnd_btn.set_bind_map(
+            **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.relink_hwnd_of_account, sw, account))})
+         .apply_bind(self.root))
         _pack_btn(relink_hwnd_btn)
         manual_link_hwnd_btn = _create_btn_in_(hwnd_frame, "手绑")
-        manual_link_hwnd_btn.on_click(
-            lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_link_hwnd_of_account, sw, account)))
+        (manual_link_hwnd_btn.set_bind_map(
+            **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_link_hwnd_of_account, sw, account))})
+         .apply_bind(self.root))
         _pack_btn(manual_link_hwnd_btn)
         hidden_hwnd_btn = _create_btn_in_(hwnd_frame, "隐藏")
-        hidden_hwnd_btn.on_click(None)
         _pack_btn(hidden_hwnd_btn)
         hidden_hwnd_btn.set_state(CustomLabelBtn.State.DISABLED)
 
@@ -1258,10 +1266,6 @@ class StatisticWndUI(SubToolWndUI, ABC):
         tree.configure(height=len(items) + 1)
         self.tree_dict[tree_type]['sort'] = not is_ascending  # 切换排序顺序
 
-
-# TODO:修改下获取程序路径，程序版本以及程序版本文件夹的逻辑√
-
-
 class SettingWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, sw, title):
         self.need_to_reinit = None
@@ -1687,11 +1691,13 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
 
         for ip in ip_presets:
             b = _create_btn_in_(ip_btn_frame, ip["name"])
-            b.on_click(lambda v=ip["value"]: ip_var.set(v))
+            b.set_bind_map(
+            **{"1": lambda v=ip["value"]: ip_var.set(v)})
             _pack_btn(b)
         for port in port_presets:
             b = _create_btn_in_(port_btn_frame, port["name"])
-            b.on_click(lambda v=port["value"]: port_var.set(v))
+            b.set_bind_map(
+            **{"1": lambda v=port["value"]: port_var.set(v)})
             _pack_btn(b)
 
         # 底部放三个按钮：确定，取消，应用
@@ -1700,7 +1706,8 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
 
         # 确定按钮
         ok_btn = _create_btn_in_(bottom_btn_frame, "确定")
-        ok_btn.on_click(self.save_settings)
+        ok_btn.set_bind_map(
+            **{"1": self.save_settings})
         ok_btn.pack(side=tk.RIGHT, padx=customized_btn_pad * 2, pady=customized_btn_pad)
 
         self.proxy_detail_frame = proxy_detail_frame
