@@ -28,7 +28,7 @@ from public_class import reusable_widgets
 from public_class.custom_widget import CustomLabelBtn, CustomWidget
 from public_class.enums import LocalCfg, RemoteCfg, SwStates
 from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWndUI
+from public_class.reusable_widgets import SubToolWndUI, DefaultEntry
 from resources import Constants, Config, Strings
 from utils import file_utils, sys_utils, widget_utils
 from utils.encoding_utils import StringUtils
@@ -1268,8 +1268,10 @@ class StatisticWndUI(SubToolWndUI, ABC):
 
 class SettingWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, sw, title):
+        self.clear_acc_var = None
+        self.title_entry = None
         self.need_to_reinit = None
-        self.visible_cb = None
+        self.visible_ckb = None
         self.visible_var = None
         self.enable_cb = None
         self.enable_var = None
@@ -1320,76 +1322,99 @@ class SettingWndUI(SubToolWndUI, ABC):
             "dll_dir": "请选择包含dll文件的版本号最新的文件夹!",
             "login_size": '不符合"数字*数字"的格式'
         }
-        self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
+
+    def _get_new_row_in_grid(self, grid_frm):
+        return max([widget.grid_info().get('row', -1) for widget in grid_frm.grid_slaves()], default=-1) + 1
 
     def load_ui(self):
         main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
         main_frame.pack(**Constants.FRM_PACK)
+        settings_grid_frm = ttk.Frame(main_frame, padding=Constants.FRM_PAD)
+        settings_grid_frm.pack(**Constants.T_FRM_PACK)
+        # 标题
+        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        default_value, = subfunc_file.get_settings(self.sw, label="")
+        note_label = tk.Label(settings_grid_frm, text="平台备注：")
+        note_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
+        self.title_entry = DefaultEntry(settings_grid_frm, default_label=default_value)
+        self.title_entry.grid(row=current_row, column=1, columnspan=3, **Constants.WE_GRID_PACK)
+        now_value, = subfunc_file.get_settings(self.sw, note="")
+        self.title_entry.set_value(now_value)
         # 第一行 - 安装路径
-        install_label = tk.Label(main_frame, text="程序路径：")
-        install_label.grid(row=0, column=0, **Constants.W_GRID_PACK)
+        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        install_label = tk.Label(settings_grid_frm, text="程序路径：")
+        install_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
         self.inst_path_var = tk.StringVar()
-        self.install_path_entry = tk.Entry(main_frame, textvariable=self.inst_path_var, width=70)
-        self.install_path_entry.grid(row=0, column=1, **Constants.WE_GRID_PACK)
-        install_get_button = ttk.Button(main_frame, text="获取",
+        install_path_entry = tk.Entry(settings_grid_frm, textvariable=self.inst_path_var, width=70)
+        install_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
+        install_get_button = ttk.Button(settings_grid_frm, text="获取",
                                         command=partial(self.load_or_get_sw_inst_path, self.sw, True))
-        install_get_button.grid(row=0, column=2, **Constants.WE_GRID_PACK)
-        install_choose_button = ttk.Button(main_frame, text="选择路径",
+        install_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
+        install_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                            command=partial(self.choose_sw_inst_path, self.sw))
-        install_choose_button.grid(row=0, column=3, **Constants.WE_GRID_PACK)
+        install_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
         # 第二行 - 数据存储路径
-        data_label = tk.Label(main_frame, text="存储路径：")
-        data_label.grid(row=1, column=0, **Constants.W_GRID_PACK)
+        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        data_label = tk.Label(settings_grid_frm, text="存储路径：")
+        data_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
         self.data_dir_var = tk.StringVar()
-        self.data_path_entry = tk.Entry(main_frame, textvariable=self.data_dir_var, width=70)
-        self.data_path_entry.grid(row=1, column=1, **Constants.WE_GRID_PACK)
-        data_get_button = ttk.Button(main_frame, text="获取",
+        data_path_entry = tk.Entry(settings_grid_frm, textvariable=self.data_dir_var, width=70)
+        data_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
+        data_get_button = ttk.Button(settings_grid_frm, text="获取",
                                      command=partial(self.load_or_get_sw_data_dir, self.sw, True))
-        data_get_button.grid(row=1, column=2, **Constants.WE_GRID_PACK)
-        data_choose_button = ttk.Button(main_frame, text="选择路径",
+        data_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
+        data_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                         command=partial(self.choose_sw_data_dir, self.sw))
-        data_choose_button.grid(row=1, column=3, **Constants.WE_GRID_PACK)
+        data_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
         # 新增第三行 - dll路径
-        dll_label = tk.Label(main_frame, text="DLL所在路径：")
-        dll_label.grid(row=2, column=0, **Constants.W_GRID_PACK)
+        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        dll_label = tk.Label(settings_grid_frm, text="DLL所在路径：")
+        dll_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
         self.dll_dir_var = tk.StringVar()
-        self.dll_path_entry = tk.Entry(main_frame, textvariable=self.dll_dir_var, width=70)
-        self.dll_path_entry.grid(row=2, column=1, **Constants.WE_GRID_PACK)
-        dll_get_button = ttk.Button(main_frame, text="获取",
+        dll_path_entry = tk.Entry(settings_grid_frm, textvariable=self.dll_dir_var, width=70)
+        dll_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
+        dll_get_button = ttk.Button(settings_grid_frm, text="获取",
                                     command=partial(self.load_or_get_sw_dll_dir, self.sw, True))
-        dll_get_button.grid(row=2, column=2, **Constants.WE_GRID_PACK)
-        dll_choose_button = ttk.Button(main_frame, text="选择路径",
+        dll_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
+        dll_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                        command=partial(self.choose_sw_dll_dir, self.sw))
-        dll_choose_button.grid(row=2, column=3, **Constants.WE_GRID_PACK)
+        dll_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
         # 新增第四行 - 登录窗口大小
-        login_size_label = tk.Label(main_frame, text="登录尺寸：")
-        login_size_label.grid(row=3, column=0, **Constants.W_GRID_PACK)
+        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        login_size_label = tk.Label(settings_grid_frm, text="登录尺寸：")
+        login_size_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
         self.login_size_var = tk.StringVar()
-        self.login_size_entry = tk.Entry(main_frame, textvariable=self.login_size_var, width=70)
-        self.login_size_entry.grid(row=3, column=1, **Constants.WE_GRID_PACK)
-        login_size_get_button = ttk.Button(main_frame, text="获取", command=self.to_get_login_size)
-        login_size_get_button.grid(row=3, column=2, **Constants.WE_GRID_PACK)
+        login_size_entry = tk.Entry(settings_grid_frm, textvariable=self.login_size_var, width=70)
+        login_size_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
+        login_size_get_button = ttk.Button(settings_grid_frm, text="获取", command=self.to_get_login_size)
+        login_size_get_button.grid(row=current_row, column=2, columnspan=2, **Constants.WE_GRID_PACK)
         # 新增第五行 - 平台禁用与显示
-        stata_frame = ttk.Frame(main_frame, padding=Constants.FRM_PAD)
-        stata_frame.grid(row=4, column=0, columnspan=3, **Constants.WE_GRID_PACK)
+        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        stata_frame = ttk.Frame(settings_grid_frm, padding=Constants.FRM_PAD)
+        stata_frame.grid(row=current_row, column=0, columnspan=3, **Constants.WE_GRID_PACK)
         # 启用复选框
         self.enable_var = tk.BooleanVar()
-        self.enable_cb = ttk.Checkbutton(stata_frame, text="启用(所有功能,包括自启动账号功能)",
+        enable_ckb = ttk.Checkbutton(stata_frame, text="启用(所有功能,包括自启动账号功能)",
                                          variable=self.enable_var,
                                          command=self._update_visible_state)
-        self.enable_cb.pack(**Constants.R_WGT_PACK)
+        enable_ckb.pack(**Constants.R_WGT_PACK)
         # 显示复选框
         self.visible_var = tk.BooleanVar()
-        self.visible_cb = ttk.Checkbutton(stata_frame, text="在主界面显示", variable=self.visible_var)
-        self.visible_cb.pack(**Constants.R_WGT_PACK)
+        self.visible_ckb = ttk.Checkbutton(stata_frame, text="在主界面显示", variable=self.visible_var)
+        self.visible_ckb.pack(**Constants.R_WGT_PACK)
+        # 清除账号数据复选框
+        self.clear_acc_var = tk.BooleanVar()
+        clear_acc_ckb = ttk.Checkbutton(stata_frame, text="清除账号数据(本次)", variable=self.clear_acc_var)
+        clear_acc_ckb.pack(**Constants.R_WGT_PACK)
 
         # 修改确定按钮，从第4行到第5行
-        ok_button = ttk.Button(main_frame, text="保存", command=self.on_ok)
-        ok_button.grid(row=3, column=3, rowspan=2, **Constants.NEWS_GRID_PACK)
+        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        ok_button = ttk.Button(settings_grid_frm, text="保存", command=self.on_ok)
+        ok_button.grid(row=current_row-1, column=3, **Constants.NEWS_GRID_PACK)
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
-        main_frame.grid_columnconfigure(1, weight=1)
-        self.main_frame = main_frame
+        settings_grid_frm.grid_columnconfigure(1, weight=1)
+        self.main_frame = settings_grid_frm
 
     def update_content(self):
         # 初始加载已经配置的，或是没有配置的话自动获取
@@ -1404,16 +1429,16 @@ class SettingWndUI(SubToolWndUI, ABC):
     def _update_visible_state(self):
         """内部使用的联动逻辑"""
         if self.enable_var.get():
-            self.visible_cb.config(state="normal")  # 启用显示复选框
+            self.visible_ckb.config(state="normal")  # 启用显示复选框
         else:
-            self.visible_cb.config(state="disabled")  # 禁用显示复选框
+            self.visible_ckb.config(state="disabled")  # 禁用显示复选框
             self.visible_var.set(False)  # 强制取消勾选
 
     def set_sw_state_cb_from_(self, state_code):
         """根据状态码设置复选框值和状态"""
         enable_var = self.enable_var
         visible_var = self.visible_var
-        visible_cb = self.visible_cb
+        visible_cb = self.visible_ckb
 
         if state_code == SwStates.DISABLED:
             enable_var.set(False)
@@ -1428,7 +1453,7 @@ class SettingWndUI(SubToolWndUI, ABC):
             visible_var.set(True)
             visible_cb.config(state="normal")
 
-    def get_sw_state_from_cb(self):
+    def get_sw_state_from_ckb(self):
         """根据复选框值返回当前状态码"""
         if not self.enable_var.get():
             return SwStates.DISABLED
@@ -1440,11 +1465,11 @@ class SettingWndUI(SubToolWndUI, ABC):
         self.changed[LocalCfg.DATA_DIR] = self.data_dir_var.get() != self.origin_values[LocalCfg.DATA_DIR]
         self.changed[LocalCfg.DLL_DIR] = self.dll_dir_var.get() != self.origin_values[LocalCfg.DLL_DIR]
         self.changed[LocalCfg.LOGIN_SIZE] = self.login_size_var.get() != self.origin_values[LocalCfg.LOGIN_SIZE]
-        self.changed[LocalCfg.STATE] = self.get_sw_state_from_cb() != self.origin_values[LocalCfg.STATE]
+        self.changed[LocalCfg.STATE] = self.get_sw_state_from_ckb() != self.origin_values[LocalCfg.STATE]
 
-        # 需要清除平台账号数据的情况
-        keys_to_check = ["data_dir"]
-        self.need_to_clear_acc = any(self.changed[key] for key in keys_to_check)
+        # # 需要清除平台账号数据的情况
+        # keys_to_check = ["data_dir"]
+        # self.need_to_clear_acc = any(self.changed[key] for key in keys_to_check)
         # 需要重新初始化的情况
         if self.changed[LocalCfg.STATE]:
             self.need_to_reinit = True
@@ -1459,26 +1484,28 @@ class SettingWndUI(SubToolWndUI, ABC):
         inst_path = None if inst_path.startswith("获取失败") else inst_path
         data_dir = None if data_dir.startswith("获取失败") else data_dir
         dll_dir = None if dll_dir.startswith("获取失败") else dll_dir
-        state = self.get_sw_state_from_cb()
-        print(f"结束时候状态:{state}")
+        state = self.get_sw_state_from_ckb()
+        note = self.title_entry.get_value()
+        # print(f"结束时候状态:{state}")
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.INST_PATH, inst_path)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DATA_DIR, data_dir)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, dll_dir)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, login_size)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.STATE, state)
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.NOTE, note)
         self.wnd.destroy()
 
         self.check_bools()
 
         def _do():
             # 检查是否需要清空账号信息
-            if self.need_to_clear_acc:
+            if self.clear_acc_var.get() is True:
                 subfunc_file.clear_some_acc_data(self.sw)
             if self.need_to_reinit:
                 self.root_class.initialize_in_root()
                 return
-            self.root_class.login_ui.refresh()
-
+            if self.root_class.root_ui:
+                self.root_class.root_ui.refresh_current_tab()
         _do()
 
     def finally_do(self):
@@ -1628,7 +1655,9 @@ class SettingWndUI(SubToolWndUI, ABC):
             self.dll_dir_var.set(selected_path)
 
     def to_get_login_size(self):
-        result = SwOperator.get_login_size(self.sw, self.multirun_mode)
+        sw = self.sw
+        self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
+        result = SwOperator.get_login_size(sw, self.multirun_mode)
         if result:
             login_width, login_height = result
             self.login_size_var.set(f"{login_width}*{login_height}")

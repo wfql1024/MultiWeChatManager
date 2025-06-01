@@ -1,6 +1,7 @@
 # main_ui.py
 import json
 import os
+import random
 import sys
 import threading
 import tkinter as tk
@@ -16,12 +17,13 @@ from public_class import reusable_widgets
 from public_class.custom_widget import CustomNotebook
 from public_class.enums import LocalCfg, SwStates, RemoteCfg
 from public_class.global_members import GlobalMembers
-from resources import Config, Constants
+from resources import Config, Constants, Strings
 from ui import login_ui, acc_manager_ui, sw_manager_ui
 from ui.wnd_ui import LoadingWndUI, WndCreator
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
+from utils.widget_utils import WidgetUtils
 
 
 # ------------------------------------------------------------------
@@ -64,6 +66,10 @@ class RootClass:
 
     def __init__(self, args=None):
         # 未分类
+        self._root_ui = None
+        self._sw_manager_ui = None
+        self._login_ui = None
+        self._acc_manager_ui = None
 
         # 全局化
         GlobalMembers.root_class = self
@@ -111,6 +117,30 @@ class RootClass:
         #     logger.error(e)
         self.root.mainloop()
 
+    @property
+    def root_ui(self):
+        if self._root_ui is None:
+            self._root_ui = RootUI(self.root, self.root_wnd.root_frame)
+        return self._root_ui
+
+    @property
+    def acc_manager_ui(self):
+        if self._acc_manager_ui is None:
+            self._acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, self.root_ui.acc_mng_frame)
+        return self._acc_manager_ui
+
+    @property
+    def sw_manager_ui(self):
+        if self._sw_manager_ui is None:
+            self._sw_manager_ui = sw_manager_ui.SwManagerUI(self.root, self.root_ui.sw_mng_frame)
+        return self._sw_manager_ui
+
+    @property
+    def login_ui(self):
+        if self._login_ui is None:
+            self._login_ui = login_ui.LoginUI()
+        return self._login_ui
+
     def initialize_in_root(self):
         """初始化加载"""
         # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
@@ -135,7 +165,7 @@ class RootClass:
         # 没有配置文件则退出程序
         if self.remote_cfg_data is None:
             messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
-            self.root.after(0, self.root.destroy)
+            self.root.destroy()
             return
 
         # 统一管理style
@@ -182,33 +212,25 @@ class RootClass:
 
     def init_root_ui(self):
         root_frame = self.root_wnd.root_frame
-        if hasattr(self.root_wnd, 'root_frame') and root_frame is not None:
-            if root_frame.winfo_exists():
-                root_frame = root_frame.nametowidget(root_frame)
-                for wdg in root_frame.winfo_children():
-                    wdg.destroy()
-                root_frame.destroy()
-        root_frame = tk.Frame(self.root)
+        if isinstance(root_frame, ttk.Frame) and root_frame.winfo_exists():
+            for wdg in root_frame.winfo_children():
+                wdg.destroy()
+            root_frame.destroy()
+        root_frame = ttk.Frame(self.root)
         root_frame.pack(expand=True, fill='both')
-        self.root_ui = RootUI(self.root, root_frame)
         self.root_wnd.root_frame = root_frame
+        self.root_ui = RootUI(self.root, root_frame)
         self.root_ui.initialize_in_root_ui()
 
     def wait_for_loading_close_and_bind(self):
         """启动时关闭等待窗口，绑定事件"""
-
-        def func_thread():
-            # self.check_and_init()
+        try:
             if hasattr(self, 'loading_wnd_class') and self.loading_wnd_class:
                 # print("主程序关闭等待窗口")
-                self.root.after(0, self.loading_wnd_class.auto_close)
+                self.loading_wnd_class.auto_close()
                 self.loading_wnd_class = None
             # 设置主窗口位置
-            self.root.after(0, self.root.deiconify)
-
-        try:
-            # 线程启动获取登录情况和渲染列表
-            threading.Thread(target=func_thread).start()
+            self.root.deiconify()
             self.after_refresh_when_start()
         except Exception as e:
             logger.error(e)
@@ -221,19 +243,42 @@ class RootClass:
         pass
         self.finish_started = True
 
+    @login_ui.setter
+    def login_ui(self, value):
+        self._login_ui = value
+
+    @acc_manager_ui.setter
+    def acc_manager_ui(self, value):
+        self._acc_manager_ui = value
+
+    @sw_manager_ui.setter
+    def sw_manager_ui(self, value):
+        self._sw_manager_ui = value
+
+    @root_ui.setter
+    def root_ui(self, value):
+        self._root_ui = value
+
 
 class RootUI:
     def __init__(self, wnd, frame):
+        self._sw_mng_frame = None
+        self._acc_mng_frame = None
+        self._login_nb_frame = None
+        self._manage_nb_frame = None
+        self._login_nb_cls = None
+        self._manage_nb_cls = None
         print("构建根UI...")
+        self.login_nb_frame = None
+        self.manage_nb_frame = None
         self.sw_classes = {}
         self.root_nb_cls = None
         self.manage_nb_cls = None
-        self.login_frm_pool = None
         self.login_nb_cls = None
+        self.login_frm_pool = None
         self.sw = None
         self.acc_mng_frame = None
         self.sw_mng_frame = None
-        self.main_frame = None
         self.scrollable_canvas = None
 
         self.root_class = GlobalMembers.root_class
@@ -241,55 +286,95 @@ class RootUI:
         self.wnd = wnd
         self.root_frame = frame
 
-        self.load_ui()
+    # @property
+    # def root_nb_cls(self):
+    #     if not isinstance(self._root_nb_cls, CustomNotebook):
+    #         self._root_nb_cls = CustomNotebook(self.root, self.root_frame)
+    #         self._load_root_nb_frame()
+    #     return self._root_nb_cls
+    #
+    # @property
+    # def manage_nb_cls(self):
+    #     if not isinstance(self._manage_nb_cls, CustomNotebook):
+    #         self._manage_nb_cls = CustomNotebook(self.root, self.manage_nb_frame)
+    #         # self._load_manage_frame()
+    #     return self._manage_nb_cls
+    #
+    # @property
+    # def login_nb_cls(self):
+    #     if not isinstance(self._login_nb_cls, CustomNotebook):
+    #         self._login_nb_cls = CustomNotebook(self.root, self.login_nb_frame)
+    #         # self._load_login_frame()
+    #     return self._login_nb_cls
 
-    def load_ui(self):
-        """
-        每一级标签有三重包裹,分别为:所在的框架xxx_frame,标签栏xxx_nb,框架池区域xxx_frame_pool
-        因此,子级标签应该先在父级的框架池之下创建好其所属的框架xxx_frame,以此类推
-        """
+    # @property
+    # def manage_nb_frame(self):
+    #     if not isinstance(self._manage_nb_frame, ttk.Frame):
+    #         self._manage_nb_frame = ttk.Frame(self.root_nb_cls.frames_pool)
+    #     return self._manage_nb_frame
+    #
+    # @property
+    # def login_nb_frame(self):
+    #     if not isinstance(self._login_nb_frame, ttk.Frame):
+    #         self._login_nb_frame = ttk.Frame(self.root_nb_cls.frames_pool)
+    #     return self._login_nb_frame
+    #
+    # @property
+    # def acc_mng_frame(self):
+    #     if not isinstance(self._acc_mng_frame, ttk.Frame):
+    #         self._acc_mng_frame = ttk.Frame(self.manage_nb_cls.frames_pool)
+    #     return self._acc_mng_frame
+    #
+    # @property
+    # def sw_mng_frame(self):
+    #     if not isinstance(self._sw_mng_frame, ttk.Frame):
+    #         self._sw_mng_frame = ttk.Frame(self.manage_nb_cls.frames_pool)
+    #     return self._sw_mng_frame
 
-        # 主页面="管理"+"登录"
-        self.root_nb_cls = root_nb_cls = CustomNotebook(self.root, self.root_frame)
-        root_nb_cls.set_major_color(selected_bg='#00FF00')
-        root_nb_frm_pool = root_nb_cls.frames_pool
-        login_nb_frame = ttk.Frame(root_nb_frm_pool)
-        manager_nb_frame = ttk.Frame(root_nb_frm_pool)
-        root_nb_cls.add("manage", "管理", manager_nb_frame)
-        root_nb_cls.add("login", "登录", login_nb_frame)
-
-        # "登录"=∑各平台
-        self.login_nb_cls = login_nb_cls = CustomNotebook(self.root, login_nb_frame)
-        login_frm_pool = login_nb_cls.frames_pool
-
-        # "管理"="平台"+"账号"
-        self.manage_nb_cls = manage_nb_cls = CustomNotebook(self.root, manager_nb_frame)
-        manage_frm_pool = manage_nb_cls.frames_pool
-        sw_mng_frame = ttk.Frame(manage_frm_pool)
-        acc_mng_frame = ttk.Frame(manage_frm_pool)
-        manage_nb_cls.add("acc", "账号", acc_mng_frame)
-        manage_nb_cls.add("sw", "平台", sw_mng_frame)
-
-        self.login_frm_pool = login_frm_pool
-        self.sw_mng_frame = sw_mng_frame
-        self.acc_mng_frame = acc_mng_frame
-
-        # 各级的细节加载
+    def initialize_in_root_ui(self):
         self._load_root_nb_frame()
-        # 启动线程完成sw的路径获取
         threading.Thread(target=self._get_path_thread).start()
-        self._load_all_sw_frame()
-        self._load_manage_frame()
+        root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
+        self.root_nb_cls.select(root_tab)
 
     def _load_root_nb_frame(self):
+        # 清理界面
+        WidgetUtils.clear_all_children_of_frame(self.root_frame)
+        # 主页面="管理"+"登录"
+        root_nb_cls = self.root_nb_cls = CustomNotebook(self.root, self.root_frame)
         self.root_nb_cls.select_callback = self._on_tab_in_root_selected
+        root_nb_cls.set_major_color(selected_bg='#00FF00')
+        root_nb_frm_pool = root_nb_cls.frames_pool
+        self.login_nb_frame = ttk.Frame(root_nb_frm_pool)
+        self.manage_nb_frame = ttk.Frame(root_nb_frm_pool)
+        root_nb_cls.add("manage", "管理", self.manage_nb_frame)
+        root_nb_cls.add("login", "登录", self.login_nb_frame)
+        pass
 
-    def _load_all_sw_frame(self):
+    def _load_manage_frame(self):
+        # 清理界面
+        WidgetUtils.clear_all_children_of_frame(self.manage_nb_frame)
+        # "管理"="平台"+"账号"
+        manage_nb_cls = self.manage_nb_cls = CustomNotebook(self.root, self.manage_nb_frame)
+        self.manage_nb_cls.select_callback = self._on_tab_in_manage_selected
+        self.manage_frm_pool = manage_frm_pool = manage_nb_cls.frames_pool
+        self.sw_mng_frame = ttk.Frame(manage_frm_pool)
+        self.acc_mng_frame = ttk.Frame(manage_frm_pool)
+        manage_nb_cls.add("acc", "账号", self.acc_mng_frame)
+        manage_nb_cls.add("sw", "平台", self.sw_mng_frame)
+        pass
+
+    def _load_login_frame(self):
+        # 清理界面
+        WidgetUtils.clear_all_children_of_frame(self.login_nb_frame)
+        # "登录"=∑各平台
+        login_nb_cls = self.login_nb_cls = CustomNotebook(self.root, self.login_nb_frame)
+        self.login_nb_cls.select_callback = self._on_tab_in_login_selected
+        self.login_frm_pool = login_nb_cls.frames_pool
+        # 加载各平台
         sp_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
         if not isinstance(sp_sw, list):
             return
-        if len(sp_sw) == 0:
-            sp_sw = ["WeChat"]
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
             state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
@@ -306,14 +391,14 @@ class RootUI:
             print(f"更新{sw}的信息体...")
             if state == SwStates.VISIBLE:
                 sw_cls.frame = ttk.Frame(self.login_frm_pool)
-                # print(sw_cls.frame)
-                label, = subfunc_file.get_remote_cfg(sw, label="未知")
-                sw_cls.label = label
+                sw_cls.label = SwInfoFunc.get_sw_origin_display_name(sw)
                 self.login_nb_cls.add(sw, sw_cls.label, sw_cls.frame)
             self.root_class.sw_classes[sw] = sw_cls
             self.sw_classes[sw] = sw_cls
-
-        self.login_nb_cls.select_callback = self._on_tab_in_login_selected
+        if len(self.login_nb_cls.tabs) == 0:
+            hint = RootUI._get_random_hint()
+            tmp_label = ttk.Label(self.login_frm_pool, text=hint, style="FirstTitle.TLabel")
+            tmp_label.pack(pady=20)
 
     def _get_path_thread(self):
         sp_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
@@ -330,21 +415,31 @@ class RootUI:
             sw_cls.inst_path = SwInfoFunc.get_sw_install_path(sw)
             sw_cls.ver = SwInfoFunc.get_sw_ver(sw, sw_cls.data_dir)
             sw_cls.dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
+            sw_cls.multirun_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.MULTIRUN_MODE)
         # print("载入完成,所有信息体:", [sw.__dict__ for sw in self.sw_classes.values()])
         printer.print_last()
-
-    def _load_manage_frame(self):
-        self.manage_nb_cls.select_callback = self._on_tab_in_manage_selected
-
-    def initialize_in_root_ui(self):
-        root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
-        self.root_nb_cls.select(root_tab)
 
     def _on_tab_in_root_selected(self, click_time):
         """根标签切换时,将自动选择下一级的标签"""
         root_tab = self.root_nb_cls.curr_tab_id
         subfunc_file.save_a_global_setting_and_callback(LocalCfg.ROOT_TAB, root_tab)
+        tab_dict = self.root_nb_cls.tabs[root_tab]
+        tab_text = tab_dict["text"]
         if root_tab == "manage":
+            if click_time <= 1:
+                # 检测,没有则加载管理标签下的页面
+                manage_nb_cls = self.manage_nb_cls
+                if not isinstance(manage_nb_cls, CustomNotebook):
+                    self._load_manage_frame()
+                pass
+            elif click_time >= 2:
+                tab_dict["tab"].config(text=f"⟳{tab_text}")
+                self.root.update_idletasks()
+                self.root_class.acc_manager_ui = None
+                self.root_class.sw_manager_ui = None
+                self._load_manage_frame()
+                tab_dict["tab"].config(text=tab_text)
+            # 自动选择下一级标签
             manage_tab = self.manage_nb_cls.curr_tab_id
             if not manage_tab:
                 manage_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.MNG_TAB)
@@ -355,6 +450,18 @@ class RootUI:
                 self.manage_nb_cls.select(next(iter(self.manage_nb_cls.tabs.keys())))
 
         elif root_tab == "login":
+            if click_time <= 1:
+                # 检测,没有则加载登录标签下的页面
+                login_nb_cls = self.login_nb_cls
+                if not isinstance(login_nb_cls, CustomNotebook):
+                    self._load_login_frame()
+            elif click_time >= 2:
+                tab_dict["tab"].config(text=f"⟳{tab_text}")
+                self.root.update_idletasks()
+                self.root_class.login_ui = None
+                self._load_login_frame()
+                tab_dict["tab"].config(text=tab_text)
+            # 自动选择下一级标签
             login_tab = self.login_nb_cls.curr_tab_id
             if not login_tab:
                 login_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.LOGIN_TAB)
@@ -362,11 +469,10 @@ class RootUI:
                 self.login_nb_cls.select(login_tab)
             except Exception as e:
                 logger.warning(e)
-                self.login_nb_cls.select(next(iter(self.login_nb_cls.tabs)))
+                if len(self.login_nb_cls.tabs) > 0:
+                    self.login_nb_cls.select(next(iter(self.login_nb_cls.tabs.keys())))
 
     def _on_tab_in_login_selected(self, click_time):
-        if self.root_class.login_ui is None:
-            self.root_class.login_ui = login_ui.LoginUI()
         self.root_class.login_ui.sw = self.login_nb_cls.curr_tab_id
         tab_dict = self.login_nb_cls.tabs[self.root_class.login_ui.sw]
         tab_text = tab_dict["text"]
@@ -386,8 +492,6 @@ class RootUI:
         tab_dict = self.manage_nb_cls.tabs[self.manage_tab]
         tab_text = tab_dict["text"]
         if self.manage_tab == "acc":
-            if self.root_class.acc_manager_ui is None:
-                self.root_class.acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, self.acc_mng_frame)
             if click_time <= 1:
                 self.root_class.acc_manager_ui.init_acc_manager_ui()
             elif click_time >= 2:
@@ -397,8 +501,6 @@ class RootUI:
                 tab_dict["tab"].config(text=tab_text)
 
         elif self.manage_tab == "sw":
-            if self.root_class.sw_manager_ui is None:
-                self.root_class.sw_manager_ui = sw_manager_ui.SwManagerUI(self.root, self.sw_mng_frame)
             if click_time <= 1:
                 self.root_class.sw_manager_ui.init_sw_manager_ui()
             elif click_time >= 2:
@@ -407,6 +509,52 @@ class RootUI:
                 self.root_class.sw_manager_ui.refresh()
                 tab_dict["tab"].config(text=tab_text)
 
+    @staticmethod
+    def _get_random_hint():
+        # 从所有文案中打乱后随机选一个
+        all_messages = sum(Strings.PLATFORM_DISABLED_HINTS.values(), [])
+        return random.choice(all_messages)
+
+    def refresh_current_tab(self):
+        """刷新当前标签页"""
+        root_tab = self.root_nb_cls.curr_tab_id
+        manage_tab = self.manage_nb_cls.curr_tab_id
+        if root_tab == "manage":
+            if manage_tab == "acc":
+                self.root_class.acc_manager_ui.refresh()
+            elif manage_tab == "sw":
+                self.root_class.sw_manager_ui.refresh()
+        elif root_tab == "login":
+            self.root_class.login_ui.refresh()
+
+    # @root_nb_cls.setter
+    # def root_nb_cls(self, value):
+    #     self._root_nb_cls = value
+    #
+    # @manage_nb_cls.setter
+    # def manage_nb_cls(self, value):
+    #     self._manage_nb_cls = value
+    #
+    # @login_nb_cls.setter
+    # def login_nb_cls(self, value):
+    #     self._login_nb_cls = value
+
+    # @manage_nb_frame.setter
+    # def manage_nb_frame(self, value):
+    #     self._manage_nb_frame = value
+    #
+    # @login_nb_frame.setter
+    # def login_nb_frame(self, value):
+    #     self._login_nb_frame = value
+    #
+    # @acc_mng_frame.setter
+    # def acc_mng_frame(self, value):
+    #     self._acc_mng_frame = value
+    #
+    # @sw_mng_frame.setter
+    # def sw_mng_frame(self, value):
+    #     self._sw_mng_frame = value
+
 
 class SoftwareInfo:
     def __init__(self, sw):
@@ -414,7 +562,7 @@ class SoftwareInfo:
         self.name = None
         self.frame = None
         self.view = None
-        self.freely_multirun = None
+        self.can_freely_multirun = None
         self.multirun_mode = None
         self.anti_revoke = None
         self.classic_ui = None

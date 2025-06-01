@@ -281,6 +281,13 @@ class TreeUtils:
         return items
 
 
+class WidgetUtils:
+    @staticmethod
+    def clear_all_children_of_frame(frame):
+        if (isinstance(frame, tk.Frame) or isinstance(frame, ttk.Frame)) and frame.winfo_exists():
+            for widget in frame.winfo_children():
+                widget.destroy()
+
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
 

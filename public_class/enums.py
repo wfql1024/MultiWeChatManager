@@ -3,8 +3,8 @@ from enum import Enum
 
 
 class MultirunMode(str, Enum):
+    BUILTIN = "内置"
     HANDLE = "handle"
-    PYTHON = "python"
     SUPER_PYTHON = "*python"
     FREELY_MULTIRUN = "全局多开"
 
@@ -75,6 +75,7 @@ class LocalCfg(str, Enum):
     LOGIN_SORT = "login_sort"
     LOGOUT_SORT = "logout_sort"
     STATE = "state"
+    NOTE = "note"
 
 
 class SwStates(str, Enum):

@@ -396,3 +396,48 @@ class SubToolWndUI(ABC):
         self.wnd.destroy()  # 关闭窗口
         if master_wnd != self.root:
             master_wnd.grab_set()  # 恢复父窗口的焦点
+
+
+class DefaultEntry(tk.Entry):
+    def __init__(self, master=None, default_label="请输入内容", **kwargs):
+        self.var = tk.StringVar()
+        super().__init__(master, textvariable=self.var, **kwargs)
+        self.default_label = default_label
+        self._is_default = False
+        self._set_default()
+        self.bind("<FocusIn>", self._on_focus_in)
+        self.bind("<FocusOut>", self._on_focus_out)
+
+    def _set_default(self):
+        self.var.set(self.default_label)
+        self._is_default = True
+        self._set_style()
+
+    def _set_style(self):
+        self.config(fg=("grey" if self._is_default else "black"))
+
+    def _on_focus_in(self, event):
+        if self._is_default:
+            self.var.set("")
+            self._is_default = False
+            self._set_style()
+
+    def _on_focus_out(self, event):
+        var = self.var.get()
+        if not var or not self.var.get().strip():
+            # 空值情况下恢复默认值
+            self._set_default()
+        else:
+            # 否则就正常显示
+            self._is_default = False
+            self._set_style()
+
+    def get_value(self):
+        return None if self._is_default else self.var.get()
+
+    def set_value(self, value):
+        """外部设置值"""
+        if value is not None:
+            self.var.set(value)
+            self._on_focus_out(None)
+

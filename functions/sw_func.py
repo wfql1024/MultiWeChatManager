@@ -155,9 +155,7 @@ class SwInfoFunc:
 
     @staticmethod
     def get_sw_logo(sw):
-        """
-        从本地缓存或json文件中的url地址获取头像，失败则默认头像
-        """
+        """获取平台图标作为logo"""
         # 构建头像文件路径
         user_sw_dir = os.path.join(Config.PROJ_USER_PATH, sw)
         if not os.path.exists(user_sw_dir):
@@ -208,13 +206,16 @@ class SwInfoFunc:
             return Image.new('RGB', Constants.AVT_SIZE, color='white')
 
     @staticmethod
-    def get_acc_origin_display_name(sw, acc) -> str:
+    def get_sw_origin_display_name(sw) -> str:
         """获取账号的展示名"""
         # 依次查找 note, nickname, alias，找到第一个不为 None 的值
-        display_name = str(acc)  # 默认值为 account
-        for key in ("note", "nickname", "alias"):
-            value, = subfunc_file.get_sw_acc_data(sw, acc, **{key: None})
+        display_name = str(sw)  # 默认值为 sw
+        label, = subfunc_file.get_remote_cfg(sw, label=sw)
+        subfunc_file.update_settings(sw, label=label)
+        for key in ("note", "label"):
+            value, = subfunc_file.get_settings(sw, **{key: None})
             if value is not None:
+                print(key, value)
                 display_name = str(value)
                 break
         return display_name
@@ -486,7 +487,7 @@ class SwOperator:
                     button_cy = int(button_details["height"] / 2)
                     hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
         # ————————————————————————————————handle————————————————————————————————
-        elif multirun_mode == MultirunMode.HANDLE or multirun_mode == MultirunMode.PYTHON:
+        elif multirun_mode == MultirunMode.HANDLE or multirun_mode == MultirunMode.BUILTIN:
             success = SwOperator._kill_mutex_by_inner_mode(sw, multirun_mode)
             if success:
                 # 更新 has_mutex 为 False 并保存
@@ -502,7 +503,7 @@ class SwOperator:
         executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
             sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
         # ————————————————————————————————python[强力]————————————————————————————————
-        if multirun_mode == MultirunMode.PYTHON:
+        if multirun_mode == MultirunMode.BUILTIN:
             pids = process_utils.get_process_ids_by_name(executable_name)
             handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
             if handle_regex_list is None:

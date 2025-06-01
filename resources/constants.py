@@ -66,7 +66,7 @@ class Constants:
     # 尺寸定义
     PROJ_WND_SIZE = (int(500 * SF), int(700 * SF))  # 程序窗口尺寸
     LOADING_WND_SIZE = (int(240 * SF), int(80 * SF))  # 登录窗口尺寸
-    SETTING_WND_SIZE = (int(600 * SF), int(210 * SF))  # 设置窗口尺寸
+    SETTING_WND_SIZE = (int(750 * SF), int(210 * SF))  # 设置窗口尺寸
     UPDATE_LOG_WND_SIZE = (int(480 * SF), int(400 * SF))  # 更新日志窗口尺寸
     ABOUT_WND_SIZE = (int(500 * SF), int(540 * SF))  # 关于窗口尺寸
     DEBUG_WND_SIZE = (int(800 * SF), int(600 * SF))  # 调试窗口尺寸

@@ -203,4 +203,4 @@ class Test(TestCase):
             print(random.randint(0, 3))
 
     def test_equals(self):
-        print(MultirunMode.PYTHON == "python")
+        print(MultirunMode.BUILTIN == "python")

@@ -141,7 +141,7 @@ class MenuUI:
             # print(f"支持快捷启动：{quick_start_sp}")
             self.file_menu.add_command(label="创建快捷启动",
                                        command=partial(SwOperator.create_multiple_lnk,
-                                                       self.sw, self.sw_class.freely_multirun,
+                                                       self.sw, self.sw_class.can_freely_multirun,
                                                        self.create_root_menu_bar),
                                        state="normal" if quick_start_sp is True else "disabled")
             print(f"文件菜单用时：{time.time() - self.start_time:.4f}秒")
@@ -346,7 +346,7 @@ class MenuUI:
         """计算多开模式并保存"""
         subfunc_file.save_a_setting_and_callback(
             self.sw, LocalCfg.REST_MULTIRUN_MODE, mode, self.create_root_menu_bar)
-        self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN if self.sw_class.freely_multirun is True else mode
+        self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN if self.sw_class.can_freely_multirun is True else mode
 
     def get_now_tab(self):
         root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
@@ -519,7 +519,7 @@ class MenuUI:
 
     def _update_multirun_menu(self, res_dict, msg):
         # 原来的多开菜单创建代码
-        self.sw_class.freely_multirun = None
+        self.sw_class.can_freely_multirun = None
         if res_dict is None:
             self.settings_menu.entryconfig("全局多开", label="！全局多开", foreground="red")
             self.multirun_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
@@ -551,7 +551,7 @@ class MenuUI:
                 else:
                     # 只要有freely_multirun为True，就将其设为True
                     if channel_freely_multirun is True:
-                        self.sw_class.freely_multirun = True
+                        self.sw_class.can_freely_multirun = True
                     self.multirun_channel_vars_dict[channel] = tk.BooleanVar(value=channel_freely_multirun)
                     self.multirun_menu.add_checkbutton(
                         label=channel_label, variable=self.multirun_channel_vars_dict[channel],
@@ -559,7 +559,7 @@ class MenuUI:
 
         # >多开子程序选择
         # 检查状态
-        if self.sw_class.freely_multirun is True:
+        if self.sw_class.can_freely_multirun is True:
             self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN
             self.multirun_menu.add_command(label="其余模式", state="disabled")
         else:
@@ -577,7 +577,7 @@ class MenuUI:
                 label='python',
                 value='python',
                 variable=rest_mode_var,
-                command=partial(self._calc_multirun_mode_and_save, MultirunMode.PYTHON.value),
+                command=partial(self._calc_multirun_mode_and_save, MultirunMode.BUILTIN.value),
                 state='disabled' if not python_sp else 'normal'
             )
             # 添加 Handle 的单选按钮

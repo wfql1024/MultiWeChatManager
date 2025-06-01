@@ -45,6 +45,7 @@ class AccManagerUI:
 
     def __init__(self, wnd, frame):
         print("构建账号管理ui...")
+
         self.quick_refresh_mode = None
         self.root_menu = None
         self.main_frame = None

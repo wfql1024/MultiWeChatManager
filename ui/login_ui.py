@@ -23,8 +23,9 @@ class LoginUI:
     """构建主窗口的类"""
 
     def __init__(self):
-        self.quick_refresh_mode = None
         print("构建登录管理ui...")
+
+        self.quick_refresh_mode = None
         # IDE初始化
         self.path_error = None
         self.acc_list_dict = None

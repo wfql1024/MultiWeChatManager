@@ -16,6 +16,7 @@ from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants
 from ui.menu_ui import MenuUI
 from ui.wnd_ui import WndCreator
+from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
@@ -265,7 +266,8 @@ class SwManagerTreeView(ActionableTreeView, ABC):
             if table_tag == "disable" and state != SwStates.DISABLED:
                 continue
 
-            display_name = " " + sw
+            display_name = SwInfoFunc.get_sw_origin_display_name(sw)
+            f_display_name = " " + display_name
             inst_path, data_dir, dll_dir = subfunc_file.get_settings(
                 sw,
                 inst_path=None,
@@ -291,8 +293,14 @@ class SwManagerTreeView(ActionableTreeView, ABC):
             data_dir = data_dir if data_dir else "请设置路径"
             dll_dir = dll_dir if dll_dir else "请设置路径"
 
-            tree.insert("", "end", iid=f"{sw}", image=photo,
-                        values=(display_name, state, version, inst_path, data_dir, dll_dir))
+            try:
+                tree.insert("", "end", iid=f"{sw}", image=photo,
+                            values=(f_display_name, state, version, inst_path, data_dir, dll_dir))
+            except Exception as e:
+                logger.warning(e)
+                tree.insert("", "end", iid=f"{sw}", image=photo,
+                            values=StringUtils.clean_texts(
+                                f_display_name, state, version, inst_path, data_dir, dll_dir))
 
         self.can_quick_refresh = True
         self.parent_class.quick_refresh_mode = True
