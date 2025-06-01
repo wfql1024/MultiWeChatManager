@@ -463,6 +463,18 @@ class MenuUI:
         try:
             success, msg = SwOperator.switch_dll(self.sw, mode, channel, self.sw_class.dll_dir)  # 执行切换操作
             if success:
+                channel_des, = subfunc_file.get_remote_cfg(
+                    self.sw, mode, "channel", **{channel: None})
+                channel_authors = []
+                channel_label = ""
+                if channel_des is not None and isinstance(channel_des, dict):
+                    if "author" in channel_des:
+                        channel_authors = channel_des["author"]
+                    if "label" in channel_des:
+                        channel_label = channel_des["label"]
+                if len(channel_authors) > 0:
+                    author_text = ", ".join(channel_authors)
+                    msg = f"{msg}\n鸣谢:{channel_label}方案特征码来自{author_text}"
                 messagebox.showinfo("提示", f"{msg}")
             else:
                 messagebox.showerror("错误", f"{msg}")
@@ -487,6 +499,27 @@ class MenuUI:
         messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
         self.create_root_menu_bar()
 
+    def _introduce_channel(self, mode, res_dict):
+        text = ""
+        for channel, res_tuple in res_dict.items():
+            if not isinstance(res_tuple, tuple) or len(res_tuple) != 4:
+                continue
+            channel_des, = subfunc_file.get_remote_cfg(
+                self.sw, mode, "channel", **{channel: None})
+            # print(channel_des)
+            channel_label = channel
+            channel_introduce = "暂无介绍"
+            channel_author = "未知"
+            if channel_des is not None and isinstance(channel_des, dict):
+                if "label" in channel_des:
+                    channel_label = channel_des["label"]
+                if "introduce" in channel_des:
+                    channel_introduce = channel_des["introduce"]
+                if "author" in channel_des:
+                    channel_author = channel_des["author"]
+            text = f"{text}\n[{channel_label}]\n{channel_introduce}\n作者：{channel_author}\n"
+        messagebox.showinfo("简介", text)
+
     """更新多开,防撤回子菜单的线程"""
 
     def _update_anti_revoke_menu(self, res_dict, msg):
@@ -501,17 +534,11 @@ class MenuUI:
                     continue
                 channel_des, = subfunc_file.get_remote_cfg(
                     self.sw, RemoteCfg.REVOKE.value, "channel", **{channel: None})
-                print(channel_des)
+                # print(channel_des)
                 channel_label = channel
-                channel_introduce = "暂无介绍"
-                channel_author = "未知"
                 if channel_des is not None and isinstance(channel_des, dict):
                     if "label" in channel_des:
                         channel_label = channel_des["label"]
-                    if "introduce" in channel_des:
-                        channel_introduce = channel_des["introduce"]
-                    if "author" in channel_des:
-                        channel_author = channel_des["author"]
                 anti_revoke, info, _, _ = res_tuple
                 if anti_revoke is None:
                     menu = self.anti_revoke_channel_menus_dict[channel] = tk.Menu(
@@ -524,32 +551,31 @@ class MenuUI:
                     self.anti_revoke_menu.add_checkbutton(
                         label=channel_label, variable=self.anti_revoke_channel_vars_dict[channel],
                         command=partial(self._toggle_patch_mode, mode=RemoteCfg.REVOKE, channel=channel))
+            self.anti_revoke_menu.add_separator()  # ————————————————分割线————————————————
+            # 频道简介菜单
+            self.anti_revoke_menu.add_command(
+                label="频道简介", command=partial(self._introduce_channel, RemoteCfg.REVOKE.value, res_dict))
+
         printer.print_last()
 
     def _update_multirun_menu(self, res_dict, msg):
-        # 原来的多开菜单创建代码
         self.sw_class.can_freely_multirun = None
         if res_dict is None:
             self.settings_menu.entryconfig("全局多开", label="！全局多开", foreground="red")
             self.multirun_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
                                            command=lambda i=msg: self.root.clipboard_append(i))
         else:
+            # 列出所有频道
             for channel, res_tuple in res_dict.items():
                 if not isinstance(res_tuple, tuple) or len(res_tuple) != 4:
                     continue
                 channel_des, = subfunc_file.get_remote_cfg(
                     self.sw, RemoteCfg.MULTI.value, "channel", **{channel: None})
-                print(channel_des)
+                # print(channel_des)
                 channel_label = channel
-                channel_introduce = "暂无介绍"
-                channel_author = "未知"
                 if channel_des is not None and isinstance(channel_des, dict):
                     if "label" in channel_des:
                         channel_label = channel_des["label"]
-                    if "introduce" in channel_des:
-                        channel_introduce = channel_des["introduce"]
-                    if "author" in channel_des:
-                        channel_author = channel_des["author"]
                 channel_freely_multirun, info, _, _ = res_tuple
                 if channel_freely_multirun is None:
                     menu = self.multirun_channel_menus_dict[channel] = tk.Menu(
@@ -565,6 +591,11 @@ class MenuUI:
                     self.multirun_menu.add_checkbutton(
                         label=channel_label, variable=self.multirun_channel_vars_dict[channel],
                         command=partial(self._toggle_patch_mode, mode=RemoteCfg.MULTI, channel=channel))
+            self.multirun_menu.add_separator()  # ————————————————分割线————————————————
+            # 频道简介菜单
+            self.multirun_menu.add_command(
+                label="频道简介", command=partial(self._introduce_channel, RemoteCfg.MULTI.value, res_dict))
+        self.multirun_menu.add_separator()  # ————————————————分割线————————————————
 
         # >多开子程序选择
         # 检查状态
@@ -583,8 +614,8 @@ class MenuUI:
                 self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
             # 添加 Python 的单选按钮
             self.rest_mode_menu.add_radiobutton(
-                label='python',
-                value='python',
+                label='内置',
+                value='内置',
                 variable=rest_mode_var,
                 command=partial(self._calc_multirun_mode_and_save, MultirunMode.BUILTIN.value),
                 state='disabled' if not python_sp else 'normal'
@@ -625,14 +656,13 @@ class MenuUI:
             # 防撤回部分
             res_dict, msg = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
-            self.menu_updater.main_thread_do_("revoke",
-                                              partial(self._update_anti_revoke_menu, res_dict, msg)
-                                              )
+            self.menu_updater.main_thread_do_(
+                "revoke", partial(self._update_anti_revoke_menu, res_dict, msg))
             # 全局多开部分
             res_dict, msg = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
-            self.menu_updater.main_thread_do_("multi",
-                                              partial(self._update_multirun_menu, res_dict, msg)
-                                              )
+            self.menu_updater.main_thread_do_(
+                "multi", partial(self._update_multirun_menu, res_dict, msg))
         except Exception as e:
             print(e)
+
