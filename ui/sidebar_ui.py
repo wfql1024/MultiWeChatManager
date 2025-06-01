@@ -117,7 +117,7 @@ class SidebarWnd:
 
         # 置底控件
         self.home_btn = CustomLabelBtn(self.bar_frame, text="管理器")
-        self.home_btn.on_click(self.switch_root_wnd)
+        self.home_btn.set_bind_map(**{"1": self.switch_root_wnd}).apply_bind(self.root)
         self.home_btn.pack(side=tk.BOTTOM, fill=tk.X)
         self.logout_frame = ttk.Frame(self.bar_frame)
         self.logout_frame.pack(side=tk.BOTTOM, fill=tk.X)
@@ -343,7 +343,7 @@ class SidebarWnd:
         # 如果新窗口不存在
         if not new_linked_hwnd or not win32gui.IsWindow(new_linked_hwnd):
             # 开启查找窗口线程
-            self.find_acc_wnd_thread = threading.Thread(target=self.wait_for_acc_wnd, args=(sw,))
+            self.find_acc_wnd_thread = threading.Thread(target=self.wait_for_acc_wnd, args=(sw, acc,))
             self.find_acc_wnd_thread.start()
             self.find_acc_wnd_thread.join()  # 等待线程结束
             new_linked_hwnd = self.thread_result
@@ -520,7 +520,7 @@ class SidebarWnd:
                 self._update_sidebar(self.get_linked_wnd_state(self.linked_hwnd))
                 break
 
-    def wait_for_acc_wnd(self, sw, timeout=10):
+    def wait_for_acc_wnd(self, sw, acc, timeout=10):
         """
         等待账号窗口出现
         :param sw: 软件名称
@@ -539,7 +539,7 @@ class SidebarWnd:
         while True:
             hwnd = win32gui.GetForegroundWindow()
             # print(hwnd)
-            if hwnd and win32gui.IsWindow(hwnd) and AccInfoFunc.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw):
+            if hwnd and win32gui.IsWindow(hwnd) and AccInfoFunc.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
                 self.thread_result = hwnd
                 return
 

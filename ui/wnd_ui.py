@@ -147,8 +147,13 @@ class DetailUI(SubToolWndUI, ABC):
         avatar_frame.grid(row=0, column=0, **Constants.W_GRID_PACK)
         avatar_label = ttk.Label(avatar_frame)
         avatar_label.pack()
-        avatar_status_label = ttk.Label(avatar_frame, text="")
-        avatar_status_label.pack(**Constants.B_WGT_PACK)
+        avatar_operate_frame = ttk.Frame(avatar_frame)
+        avatar_operate_frame.pack(**Constants.B_WGT_PACK)
+        # 左右的占位符
+        ttk.Frame(avatar_operate_frame).pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
+        ttk.Frame(avatar_operate_frame).pack(side=tk.RIGHT, expand=True, fill=tk.BOTH)
+        # avatar_status_label = ttk.Label(avatar_frame, text="")
+        # avatar_status_label.pack(**Constants.B_WGT_PACK)
 
         # 登录状态=pid+hwnd
         customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
@@ -160,6 +165,17 @@ class DetailUI(SubToolWndUI, ABC):
 
         def _pack_btn(btn):
             btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
+
+        change_avatar_btn = _create_btn_in_(avatar_operate_frame, "手动选择")
+        change_avatar_btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
+        (change_avatar_btn.set_bind_map(
+            **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_choose_avatar_for_acc, sw, account))})
+         .apply_bind(self.root))
+        delete_avatar_btn = _create_btn_in_(avatar_operate_frame, " × ")
+        delete_avatar_btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
+        (delete_avatar_btn.set_bind_map(
+            **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.delete_avatar_for_acc, sw, account))})
+         .apply_bind(self.root))
 
         login_status_frame = ttk.Frame(basic_info_grid)
         login_status_frame.grid(row=0, column=1, **Constants.W_GRID_PACK)
@@ -230,21 +246,22 @@ class DetailUI(SubToolWndUI, ABC):
         _, hotkey_entry, hotkey_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "热键", "" if hotkey is None else hotkey)
         reusable_widgets.HotkeyEntry4Keyboard(hotkey_entry, hotkey_var)
-
-        # 隐藏账号
-        hidden_frame = ttk.Frame(frame)
+        # 复选框区域
+        current_row = max([widget.grid_info().get('row', -1) for widget in basic_info_grid.grid_slaves()],
+                          default=-1) + 1
+        ckb_frm = ttk.Frame(basic_info_grid)
+        ckb_frm.grid(row=current_row, column=0, columnspan=2, **Constants.W_GRID_PACK)
+        # -隐藏账号
         hidden, = subfunc_file.get_sw_acc_data(sw, account, hidden=False)
         hidden_var = tk.BooleanVar(value=hidden)
-        hidden_checkbox = tk.Checkbutton(hidden_frame, text="未登录时隐藏", variable=hidden_var)
+        hidden_checkbox = tk.Checkbutton(ckb_frm, text="未登录时隐藏", variable=hidden_var)
         hidden_checkbox.pack(side=tk.LEFT)
-        # 账号自启动
-        auto_start_frame = ttk.Frame(frame)
+        # -账号自启动
         auto_start, = subfunc_file.get_sw_acc_data(sw, account, auto_start=False)
         auto_start_var = tk.BooleanVar(value=auto_start)
         auto_start_checkbox = tk.Checkbutton(
-            auto_start_frame, text="进入软件时自启动", variable=auto_start_var)
+            ckb_frm, text="进入软件时自启动", variable=auto_start_var)
         auto_start_checkbox.pack(side=tk.LEFT)
-
         # 按钮区域
         button_frame = ttk.Frame(frame, padding=Constants.B_FRM_PAD)
         save_button = ttk.Button(button_frame, text="保存", command=self._save_acc_settings)
@@ -254,15 +271,12 @@ class DetailUI(SubToolWndUI, ABC):
 
         # 底部区域按从下至上的顺序pack
         button_frame.pack(**Constants.B_FRM_PACK)
-        auto_start_frame.pack(anchor="w", **Constants.B_WGT_PACK)
-        hidden_frame.pack(anchor="w", **Constants.B_WGT_PACK)
 
         ttk.Frame(frame).pack(fill=tk.BOTH, expand=True)  # 占位
 
         print(f"加载控件完成")
 
         self.avatar_label = avatar_label
-        self.avatar_status_label = avatar_status_label
         self.pid_label = pid_label
         self.mutex_label = mutex_label
         self.hwnd_label = hwnd_label
@@ -296,27 +310,13 @@ class DetailUI(SubToolWndUI, ABC):
 
         # 获取信息
         printer.print_vn(f"加载对应头像...")
-        avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
         # 获取其余信息
         has_mutex, main_hwnd = subfunc_file.get_sw_acc_data(
             sw, account, has_mutex=True, main_hwnd=None)
         avatar_url, alias, nickname, pid = subfunc_file.get_sw_acc_data(
             sw, account, avatar_url=None, alias="请获取数据", nickname="请获取数据", pid=None)
-
-        # 刷新页面头像
-        if os.path.exists(avatar_path):
-            printer.print_vn(f"对应头像存在...")
-        else:
-            # 如果没有，检查default.jpg
-            printer.print_vn(f"没有对应头像，加载默认头像...")
-            default_path = os.path.join(Config.PROJ_USER_PATH, f"default.jpg")
-            base64_string = Strings.DEFAULT_AVATAR_BASE64
-            image_data = base64.b64decode(base64_string)
-            with open(default_path, "wb") as f:
-                f.write(image_data)
-            printer.print_vn(f"默认头像已保存到 {default_path}")
-            avatar_path = default_path
-        self._update_avatar_and_bind(avatar_path, avatar_url)
+        img = AccInfoFunc.get_acc_avatar_from_files(sw, account)
+        self._update_avatar_and_bind(img, avatar_url)
         # 刷新其他信息
         pid_str = f"{pid}" if pid is not None else "未登录"
         self.pid_label.config(text=f"进程: {pid_str}")
@@ -343,7 +343,6 @@ class DetailUI(SubToolWndUI, ABC):
         # 获取当前frame中已布局的组件数量，作为新组件的行号
         current_row = max([widget.grid_info().get('row', -1) for widget in grid_frame.grid_slaves()],
                           default=-1) + 1
-        # print(f"当前行号：{current_row}")
 
         label = ttk.Label(grid_frame, text=label_text)
         label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
@@ -354,24 +353,20 @@ class DetailUI(SubToolWndUI, ABC):
 
         return label, entry, var
 
-    def _update_avatar_and_bind(self, avatar_path, avatar_url):
+    def _update_avatar_and_bind(self, img, avatar_url):
         try:
-            img = Image.open(avatar_path)
-            new_size = tuple(int(dim * 1.8) for dim in Constants.AVT_SIZE)
+            new_size = tuple(int(dim * 2.5) for dim in Constants.AVT_SIZE)
             img = img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
             photo = ImageTk.PhotoImage(img)
             self.avatar_label.config(image=photo)
             self.avatar_label.image = photo
             self.avatar_label.bind("<Leave>", lambda event: self.avatar_label.config(cursor=""))
-
             if avatar_url:
                 self.avatar_label.bind("<Enter>", lambda event: self.avatar_label.config(cursor="hand2"))
                 self.avatar_label.bind("<Button-1>", lambda event: webbrowser.open(avatar_url))
-                self.avatar_status_label.forget()
             else:
                 self.avatar_label.bind("<Enter>", lambda event: self.avatar_label.config(cursor=""))
                 self.avatar_label.unbind("<Button-1>")
-                self.avatar_status_label.config(text="未更新")
         except Exception as e:
             print(f"Error loading avatar: {e}")
             self.avatar_label.config(text="无头像")
@@ -1500,6 +1495,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         def _do():
             # 检查是否需要清空账号信息
             if self.clear_acc_var.get() is True:
+                print("清除平台账号数据")
                 subfunc_file.clear_some_acc_data(self.sw)
             if self.need_to_reinit:
                 self.root_class.initialize_in_root()

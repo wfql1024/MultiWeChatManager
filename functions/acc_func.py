@@ -1,6 +1,7 @@
 import base64
 import datetime
 import os
+import random
 import shutil
 import subprocess
 import sys
@@ -8,13 +9,14 @@ import threading
 import time
 import tkinter as tk
 from collections.abc import Iterable
-from tkinter import messagebox
+from tkinter import messagebox, filedialog
 from typing import Dict, List
 
 import psutil
 import win32con
 import win32gui
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
+import re
 
 from functions import subfunc_file
 from functions.sw_func import SwOperator, SwInfoFunc
@@ -450,7 +452,90 @@ class AccInfoFunc:
         sw: 选择的软件标签
         acc: 账号标识
     """
-    pass
+    @staticmethod
+    def _use_default_avatar_or_white_bg():
+        # 如果没有，检查default.jpg
+        default_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
+        if os.path.exists(default_path):
+            return Image.open(default_path)
+
+        # 如果default.jpg也不存在，则将从字符串转换出来
+        try:
+            base64_string = Strings.DEFAULT_AVATAR_BASE64
+            image_data = base64.b64decode(base64_string)
+            with open(default_path, "wb") as f:
+                f.write(image_data)
+            return Image.open(default_path)
+        except FileNotFoundError as e:
+            print("文件路径无效或无法创建文件:", e)
+            return None
+        except IOError as e:
+            print("图像文件读取失败:", e)
+            return None
+        except Exception as e:
+            print("所有方法都失败，创建空白头像:", e)
+            return Image.new('RGB', Constants.AVT_SIZE, color='white')
+
+    @staticmethod
+    def _generate_text_avatar(display_name):
+        # 计算最多4单位长度的末尾子串（中文占2，英文占1）
+        units = []
+        total = 0
+        for char in reversed(display_name):
+            char_width = 2 if re.match(r'[\u4e00-\u9fff]', char) else 1
+            if total + char_width > 4:
+                break
+            units.append(char)
+            total += char_width
+        text = ''.join(reversed(units))
+
+        # 创建头像图像（背景颜色可以自定义）
+        def _random_dark_color():
+            return tuple(random.randint(75, 125) for _ in range(3))
+        dark_color = _random_dark_color()
+        img = Image.new("RGB", Constants.AVT_SIZE, color=dark_color)  #type: ignore
+        draw = ImageDraw.Draw(img)
+
+        # 加载字体（使用系统字体，必要时可指定路径）
+        try:
+            font = ImageFont.truetype("msyh.ttc", 16)
+        except IOError:
+            font = ImageFont.load_default()
+
+        # 计算文本位置使其居中
+        text_size = draw.textbbox((0, 0), text, font=font)
+        text_width = text_size[2] - text_size[0]
+        text_height = text_size[3] - text_size[1]
+        position = ((Constants.AVT_SIZE[0] - text_width) // 2, (Constants.AVT_SIZE[1] - text_height) // 2.2)
+
+        # 绘制文本
+        draw.text(position, text, fill="white", font=font)
+        return img
+
+    @staticmethod
+    def manual_choose_avatar_for_acc(sw, acc):
+        file_path = filedialog.askopenfilename(
+            title="选择头像图片",
+            filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")]
+        )
+        if not file_path:
+            return
+
+        with Image.open(file_path) as img:
+            width, height = img.size
+            side = min(width, height)
+            left = (width - side) // 2
+            top = (height - side) // 2
+            cropped = img.crop((left, top, left + side, top + side))
+            path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
+            cropped.save(path, format=img.format)
+
+    @staticmethod
+    def delete_avatar_for_acc(sw, acc):
+        path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
+        if os.path.exists(path):
+            os.remove(path)
+        subfunc_file.update_sw_acc_data(sw, acc, avatar_url=Strings.NO_NEED_AVT_URL)
 
     @staticmethod
     def get_acc_avatar_from_files(sw, acc):
@@ -466,30 +551,19 @@ class AccInfoFunc:
         # 如果没有，从网络下载
         url, = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None)
         if url is not None and url.endswith("/0"):
-            image_utils.download_image(url, avatar_path)
+            if url != Strings.NO_NEED_AVT_URL:
+                image_utils.download_image(url, avatar_path)
 
         # 第二次检查是否存在对应account的头像
         if os.path.exists(avatar_path):
             return Image.open(avatar_path)
-        # 如果没有，检查default.jpg
-        default_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
-        if os.path.exists(default_path):
-            return Image.open(default_path)
 
-        # 如果default.jpg也不存在，则将从字符串转换出来
-        try:
-            base64_string = Strings.DEFAULT_AVATAR_BASE64
-            image_data = base64.b64decode(base64_string)
-            with open(default_path, "wb") as f:
-                f.write(image_data)
-            return Image.open(default_path)
-        except FileNotFoundError as e:
-            print("文件路径无效或无法创建文件:", e)
-        except IOError as e:
-            print("图像文件读取失败:", e)
-        except Exception as e:
-            print("所有方法都失败，创建空白头像:", e)
-            return Image.new('RGB', Constants.AVT_SIZE, color='white')
+        # 处理没有本地头像的情况
+        use_text_avatar = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_TXT_AVT)
+        if use_text_avatar:
+            return AccInfoFunc._generate_text_avatar(AccInfoFunc.get_acc_origin_display_name(sw, acc))
+        else:
+            return AccInfoFunc._use_default_avatar_or_white_bg()
 
     @staticmethod
     def get_acc_origin_display_name(sw, acc) -> str:

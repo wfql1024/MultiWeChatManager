@@ -13,7 +13,6 @@ from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
 from resources import Constants, Config, Strings
 from ui import treeview_row_ui, classic_row_ui
-from ui.menu_ui import MenuUI
 from ui.wnd_ui import WndCreator
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
@@ -62,8 +61,6 @@ class LoginUI:
         self.tab_frame = self.sw_class.frame
 
         # 刷新菜单
-        if not isinstance(self.root_class.menu_ui, MenuUI):
-            self.root_class.menu_ui = MenuUI()
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if config_data is None:
             messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")

@@ -14,7 +14,6 @@ from public_class.global_members import GlobalMembers
 from public_class.reusable_widgets import SubToolWndUI
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants
-from ui.menu_ui import MenuUI
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
@@ -38,7 +37,7 @@ class SwManagerWndUI(SubToolWndUI, ABC):
         pass
 
     def update_content(self):
-        self.sw_manager_ui.display_ui()
+        self.sw_manager_ui.display_sw_mng_ui()
 
 
 class SwManagerUI:
@@ -112,7 +111,7 @@ class SwManagerUI:
         if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
             self.refresh()
 
-    def display_ui(self):
+    def display_sw_mng_ui(self):
         print("创建平台管理界面...")
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
         self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
@@ -151,8 +150,6 @@ class SwManagerUI:
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         # 刷新菜单
-        if not isinstance(self.root_class.menu_ui, MenuUI):
-            self.root_class.menu_ui = MenuUI()
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if config_data is None:
             messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
@@ -163,7 +160,6 @@ class SwManagerUI:
             logger.error(re)
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
             self.root.destroy()
-
         # 刷新界面
         try:
             self.root.after(0, self.refresh_frame)
@@ -188,13 +184,12 @@ class SwManagerUI:
         print("进入平台管理刷新")
         if sw:
             pass
-
         def slowly_refresh():
             if isinstance(self.tab_frame, ttk.Frame) and self.tab_frame.winfo_exists():
                 printer.vital("刷新页面")
                 for widget in self.tab_frame.winfo_children():
                     widget.destroy()
-            self.display_ui()
+            self.display_sw_mng_ui()
 
         if self.quick_refresh_mode is True:
             try:

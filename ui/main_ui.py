@@ -19,6 +19,7 @@ from public_class.enums import LocalCfg, SwStates, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Config, Constants, Strings
 from ui import login_ui, acc_manager_ui, sw_manager_ui
+from ui.menu_ui import MenuUI
 from ui.wnd_ui import LoadingWndUI, WndCreator
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger
@@ -66,6 +67,7 @@ class RootClass:
 
     def __init__(self, args=None):
         # 未分类
+        self._menu_ui = None
         self._root_ui = None
         self._sw_manager_ui = None
         self._login_ui = None
@@ -116,6 +118,12 @@ class RootClass:
         # except Exception as e:
         #     logger.error(e)
         self.root.mainloop()
+
+    @property
+    def menu_ui(self):
+        if not isinstance(self._menu_ui, MenuUI):
+            self._menu_ui = MenuUI()
+        return self._menu_ui
 
     @property
     def root_ui(self):
@@ -213,8 +221,6 @@ class RootClass:
     def init_root_ui(self):
         root_frame = self.root_wnd.root_frame
         if isinstance(root_frame, ttk.Frame) and root_frame.winfo_exists():
-            for wdg in root_frame.winfo_children():
-                wdg.destroy()
             root_frame.destroy()
         root_frame = ttk.Frame(self.root)
         root_frame.pack(expand=True, fill='both')
@@ -259,9 +265,14 @@ class RootClass:
     def root_ui(self, value):
         self._root_ui = value
 
+    @menu_ui.setter
+    def menu_ui(self, value):
+        self._menu_ui = value
+
 
 class RootUI:
     def __init__(self, wnd, frame):
+        self._root_nb_cls = None
         self._sw_mng_frame = None
         self._acc_mng_frame = None
         self._login_nb_frame = None
@@ -285,51 +296,6 @@ class RootUI:
         self.root = self.root_class.root
         self.wnd = wnd
         self.root_frame = frame
-
-    # @property
-    # def root_nb_cls(self):
-    #     if not isinstance(self._root_nb_cls, CustomNotebook):
-    #         self._root_nb_cls = CustomNotebook(self.root, self.root_frame)
-    #         self._load_root_nb_frame()
-    #     return self._root_nb_cls
-    #
-    # @property
-    # def manage_nb_cls(self):
-    #     if not isinstance(self._manage_nb_cls, CustomNotebook):
-    #         self._manage_nb_cls = CustomNotebook(self.root, self.manage_nb_frame)
-    #         # self._load_manage_frame()
-    #     return self._manage_nb_cls
-    #
-    # @property
-    # def login_nb_cls(self):
-    #     if not isinstance(self._login_nb_cls, CustomNotebook):
-    #         self._login_nb_cls = CustomNotebook(self.root, self.login_nb_frame)
-    #         # self._load_login_frame()
-    #     return self._login_nb_cls
-
-    # @property
-    # def manage_nb_frame(self):
-    #     if not isinstance(self._manage_nb_frame, ttk.Frame):
-    #         self._manage_nb_frame = ttk.Frame(self.root_nb_cls.frames_pool)
-    #     return self._manage_nb_frame
-    #
-    # @property
-    # def login_nb_frame(self):
-    #     if not isinstance(self._login_nb_frame, ttk.Frame):
-    #         self._login_nb_frame = ttk.Frame(self.root_nb_cls.frames_pool)
-    #     return self._login_nb_frame
-    #
-    # @property
-    # def acc_mng_frame(self):
-    #     if not isinstance(self._acc_mng_frame, ttk.Frame):
-    #         self._acc_mng_frame = ttk.Frame(self.manage_nb_cls.frames_pool)
-    #     return self._acc_mng_frame
-    #
-    # @property
-    # def sw_mng_frame(self):
-    #     if not isinstance(self._sw_mng_frame, ttk.Frame):
-    #         self._sw_mng_frame = ttk.Frame(self.manage_nb_cls.frames_pool)
-    #     return self._sw_mng_frame
 
     def initialize_in_root_ui(self):
         self._load_root_nb_frame()
@@ -518,43 +484,14 @@ class RootUI:
     def refresh_current_tab(self):
         """刷新当前标签页"""
         root_tab = self.root_nb_cls.curr_tab_id
-        manage_tab = self.manage_nb_cls.curr_tab_id
         if root_tab == "manage":
+            manage_tab = self.manage_nb_cls.curr_tab_id
             if manage_tab == "acc":
                 self.root_class.acc_manager_ui.refresh()
             elif manage_tab == "sw":
                 self.root_class.sw_manager_ui.refresh()
         elif root_tab == "login":
             self.root_class.login_ui.refresh()
-
-    # @root_nb_cls.setter
-    # def root_nb_cls(self, value):
-    #     self._root_nb_cls = value
-    #
-    # @manage_nb_cls.setter
-    # def manage_nb_cls(self, value):
-    #     self._manage_nb_cls = value
-    #
-    # @login_nb_cls.setter
-    # def login_nb_cls(self, value):
-    #     self._login_nb_cls = value
-
-    # @manage_nb_frame.setter
-    # def manage_nb_frame(self, value):
-    #     self._manage_nb_frame = value
-    #
-    # @login_nb_frame.setter
-    # def login_nb_frame(self, value):
-    #     self._login_nb_frame = value
-    #
-    # @acc_mng_frame.setter
-    # def acc_mng_frame(self, value):
-    #     self._acc_mng_frame = value
-    #
-    # @sw_mng_frame.setter
-    # def sw_mng_frame(self, value):
-    #     self._sw_mng_frame = value
-
 
 class SoftwareInfo:
     def __init__(self, sw):
@@ -595,6 +532,7 @@ class GlobalSettings:
         self.new_func = None
         self.auto_press = None
         self.disable_proxy = None
+        self.use_txt_avt = None
 
 
 class HotkeyManager:

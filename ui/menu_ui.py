@@ -172,15 +172,24 @@ class MenuUI:
             self.view_menu.add_radiobutton(label="列表", variable=view_var, value="tree",
                                            command=self._switch_to_tree_view)
             # 视图选项
+            self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
+            self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
             sign_vis_value = self.global_settings_value.sign_vis = \
                 True if subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True" else False
             sign_vis_var = self.global_settings_var.sign_vis = tk.BooleanVar(value=sign_vis_value)
-            self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
-            self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
             self.view_options_menu.add_checkbutton(
                 label="显示状态标志", variable=sign_vis_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
                                 "sign_visible", not self.global_settings_value.sign_vis,
+                                self.root_class.login_ui.refresh)
+            )
+            use_txt_avt = self.global_settings_value.use_txt_avt = \
+                subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_TXT_AVT)
+            use_txt_avt_var = self.global_settings_var.use_txt_avt = tk.BooleanVar(value=use_txt_avt)
+            self.view_options_menu.add_checkbutton(
+                label="使用文字头像", variable=use_txt_avt_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                LocalCfg.USE_TXT_AVT, not use_txt_avt,
                                 self.root_class.login_ui.refresh)
             )
             self.view_menu.add_separator()  # ————————————————分割线————————————————

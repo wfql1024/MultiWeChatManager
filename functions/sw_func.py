@@ -519,6 +519,7 @@ class SwOperator:
                     )
                 )
                 return success
+            return True
         # ————————————————————————————————handle————————————————————————————————
         else:
             success, success_lists = handle_utils.close_sw_mutex_by_handle(
@@ -551,6 +552,7 @@ class SwOperator:
                     )
                 )
                 return success
+            return True
         # ————————————————————————————————handle————————————————————————————————
         else:
             success, success_lists = handle_utils.close_sw_mutex_by_handle(
@@ -608,6 +610,7 @@ class SwOperator:
             logger.info(f"获得了窗口尺寸：{login_width}, {login_height}")
             login_wnd.close()
             return login_width, login_height
+        return None
 
     @staticmethod
     def _create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):

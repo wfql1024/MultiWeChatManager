@@ -13,7 +13,6 @@ from public_class.global_members import GlobalMembers
 from public_class.reusable_widgets import SubToolWndUI
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants
-from ui.menu_ui import MenuUI
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
@@ -116,8 +115,6 @@ class AccManagerUI:
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         # 刷新菜单
-        if not isinstance(self.root_class.menu_ui, MenuUI):
-            self.root_class.menu_ui = MenuUI()
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if config_data is None:
             messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")

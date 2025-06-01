@@ -30,6 +30,7 @@ class Config:
             LocalCfg.CALL_MODE: "HANDLE",
             LocalCfg.NEXT_CHECK_TIME: None,
             LocalCfg.USE_PROXY: "True",
+            LocalCfg.USE_TXT_AVT: True,
         },
         SW.DEFAULT: {
             LocalCfg.VIEW: "tree",
