@@ -1,7 +1,7 @@
 @echo off
 
 :: 清空 dist 文件夹（如果存在）
-if exist "dist\微信多开管理器By38" rmdir /S /Q "dist\微信多开管理器By38"
+if exist "dist\极峰多聊By38" rmdir /S /Q "dist\极峰多聊By38"
 if exist "build" rmdir /S /Q "build"
 if exist "*.spec" del /Q "*.spec"
 
@@ -23,12 +23,12 @@ move /Y "dist\Updater.exe" "external_res\"
 
 
 :: 请先修改使用的虚拟环境，使用 PyInstaller 创建正常版本（无窗口）
-.venv38\Scripts\pyinstaller --name="微信多开管理器" --windowed --icon=external_res\SunnyMultiWxMng.ico ^
---add-data="external_res;external_res" --distpath="dist\微信多开管理器By38" ^
+.venv38\Scripts\pyinstaller --name="极峰多聊" --windowed --icon=external_res\SunnyMultiWxMng.ico ^
+--add-data="external_res;external_res" --distpath="dist\极峰多聊By38" ^
 --version-file=.meta\version.txt --noconfirm Main.py
 
 :: 检查打包是否成功
-if exist "dist\微信多开管理器By38\微信多开管理器\微信多开管理器.exe" (
+if exist "dist\极峰多聊By38\极峰多聊\极峰多聊.exe" (
     echo 正式版打包成功
 ) else (
     echo 正式版打包失败
@@ -36,7 +36,7 @@ if exist "dist\微信多开管理器By38\微信多开管理器\微信多开管�
 )
 
 :: 复制快捷方式创建脚本到打包文件夹
-xcopy "click_me_to_create_lnk.bat" "dist\微信多开管理器By38\微信多开管理器\管理员身份创建快捷方式.bat*" /Y
+xcopy "click_me_to_create_lnk.bat" "dist\极峰多聊By38\极峰多聊\管理员身份创建快捷方式.bat*" /Y
 
 echo 打包完成！
 

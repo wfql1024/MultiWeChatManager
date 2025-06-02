@@ -14,9 +14,45 @@ from public_class.enums import LocalCfg
 from resources import Config
 from utils import file_utils
 from utils.logger_utils import mylogger as logger
-
+import threading
+from pystray import Icon, MenuItem as item, Menu
+from PIL import Image, ImageDraw
 
 class AppFunc:
+    @staticmethod
+    def to_tray(root):
+        def create_image():
+            # 创建一个简单的圆形图标
+            img = Image.new("RGB", (64, 64), "blue")
+            d = ImageDraw.Draw(img)
+            d.ellipse((8, 8, 56, 56), fill="white")
+            return img
+
+        def on_restore(icon, item=None):
+            root.after(0, lambda: root.deiconify())
+
+        def on_exit(icon, item=None):
+            icon.visible = False
+            icon.stop()
+            root.after(0, root.destroy)
+
+        menu = Menu(
+            item("显示窗口", on_restore),
+            item("退出", on_exit),
+        )
+
+        icon_img = Image.open(Config.PROJ_ICO_PATH)
+        icon = Icon("AppTray", icon_img, title="App is running", menu=menu)
+
+        def run_icon():
+            icon.run()
+
+        # 在后台线程中运行托盘图标
+        threading.Thread(target=run_icon, daemon=True).start()
+        root.withdraw()  # 隐藏主窗口
+
+        return icon
+
     @staticmethod
     def apply_proxy_setting():
         use_proxy = True if subfunc_file.fetch_global_setting_or_set_default_or_none(

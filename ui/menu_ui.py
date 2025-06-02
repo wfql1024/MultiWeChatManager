@@ -266,6 +266,8 @@ class MenuUI:
             )
             self.menu_bar.entryconfigure(author_str_with_hint, command=handler.on_click_down)
 
+        self.menu_bar.add_command(label="↘", command=partial(AppFunc.to_tray, self.root))
+
     def _create_setting_menu(self):
         # -全局设置
         self.settings_menu.add_command(label=f"全局设置", command=WndCreator.open_global_setting_wnd)
