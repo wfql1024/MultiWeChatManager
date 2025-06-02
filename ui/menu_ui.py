@@ -150,8 +150,9 @@ class MenuUI:
         self.edit_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="编辑", menu=self.edit_menu)
         # -刷新
-        self.edit_menu.add_command(label="快速刷新", command=self._to_quick_refresh)
-        self.edit_menu.add_command(label="刷新", command=self._to_refresh)
+        self.edit_menu.add_command(label="快速刷新", command=self.root_class.root_ui.refresh_current_tab)
+        self.edit_menu.add_command(
+            label="刷新", command=partial(self.root_class.root_ui.refresh_current_tab, False))
         self.edit_menu.add_separator()  # ————————————————分割线————————————————
         self.edit_menu.add_command(label="热更新", command=self._to_update_remote_cfg)
         self.edit_menu.add_separator()  # ————————————————分割线————————————————
@@ -357,48 +358,6 @@ class MenuUI:
             self.sw, LocalCfg.REST_MULTIRUN_MODE, mode, self.create_root_menu_bar)
         self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN if self.sw_class.can_freely_multirun is True else mode
 
-    def get_now_tab(self):
-        root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
-        if root_tab == "login":
-            return "login"
-        if root_tab == "manage":
-            manage_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.MNG_TAB)
-            if manage_tab == "acc":
-                return "acc"
-            if manage_tab == "sw":
-                return "sw"
-        return "login"
-
-    def _to_quick_refresh(self):
-        tab = self.get_now_tab()
-        print(f"尝试快速刷新{tab}")
-        if tab == "login":
-            self.root_class.login_ui.quick_refresh_mode = True
-            self.root_class.login_ui.refresh()
-        elif tab == "acc":
-            self.root_class.acc_manager_ui.quick_refresh_mode = True
-            self.root_class.acc_manager_ui.refresh()
-        elif tab == "sw":
-            self.root_class.sw_manager_ui.quick_refresh_mode = True
-            self.root_class.sw_manager_ui.refresh()
-        else:
-            pass
-
-    def _to_refresh(self):
-        tab = self.get_now_tab()
-        print(f"尝试页面刷新{tab}")
-        if tab == "login":
-            self.root_class.login_ui.quick_refresh_mode = False
-            self.root_class.login_ui.refresh()
-        elif tab == "acc":
-            self.root_class.acc_manager_ui.quick_refresh_mode = False
-            self.root_class.acc_manager_ui.refresh()
-        elif tab == "sw":
-            self.root_class.sw_manager_ui.quick_refresh_mode = False
-            self.root_class.sw_manager_ui.refresh()
-        else:
-            pass
-
     def _to_update_remote_cfg(self):
         printer.vital("更新远程配置")
         config_data = subfunc_file.force_fetch_remote_encrypted_cfg()
@@ -406,7 +365,7 @@ class MenuUI:
             messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
             return False
         messagebox.showinfo("提示", "更新成功")
-        self._to_quick_refresh()
+        self.root_class.root_ui.refresh_current_tab()
         return True
 
     def _to_initialize(self):

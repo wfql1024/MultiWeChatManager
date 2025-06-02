@@ -388,7 +388,7 @@ class RootUI:
     def _on_tab_in_root_selected(self, click_time):
         """根标签切换时,将自动选择下一级的标签"""
         root_tab = self.root_nb_cls.curr_tab_id
-        subfunc_file.save_a_global_setting_and_callback(LocalCfg.ROOT_TAB, root_tab)
+        subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.ROOT_TAB: root_tab})
         tab_dict = self.root_nb_cls.tabs[root_tab]
         tab_text = tab_dict["text"]
         if root_tab == "manage":
@@ -442,8 +442,9 @@ class RootUI:
         self.root_class.login_ui.sw = self.login_nb_cls.curr_tab_id
         tab_dict = self.login_nb_cls.tabs[self.root_class.login_ui.sw]
         tab_text = tab_dict["text"]
-        print(f"当前是{self.sw}的标签页")
-        subfunc_file.save_a_global_setting_and_callback(LocalCfg.LOGIN_TAB, self.root_class.login_ui.sw)
+        print(f"当前是{self.root_class.login_ui.sw}的标签页")
+        subfunc_file.update_settings(
+            LocalCfg.GLOBAL_SECTION, **{LocalCfg.LOGIN_TAB:self.root_class.login_ui.sw})
         if click_time <= 1:
             self.root_class.login_ui.init_login_ui()
         elif click_time >= 2:
@@ -454,7 +455,8 @@ class RootUI:
 
     def _on_tab_in_manage_selected(self, click_time):
         self.manage_tab = self.manage_nb_cls.curr_tab_id
-        subfunc_file.save_a_global_setting_and_callback(LocalCfg.MNG_TAB, self.manage_tab)
+        subfunc_file.update_settings(
+            LocalCfg.GLOBAL_SECTION, **{LocalCfg.MNG_TAB: self.manage_tab})
         tab_dict = self.manage_nb_cls.tabs[self.manage_tab]
         tab_text = tab_dict["text"]
         if self.manage_tab == "acc":
@@ -481,16 +483,19 @@ class RootUI:
         all_messages = sum(Strings.PLATFORM_DISABLED_HINTS.values(), [])
         return random.choice(all_messages)
 
-    def refresh_current_tab(self):
+    def refresh_current_tab(self, quick=True):
         """刷新当前标签页"""
         root_tab = self.root_nb_cls.curr_tab_id
         if root_tab == "manage":
             manage_tab = self.manage_nb_cls.curr_tab_id
             if manage_tab == "acc":
+                self.root_class.acc_manager_ui.quick_refresh_mode = quick
                 self.root_class.acc_manager_ui.refresh()
             elif manage_tab == "sw":
+                self.root_class.sw_manager_ui.quick_refresh_mode = quick
                 self.root_class.sw_manager_ui.refresh()
         elif root_tab == "login":
+            self.root_class.login_ui.quick_refresh_mode = quick
             self.root_class.login_ui.refresh()
 
 class SoftwareInfo:
