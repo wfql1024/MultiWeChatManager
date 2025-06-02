@@ -1,6 +1,6 @@
 {
     "global": {
-        "app_name": "微信多开管理器",
+        "app_name": "极峰多聊",
         "app_author": "吾峰起浪",
         "new_func_hint": "狂按",
         "proxy": {
@@ -825,7 +825,10 @@
             "channel": {
                 "default": {
                     "label": "默认",
-                    "introduce": "可以在全局进行多开"
+                    "introduce": "可以在全局进行多开",
+                    "author": [
+                        "huiyadanli"
+                    ]
                 }
             },
             "feature": {

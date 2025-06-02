@@ -50,7 +50,7 @@ class Config:
     HANDLE_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/handle.exe'
     WECHAT_DUMP_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/wechat-dump-rs.exe'
     VERSION_FILE = fr'{PROJ_META_PATH}/version.txt'
-    PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/SunnyMultiWxMng.ico'
+    PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/JFMC.ico'
     REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/Rewards.png'
     TASK_TP_XML_PATH = fr'{PROJ_USER_PATH}/task_template.xml'
     STATISTIC_JSON_PATH = fr'{PROJ_USER_PATH}/statistics.json'

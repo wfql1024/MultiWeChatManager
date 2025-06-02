@@ -155,22 +155,10 @@ class RootClass:
         if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
             os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
             print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
-        # # 版本更新，统计表结构更新，需升级
-        # subfunc_file.merge_refresh_nodes()
-        # subfunc_file.move_data_to_wechat()
-        # subfunc_file.swap_cnt_and_mode_levels_in_auto()
-        # subfunc_file.downgrade_item_lvl_under_manual()
-
-        # 获取远程配置文件
-        try:
-            self.remote_cfg_data = subfunc_file.try_read_remote_cfg_locally()
-        except Exception as e:
-            logger.error(e)
-            try:
-                self.remote_cfg_data = subfunc_file.force_fetch_remote_encrypted_cfg()
-            except Exception as e:
-                logger.error(e)
-        # 没有配置文件则退出程序
+        # 代理
+        AppFunc.apply_proxy_setting()
+        # 获取远程配置,没有配置文件则退出程序
+        self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
         if self.remote_cfg_data is None:
             messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
             self.root.destroy()
@@ -196,8 +184,6 @@ class RootClass:
         style.layout("SidebarTreeview", style.layout("Treeview"))  # 继承默认布局
         style.configure("Mutex.TLabel", foreground="red")
 
-        # 代理
-        AppFunc.apply_proxy_setting()
         # 创建状态栏
         if self.statusbar_ui is None or not self.statusbar_ui.status_bar.winfo_exists():
             self.statusbar_ui = reusable_widgets.StatusBarUI(self.root, self, self.debug)
