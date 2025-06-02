@@ -8,7 +8,7 @@ from PIL import ImageTk, Image
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
 from public_class.custom_classes import Condition
-from public_class.enums import OnlineStatus
+from public_class.enums import OnlineStatus, LocalCfg
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants, Strings
@@ -111,7 +111,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
 
         self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.data_dir = self.root_class.sw_classes[self.sw].data_dir
-        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
+        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
         self.columns = (" ", "配置", "pid", "原始id", "当前id", "昵称")
         sort_str = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, f"{self.table_tag}_sort")
         if isinstance(sort_str, str):

@@ -10,6 +10,7 @@ from PIL import ImageTk, Image
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
 from public_class.custom_classes import Condition
+from public_class.enums import LocalCfg
 from public_class.global_members import GlobalMembers
 from resources import Constants
 from ui.wnd_ui import WndCreator
@@ -87,7 +88,7 @@ class CheckboxItemRow:
         # 账号标签
         wrapped_display_name = AccInfoFunc.get_acc_wrapped_display_name(self.sw, account)
         has_mutex, = subfunc_file.get_sw_acc_data(self.sw, account, has_mutex=None)
-        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True"
+        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
         if has_mutex and self.sign_visible:
             try:
                 self.item_label = ttk.Label(

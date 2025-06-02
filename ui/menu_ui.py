@@ -27,6 +27,9 @@ from utils.logger_utils import myprinter as printer
 class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
+        self._to_tray_label = None
+        self.used_tray = None
+        self.sidebar_menu_label = None
         print("构建菜单ui...")
         self.sw_class = None
         self.sw = None
@@ -44,7 +47,7 @@ class MenuUI:
         self.multirun_menu = None
         self.anti_revoke_menu = None
         self.freely_multirun_var = None
-        self.sidebar_wnd_class = None
+        self.sidebar_ui = None
         self.sidebar_wnd = None
         self.call_mode_menu = None
         self.auto_start_menu = None
@@ -93,6 +96,12 @@ class MenuUI:
             self.root.config(menu=self.menu_bar)
 
         self.menu_bar.delete(0, tk.END)
+
+        # ————————————————————————————侧栏菜单————————————————————————————
+        used_sidebar = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USED_SIDEBAR)
+        suffix = "" if used_sidebar is True else Strings.SIDEBAR_HINT
+        self.sidebar_menu_label = f"❮{suffix}"
+        self.menu_bar.add_command(label=self.sidebar_menu_label, command=partial(self._open_sidebar))
         # ————————————————————————————文件菜单————————————————————————————
         self.file_menu = tk.Menu(self.menu_bar, tearoff=False)
         self.menu_bar.add_cascade(label="文件", menu=self.file_menu)
@@ -172,32 +181,32 @@ class MenuUI:
                                            command=self._switch_to_classic_view)
             self.view_menu.add_radiobutton(label="列表", variable=view_var, value="tree",
                                            command=self._switch_to_tree_view)
-            # 视图选项
-            self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
-            self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
-            sign_vis_value = self.global_settings_value.sign_vis = \
-                True if subfunc_file.fetch_global_setting_or_set_default_or_none("sign_visible") == "True" else False
-            sign_vis_var = self.global_settings_var.sign_vis = tk.BooleanVar(value=sign_vis_value)
-            self.view_options_menu.add_checkbutton(
-                label="显示状态标志", variable=sign_vis_var,
-                command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                "sign_visible", not self.global_settings_value.sign_vis,
-                                self.root_class.login_ui.refresh)
-            )
-            use_txt_avt = self.global_settings_value.use_txt_avt = \
-                subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_TXT_AVT)
-            use_txt_avt_var = self.global_settings_var.use_txt_avt = tk.BooleanVar(value=use_txt_avt)
-            self.view_options_menu.add_checkbutton(
-                label="使用文字头像", variable=use_txt_avt_var,
-                command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                LocalCfg.USE_TXT_AVT, not use_txt_avt,
-                                self.root_class.login_ui.refresh)
-            )
             self.view_menu.add_separator()  # ————————————————分割线————————————————
-        # 全局菜单:缩放+侧栏
-        sidebar_var = tk.BooleanVar(value=False)
-        self.view_menu.add_checkbutton(label="侧栏", variable=sidebar_var,
-                                       command=self._open_sidebar)
+        # 全局菜单:缩放+选项
+        # 视图选项
+        self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
+        self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
+        sign_vis_value = self.global_settings_value.sign_vis = \
+            subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
+        sign_vis_var = self.global_settings_var.sign_vis = tk.BooleanVar(value=sign_vis_value)
+        self.view_options_menu.add_checkbutton(
+            label="显示状态标志", variable=sign_vis_var,
+            command=partial(subfunc_file.save_a_global_setting_and_callback,
+                            LocalCfg.SIGN_VISIBLE, not self.global_settings_value.sign_vis,
+                            self.root_class.login_ui.refresh)
+        )
+        use_txt_avt = self.global_settings_value.use_txt_avt = \
+            subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_TXT_AVT)
+        use_txt_avt_var = self.global_settings_var.use_txt_avt = tk.BooleanVar(value=use_txt_avt)
+        self.view_options_menu.add_checkbutton(
+            label="使用文字头像", variable=use_txt_avt_var,
+            command=partial(subfunc_file.save_a_global_setting_and_callback,
+                            LocalCfg.USE_TXT_AVT, not use_txt_avt,
+                            self.root_class.login_ui.refresh)
+        )
+        # sidebar_var = tk.BooleanVar(value=False)
+        # self.view_menu.add_checkbutton(label="侧栏", variable=sidebar_var,
+        #                                command=self._open_sidebar)
         scale_value = self.global_settings_value.scale = subfunc_file.fetch_global_setting_or_set_default_or_none(
             "scale")
         scale_var = self.global_settings_var.scale = tk.StringVar(value=scale_value)
@@ -266,7 +275,10 @@ class MenuUI:
             )
             self.menu_bar.entryconfigure(author_str_with_hint, command=handler.on_click_down)
 
-        self.menu_bar.add_command(label="↘", command=partial(AppFunc.to_tray, self.root))
+        self.used_tray = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USED_TRAY)
+        suffix = "" if self.used_tray is True else Strings.TRAY_HINT
+        self._to_tray_label = f"⌟{suffix}"
+        self.menu_bar.add_command(label=self._to_tray_label, command=self._to_bring_tk_to_tray)
 
     def _create_setting_menu(self):
         # -全局设置
@@ -298,12 +310,12 @@ class MenuUI:
             self.update_settings_menu_thread()
 
             hide_wnd_value = self.global_settings_value.hide_wnd = \
-                True if subfunc_file.fetch_global_setting_or_set_default_or_none("hide_wnd") == "True" else False
+                subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.HIDE_WND)
             hide_wnd_var = self.global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)
             self.settings_menu.add_checkbutton(
                 label="自动登录前隐藏主窗口", variable=hide_wnd_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                "hide_wnd", not hide_wnd_value, self.create_root_menu_bar))
+                                LocalCfg.HIDE_WND, not hide_wnd_value, self.create_root_menu_bar))
 
             # >调用模式
             self.call_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
@@ -343,7 +355,7 @@ class MenuUI:
             )
 
             auto_press_value = self.global_settings_value.auto_press = \
-                True if subfunc_file.fetch_global_setting_or_set_default_or_none("auto_press") == "True" else False
+                subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.AUTO_PRESS)
             auto_press_var = self.global_settings_var.auto_press = tk.BooleanVar(value=auto_press_value)
             self.settings_menu.add_checkbutton(
                 label="自动点击登录按钮", variable=auto_press_var,
@@ -384,14 +396,19 @@ class MenuUI:
     def _open_sidebar(self):
         if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists():
             print("销毁", self.sidebar_wnd)
-            if self.sidebar_wnd_class is not None:
-                self.sidebar_wnd_class.listener_running = False
-                self.sidebar_wnd_class = None
+            self.menu_bar.entryconfigure("❯", label="❮")
+            if self.sidebar_ui is not None:
+                self.sidebar_ui.listener_running = False
+                self.sidebar_ui = None
             self.sidebar_wnd.destroy()
         else:
-            self.sidebar_wnd = tk.Toplevel(self.root)
             print("创建", self.sidebar_wnd)
-            self.sidebar_wnd_class = sidebar_ui.SidebarWnd(self.sidebar_wnd, "导航条")
+            self.menu_bar.entryconfigure(self.sidebar_menu_label, label="❯")
+            if len(self.sidebar_menu_label) > 1:
+                subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_SIDEBAR: True})
+                self.sidebar_menu_label = "❮"
+            self.sidebar_wnd = tk.Toplevel(self.root)
+            self.sidebar_ui = sidebar_ui.SidebarUI(self.sidebar_wnd, "导航条")
 
     def _set_wnd_scale(self, scale=None):
         if scale is None:
@@ -459,6 +476,19 @@ class MenuUI:
         subfunc_file.save_a_global_setting_and_callback('enable_new_func', True)
         messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
         self.create_root_menu_bar()
+
+    def _to_bring_tk_to_tray(self):
+        """将tk窗口最小化到托盘"""
+        self.root.withdraw()
+        if self.used_tray is not True:
+            self.used_tray = False
+            subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_TRAY: True})
+            new_label = self._to_tray_label.replace(Strings.TRAY_HINT, "")
+            self.menu_bar.entryconfigure(self._to_tray_label, label=new_label)
+            self._to_tray_label = new_label
+        if self.root_class.global_settings_value.in_tray is not True:
+            AppFunc.create_tray(self.root)
+            self.root_class.global_settings_value.in_tray = True
 
     def _introduce_channel(self, mode, res_dict):
         text = ""
@@ -626,4 +656,3 @@ class MenuUI:
                 "multi", partial(self._update_multirun_menu, res_dict, msg))
         except Exception as e:
             print(e)
-

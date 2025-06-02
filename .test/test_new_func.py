@@ -6,7 +6,7 @@ import psutil
 from functions import subfunc_file
 from functions.sw_func import SwInfoUtils
 from resources import Config
-from ui.sidebar_ui import SidebarWnd, WndProperties
+from ui.sidebar_ui import SidebarUI, WndProperties
 from utils import handle_utils, hwnd_utils, pywinhandle
 from utils.file_utils import IniUtils
 from utils.patch_utils import *
@@ -146,7 +146,7 @@ class Test(TestCase):
     def test_get_wnd_state(self):
         hwnd = 334080
         while True:
-            curr_linked_wnd_state = SidebarWnd.get_linked_wnd_state(hwnd)
+            curr_linked_wnd_state = SidebarUI.get_linked_wnd_state(hwnd)
             print(f"{hwnd}当前状态: "
                   f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
                   f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "

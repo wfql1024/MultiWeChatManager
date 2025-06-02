@@ -20,14 +20,7 @@ from PIL import Image, ImageDraw
 
 class AppFunc:
     @staticmethod
-    def to_tray(root):
-        def create_image():
-            # 创建一个简单的圆形图标
-            img = Image.new("RGB", (64, 64), "blue")
-            d = ImageDraw.Draw(img)
-            d.ellipse((8, 8, 56, 56), fill="white")
-            return img
-
+    def create_tray(root):
         def on_restore(icon, item=None):
             root.after(0, lambda: root.deiconify())
 
@@ -42,23 +35,32 @@ class AppFunc:
         )
 
         icon_img = Image.open(Config.PROJ_ICO_PATH)
-        icon = Icon("AppTray", icon_img, title="App is running", menu=menu)
+        icon = Icon("JFMC", icon_img, title="极峰多聊", menu=menu)
+
+        # 给托盘图标绑定鼠标点击恢复窗口
+        def setup(icon):
+            icon.visible = True
+            icon._run_detached = True  # 防止点击后阻塞
+            icon.icon = icon_img
+            icon.menu = menu
+            icon.title = "极峰多聊"
+            icon.update_menu()
+            # 点击事件：多数系统支持
+            icon.on_click = lambda: on_restore(icon)
 
         def run_icon():
-            icon.run()
+            icon.run(setup)
 
         # 在后台线程中运行托盘图标
         threading.Thread(target=run_icon, daemon=True).start()
-        root.withdraw()  # 隐藏主窗口
 
         return icon
 
     @staticmethod
     def apply_proxy_setting():
-        use_proxy = True if subfunc_file.fetch_global_setting_or_set_default_or_none(
-            LocalCfg.USE_PROXY) == "true" else False
+        use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(
+            LocalCfg.USE_PROXY)
         if use_proxy is True:
-            # 强制不使用任何代理
             proxy_ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
             proxy_port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)
             os.environ['http_proxy'] = f"{proxy_ip}:{proxy_port}"

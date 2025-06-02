@@ -1740,7 +1740,7 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         self.proxy_port = port_var
 
     def update_content(self):
-        use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_PROXY) == "True"
+        use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_PROXY)
         self.use_proxy_var.set(use_proxy)
         ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
         port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)

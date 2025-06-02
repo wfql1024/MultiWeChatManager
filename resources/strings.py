@@ -22,6 +22,10 @@ class Strings:
     MUTEX_SIGN = "🔒" if NEWER_VER else "⚔"
     CFG_SIGN = "📝" if NEWER_VER else "❐"
 
+    REFRESH_HINT = "(标签页单击切换,双击可刷新)"
+    TRAY_HINT = "(到托盘)"
+    SIDEBAR_HINT = "(侧栏)"
+
     PLATFORM_DISABLED_HINTS = {
         "friendly": [
             "空空如也～你还没启用任何平台哦，快去设置里挑几个上线吧！",

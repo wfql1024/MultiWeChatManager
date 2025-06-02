@@ -64,6 +64,9 @@ class LocalCfg(str, Enum):
     PROXY_USERNAME = "proxy_username"
     PROXY_PWD = "proxy_pwd"
     USE_TXT_AVT = "txt_avt"
+    USED_TRAY = "used_tray"
+    USED_REFRESH = "used_refresh"
+    USED_SIDEBAR = "used_sidebar"
 
     # 设置项中的平台设置
     INST_PATH = "inst_path"

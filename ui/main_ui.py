@@ -299,7 +299,10 @@ class RootUI:
         root_nb_frm_pool = root_nb_cls.frames_pool
         self.login_nb_frame = ttk.Frame(root_nb_frm_pool)
         self.manage_nb_frame = ttk.Frame(root_nb_frm_pool)
-        root_nb_cls.add("manage", "管理", self.manage_nb_frame)
+
+        self.used_refresh = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USED_REFRESH)
+        suffix = "" if self.used_refresh is True else Strings.REFRESH_HINT
+        root_nb_cls.add("manage", f"管理{suffix}", self.manage_nb_frame)
         root_nb_cls.add("login", "登录", self.login_nb_frame)
         pass
 
@@ -385,6 +388,11 @@ class RootUI:
                     self._load_manage_frame()
                 pass
             elif click_time >= 2:
+                # 首次使用,消除提示
+                if self.used_refresh is not True:
+                    tab_text = tab_text.replace(Strings.REFRESH_HINT, "")
+                    subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_REFRESH: True})
+                    self.used_refresh = True
                 tab_dict["tab"].config(text=f"⟳{tab_text}")
                 self.root.update_idletasks()
                 self.root_class.acc_manager_ui = None
@@ -524,6 +532,7 @@ class GlobalSettings:
         self.auto_press = None
         self.disable_proxy = None
         self.use_txt_avt = None
+        self.in_tray = False
 
 
 class HotkeyManager:

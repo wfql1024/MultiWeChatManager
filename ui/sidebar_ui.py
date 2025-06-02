@@ -35,7 +35,7 @@ class WndProperties(str, Enum):
     RECT = "rect"
 
 
-class SidebarWnd:
+class SidebarUI:
     # TODO: 若无法找到窗口，联动详情窗口来获取窗口句柄
     # TODO: 列表选中状态应该是根据目前已经链接的窗口来确定
     # TODO: 增加最大化判断

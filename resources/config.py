@@ -1,6 +1,6 @@
 import os
 
-from public_class.enums import LocalCfg, SW, SwStates
+from public_class.enums import LocalCfg, SW, SwStates, MultirunMode
 from resources import constants
 
 # 获取屏幕缩放因子
@@ -14,30 +14,33 @@ class Config:
     INI_DEFAULT_VALUE = {
         LocalCfg.GLOBAL_SECTION: {
             LocalCfg.SCREEN_SIZE: f"1920*1080",
-            LocalCfg.HIDE_WND: "False",
-            LocalCfg.ENABLE_NEW_FUNC: "True",
+            LocalCfg.HIDE_WND: False,
+            LocalCfg.ENABLE_NEW_FUNC: True,
             LocalCfg.ROOT_TAB: "login",
             LocalCfg.MNG_TAB: "acc",
             LocalCfg.LOGIN_TAB: SW.WECHAT,
             LocalCfg.SCALE: "auto",
-            LocalCfg.SIGN_VISIBLE: "True",
+            LocalCfg.SIGN_VISIBLE: True,
             LocalCfg.HIDDEN_SORT: "#0,True",
             LocalCfg.AUTO_START_SORT: "#0,True",
             LocalCfg.ENABLE_SORT: "#0,True",
             LocalCfg.DISABLE_SORT: "#0,True",
             LocalCfg.ALL_SORT: "#0,True",
-            LocalCfg.AUTO_PRESS: "True",
+            LocalCfg.AUTO_PRESS: True,
             LocalCfg.CALL_MODE: "HANDLE",
             LocalCfg.NEXT_CHECK_TIME: None,
-            LocalCfg.USE_PROXY: "True",
+            LocalCfg.USE_PROXY: True,
             LocalCfg.USE_TXT_AVT: True,
+            LocalCfg.USED_TRAY: False,
+            LocalCfg.USED_REFRESH: False,
+            LocalCfg.USED_SIDEBAR: False
         },
         SW.DEFAULT: {
             LocalCfg.VIEW: "tree",
             LocalCfg.LOGIN_SORT: "配置,True",
             LocalCfg.LOGOUT_SORT: "配置,True",
             LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            LocalCfg.REST_MULTIRUN_MODE: "python",
+            LocalCfg.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
             LocalCfg.STATE: SwStates.VISIBLE
         }
     }
