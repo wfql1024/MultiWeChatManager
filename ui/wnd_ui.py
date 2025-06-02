@@ -1,4 +1,3 @@
-import base64
 import os
 import re
 import sys
@@ -34,9 +33,16 @@ from utils import file_utils, sys_utils, widget_utils
 from utils.encoding_utils import StringUtils
 from utils.file_utils import JsonUtils
 from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUtils
+from utils.sys_utils import Tk2Sys
+from utils.widget_utils import UnlimitedClickHandler
 
 
 class WndCreator:
+
+    @staticmethod
+    def open_feedback():
+        feedback_wnd = tk.Toplevel(GlobalMembers.root_class.root)
+        FeedBackWndUI(feedback_wnd, "反馈渠道")
 
     @staticmethod
     def open_sw_settings(sw):
@@ -88,7 +94,7 @@ class WndCreator:
     def open_rewards():
         """打开赞赏窗口"""
         rewards_window = tk.Toplevel(GlobalMembers.root_class.root)
-        RewardsWndUI(rewards_window, "我来赏你！", Config.REWARDS_PNG_PATH)
+        RewardsWndUI(rewards_window, "我来赏你！")
 
     @staticmethod
     def open_about(app_info):
@@ -849,17 +855,14 @@ class AboutWndUI(SubToolWndUI, ABC):
 
 
 class RewardsWndUI(SubToolWndUI, ABC):
-    def __init__(self, wnd, title, image_path):
+    def __init__(self, wnd, title):
         self.img = None
-        self.image_path = image_path
-
+        self.image_path = Config.REWARDS_PNG_PATH
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
         # 加载图片
         self.img = Image.open(self.image_path)
-        # 设置窗口大小为图片的大小
-        self.wnd_width, self.wnd_height = self.img.size
 
     def load_ui(self):
         # 创建Frame并填充
@@ -867,6 +870,49 @@ class RewardsWndUI(SubToolWndUI, ABC):
         frame.pack(fill=tk.BOTH, expand=True)
         # 调用方法在frame中显示图片
         self.show_image_in_frame(frame, self.img)
+
+    @staticmethod
+    def show_image_in_frame(frame, img):
+        # 将图片转换为Tkinter格式
+        tk_img = ImageTk.PhotoImage(img)
+
+        # 在frame中创建Label用于显示图片
+        label = ttk.Label(frame, image=tk_img)
+        label.image = tk_img  # 防止图片被垃圾回收
+        label.pack()
+
+
+class FeedBackWndUI(SubToolWndUI, ABC):
+    def __init__(self, wnd, title):
+        self.img = None
+        self.image_path = Config.FEEDBACK_PNG_PATH
+        super().__init__(wnd, title)
+
+    def initialize_members_in_init(self):
+        # 加载图片
+        self.img = Image.open(self.image_path)
+        w, h = self.img.size
+        self.img = self.img.resize((w // 2, h // 2), Image.Resampling.LANCZOS)
+
+    def load_ui(self):
+        # 创建Frame并填充
+        img_frame = ttk.Frame(self.wnd_frame)
+        img_frame.pack(fill=tk.BOTH, expand=True)
+        # 调用方法在frame中显示图片
+        self.show_image_in_frame(img_frame, self.img)
+        btn_grid_frm = ttk.Frame(self.wnd_frame)
+        btn_grid_frm.pack(**Constants.B_FRM_PACK)
+        copy_qq_channel_num_btn = CustomLabelBtn(btn_grid_frm, "复制频道号")
+        copy_qq_channel_num_btn.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
+        btn_grid_frm.grid_columnconfigure(0, weight=1)
+        UnlimitedClickHandler(
+            self.root, copy_qq_channel_num_btn, **{"1": lambda : Tk2Sys.copy_to_clipboard(self.root, "pd94878499")})
+        copy_qq_group_num_btn = CustomLabelBtn(btn_grid_frm, "复制群号")
+        copy_qq_group_num_btn.grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
+        btn_grid_frm.grid_columnconfigure(1, weight=1)
+        UnlimitedClickHandler(
+            self.root, copy_qq_group_num_btn, **{"1": lambda : Tk2Sys.copy_to_clipboard(self.root, "1040033347")}
+        )
 
     @staticmethod
     def show_image_in_frame(frame, img):

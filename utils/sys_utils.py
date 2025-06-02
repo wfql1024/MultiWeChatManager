@@ -6,6 +6,15 @@ from contextlib import contextmanager
 from ctypes import wintypes
 from pathlib import Path
 
+class Tk2Sys:
+    @staticmethod
+    def copy_to_clipboard(root, text):
+        root.clipboard_clear()
+        root.clipboard_append(text)
+        root.update()  # 有时为了让剪贴板立即生效
+        print(f"已复制到剪贴板:{text}")
+
+
 # 定义常量
 MDT_EFFECTIVE_DPI = 0  # 有效 DPI（当前缩放）
 PROCESS_PER_MONITOR_DPI_AWARE = 2  # 进程 DPI 感知模式

@@ -55,6 +55,7 @@ class Config:
     VERSION_FILE = fr'{PROJ_META_PATH}/version.txt'
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/JFMC.ico'
     REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/Rewards.png'
+    FEEDBACK_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/Feedback.png'
     TASK_TP_XML_PATH = fr'{PROJ_USER_PATH}/task_template.xml'
     STATISTIC_JSON_PATH = fr'{PROJ_USER_PATH}/statistics.json'
     TAB_ACC_JSON_PATH = fr'{PROJ_USER_PATH}/tab_acc_data.json'

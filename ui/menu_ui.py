@@ -19,6 +19,7 @@ from ui.wnd_ui import WndCreator
 from utils import widget_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
+from utils.sys_utils import Tk2Sys
 
 
 # TODO: 用户可以自定义多开的全流程
@@ -250,6 +251,7 @@ class MenuUI:
         self.help_menu.add_command(label="视频教程",
                                    command=lambda: webbrowser.open_new(Strings.VIDEO_TUTORIAL_LINK))
         self.help_menu.add_command(label="更新日志", command=WndCreator.open_update_log)
+        self.help_menu.add_command(label="反馈渠道", command=WndCreator.open_feedback)
         self.help_menu.add_command(label=f"{prefix}关于",
                                    command=partial(WndCreator.open_about, self.app_info))
         print(f"帮助菜单用时：{time.time() - self.start_time:.4f}秒")
@@ -518,7 +520,7 @@ class MenuUI:
         if res_dict is None:
             self.settings_menu.entryconfig("防撤回", label="！防撤回", foreground="red")
             self.anti_revoke_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
-                                              command=lambda i=msg: self.root.clipboard_append(i))
+                                              command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
             for channel, res_tuple in res_dict.items():
                 if not isinstance(res_tuple, tuple) or len(res_tuple) != 4:
@@ -536,7 +538,7 @@ class MenuUI:
                         self.anti_revoke_menu, tearoff=False)
                     self.anti_revoke_menu.add_cascade(label=channel_label, menu=menu)
                     menu.add_command(label=f"[点击复制]{info}", foreground="red",
-                                     command=lambda i=info: self.root.clipboard_append(i))
+                                     command=lambda i=info: Tk2Sys.copy_to_clipboard(self.root, i))
                 else:
                     self.anti_revoke_channel_vars_dict[channel] = tk.BooleanVar(value=anti_revoke)
                     self.anti_revoke_menu.add_checkbutton(
@@ -554,7 +556,7 @@ class MenuUI:
         if res_dict is None:
             self.settings_menu.entryconfig("全局多开", label="！全局多开", foreground="red")
             self.multirun_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
-                                           command=lambda i=msg: self.root.clipboard_append(i))
+                                           command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
             # 列出所有频道
             for channel, res_tuple in res_dict.items():
@@ -573,7 +575,7 @@ class MenuUI:
                         self.multirun_menu, tearoff=False)
                     self.multirun_menu.add_cascade(label=channel_label, menu=menu)
                     menu.add_command(label=f"[点击复制]{info}", foreground="red",
-                                     command=lambda i=info: self.root.clipboard_append(i))
+                                     command=lambda i=info: Tk2Sys.copy_to_clipboard(self.root, i))
                 else:
                     # 只要有freely_multirun为True，就将其设为True
                     if channel_freely_multirun is True:
