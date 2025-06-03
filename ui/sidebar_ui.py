@@ -40,7 +40,6 @@ class SidebarUI:
     # TODO: 列表选中状态应该是根据目前已经链接的窗口来确定
     # TODO: 增加最大化判断
     # TODO: 完善侧栏功能：手动登录，自动登录
-
     def __init__(self, wnd, title):
         self.thread_result = None
         self.find_acc_wnd_thread = None
@@ -102,28 +101,28 @@ class SidebarUI:
         self.login_frame = ttk.Frame(self.bar_frame)
         self.login_frame.pack(side=tk.TOP, fill=tk.X)
 
-        # 中间框架
-        self.middle_frame = ttk.Frame(self.bar_frame)
-        self.middle_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
-
-        self.tip_label = tk.Label(
-            self.middle_frame,
-            text=" ",
-            fg="red",
-            wraplength=self.bar_width - 20,  # 设置自动换行宽度，留出边距
-            justify="left"
-        )
-        self.tip_label.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        # # 中间框架
+        # self.middle_frame = ttk.Frame(self.bar_frame)
+        # self.middle_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        #
+        # self.tip_label = tk.Label(
+        #     self.middle_frame,
+        #     text=" ",
+        #     fg="red",
+        #     wraplength=self.bar_width - 20,  # 设置自动换行宽度，留出边距
+        #     justify="left"
+        # )
+        # self.tip_label.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
         # 置底控件
         self.home_btn = CustomLabelBtn(self.bar_frame, text="管理器")
         self.home_btn.set_bind_map(**{"1": self.switch_root_wnd}).apply_bind(self.root)
         self.home_btn.pack(side=tk.BOTTOM, fill=tk.X)
-        self.logout_frame = ttk.Frame(self.bar_frame)
-        self.logout_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        # self.logout_frame = ttk.Frame(self.bar_frame)
+        # self.logout_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
         self.login_class = SidebarTree(self, self.login_frame, OnlineStatus.LOGIN)
-        self.logout_class = SidebarTree(self, self.logout_frame, OnlineStatus.LOGOUT)
+        # self.logout_class = SidebarTree(self, self.logout_frame, OnlineStatus.LOGOUT)
 
         # 首次显示时，设置 bar 窗口的位置和大小
         self.linked_hwnd = self.root_hwnd
@@ -520,42 +519,42 @@ class SidebarUI:
                 self._update_sidebar(self.get_linked_wnd_state(self.linked_hwnd))
                 break
 
-    def wait_for_acc_wnd(self, sw, acc, timeout=10):
-        """
-        等待账号窗口出现
-        :param sw: 软件名称
-        :param timeout: 超时时间(秒)
-        :return: 窗口句柄或None(超时)
-        """
-        start_time = time.time()
-
-        def on_tip_click(e):
-            nonlocal last_time
-            last_time = 0
-
-        # print(start_time)
-        self.root.after(0, lambda: self.tip_label.bind("<Button-1>", on_tip_click))
-
-        while True:
-            hwnd = win32gui.GetForegroundWindow()
-            # print(hwnd)
-            if hwnd and win32gui.IsWindow(hwnd) and AccInfoFunc.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
-                self.thread_result = hwnd
-                return
-
-            # 计算剩余时间
-            elapsed_time = time.time() - start_time
-            last_time = int(timeout - elapsed_time)
-
-            if last_time <= 0:
-                self.root.after(0, lambda: self.tip_label.config(text=" "))
-                self.thread_result = None
-                return
-
-            # 更新提示信息
-            self.root.after(0, lambda: self.tip_label.config(
-                text=f"（点击可取消）窗口丢失，请{last_time}秒内打开对应窗口..."))
-            time.sleep(0.02)
+    # def wait_for_acc_wnd(self, sw, acc, timeout=10):
+    #     """
+    #     等待账号窗口出现
+    #     :param sw: 软件名称
+    #     :param timeout: 超时时间(秒)
+    #     :return: 窗口句柄或None(超时)
+    #     """
+    #     start_time = time.time()
+    #
+    #     def on_tip_click(e):
+    #         nonlocal last_time
+    #         last_time = 0
+    #
+    #     # print(start_time)
+    #     self.root.after(0, lambda: self.tip_label.bind("<Button-1>", on_tip_click))
+    #
+    #     while True:
+    #         hwnd = win32gui.GetForegroundWindow()
+    #         # print(hwnd)
+    #         if hwnd and win32gui.IsWindow(hwnd) and AccInfoFunc.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
+    #             self.thread_result = hwnd
+    #             return
+    #
+    #         # 计算剩余时间
+    #         elapsed_time = time.time() - start_time
+    #         last_time = int(timeout - elapsed_time)
+    #
+    #         if last_time <= 0:
+    #             self.root.after(0, lambda: self.tip_label.config(text=" "))
+    #             self.thread_result = None
+    #             return
+    #
+    #         # 更新提示信息
+    #         self.root.after(0, lambda: self.tip_label.config(
+    #             text=f"（点击可取消）窗口丢失，请{last_time}秒内打开对应窗口..."))
+    #         time.sleep(0.02)
 
 
 class SidebarTree(RadioTreeView, ABC):
@@ -595,7 +594,7 @@ class SidebarTree(RadioTreeView, ABC):
                 if table_tag == OnlineStatus.LOGOUT and sw_data[acc].get("pid", None) is not None:
                     continue
 
-                display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
+                # display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
                 # 获取头像图像
                 img = AccInfoFunc.get_acc_avatar_from_files(sw, acc)
                 img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
@@ -619,7 +618,7 @@ class SidebarTree(RadioTreeView, ABC):
                 tree.insert("", "end", iid=f"{sw}/{acc}", image=photo)
 
     def click_on_id_column(self, click_time, item_id):
-        self.click_on_leaf_item(click_time, item_id, None)
+        # self.click_on_leaf_item(click_time, item_id, None)
         print(item_id)
         if click_time == 1:
             self.parent_class.switch_acc_wnd(item_id)

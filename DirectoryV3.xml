@@ -29,4 +29,5 @@
     <tree path="/remote_setting" title="加密的云端配置源"/>
     <tree path="/update_program.py" title="升级器"/>
     <tree path="/functions/subfunc_sw.py" title="平台相关的子功能类"/>
+    <tree path="/adaptation" title="对不同平台的功能实现"/>
 </trees>

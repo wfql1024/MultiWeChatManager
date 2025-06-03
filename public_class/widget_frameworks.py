@@ -549,7 +549,7 @@ class ActionableTreeView(ABC):
             # 排序+调整列宽
             self._apply_or_switch_col_order()
             self.on_tree_configure(None)
-            if self.tree_has_bind is False:
+            if self.tree_has_bind is not True:
                 # 绑定事件
                 widget_utils.UnlimitedClickHandler(
                     self.root,
@@ -1116,7 +1116,7 @@ class RadioTreeView(ABC):
             # 如果条目数量不为 0则显示控件
             print(f"应该显示{self.table_tag}列表")
             self.tree_frame.pack(side=tk.TOP, fill=tk.X)
-            if self.tree_has_bind is False:
+            if self.tree_has_bind is not True:
                 widget_utils.UnlimitedClickHandler(
                     self.root,
                     tree,

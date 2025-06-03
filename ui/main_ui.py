@@ -32,9 +32,6 @@ from utils.widget_utils import WidgetUtils
 # main_ui > 基本ui > 窗口ui > func > utils > public_class > resources
 # ------------------------------------------------------------------
 
-# TODO: 标签页布局优化√
-
-
 class RootWnd:
     def __init__(self, root):
         self.root = root

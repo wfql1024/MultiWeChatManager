@@ -158,12 +158,11 @@ class DetailWndFunc:
         # 第三阶段：解密
         try:
             success, result = decrypt_impl.decrypt_db_file_by_str_key(pid, db_path, str_key)
+            return success, result
         except Exception as e:
             logger.error(e)
             return False, e
 
-        if success is True:
-            return True, result
 
     @staticmethod
     def _get_decrypt_utils(platform):

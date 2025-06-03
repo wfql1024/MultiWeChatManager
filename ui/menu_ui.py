@@ -101,7 +101,8 @@ class MenuUI:
         # ————————————————————————————侧栏菜单————————————————————————————
         used_sidebar = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USED_SIDEBAR)
         suffix = "" if used_sidebar is True else Strings.SIDEBAR_HINT
-        self.sidebar_menu_label = f"❮{suffix}"
+        label = "❯" if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists() else "❮"
+        self.sidebar_menu_label = f"{label}{suffix}"
         self.menu_bar.add_command(label=self.sidebar_menu_label, command=partial(self._open_sidebar))
         # ————————————————————————————文件菜单————————————————————————————
         self.file_menu = tk.Menu(self.menu_bar, tearoff=False)
@@ -398,17 +399,20 @@ class MenuUI:
     def _open_sidebar(self):
         if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists():
             print("销毁", self.sidebar_wnd)
-            self.menu_bar.entryconfigure("❯", label="❮")
+            new_label = "❮"
+            self.menu_bar.entryconfigure(self.sidebar_menu_label, label=new_label)
+            self.sidebar_menu_label = new_label
             if self.sidebar_ui is not None:
                 self.sidebar_ui.listener_running = False
                 self.sidebar_ui = None
             self.sidebar_wnd.destroy()
         else:
             print("创建", self.sidebar_wnd)
-            self.menu_bar.entryconfigure(self.sidebar_menu_label, label="❯")
+            new_label = "❯"
+            self.menu_bar.entryconfigure(self.sidebar_menu_label, label=new_label)
+            self.sidebar_menu_label = new_label
             if len(self.sidebar_menu_label) > 1:
                 subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_SIDEBAR: True})
-                self.sidebar_menu_label = "❮"
             self.sidebar_wnd = tk.Toplevel(self.root)
             self.sidebar_ui = sidebar_ui.SidebarUI(self.sidebar_wnd, "导航条")
 

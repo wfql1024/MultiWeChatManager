@@ -595,7 +595,6 @@ class Direction:
 
 
 class AboutWndUI(SubToolWndUI, ABC):
-    # TODO：加入bug反馈渠道
     # TODO: 提取滚动文本的公共方法
     def __init__(self, wnd, title, app_info):
         self.logo_img = None
