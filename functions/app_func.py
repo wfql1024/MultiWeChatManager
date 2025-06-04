@@ -1,11 +1,14 @@
 import json
 import os
 import sys
+import threading
 from tkinter import messagebox
 from typing import Union, Tuple
 
 import win32com
 import winshell
+from PIL import Image
+from pystray import Icon, MenuItem as item, Menu
 from win32com.client import Dispatch
 
 from functions import subfunc_file
@@ -14,9 +17,7 @@ from public_class.enums import LocalCfg
 from resources import Config
 from utils import file_utils
 from utils.logger_utils import mylogger as logger
-import threading
-from pystray import Icon, MenuItem as item, Menu
-from PIL import Image, ImageDraw
+
 
 class AppFunc:
     @staticmethod

@@ -440,4 +440,3 @@ class DefaultEntry(tk.Entry):
         if value is not None:
             self.var.set(value)
             self._on_focus_out(None)
-

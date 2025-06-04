@@ -2,6 +2,7 @@ import base64
 import datetime
 import os
 import random
+import re
 import shutil
 import subprocess
 import sys
@@ -18,7 +19,6 @@ import win32con
 import win32gui
 import winshell
 from PIL import Image, ImageDraw, ImageFont
-import re
 
 from functions import subfunc_file
 from functions.sw_func import SwOperator, SwInfoFunc
@@ -733,11 +733,9 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
                 try:
                     AccOperator._create_starter_lnk_for_acc(sw, acc)
                 except Exception as e:
-                    err_dict[f"{sw/acc}"] = e
+                    err_dict[f"{sw / acc}"] = e
         success = len(err_dict) == 0
         return success, err_dict
-
-
 
 
 class AccInfoFunc:
@@ -790,7 +788,7 @@ class AccInfoFunc:
             return tuple(random.randint(75, 125) for _ in range(3))
 
         dark_color = _random_dark_color()
-        img = Image.new("RGB", Constants.AVT_SIZE, color=dark_color)  #type: ignore
+        img = Image.new("RGB", Constants.AVT_SIZE, color=dark_color)  # type: ignore
         draw = ImageDraw.Draw(img)
 
         # 加载字体（使用系统字体，必要时可指定路径）

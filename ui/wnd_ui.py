@@ -905,12 +905,12 @@ class FeedBackWndUI(SubToolWndUI, ABC):
         copy_qq_channel_num_btn.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
         btn_grid_frm.grid_columnconfigure(0, weight=1)
         UnlimitedClickHandler(
-            self.root, copy_qq_channel_num_btn, **{"1": lambda : Tk2Sys.copy_to_clipboard(self.root, "pd94878499")})
+            self.root, copy_qq_channel_num_btn, **{"1": lambda: Tk2Sys.copy_to_clipboard(self.root, "pd94878499")})
         copy_qq_group_num_btn = CustomLabelBtn(btn_grid_frm, "复制群号")
         copy_qq_group_num_btn.grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
         btn_grid_frm.grid_columnconfigure(1, weight=1)
         UnlimitedClickHandler(
-            self.root, copy_qq_group_num_btn, **{"1": lambda : Tk2Sys.copy_to_clipboard(self.root, "1040033347")}
+            self.root, copy_qq_group_num_btn, **{"1": lambda: Tk2Sys.copy_to_clipboard(self.root, "1040033347")}
         )
 
     @staticmethod
@@ -1306,6 +1306,7 @@ class StatisticWndUI(SubToolWndUI, ABC):
         tree.configure(height=len(items) + 1)
         self.tree_dict[tree_type]['sort'] = not is_ascending  # 切换排序顺序
 
+
 class SettingWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, sw, title):
         self.clear_acc_var = None
@@ -1435,8 +1436,8 @@ class SettingWndUI(SubToolWndUI, ABC):
         # 启用复选框
         self.enable_var = tk.BooleanVar()
         enable_ckb = ttk.Checkbutton(stata_frame, text="启用(所有功能,包括自启动账号功能)",
-                                         variable=self.enable_var,
-                                         command=self._update_visible_state)
+                                     variable=self.enable_var,
+                                     command=self._update_visible_state)
         enable_ckb.pack(**Constants.R_WGT_PACK)
         # 显示复选框
         self.visible_var = tk.BooleanVar()
@@ -1450,7 +1451,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         # 修改确定按钮，从第4行到第5行
         current_row = self._get_new_row_in_grid(settings_grid_frm)
         ok_button = ttk.Button(settings_grid_frm, text="保存", command=self.on_ok)
-        ok_button.grid(row=current_row-1, column=3, **Constants.NEWS_GRID_PACK)
+        ok_button.grid(row=current_row - 1, column=3, **Constants.NEWS_GRID_PACK)
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         settings_grid_frm.grid_columnconfigure(1, weight=1)
@@ -1547,6 +1548,7 @@ class SettingWndUI(SubToolWndUI, ABC):
                 return
             if self.root_class.root_ui:
                 self.root_class.root_ui.refresh_current_tab()
+
         _do()
 
     def finally_do(self):
@@ -1762,12 +1764,12 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         for ip in ip_presets:
             b = _create_btn_in_(ip_btn_frame, ip["name"])
             b.set_bind_map(
-            **{"1": lambda v=ip["value"]: ip_var.set(v)})
+                **{"1": lambda v=ip["value"]: ip_var.set(v)})
             _pack_btn(b)
         for port in port_presets:
             b = _create_btn_in_(port_btn_frame, port["name"])
             b.set_bind_map(
-            **{"1": lambda v=port["value"]: port_var.set(v)})
+                **{"1": lambda v=port["value"]: port_var.set(v)})
             _pack_btn(b)
 
         # 底部放三个按钮：确定，取消，应用

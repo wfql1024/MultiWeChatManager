@@ -6,6 +6,7 @@ from contextlib import contextmanager
 from ctypes import wintypes
 from pathlib import Path
 
+
 class Tk2Sys:
     @staticmethod
     def copy_to_clipboard(root, text):

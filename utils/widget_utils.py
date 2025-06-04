@@ -11,6 +11,7 @@ from public_class.custom_classes import Condition, Conditions
 
 class UnlimitedClickHandler:
     _widget_events_map = {}
+
     def __init__(self, root, widget, click_func=None, **click_map):
         """
         初始化 ClickHandler 类，接收 root 和外部提供的点击处理函数。
@@ -59,6 +60,7 @@ class UnlimitedClickHandler:
                 if event:
                     pass
                 return func(click_time)
+
             return wrapper
         elif len(params) == 2:
             # 接受 click_time 和 event
@@ -287,6 +289,7 @@ class WidgetUtils:
         if (isinstance(frame, tk.Frame) or isinstance(frame, ttk.Frame)) and frame.winfo_exists():
             for widget in frame.winfo_children():
                 widget.destroy()
+
 
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""

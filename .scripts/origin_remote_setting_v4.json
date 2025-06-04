@@ -2253,9 +2253,9 @@
         ],
         "login_wnd_class": "WeChatLogin",
         "main_wnd_class": "WeWorkWindow",
-        "config_path_suffix": "Profiles",
+        "config_path_suffix": "Global",
         "config_file_list": [
-            "config"
+            "Config.cfg"
         ],
         "excluded_dir_list": [
             "BrowserMetrics",

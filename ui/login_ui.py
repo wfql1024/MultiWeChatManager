@@ -283,9 +283,8 @@ class LoginUI:
         if success is True:
             messagebox.showinfo("提示", "创建成功")
         else:
-            err_str = "\n".join([f"{e}:{m}" for e,m in err.items()])
+            err_str = "\n".join([f"{e}:{m}" for e, m in err.items()])
             messagebox.showwarning("警告", err_str)
-
 
     def to_quit_accounts(self, items):
         """退出所选账号"""

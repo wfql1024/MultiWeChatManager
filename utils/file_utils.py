@@ -22,6 +22,7 @@ from utils.logger_utils import mylogger as logger
 
 rw_lock = rwlock.RWLockFairD()
 
+
 class DictUtils:
     SEPARATOR = '/'
 

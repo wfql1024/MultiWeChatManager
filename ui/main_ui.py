@@ -435,7 +435,7 @@ class RootUI:
         tab_text = tab_dict["text"]
         print(f"当前是{self.root_class.login_ui.sw}的标签页")
         subfunc_file.update_settings(
-            LocalCfg.GLOBAL_SECTION, **{LocalCfg.LOGIN_TAB:self.root_class.login_ui.sw})
+            LocalCfg.GLOBAL_SECTION, **{LocalCfg.LOGIN_TAB: self.root_class.login_ui.sw})
         if click_time <= 1:
             self.root_class.login_ui.init_login_ui()
         elif click_time >= 2:
@@ -488,6 +488,7 @@ class RootUI:
         elif root_tab == "login":
             self.root_class.login_ui.quick_refresh_mode = quick
             self.root_class.login_ui.refresh()
+
 
 class SoftwareInfo:
     def __init__(self, sw):

@@ -184,6 +184,7 @@ class SwManagerUI:
         print("进入平台管理刷新")
         if sw:
             pass
+
         def slowly_refresh():
             if isinstance(self.tab_frame, ttk.Frame) and self.tab_frame.winfo_exists():
                 printer.vital("刷新页面")

@@ -5,7 +5,7 @@ import win32api
 import win32con
 import win32gui
 import win32ui
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image, ImageDraw
 
 from utils.logger_utils import mylogger as logger
 

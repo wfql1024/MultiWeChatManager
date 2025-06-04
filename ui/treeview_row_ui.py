@@ -67,7 +67,7 @@ class TreeviewLoginUI:
                         Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(2, None)])
                 }
             },
-            "create_starter":{
+            "create_starter": {
                 "text": "创建启动器",
                 "btn": None,
                 "func": self.login_ui.to_create_starter,

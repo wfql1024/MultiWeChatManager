@@ -230,7 +230,7 @@ class CustomLabelBtn(tk.Label, CustomWidget, ABC):
 
 
 class CustomNotebook:
-    def __init__(self, root, parent_frame, direction:NotebookDirection=NotebookDirection.TOP, *args, **kwargs):
+    def __init__(self, root, parent_frame, direction: NotebookDirection = NotebookDirection.TOP, *args, **kwargs):
         self.click_time = 0
         self.direction = direction
         self.root = root

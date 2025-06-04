@@ -4,7 +4,6 @@ import os
 import re
 import shutil
 import subprocess
-import sys
 import threading
 import time
 import winreg
@@ -717,6 +716,7 @@ class SwOperator:
             shell.CurrentDirectory = dll_dir
             shell.Run(f'explorer /select,{dll_file}')
 
+
 #     @staticmethod
 #     def _create_lnk_for_account(sw, account, multiple_status):
 #         """
@@ -825,45 +825,45 @@ class SwOperator:
 #         print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
 #         return True
 
-    # @staticmethod
-    # def create_multiple_lnk(sw, status, after):
-    #     """
-    #     创建快捷多开
-    #     :return: 是否成功
-    #     """
-    #
-    #     def get_all_configs():
-    #         """
-    #         获取已经配置的账号列表
-    #         :return: 已经配置的账号列表
-    #         """
-    #         target_path = os.path.join(SwInfoFunc.get_sw_data_dir(sw), 'All Users', 'config')
-    #         all_configs = []
-    #         # 遍历目标目录中的所有文件
-    #         for file_name in os.listdir(target_path):
-    #             # 只处理以 .data 结尾的文件
-    #             if file_name.endswith('.data') and file_name != 'config.data':
-    #                 # 获取不含扩展名的文件名
-    #                 file_name_without_ext = os.path.splitext(file_name)[0]
-    #                 # 添加到列表中
-    #                 all_configs.append(file_name_without_ext)
-    #
-    #         return all_configs
-    #
-    #     # 获取已经配置的列表
-    #     configured_accounts = get_all_configs()
-    #     if len(configured_accounts) == 0:
-    #         messagebox.showinfo("提醒", "您还没有创建过登录配置")
-    #         return False
-    #
-    #     for account in configured_accounts:
-    #         # 对每一个账号进行创建
-    #         result = SwOperator._create_lnk_for_account(sw, account, status)
-    #         if result is False:
-    #             continue
-    #     after()
-    #     print("创建快捷启动成功！")
-    #     return True
+# @staticmethod
+# def create_multiple_lnk(sw, status, after):
+#     """
+#     创建快捷多开
+#     :return: 是否成功
+#     """
+#
+#     def get_all_configs():
+#         """
+#         获取已经配置的账号列表
+#         :return: 已经配置的账号列表
+#         """
+#         target_path = os.path.join(SwInfoFunc.get_sw_data_dir(sw), 'All Users', 'config')
+#         all_configs = []
+#         # 遍历目标目录中的所有文件
+#         for file_name in os.listdir(target_path):
+#             # 只处理以 .data 结尾的文件
+#             if file_name.endswith('.data') and file_name != 'config.data':
+#                 # 获取不含扩展名的文件名
+#                 file_name_without_ext = os.path.splitext(file_name)[0]
+#                 # 添加到列表中
+#                 all_configs.append(file_name_without_ext)
+#
+#         return all_configs
+#
+#     # 获取已经配置的列表
+#     configured_accounts = get_all_configs()
+#     if len(configured_accounts) == 0:
+#         messagebox.showinfo("提醒", "您还没有创建过登录配置")
+#         return False
+#
+#     for account in configured_accounts:
+#         # 对每一个账号进行创建
+#         result = SwOperator._create_lnk_for_account(sw, account, status)
+#         if result is False:
+#             continue
+#     after()
+#     print("创建快捷启动成功！")
+#     return True
 
 
 class SwInfoUtils:
