@@ -29,6 +29,7 @@ from utils.encoding_utils import VersionUtils
 from utils.file_utils import DllUtils
 from utils.hwnd_utils import TkWndUtils
 from utils.logger_utils import mylogger as logger
+from utils.logger_utils import myprinter as printer
 
 
 class SwInfoFunc:
@@ -223,28 +224,45 @@ class SwInfoFunc:
 
 class SwOperator:
     @staticmethod
-    def close_classes_but_sw_main_wnd(wnd_classes, sw):
-        """关闭某些类名的窗口，但排除主窗口"""
-        # TODO: 优化排除逻辑
-        if wnd_classes is None:
-            return
-        if len(wnd_classes) == 0:
-            return
-        for class_name in wnd_classes:
-            try:
-                while True:
-                    hwnd = win32gui.FindWindow(class_name, None)
-                    if hwnd:
-                        print(hwnd)
-                        if not SwOperatorUtils.is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-                            print("这个需要关闭")
-                            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-                            time.sleep(0.5)  # 等待窗口关闭
-                    else:
-                        print(f"已清理所有{class_name}窗口！")
-                        break
-            except Exception as ex:
-                logger.error(ex)
+    def _ask_for_manual_terminate_or_force(executable):
+        """询问手动退出,否则强制退出"""
+        processes = []
+        for proc in psutil.process_iter(['pid', 'name']):
+            if proc.name().lower() == executable.lower():
+                processes.append(proc)
+        if processes:
+            answer = messagebox.askokcancel(
+                "警告",
+                f"检测到正在使用{executable}。该操作需要退出进程，请先手动退出，直接继续将会强制关闭。是否继续？"
+            )
+            if answer is not True:
+                return None
+            still_running = process_utils.try_terminate_executable(executable)
+            if len(still_running) != 0:
+                messagebox.showerror("错误", f"无法终止微信进程：{still_running}")
+                return False
+            return True
+        return True
+
+    @staticmethod
+    def _backup_dll(sw, dll_dir):
+        """备份当前的dll"""
+        desktop_path = winshell.desktop()
+        patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
+        dll_path = os.path.join(dll_dir, patch_dll)
+        dll_bak_path = os.path.join(dll_dir, f"{patch_dll}.bak")
+        bak_desktop_path = os.path.join(desktop_path, f"{patch_dll}.bak")
+        curr_ver = file_utils.get_file_version(dll_path)
+        not_same_version = True
+        if os.path.exists(dll_bak_path):
+            not_same_version = file_utils.get_file_version(dll_bak_path) != curr_ver
+        if not os.path.exists(dll_bak_path) or (
+                os.path.exists(dll_bak_path) and not_same_version):
+            print("没有备份")
+            messagebox.showinfo("提醒",
+                                "当前是您该版本首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
+            shutil.copyfile(dll_path, dll_bak_path)
+            shutil.copyfile(dll_path, bak_desktop_path)
 
     @staticmethod
     def switch_dll(sw, mode, channel, dll_dir) -> Tuple[Optional[bool], str]:
@@ -313,54 +331,6 @@ class SwOperator:
             return False, f"{str(e)}"
 
     @staticmethod
-    def _ask_for_manual_terminate_or_force(executable):
-        """询问手动退出,否则强制退出"""
-        processes = []
-        for proc in psutil.process_iter(['pid', 'name']):
-            if proc.name().lower() == executable.lower():
-                processes.append(proc)
-        if processes:
-            answer = messagebox.askokcancel(
-                "警告",
-                f"检测到正在使用{executable}。该操作需要退出进程，请先手动退出，直接继续将会强制关闭。是否继续？"
-            )
-            if answer is not True:
-                return None
-            still_running = process_utils.try_terminate_executable(executable)
-            if len(still_running) != 0:
-                messagebox.showerror("错误", f"无法终止微信进程：{still_running}")
-                return False
-            return True
-        return True
-
-    @staticmethod
-    def _backup_dll(sw, dll_dir):
-        """备份当前的dll"""
-        desktop_path = winshell.desktop()
-        patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
-        dll_path = os.path.join(dll_dir, patch_dll)
-        dll_bak_path = os.path.join(dll_dir, f"{patch_dll}.bak")
-        bak_desktop_path = os.path.join(desktop_path, f"{patch_dll}.bak")
-        curr_ver = file_utils.get_file_version(dll_path)
-        not_same_version = True
-        if os.path.exists(dll_bak_path):
-            not_same_version = file_utils.get_file_version(dll_bak_path) != curr_ver
-        if not os.path.exists(dll_bak_path) or (
-                os.path.exists(dll_bak_path) and not_same_version):
-            print("没有备份")
-            messagebox.showinfo("提醒",
-                                "当前是您该版本首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
-            shutil.copyfile(dll_path, dll_bak_path)
-            shutil.copyfile(dll_path, bak_desktop_path)
-
-    @staticmethod
-    def thread_to_manual_login(sw):
-        threading.Thread(
-            target=SwOperator._manual_login,
-            args=(sw,)
-        ).start()
-
-    @staticmethod
     def _manual_login(sw):
         """手动登录"""
         root_class = GlobalMembers.root_class
@@ -404,6 +374,13 @@ class SwOperator:
         TkWndUtils.bring_wnd_to_front(root, root)
 
     @staticmethod
+    def thread_to_manual_login(sw):
+        threading.Thread(
+            target=SwOperator._manual_login,
+            args=(sw,)
+        ).start()
+
+    @staticmethod
     def kill_sw_multiple_processes(sw):
         """清理多开器的进程"""
         print("清理多余多开器窗口...")
@@ -438,68 +415,7 @@ class SwOperator:
         return has_mutex_dict
 
     @staticmethod
-    def open_sw(sw, multirun_mode):
-        """
-        根据状态以不同方式打开微信
-        :param sw: 选择软件标签
-        :param multirun_mode: 多开模式
-        :return: 微信窗口句柄
-        """
-        print(f"进入了打开微信的方法...")
-        sub_exe_process = None
-        wechat_path = SwInfoFunc.get_sw_install_path(sw)
-        if not wechat_path:
-            return None
-
-        if multirun_mode == "全局多开":
-            print(f"当前是全局多开模式")
-            SwOperator._create_process_without_admin(wechat_path)
-        else:
-            sub_exe_process = SwOperator._open_sw_without_freely_multirun(sw, multirun_mode)
-        return sub_exe_process
-
-    @staticmethod
-    def _open_sw_without_freely_multirun(sw, multirun_mode):
-        """非全局多开模式下打开微信"""
-        start_time = time.time()
-        sub_exe_process = None
-        wechat_path = SwInfoFunc.get_sw_install_path(sw)
-        # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
-        if multirun_mode == "WeChatMultiple_Anhkgg.exe":
-            sub_exe_process = SwOperator._create_process_without_admin(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}",
-                creation_flags=subprocess.CREATE_NO_WINDOW
-            )
-        # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
-        elif multirun_mode == "WeChatMultiple_lyie15.exe":
-            sub_exe_process = SwOperator._create_process_without_admin(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}"
-            )
-            sub_exe_hwnd = hwnd_utils.wait_open_to_get_hwnd("WTWindow", 8)
-            print(f"子程序窗口：{sub_exe_hwnd}")
-            if sub_exe_hwnd:
-                button_handle = hwnd_utils.get_child_hwnd_list_of_(
-                    sub_exe_hwnd
-                )[1]
-                if button_handle:
-                    button_details = hwnd_utils.get_hwnd_details_of_(button_handle)
-                    button_cx = int(button_details["width"] / 2)
-                    button_cy = int(button_details["height"] / 2)
-                    hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
-        # ————————————————————————————————handle————————————————————————————————
-        elif multirun_mode == MultirunMode.HANDLE or multirun_mode == MultirunMode.BUILTIN:
-            success = SwOperator._kill_mutex_by_inner_mode(sw, multirun_mode)
-            if success:
-                # 更新 has_mutex 为 False 并保存
-                print(f"成功关闭：{time.time() - start_time:.4f}秒")
-            else:
-                print(f"关闭互斥体失败！")
-            SwOperator._create_process_without_admin(wechat_path, None)
-
-        return sub_exe_process
-
-    @staticmethod
-    def kill_mutex_by_forced_inner_mode(sw, multirun_mode):
+    def _kill_mutex_by_forced_inner_mode(sw, multirun_mode):
         executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
             sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
         # ————————————————————————————————python[强力]————————————————————————————————
@@ -534,7 +450,7 @@ class SwOperator:
         executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
             sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
         # ————————————————————————————————python————————————————————————————————
-        if multirun_mode == "python":
+        if multirun_mode == MultirunMode.BUILTIN:
             handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
             if handle_regex_list is None:
                 return True
@@ -585,6 +501,131 @@ class SwOperator:
         return success
 
     @staticmethod
+    def _create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
+        """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
+        cur_sys_ver = sys_utils.get_sys_major_version_name()
+        if cur_sys_ver == "win11" or cur_sys_ver == "win10":
+            # return process_utils.create_process_with_logon(
+            #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
+            # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
+            # # 拿默认令牌通过资源管理器身份创建
+            # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
+            # # 拿Handle令牌通过资源管理器身份创建
+            return process_utils.create_process_with_re_token_handle(executable, args, creation_flags)
+        else:
+            return process_utils.create_process_for_win7(executable, args, creation_flags)
+
+    @staticmethod
+    def _open_sw_without_freely_multirun(sw, multirun_mode):
+        """非全局多开模式下打开微信"""
+        start_time = time.time()
+        sub_exe_process = None
+        wechat_path = SwInfoFunc.get_sw_install_path(sw)
+        # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
+        if multirun_mode == "WeChatMultiple_Anhkgg.exe":
+            sub_exe_process = SwOperator._create_process_without_admin(
+                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}",
+                creation_flags=subprocess.CREATE_NO_WINDOW
+            )
+        # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
+        elif multirun_mode == "WeChatMultiple_lyie15.exe":
+            sub_exe_process = SwOperator._create_process_without_admin(
+                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}"
+            )
+            sub_exe_hwnd = hwnd_utils.wait_open_to_get_hwnd("WTWindow", 8)
+            print(f"子程序窗口：{sub_exe_hwnd}")
+            if sub_exe_hwnd:
+                button_handle = hwnd_utils.get_child_hwnd_list_of_(
+                    sub_exe_hwnd
+                )[1]
+                if button_handle:
+                    button_details = hwnd_utils.get_hwnd_details_of_(button_handle)
+                    button_cx = int(button_details["width"] / 2)
+                    button_cy = int(button_details["height"] / 2)
+                    hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
+        # ————————————————————————————————handle————————————————————————————————
+        elif multirun_mode == MultirunMode.HANDLE or multirun_mode == MultirunMode.BUILTIN:
+            success = SwOperator._kill_mutex_by_inner_mode(sw, multirun_mode)
+            if success:
+                # 更新 has_mutex 为 False 并保存
+                print(f"成功关闭：{time.time() - start_time:.4f}秒")
+            else:
+                print(f"关闭互斥体失败！")
+            SwOperator._create_process_without_admin(wechat_path, None)
+
+        return sub_exe_process
+
+    @staticmethod
+    def open_sw(sw, multirun_mode):
+        """
+        根据状态以不同方式打开微信
+        :param sw: 选择软件标签
+        :param multirun_mode: 多开模式
+        :return: 微信窗口句柄
+        """
+        print(f"进入了打开微信的方法...")
+        sub_exe_process = None
+        wechat_path = SwInfoFunc.get_sw_install_path(sw)
+        if not wechat_path:
+            return None
+
+        if multirun_mode == "全局多开":
+            print(f"当前是全局多开模式")
+            SwOperator._create_process_without_admin(wechat_path)
+        else:
+            sub_exe_process = SwOperator._open_sw_without_freely_multirun(sw, multirun_mode)
+        return sub_exe_process
+
+    @staticmethod
+    def _is_hwnd_a_main_wnd_of_sw(hwnd, sw):
+        # TODO: 窗口检测逻辑需要优化
+        """检测窗口是否是某个平台的主窗口"""
+        executable, = subfunc_file.get_remote_cfg(sw, executable=None)
+        # 判断hwnd是否属于指定的程序
+        pid = hwnd_utils.get_hwnd_details_of_(hwnd)["pid"]
+        if psutil.Process(pid).exe() != executable:
+            return False
+        expected_class, = subfunc_file.get_remote_cfg(sw, main_wnd_class=None)
+        class_name = win32gui.GetClassName(hwnd)
+        # print(expected_class, class_name)
+        if sw == SW.WECHAT:
+            # 旧版微信可直接通过窗口类名确定主窗口
+            return class_name == expected_class
+        elif sw == SW.WEIXIN:
+            if class_name != expected_class:
+                return False
+            # 新版微信需要通过窗口控件判定
+            style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+            # 检查是否有最大化按钮
+            has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
+            return has_maximize
+        return None
+
+    @staticmethod
+    def close_classes_but_sw_main_wnd(wnd_classes, sw):
+        """关闭某些类名的窗口，但排除主窗口"""
+        # TODO: 优化排除逻辑
+        if wnd_classes is None:
+            return
+        if len(wnd_classes) == 0:
+            return
+        for class_name in wnd_classes:
+            try:
+                while True:
+                    hwnd = win32gui.FindWindow(class_name, None)
+                    if hwnd:
+                        print(hwnd)
+                        if not SwOperator._is_hwnd_a_main_wnd_of_sw(hwnd, sw):
+                            print("这个需要关闭")
+                            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                            time.sleep(0.5)  # 等待窗口关闭
+                    else:
+                        print(f"已清理所有{class_name}窗口！")
+                        break
+            except Exception as ex:
+                logger.error(ex)
+
+    @staticmethod
     def get_login_size(sw, multirun_mode):
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
             sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
@@ -611,21 +652,6 @@ class SwOperator:
             login_wnd.close()
             return login_width, login_height
         return None
-
-    @staticmethod
-    def _create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
-        """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
-        cur_sys_ver = sys_utils.get_sys_major_version_name()
-        if cur_sys_ver == "win11" or cur_sys_ver == "win10":
-            # return process_utils.create_process_with_logon(
-            #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
-            # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
-            # # 拿默认令牌通过资源管理器身份创建
-            # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
-            # # 拿Handle令牌通过资源管理器身份创建
-            return process_utils.create_process_with_re_token_handle(executable, args, creation_flags)
-        else:
-            return process_utils.create_process_for_win7(executable, args, creation_flags)
 
     @staticmethod
     def open_config_file(sw):
@@ -660,7 +686,6 @@ class SwOperator:
 
             for file in config_file_list:
                 config_path = os.path.join(data_path, str(config_path_suffix))
-                # 获取所有 `.data` 文件，除了 `config.data`
                 file_suffix = file.split(".")[-1]
                 data_files = glob.glob(os.path.join(config_path, f'*.{file_suffix}').replace("\\", "/"))
                 files_to_delete.extend([f for f in data_files if not os.path.split(config_path) == config_path_suffix])
@@ -669,12 +694,14 @@ class SwOperator:
                 # print(files_to_delete)
             if len(files_to_delete) > 0:
                 # 删除这些文件
+                file_utils.move_files_to_recycle_bin(files_to_delete)
+                print(f"已删除: {files_to_delete}")
                 try:
-                    file_utils.move_files_to_recycle_bin(files_to_delete)
-                    print(f"已删除: {files_to_delete}")
+                    pass
                 except Exception as e:
                     logger.error(f"无法删除 {files_to_delete}: {e}")
-            after(message=f"清除{sw}登录配置完成！")
+            after()
+            printer.print_last(f"清除{sw}登录配置完成！")
 
     @staticmethod
     def open_dll_dir(sw):
@@ -690,152 +717,153 @@ class SwOperator:
             shell.CurrentDirectory = dll_dir
             shell.Run(f'explorer /select,{dll_file}')
 
-    @staticmethod
-    def create_multiple_lnk(sw, status, after):
-        """
-        创建快捷多开
-        :return: 是否成功
-        """
+#     @staticmethod
+#     def _create_lnk_for_account(sw, account, multiple_status):
+#         """
+#         为账号创建快捷开启
+#         :param sw: 选择的软件标签
+#         :param account: 账号
+#         :param multiple_status: 是否多开状态
+#         :return: 是否成功
+#         """
+#         # 确保可以创建快捷启动
+#         data_path = SwInfoFunc.get_sw_data_dir(sw)
+#         wechat_path = SwInfoFunc.get_sw_install_path(sw)
+#         if not data_path or not wechat_path:
+#             messagebox.showerror("错误", "无法获取数据路径")
+#             return False
+#         avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
+#         if not os.path.exists(avatar_path):
+#             avatar_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
+#
+#         # 构建源文件和目标文件路径
+#         source_file = os.path.join(data_path, "All Users", "config", f"{account}.data").replace('/', '\\')
+#         target_file = os.path.join(data_path, "All Users", "config", "config.data").replace('/', '\\')
+#         close_mutex_executable = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, "WeChatMultiple_Anhkgg.exe")
+#         if multiple_status == "已开启":
+#             close_mutex_code = ""
+#             prefix = "[要开全局] - "
+#             exe_path = wechat_path
+#         else:
+#             close_mutex_code = \
+# f"""
+# \n{close_mutex_executable}
+# """
+#             prefix = ""
+#             # 判断环境
+#             if getattr(sys, 'frozen', False):  # 打包环境
+#                 exe_path = sys.executable  # 当前程序的 exe
+#             else:  # PyCharm 或其他开发环境
+#                 exe_path = close_mutex_executable  # 使用 handle_path
+#
+#         bat_content = \
+# f"""
+# @echo off
+# chcp 65001
+# REM 复制配置文件
+# copy "{source_file}" "{target_file}"
+# if errorlevel 1 (
+#     echo 复制配置文件失败
+#     exit /b 1
+# )
+# echo 复制配置文件成功
+#
+# REM 根据状态启动微信
+# @echo off{close_mutex_code}
+# cmd /u /c "start "" "{wechat_path}""
+# if errorlevel 1 (
+#     echo 启动微信失败，请检查路径是否正确。
+#     pause
+#     exit /b 1
+# )
+# """
+#
+#         # 确保路径存在
+#         account_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}')
+#         if not os.path.exists(account_file_path):
+#             os.makedirs(account_file_path)
+#         # 保存为批处理文件
+#         bat_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}', f'{prefix}{account}.bat')
+#         # 以带有BOM的UTF-8格式写入bat文件
+#         with open(bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
+#             bat_file.write(bat_content)
+#         print(f"批处理文件已生成: {bat_file_path}")
+#
+#         # 获取桌面路径
+#         desktop = winshell.desktop()
+#         # 获取批处理文件名并去除后缀
+#         bat_file_name = os.path.splitext(os.path.basename(bat_file_path))[0]
+#         # 构建快捷方式路径
+#         shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
+#
+#         # 图标文件路径
+#         acc_dir = os.path.join(Config.PROJ_USER_PATH, str(sw), f"{account}")
+#         exe_name = os.path.splitext(os.path.basename(exe_path))[0]
+#
+#         # 步骤1：提取图标为图片
+#         extracted_exe_png_path = os.path.join(acc_dir, f"{exe_name}_extracted.png")
+#         image_utils.extract_icon_to_png(exe_path, extracted_exe_png_path)
+#
+#         # 步骤2：合成图片
+#         ico_jpg_path = os.path.join(acc_dir, f"{account}_{exe_name}.png")
+#         image_utils.add_diminished_se_corner_mark_to_image(avatar_path, extracted_exe_png_path, ico_jpg_path)
+#
+#         # 步骤3：对图片转格式
+#         ico_path = os.path.join(acc_dir, f"{account}_{exe_name}.ico")
+#         image_utils.png_to_ico(ico_jpg_path, ico_path)
+#
+#         # 清理临时文件
+#         os.remove(extracted_exe_png_path)
+#
+#         # 创建快捷方式
+#         with winshell.shortcut(shortcut_path) as shortcut:
+#             shortcut.path = bat_file_path
+#             shortcut.working_directory = os.path.dirname(bat_file_path)
+#             # 修正icon_location的传递方式，传入一个包含路径和索引的元组
+#             shortcut.icon_location = (ico_path, 0)
+#
+#         print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
+#         return True
 
-        def get_all_configs():
-            """
-            获取已经配置的账号列表
-            :return: 已经配置的账号列表
-            """
-            target_path = os.path.join(SwInfoFunc.get_sw_data_dir(sw), 'All Users', 'config')
-            all_configs = []
-            # 遍历目标目录中的所有文件
-            for file_name in os.listdir(target_path):
-                # 只处理以 .data 结尾的文件
-                if file_name.endswith('.data') and file_name != 'config.data':
-                    # 获取不含扩展名的文件名
-                    file_name_without_ext = os.path.splitext(file_name)[0]
-                    # 添加到列表中
-                    all_configs.append(file_name_without_ext)
-
-            return all_configs
-
-        # 获取已经配置的列表
-        configured_accounts = get_all_configs()
-        if len(configured_accounts) == 0:
-            messagebox.showinfo("提醒", "您还没有创建过登录配置")
-            return False
-
-        for account in configured_accounts:
-            # 对每一个账号进行创建
-            result = SwOperator._create_lnk_for_account(sw, account, status)
-            if result is False:
-                continue
-        after()
-        print("创建快捷启动成功！")
-        return True
-
-    @staticmethod
-    def _create_lnk_for_account(sw, account, multiple_status):
-        """
-        为账号创建快捷开启
-        :param sw: 选择的软件标签
-        :param account: 账号
-        :param multiple_status: 是否多开状态
-        :return: 是否成功
-        """
-        # 确保可以创建快捷启动
-        data_path = SwInfoFunc.get_sw_data_dir(sw)
-        wechat_path = SwInfoFunc.get_sw_install_path(sw)
-        if not data_path or not wechat_path:
-            messagebox.showerror("错误", "无法获取数据路径")
-            return False
-        avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
-        if not os.path.exists(avatar_path):
-            avatar_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
-
-        # 构建源文件和目标文件路径
-        source_file = os.path.join(data_path, "All Users", "config", f"{account}.data").replace('/', '\\')
-        target_file = os.path.join(data_path, "All Users", "config", "config.data").replace('/', '\\')
-        close_mutex_executable = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, "WeChatMultiple_Anhkgg.exe")
-        if multiple_status == "已开启":
-            close_mutex_code = ""
-            prefix = "[要开全局] - "
-            exe_path = wechat_path
-        else:
-            close_mutex_code = \
-                f"""
-                            \n{close_mutex_executable}
-                        """
-            prefix = ""
-            # 判断环境
-            if getattr(sys, 'frozen', False):  # 打包环境
-                exe_path = sys.executable  # 当前程序的 exe
-            else:  # PyCharm 或其他开发环境
-                exe_path = close_mutex_executable  # 使用 handle_path
-
-        bat_content = f"""
-                    @echo off
-                    chcp 65001
-                    REM 复制配置文件
-                    copy "{source_file}" "{target_file}"
-                    if errorlevel 1 (
-                        echo 复制配置文件失败
-                        exit /b 1
-                    )
-                    echo 复制配置文件成功
-
-                    REM 根据状态启动微信
-                    @echo off{close_mutex_code}
-                    cmd /u /c "start "" "{wechat_path}""
-                    if errorlevel 1 (
-                    echo 启动微信失败，请检查路径是否正确。
-                    pause
-                    exit /b 1
-                    )
-                    """
-
-        # 确保路径存在
-        account_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}')
-        if not os.path.exists(account_file_path):
-            os.makedirs(account_file_path)
-        # 保存为批处理文件
-        bat_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}', f'{prefix}{account}.bat')
-        # 以带有BOM的UTF-8格式写入bat文件
-        with open(bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
-            bat_file.write(bat_content)
-        print(f"批处理文件已生成: {bat_file_path}")
-
-        # 获取桌面路径
-        desktop = winshell.desktop()
-        # 获取批处理文件名并去除后缀
-        bat_file_name = os.path.splitext(os.path.basename(bat_file_path))[0]
-        # 构建快捷方式路径
-        shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
-
-        # 图标文件路径
-        acc_dir = os.path.join(Config.PROJ_USER_PATH, str(sw), f"{account}")
-        exe_name = os.path.splitext(os.path.basename(exe_path))[0]
-
-        # 步骤1：提取图标为图片
-        extracted_exe_png_path = os.path.join(acc_dir, f"{exe_name}_extracted.png")
-        image_utils.extract_icon_to_png(exe_path, extracted_exe_png_path)
-
-        # 步骤2：合成图片
-        ico_jpg_path = os.path.join(acc_dir, f"{account}_{exe_name}.png")
-        image_utils.add_diminished_se_corner_mark_to_image(avatar_path, extracted_exe_png_path, ico_jpg_path)
-
-        # 步骤3：对图片转格式
-        ico_path = os.path.join(acc_dir, f"{account}_{exe_name}.ico")
-        image_utils.png_to_ico(ico_jpg_path, ico_path)
-
-        # 清理临时文件
-        os.remove(extracted_exe_png_path)
-
-        # 创建快捷方式
-        with winshell.shortcut(shortcut_path) as shortcut:
-            shortcut.path = bat_file_path
-            shortcut.working_directory = os.path.dirname(bat_file_path)
-            # 修正icon_location的传递方式，传入一个包含路径和索引的元组
-            shortcut.icon_location = (ico_path, 0)
-
-        print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
-        return True
+    # @staticmethod
+    # def create_multiple_lnk(sw, status, after):
+    #     """
+    #     创建快捷多开
+    #     :return: 是否成功
+    #     """
+    #
+    #     def get_all_configs():
+    #         """
+    #         获取已经配置的账号列表
+    #         :return: 已经配置的账号列表
+    #         """
+    #         target_path = os.path.join(SwInfoFunc.get_sw_data_dir(sw), 'All Users', 'config')
+    #         all_configs = []
+    #         # 遍历目标目录中的所有文件
+    #         for file_name in os.listdir(target_path):
+    #             # 只处理以 .data 结尾的文件
+    #             if file_name.endswith('.data') and file_name != 'config.data':
+    #                 # 获取不含扩展名的文件名
+    #                 file_name_without_ext = os.path.splitext(file_name)[0]
+    #                 # 添加到列表中
+    #                 all_configs.append(file_name_without_ext)
+    #
+    #         return all_configs
+    #
+    #     # 获取已经配置的列表
+    #     configured_accounts = get_all_configs()
+    #     if len(configured_accounts) == 0:
+    #         messagebox.showinfo("提醒", "您还没有创建过登录配置")
+    #         return False
+    #
+    #     for account in configured_accounts:
+    #         # 对每一个账号进行创建
+    #         result = SwOperator._create_lnk_for_account(sw, account, status)
+    #         if result is False:
+    #             continue
+    #     after()
+    #     print("创建快捷启动成功！")
+    #     return True
 
 
 class SwInfoUtils:
@@ -974,7 +1002,7 @@ class SwInfoUtils:
         return results
 
     @staticmethod
-    def get_replacement_pairs(regex, repl_bytes, data):
+    def _get_replacement_pairs(regex, repl_bytes, data):
         matches = list(regex.finditer(data))
         replacement_pairs = []
 
@@ -1071,7 +1099,7 @@ class SwInfoUtils:
             # print(f"repl_hex: {bytes_to_hex_str(repl_bytes)}")
             original_regex = re.compile(original_regex_bytes, re.DOTALL)
 
-            pairs = SwInfoUtils.get_replacement_pairs(original_regex, repl_bytes, data)
+            pairs = SwInfoUtils._get_replacement_pairs(original_regex, repl_bytes, data)
             if len(pairs) == 0:
                 print("未识别到特征码")
                 return None
@@ -1283,27 +1311,4 @@ class SwInfoUtils:
 
 
 class SwOperatorUtils:
-    @staticmethod
-    def is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-        # TODO: 窗口检测逻辑需要优化
-        """检测窗口是否是某个平台的主窗口"""
-        executable, = subfunc_file.get_remote_cfg(sw, executable=None)
-        # 判断hwnd是否属于指定的程序
-        pid = hwnd_utils.get_hwnd_details_of_(hwnd)["pid"]
-        if psutil.Process(pid).exe() != executable:
-            return False
-        expected_class, = subfunc_file.get_remote_cfg(sw, main_wnd_class=None)
-        class_name = win32gui.GetClassName(hwnd)
-        # print(expected_class, class_name)
-        if sw == SW.WECHAT:
-            # 旧版微信可直接通过窗口类名确定主窗口
-            return class_name == expected_class
-        elif sw == SW.WEIXIN:
-            if class_name != expected_class:
-                return False
-            # 新版微信需要通过窗口控件判定
-            style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
-            # 检查是否有最大化按钮
-            has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
-            return has_maximize
-        return None
+    pass

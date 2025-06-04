@@ -544,7 +544,7 @@ def move_files_to_recycle_bin(file_paths):
     # 创建 SHFileOpStruct 实例
     file_op = SHFileOpStruct()
     file_op.wFunc = FO_DELETE
-    file_op.pFrom = file_paths_str
+    file_op.pFrom = ctypes.cast(ctypes.create_unicode_buffer(file_paths_str), ctypes.c_wchar_p)
     file_op.fFlags = FOF_ALLOWUNDO  # 允许撤销操作（即放入回收站）
 
     # 调用 Windows API

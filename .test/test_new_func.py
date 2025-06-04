@@ -4,6 +4,7 @@ from unittest import TestCase
 import psutil
 
 from functions import subfunc_file
+from functions.acc_func import AccOperator
 from functions.sw_func import SwInfoUtils
 from resources import Config
 from ui.sidebar_ui import SidebarUI, WndProperties
@@ -193,3 +194,7 @@ class Test(TestCase):
         features_tuple = (original_features, modified_features)
         res = SwInfoUtils.search_patterns_and_replaces_by_features(dll_path, features_tuple)
         print(res)
+
+    def test__create_lnk_for_account(self):
+        AccOperator._create_starter_lnk_for_acc("WeChat", "wxid_5daddxikoccs22")
+        AccOperator._create_starter_lnk_for_acc("WeChat", "wxid_h5m0aq1uvr2f22")

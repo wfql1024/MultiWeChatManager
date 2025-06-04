@@ -161,7 +161,7 @@ class WeChatDecryptImpl(DecryptInterface):
                     logger.info(f"pointer={address:X}, key_addr={key_addr:X}, key={key}")
                     logger.info(f"str_key:{str_key}")
                     logger.info(f"查找用时：{time.time() + 5 - end_time:.4f}秒，地址差为{address - phone_addr:X}")
-                    return True, str_key
+                    break
                 else:
                     logger.warning(
                         f"Error key: diff={address - phone_addr:X}, pointer={address:X}, key_addr={key_addr:X}, key={key}")
@@ -170,6 +170,8 @@ class WeChatDecryptImpl(DecryptInterface):
             if not str_key:
                 logger.error("超时，没有找到main_key")
                 return False, "超时，没有找到main_key"
+            else:
+                return True, str_key
         except Exception as e:
             logger.error(e)
             return False, e

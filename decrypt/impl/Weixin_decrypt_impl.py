@@ -64,15 +64,6 @@ class WeixinDecryptImpl(DecryptInterface):
     def get_acc_str_key_by_pid(self, pid):
         print("正在获取key...")
         str_key = 'this is a hypothetical key'
-        # dump_exe = Config.WECHAT_DUMP_EXE_PATH
-        # info = subprocess.check_output([dump_exe, '-p', f"{pid}", '-r']).decode()
-        # key_pattern = r"key:\s*([a-fA-F0-9]+)"
-        # matched = re.search(key_pattern, info)
-        # if matched:
-        #     str_key = matched.group(1)
-        #     print(f"Extracted key: {str_key}")
-        # else:
-        #     print("Key not found.")
 
         return True, str_key
 

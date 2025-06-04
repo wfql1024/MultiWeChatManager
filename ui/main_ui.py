@@ -108,8 +108,8 @@ class RootClass:
             self.root.after(3000, WndCreator.open_update_log)
             self.root.after(3000, lambda: AppFunc.mov_backup(new=self.new))
         # -关闭加载窗口
-        print("1.5秒后关闭加载窗口...")
-        self.root.after(1500, self.wait_for_loading_close_and_bind)
+        print("2秒后关闭加载窗口...")
+        self.root.after(2000, self.wait_for_loading_close_and_bind)
         # -初始化构建...
         self.initialize_in_root()
         # except Exception as e:

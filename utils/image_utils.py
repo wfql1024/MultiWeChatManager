@@ -104,7 +104,8 @@ def extract_icon_to_png(exe_path, output_png_path=None):
     ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
 
     large, small = win32gui.ExtractIconEx(exe_path, 0)
-    win32gui.DestroyIcon(small[0])
+    if small:
+        win32gui.DestroyIcon(small[0])
 
     hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
     hbmp = win32ui.CreateBitmap()
@@ -112,6 +113,13 @@ def extract_icon_to_png(exe_path, output_png_path=None):
     hdc = hdc.CreateCompatibleDC()
 
     hdc.SelectObject(hbmp)
+    if not large:
+        # 返回一个透明图像
+        transparent_img = Image.new('RGBA', (ico_x, ico_y), (0, 0, 0, 0))
+        if output_png_path is not None:
+            transparent_img.save(output_png_path, format='PNG')
+        return None
+        # return ImageTk.PhotoImage(transparent_img)
     hdc.DrawIcon((0, 0), large[0])
 
     bmp_str = hbmp.GetBitmapBits(True)
@@ -127,7 +135,7 @@ def extract_icon_to_png(exe_path, output_png_path=None):
         icon.save(output_png_path, format='PNG')
     else:
         pass
-    return ImageTk.PhotoImage(icon)
+    # return ImageTk.PhotoImage(icon)
 
 
 def add_diminished_se_corner_mark_to_image(image_path, mark_path, output_path, diminish_time=3):

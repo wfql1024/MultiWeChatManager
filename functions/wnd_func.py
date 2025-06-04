@@ -20,19 +20,53 @@ from utils.logger_utils import myprinter as printer
 
 class DetailWndFunc:
     @staticmethod
-    def thread_to_fetch_acc_detail_by_pid(sw, pid, account, after):
+    def _get_decrypt_utils(platform):
+        module_name = None
+        class_name = None
         try:
-            psutil.Process(pid)
-        except psutil.NoSuchProcess:
-            # 用户在此过程偷偷把账号退了...
-            logger.warning(f"该进程已不存在: {pid}")
-            subfunc_file.update_sw_acc_data(sw, account, pid=None)
-            messagebox.showinfo("提示", "未检测到该账号登录")
-            after()
-            return
-        # 线程启动获取详情
-        threading.Thread(target=DetailWndFunc._fetch_acc_detail_by_pid,
-                         args=(sw, pid, account, after)).start()
+            # # 动态加载模块，模块名称格式为 {platform}_decrypt_utils
+            # # module_name = f"decrypt.impl.{platform}_decrypt_impl"
+            # module_name = f"decrypt"
+            # module = importlib.import_module(module_name)
+            # 从模块中获取工具类，例如 WeChatDecryptUtils
+            class_name = f"{platform}DecryptImpl"
+            decrypt_class = getattr(decrypt, class_name)
+            return decrypt_class()
+        except ModuleNotFoundError:
+            raise ValueError(f"未找到模块: {module_name}")
+        except AttributeError:
+            raise ValueError(f"模块 {module_name} 中未找到类: {class_name}")
+
+    @staticmethod
+    def _decrypt_db_and_return(sw, pid, account):
+        # 加载对应平台的解密工具
+        try:
+            decrypt_impl = DetailWndFunc._get_decrypt_utils(sw)
+        except ValueError as e:
+            logger.error(e)
+            return False, f"{sw}平台不支持, {e}"
+
+        # 第一阶段：获取密钥
+        success, result = decrypt_impl.get_acc_str_key_by_pid(pid)
+        if success is not True:
+            return False, result
+        str_key = result
+        print(f"成功获取key:{str_key}")
+
+        # 第二阶段：将数据库拷贝到项目
+        success, result = decrypt_impl.copy_origin_db_to_proj(pid, account)
+        if success is not True:
+            return False, result
+        db_path = result
+        print(f"成功将数据库拷贝到项目：{db_path}")
+
+        # 第三阶段：解密
+        try:
+            success, result = decrypt_impl.decrypt_db_file_by_str_key(pid, db_path, str_key)
+            return success, result
+        except Exception as e:
+            logger.error(e)
+            return False, e
 
     @staticmethod
     def _fetch_acc_detail_by_pid(sw, pid, account, after):
@@ -53,7 +87,7 @@ class DetailWndFunc:
             return
 
         print(f"pid：{pid}，开始找key...")
-        success, result = DetailWndFunc.decrypt_db_and_return(sw, pid, account)
+        success, result = DetailWndFunc._decrypt_db_and_return(sw, pid, account)
         if success is not True:
             print("解密出错...")
             messagebox.showerror("错误", result)
@@ -133,54 +167,19 @@ class DetailWndFunc:
             after()
 
     @staticmethod
-    def decrypt_db_and_return(sw, pid, account):
-        # 加载对应平台的解密工具
+    def thread_to_fetch_acc_detail_by_pid(sw, pid, account, after):
         try:
-            decrypt_impl = DetailWndFunc._get_decrypt_utils(sw)
-        except ValueError as e:
-            logger.error(e)
-            return False, f"{sw}平台不支持, {e}"
-
-        # 第一阶段：获取密钥
-        success, result = decrypt_impl.get_acc_str_key_by_pid(pid)
-        if success is not True:
-            return False, result
-        str_key = result
-        print(f"成功获取key:{str_key}")
-
-        # 第二阶段：将数据库拷贝到项目
-        success, result = decrypt_impl.copy_origin_db_to_proj(pid, account)
-        if success is not True:
-            return False, result
-        db_path = result
-        print(f"成功将数据库拷贝到项目：{db_path}")
-
-        # 第三阶段：解密
-        try:
-            success, result = decrypt_impl.decrypt_db_file_by_str_key(pid, db_path, str_key)
-            return success, result
-        except Exception as e:
-            logger.error(e)
-            return False, e
-
-
-    @staticmethod
-    def _get_decrypt_utils(platform):
-        module_name = None
-        class_name = None
-        try:
-            # # 动态加载模块，模块名称格式为 {platform}_decrypt_utils
-            # # module_name = f"decrypt.impl.{platform}_decrypt_impl"
-            # module_name = f"decrypt"
-            # module = importlib.import_module(module_name)
-            # 从模块中获取工具类，例如 WeChatDecryptUtils
-            class_name = f"{platform}DecryptImpl"
-            decrypt_class = getattr(decrypt, class_name)
-            return decrypt_class()
-        except ModuleNotFoundError:
-            raise ValueError(f"未找到模块: {module_name}")
-        except AttributeError:
-            raise ValueError(f"模块 {module_name} 中未找到类: {class_name}")
+            psutil.Process(pid)
+        except psutil.NoSuchProcess:
+            # 用户在此过程偷偷把账号退了...
+            logger.warning(f"该进程已不存在: {pid}")
+            subfunc_file.update_sw_acc_data(sw, account, pid=None)
+            messagebox.showinfo("提示", "未检测到该账号登录")
+            after()
+            return
+        # 线程启动获取详情
+        threading.Thread(target=DetailWndFunc._fetch_acc_detail_by_pid,
+                         args=(sw, pid, account, after)).start()
 
 
 class UpdateLogWndFunc:

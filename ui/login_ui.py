@@ -262,16 +262,9 @@ class LoginUI:
 
     def to_auto_login(self, items):
         """登录所选账号"""
-        login_dict = {}
-        for item in items:
-            sw, acc = item.split("/")
-            if sw not in login_dict:
-                login_dict[sw] = []
-            login_dict[sw].append(acc)
-
+        login_dict = LoginUI._items_to_dict(items)
         if self.global_settings_value.hide_wnd is True:
             self.root.iconify()  # 最小化主窗口
-
         try:
             AccOperator.thread_to_auto_login_accounts(login_dict)
         except Exception as e:
@@ -283,9 +276,30 @@ class LoginUI:
         threading.Thread(target=AccOperator.open_sw_and_ask,
                          args=(self.sw, accounts[0], self.sw_classes[self.sw].multirun_mode)).start()
 
+    @staticmethod
+    def to_create_starter(items):
+        sw_accounts_dict = LoginUI._items_to_dict(items)
+        success, err = AccOperator.create_starter_lnk_for_accounts(sw_accounts_dict)
+        if success is True:
+            messagebox.showinfo("提示", "创建成功")
+        else:
+            err_str = "\n".join([f"{e}:{m}" for e,m in err.items()])
+            messagebox.showwarning("警告", err_str)
+
+
     def to_quit_accounts(self, items):
         """退出所选账号"""
         accounts = [items.split("/")[1] for items in items]
         answer = AccOperator.quit_selected_accounts(self.sw, accounts)
         if answer is True:
             self.refresh_frame(self.sw)
+
+    @staticmethod
+    def _items_to_dict(items):
+        login_dict = {}
+        for item in items:
+            sw, acc = item.split("/")
+            if sw not in login_dict:
+                login_dict[sw] = []
+            login_dict[sw].append(acc)
+        return login_dict

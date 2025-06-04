@@ -66,6 +66,17 @@ class TreeviewLoginUI:
                     "只能配置一个账号哦~":
                         Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(2, None)])
                 }
+            },
+            "create_starter":{
+                "text": "创建启动器",
+                "btn": None,
+                "func": self.login_ui.to_create_starter,
+                "enable_scopes":
+                    Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
+                "tip_scopes_dict": {
+                    "请选择要创建的账号":
+                        Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
+                }
             }
         }
         self.ui_frame = dict()
@@ -79,13 +90,17 @@ class TreeviewLoginUI:
         if isinstance(logins, Sized):
             self.tree_class["login"] = AccLoginTreeView(
                 self,
-                "login", "已登录：", self.btn_dict["auto_quit_btn"],
-                self.btn_dict["config_btn"], )
+                "login", "已登录：", self.btn_dict["auto_quit_btn"].copy(),
+                self.btn_dict["config_btn"].copy(),
+                self.btn_dict["create_starter"].copy(),
+            )
 
         # 加载未登录列表
         if isinstance(logouts, Sized):
             self.tree_class["logout"] = AccLoginTreeView(
-                self, "logout", "未登录：", self.btn_dict["auto_login_btn"])
+                self, "logout", "未登录：", self.btn_dict["auto_login_btn"].copy(),
+                self.btn_dict["create_starter"].copy(),
+            )
 
 
 class AccLoginTreeView(ActionableTreeView, ABC):

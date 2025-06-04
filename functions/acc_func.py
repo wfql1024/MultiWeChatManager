@@ -9,12 +9,14 @@ import threading
 import time
 import tkinter as tk
 from collections.abc import Iterable
+from pathlib import Path
 from tkinter import messagebox, filedialog
 from typing import Dict, List
 
 import psutil
 import win32con
 import win32gui
+import winshell
 from PIL import Image, ImageDraw, ImageFont
 import re
 
@@ -220,6 +222,8 @@ class AccOperator:
 
             threading.Thread(target=click_all_login_button).start()
 
+        return True
+
     @staticmethod
     def _get_max_dimensions_from_sw_list(sw_list):
         """
@@ -263,12 +267,12 @@ class AccOperator:
             logger.error(e)
 
     @staticmethod
-    def operate_acc_config(method, sw, account):
+    def operate_acc_config(method, sw, acc):
         """
         使用use或add操作账号对应的登录配置
         :param method: 操作方法
         :param sw: 选择的软件标签
-        :param account: 账号
+        :param acc: 账号
         :return: 是否成功，携带的信息
         """
         if method not in ["use", "add"]:
@@ -287,7 +291,7 @@ class AccOperator:
             origin_cfg_path = os.path.join(str(data_path), str(config_path_suffix), str(item)).replace("\\", "/")
             # 提取源配置文件的后缀
             item_suffix = item.split(".")[-1]
-            acc_cfg_item = f"{account}.{item_suffix}"
+            acc_cfg_item = f"{acc}.{item_suffix}"
             acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), acc_cfg_item)
                             .replace("\\", "/"))
             # 构建配置字典
@@ -444,6 +448,297 @@ class AccOperator:
                 pass
         return quited_accounts
 
+    @staticmethod
+    def _generate_close_mutex_bat(handle_exe_path, target_exe_name, mutex_names):
+        """
+        生成 .bat 文件，用于通过 handle.exe 查找并关闭指定程序中的互斥体句柄。
+        :param handle_exe_path: handle.exe 的绝对路径
+        :param target_exe_name:      要查找的目标进程名称（如 SomeProgram.exe）
+        :param mutex_names:      要查找的互斥体全名（如 \\BaseNamedObjects\\MyMutex）
+        """
+        header = f"""REM 删除互斥体
+@echo off
+REM 设置路径和参数
+set "HANDLE_EXE={handle_exe_path}"
+set "TARGET_EXE={target_exe_name}"
+"""
+
+        body = 'setlocal enabledelayedexpansion\n'
+        for i, mutex in enumerate(mutex_names):
+            var_name = f"MUTEX{i}"
+            body += f'set "{var_name}={mutex}"\n'
+
+        body += "\nREM 遍历所有互斥体并查找+关闭句柄\n"
+        for i in range(len(mutex_names)):
+            var = f"%MUTEX{i}%"
+            body += f"""
+echo ========= 查找互斥体：{var} =========
+"%HANDLE_EXE%" -a -p "%TARGET_EXE%" "{var}" > temp_handle.txt
+
+for /f "tokens=3,6 delims= " %%a in ('findstr /i "{var}" temp_handle.txt') do (
+    set "PID=%%a"
+    set "HANDLE=%%b"
+    call set "PID=%%PID: =%%"
+    call set "HANDLE=%%HANDLE: =%%"
+    echo 找到句柄 PID: !PID!, 句柄: !HANDLE!
+    echo 尝试关闭句柄...
+    echo y | "%HANDLE_EXE%" -c !HANDLE! -p !PID!
+    echo 已关闭
+)
+"""
+
+        footer = """
+del temp_handle.txt
+echo 所有互斥体处理完成
+"""
+        content = header + body + footer
+        return content
+
+    @staticmethod
+    def _generate_replace_cfg_cmds(sw, acc, data_path):
+        """生成用于替换配置文件的bat指令"""
+        config_path_suffix, cfg_items = subfunc_file.get_remote_cfg(
+            sw, config_path_suffix=None, config_file_list=None)
+        # 构建相关文件列表
+        replace_cmd_list = []
+        for item in cfg_items:
+            # 拼接出源配置路径
+            origin_cfg_path = os.path.join(
+                str(data_path), str(config_path_suffix), str(item)).replace("/", "\\")
+            # 提取源配置文件的后缀
+            item_suffix = item.split(".")[-1]
+            acc_cfg_item = f"{acc}.{item_suffix}"
+            acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), acc_cfg_item)
+                            .replace("/", "\\"))
+            remove_cmd = f'echo y | del "{origin_cfg_path}"'
+            copy_cmd = f'echo y | copy "{acc_cfg_path}" "{origin_cfg_path}"'
+            replace_cmd = f"{remove_cmd}\n{copy_cmd}"
+            replace_cmd_list.append(replace_cmd)
+
+            # # 构建配置字典
+        replace_cmds_str = "\n".join(replace_cmd_list)
+        replace_cfg_cmd = f"""
+@echo off
+chcp 65001
+REM 替换配置文件
+{replace_cmds_str}
+if errorlevel 1 (
+    echo 复制配置文件失败
+    exit /b 1
+)
+echo 替换配置文件成功
+"""
+        return replace_cfg_cmd
+
+    @staticmethod
+    def _generate_start_cmds_if_freely_multirun(sw_path):
+        close_handle_cmds_str = ""
+        #         start_cmds_str = f"""
+        # REM 启动
+        # cmd /u /c "start "" "{sw_path}""
+        # if errorlevel 1 (
+        #     echo 启动微信失败，请检查路径是否正确。
+        #     pause
+        #     exit /b 1
+        # )
+        # """
+        start_vbs_str = f"""
+WScript.Sleep 2000
+
+shell.ShellExecute "{sw_path}", "", "", "", 1
+"""
+        handle_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, "handle.exe")
+        # 判断环境
+        if getattr(sys, 'frozen', False):  # 打包环境
+            icon_exe = sys.executable  # 当前程序的 exe
+        else:  # PyCharm 或其他开发环境
+            icon_exe = handle_path  # 使用 handle_path
+        prefix = "[需开全局多开]"
+        return [(icon_exe, prefix, close_handle_cmds_str, start_vbs_str)]
+
+    @staticmethod
+    def _generate_start_cmds_for_handle(handle_path, sw_path, mutex_names):
+        sw_exe_name = os.path.basename(sw_path)
+        close_handle_cmds_str = AccOperator._generate_close_mutex_bat(handle_path, sw_exe_name, mutex_names)
+        #         start_cmds_str = f"""REM 启动
+        # cmd /u /c "start "" "{sw_path}""
+        # if errorlevel 1 (
+        #     echo 启动微信失败，请检查路径是否正确。
+        #     pause
+        #     exit /b 1
+        # )
+        # """
+        start_vbs_str = f"""
+WScript.Sleep 5000
+
+shell.ShellExecute "{sw_path}", "", "", "", 1
+"""
+        prefix = "[handle]"
+        return [(sw_path, prefix, close_handle_cmds_str, start_vbs_str)]
+
+    @staticmethod
+    def _generate_start_cmds_for_other(sw):
+        res_tuple = []
+        exe_files = [str(p) for p in Path(Config.PROJ_EXTERNAL_RES_PATH).rglob(f"{sw}Multiple_*.exe")]
+        for exe_file in exe_files:
+            exe_name = os.path.basename(exe_file)
+            right_part = exe_name.split('_', 1)[1].rsplit('.exe', 1)[0]
+            prefix = f"[{right_part}]"
+            close_handle_cmds_str = ""
+            #             start_cmds_str = f"""
+            # REM 启动
+            # cmd /u /c "start "" "{exe_file}""
+            # if errorlevel 1 (
+            #     echo 启动微信失败，请检查路径是否正确。
+            #     pause
+            #     exit /b 1
+            # )
+            # """
+            start_vbs_str = f"""
+WScript.Sleep 2000
+
+shell.ShellExecute "{exe_file}", "", "", "", 1
+"""
+            res_tuple.append((exe_file, prefix, close_handle_cmds_str, start_vbs_str))
+        return res_tuple
+
+    @staticmethod
+    def _create_bat_icon_lnk(sw, acc, icon_exe, acc_avatar, prefix, admin_bat_str, normal_vbs_str):
+        # 确保路径存在
+        account_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{acc}')
+        if not os.path.exists(account_file_path):
+            os.makedirs(account_file_path)
+        # 保存为批处理文件
+        sw_display_name = StringUtils.clean_texts(SwInfoFunc.get_sw_origin_display_name(sw))
+        acc_display_name = StringUtils.clean_texts(AccInfoFunc.get_acc_origin_display_name(sw, acc))
+        admin_bat_file_path = os.path.join(
+            Config.PROJ_USER_PATH, sw, f'{acc}',
+            f'{prefix}{sw_display_name}{acc_display_name}[admin].bat').replace("/", "\\")
+        # bat_file_path = os.path.join(
+        #     Config.PROJ_USER_PATH, sw, f'{acc}', f'{prefix}{sw_display_name}{acc_display_name}.bat').replace("/", "\\")
+        vbs_file_path = os.path.join(
+            Config.PROJ_USER_PATH, sw, f'{acc}',
+            f'{prefix}{sw_display_name}{acc_display_name}.vbs').replace("/", "\\")
+        # -以带有BOM的UTF-8格式写入管理员bat文件
+        with open(admin_bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
+            bat_file.write(admin_bat_str)
+        print(f"批处理文件已生成: {admin_bat_file_path}")
+
+        #         # -拼接一个先运行管理员bat文件再执行普通bat命令的bat文件
+        #         bat_file_content = f"""@echo off
+        # chcp 65001 >nul
+        # REM 执行 VBS 提权执行 bat
+        # cscript //nologo "{vbs_file_path}"
+        #
+        # {normal_vbs_str}
+        #         """
+        #         with open(bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
+        #             bat_file.write(bat_file_content)
+        #         print(f"批处理文件已生成: {bat_file_path}")
+
+        # -生成vbs文件
+        vbs_content = f"""
+Set shell = CreateObject("Shell.Application")
+shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
+{normal_vbs_str}
+"""
+        with open(vbs_file_path, "w", encoding="utf-16") as f:
+            f.write(vbs_content)
+        # 获取桌面路径
+        desktop = winshell.desktop()
+        # 获取批处理文件名并去除后缀
+        bat_file_name = os.path.splitext(os.path.basename(vbs_file_path))[0]
+        # 构建快捷方式路径
+        shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
+
+        # 图标文件路径
+        acc_dir = os.path.join(Config.PROJ_USER_PATH, str(sw), f"{acc}")
+        exe_name = os.path.splitext(os.path.basename(icon_exe))[0]
+
+        # 步骤1：提取图标为图片
+        extracted_exe_png_path = os.path.join(acc_dir, f"{exe_name}_extracted.png")
+        image_utils.extract_icon_to_png(icon_exe, extracted_exe_png_path)
+
+        # 步骤2：合成图片
+        ico_jpg_path = os.path.join(acc_dir, f"{acc}_{exe_name}.png")
+        image_utils.add_diminished_se_corner_mark_to_image(acc_avatar, extracted_exe_png_path, ico_jpg_path)
+
+        # 步骤3：对图片转格式
+        ico_path = os.path.join(acc_dir, f"{acc}_{exe_name}.ico")
+        image_utils.png_to_ico(ico_jpg_path, ico_path)
+
+        # 清理临时文件
+        os.remove(extracted_exe_png_path)
+
+        # 创建快捷方式
+        with winshell.shortcut(shortcut_path) as shortcut:
+            shortcut.path = vbs_file_path
+            shortcut.working_directory = os.path.dirname(vbs_file_path)
+            # 修正icon_location的传递方式，传入一个包含路径和索引的元组
+            shortcut.icon_location = (ico_path, 0)
+
+        print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
+
+    @staticmethod
+    def _create_starter_lnk_for_acc(sw, acc):
+        """
+        为账号创建快捷开启
+        :param sw: 选择的软件标签
+        :param acc: 账号
+        :return: 是否成功
+        """
+        # 确保可以创建快捷启动
+        data_path = SwInfoFunc.get_sw_data_dir(sw)
+        sw_path = SwInfoFunc.get_sw_install_path(sw)
+        if not data_path or not sw_path:
+            messagebox.showerror("错误", "无法获取数据路径")
+            return False
+        data_path = data_path.replace("/", "\\")
+        sw_path = sw_path.replace("/", "\\")
+        handle_exe_path = Config.HANDLE_EXE_PATH.replace("/", "\\")
+        # 头像
+        avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
+        if not os.path.exists(avatar_path):
+            avatar_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
+
+        # 互斥体名称列表
+        mutex_names = []
+        lock_handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=[])
+        for handle_regex_dict in lock_handle_regex_list:
+            print(handle_regex_dict)
+            mutex_name = handle_regex_dict.get("handle_name")
+            mutex_names.append(mutex_name)
+        print(f"互斥体名称列表：{mutex_names}")
+
+        replace_cfg_cmd = AccOperator._generate_replace_cfg_cmds(sw, acc, data_path)
+        operate_list = []
+        operate_list.extend(AccOperator._generate_start_cmds_if_freely_multirun(sw_path))
+        operate_list.extend(AccOperator._generate_start_cmds_for_handle(
+            handle_exe_path, sw_path, mutex_names))
+        operate_list.extend(AccOperator._generate_start_cmds_for_other(sw))
+
+        for exe_path, prefix, close_handle_cmds_str, start_vbs_str in operate_list:
+            # 管理员运行部分:替换+关闭句柄
+            admin_bat_str = f"{replace_cfg_cmd}\n{close_handle_cmds_str}"
+            # 普通运行部分：启动
+            normal_vbs_str = f"{start_vbs_str}"
+            AccOperator._create_bat_icon_lnk(sw, acc, exe_path, avatar_path, prefix, admin_bat_str, normal_vbs_str)
+        return None
+
+    @staticmethod
+    def create_starter_lnk_for_accounts(sw_accounts_dict):
+        err_dict = {}
+        for sw, accounts in sw_accounts_dict.items():
+            for acc in accounts:
+                try:
+                    AccOperator._create_starter_lnk_for_acc(sw, acc)
+                except Exception as e:
+                    err_dict[f"{sw/acc}"] = e
+        success = len(err_dict) == 0
+        return success, err_dict
+
+
+
 
 class AccInfoFunc:
     """
@@ -452,6 +747,7 @@ class AccInfoFunc:
         sw: 选择的软件标签
         acc: 账号标识
     """
+
     @staticmethod
     def _use_default_avatar_or_white_bg():
         # 如果没有，检查default.jpg
@@ -492,6 +788,7 @@ class AccInfoFunc:
         # 创建头像图像（背景颜色可以自定义）
         def _random_dark_color():
             return tuple(random.randint(75, 125) for _ in range(3))
+
         dark_color = _random_dark_color()
         img = Image.new("RGB", Constants.AVT_SIZE, color=dark_color)  #type: ignore
         draw = ImageDraw.Draw(img)

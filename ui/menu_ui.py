@@ -147,14 +147,14 @@ class MenuUI:
             self.file_menu.add_command(label="查看DLL目录", command=partial(SwOperator.open_dll_dir, self.sw))
             if self.sw_class.dll_dir is None:
                 self.file_menu.entryconfig(f"查看DLL目录", state="disable")
-            # -创建快捷启动
-            quick_start_sp, = subfunc_file.get_remote_cfg(self.sw, support_quick_start=None)
-            # print(f"支持快捷启动：{quick_start_sp}")
-            self.file_menu.add_command(label="创建快捷启动",
-                                       command=partial(SwOperator.create_multiple_lnk,
-                                                       self.sw, self.sw_class.can_freely_multirun,
-                                                       self.create_root_menu_bar),
-                                       state="normal" if quick_start_sp is True else "disabled")
+            # # -创建快捷启动
+            # quick_start_sp, = subfunc_file.get_remote_cfg(self.sw, support_quick_start=None)
+            # # print(f"支持快捷启动：{quick_start_sp}")
+            # self.file_menu.add_command(label="创建快捷启动",
+            #                            command=partial(SwOperator.create_multiple_lnk,
+            #                                            self.sw, self.sw_class.can_freely_multirun,
+            #                                            self.create_root_menu_bar),
+            #                            state="normal" if quick_start_sp is True else "disabled")
             print(f"文件菜单用时：{time.time() - self.start_time:.4f}秒")
 
         # ————————————————————————————编辑菜单————————————————————————————
