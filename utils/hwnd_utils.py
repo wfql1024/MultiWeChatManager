@@ -166,6 +166,7 @@ def wait_open_to_get_hwnd(class_name, timeout=30, title=None):
         time.sleep(0.5)
     return None  # 未找到窗口，返回 None
 
+
 def wait_open_to_get_hwnd_but_exclude_(exclude_hwnd_list, class_name, timeout=30, title=None):
     """等待指定类名的窗口打开，并返回窗口句柄"""
     end_time = time.time() + timeout

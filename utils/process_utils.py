@@ -7,9 +7,9 @@ import time
 import xml.etree.ElementTree as ET
 from ctypes import wintypes
 from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
+from typing import List
 
 import psutil
-from typing import List
 
 from utils.logger_utils import mylogger as logger
 

@@ -50,7 +50,8 @@
             "Weixin",
             "WXWork",
             "QQNT",
-            "QQ"
+            "QQ",
+            "TIM"
         ],
         "all_login_status": {
             "login": {
@@ -2227,7 +2228,7 @@
         "anti-revoke": {
         },
         "redundant_wnd_class": [
-            ""
+            "WeChatLogin"
         ],
         "label": "企微",
         "executable": "WXWork.exe",
@@ -2336,13 +2337,58 @@
         ],
         "label": "QQ",
         "executable": "QQ.exe",
-        "inst_path_guess_suffix": "Tencent\\QQ\\QQ.exe",
+        "inst_path_guess_suffix": "Tencent\\QQ\\Bin\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQ",
         "data_dir_check_suffix": "All Users",
         "dll_dir_check_suffix": "IM.dll",
         "patch_dll": "IM.dll",
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQ",
         "user_reg_sub_key": "Software\\Tencent\\QQ",
+        "data_dir_name": "Tencent Files",
+        "lock_handle_regex_list": [
+        ],
+        "cfg_handle_regex_list": [
+        ],
+        "login_wnd_class": "TXGuiFoundation",
+        "main_wnd_class": "TXGuiFoundation",
+        "config_path_suffix": "All Users",
+        "config_file_list": [
+            "Registry.db"
+        ],
+        "excluded_dir_list": [
+            "All Users",
+            "nt_data",
+            "nt_db",
+            "nt_qq",
+            "nt_temp",
+            "Tencent Files"
+        ],
+        "cut_to_compatible_id": [
+            0,
+            0
+        ],
+        "support_python_mode": true,
+        "support_python_s_mode": true,
+        "support_handle_mode": true,
+        "support_quick_start": false
+    },
+    "TIM": {
+        "multirun": {
+        },
+        "anti-revoke": {
+        },
+        "redundant_wnd_class": [
+            ""
+        ],
+        "label": "TIM",
+        "executable": "TIM.exe",
+        "inst_path_guess_suffix": "Tencent\\TIM\\Bin\\TIM.exe",
+        "data_dir_guess_suffix": "Tencent\\TIM",
+        "data_dir_check_suffix": "All Users",
+        "dll_dir_check_suffix": "IM.dll",
+        "patch_dll": "IM.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TIM",
+        "user_reg_sub_key": "Software\\Tencent\\TIM",
         "data_dir_name": "Tencent Files",
         "lock_handle_regex_list": [
         ],

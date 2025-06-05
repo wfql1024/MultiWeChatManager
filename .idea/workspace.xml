@@ -5,22 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="优化自动登录过程,防止登录窗口过快移动导致显示异常;优化路径获取识别,除设置中深入查找路径外,其余场景皆读取本地记录;新增精准识别进程所使用程序位置,优化登录状态识别;详情页重登会立即关闭详情窗,防止崩溃.">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.scripts/origin_remote_setting_v4.json" beforeDir="false" afterPath="$PROJECT_DIR$/.scripts/origin_remote_setting_v4.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_unit.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_unit.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/acc_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/acc_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/app_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/app_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/wnd_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/wnd_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/acc_manager_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/acc_manager_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/login_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/login_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/sw_manager_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/sw_manager_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/wnd_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/wnd_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/encoding_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/encoding_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/hwnd_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/hwnd_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/process_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/process_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -754,15 +739,7 @@
       <workItem from="1748893531919" duration="21943000" />
       <workItem from="1748970265126" duration="34360000" />
       <workItem from="1749049804026" duration="11603000" />
-      <workItem from="1749085694381" duration="17533000" />
-    </task>
-    <task id="LOCAL-00281" summary="修改新版本配置文件格式，增加旧版配置转换方法">
-      <option name="closed" value="true" />
-      <created>1745138915963</created>
-      <option name="number" value="00281" />
-      <option name="presentableId" value="LOCAL-00281" />
-      <option name="project" value="LOCAL" />
-      <updated>1745138915963</updated>
+      <workItem from="1749085694381" duration="17857000" />
     </task>
     <task id="LOCAL-00282" summary="修改新版本配置文件格式，增加旧版配置转换方法">
       <option name="closed" value="true" />
@@ -1148,7 +1125,15 @@
       <option name="project" value="LOCAL" />
       <updated>1749053710074</updated>
     </task>
-    <option name="localTasksCounter" value="330" />
+    <task id="LOCAL-00330" summary="优化自动登录过程,防止登录窗口过快移动导致显示异常;优化路径获取识别,除设置中深入查找路径外,其余场景皆读取本地记录;新增精准识别进程所使用程序位置,优化登录状态识别;详情页重登会立即关闭详情窗,防止崩溃.">
+      <option name="closed" value="true" />
+      <created>1749113229516</created>
+      <option name="number" value="00330" />
+      <option name="presentableId" value="LOCAL-00330" />
+      <option name="project" value="LOCAL" />
+      <updated>1749113229517</updated>
+    </task>
+    <option name="localTasksCounter" value="331" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">

@@ -222,7 +222,7 @@ class AccOperator:
                         break
                 root.after(0, login_ui.refresh_frame, sw)
 
-            threading.Thread(target=click_all_login_button, args=(hwnd_list, )).start()
+            threading.Thread(target=click_all_login_button, args=(hwnd_list,)).start()
 
         return True
 

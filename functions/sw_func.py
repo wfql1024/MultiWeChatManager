@@ -40,6 +40,7 @@ class SwInfoFunc:
         feature: 特征码适配，适配当前版本及其兼容版本. 结构为 版本号 -> 频道 -> 特征码
         channel: 频道，区分不同特征/作者的适配. 结构为 频道 -> (标题,说明,作者)
     """
+
     @staticmethod
     def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict) -> Tuple[Optional[dict], str]:
         """通过精确版本分支进行识别dll状态"""
