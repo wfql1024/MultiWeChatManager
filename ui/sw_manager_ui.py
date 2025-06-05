@@ -110,6 +110,8 @@ class SwManagerUI:
         """初始化账号管理UI"""
         if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
             self.refresh()
+        else:
+            self.refresh(True)
 
     def display_sw_mng_ui(self):
         print("创建平台管理界面...")
@@ -146,7 +148,7 @@ class SwManagerUI:
         if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
             self.scrollable_canvas.refresh_canvas()
 
-    def refresh(self):
+    def refresh(self, only_menu=False):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         # 刷新菜单
@@ -160,6 +162,8 @@ class SwManagerUI:
             logger.error(re)
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
             self.root.destroy()
+        if only_menu is True:
+            return
         # 刷新界面
         try:
             self.root.after(0, self.refresh_frame)
@@ -273,7 +277,7 @@ class SwManagerTreeView(ActionableTreeView, ABC):
             dll_path = dll_dir
             try:
                 patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
-                dll_path = os.path.join(dll_dir, patch_dll)
+                dll_path = os.path.join(dll_dir, patch_dll).replace('\\', '/')
             except Exception as e:
                 logger.warning(e)
             version = SwInfoFunc.calc_sw_ver(sw, dll_path)

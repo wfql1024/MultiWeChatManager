@@ -52,8 +52,10 @@ class LoginUI:
         self.tab_frame = self.sw_class.frame
         if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
             self.refresh()
+        else:
+            self.refresh(True)
 
-    def refresh(self):
+    def refresh(self, only_menu=False):
         """刷新菜单和界面"""
         print(f"登录页:刷新菜单与界面...")
         self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
@@ -69,8 +71,8 @@ class LoginUI:
         # 路径检查
         self.sw_class.data_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DATA_DIR)
         self.sw_class.inst_path = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.INST_PATH)
-        self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw, self.sw_class.data_dir)
         self.sw_class.dll_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DLL_DIR)
+        self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw, self.sw_class.dll_dir)
 
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
@@ -79,6 +81,8 @@ class LoginUI:
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
             self.root.destroy()
 
+        if only_menu is True:
+            return
         # 刷新界面
         try:
             self.root.after(0, self.refresh_frame, self.sw)
@@ -145,7 +149,7 @@ class LoginUI:
             # 底部框架=版本号+手动登录
             bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
             bottom_frame.pack(side=tk.BOTTOM)
-            sw_ver = SwInfoFunc.calc_sw_ver(self.sw, self.sw_class.data_dir)
+            sw_ver = SwInfoFunc.calc_sw_ver(self.sw, self.sw_class.dll_dir)
             if sw_ver is not None:
                 sw_ver_label = ttk.Label(bottom_frame, text=f"{sw_ver}", foreground="grey")
                 sw_ver_label.pack(side=tk.BOTTOM)

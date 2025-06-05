@@ -42,9 +42,9 @@ class SwInfoFunc:
     """
 
     @staticmethod
-    def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict) -> Tuple[Optional[dict], str]:
+    def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_dir, mode_branches_dict) -> Tuple[Optional[dict], str]:
         """通过精确版本分支进行识别dll状态"""
-        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw, dll_path)
+        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw, dll_dir)
         if cur_sw_ver is None:
             return None, f"错误：识别不到版本"
         if "precise" not in mode_branches_dict:
@@ -53,6 +53,8 @@ class SwInfoFunc:
         if cur_sw_ver not in precise_vers_dict:
             return None, f"错误：未找到版本{cur_sw_ver}的适配"
         ver_channels_dict = precise_vers_dict[cur_sw_ver]
+        patch_dll, =subfunc_file.get_remote_cfg(sw, patch_dll=None)
+        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
         res_dict = SwInfoUtils.identify_dll_of_ver_by_dict(ver_channels_dict, dll_path)
         if len(res_dict) == 0:
             return None, f"错误：该版本{cur_sw_ver}没有适配"
@@ -69,7 +71,7 @@ class SwInfoFunc:
             return
         dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
         # 尝试寻找兼容版本并添加到额外表中
-        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw, dll_path)
+        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw, dll_dir)
         subfunc_file.update_extra_cfg(sw, patch_dll=os.path.basename(dll_path))
         if "precise" in mode_branches_dict:
             precise_vers_dict = mode_branches_dict["precise"]
@@ -108,8 +110,7 @@ class SwInfoFunc:
         patch_dll, mode_branches_dict = subfunc_file.get_extra_cfg(sw, patch_dll=None, **{mode: None})
         if patch_dll is None or mode_branches_dict is None:
             return None, f"错误：平台未适配{mode}"
-        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-        return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict)
+        return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, dll_dir, mode_branches_dict)
 
     @staticmethod
     def identify_dll(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:
@@ -147,17 +148,23 @@ class SwInfoFunc:
         return path if PathUtils.is_valid_path(path) else None
 
     @staticmethod
-    def calc_sw_ver(sw, dll_path):
+    def calc_sw_ver(sw, dll_dir):
         """获取软件版本"""
         try:
+            patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
+            # print(patch_dll)
+            dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
             cur_sw_ver = file_utils.get_file_version(dll_path)
-            if cur_sw_ver is None:
-                exec_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
-                cur_sw_ver = file_utils.get_file_version(exec_path)
             return cur_sw_ver
         except Exception as e:
             print(e)
-            return None
+            try:
+                exec_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+                cur_sw_ver = file_utils.get_file_version(exec_path)
+                return cur_sw_ver
+            except Exception as e:
+                print(e)
+                return None
 
     @staticmethod
     def get_sw_logo(sw):

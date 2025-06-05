@@ -110,8 +110,10 @@ class AccManagerUI:
         """初始化账号管理UI"""
         if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
             self.refresh()
+        else:
+            self.refresh(True)
 
-    def refresh(self):
+    def refresh(self, only_menu=False):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         # 刷新菜单
@@ -126,6 +128,8 @@ class AccManagerUI:
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
             self.root.destroy()
 
+        if only_menu is True:
+            return
         # 刷新界面
         try:
             self.root.after(0, self.refresh_frame)
