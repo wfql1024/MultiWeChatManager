@@ -199,6 +199,8 @@ class DetailUI(SubToolWndUI, ABC):
         re_login_btn = _create_btn_in_(pid_frame, "重登")
         re_login_btn.set_bind_map(
             **{"1": partial(AccOperator.thread_to_auto_login_accounts, {sw: [account]})}).apply_bind(self.root)
+        re_login_btn.set_bind_map(
+            **{"1": self.wnd.destroy}).apply_bind(self.root)
         _pack_btn(re_login_btn)
         # mutex
         mutex_frame = ttk.Frame(login_status_frame)
@@ -1351,11 +1353,11 @@ class SettingWndUI(SubToolWndUI, ABC):
         }
         sw = self.sw
         self.origin_values = {
-            "inst_path": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "inst_path"),
-            "data_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "data_dir"),
-            "dll_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "dll_dir"),
-            "login_size": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "login_size"),
-            "state": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, "state"),
+            "inst_path": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.INST_PATH),
+            "data_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.DATA_DIR),
+            "dll_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.DLL_DIR),
+            "login_size": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.LOGIN_SIZE),
+            "state": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE),
         }
         self.error_msg = {
             "inst_path": "请选择可执行文件!",
@@ -1459,13 +1461,17 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def update_content(self):
         # 初始加载已经配置的，或是没有配置的话自动获取
-        self.load_or_get_sw_inst_path(self.sw, False)
-        self.load_or_get_sw_data_dir(self.sw, False)
-        self.load_or_get_sw_dll_dir(self.sw, False)
-        login_size = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, 'login_size')
-        self.login_size_var.set(login_size)
-        state_code = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, LocalCfg.STATE)
-        self.set_sw_state_cb_from_(state_code)
+        self.inst_path_var.set(self.origin_values[LocalCfg.INST_PATH])
+        self.data_dir_var.set(self.origin_values[LocalCfg.DATA_DIR])
+        self.dll_dir_var.set(self.origin_values[LocalCfg.DLL_DIR])
+        self.login_size_var.set(self.origin_values[LocalCfg.LOGIN_SIZE])
+        # self.load_or_get_sw_inst_path(self.sw, True)
+        # self.load_or_get_sw_data_dir(self.sw, True)
+        # self.load_or_get_sw_dll_dir(self.sw, True)
+        # login_size = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, 'login_size')
+        # self.login_size_var.set(login_size)
+        # state_code = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, LocalCfg.STATE)
+        self.set_sw_state_cb_from_(self.origin_values[LocalCfg.STATE])
 
     def _update_visible_state(self):
         """内部使用的联动逻辑"""
@@ -1588,11 +1594,11 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def load_or_get_sw_inst_path(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.get_sw_install_path(sw, ignore_local_rec)  # 此函数会应用路径
+        path = SwInfoFunc.detect_sw_install_path(sw, ignore_local_rec)  # 此函数会应用路径
         if path:
             self.inst_path_var.set(path.replace('\\', '/'))
-        else:
-            self.inst_path_var.set("获取失败，请登录后获取或手动选择路径")
+        # else:
+        #     self.inst_path_var.set("获取失败，请登录后获取或手动选择路径")
 
     def choose_sw_inst_path(self, sw):
         """选择路径，若检验成功会进行保存"""
@@ -1618,11 +1624,11 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def load_or_get_sw_data_dir(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.get_sw_data_dir(sw, ignore_local_rec)  # 此函数会保存路径
+        path = SwInfoFunc.detect_sw_data_dir(sw, ignore_local_rec)  # 此函数会保存路径
         if path:
             self.data_dir_var.set(path.replace('\\', '/'))
-        else:
-            self.data_dir_var.set("获取失败，请手动选择存储文件夹（可在平台设置中查看）")
+        # else:
+        #     self.data_dir_var.set("获取失败，请手动选择存储文件夹（可在平台设置中查看）")
 
     @staticmethod
     def _ask_for_directory():
@@ -1669,11 +1675,11 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def load_or_get_sw_dll_dir(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.get_sw_dll_dir(sw, ignore_local_rec)  # 此函数会保存路径
+        path = SwInfoFunc.detect_sw_dll_dir(sw, ignore_local_rec)  # 此函数会保存路径
         if path:
             self.dll_dir_var.set(path.replace('\\', '/'))
-        else:
-            self.dll_dir_var.set("获取失败，请手动选择安装目录下最新版本号文件夹")
+        # else:
+        #     self.dll_dir_var.set("获取失败，请手动选择安装目录下最新版本号文件夹")
 
     def choose_sw_dll_dir(self, sw):
         """选择路径，若检验成功会进行保存"""

@@ -24,7 +24,7 @@ from public_class.global_members import GlobalMembers
 from resources import Config, Strings, Constants
 from utils import file_utils, process_utils, pywinhandle, handle_utils, hwnd_utils, sys_utils, image_utils
 from utils.better_wx.inner_utils import wildcard_tokenize, patt2hex
-from utils.encoding_utils import VersionUtils
+from utils.encoding_utils import VersionUtils, PathUtils
 from utils.file_utils import DllUtils
 from utils.hwnd_utils import TkWndUtils
 from utils.logger_utils import mylogger as logger
@@ -40,11 +40,10 @@ class SwInfoFunc:
         feature: 特征码适配，适配当前版本及其兼容版本. 结构为 版本号 -> 频道 -> 特征码
         channel: 频道，区分不同特征/作者的适配. 结构为 频道 -> (标题,说明,作者)
     """
-
     @staticmethod
     def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_path, mode_branches_dict) -> Tuple[Optional[dict], str]:
         """通过精确版本分支进行识别dll状态"""
-        cur_sw_ver = SwInfoFunc.get_sw_ver(sw, dll_path)
+        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw, dll_path)
         if cur_sw_ver is None:
             return None, f"错误：识别不到版本"
         if "precise" not in mode_branches_dict:
@@ -69,7 +68,7 @@ class SwInfoFunc:
             return
         dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
         # 尝试寻找兼容版本并添加到额外表中
-        cur_sw_ver = SwInfoFunc.get_sw_ver(sw, dll_path)
+        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw, dll_path)
         subfunc_file.update_extra_cfg(sw, patch_dll=os.path.basename(dll_path))
         if "precise" in mode_branches_dict:
             precise_vers_dict = mode_branches_dict["precise"]
@@ -120,33 +119,39 @@ class SwInfoFunc:
         return SwInfoFunc._identify_dll_by_extra_cfg(sw, mode, dll_dir)
 
     @staticmethod
-    def get_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
+    def detect_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
         """获取微信安装路径,ignore_local_record为True时忽略本地记录"""
         print("获取安装路径...")
         _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.INST_PATH, ignore_local_record)
         return result
 
     @staticmethod
-    def get_sw_data_dir(sw: str, ignore_local_record=False):
+    def detect_sw_data_dir(sw: str, ignore_local_record=False):
         """获取微信数据路径,ignore_local_record为True时忽略本地记录"""
         print("获取数据存储路径...")
         _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DATA_DIR, ignore_local_record)
         return result
 
     @staticmethod
-    def get_sw_dll_dir(sw: str, ignore_local_record=False):
+    def detect_sw_dll_dir(sw: str, ignore_local_record=False):
         """获取微信dll所在文件夹,ignore_local_record为True时忽略本地记录"""
         print("获取dll目录...")
         _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DLL_DIR, ignore_local_record)
         return result
 
     @staticmethod
-    def get_sw_ver(sw, dll_path):
+    def get_saved_path_of_(sw, path_type) -> Optional[str]:
+        """获取已保存的路径"""
+        path, = subfunc_file.get_settings(sw, **{path_type: None})
+        return path if PathUtils.is_valid_path(path) else None
+
+    @staticmethod
+    def calc_sw_ver(sw, dll_path):
         """获取软件版本"""
         try:
             cur_sw_ver = file_utils.get_file_version(dll_path)
             if cur_sw_ver is None:
-                exec_path = SwInfoFunc.get_sw_install_path(sw)
+                exec_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
                 cur_sw_ver = file_utils.get_file_version(exec_path)
             return cur_sw_ver
         except Exception as e:
@@ -355,7 +360,8 @@ class SwOperator:
         sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
         wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 20)
         if wechat_hwnd:
-            subfunc_file.set_all_acc_values_to_false(sw)
+            subfunc_file.set_pid_mutex_values_to_false(sw)
+            subfunc_file.update_has_mutex_from_pid_mutex(sw)
             subfunc_file.update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
             print(f"打开了登录窗口{wechat_hwnd}")
             if sub_exe_process:
@@ -519,7 +525,7 @@ class SwOperator:
         """非全局多开模式下打开微信"""
         start_time = time.time()
         sub_exe_process = None
-        wechat_path = SwInfoFunc.get_sw_install_path(sw)
+        sw_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if multirun_mode == "WeChatMultiple_Anhkgg.exe":
             sub_exe_process = SwOperator._create_process_without_admin(
@@ -550,7 +556,7 @@ class SwOperator:
                 print(f"成功关闭：{time.time() - start_time:.4f}秒")
             else:
                 print(f"关闭互斥体失败！")
-            SwOperator._create_process_without_admin(wechat_path, None)
+            SwOperator._create_process_without_admin(sw_path, None)
 
         return sub_exe_process
 
@@ -564,13 +570,13 @@ class SwOperator:
         """
         print(f"进入了打开微信的方法...")
         sub_exe_process = None
-        wechat_path = SwInfoFunc.get_sw_install_path(sw)
-        if not wechat_path:
+        sw_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        if not sw_path:
             return None
 
-        if multirun_mode == "全局多开":
+        if multirun_mode == MultirunMode.FREELY_MULTIRUN:
             print(f"当前是全局多开模式")
-            SwOperator._create_process_without_admin(wechat_path)
+            SwOperator._create_process_without_admin(sw_path)
         else:
             sub_exe_process = SwOperator._open_sw_without_freely_multirun(sw, multirun_mode)
         return sub_exe_process
@@ -655,7 +661,7 @@ class SwOperator:
     @staticmethod
     def open_config_file(sw):
         """打开配置文件夹"""
-        data_path = SwInfoFunc.get_sw_data_dir(sw)
+        data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
         if os.path.exists(data_path):
             config_path_suffix, = subfunc_file.get_remote_cfg(sw, config_path_suffix=None)
             if config_path_suffix is None:
@@ -673,7 +679,7 @@ class SwOperator:
             f"该操作将会清空{sw}登录配置文件，请确认是否需要清除？"
         )
         if confirm:
-            data_path = SwInfoFunc.get_sw_data_dir(sw)
+            data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
             config_path_suffix, config_file_list = subfunc_file.get_remote_cfg(
                 sw, config_path_suffix=None, config_file_list=None)
             if (config_path_suffix is None or config_file_list is None or
@@ -705,7 +711,7 @@ class SwOperator:
     @staticmethod
     def open_dll_dir(sw):
         """打开注册表所在文件夹，并将光标移动到文件"""
-        dll_dir = SwInfoFunc.get_sw_dll_dir(sw)
+        dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
         if os.path.exists(dll_dir):
             dll_file, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
             if dll_file is None:
@@ -944,6 +950,8 @@ class SwInfoUtils:
     @staticmethod
     def get_sw_install_path_by_guess(sw: str) -> list:
         suffix, = subfunc_file.get_remote_cfg(sw, inst_path_guess_suffix=None)
+        if suffix is None:
+            return []
         guess_paths = [
             os.path.join(os.environ.get('ProgramFiles'), suffix).replace('\\', '/'),
             os.path.join(os.environ.get('ProgramFiles(x86)'), suffix).replace('\\', '/'),
@@ -969,6 +977,8 @@ class SwInfoUtils:
     def get_sw_data_dir_by_guess(sw: str) -> list:
         data_dir_name, data_dir_guess_suffix = subfunc_file.get_remote_cfg(
             sw, data_dir_name=None, data_dir_guess_suffix=None)
+        if data_dir_name is None or data_dir_guess_suffix is None:
+            return []
         guess_paths = [
             os.path.join(os.path.expanduser('~'), 'Documents', data_dir_name).replace('\\', '/'),
         ]
@@ -1267,18 +1277,17 @@ class SwInfoUtils:
         if data_dir_name is None or data_dir_name == "":
             paths = []
         if sw == SW.WEIXIN:
-            other_path = SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.DATA_DIR)(SW.WECHAT)
-            if other_path and len(other_path) != 0:
-                paths = [os.path.join(os.path.dirname(other_path[0]), data_dir_name).replace('\\', '/')]
+            other_path = SwInfoFunc.get_saved_path_of_(SW.WECHAT, LocalCfg.DATA_DIR)
+            if other_path is not None:
+                paths = [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
             else:
                 paths = []
         if sw == SW.WECHAT:
-            other_path = SwInfoFunc.get_sw_data_dir(SW.WEIXIN)
-            if other_path and len(other_path) != 0:
-                return [os.path.join(os.path.dirname(other_path[0]), data_dir_name).replace('\\', '/')]
+            other_path = SwInfoFunc.get_saved_path_of_(SW.WEIXIN, LocalCfg.DATA_DIR)
+            if other_path is not None:
+                return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
             else:
                 return []
-
         return paths
 
     @staticmethod
@@ -1286,8 +1295,8 @@ class SwInfoUtils:
         """通过文件遍历方式获取dll文件夹"""
         dll_name, = subfunc_file.get_remote_cfg(
             sw, dll_dir_check_suffix=None)
-        install_path = SwInfoFunc.get_sw_install_path(sw)
-        if install_path and install_path != "":
+        install_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        if install_path is not None and install_path != "":
             install_dir = os.path.dirname(install_path)
         else:
             return []

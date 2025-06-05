@@ -285,7 +285,9 @@ class AppFunc:
                 all_sw, = subfunc_file.get_remote_cfg('global', all_sw={})
                 # print(all_sw)
                 for sw in all_sw:
-                    dll_dir_path = SwInfoFunc.get_sw_dll_dir(sw)
+                    dll_dir_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
+                    if dll_dir_path is None:
+                        continue
                     patch_dll, = subfunc_file.get_remote_cfg(
                         sw, patch_dll=None)
                     if patch_dll is None:

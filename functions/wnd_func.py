@@ -12,6 +12,7 @@ import requests
 import decrypt
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
+from public_class.enums import LocalCfg
 from resources.config import Config
 from utils import image_utils
 from utils.logger_utils import mylogger as logger
@@ -97,9 +98,10 @@ class DetailWndFunc:
         decrypted_mm_db_path = result
         print(f"解密成功，数据库临时存在：{decrypted_mm_db_path}")
 
-        data_path = SwInfoFunc.get_sw_data_dir(sw)
-        excluded_folders = {'All Users', 'Applet', 'Plugins', 'WMPF'}
-        folders = set(
+        data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
+        excluded_folders, = subfunc_file.get_remote_cfg(
+            sw, excluded_dir_list=None)
+        acc_folders = set(
             folder for folder in os.listdir(data_path)
             if os.path.isdir(os.path.join(data_path, folder))
         ) - excluded_folders
@@ -114,7 +116,7 @@ class DetailWndFunc:
 
         try:
             cursor = conn.cursor()
-            for acc in folders:
+            for acc in acc_folders:
                 success, result = decrypt_impl.get_acc_id_and_alias_from_db(cursor, acc)
                 if success is not True:
                     logger.error(f"账号{acc}查询失败")

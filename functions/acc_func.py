@@ -96,7 +96,7 @@ class AccOperator:
             # 开始遍历登录账号过程
             start_time = time.time()
             # 使用一个set存储不重复的handle
-            wechat_handles = set()
+            hwnd_list = []
             for j in range(len(login_dict[sw])):
                 # 关闭配置文件锁
                 handle_utils.close_sw_mutex_by_handle(
@@ -114,47 +114,39 @@ class AccOperator:
                 sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
 
                 # 等待打开窗口
-                end_time = time.time() + 20
-                while True:
-                    wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 1)
-                    if wechat_hwnd is not None and wechat_hwnd not in wechat_handles:
-                        # 确保打开了新的微信登录窗口
-                        wechat_handles.add(wechat_hwnd)
-                        if sub_exe_process:
-                            # print(f"进程{sub_exe_process}")
-                            # print(isinstance(sub_exe_process, process_utils.Process))
-                            # print(sub_exe_process.h_process, sub_exe_process.h_thread)
-                            sub_exe_process.terminate()
-                        print(f"打开窗口成功：{wechat_hwnd}")
-                        subfunc_file.set_all_acc_values_to_false(sw)
-                        subfunc_file.update_has_mutex_from_all_acc(sw)
-                        break
-                    if time.time() > end_time:
-                        print(f"超时！此号打开窗口失败！")
-                        wechat_hwnd = None
-                        break
-
-                if wechat_hwnd is None:
-                    # 跳过这个账号
+                sw_hwnd = hwnd_utils.wait_open_to_get_hwnd_but_exclude_(hwnd_list, login_wnd_class)
+                if sw_hwnd is not None and sw_hwnd not in hwnd_list:
+                    # 确保打开了新的微信登录窗口
+                    hwnd_list.append(sw_hwnd)
+                    if sub_exe_process:
+                        # print(f"进程{sub_exe_process}")
+                        # print(isinstance(sub_exe_process, process_utils.Process))
+                        # print(sub_exe_process.h_process, sub_exe_process.h_thread)
+                        sub_exe_process.terminate()
+                    print(f"打开窗口成功：{sw_hwnd}")
+                    subfunc_file.set_pid_mutex_values_to_false(sw)
+                    subfunc_file.update_has_mutex_from_pid_mutex(sw)
+                else:
                     continue
 
-                # 安排窗口位置
-                # 横坐标算出完美的平均位置
-                new_left, new_top = acc_positions[acc_turn]
-
-                # 只调整窗口的位置，不改变大小
-                try:
-                    win32gui.SetWindowPos(
-                        wechat_hwnd,
-                        win32con.HWND_TOP,
-                        new_left,
-                        new_top,
-                        0,  # 宽度设置为 0 表示不改变
-                        0,  # 高度设置为 0 表示不改变
-                        win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
-                    )
-                except Exception as e:
-                    logger.error(e)
+                # 两个以上窗口才安排位置,打开一个窗口就安排上一个窗口的位置
+                if acc_turn >= 1:
+                    # 计算当前窗口的位置
+                    # 安排窗口位置
+                    new_left, new_top = acc_positions[acc_turn - 1]
+                    # 只调整窗口的位置，不改变大小
+                    try:
+                        win32gui.SetWindowPos(
+                            hwnd_list[acc_turn - 1],
+                            win32con.HWND_TOP,
+                            new_left,
+                            new_top,
+                            0,  # 宽度设置为 0 表示不改变
+                            0,  # 高度设置为 0 表示不改变
+                            win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+                        )
+                    except Exception as e:
+                        logger.error(e)
 
                 # 逐次统计时间
                 subfunc_file.update_statistic_data(sw, 'auto', str(j + 1), multirun_mode, time.time() - start_time)
@@ -169,17 +161,27 @@ class AccOperator:
             # 如果有，关掉多余的多开器
             SwOperator.kill_sw_multiple_processes(sw)
 
+            # 间隔一段时间后对最后一个窗口移动
+            time.sleep(3)
+            new_left, new_top = acc_positions[-1]
+            try:
+                win32gui.SetWindowPos(
+                    hwnd_list[-1], win32con.HWND_TOP, new_left, new_top, 0, 0,
+                    win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+                )
+            except Exception as e:
+                logger.error(e)
+
             # 定义点击按钮并等待成功的线程，启动线程
-            def click_all_login_button():
+            def click_all_login_button(hwnds):
                 # 判断是否需要自动点击按钮
                 auto_press = root_class.global_settings_value.auto_press
                 if auto_press:
                     # 两轮点击所有窗口的登录，防止遗漏
-                    hwnd_list = hwnd_utils.get_hwnd_list_by_class_and_title(login_wnd_class)
                     time.sleep(0.5)
                     inner_start_time = time.time()
                     for i in range(1):
-                        for h in hwnd_list:
+                        for h in hwnds:
                             hwnd_details = hwnd_utils.get_hwnd_details_of_(h)
                             cx = int(hwnd_details["width"] * 0.5)
                             cy = int(hwnd_details["height"] * 0.75)
@@ -188,7 +190,7 @@ class AccOperator:
                         print(f"通过位置查找，用时：{time.time() - inner_start_time:.4f}s")
 
                     inner_start_time = time.time()
-                    for h in hwnd_list:
+                    for h in hwnds:
                         titles = ["进入微信", "进入WeChat", "Enter Weixin", "进入微信"]  # 添加所有需要查找的标题
                         try:
                             # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
@@ -220,7 +222,7 @@ class AccOperator:
                         break
                 root.after(0, login_ui.refresh_frame, sw)
 
-            threading.Thread(target=click_all_login_button).start()
+            threading.Thread(target=click_all_login_button, args=(hwnd_list, )).start()
 
         return True
 
@@ -278,7 +280,7 @@ class AccOperator:
         if method not in ["use", "add"]:
             logger.error("未知字段：" + method)
             return False, "未知字段"
-        data_path = SwInfoFunc.get_sw_data_dir(sw)
+        data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
         if not data_path:
             return False, "无法获取WeChat数据路径"
         config_path_suffix, cfg_items = subfunc_file.get_remote_cfg(
@@ -395,6 +397,8 @@ class AccOperator:
                 time.sleep(0.2)
                 hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
                 hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+        else:
+            hwnd_utils.restore_window(main_hwnd)
 
     @staticmethod
     def quit_selected_accounts(sw, accounts_selected):
@@ -688,8 +692,8 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
         :return: 是否成功
         """
         # 确保可以创建快捷启动
-        data_path = SwInfoFunc.get_sw_data_dir(sw)
-        sw_path = SwInfoFunc.get_sw_install_path(sw)
+        data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
+        sw_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
         if not data_path or not sw_path:
             messagebox.showerror("错误", "无法获取数据路径")
             return False
@@ -1058,9 +1062,12 @@ class AccInfoFunc:
         if exe is None or excluded_dir_list is None:
             messagebox.showerror("错误", f"{sw}平台未适配")
             return False, "该平台未适配"
+        inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        # 从进程名获取pid;对pid去除子进程;对pid进行重名筛选,只要特定路径的
         pids = process_utils.get_process_ids_by_name(exe)
         pids = process_utils.remove_child_pids(pids)
-        # print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
+        pids = process_utils.remove_pids_not_in_path(pids, inst_path)
+        print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
         if isinstance(pids, Iterable):
             for pid in pids:
                 update_acc_list_by_pid(pid)
@@ -1096,7 +1103,7 @@ class AccInfoFunc:
                     subfunc_file.update_sw_acc_data(sw, acc, has_mutex=None)
                 subfunc_file.update_sw_acc_data(sw, acc, pid=pid_dict.get(acc, None))
             # 更新json表中各微信进程的互斥体情况
-            success, has_mutex = subfunc_file.update_has_mutex_from_all_acc(sw)
+            success, has_mutex = subfunc_file.update_has_mutex_from_pid_mutex(sw)
 
         # print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
         acc_list_dict = {

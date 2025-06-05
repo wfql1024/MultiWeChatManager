@@ -21,7 +21,6 @@ from utils.logger_utils import myprinter as printer
 
 class AccManagerWndUI(SubToolWndUI, ABC):
     """账号管理窗口"""
-
     def __init__(self, wnd, title):
         self.acc_manager_ui = None
         self.sw = None

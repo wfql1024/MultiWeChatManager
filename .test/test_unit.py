@@ -22,7 +22,7 @@ class Test(TestCase):
         print(details['class'])
 
     def test_get_sw_data_dir(self):
-        print(SwInfoFunc.get_sw_data_dir(sw="Weixin"))
+        print(SwInfoFunc.detect_sw_data_dir(sw="Weixin"))
 
     def test_wait_for_wnd_open(self):
         hwnd_utils.wait_open_to_get_hwnd("Qt51514QWindowIcon")

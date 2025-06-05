@@ -432,7 +432,7 @@ def update_pid_mutex_of_(sw):
     return True
 
 
-def set_all_acc_values_to_false(sw):
+def set_pid_mutex_values_to_false(sw):
     """
     将所有微信进程all_acc中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
     （因为登录好一个窗口，说明之前所有的微信都没有互斥体了）
@@ -449,9 +449,9 @@ def set_all_acc_values_to_false(sw):
     return True
 
 
-def update_has_mutex_from_all_acc(sw):
+def update_has_mutex_from_pid_mutex(sw):
     """
-    将json中登录列表all_wechat结点中的情况加载回所有已登录账号，适合刷新结束时使用
+    将json中登录列表pid_mutex结点中的情况加载回所有已登录账号，适合刷新结束时使用
     :return: 是否成功
     """
     has_mutex = False

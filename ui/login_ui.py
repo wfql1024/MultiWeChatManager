@@ -9,7 +9,7 @@ from functions.acc_func import AccInfoFunc, AccOperator
 from functions.main_func import MultiSwFunc
 from functions.sw_func import SwOperator, SwInfoFunc
 from public_class import reusable_widgets
-from public_class.enums import OnlineStatus
+from public_class.enums import OnlineStatus, LocalCfg
 from public_class.global_members import GlobalMembers
 from resources import Constants, Config, Strings
 from ui import treeview_row_ui, classic_row_ui
@@ -67,10 +67,10 @@ class LoginUI:
             self.root.destroy()
 
         # 路径检查
-        self.sw_class.data_dir = SwInfoFunc.get_sw_data_dir(self.sw)
-        self.sw_class.inst_path = SwInfoFunc.get_sw_install_path(self.sw)
-        self.sw_class.ver = SwInfoFunc.get_sw_ver(self.sw, self.sw_class.data_dir)
-        self.sw_class.dll_dir = SwInfoFunc.get_sw_dll_dir(self.sw)
+        self.sw_class.data_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DATA_DIR)
+        self.sw_class.inst_path = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.INST_PATH)
+        self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw, self.sw_class.data_dir)
+        self.sw_class.dll_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DLL_DIR)
 
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
@@ -145,7 +145,7 @@ class LoginUI:
             # 底部框架=版本号+手动登录
             bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
             bottom_frame.pack(side=tk.BOTTOM)
-            sw_ver = SwInfoFunc.get_sw_ver(self.sw, self.sw_class.data_dir)
+            sw_ver = SwInfoFunc.calc_sw_ver(self.sw, self.sw_class.data_dir)
             if sw_ver is not None:
                 sw_ver_label = ttk.Label(bottom_frame, text=f"{sw_ver}", foreground="grey")
                 sw_ver_label.pack(side=tk.BOTTOM)

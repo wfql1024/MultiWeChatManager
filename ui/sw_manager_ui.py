@@ -276,7 +276,7 @@ class SwManagerTreeView(ActionableTreeView, ABC):
                 dll_path = os.path.join(dll_dir, patch_dll)
             except Exception as e:
                 logger.warning(e)
-            version = SwInfoFunc.get_sw_ver(sw, dll_path)
+            version = SwInfoFunc.calc_sw_ver(sw, dll_path)
             # 获取平台图像
             img = SwInfoFunc.get_sw_logo(sw)
             img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)

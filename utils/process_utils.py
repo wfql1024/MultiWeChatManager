@@ -9,6 +9,7 @@ from ctypes import wintypes
 from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
 
 import psutil
+from typing import List
 
 from utils.logger_utils import mylogger as logger
 
@@ -366,6 +367,26 @@ def remove_child_pids(pids):
                     pids.remove(child.pid)  # 删除子进程 PID
         i += 1
 
+    return pids
+
+
+def remove_pids_not_in_path(pids: List[int], path_keyword: str) -> List[int]:
+    """从 pids 列表中排除那些不在指定路径关键字中的进程"""
+    # 获取所有进程信息（包含可执行路径）
+    all_processes = {p.pid: p for p in psutil.process_iter(['pid', 'exe'])}
+    path_keyword = path_keyword.replace("/", "\\")
+    for pid in pids[:]:  # 注意复制列表，以便在遍历过程中安全删除
+        process = all_processes.get(pid)
+        if process:
+            try:
+                exe_path = process.info['exe'] or ""
+                print("debug", exe_path)
+                if path_keyword.lower() not in exe_path.lower():
+                    pids.remove(pid)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pids.remove(pid)
+        else:
+            pids.remove(pid)
     return pids
 
 

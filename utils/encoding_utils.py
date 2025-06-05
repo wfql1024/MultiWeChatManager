@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Tuple, Union, Optional
 
 from utils.logger_utils import mylogger as logger
@@ -169,3 +170,16 @@ class VersionUtils:
         candidates.sort(reverse=True, key=lambda x: x[0])
 
         return candidates[0][1]
+
+
+class PathUtils:
+    @staticmethod
+    def is_valid_path(path) -> bool:
+        if not path or str(path).strip().lower() == "none":
+            return False
+        try:
+            formatted_path = Path(path)
+            return formatted_path.exists()
+        except Exception as e:
+            print(e)
+            return False
