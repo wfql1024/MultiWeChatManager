@@ -2270,7 +2270,8 @@
             "qtCef",
             "Safe Browsing",
             "segmentation_platform",
-            "ShaderCache"
+            "ShaderCache",
+            "WeDrive"
         ],
         "cut_to_compatible_id": [
             0,
@@ -2282,10 +2283,9 @@
         "support_quick_start": false
     },
     "QQNT": {
-        "multirun": {
-        },
-        "anti-revoke": {
-        },
+        "native-multirun": true,
+        "multirun": {},
+        "anti-revoke": {},
         "redundant_wnd_class": [
             ""
         ],
@@ -2328,9 +2328,48 @@
         "support_quick_start": false
     },
     "QQ": {
-        "multirun": {
-        },
+        "native-multirun": true,
+        "multirun": {},
         "anti-revoke": {
+            "channel": {
+                "silence": {
+                    "label": "静默",
+                    "introduce": "不含防撤回提示",
+                    "author": [
+                        "huiyadanli"
+                    ]
+                }
+            },
+            "feature": {
+                "9.7": {
+                    "silence": {
+                        "original": [
+                            "68 ?? ?? ?? 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C ?? ?? ?? 56 50 68 ?? ?? ?? 56 FF",
+                            "51 ?? ?? ?? ?? 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C ?? ?? ?? ?? 50 68 ?? ?? ?? ?? FF 35"
+                        ],
+                        "modified": [
+                            "EB 09 90 90 90 ...",
+                            "EB 08 90 90 90 90 ..."
+                        ]
+                    }
+                }
+            },
+            "precise": {
+                "9.7.23.29406": {
+                    "silence": {
+                        "original": [
+                            "68 68 BB 2D 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                            "68 68 BB 2D 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                            "51 68 D8 B7 2D 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C E8 B7 2D 56 50 68 5C A3 2B 56 FF 35"
+                        ],
+                        "modified": [
+                            "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                            "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                            "EB 08 90 90 90 90 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C E8 B7 2D 56 50 68 5C A3 2B 56 FF 35"
+                        ]
+                    }
+                }
+            }
         },
         "redundant_wnd_class": [
             ""
@@ -2373,13 +2412,50 @@
         "support_quick_start": false
     },
     "TIM": {
-        "multirun": {
-        },
+        "native-multirun": true,
+        "multirun": {},
         "anti-revoke": {
+            "channel": {
+                "silence": {
+                    "label": "静默",
+                    "introduce": "不含防撤回提示",
+                    "author": [
+                        "huiyadanli"
+                    ]
+                }
+            },
+            "feature": {
+                "3.4": {
+                    "silence": {
+                        "original": [
+                            "68 ?? ?? ?? 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C ?? ?? ?? 56 50 68 ?? ?? ?? 56 FF",
+                            "51 ?? ?? ?? ?? 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C ?? ?? ?? ?? 50 68 ?? ?? ?? ?? FF 35"
+                        ],
+                        "modified": [
+                            "EB 09 90 90 90 ...",
+                            "EB 08 90 90 90 90 ..."
+                        ]
+                    }
+                }
+            },
+            "precise": {
+                "3.4.8.22121": {
+                    "silence": {
+                        "original": [
+                            "68 F8 2B 21 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                            "68 F8 2B 21 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                            "51 68 68 28 21 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C 78 28 21 56 50 68 28 50 1F 56 FF 35"
+                        ],
+                        "modified": [
+                            "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                            "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                            "EB 08 90 90 90 90 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C 78 28 21 56 50 68 28 50 1F 56 FF 35"
+                        ]
+                    }
+                }
+            }
         },
-        "redundant_wnd_class": [
-            ""
-        ],
+        "redundant_wnd_class": [],
         "label": "TIM",
         "executable": "TIM.exe",
         "inst_path_guess_suffix": "Tencent\\TIM\\Bin\\TIM.exe",
