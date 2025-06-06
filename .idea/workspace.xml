@@ -4,22 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="优化侧栏代码防止卡死">
-      <change beforePath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="发布前的测试与修复(代理,快捷方式,版本显示,侧栏菜单显示,解密,同类平台数据路径获取">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/click_me_to_create_lnk.bat" beforeDir="false" afterPath="$PROJECT_DIR$/click_me_to_create_lnk.bat" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/app_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/app_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/wnd_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/wnd_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/remote_setting" beforeDir="false" afterPath="$PROJECT_DIR$/remote_setting" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/remote_setting_v4" beforeDir="false" afterPath="$PROJECT_DIR$/remote_setting_v4" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/login_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/login_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/sw_manager_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/sw_manager_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/wnd_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/wnd_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.meta/version.txt" beforeDir="false" afterPath="$PROJECT_DIR$/.meta/version.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Build4Win7.bat" beforeDir="false" afterPath="$PROJECT_DIR$/Build4Win7.bat" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -755,15 +743,7 @@
       <workItem from="1749049804026" duration="11603000" />
       <workItem from="1749085694381" duration="18515000" />
       <workItem from="1749131218558" duration="15889000" />
-      <workItem from="1749177427179" duration="22776000" />
-    </task>
-    <task id="LOCAL-00288" summary="重构代码结构，优化定制按钮和书签逻辑，更新微信4.0的屏蔽文件夹名">
-      <option name="closed" value="true" />
-      <created>1745758583950</created>
-      <option name="number" value="00288" />
-      <option name="presentableId" value="LOCAL-00288" />
-      <option name="project" value="LOCAL" />
-      <updated>1745758583950</updated>
+      <workItem from="1749177427179" duration="26659000" />
     </task>
     <task id="LOCAL-00289" summary="打包测试，并修复遇到的问题；移除已完成的todo">
       <option name="closed" value="true" />
@@ -1149,7 +1129,15 @@
       <option name="project" value="LOCAL" />
       <updated>1749199605445</updated>
     </task>
-    <option name="localTasksCounter" value="337" />
+    <task id="LOCAL-00337" summary="发布前的测试与修复(代理,快捷方式,版本显示,侧栏菜单显示,解密,同类平台数据路径获取">
+      <option name="closed" value="true" />
+      <created>1749212532701</created>
+      <option name="number" value="00337" />
+      <option name="presentableId" value="LOCAL-00337" />
+      <option name="project" value="LOCAL" />
+      <updated>1749212532701</updated>
+    </task>
+    <option name="localTasksCounter" value="338" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1203,7 +1191,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="新版本添加精确适配" />
     <MESSAGE value="为新版本程序添加微信3.9精确适配" />
     <MESSAGE value="为新标签页功能更新新的结构" />
     <MESSAGE value="精确适配4.0.5.17" />
@@ -1228,7 +1215,8 @@
     <MESSAGE value="远程设置QQ,QQNT,TIM的原生支持多开;适配QQ9.7,TIM3.4的防撤回特征码." />
     <MESSAGE value="远程配置QQ和TIM的选号登录;优化部分代码" />
     <MESSAGE value="优化侧栏代码防止卡死" />
-    <option name="LAST_COMMIT_MESSAGE" value="优化侧栏代码防止卡死" />
+    <MESSAGE value="发布前的测试与修复(代理,快捷方式,版本显示,侧栏菜单显示,解密,同类平台数据路径获取" />
+    <option name="LAST_COMMIT_MESSAGE" value="发布前的测试与修复(代理,快捷方式,版本显示,侧栏菜单显示,解密,同类平台数据路径获取" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
