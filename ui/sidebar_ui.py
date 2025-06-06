@@ -17,6 +17,7 @@ from public_class.enums import OnlineStatus, AccKeys
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import RadioTreeView
 from resources import Constants
+from ui.wnd_ui import WndCreator
 from utils import hwnd_utils
 from utils.hwnd_utils import TkWndUtils
 from utils.logger_utils import mylogger as logger
@@ -342,9 +343,10 @@ class SidebarUI:
         # 如果新窗口不存在
         if not new_linked_hwnd or not win32gui.IsWindow(new_linked_hwnd):
             # 开启查找窗口线程
-            self.find_acc_wnd_thread = threading.Thread(target=self.wait_for_acc_wnd, args=(sw, acc,))
-            self.find_acc_wnd_thread.start()
-            self.find_acc_wnd_thread.join()  # 等待线程结束
+            self.wait_for_acc_wnd(sw, acc)
+            # self.find_acc_wnd_thread = threading.Thread(target=self.wait_for_acc_wnd, args=(sw, acc,))
+            # self.find_acc_wnd_thread.start()
+            # self.find_acc_wnd_thread.join()  # 等待线程结束
             new_linked_hwnd = self.thread_result
 
         # 获取不到的话，则不变换窗口
@@ -519,42 +521,52 @@ class SidebarUI:
                 self._update_sidebar(self.get_linked_wnd_state(self.linked_hwnd))
                 break
 
-    # def wait_for_acc_wnd(self, sw, acc, timeout=10):
-    #     """
-    #     等待账号窗口出现
-    #     :param sw: 软件名称
-    #     :param timeout: 超时时间(秒)
-    #     :return: 窗口句柄或None(超时)
-    #     """
-    #     start_time = time.time()
-    #
-    #     def on_tip_click(e):
-    #         nonlocal last_time
-    #         last_time = 0
-    #
-    #     # print(start_time)
-    #     self.root.after(0, lambda: self.tip_label.bind("<Button-1>", on_tip_click))
-    #
-    #     while True:
-    #         hwnd = win32gui.GetForegroundWindow()
-    #         # print(hwnd)
-    #         if hwnd and win32gui.IsWindow(hwnd) and AccInfoFunc.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
-    #             self.thread_result = hwnd
-    #             return
-    #
-    #         # 计算剩余时间
-    #         elapsed_time = time.time() - start_time
-    #         last_time = int(timeout - elapsed_time)
-    #
-    #         if last_time <= 0:
-    #             self.root.after(0, lambda: self.tip_label.config(text=" "))
-    #             self.thread_result = None
-    #             return
-    #
-    #         # 更新提示信息
-    #         self.root.after(0, lambda: self.tip_label.config(
-    #             text=f"（点击可取消）窗口丢失，请{last_time}秒内打开对应窗口..."))
-    #         time.sleep(0.02)
+    def wait_for_acc_wnd(self, sw, acc):
+        """
+        等待账号窗口出现
+        :param acc:
+        :param sw: 软件名称
+        :return: 窗口句柄或None(超时)
+        """
+        self.turn_off_listener()
+        time.sleep(1)
+        # 打开详情页
+        WndCreator.open_acc_detail(f"{sw}/{acc}", self)
+
+        # 重新获取hwnd
+        hwnd, = subfunc_file.get_sw_acc_data(sw, acc, main_hwnd=None)
+        self.thread_result = hwnd
+        self.turn_on_listener()
+
+        # start_time = time.time()
+        #
+        # def on_tip_click(e):
+        #     nonlocal last_time
+        #     last_time = 0
+        #
+        # # print(start_time)
+        # self.root.after(0, lambda: self.tip_label.bind("<Button-1>", on_tip_click))
+        #
+        # while True:
+        #     hwnd = win32gui.GetForegroundWindow()
+        #     # print(hwnd)
+        #     if hwnd and win32gui.IsWindow(hwnd) and AccInfoFunc.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
+        #         self.thread_result = hwnd
+        #         return
+        #
+        #     # 计算剩余时间
+        #     elapsed_time = time.time() - start_time
+        #     last_time = int(timeout - elapsed_time)
+        #
+        #     if last_time <= 0:
+        #         self.root.after(0, lambda: self.tip_label.config(text=" "))
+        #         self.thread_result = None
+        #         return
+        #
+        #     # 更新提示信息
+        #     self.root.after(0, lambda: self.tip_label.config(
+        #         text=f"（点击可取消）窗口丢失，请{last_time}秒内打开对应窗口..."))
+        #     time.sleep(0.02)
 
 
 class SidebarTree(RadioTreeView, ABC):
