@@ -236,12 +236,19 @@ class SwInfoFunc:
 
 class SwOperator:
     @staticmethod
-    def _ask_for_manual_terminate_or_force(executable):
+    def _ask_for_manual_terminate_or_force(sw_exe_path):
         """询问手动退出,否则强制退出"""
+        executable = os.path.basename(sw_exe_path)
         processes = []
-        for proc in psutil.process_iter(['pid', 'name']):
-            if proc.name().lower() == executable.lower():
-                processes.append(proc)
+        for proc in psutil.process_iter(['pid', 'name', 'exe']):
+            try:
+                if proc.info['name'].lower() == executable.lower():
+                    exe_path = proc.info['exe'] or ""
+                    # 只保留来自 sw_exe_path 的同名进程
+                    if os.path.normcase(exe_path) == os.path.normcase(sw_exe_path):
+                        processes.append(proc)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
         if processes:
             answer = messagebox.askokcancel(
                 "警告",
@@ -249,9 +256,17 @@ class SwOperator:
             )
             if answer is not True:
                 return None
-            still_running = process_utils.try_terminate_executable(executable)
+            for proc in processes:
+                try:
+                    proc.terminate()
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+
+            # 等待进程终止
+            gone, alive = psutil.wait_procs(processes, timeout=3)
+            still_running = [p.pid for p in alive]
             if len(still_running) != 0:
-                messagebox.showerror("错误", f"无法终止微信进程：{still_running}")
+                messagebox.showerror("错误", f"以下进程仍未终止：{still_running}")
                 return False
             return True
         return True
@@ -291,11 +306,11 @@ class SwOperator:
             config_data = subfunc_file.read_remote_cfg_in_rules()
             if not config_data:
                 return False, "没有数据"
-            executable, = subfunc_file.get_remote_cfg(sw, executable=None)
-            if executable is None:
+            sw_exe_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+            if not sw_exe_path:
                 return False, "该平台暂未适配"
             # 提醒用户手动终止微信进程
-            answer = SwOperator._ask_for_manual_terminate_or_force(executable)
+            answer = SwOperator._ask_for_manual_terminate_or_force(sw_exe_path)
             if answer is not True:
                 return False, "用户取消操作"
 

@@ -32,6 +32,7 @@ class RemoteCfg(str, Enum):
 
     REVOKE = "anti-revoke"
     MULTI = "multirun"
+    NATIVE_MULTI = "native-multirun"
     # dll模式字段
     ORIGINAL = "original"
     MODIFIED = "modified"
@@ -110,6 +111,7 @@ class SW(str, Enum):
     QQ = "QQ"
     QQNT = "QQNT"
     WXWORK = "WXWork"
+    TIM = "TIM"
     DINGTALK = "DingTalk"
     FEISHU = "Feishu"
     BAIDU = "Baidu"

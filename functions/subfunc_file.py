@@ -315,7 +315,6 @@ def fetch_sw_setting_or_set_default_or_none(sw: str, setting_key: str, enum_cls:
     :param enum_cls: 可选枚举类（用于严格验证值）
     :return: 配置值（保证符合枚举约束）或None
     """
-    # print("debug:", sw, setting_key)
     # 原值
     value, = get_settings(sw, **{setting_key: None})
     if value in (None, "", "None", "none", "null", "NULL"):
@@ -323,11 +322,13 @@ def fetch_sw_setting_or_set_default_or_none(sw: str, setting_key: str, enum_cls:
             # 默认值
             try:
                 sw_dict = Config.INI_DEFAULT_VALUE[sw]
-            except KeyError:
+            except KeyError as ke:
+                print(ke)
                 sw_dict = Config.INI_DEFAULT_VALUE[SW.DEFAULT]
             value = sw_dict[setting_key]
             pass
-        except (KeyError, AttributeError):
+        except (KeyError, AttributeError) as e:
+            print(e)
             # 空值
             value = None
     if isinstance(value, Enum):

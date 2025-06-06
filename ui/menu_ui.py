@@ -1,4 +1,5 @@
 import os
+import threading
 import time
 import tkinter as tk
 import webbrowser
@@ -10,7 +11,6 @@ from functions import subfunc_file
 from functions.app_func import AppFunc
 from functions.main_func import MultiSwFunc
 from functions.sw_func import SwInfoFunc, SwOperator
-from public_class.custom_classes import TkThreadWorker
 from public_class.enums import LocalCfg, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
@@ -552,15 +552,21 @@ class MenuUI:
             # 频道简介菜单
             self.anti_revoke_menu.add_command(
                 label="频道简介", command=partial(self._introduce_channel, RemoteCfg.REVOKE.value, res_dict))
-
         printer.print_last()
 
     def _update_multirun_menu(self, res_dict, msg):
         self.sw_class.can_freely_multirun = None
+        # 以有无适配为准;
         if res_dict is None:
-            self.settings_menu.entryconfig("全局多开", label="！全局多开", foreground="red")
-            self.multirun_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
-                                           command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
+            # 若没有适配,检查是否是原生支持多开
+            native_multirun, = subfunc_file.get_remote_cfg(self.sw, **{RemoteCfg.NATIVE_MULTI.value: None})
+            if native_multirun is True:
+                self.sw_class.can_freely_multirun = True
+                self.multirun_menu.add_command(label="原生支持多开", state="disabled")
+            else:
+                self.settings_menu.entryconfig("全局多开", label="！全局多开", foreground="red")
+                self.multirun_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
+                                               command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
             # 列出所有频道
             for channel, res_tuple in res_dict.items():
@@ -595,7 +601,7 @@ class MenuUI:
         self.multirun_menu.add_separator()  # ————————————————分割线————————————————
 
         # >多开子程序选择
-        # 检查状态
+        # 得出使用的多开模式,若开了全局多开,则使用全局多开模式,否则使用其他模式
         if self.sw_class.can_freely_multirun is True:
             self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN
             self.multirun_menu.add_command(label="其余模式", state="disabled")
@@ -642,10 +648,35 @@ class MenuUI:
                     )
         printer.print_last()
 
+    # def update_settings_menu_thread(self):
+    #     self.menu_updater = TkThreadWorker(self.root, after_interval=100)
+    #     self.menu_updater.thread_method = self._identify_dll_and_update_menu
+    #     self.menu_updater.start_thread()
+    #
+    # def _identify_dll_and_update_menu(self):
+    #     """实现抽象方法（原_create_menus_thread逻辑）"""
+    #     try:
+    #         # 防撤回部分
+    #         print("线程收集防撤回数据中...")
+    #         res_dict, msg = SwInfoFunc.identify_dll(
+    #             self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
+    #         print("数据收集好...")
+    #         self.menu_updater.main_thread_do_(
+    #             "revoke", partial(self._update_anti_revoke_menu, res_dict, msg))
+    #         # 全局多开部分
+    #         print("线程收集全局多开数据中...")
+    #         res_dict, msg = SwInfoFunc.identify_dll(
+    #             self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
+    #         time.sleep(10)
+    #         print("数据收集好...")
+    #         self.menu_updater.main_thread_do_(
+    #             "multi", partial(self._update_multirun_menu, res_dict, msg))
+    #         self.menu_updater.stop_task()
+    #     except Exception as e:
+    #         print(e)
+
     def update_settings_menu_thread(self):
-        self.menu_updater = TkThreadWorker(self.root, after_interval=100)
-        self.menu_updater.thread_method = self._identify_dll_and_update_menu
-        self.menu_updater.start_thread()
+        threading.Thread(target=self._identify_dll_and_update_menu).start()
 
     def _identify_dll_and_update_menu(self):
         """实现抽象方法（原_create_menus_thread逻辑）"""
@@ -653,12 +684,12 @@ class MenuUI:
             # 防撤回部分
             res_dict, msg = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
-            self.menu_updater.main_thread_do_(
-                "revoke", partial(self._update_anti_revoke_menu, res_dict, msg))
+            self.root.after(0, self._update_anti_revoke_menu, res_dict, msg)
             # 全局多开部分
             res_dict, msg = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
-            self.menu_updater.main_thread_do_(
-                "multi", partial(self._update_multirun_menu, res_dict, msg))
+            self.root.after(0, self._update_multirun_menu, res_dict, msg)
         except Exception as e:
             print(e)
+
+

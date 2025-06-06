@@ -1,16 +1,26 @@
 import queue
 import threading
+import time
 from enum import Enum
 
 
 class TkThreadWorker:
-    """Tkinter 线程任务工具类"""
+    """
+    Tkinter 线程任务工具类
+    本工具过度抽象了其实,直接在要线程运行的方法里使用root.after()即可,无需使用本工具
+    本工具主要是为了实现主线程与子线程的通信, 主线程可以通过 main_thread_do_ 方法注册任务, 子线程可以通过 task_queue 队列获取任务,
+    但是,after方法本身就是队列轮询, 所以,本工具的意义不大, 留个念想吧
+    """
 
-    def __init__(self, root, after_interval=100):
+    def __init__(self, root, after_interval=100, max_duration=5):
         """
         :param root: Tkinter 根窗口
         :param after_interval: 主线程轮询队列的间隔(ms)
+        :param max_duration: 最大执行时间(秒)
         """
+        self._start_time = None
+        self.max_duration = max_duration
+        self._is_running = False
         self.root = root
         self.after_interval = after_interval
         self.task_queue = queue.Queue()
@@ -23,20 +33,21 @@ class TkThreadWorker:
         :param method_id: 任务唯一标识
         :param method: 可调用对象（如 partial 或 lambda）
         """
+        print(f"注册{method_id}")
         self.main_thread_methods[method_id] = method
         self.task_queue.put(method_id)
 
     def start_thread(self):
         """启动线程并开始队列轮询"""
-        if callable(self.thread_method):
-            threading.Thread(
-                target=self.thread_method,
-                daemon=True
-            ).start()
-            self._process_queue()
+        if not callable(self.thread_method):
+            return
+        self._is_running = True
+        self._start_time = time.time()
+
+        threading.Thread(target=self.thread_method, daemon=True).start()
+        self._process_queue()
 
     def _process_queue(self):
-        """主线程处理队列任务（自动循环）"""
         try:
             while True:
                 try:
@@ -44,11 +55,22 @@ class TkThreadWorker:
                     if method_id in self.main_thread_methods:
                         method = self.main_thread_methods[method_id]
                         if callable(method):
-                            method()  # 执行主线程方法
+                            method()
                 except queue.Empty:
                     break
         finally:
-            self.root.after(self.after_interval, self._process_queue)
+            now = time.time()
+            should_stop = not self._is_running
+            if self.max_duration is not None:
+                should_stop = should_stop or (now - self._start_time >= self.max_duration)
+
+            if not should_stop:
+                self.root.after(self.after_interval, self._process_queue)
+
+    def stop_task(self):
+        """主动停止队列轮询"""
+        print("轮询任务结束咯,不再接收新的主线程任务~")
+        self._is_running = False
 
 
 class QueueWithUpdate(queue.Queue):

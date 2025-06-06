@@ -62,7 +62,7 @@ def close_handles_by_matches(handle_exe, matches):
             process = subprocess.Popen(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=True)
             # 检查子进程是否具有管理员权限
-            if process_utils.is_process_admin(process.pid):
+            if process_utils.is_pid_elevated(process.pid):
                 printer.print_vn(f"子进程 {process.pid} 以管理员权限运行")
             else:
                 printer.print_vn(f"子进程 {process.pid} 没有管理员权限")

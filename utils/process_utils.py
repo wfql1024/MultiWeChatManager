@@ -393,7 +393,7 @@ def remove_pids_not_in_path(pids: List[int], path_keyword: str) -> List[int]:
 """PID信息"""
 
 
-def is_process_admin(pid):
+def is_pid_elevated(pid):
     try:
         process = psutil.Process(pid)
         return process.is_running() and ctypes.windll.shell32.IsUserAnAdmin()
@@ -428,7 +428,7 @@ def iter_open_files(pid):
         print(f"An error occurred: {e}")
 
 
-def process_exists(pid):
+def is_pid_alive(pid):
     """判断进程id是否存在"""
     output = 'default'
     try:
@@ -485,6 +485,7 @@ def try_terminate_executable(executable_name):
         time.sleep(2)
         # 检查是否所有进程都已关闭
         return [p for p in wechat_processes if p.is_running()]
+    return None
 
 
 def get_process_ids_by_name(process_name) -> list:

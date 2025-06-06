@@ -430,7 +430,7 @@ class AccOperator:
                 cleaned_display_name = StringUtils.clean_texts(display_name)
                 executable_name, = subfunc_file.get_remote_cfg(sw, executable=None)
                 process = psutil.Process(pid)
-                if process_utils.process_exists(pid) and process.name() == executable_name:
+                if process_utils.is_pid_alive(pid) and process.name() == executable_name:
                     startupinfo = None
                     if sys.platform == 'win32':
                         startupinfo = subprocess.STARTUPINFO()
@@ -1123,6 +1123,7 @@ class AccInfoFunc:
 
             pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
             hwnd_list = hwnd_utils.get_hwnd_list_by_pid_and_class(pid, target_class)
+            print("Debug", hwnd_list)
             if len(hwnd_list) == 0:
                 continue
             if len(hwnd_list) == 1:
@@ -1135,7 +1136,8 @@ class AccInfoFunc:
             if correct_hwnd is not None:
                 subfunc_file.update_sw_acc_data(sw, acc, main_hwnd=correct_hwnd)
                 display_name = AccInfoFunc.get_acc_origin_display_name(sw, acc)
-                hwnd_utils.set_window_title(correct_hwnd, f"微信 - {display_name}")
+                sw_display_name = SwInfoFunc.get_sw_origin_display_name(sw)
+                hwnd_utils.set_window_title(correct_hwnd, f"{sw_display_name} - {display_name}")
                 return None
             return None
         return None
@@ -1153,10 +1155,7 @@ class AccInfoFunc:
         expected_class, = subfunc_file.get_remote_cfg(sw, main_wnd_class=None)
         class_name = win32gui.GetClassName(hwnd)
         # print(expected_class, class_name)
-        if sw == SW.WECHAT:
-            # 旧版微信可直接通过窗口类名确定主窗口
-            return class_name == expected_class
-        elif sw == SW.WEIXIN:
+        if sw == SW.WEIXIN or sw == SW.TIM:
             if class_name != expected_class:
                 return False
             # 新版微信需要通过窗口控件判定
@@ -1165,6 +1164,8 @@ class AccInfoFunc:
             has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
             # print("有最大化按钮", hwnd, has_maximize)
             return has_maximize
+        else:
+            return class_name == expected_class
 
     @staticmethod
     def unlink_hwnd_of_account(sw, account):
@@ -1185,7 +1186,7 @@ class AccInfoFunc:
     @staticmethod
     def manual_link_hwnd_of_account(sw, account):
         # 一个确定和取消的提示框
-        if messagebox.askyesno("提示", "请将微信窗口置于前台，是否继续？"):
+        if messagebox.askyesno("提示", "请先手动将平台对应窗口置于前台，是否完成？"):
             # 将桌面中可见的窗口从顶部到底部遍历
             hwnds = hwnd_utils.get_visible_windows_sorted_by_top()
             for hwnd in hwnds:
