@@ -369,7 +369,7 @@ class AccOperator:
                     sub_exe_process.terminate()
                 time.sleep(1)
                 hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(wechat_hwnd, root.winfo_id())
-                if messagebox.askyesno("确认", "是否为对应的微信号？"):
+                if messagebox.askyesno("确认", "是否为对应的账号？"):
                     success, result = AccOperator.operate_acc_config('add', sw, account)
                     if success is True:
                         created_list_text = "\n".join(result)

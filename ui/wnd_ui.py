@@ -1366,16 +1366,17 @@ class SettingWndUI(SubToolWndUI, ABC):
             "login_size": '不符合"数字*数字"的格式'
         }
 
-    def _get_new_row_in_grid(self, grid_frm):
-        return max([widget.grid_info().get('row', -1) for widget in grid_frm.grid_slaves()], default=-1) + 1
 
     def load_ui(self):
+        def _get_new_row_in_grid(grid_frm):
+            return max([widget.grid_info().get('row', -1) for widget in grid_frm.grid_slaves()], default=-1) + 1
+
         main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
         main_frame.pack(**Constants.FRM_PACK)
         settings_grid_frm = ttk.Frame(main_frame, padding=Constants.FRM_PAD)
         settings_grid_frm.pack(**Constants.T_FRM_PACK)
         # 标题
-        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        current_row = _get_new_row_in_grid(settings_grid_frm)
         default_value, = subfunc_file.get_settings(self.sw, label="")
         note_label = tk.Label(settings_grid_frm, text="平台备注：")
         note_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
@@ -1384,7 +1385,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         now_value, = subfunc_file.get_settings(self.sw, note="")
         self.title_entry.set_value(now_value)
         # 第一行 - 安装路径
-        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        current_row = _get_new_row_in_grid(settings_grid_frm)
         install_label = tk.Label(settings_grid_frm, text="程序路径：")
         install_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
         self.inst_path_var = tk.StringVar()
@@ -1397,7 +1398,7 @@ class SettingWndUI(SubToolWndUI, ABC):
                                            command=partial(self.choose_sw_inst_path, self.sw))
         install_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
         # 第二行 - 数据存储路径
-        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        current_row = _get_new_row_in_grid(settings_grid_frm)
         data_label = tk.Label(settings_grid_frm, text="存储路径：")
         data_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
         self.data_dir_var = tk.StringVar()
@@ -1410,7 +1411,7 @@ class SettingWndUI(SubToolWndUI, ABC):
                                         command=partial(self.choose_sw_data_dir, self.sw))
         data_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
         # 新增第三行 - dll路径
-        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        current_row = _get_new_row_in_grid(settings_grid_frm)
         dll_label = tk.Label(settings_grid_frm, text="DLL所在路径：")
         dll_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
         self.dll_dir_var = tk.StringVar()
@@ -1423,7 +1424,7 @@ class SettingWndUI(SubToolWndUI, ABC):
                                        command=partial(self.choose_sw_dll_dir, self.sw))
         dll_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
         # 新增第四行 - 登录窗口大小
-        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        current_row = _get_new_row_in_grid(settings_grid_frm)
         login_size_label = tk.Label(settings_grid_frm, text="登录尺寸：")
         login_size_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
         self.login_size_var = tk.StringVar()
@@ -1432,7 +1433,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         login_size_get_button = ttk.Button(settings_grid_frm, text="获取", command=self.to_get_login_size)
         login_size_get_button.grid(row=current_row, column=2, columnspan=2, **Constants.WE_GRID_PACK)
         # 新增第五行 - 平台禁用与显示
-        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        current_row = _get_new_row_in_grid(settings_grid_frm)
         stata_frame = ttk.Frame(settings_grid_frm, padding=Constants.FRM_PAD)
         stata_frame.grid(row=current_row, column=0, columnspan=3, **Constants.WE_GRID_PACK)
         # 启用复选框
@@ -1451,7 +1452,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         clear_acc_ckb.pack(**Constants.R_WGT_PACK)
 
         # 修改确定按钮，从第4行到第5行
-        current_row = self._get_new_row_in_grid(settings_grid_frm)
+        current_row = _get_new_row_in_grid(settings_grid_frm)
         ok_button = ttk.Button(settings_grid_frm, text="保存", command=self.on_ok)
         ok_button.grid(row=current_row - 1, column=3, **Constants.NEWS_GRID_PACK)
 
@@ -1465,12 +1466,6 @@ class SettingWndUI(SubToolWndUI, ABC):
         self.data_dir_var.set(self.origin_values[LocalCfg.DATA_DIR])
         self.dll_dir_var.set(self.origin_values[LocalCfg.DLL_DIR])
         self.login_size_var.set(self.origin_values[LocalCfg.LOGIN_SIZE])
-        # self.load_or_get_sw_inst_path(self.sw, True)
-        # self.load_or_get_sw_data_dir(self.sw, True)
-        # self.load_or_get_sw_dll_dir(self.sw, True)
-        # login_size = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, 'login_size')
-        # self.login_size_var.set(login_size)
-        # state_code = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, LocalCfg.STATE)
         self.set_sw_state_cb_from_(self.origin_values[LocalCfg.STATE])
 
     def _update_visible_state(self):

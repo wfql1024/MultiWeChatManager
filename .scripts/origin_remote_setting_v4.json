@@ -2371,9 +2371,7 @@
                 }
             }
         },
-        "redundant_wnd_class": [
-            ""
-        ],
+        "redundant_wnd_class": [],
         "label": "QQ",
         "executable": "QQ.exe",
         "inst_path_guess_suffix": "Tencent\\QQ\\Bin\\QQ.exe",
@@ -2390,9 +2388,9 @@
         ],
         "login_wnd_class": "TXGuiFoundation",
         "main_wnd_class": "TXGuiFoundation",
-        "config_path_suffix": "All Users",
+        "config_path_suffix": "All Users\\QQ",
         "config_file_list": [
-            "Registry.db"
+            "History.db"
         ],
         "excluded_dir_list": [
             "All Users",
@@ -2472,9 +2470,9 @@
         ],
         "login_wnd_class": "TXGuiFoundation",
         "main_wnd_class": "TXGuiFoundation",
-        "config_path_suffix": "All Users",
+        "config_path_suffix": "All Users\\TIM",
         "config_file_list": [
-            "Registry.db"
+            "History.db"
         ],
         "excluded_dir_list": [
             "All Users",
