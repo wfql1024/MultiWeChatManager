@@ -29,7 +29,7 @@ class Config:
             LocalCfg.AUTO_PRESS: True,
             LocalCfg.CALL_MODE: "HANDLE",
             LocalCfg.NEXT_CHECK_TIME: None,
-            LocalCfg.USE_PROXY: True,
+            LocalCfg.USE_PROXY: False,
             LocalCfg.USE_TXT_AVT: True,
             LocalCfg.USED_TRAY: False,
             LocalCfg.USED_REFRESH: False,

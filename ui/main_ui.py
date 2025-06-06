@@ -366,8 +366,8 @@ class RootUI:
             sw_cls.data_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
             sw_cls.inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
             sw_cls.dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
-            sw_cls.ver = SwInfoFunc.calc_sw_ver(sw, sw_cls.dll_dir)
-            sw_cls.multirun_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.MULTIRUN_MODE)
+            sw_cls.ver = SwInfoFunc.calc_sw_ver(sw)
+            # sw_cls.multirun_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.MULTIRUN_MODE)
         # print("载入完成,所有信息体:", [sw.__dict__ for sw in self.sw_classes.values()])
         printer.print_last()
 

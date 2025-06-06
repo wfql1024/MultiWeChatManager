@@ -61,6 +61,7 @@ class AppFunc:
     def apply_proxy_setting():
         use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(
             LocalCfg.USE_PROXY)
+        print(use_proxy)
         if use_proxy is True:
             proxy_ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
             proxy_port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)

@@ -410,9 +410,9 @@ class MenuUI:
             print("创建", self.sidebar_wnd)
             new_label = "❯"
             self.menu_bar.entryconfigure(self.sidebar_menu_label, label=new_label)
-            self.sidebar_menu_label = new_label
             if len(self.sidebar_menu_label) > 1:
                 subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_SIDEBAR: True})
+            self.sidebar_menu_label = new_label
             self.sidebar_wnd = tk.Toplevel(self.root)
             self.sidebar_ui = sidebar_ui.SidebarUI(self.sidebar_wnd, "导航条")
 

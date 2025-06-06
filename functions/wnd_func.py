@@ -101,6 +101,7 @@ class DetailWndFunc:
         data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
         excluded_folders, = subfunc_file.get_remote_cfg(
             sw, excluded_dir_list=None)
+        excluded_folders = set(excluded_folders)
         acc_folders = set(
             folder for folder in os.listdir(data_path)
             if os.path.isdir(os.path.join(data_path, folder))

@@ -44,7 +44,7 @@ class SwInfoFunc:
     @staticmethod
     def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_dir, mode_branches_dict) -> Tuple[Optional[dict], str]:
         """通过精确版本分支进行识别dll状态"""
-        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw, dll_dir)
+        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw)
         if cur_sw_ver is None:
             return None, f"错误：识别不到版本"
         if "precise" not in mode_branches_dict:
@@ -71,7 +71,7 @@ class SwInfoFunc:
             return
         dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
         # 尝试寻找兼容版本并添加到额外表中
-        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw, dll_dir)
+        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw)
         subfunc_file.update_extra_cfg(sw, patch_dll=os.path.basename(dll_path))
         if "precise" in mode_branches_dict:
             precise_vers_dict = mode_branches_dict["precise"]
@@ -148,23 +148,24 @@ class SwInfoFunc:
         return path if PathUtils.is_valid_path(path) else None
 
     @staticmethod
-    def calc_sw_ver(sw, dll_dir):
+    def calc_sw_ver(sw):
         """获取软件版本"""
         try:
+            exec_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+            cur_sw_ver = file_utils.get_file_version(exec_path)
+            if cur_sw_ver is not None:
+                return cur_sw_ver
+            dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
             patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
             # print(patch_dll)
             dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
             cur_sw_ver = file_utils.get_file_version(dll_path)
-            return cur_sw_ver
-        except Exception as e:
-            print(e)
-            try:
-                exec_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
-                cur_sw_ver = file_utils.get_file_version(exec_path)
+            if cur_sw_ver is not None:
                 return cur_sw_ver
-            except Exception as e:
-                print(e)
-                return None
+            return None
+        except Exception as e:
+            logger.error(f"从dll文件处获取失败:{e}")
+            return None
 
     @staticmethod
     def get_sw_logo(sw):
@@ -1299,18 +1300,24 @@ class SwInfoUtils:
         paths = []
         if data_dir_name is None or data_dir_name == "":
             paths = []
-        if sw == SW.WEIXIN:
-            other_path = SwInfoFunc.get_saved_path_of_(SW.WECHAT, LocalCfg.DATA_DIR)
-            if other_path is not None:
-                paths = [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
-            else:
-                paths = []
-        if sw == SW.WECHAT:
-            other_path = SwInfoFunc.get_saved_path_of_(SW.WEIXIN, LocalCfg.DATA_DIR)
-            if other_path is not None:
-                return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
-            else:
-                return []
+        # 微信和新版微信的数据文件夹通常会选择在同一级目录, 微信是WeChat Files, 新版是xwechat_files
+        other_sws = [SW.WECHAT, SW.WEIXIN]
+        if sw in other_sws:
+            for osw in other_sws:
+                if sw == osw:
+                    continue
+                other_path = SwInfoFunc.get_saved_path_of_(osw, LocalCfg.DATA_DIR)
+                if other_path is not None:
+                    return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
+        # QQ, 新版QQ, TIM使用同一个文件夹作为数据文件夹
+        other_sws = [SW.QQNT, SW.TIM, SW.QQ]
+        if sw in other_sws:
+            for osw in other_sws:
+                if sw == osw:
+                    continue
+                other_path = SwInfoFunc.get_saved_path_of_(osw, LocalCfg.DATA_DIR)
+                if other_path is not None:
+                    return [other_path]
         return paths
 
     @staticmethod

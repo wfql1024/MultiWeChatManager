@@ -274,13 +274,7 @@ class SwManagerTreeView(ActionableTreeView, ABC):
                 data_dir=None,
                 dll_dir=None
             )
-            dll_path = dll_dir
-            try:
-                patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
-                dll_path = os.path.join(dll_dir, patch_dll).replace('\\', '/')
-            except Exception as e:
-                logger.warning(e)
-            version = SwInfoFunc.calc_sw_ver(sw, dll_path)
+            version = SwInfoFunc.calc_sw_ver(sw)
             # 获取平台图像
             img = SwInfoFunc.get_sw_logo(sw)
             img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)

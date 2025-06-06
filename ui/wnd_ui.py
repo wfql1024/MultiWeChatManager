@@ -1765,12 +1765,12 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         for ip in ip_presets:
             b = _create_btn_in_(ip_btn_frame, ip["name"])
             b.set_bind_map(
-                **{"1": lambda v=ip["value"]: ip_var.set(v)})
+                **{"1": partial(ip_var.set, ip["value"])}).apply_bind(self.root)
             _pack_btn(b)
         for port in port_presets:
             b = _create_btn_in_(port_btn_frame, port["name"])
             b.set_bind_map(
-                **{"1": lambda v=port["value"]: port_var.set(v)})
+                **{"1": partial(port_var.set, port["value"])}).apply_bind(self.root)
             _pack_btn(b)
 
         # 底部放三个按钮：确定，取消，应用
@@ -1780,7 +1780,7 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         # 确定按钮
         ok_btn = _create_btn_in_(bottom_btn_frame, "确定")
         ok_btn.set_bind_map(
-            **{"1": self.save_settings})
+            **{"1": self.save_settings}).apply_bind(self.root)
         ok_btn.pack(side=tk.RIGHT, padx=customized_btn_pad * 2, pady=customized_btn_pad)
 
         self.proxy_detail_frame = proxy_detail_frame
@@ -1817,6 +1817,7 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         subfunc_file.save_a_global_setting_and_callback(LocalCfg.PROXY_PORT, port)
         printer.vital("设置成功")
         self.wnd.destroy()
+        AppFunc.apply_proxy_setting()
 
     def do_and_update(self, func):
         func()

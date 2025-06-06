@@ -72,7 +72,7 @@ class LoginUI:
         self.sw_class.data_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DATA_DIR)
         self.sw_class.inst_path = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.INST_PATH)
         self.sw_class.dll_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DLL_DIR)
-        self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw, self.sw_class.dll_dir)
+        self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw)
 
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
@@ -149,7 +149,7 @@ class LoginUI:
             # 底部框架=版本号+手动登录
             bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
             bottom_frame.pack(side=tk.BOTTOM)
-            sw_ver = SwInfoFunc.calc_sw_ver(self.sw, self.sw_class.dll_dir)
+            sw_ver = SwInfoFunc.calc_sw_ver(self.sw)
             if sw_ver is not None:
                 sw_ver_label = ttk.Label(bottom_frame, text=f"{sw_ver}", foreground="grey")
                 sw_ver_label.pack(side=tk.BOTTOM)

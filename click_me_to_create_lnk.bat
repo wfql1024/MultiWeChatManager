@@ -6,7 +6,7 @@ setlocal enabledelayedexpansion
 set "currentDir=%~dp0"
 
 :: 设置目标文件名
-set "targetFile1=微信多开管理器.exe"
+set "targetFile1=极峰多聊.exe"
 
 :: 检查目标文件是否存在
 if not exist "%currentDir%%targetFile1%" (
