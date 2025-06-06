@@ -287,6 +287,59 @@
             }
         },
         "update": {
+            "v3.3.0.3718-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win7_x64_v3.3.0.3718-Beta.zip",
+                            "md5": "d2d7385ebcc80b5085d52b5fb4b380f6",
+                            "sha-256": "c1fa93bf00f9eeba5b0e485e457f399df38262cb74e48a7fb9942652f6db5b18"
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win10%20_x64_v3.3.0.3718-Beta.zip",
+                            "md5": "edf0fc07829584bfd8c7ceda321713fe",
+                            "sha-256": "b8bd9dd85489a3470f78a76c5ef38c99a8c2aa04dd6dcbdc5f8914c307b81640"
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win10%20_x64_v3.3.0.3718-Beta.zip",
+                            "md5": "edf0fc07829584bfd8c7ceda321713fe",
+                            "sha-256": "b8bd9dd85489a3470f78a76c5ef38c99a8c2aa04dd6dcbdc5f8914c307b81640"
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win7_x64_v3.3.0.3718-Beta.zip",
+                            "md5": "d2d7385ebcc80b5085d52b5fb4b380f6",
+                            "sha-256": "c1fa93bf00f9eeba5b0e485e457f399df38262cb74e48a7fb9942652f6db5b18"
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新标签页新UI, 新名字新图标",
+                        "☆新增平台管理,初步适配企业微信,QQ,QQNT,TIM等平台. 账号管理,不止微信~",
+                        "☆新增特征码适配, 多开与防撤回, 无需等待精确版本适配, 自动根据特征码查找, 快人一步~",
+                        "☆可以对已配置的账号创建启动器(原快捷启动), 无需管理软件, 双击即可选号启动~",
+                        "新增缩小到托盘, 静默运行, 保障体验不打扰~",
+                        "新增反馈渠道, `帮助-反馈渠道`欢迎进群畅聊~"
+                    ],
+                    "优化": [
+                        "优化侧栏, 窗口找不到时将弹出详情页获取窗口, 防止卡死;",
+                        "优化菜单刷新逻辑, 菜单对应界面, 不混乱; 优化刷新逻辑, 可快速刷新表格, 也可刷新整个页面;",
+                        "优化平台设置的路径获取与保存逻辑, 告别各种检测限制;",
+                        "优化结束进程区分, 避免误杀同名进程;",
+                        "优化头像显示, 对于暂时无法获取头像昵称的账号, 可以自行添加头像啦, 也可以使用文字头像;",
+                        "优化文件读写, 添加读写锁, 避免文件写入错误导致设置损失."
+                    ],
+                    "修复": [
+                        "修复已知问题."
+                    ]
+                }
+            },
             "v3.0.0.3087-Beta": {
                 "pkgs": {
                     "win7": [

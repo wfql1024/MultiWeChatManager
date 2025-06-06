@@ -67,7 +67,7 @@ class Test(TestCase):
         print("Found HWNDs:", test_hwnd)
 
     def test_calculate_md5(self):
-        file_path = r"E:\Now\QuickCenter\WorkBench\技术梦想\项目\MultiWeChatManager\Releases\MultiWeChatManager_win7_x64_v3.0.0.3087-Beta.zip"
+        file_path = r"E:\Now\QuickCenter\WorkBench\技术梦想\项目\MultiWeChatManager\Releases\JhiFengMultiChat_win7_x64_v3.3.0.3718-Beta.zip"
         md5 = file_utils.calculate_md5(file_path)
         print(md5)
 
