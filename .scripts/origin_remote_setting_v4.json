@@ -1556,6 +1556,26 @@
                 }
             },
             "precise": {
+                "4.0.5.23": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ],
+                        "modified": [
+                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ]
+                    }
+                },
+                "4.0.5.18": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ],
+                        "modified": [
+                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ]
+                    }
+                },
                 "4.0.5.17": {
                     "default": {
                         "original": [
@@ -1776,7 +1796,7 @@
                 },
                 "alert": {
                     "label": "通知",
-                    "introduce": "通过通知进行防撤回提示",
+                    "introduce": "通过系统通知进行防撤回提示",
                     "author": [
                         "EEEEhex",
                         "afaa1991"
@@ -1785,6 +1805,18 @@
             },
             "feature": {
                 "4.0.5": {
+                    "alert": {
+                        "original": [
+                            "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                            "45 31 C0 E8 67 A7 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                            "45 31 C0 E8 8C 68 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                        ],
+                        "modified":[
+                            "01 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                            "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                            "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                        ]
+                    },
                     "bubble": {
                         "original": [
                             "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
@@ -1864,6 +1896,52 @@
                 }
             },
             "precise": {
+                "4.0.5.23": {
+                    "alert": {
+                        "original": [
+                            "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                            "45 31 C0 E8 67 A7 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                            "45 31 C0 E8 8C 68 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                        ],
+                        "modified":[
+                            "01 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                            "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                            "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                        ]
+                    },
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 d1 81 f8 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "74 6e 48 8d 8d 28 04 00 00 e8 c0 e8 d2 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 bd 31 03 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 ea b5 30 fe 48 8d 8d b0 00 00 00 e8 be fe 04 fe"
+                        ],
+                        "modified": [
+                            "eb 6e 48 8d 8d 28 04 00 00 e8 c0 e8 d2 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 bd 31 03 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 ea b5 30 fe 48 8d 8d b0 00 00 00 e8 be fe 04 fe"
+                        ]
+                    }
+                },
+                "4.0.5.18": {
+                    "silence": {
+                        "original": [
+                            "74 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
+                        ],
+                        "modified": [
+                            "eb 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
+                        ]
+                    }
+                },
                 "4.0.5.17": {
                     "bubble": {
                         "original": [
