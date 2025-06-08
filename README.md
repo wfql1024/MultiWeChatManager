@@ -166,6 +166,6 @@
 ├─📄 remote_setting_v4------------#v4：加密当前使用的适配表得到的云端配置源
 ├─📄 requirements.txt
 ├─📄 update_program.py------------#升级器
-├─📄 version_adaptation.json------#v1：2.5左右版本适配表，维护3.9微信的全局多开、防撤回及软件的版本日志
-└─📄 version_config.json----------#v2：2.3.3.333之前使用的适配表，维护3.9微信的全局多开
+├─📄 version_adaptation.json------#v2：2.5左右版本适配表，维护3.9微信的全局多开、防撤回及软件的版本日志
+└─📄 version_config.json----------#v1：2.3.3.333之前使用的适配表，维护3.9微信的全局多开
 ```
