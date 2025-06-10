@@ -4,10 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="远程适配表增加新版本3.3.0.3718-Beta">
-      <change afterPath="$PROJECT_DIR$/external_res/JFMC.png" afterDir="false" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="精确适配4.0.5.23的通知型防撤回.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -294,6 +292,29 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="dir_tree_creator" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="MultiWeChatManager" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/.scripts" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/.scripts/dir_tree_creator.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <configuration name="menu_ui" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="MultiWeChatManager" />
       <option name="ENV_FILES" value="" />
@@ -341,29 +362,6 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="widget_utils" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="MultiWeChatManager" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/utils" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/utils/widget_utils.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="Python tests for test_new_func.Test.test__create_lnk_for_account" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
       <module name="MultiWeChatManager" />
       <option name="ENV_FILES" value="" />
@@ -401,19 +399,19 @@
       <item itemvalue="Python.UpdateRemote" />
       <item itemvalue="Python.[debug]MWM" />
       <item itemvalue="Python.update_program" />
+      <item itemvalue="Python.dir_tree_creator" />
       <item itemvalue="Python.menu_ui" />
-      <item itemvalue="Python.widget_utils" />
       <item itemvalue="Python.custom_widget" />
       <item itemvalue="Python tests.Python tests for test_unit.Test.test_calculate_md5" />
       <item itemvalue="Python tests.Python tests for test_new_func.Test.test__create_lnk_for_account" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.dir_tree_creator" />
         <item itemvalue="Python tests.Python tests for test_unit.Test.test_calculate_md5" />
         <item itemvalue="Python tests.Python tests for test_new_func.Test.test__create_lnk_for_account" />
         <item itemvalue="Python.menu_ui" />
         <item itemvalue="Python.custom_widget" />
-        <item itemvalue="Python.widget_utils" />
       </list>
     </recent_temporary>
   </component>
@@ -736,31 +734,10 @@
       <workItem from="1749049804026" duration="11603000" />
       <workItem from="1749085694381" duration="18515000" />
       <workItem from="1749131218558" duration="15889000" />
-      <workItem from="1749177427179" duration="35718000" />
-    </task>
-    <task id="LOCAL-00291" summary="计算及修改新版本号">
-      <option name="closed" value="true" />
-      <created>1745860723298</created>
-      <option name="number" value="00291" />
-      <option name="presentableId" value="LOCAL-00291" />
-      <option name="project" value="LOCAL" />
-      <updated>1745860723299</updated>
-    </task>
-    <task id="LOCAL-00292" summary="测试在线升级">
-      <option name="closed" value="true" />
-      <created>1745867442655</created>
-      <option name="number" value="00292" />
-      <option name="presentableId" value="LOCAL-00292" />
-      <option name="project" value="LOCAL" />
-      <updated>1745867442655</updated>
-    </task>
-    <task id="LOCAL-00293" summary="适配4.0.3.43">
-      <option name="closed" value="true" />
-      <created>1745969910728</created>
-      <option name="number" value="00293" />
-      <option name="presentableId" value="LOCAL-00293" />
-      <option name="project" value="LOCAL" />
-      <updated>1745969910729</updated>
+      <workItem from="1749177427179" duration="36946000" />
+      <workItem from="1749302120939" duration="9000" />
+      <workItem from="1749383091485" duration="3475000" />
+      <workItem from="1749548292944" duration="2125000" />
     </task>
     <task id="LOCAL-00294" summary="新增企业微信(指定登录除外)">
       <option name="closed" value="true" />
@@ -1130,7 +1107,31 @@
       <option name="project" value="LOCAL" />
       <updated>1749222792056</updated>
     </task>
-    <option name="localTasksCounter" value="340" />
+    <task id="LOCAL-00340" summary="UPDATE README">
+      <option name="closed" value="true" />
+      <created>1749227851160</created>
+      <option name="number" value="00340" />
+      <option name="presentableId" value="LOCAL-00340" />
+      <option name="project" value="LOCAL" />
+      <updated>1749227851160</updated>
+    </task>
+    <task id="LOCAL-00341" summary="UPDATE README">
+      <option name="closed" value="true" />
+      <created>1749398019095</created>
+      <option name="number" value="00341" />
+      <option name="presentableId" value="LOCAL-00341" />
+      <option name="project" value="LOCAL" />
+      <updated>1749398019095</updated>
+    </task>
+    <task id="LOCAL-00342" summary="精确适配4.0.5.23的通知型防撤回.">
+      <option name="closed" value="true" />
+      <created>1749398054389</created>
+      <option name="number" value="00342" />
+      <option name="presentableId" value="LOCAL-00342" />
+      <option name="project" value="LOCAL" />
+      <updated>1749398054389</updated>
+    </task>
+    <option name="localTasksCounter" value="343" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1184,8 +1185,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="精确适配4.0.5.17" />
-    <MESSAGE value="设计并完善平台管理页面;将本地设置ini转为json;优化主进程,将其余平台的数据读取改为线程方式;使用读写锁避免读写冲突;优化点击事件类的逻辑;优化自定义按钮的显示逻辑" />
     <MESSAGE value="为所有页面增加&quot;快速刷新&quot;功能:菜单上,标签上;以及快速刷新显示优化:多个tree会按统一顺序布局;格式化代码,调整部分方法位置" />
     <MESSAGE value="标签页设为单击切换,双击刷新" />
     <MESSAGE value="平台设置可以修改平台备注,可以选择清理平台账号数据." />
@@ -1209,7 +1208,9 @@
     <MESSAGE value="发布前的测试与修复(代理,快捷方式,版本显示,侧栏菜单显示,解密,同类平台数据路径获取" />
     <MESSAGE value="发布3.3.0.3718" />
     <MESSAGE value="远程适配表增加新版本3.3.0.3718-Beta" />
-    <option name="LAST_COMMIT_MESSAGE" value="远程适配表增加新版本3.3.0.3718-Beta" />
+    <MESSAGE value="UPDATE README" />
+    <MESSAGE value="精确适配4.0.5.23的通知型防撤回." />
+    <option name="LAST_COMMIT_MESSAGE" value="精确适配4.0.5.23的通知型防撤回." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1234,9 +1235,9 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_detail.coverage" NAME="func_detail Coverage Results" MODIFIED="1723965430993" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$process_utils.coverage" NAME="process_utils Coverage Results" MODIFIED="1738825111392" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$.coverage" NAME=" Coverage Results" MODIFIED="1749222289735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.test" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$dir_tree_creator.coverage" NAME="dir_tree_creator Coverage Results" MODIFIED="1741019058639" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$mainTest.coverage" NAME="mainTest Coverage Results" MODIFIED="1727055425310" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/dll_injection" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$widget_utils.coverage" NAME="widget_utils Coverage Results" MODIFIED="1748519511278" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$dir_tree_creator.coverage" NAME="dir_tree_creator Coverage Results" MODIFIED="1749227245107" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_data.coverage" NAME="get_path_of_data Coverage Results" MODIFIED="1723333667569" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$detail_ui.coverage" NAME="detail_ui Coverage Results" MODIFIED="1728864776987" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$update_program.coverage" NAME="update_program Coverage Results" MODIFIED="1731898657791" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
@@ -1254,7 +1255,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_file.coverage" NAME="func_file Coverage Results" MODIFIED="1733325233358" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_wechat.coverage" NAME="get_path_of_wechat Coverage Results" MODIFIED="1723333662145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1749225057687" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1749548505497" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_setting.coverage" NAME="func_setting Coverage Results" MODIFIED="1735011292727" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_decrypt_utils.coverage" NAME="wechat_decrypt_utils Coverage Results" MODIFIED="1723959593571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$more_open.coverage" NAME="more_open Coverage Results" MODIFIED="1724791562833" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
@@ -1262,7 +1263,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$main.coverage" NAME="main Coverage Results" MODIFIED="1732901848113" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$change.coverage" NAME="change Coverage Results" MODIFIED="1745071352553" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_path.coverage" NAME="func_path Coverage Results" MODIFIED="1723587474270" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$UpdateRemote.coverage" NAME="UpdateRemote Coverage Results" MODIFIED="1749222741671" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$UpdateRemote.coverage" NAME="UpdateRemote Coverage Results" MODIFIED="1749398006830" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$hwnd.coverage" NAME="hwnd Coverage Results" MODIFIED="1732032782606" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$rewards_ui.coverage" NAME="rewards_ui Coverage Results" MODIFIED="1733621223266" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$search_wechat_key.coverage" NAME="search_wechat_key Coverage Results" MODIFIED="1723953330536" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/decrypt" />
