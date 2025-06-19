@@ -15,7 +15,7 @@ from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
 from public_class.enums import LocalCfg
 from resources import Config
-from utils import file_utils
+from utils import file_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 
 
@@ -263,6 +263,39 @@ class AppFunc:
 
         # 打印所有创建成功信息
         messagebox.showinfo("成功", "\n".join(notice))
+
+    @staticmethod
+    def check_auto_start_or_toggle_to_(target_state=None):
+        startup_folder = sys_utils.get_startup_folder()
+        print(startup_folder)
+        if getattr(sys, 'frozen', False):
+            # 如果是打包后的可执行文件
+            app_path = sys.executable
+        else:
+            # 如果是源代码运行
+            app_path = None
+
+        if app_path is None:
+            auto_start, paths = False, None
+            shortcut_path = None
+        else:
+            auto_start, paths = file_utils.check_shortcut_in_folder(startup_folder, app_path)
+            shortcut_name = os.path.splitext(os.path.basename(app_path))[0]
+            shortcut_path = os.path.join(startup_folder, f"{shortcut_name}.lnk")
+
+        if target_state is None:
+            return True, auto_start
+
+        else:
+            try:
+                if target_state is True:
+                    file_utils.create_shortcut_for_(app_path, shortcut_path)
+                elif target_state is False:
+                    file_utils.move_files_to_recycle_bin(paths)
+                return True, None
+            except Exception as e:
+                logger.error(e)
+                return False, str(e)
 
     @staticmethod
     def reset(after):

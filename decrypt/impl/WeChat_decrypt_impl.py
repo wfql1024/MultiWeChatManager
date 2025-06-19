@@ -68,11 +68,11 @@ class WeChatDecryptImpl(DecryptInterface):
 
     # 第一步：找key
     def get_acc_str_key_by_pid(self, pid):
-        printer.vital("获取key...")
-        logger.info(f"pid: {pid}")
-        logger.info("遍历微信内存，去暴力找key......")
-        phone_types = [b'android\x00', b'iphone\x00']
         try:
+            printer.vital("获取key...")
+            logger.info(f"pid: {pid}")
+            logger.info("遍历微信内存，去暴力找key......")
+            phone_types = [b'android\x00', b'iphone\x00']
             pm = pymem.Pymem()
             pm.open_process_from_id(pid)
             p = psutil.Process(pid)

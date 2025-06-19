@@ -286,7 +286,7 @@ class MenuUI:
     def _create_setting_menu(self):
         # -全局设置
         self.settings_menu.add_command(label=f"全局设置", command=WndCreator.open_global_setting_wnd)
-        _, self.global_settings_value.auto_start = subfunc_file.check_auto_start_or_toggle_to_()
+        _, self.global_settings_value.auto_start = AppFunc.check_auto_start_or_toggle_to_()
         auto_start_value = self.global_settings_value.auto_start
         auto_start_var = self.global_settings_var.auto_start = tk.BooleanVar(value=auto_start_value)
         self.auto_start_menu = tk.Menu(self.settings_menu, tearoff=False)
@@ -470,7 +470,7 @@ class MenuUI:
 
     def _toggle_auto_start(self, value):
         """切换是否开机自启动"""
-        success, res = subfunc_file.check_auto_start_or_toggle_to_(value)
+        success, res = AppFunc.check_auto_start_or_toggle_to_(value)
         self.create_root_menu_bar()
         if success is not True:
             messagebox.showerror("错误", res)

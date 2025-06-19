@@ -157,7 +157,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         login_status = self.table_tag
         # print(f"tree={tree}, accounts={accounts}, login_status={login_status}")
 
-        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(self.sw, self.data_dir)
+        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw, self.data_dir)
 
         for account in accounts:
             # 未登录账号中，隐藏的账号不显示

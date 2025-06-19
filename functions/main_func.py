@@ -107,3 +107,7 @@ class MultiSwFunc:
             threading.Thread(target=MultiSwFunc._login_auto_start_accounts).start()
         except Exception as e:
             logger.error(e)
+
+
+class MainFunc:
+    pass

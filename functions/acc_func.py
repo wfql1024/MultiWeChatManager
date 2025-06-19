@@ -21,6 +21,8 @@ import winshell
 from PIL import Image, ImageDraw, ImageFont
 
 from functions import subfunc_file
+from functions.acc_func_impl import AccInfoFuncImpl
+from functions.func_tool import FuncTool
 from functions.sw_func import SwOperator, SwInfoFunc
 from public_class.enums import AccKeys, SW, LocalCfg
 from public_class.global_members import GlobalMembers
@@ -826,21 +828,28 @@ class AccInfoFunc:
             left = (width - side) // 2
             top = (height - side) // 2
             cropped = img.crop((left, top, left + side, top + side))
-            path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
-            cropped.save(path, format=img.format)
+            dir_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}")
+            file_path = os.path.join(dir_path, f"{acc}.jpg")
+            # 确保目录存在
+            os.makedirs(dir_path, exist_ok=True)
+            cropped.save(file_path, format=img.format)
 
     @staticmethod
     def delete_avatar_for_acc(sw, acc):
         path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
         if os.path.exists(path):
             os.remove(path)
-        subfunc_file.update_sw_acc_data(sw, acc, avatar_url=Strings.NO_NEED_AVT_URL)
+        subfunc_file.update_sw_acc_data(sw, acc, avatar_url=None)
 
     @staticmethod
     def get_acc_avatar_from_files(sw, acc):
         """
         从本地缓存或json文件中的url地址获取头像，失败则默认头像
         """
+        disable_avatar, = subfunc_file.get_sw_acc_data(sw, acc, disable_avatar=None)
+        if disable_avatar is True:
+            return AccInfoFunc._get_acc_avatar_without_files(sw, acc)
+
         # 构建头像文件路径
         avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
 
@@ -850,13 +859,16 @@ class AccInfoFunc:
         # 如果没有，从网络下载
         url, = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None)
         if url is not None and url.endswith("/0"):
-            if url != Strings.NO_NEED_AVT_URL:
-                image_utils.download_image(url, avatar_path)
+            image_utils.download_image(url, avatar_path)
 
         # 第二次检查是否存在对应account的头像
         if os.path.exists(avatar_path):
             return Image.open(avatar_path)
 
+        return AccInfoFunc._get_acc_avatar_without_files(sw, acc)
+
+    @staticmethod
+    def _get_acc_avatar_without_files(sw, acc):
         # 处理没有本地头像的情况
         use_text_avatar = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_TXT_AVT)
         if use_text_avatar:
@@ -913,18 +925,86 @@ class AccInfoFunc:
         )
 
     @staticmethod
-    def _silent_get_avatar_url(sw, acc_list, data_dir):
-        """悄悄获取账号的头像url"""
-        changed1 = subfunc_file.get_avatar_url_from_file(sw, acc_list, data_dir)
-        changed2 = subfunc_file.get_avatar_url_from_other_sw(sw, acc_list)
-        return changed1 or changed2
+    def _get_avatar_from_other_sw(now_sw, now_acc_list):
+        # 获取从其他平台到当前平台的裁剪映射
+        changed = False
+        sw_id_trims, = subfunc_file.get_remote_cfg(now_sw, sw_id_trims=None)
+        for other_sw, trim_values in (sw_id_trims or {}).items():
+            if not isinstance(trim_values, list) or len(trim_values) != 4:
+                logger.warning(f"无效的 sw_id_trims 配置: {other_sw} -> {trim_values}")
+                continue
+            other_l, other_r, now_l, now_r = trim_values
+            other_r = None if other_r == 0 else -other_r
+            now_r = None if now_r == 0 else -now_r
+
+            # 加载其他平台的账号列表
+            other_acc_list = subfunc_file.get_sw_acc_data(other_sw)
+            # 预处理：构建一个 dict，key 是裁切后的 other_acc，value 是原账号
+            other_cut_map = {
+                other_acc[other_l:other_r]: other_acc
+                for other_acc in other_acc_list
+            }
+
+            for now_acc in now_acc_list:
+                now_cut_acc = now_acc[now_l:now_r]
+                other_acc = other_cut_map.get(now_cut_acc)
+                if other_acc:
+                    # 检查头像url是否存在,若不在,则偷取
+                    now_avatar_url, = subfunc_file.get_sw_acc_data(now_sw, now_acc, avatar_url=None)
+                    other_avatar_url, = subfunc_file.get_sw_acc_data(other_sw, other_acc, avatar_url=None)
+                    if other_avatar_url and not now_avatar_url:
+                        logger.info(f"{now_acc}: {other_avatar_url}")
+                        subfunc_file.update_sw_acc_data(now_sw, now_acc, avatar_url=other_avatar_url)
+                        changed = True
+                    # 检查头像文件是否存在,若不在,先从url下载,若下载失败,则从其他平台偷取本地图片
+                    now_avatar_path = os.path.join(Config.PROJ_USER_PATH, now_sw, f"{now_acc}", f"{now_acc}.jpg")
+                    now_avatar_url, = subfunc_file.get_sw_acc_data(now_sw, now_acc, avatar_url=None)
+                    if not os.path.isfile(now_avatar_path):
+                        if now_avatar_url is not None:
+                            success = image_utils.download_image(now_avatar_url, now_avatar_path)
+                            if success is True:
+                                return True
+                        other_avatar_path = os.path.join(Config.PROJ_USER_PATH, other_sw, f"{other_acc}",
+                                                         f"{other_acc}.jpg")
+                        if os.path.isfile(other_avatar_path) and not os.path.isfile(now_avatar_path):
+                            os.makedirs(os.path.dirname(now_avatar_path), exist_ok=True)
+                            shutil.copyfile(other_avatar_path, now_avatar_path)
+                            return True
+        return changed
 
     @staticmethod
-    def _silent_get_nickname(sw, acc_list, data_dir):
-        """悄悄获取账号的头像url"""
-        changed1 = subfunc_file.get_nickname_from_file(sw, acc_list, data_dir)
-        changed2 = subfunc_file.get_nickname_from_other_sw(sw, acc_list)
-        return changed1 or changed2
+    def _get_nickname_from_other_sw(now_sw, now_acc_list):
+        # 获取从其他平台到当前平台的裁剪映射
+        changed = False
+        sw_id_trims, = subfunc_file.get_remote_cfg(now_sw, sw_id_trims=None)
+        for other_sw, trim_values in (sw_id_trims or {}).items():
+            if not isinstance(trim_values, list) or len(trim_values) != 4:
+                logger.warning(f"无效的 sw_id_trims 配置: {other_sw} -> {trim_values}")
+                continue
+            other_l, other_r, now_l, now_r = trim_values
+            other_r = None if other_r == 0 else -other_r
+            now_r = None if now_r == 0 else -now_r
+
+            # 加载其他平台的账号列表
+            other_acc_list = subfunc_file.get_sw_acc_data(other_sw)
+            # 预处理：构建一个 dict，key 是裁切后的 other_acc，value 是原账号
+            other_cut_map = {
+                other_acc[other_l:other_r]: other_acc
+                for other_acc in other_acc_list
+            }
+
+            for now_acc in now_acc_list:
+                now_cut_acc = now_acc[now_l:now_r]
+                other_acc = other_cut_map.get(now_cut_acc)
+                if other_acc:
+                    # 检查头像url是否存在,若不在,则偷取
+                    now_nickname, = subfunc_file.get_sw_acc_data(now_sw, now_acc, nickname=None)
+                    other_nickname, = subfunc_file.get_sw_acc_data(other_sw, other_acc, nickname=None)
+                    if other_nickname and not now_nickname:
+                        logger.info(f"{now_acc}: {other_nickname}")
+                        subfunc_file.update_sw_acc_data(now_sw, now_acc, nickname=other_nickname)
+                        changed = True
+        return changed
 
     @staticmethod
     def silent_get_and_config(sw):
@@ -934,13 +1014,12 @@ class AccInfoFunc:
         root = root_class.root
         data_dir = root_class.sw_classes[sw].data_dir
 
-        # 悄悄执行检测昵称和头像
-        need_to_notice = False
+        # 线程执行检测昵称和头像
+        need_to_notice = []
 
         # 1. 获取所有账号节点的url和昵称，将空的账号返回
         accounts_need_to_get_avatar = []
         accounts_need_to_get_nickname = []
-
         sw_data = subfunc_file.get_sw_acc_data(sw)
         # print(login, logout)
         for acc in sw_data:
@@ -952,31 +1031,32 @@ class AccInfoFunc:
             if nickname is None:
                 accounts_need_to_get_nickname.append(acc)
         # print(accounts_need_to_get_avatar, accounts_need_to_get_nickname)
-
         # 2. 对待获取url的账号遍历尝试获取
         if len(accounts_need_to_get_avatar) > 0:
-            changed = AccInfoFunc._silent_get_avatar_url(sw, accounts_need_to_get_avatar, data_dir)
-            if changed is True:
-                need_to_notice = True
-
+            need_to_notice.append(
+                FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_avatar_url_from_file(
+                    sw, accounts_need_to_get_avatar, data_dir))
+            need_to_notice.append(AccInfoFunc._get_avatar_from_other_sw(sw, accounts_need_to_get_avatar))
         # 3. 对待获取昵称的账号尝试遍历获取
         if len(accounts_need_to_get_nickname) > 0:
-            changed = AccInfoFunc._silent_get_nickname(sw, accounts_need_to_get_nickname, data_dir)
-            if changed is True:
-                need_to_notice = True
-
+            need_to_notice.append(
+                FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_nickname_from_file(
+                    sw, accounts_need_to_get_nickname, data_dir))
+            need_to_notice.append(AccInfoFunc._get_nickname_from_other_sw(sw, accounts_need_to_get_nickname))
         # 4. 偷偷创建配置文件
-        curr_config_acc = subfunc_file.get_curr_wx_id_from_config_file(sw, data_dir)
+        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(sw, data_dir)
         if curr_config_acc is not None:
             if AccInfoFunc.get_sw_acc_login_cfg(sw, curr_config_acc, data_dir) == "无配置":
                 changed, _ = AccOperator.operate_acc_config('add', sw, curr_config_acc)
-                if changed is True:
-                    need_to_notice = True
-
+                need_to_notice.append(changed)
         # 5. 通知
-        if need_to_notice is True:
+        if any(need_to_notice):
             messagebox.showinfo("提醒", "已自动化获取或配置！即将刷新！")
             root.after(0, login_ui.refresh_frame, sw)
+
+    @staticmethod
+    def get_curr_wx_id_from_config_file(sw, data_dir):
+        return FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_curr_wx_id_from_config_file(sw, data_dir)
 
     @staticmethod
     def get_sw_acc_list(_root, root_class, sw):
@@ -1193,6 +1273,7 @@ class AccInfoFunc:
                 print(hwnd_utils.get_hwnd_details_of_(hwnd)["class"])
                 if AccInfoFunc.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, account):
                     subfunc_file.update_sw_acc_data(sw, account, main_hwnd=hwnd)
+                    sw_display_name = SwInfoFunc.get_sw_origin_display_name(sw)
                     display_name = AccInfoFunc.get_acc_origin_display_name(sw, account)
-                    hwnd_utils.set_window_title(hwnd, f"微信 - {display_name}")
+                    hwnd_utils.set_window_title(hwnd, f"{sw_display_name} - {display_name}")
                     break

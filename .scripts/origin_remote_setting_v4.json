@@ -1478,6 +1478,9 @@
             "WMPF",
             "all_users"
         ],
+        "sw_id_trims": {
+            "Weixin": [0,5,0,0]
+        },
         "cut_to_compatible_id": [
             0,
             0
@@ -2345,9 +2348,10 @@
         ],
         "login_wnd_class": "Qt51514QWindowIcon",
         "main_wnd_class": "Qt51514QWindowIcon",
-        "config_path_suffix": "all_users",
+        "config_path_suffix": "all_users\\config",
         "config_file_list": [
-            "config"
+            "global_config",
+            "global_config.crc"
         ],
         "excluded_dir_list": [
             "All Users",
@@ -2358,6 +2362,9 @@
             "Backup",
             "old_backup"
         ],
+        "sw_id_trims": {
+            "WeChat": [0,0,0,5]
+        },
         "cut_to_compatible_id": [
             0,
             5
@@ -2418,6 +2425,9 @@
             "ShaderCache",
             "WeDrive"
         ],
+        "sw_id_trims": {
+
+        },
         "cut_to_compatible_id": [
             0,
             5
@@ -2463,6 +2473,10 @@
             "nt_temp",
             "Tencent Files"
         ],
+        "sw_id_trims": {
+            "QQ": [0,0,0,0],
+            "TIM": [0,0,0,0]
+        },
         "cut_to_compatible_id": [
             0,
             0
@@ -2545,6 +2559,10 @@
             "nt_temp",
             "Tencent Files"
         ],
+        "sw_id_trims": {
+            "QQNT": [0,0,0,0],
+            "TIM": [0,0,0,0]
+        },
         "cut_to_compatible_id": [
             0,
             0
@@ -2627,6 +2645,10 @@
             "nt_temp",
             "Tencent Files"
         ],
+        "sw_id_trims": {
+            "QQ": [0,0,0,0],
+            "QQNT": [0,0,0,0]
+        },
         "cut_to_compatible_id": [
             0,
             0
@@ -2713,6 +2735,10 @@
             "nt_qq",
             "nt_temp"
         ],
+        "sw_id_trims": {
+            "QQ": [0,0,0,0],
+            "QQNT": [0,0,0,0]
+        },
         "cut_to_compatible_id": [
             0,
             0

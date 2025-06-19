@@ -105,6 +105,7 @@ class WndCreator:
 
 class DetailUI(SubToolWndUI, ABC):
     def __init__(self, wnd, title, sw, account, tab_class):
+        self.disable_avatar_var = None
         self.mutex_label = None
         self.hwnd_label = None
         self.login_status_frame = None
@@ -149,10 +150,10 @@ class DetailUI(SubToolWndUI, ABC):
         basic_info_grid.pack()
 
         # 头像
-        avatar_frame = ttk.Frame(basic_info_grid, padding=Constants.L_FRM_PAD)
+        avatar_frame = ttk.Frame(basic_info_grid)
         avatar_frame.grid(row=0, column=0, **Constants.W_GRID_PACK)
         avatar_label = ttk.Label(avatar_frame)
-        avatar_label.pack()
+        avatar_label.pack(**Constants.T_WGT_PACK)
         avatar_operate_frame = ttk.Frame(avatar_frame)
         avatar_operate_frame.pack(**Constants.B_WGT_PACK)
         # 左右的占位符
@@ -172,7 +173,7 @@ class DetailUI(SubToolWndUI, ABC):
         def _pack_btn(btn):
             btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
 
-        change_avatar_btn = _create_btn_in_(avatar_operate_frame, "手动选择")
+        change_avatar_btn = _create_btn_in_(avatar_operate_frame, "修改")
         change_avatar_btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
         (change_avatar_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_choose_avatar_for_acc, sw, account))})
@@ -270,6 +271,12 @@ class DetailUI(SubToolWndUI, ABC):
         auto_start_checkbox = tk.Checkbutton(
             ckb_frm, text="进入软件时自启动", variable=auto_start_var)
         auto_start_checkbox.pack(side=tk.LEFT)
+        # -头像禁用
+        disable_avatar, = subfunc_file.get_sw_acc_data(sw, account, disable_avatar=False)
+        disable_avatar_var = tk.BooleanVar(value=disable_avatar)
+        disable_avatar_checkbox = tk.Checkbutton(
+            ckb_frm, text="禁用头像", variable=disable_avatar_var)
+        disable_avatar_checkbox.pack(side=tk.LEFT)
         # 按钮区域
         button_frame = ttk.Frame(frame, padding=Constants.B_FRM_PAD)
         save_button = ttk.Button(button_frame, text="保存", command=self._save_acc_settings)
@@ -296,6 +303,7 @@ class DetailUI(SubToolWndUI, ABC):
         self.hotkey_entry = hotkey_entry
         self.hotkey_var = hotkey_var
         self.hidden_var = hidden_var
+        self.disable_avatar_var = disable_avatar_var
         self.auto_start_var = auto_start_var
 
     def update_content(self):
@@ -344,6 +352,7 @@ class DetailUI(SubToolWndUI, ABC):
         # 将局部变量赋值回实例变量
         self.pid = pid
         self.main_hwnd = main_hwnd
+        self.avatar_url = avatar_url
 
     @staticmethod
     def _create_label_entry_grid(grid_frame, label_text, var_value, readonly=False):
@@ -363,7 +372,7 @@ class DetailUI(SubToolWndUI, ABC):
 
     def _update_avatar_and_bind(self, img, avatar_url):
         try:
-            new_size = tuple(int(dim * 2.5) for dim in Constants.AVT_SIZE)
+            new_size = tuple(int(dim * 2) for dim in Constants.AVT_SIZE)
             img = img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
             photo = ImageTk.PhotoImage(img)
             self.avatar_label.config(image=photo)
@@ -402,11 +411,18 @@ class DetailUI(SubToolWndUI, ABC):
         hidden = self.hidden_var.get()
         auto_start = self.auto_start_var.get()
         hotkey = self.hotkey_var.get().strip()
-        subfunc_file.update_sw_acc_data(self.sw, self.account,
-                                        hidden=hidden, auto_start=auto_start, hotkey=hotkey)
+        disable_avatar = self.disable_avatar_var.get()
+        subfunc_file.update_sw_acc_data(
+            self.sw, self.account, hidden=hidden, auto_start=auto_start, hotkey=hotkey, disable_avatar=disable_avatar)
         printer.vital("账号设置成功")
         self.wnd.destroy()
         self.tab_class.refresh_frame(self.sw)
+
+    # def _set_avatar_disabled(self, disabled):
+    #     if disabled is True:
+    #         AccInfoFunc.disable_avatar_for_acc(self.sw, self.account)
+    #     elif disabled is False and self.avatar_url == Strings.NO_NEED_AVT_URL:
+    #         subfunc_file.update_sw_acc_data(self.sw, self.account, avatar_url=None)
 
     def set_focus_to_(self, widget_tag):
         if widget_tag == "note":
