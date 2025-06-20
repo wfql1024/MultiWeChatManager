@@ -29,9 +29,9 @@ from public_class.global_members import GlobalMembers
 from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
-from utils import process_utils, image_utils, hwnd_utils, handle_utils
+from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 
 
 class AccOperator:
@@ -1059,6 +1059,67 @@ class AccInfoFunc:
         return FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_curr_wx_id_from_config_file(sw, data_dir)
 
     @staticmethod
+    def update_acc_list_by_pid(pid: int, data_dir, proc_dict, logged_in_ids):
+        """
+        为存在的微信进程匹配出对应的账号，并更新[已登录账号]和[(已登录进程,账号)]
+        :param logged_in_ids:
+        :param proc_dict:
+        :param data_dir:
+        :param pid: 微信进程id
+        :return: 无
+        """
+        # print(data_path)
+        try:
+            # print(pid, "的孩子：", psutil.Process(process_id).children())
+            # 获取指定进程的内存映射文件路径
+            for f in psutil.Process(pid).memory_maps():
+                # print(process_id, f)
+                # 将路径中的反斜杠替换为正斜杠
+                normalized_path = f.path.replace('\\', '/')
+                # print(normalized_path)
+                # 检查路径是否以 data_path 开头
+                if normalized_path.startswith(data_dir):
+                    # print(
+                    #     f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
+                    # print(f"提取中：{f.path}")
+                    path_parts = f.path.split(os.path.sep)
+                    try:
+                        wx_id_index = path_parts.index(os.path.basename(data_dir)) + 1
+                        wx_id = path_parts[wx_id_index]
+                        proc_dict.append((wx_id, pid))
+                        logged_in_ids.add(wx_id)
+                        # print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
+                        return
+                    except Exception as e:
+                        logger.error(e)
+            for f in psutil.Process(pid).open_files():
+                # print(process_id, f)
+                # 将路径中的反斜杠替换为正斜杠
+                normalized_path = f.path.replace('\\', '/')
+                # print(normalized_path)
+                # 检查路径是否以 data_path 开头
+                if normalized_path.startswith(data_dir):
+                    # print(
+                    #     f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
+                    # print(f"提取中：{f.path}")
+                    path_parts = f.path.split(os.path.sep)
+                    try:
+                        wx_id_index = path_parts.index(os.path.basename(data_dir)) + 1
+                        wx_id = path_parts[wx_id_index]
+                        proc_dict.append((wx_id, pid))
+                        logged_in_ids.add(wx_id)
+                        # print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
+                        return
+                    except Exception as e:
+                        logger.error(e)
+        except psutil.AccessDenied:
+            logger.error(f"无法访问进程ID为 {pid} 的内存映射文件，权限不足。")
+        except psutil.NoSuchProcess:
+            logger.error(f"进程ID为 {pid} 的进程不存在或已退出。")
+        except Exception as e:
+            logger.error(f"发生意外错误: {e}")
+
+    @staticmethod
     def get_sw_acc_list(_root, root_class, sw):
         """
         获取账号及其登录情况
@@ -1073,67 +1134,7 @@ class AccInfoFunc:
         if data_dir is None or os.path.isdir(data_dir) is False:
             return False, "数据路径不存在"
 
-        def update_acc_list_by_pid(process_id: int):
-            """
-            为存在的微信进程匹配出对应的账号，并更新[已登录账号]和[(已登录进程,账号)]
-            :param process_id: 微信进程id
-            :return: 无
-            """
-            # print(data_path)
-            try:
-                # print(pid, "的孩子：", psutil.Process(process_id).children())
-                # 获取指定进程的内存映射文件路径
-                for f in psutil.Process(process_id).memory_maps():
-                    # print(process_id, f)
-                    # 将路径中的反斜杠替换为正斜杠
-                    normalized_path = f.path.replace('\\', '/')
-                    # print(normalized_path)
-                    # 检查路径是否以 data_path 开头
-                    if normalized_path.startswith(data_dir):
-                        # print(
-                        #     f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
-                        # print(f"提取中：{f.path}")
-                        path_parts = f.path.split(os.path.sep)
-                        try:
-                            wx_id_index = path_parts.index(os.path.basename(data_dir)) + 1
-                            wx_id = path_parts[wx_id_index]
-                            if wx_id not in excluded_dir_list:
-                                proc_dict.append((wx_id, process_id))
-                                logged_in_ids.add(wx_id)
-                                # print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
-                                return
-                        except Exception as e:
-                            logger.error(e)
-                for f in psutil.Process(process_id).open_files():
-                    # print(process_id, f)
-                    # 将路径中的反斜杠替换为正斜杠
-                    normalized_path = f.path.replace('\\', '/')
-                    # print(normalized_path)
-                    # 检查路径是否以 data_path 开头
-                    if normalized_path.startswith(data_dir):
-                        # print(
-                        #     f"┌———匹配到进程{process_id}使用的符合的文件，待比对，已用时：{time.time() - start_time:.4f}秒")
-                        # print(f"提取中：{f.path}")
-                        path_parts = f.path.split(os.path.sep)
-                        try:
-                            wx_id_index = path_parts.index(os.path.basename(data_dir)) + 1
-                            wx_id = path_parts[wx_id_index]
-                            if wx_id not in ["all_users"]:
-                                proc_dict.append((wx_id, process_id))
-                                logged_in_ids.add(wx_id)
-                                # print(f"进程{process_id}对应账号{wx_id}，已用时：{time.time() - start_time:.4f}秒")
-                                return
-                        except Exception as e:
-                            logger.error(e)
-            except psutil.AccessDenied:
-                logger.error(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
-            except psutil.NoSuchProcess:
-                logger.error(f"进程ID为 {process_id} 的进程不存在或已退出。")
-            except Exception as e:
-                logger.error(f"发生意外错误: {e}")
-
         start_time = time.time()
-
         proc_dict = []
         logged_in_ids = set()
 
@@ -1143,14 +1144,24 @@ class AccInfoFunc:
             messagebox.showerror("错误", f"{sw}平台未适配")
             return False, "该平台未适配"
         inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        inst_dir = os.path.dirname(inst_path)
+        # 在安装路径中获取原生exe和共存exe
+        coexist_exes = file_utils.get_matching_exe_names("WeChat?.exe", inst_dir)
+        exes = coexist_exes + [exe]
+        Printer().debug(coexist_exes, exes)
+
         # 从进程名获取pid;对pid去除子进程;对pid进行重名筛选,只要特定路径的
-        pids = process_utils.get_process_ids_by_name(exe)
+        pids = []
+        for exe in exes:
+            pids.extend(process_utils.get_process_ids_by_name(exe))
+        # pids = process_utils.get_process_ids_by_name(exe)
         pids = process_utils.remove_child_pids(pids)
-        pids = process_utils.remove_pids_not_in_path(pids, inst_path)
+        pids = process_utils.remove_pids_not_in_path(pids, inst_dir)
         print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
         if isinstance(pids, Iterable):
+            Printer().debug(pids)
             for pid in pids:
-                update_acc_list_by_pid(pid)
+                AccInfoFunc.update_acc_list_by_pid(pid, data_dir, proc_dict, logged_in_ids)
         # print(f"完成判断进程对应账号，用时：{time.time() - start_time:.4f} 秒")
 
         # print(proc_dict)
@@ -1171,6 +1182,7 @@ class AccInfoFunc:
         # 更新数据
         has_mutex = True
         pid_dict = dict(proc_dict)
+
         multiple_status = sw_class.can_freely_multirun
         if multiple_status == "已开启":
             # print(f"由于是全局多开模式，直接所有has_mutex都为false")

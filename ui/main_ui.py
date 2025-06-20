@@ -22,7 +22,7 @@ from ui import login_ui, acc_manager_ui, sw_manager_ui
 from ui.menu_ui import MenuUI
 from ui.wnd_ui import LoadingWndUI, WndCreator
 from utils import hwnd_utils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Logger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import WidgetUtils
 
@@ -588,7 +588,7 @@ class HotkeyManager:
     def _hotkey_listener(self):
         """ 热键监听线程，等待退出信号 """
         while not self.stop_event.is_set():
-            logger.info("监听快捷键中...")
+            Logger().info("监听快捷键中...")
             keyboard.wait()  # 等待快捷键事件，直到 stop_event 触发
 
     def stop_hotkey_listener(self):

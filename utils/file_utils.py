@@ -1,6 +1,7 @@
 import configparser
 import ctypes
 import datetime as dt
+import glob
 import hashlib
 import json
 import mmap
@@ -18,7 +19,7 @@ from Crypto.Util.Padding import pad
 from Crypto.Util.Padding import unpad
 from readerwriterlock import rwlock
 
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 
 rw_lock = rwlock.RWLockFairD()
 
@@ -614,6 +615,11 @@ def find_file(start_dir, filename):
             return os.path.join(root, filename)
     return None
 
+def get_matching_exe_names(pattern_with_qmark: str, search_dir: str = "."):
+    pattern = os.path.join(search_dir, pattern_with_qmark).replace("/", "\\")
+    matched_paths = glob.glob(pattern)
+    Printer().debug(pattern, matched_paths)
+    return [os.path.basename(path) for path in matched_paths]
 
 def get_file_version(file_path):
     try:

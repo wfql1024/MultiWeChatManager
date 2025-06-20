@@ -1,5 +1,6 @@
 # logger_utils.py
 # 这个是很底层的工具类，不要导入项目其他的模块
+import builtins
 import functools
 import inspect
 import io
@@ -309,7 +310,24 @@ class RedirectText(io.TextIOBase):
         return self.logs  # 返回结构化日志
 
 
-class PrinterUtils:
+class Printer:
+    _instance = None
+    GREEN = "\033[92m"
+    RED = "\033[91m"
+    YELLOW = "\033[93m"
+    BLUE = "\033[96m"
+    RESET = "\033[0m"
+
+    BOLD = "\033[1m"
+    NO_BOLD = "\033[22m"
+    REVERSE = "\033[7m"
+    NO_REVERSE = "\033[27m"
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self):
         self.vital_msg = None  # 用于保存 Vital 级别的输出
         self.last_msg = None  # 用于存储最后一条消息
@@ -340,13 +358,34 @@ class PrinterUtils:
         self.last_msg = str(obj)
         return self
 
+    def debug(self, *args, **kwargs):
+        text = " ".join(str(arg) for arg in args)
+        kwargs.setdefault("flush", True)
+        builtins.print(f"{self.BOLD}{self.BLUE}Debug: {text}{self.RESET}", **kwargs)
 
-class LoggerUtils:
-    def __init__(self, file):
-        self.logger = self.get_logger(file)
+    def cmd_in(self, *args, **kwargs):
+        print(f"{self.GREEN}{self.BOLD}>", *args, f"{self.RESET}", **kwargs)
+
+    def cmd_out(self, *args, **kwargs):
+        print(f"{self.YELLOW}>", *args, f"{self.RESET}", **kwargs)
+
+
+class Logger:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(self, file=None):
+        if file is None:
+            app = os.path.basename(os.path.abspath(sys.argv[0]))
+            file = app.split('.')[0] + '.log'
+        self.logger = self._get_logger(file)
 
     @staticmethod
-    def get_logger(file):
+    def _get_logger(file):
         # 定log输出格式，配置同时输出到标准输出与log文件，返回logger这个对象
         log_colors_config = {
             # 终端输出日志颜色配置
@@ -382,11 +421,15 @@ class LoggerUtils:
 
         return logger
 
+    def __getattr__(self, name):
+        # 避免转发自身已有的属性或方法
+        if name in self.__dict__ or hasattr(type(self), name):
+            return self.__dict__[name] if name in self.__dict__ else getattr(type(self), name)
+        return getattr(self.logger, name)
 
-app_path = os.path.basename(os.path.abspath(sys.argv[0]))
-log_file = app_path.split('.')[0] + '.log'
-mylogger = LoggerUtils.get_logger(log_file)
-myprinter = PrinterUtils()
+
+mylogger = Logger()
+myprinter = Printer()
 
 if __name__ == '__main__':
     pass

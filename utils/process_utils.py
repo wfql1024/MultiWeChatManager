@@ -11,7 +11,7 @@ from typing import List
 
 import psutil
 
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 
 
 class Process:
@@ -380,7 +380,7 @@ def remove_pids_not_in_path(pids: List[int], path_keyword: str) -> List[int]:
         if process:
             try:
                 exe_path = process.info['exe'] or ""
-                print("debug", exe_path)
+                Printer().debug(exe_path)
                 if path_keyword.lower() not in exe_path.lower():
                     pids.remove(pid)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -503,15 +503,19 @@ def get_process_ids_by_name(process_name) -> list:
             ['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/FO', 'CSV', '/NH'],
             startupinfo=startupinfo
         )
-        # print(f"{origin_output}")
+        Printer().cmd_out(f"{origin_output}")
 
+        output = "解码错误"
         try:
             output = origin_output.decode('utf-8').strip()
         except UnicodeDecodeError as e:
-            print(f"解码错误：{e}")
-            print(f"{origin_output.decode('GBK').strip()}")
-            return []  # 或者根据需求返回其他值或执行其他逻辑
-        print(f"{output}")
+            # print(f"解码错误：{e}")
+            try:
+                # print(f"{origin_output.decode('GBK').strip()}")
+                output = origin_output.decode('GBK').strip()
+            except UnicodeDecodeError as ue:
+                print(ue)
+        Printer().cmd_out(f"{output}")
 
         # 解析输出并获取进程 ID
         for line in output.split('\n'):
@@ -521,6 +525,7 @@ def get_process_ids_by_name(process_name) -> list:
 
     except subprocess.CalledProcessError:
         pass
+    Printer().debug(matching_processes)
 
     return matching_processes
 
