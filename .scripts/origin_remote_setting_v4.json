@@ -1449,6 +1449,7 @@
         ],
         "label": "微信",
         "executable": "WeChat.exe",
+        "coexist_exe_regex": "WeChat?.exe",
         "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
         "data_dir_guess_suffix": "Tencent\\WeChat",
         "data_dir_check_suffix": "All Users",
@@ -1479,7 +1480,12 @@
             "all_users"
         ],
         "sw_id_trims": {
-            "Weixin": [0,5,0,0]
+            "Weixin": [
+                0,
+                5,
+                0,
+                0
+            ]
         },
         "cut_to_compatible_id": [
             0,
@@ -1517,6 +1523,16 @@
                 }
             },
             "feature": {
+                "4.0.6": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ],
+                        "modified": [
+                            "C3 ..."
+                        ]
+                    }
+                },
                 "4.0.5": {
                     "default": {
                         "original": [
@@ -1559,6 +1575,36 @@
                 }
             },
             "precise": {
+                "4.0.6.7": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ],
+                        "modified": [
+                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ]
+                    }
+                },
+                "4.0.6.5": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ],
+                        "modified": [
+                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ]
+                    }
+                },
+                "4.0.6.3": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ],
+                        "modified": [
+                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                        ]
+                    }
+                },
                 "4.0.5.23": {
                     "default": {
                         "original": [
@@ -1807,6 +1853,40 @@
                 }
             },
             "feature": {
+                "4.0.6": {
+                    "alert": {
+                        "original": [
+                            "00 E8 BE DA FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 56 57 53 48 81",
+                            "45 31 C0 ?? ?? ?? 55 FE 48 8B BD 48 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89"
+                        ],
+                        "modified": [
+                            "01 ...",
+                            "48 83 85 C0 02 00 00 01 ..."
+                        ]
+                    },
+                    "bubble": {
+                        "original": [
+                            "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                            "E8 ?? ?? ?? FE 89 C6 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89",
+                            "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                            "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                        ],
+                        "modified": [
+                            "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                            "BE 12 27 00 00 90 90 ...",
+                            "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                            "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "0F 84 CF 00 00 00 48 8D 8D B0 03 00 00 E8 ?? ?? C1 FD 48 8B 8D B0 03 00 00 48 8D 95 30 03 00 00 E8 ?? ?? F4 FD 48 8B 8D 30 03 00 00 48 8D"
+                        ],
+                        "modified": [
+                            "90 E9 ..."
+                        ]
+                    }
+                },
                 "4.0.5": {
                     "alert": {
                         "original": [
@@ -1814,7 +1894,7 @@
                             "45 31 C0 E8 ?? ?? ?? FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
                             "45 31 C0 E8 ?? ?? ?? FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
                         ],
-                        "modified":[
+                        "modified": [
                             "01 ...",
                             "48 83 85 C0 02 00 00 01 ...",
                             "48 83 85 C0 02 00 00 01 ..."
@@ -1899,6 +1979,108 @@
                 }
             },
             "precise": {
+                "4.0.6.7": {
+                    "alert": {
+                        "original": [
+                            "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                            "45 31 c0 e8 a0 3b 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                        ],
+                        "modified": [
+                            "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                            "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                        ]
+                    },
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 3a fd f5 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 3f b5 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 7c b6 f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                        ],
+                        "modified": [
+                            "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 3f b5 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 7c b6 f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                        ]
+                    }
+                },
+                "4.0.6.5": {
+                    "alert": {
+                        "original": [
+                            "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                            "45 31 c0 e8 80 58 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                        ],
+                        "modified": [
+                            "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                            "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                        ]
+                    },
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 fa 01 f6 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 6f be c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 ac bf f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                        ],
+                        "modified": [
+                            "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 6f be c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 ac bf f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                        ]
+                    }
+                },
+                "4.0.6.3": {
+                    "alert": {
+                        "original": [
+                            "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                            "45 31 c0 e8 30 51 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                        ],
+                        "modified": [
+                            "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                            "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                        ]
+                    },
+                    "bubble": {
+                        "original": [
+                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                            "e8 fa 01 f6 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                        ],
+                        "modified": [
+                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                            "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                        ]
+                    },
+                    "silence": {
+                        "original": [
+                            "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 af c7 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 3c c9 f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                        ],
+                        "modified": [
+                            "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 af c7 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 3c c9 f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                        ]
+                    }
+                },
                 "4.0.5.26": {
                     "alert": {
                         "original": [
@@ -1906,7 +2088,7 @@
                             "45 31 C0 E8 F7 AF 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
                             "45 31 C0 E8 1C 71 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
                         ],
-                        "modified":[
+                        "modified": [
                             "01 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
                             "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
                             "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
@@ -1920,7 +2102,7 @@
                             "45 31 C0 E8 67 A7 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
                             "45 31 C0 E8 8C 68 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
                         ],
-                        "modified":[
+                        "modified": [
                             "01 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
                             "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
                             "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
@@ -2322,6 +2504,7 @@
         ],
         "label": "微信4.0",
         "executable": "Weixin.exe",
+        "coexist_exe_regex": "Weixin?.exe",
         "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
         "data_dir_guess_suffix": "Tencent\\Weixin",
         "data_dir_check_suffix": "all_users",
@@ -2363,7 +2546,12 @@
             "old_backup"
         ],
         "sw_id_trims": {
-            "WeChat": [0,0,0,5]
+            "WeChat": [
+                0,
+                0,
+                0,
+                5
+            ]
         },
         "cut_to_compatible_id": [
             0,
@@ -2426,7 +2614,6 @@
             "WeDrive"
         ],
         "sw_id_trims": {
-
         },
         "cut_to_compatible_id": [
             0,
@@ -2474,8 +2661,18 @@
             "Tencent Files"
         ],
         "sw_id_trims": {
-            "QQ": [0,0,0,0],
-            "TIM": [0,0,0,0]
+            "QQ": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "TIM": [
+                0,
+                0,
+                0,
+                0
+            ]
         },
         "cut_to_compatible_id": [
             0,
@@ -2560,8 +2757,18 @@
             "Tencent Files"
         ],
         "sw_id_trims": {
-            "QQNT": [0,0,0,0],
-            "TIM": [0,0,0,0]
+            "QQNT": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "TIM": [
+                0,
+                0,
+                0,
+                0
+            ]
         },
         "cut_to_compatible_id": [
             0,
@@ -2646,8 +2853,18 @@
             "Tencent Files"
         ],
         "sw_id_trims": {
-            "QQ": [0,0,0,0],
-            "QQNT": [0,0,0,0]
+            "QQ": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "QQNT": [
+                0,
+                0,
+                0,
+                0
+            ]
         },
         "cut_to_compatible_id": [
             0,
@@ -2736,8 +2953,18 @@
             "nt_temp"
         ],
         "sw_id_trims": {
-            "QQ": [0,0,0,0],
-            "QQNT": [0,0,0,0]
+            "QQ": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "QQNT": [
+                0,
+                0,
+                0,
+                0
+            ]
         },
         "cut_to_compatible_id": [
             0,
