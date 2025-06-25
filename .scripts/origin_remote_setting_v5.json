@@ -1447,6 +1447,9 @@
         "redundant_wnd_class": [
             "WeChatLoginWndForPC"
         ],
+        "redundant_wnd_class_regexes": [
+            "?eChatLoginWndForPC"
+        ],
         "label": "微信",
         "executable": "WeChat.exe",
         "coexist_exe_regex": "WeChat?.exe",
@@ -1467,7 +1470,9 @@
         "cfg_handle_regex_list": [
         ],
         "login_wnd_class": "WeChatLoginWndForPC",
+        "coexist_login_wnd_class_regexes": ["?eChatLoginWndForPC"],
         "main_wnd_class": "WeChatMainWndForPC",
+        "coexist_main_wnd_class_regexes": ["?eChatMainWndForPC"],
         "config_path_suffix": "All Users\\config",
         "config_file_list": [
             "config.data"
