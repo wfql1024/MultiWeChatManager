@@ -6,6 +6,7 @@ from PIL import Image, ImageTk
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
+from functions.sw_func import SwInfoFunc
 from public_class import reusable_widgets
 from public_class.custom_classes import Condition
 from public_class.enums import AccKeys
@@ -268,6 +269,23 @@ class AccManagerTreeView(ActionableTreeView, ABC):
                 if table_tag == "auto_start" and sw_data[acc].get("auto_start", None) != True:
                     continue
 
+                # 根据原始id得到真实id(共存程序会用linked_acc指向)
+                acc_dict: dict = subfunc_file.get_sw_acc_data(sw, acc)
+                if "linked_acc" in acc_dict:
+                    config_status = acc
+                    if acc_dict["linked_acc"] is not None:
+                        # 共存程序且曾经登录过--------------------------------------------------------------------------
+                        linked_acc = acc_dict["linked_acc"]
+                        img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
+                    else:
+                        # 共存程序还未登录过--------------------------------------------------------------------------
+                        linked_acc = acc
+                        img = SwInfoFunc.get_sw_logo(sw)
+                else:
+                    # 主程序
+                    linked_acc = acc
+                    img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
+
                 display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
                 hotkey, hidden, auto_start, nickname = subfunc_file.get_sw_acc_data(
                     sw,
@@ -277,13 +295,17 @@ class AccManagerTreeView(ActionableTreeView, ABC):
                     auto_start=None,
                     nickname=None,
                 )
+                nickname, = subfunc_file.get_sw_acc_data(
+                    sw,
+                    linked_acc,
+                    nickname=None,
+                )
                 hotkey = hotkey if hotkey != "" else "-"
                 hidden = "√" if hidden is True else "-"
                 auto_start = "√" if auto_start is True else "-"
                 nickname = nickname if nickname else "请获取数据"
 
                 # 获取头像图像
-                img = AccInfoFunc.get_acc_avatar_from_files(sw, acc)
                 img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)

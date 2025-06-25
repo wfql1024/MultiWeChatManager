@@ -23,7 +23,8 @@ class AccInfoFuncImpl:
     def get_curr_wx_id_from_config_file(sw, data_dir):
         return None
 
-class WeChatAccInfoFunc(AccInfoFuncImpl):
+
+class WeChatAccInfoFuncImpl(AccInfoFuncImpl):
     def __init__(self):
         super().__init__()
 
@@ -90,6 +91,7 @@ class WeChatAccInfoFunc(AccInfoFuncImpl):
 
     @staticmethod
     def get_curr_wx_id_from_config_file(sw, data_dir):
+        # Printer().debug("进入微信的查找当前微信ID的方法")
         config_path_suffix, config_files = subfunc_file.get_remote_cfg(
             sw, config_path_suffix=None, config_file_list=None)
         if config_files is None or len(config_files) == 0:

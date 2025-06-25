@@ -1,4 +1,5 @@
 import ctypes
+import re
 import sys
 import time
 import tkinter as tk
@@ -14,6 +15,7 @@ import win32gui
 import win32process
 
 from public_class.enums import Position
+from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
@@ -152,6 +154,27 @@ def get_hwnd_list_by_pid_and_class(pid, target_class_name):
         return True
 
     hwnd_list = []
+    EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
+    return hwnd_list
+
+
+def get_hwnd_list_by_pid_and_class_wildcard(pid, class_wildcard):
+    def enum_windows_callback(hwnd, _lParam):
+        # 获取窗口所属的进程 ID
+        process_id = wintypes.DWORD()
+        GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
+
+        # 检查是否是目标进程的窗口
+        if process_id.value == pid:
+            class_name = ctypes.create_unicode_buffer(256)
+            GetClassName(hwnd, class_name, 256)
+            # 检查窗口类名是否匹配
+            if re.match(regex, class_name.value):
+                hwnd_list.append(hwnd)
+        return True
+
+    hwnd_list = []
+    regex = StringUtils.wildcard_to_regex(class_wildcard)
     EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
     return hwnd_list
 

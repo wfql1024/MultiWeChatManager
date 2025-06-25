@@ -1470,9 +1470,13 @@
         "cfg_handle_regex_list": [
         ],
         "login_wnd_class": "WeChatLoginWndForPC",
-        "coexist_login_wnd_class_regexes": ["?eChatLoginWndForPC"],
+        "coexist_login_wnd_class_regexes": [
+            "?eChatLoginWndForPC"
+        ],
         "main_wnd_class": "WeChatMainWndForPC",
-        "coexist_main_wnd_class_regexes": ["?eChatMainWndForPC"],
+        "coexist_main_wnd_class_regexes": [
+            "?eChatMainWndForPC"
+        ],
         "config_path_suffix": "All Users\\config",
         "config_file_list": [
             "config.data"
@@ -1491,15 +1495,7 @@
                 0,
                 0
             ]
-        },
-        "cut_to_compatible_id": [
-            0,
-            0
-        ],
-        "support_python_mode": true,
-        "support_python_s_mode": true,
-        "support_handle_mode": true,
-        "support_quick_start": true
+        }
     },
     "Weixin": {
         "coexist": {
@@ -2536,6 +2532,9 @@
         ],
         "login_wnd_class": "Qt51514QWindowIcon",
         "main_wnd_class": "Qt51514QWindowIcon",
+        "coexist_main_wnd_class_regexes": [
+            "Qt51514QWindowIcon"
+        ],
         "config_path_suffix": "all_users\\config",
         "config_file_list": [
             "global_config",
@@ -2557,15 +2556,7 @@
                 0,
                 5
             ]
-        },
-        "cut_to_compatible_id": [
-            0,
-            5
-        ],
-        "support_python_mode": true,
-        "support_python_s_mode": true,
-        "support_handle_mode": true,
-        "support_quick_start": false
+        }
     },
     "WXWork": {
         "multirun": {
@@ -2599,6 +2590,9 @@
         ],
         "login_wnd_class": "WeChatLogin",
         "main_wnd_class": "WeWorkWindow",
+        "coexist_main_wnd_class_regexes": [
+            "WeWorkWindow"
+        ],
         "config_path_suffix": "Global",
         "config_file_list": [
             "Config.cfg"
@@ -2619,15 +2613,7 @@
             "WeDrive"
         ],
         "sw_id_trims": {
-        },
-        "cut_to_compatible_id": [
-            0,
-            5
-        ],
-        "support_python_mode": true,
-        "support_python_s_mode": true,
-        "support_handle_mode": true,
-        "support_quick_start": false
+        }
     },
     "QQNT": {
         "native-multirun": true,
@@ -2651,6 +2637,9 @@
         ],
         "login_wnd_class": "Chrome_WidgetWin_1",
         "main_wnd_class": "Chrome_WidgetWin_1",
+        "coexist_main_wnd_class_regexes": [
+            "Chrome_WidgetWin_1"
+        ],
         "config_path_suffix": "nt_qq/global/nt_db",
         "config_file_list": [
             "login.db",
@@ -2677,15 +2666,7 @@
                 0,
                 0
             ]
-        },
-        "cut_to_compatible_id": [
-            0,
-            0
-        ],
-        "support_python_mode": true,
-        "support_python_s_mode": true,
-        "support_handle_mode": true,
-        "support_quick_start": false
+        }
     },
     "QQ": {
         "native-multirun": true,
@@ -2748,6 +2729,9 @@
         ],
         "login_wnd_class": "TXGuiFoundation",
         "main_wnd_class": "TXGuiFoundation",
+        "coexist_main_wnd_class_regexes": [
+            "TXGuiFoundation"
+        ],
         "config_path_suffix": "All Users\\QQ",
         "config_file_list": [
             "History.db"
@@ -2773,15 +2757,7 @@
                 0,
                 0
             ]
-        },
-        "cut_to_compatible_id": [
-            0,
-            0
-        ],
-        "support_python_mode": true,
-        "support_python_s_mode": true,
-        "support_handle_mode": true,
-        "support_quick_start": false
+        }
     },
     "TIM": {
         "native-multirun": true,
@@ -2844,6 +2820,9 @@
         ],
         "login_wnd_class": "TXGuiFoundation",
         "main_wnd_class": "TXGuiFoundation",
+        "coexist_main_wnd_class_regexes": [
+            "TXGuiFoundation"
+        ],
         "config_path_suffix": "All Users\\TIM",
         "config_file_list": [
             "History.db"
@@ -2869,15 +2848,7 @@
                 0,
                 0
             ]
-        },
-        "cut_to_compatible_id": [
-            0,
-            0
-        ],
-        "support_python_mode": true,
-        "support_python_s_mode": true,
-        "support_handle_mode": true,
-        "support_quick_start": false
+        }
     },
     "default": {
         "multirun": {
@@ -2944,6 +2915,9 @@
         ],
         "login_wnd_class": "TXGuiFoundation",
         "main_wnd_class": "TXGuiFoundation",
+        "coexist_main_wnd_class_regexes": [
+            "?eChatMainWndForPC"
+        ],
         "config_path_suffix": "All Users",
         "config_file_list": [
             "Registry.db"
@@ -2968,14 +2942,6 @@
                 0,
                 0
             ]
-        },
-        "cut_to_compatible_id": [
-            0,
-            0
-        ],
-        "support_python_mode": true,
-        "support_python_s_mode": true,
-        "support_handle_mode": true,
-        "support_quick_start": false
+        }
     }
 }

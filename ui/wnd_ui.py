@@ -1382,7 +1382,6 @@ class SettingWndUI(SubToolWndUI, ABC):
             "login_size": '不符合"数字*数字"的格式'
         }
 
-
     def load_ui(self):
         def _get_new_row_in_grid(grid_frm):
             return max([widget.grid_info().get('row', -1) for widget in grid_frm.grid_slaves()], default=-1) + 1

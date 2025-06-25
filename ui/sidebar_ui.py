@@ -20,7 +20,7 @@ from resources import Constants
 from ui.wnd_ui import WndCreator
 from utils import hwnd_utils
 from utils.hwnd_utils import TkWndUtils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 from utils.widget_utils import TreeUtils
 
 
@@ -231,14 +231,14 @@ class SidebarUI:
                 if self.linked_hwnd and win32gui.IsWindow(self.linked_hwnd):
                     # 获取目标窗口当前各种状态
                     curr_linked_wnd_state = self.get_linked_wnd_state(self.linked_hwnd)
-                    print(f"{self.linked_hwnd}当前状态: "
-                          f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
-                          f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
-                          f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
-                          f"隐藏={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]},"
-                          f"位置={curr_linked_wnd_state[WndProperties.RECT]}，"
-                          f"“最大化”={is_def_max_wnd}，"
-                          f"记录的“非最大化”位置：{self.last_linked_rect}")  # 每次监听都打印状态
+                    Printer().debug(f"{self.linked_hwnd}当前状态: "
+                                    f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
+                                    f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
+                                    f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
+                                    f"隐藏={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]},"
+                                    f"位置={curr_linked_wnd_state[WndProperties.RECT]}，"
+                                    f"“最大化”={is_def_max_wnd}，"
+                                    f"记录的“非最大化”位置：{self.last_linked_rect}")  # 每次监听都打印状态
 
                     # 首次运行时初始化 last_linked_wnd_state
                     if last_linked_wnd_state is None:
@@ -608,7 +608,8 @@ class SidebarTree(RadioTreeView, ABC):
 
                 # display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
                 # 获取头像图像
-                img = AccInfoFunc.get_acc_avatar_from_files(sw, acc)
+                linked_acc = AccInfoFunc.get_real_acc(sw, acc)
+                img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
                 img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)

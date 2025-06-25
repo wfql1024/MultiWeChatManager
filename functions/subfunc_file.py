@@ -401,7 +401,7 @@ def get_sw_acc_data(*front_addr, **kwargs) -> Union[Any, Tuple[Any, ...]]:
         return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
     except Exception as e:
         logger.error(e)
-        return tuple()
+        return tuple(None for _ in kwargs.keys())
 
 
 """账号互斥体相关"""

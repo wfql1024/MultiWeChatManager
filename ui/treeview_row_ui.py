@@ -7,8 +7,9 @@ from PIL import ImageTk, Image
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
+from functions.sw_func import SwInfoFunc
 from public_class.custom_classes import Condition
-from public_class.enums import OnlineStatus, LocalCfg
+from public_class.enums import OnlineStatus, LocalCfg, CfgStatus
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants, Strings
@@ -25,7 +26,7 @@ class TreeviewLoginUI:
         self.root = self.root_class.root
         self.login_ui = self.root_class.login_ui
 
-        self.acc_list_dict, _, _ = result
+        self.acc_list_dict, _ = result
 
         logins = self.acc_list_dict["login"]
         logouts = self.acc_list_dict["logout"]
@@ -164,42 +165,53 @@ class AccLoginTreeView(ActionableTreeView, ABC):
             hidden, = subfunc_file.get_sw_acc_data(self.sw, account, hidden=None)
             if hidden is True and login_status == "logout":
                 continue
-
-            display_name = "  " + AccInfoFunc.get_acc_origin_display_name(self.sw, account)
-            config_status = AccInfoFunc.get_sw_acc_login_cfg(self.sw, account, self.data_dir)
-            avatar_url, alias, nickname, pid, has_mutex = subfunc_file.get_sw_acc_data(
+            # 根据原始id得到真实id(共存程序会用linked_acc指向)
+            acc_dict: dict = subfunc_file.get_sw_acc_data(self.sw, account)
+            if "linked_acc" in acc_dict:
+                config_status = account
+                if acc_dict["linked_acc"] is not None:
+                    # 共存程序并且在线--------------------------------------------------------------------------
+                    linked_acc = acc_dict["linked_acc"]
+                    img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
+                else:
+                    # 共存程序但不在线--------------------------------------------------------------------------
+                    linked_acc = account
+                    img = SwInfoFunc.get_sw_logo(self.sw)
+            else:
+                # 主程序
+                linked_acc = account
+                img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
+                config_status = AccInfoFunc.get_sw_acc_login_cfg(self.sw, linked_acc, self.data_dir)
+                suffix = Strings.CFG_SIGN if linked_acc == curr_config_acc and self.sign_visible else ""
+                config_status = "" + str(config_status) + suffix
+            # 展示名,别名,昵称,互斥体等都由真实id查询
+            display_name = "  " + AccInfoFunc.get_acc_origin_display_name(self.sw, linked_acc)
+            alias, nickname, has_mutex = subfunc_file.get_sw_acc_data(
                 self.sw,
-                account,
-                avatar_url=None,
+                linked_acc,
                 alias="请获取数据",
                 nickname="请获取数据",
-                pid=None,
                 has_mutex=None
             )
-
-            img = AccInfoFunc.get_acc_avatar_from_files(self.sw, account)
             img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
-
             self.photo_images.append(photo)
 
+            pid, = subfunc_file.get_sw_acc_data(self.sw, account, pid=None)
             suffix = Strings.MUTEX_SIGN if has_mutex and self.sign_visible else ""
-            pid = " " + str(pid) + suffix
-            suffix = Strings.CFG_SIGN if account == curr_config_acc and self.sign_visible else ""
-            config_status = "" + str(config_status) + suffix
+            pid_str = " " + str(pid) + suffix
 
             iid = f"{self.sw}/{account}"
 
             try:
                 tree.insert("", "end", iid=iid, image=photo,
-                            values=(display_name, config_status, pid, account, alias, nickname))
+                            values=(display_name, config_status, pid_str, linked_acc, alias, nickname))
             except Exception as ec:
                 logger.warning(ec)
                 tree.insert("", "end", iid=iid, image=photo,
                             values=StringUtils.clean_texts(
-                                display_name, config_status, pid, account, alias, nickname))
-
-            if config_status == "无配置" and login_status == "logout":
+                                display_name, config_status, pid_str, linked_acc, alias, nickname))
+            if config_status == CfgStatus.NO_CFG and login_status == "logout":
                 TreeUtils.add_a_tag_to_item(tree, iid, "disabled")
 
         self.can_quick_refresh = True

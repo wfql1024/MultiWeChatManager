@@ -71,7 +71,7 @@ class MultiSwFunc:
                 success, result = AccInfoFunc.get_sw_acc_list(root, root_class, sw)
                 if success is not True:
                     continue
-                acc_list_dict, _, _ = result
+                acc_list_dict, _ = result
                 logins = acc_list_dict["login"]
             for acc in logins:
                 can_auto_start[sw].discard(acc)

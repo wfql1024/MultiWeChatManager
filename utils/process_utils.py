@@ -1,5 +1,6 @@
 import ctypes
 import datetime
+import fnmatch
 import os
 import subprocess
 import sys
@@ -305,7 +306,7 @@ def create_process_with_task_scheduler(executable, args):
     pid = None
     end_time = time.time() + 5
     while len(pids) == 0:
-        pids: list = get_process_ids_by_name(os.path.basename(executable))
+        pids: list = get_process_ids_by_precise_name(os.path.basename(executable))
         if time.time() > end_time:
             break
     if len(pids) > 0:
@@ -373,21 +374,31 @@ def remove_child_pids(pids):
 def remove_pids_not_in_path(pids: List[int], path_keyword: str) -> List[int]:
     """从 pids 列表中排除那些不在指定路径关键字中的进程"""
     # 获取所有进程信息（包含可执行路径）
-    all_processes = {p.pid: p for p in psutil.process_iter(['pid', 'exe'])}
-    path_keyword = path_keyword.replace("/", "\\")
-    for pid in pids[:]:  # 注意复制列表，以便在遍历过程中安全删除
-        process = all_processes.get(pid)
-        if process:
-            try:
-                exe_path = process.info['exe'] or ""
-                Printer().debug(exe_path)
-                if path_keyword.lower() not in exe_path.lower():
-                    pids.remove(pid)
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pids.remove(pid)
-        else:
-            pids.remove(pid)
-    return pids
+    path_keyword = path_keyword.replace("/", "\\").lower()
+    filtered = []
+    for pid in pids:
+        try:
+            proc = psutil.Process(pid)
+            exe_path = proc.exe() or ""
+            Printer().debug(exe_path)
+            if path_keyword in exe_path.lower():
+                filtered.append(pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue  # 无权限或已退出的进程跳过
+
+    return filtered
+
+
+def get_exe_name_by_pid(pid, precise=False):
+    try:
+        process = psutil.Process(pid)
+        exe_path = process.exe()
+        if precise is not True:
+            exe_path = os.path.basename(exe_path)
+        return exe_path
+    except psutil.NoSuchProcess:
+        print(f"No process found with PID: {pid}")
+        return None
 
 
 """PID信息"""
@@ -488,7 +499,26 @@ def try_terminate_executable(executable_name):
     return None
 
 
-def get_process_ids_by_name(process_name) -> list:
+def get_pids_by_name_pattern_psutil(pattern):
+    """
+    使用 psutil 模糊匹配进程名，支持 Unix 和 Windows
+    pattern 支持通配符，比如 "WeChat*.exe"
+    返回匹配的 pid 列表
+    """
+    if pattern is None:
+        return []
+    pids = []
+    for proc in psutil.process_iter(['name']):
+        try:
+            name = proc.info['name']
+            if name and fnmatch.fnmatch(name, pattern):
+                pids.append(proc.pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+    return pids
+
+
+def get_process_ids_by_precise_name(process_name) -> list:
     """通过进程名获取所有的进程id"""
     matching_processes = []
     try:
@@ -499,11 +529,13 @@ def get_process_ids_by_name(process_name) -> list:
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
         # 直接执行 tasklist 命令并获取输出
+        cmd = ['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/FO', 'CSV', '/NH']
+        Printer().cmd_in(" ".join(cmd))  # 打印命令
         origin_output = subprocess.check_output(
-            ['tasklist', '/FI', f'IMAGENAME eq {process_name}', '/FO', 'CSV', '/NH'],
+            cmd,
             startupinfo=startupinfo
         )
-        Printer().cmd_out(f"{origin_output}")
+        Printer().cmd_out(origin_output)
 
         output = "解码错误"
         try:
@@ -520,7 +552,7 @@ def get_process_ids_by_name(process_name) -> list:
         # 解析输出并获取进程 ID
         for line in output.split('\n'):
             process_info = [x.strip('"') for x in line.split(',')]
-            if process_info[0].lower() == process_name.lower():
+            if len(process_info) >= 2 and process_info[1].isdigit():
                 matching_processes.append(int(process_info[1]))
 
     except subprocess.CalledProcessError:

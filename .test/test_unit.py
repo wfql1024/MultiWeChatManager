@@ -35,7 +35,7 @@ class Test(TestCase):
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
     def test_get_all_open_files(self):
-        pids = process_utils.get_process_ids_by_name("Weixin")
+        pids = process_utils.get_process_ids_by_precise_name("Weixin")
         for pid in pids:
             for f in psutil.Process(pid).memory_maps():
                 print(pid, f)
@@ -48,7 +48,7 @@ class Test(TestCase):
         print(f"DPI Awareness Level: {awareness.value}")
 
     def test_get_process_ids_by_name(self):
-        pids = process_utils.get_process_ids_by_name("WeChat.exe")
+        pids = process_utils.get_process_ids_by_precise_name("WeChat.exe")
         print(pids)
 
     def test_lowercase(self):

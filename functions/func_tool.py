@@ -34,6 +34,7 @@ class FuncTool:
         if key in FuncTool._SW_FUNC_CACHE:
             return FuncTool._SW_FUNC_CACHE[key]
         class_name = f"{sw}{base_cls.__name__}"
+        # Printer().debug(f"class_name: {class_name}")
 
         try:
             impl_class = getattr(acc_func_impl, class_name)

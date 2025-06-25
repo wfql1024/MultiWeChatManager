@@ -312,6 +312,8 @@ class RedirectText(io.TextIOBase):
 
 class Printer:
     _instance = None
+    _initialized = False
+
     GREEN = "\033[92m"
     RED = "\033[91m"
     YELLOW = "\033[93m"
@@ -329,9 +331,14 @@ class Printer:
         return cls._instance
 
     def __init__(self):
-        self.vital_msg = None  # 用于保存 Vital 级别的输出
-        self.last_msg = None  # 用于存储最后一条消息
-        self.normal_msg = None
+        if Printer._initialized is not True:
+            # self.vital_msg = None
+            # self.last_msg = None
+            # self.normal_msg = None
+            self.vital_msg = None  # 用于保存 Vital 级别的输出
+            self.last_msg = None  # 用于存储最后一条消息
+            self.normal_msg = None
+            Printer._initialized = True
 
     def print_vn(self, obj=None):
         if obj is not None:
@@ -372,6 +379,7 @@ class Printer:
 
 class Logger:
     _instance = None
+    _initialized = False  # 类变量，标记是否初始化过
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -379,10 +387,15 @@ class Logger:
         return cls._instance
 
     def __init__(self, file=None):
+        if Logger._initialized:
+            return  # 已经初始化过，直接返回，避免重复初始化
+
         if file is None:
             app = os.path.basename(os.path.abspath(sys.argv[0]))
             file = app.split('.')[0] + '.log'
         self.logger = self._get_logger(file)
+
+        Logger._initialized = True  # 标记初始化完成
 
     @staticmethod
     def _get_logger(file):

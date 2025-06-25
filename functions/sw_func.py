@@ -24,7 +24,7 @@ from public_class.global_members import GlobalMembers
 from resources import Config, Strings, Constants
 from utils import file_utils, process_utils, pywinhandle, handle_utils, hwnd_utils, sys_utils, image_utils
 from utils.better_wx.inner_utils import wildcard_tokenize, patt2hex
-from utils.encoding_utils import VersionUtils, PathUtils
+from utils.encoding_utils import VersionUtils, PathUtils, StringUtils
 from utils.file_utils import DllUtils
 from utils.hwnd_utils import TkWndUtils
 from utils.logger_utils import mylogger as logger
@@ -53,7 +53,7 @@ class SwInfoFunc:
         if cur_sw_ver not in precise_vers_dict:
             return None, f"错误：未找到版本{cur_sw_ver}的适配"
         ver_channels_dict = precise_vers_dict[cur_sw_ver]
-        patch_dll, =subfunc_file.get_remote_cfg(sw, patch_dll=None)
+        patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
         dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
         res_dict = SwInfoUtils.identify_dll_of_ver_by_dict(ver_channels_dict, dll_path)
         if len(res_dict) == 0:
@@ -431,7 +431,7 @@ class SwOperator:
         executable, = subfunc_file.get_remote_cfg(sw, executable=None)
         if executable is None:
             return dict()
-        pids = process_utils.get_process_ids_by_name(executable)
+        pids = process_utils.get_process_ids_by_precise_name(executable)
         print(f"获取到的{sw}进程列表：{pids}")
         has_mutex_dict = dict()
         for pid in pids:
@@ -449,7 +449,7 @@ class SwOperator:
             sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
         # ————————————————————————————————python[强力]————————————————————————————————
         if multirun_mode == MultirunMode.BUILTIN:
-            pids = process_utils.get_process_ids_by_name(executable_name)
+            pids = process_utils.get_process_ids_by_precise_name(executable_name)
             handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
             if handle_regex_list is None:
                 return True
@@ -614,21 +614,26 @@ class SwOperator:
         pid = hwnd_utils.get_hwnd_details_of_(hwnd)["pid"]
         if psutil.Process(pid).exe() != executable:
             return False
-        expected_class, = subfunc_file.get_remote_cfg(sw, main_wnd_class=None)
+        expected_classes, = subfunc_file.get_remote_cfg(sw, coexist_main_wnd_class_regexes=None)
         class_name = win32gui.GetClassName(hwnd)
-        # print(expected_class, class_name)
-        if sw == SW.WECHAT:
-            # 旧版微信可直接通过窗口类名确定主窗口
-            return class_name == expected_class
-        elif sw == SW.WEIXIN:
-            if class_name != expected_class:
-                return False
-            # 新版微信需要通过窗口控件判定
-            style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
-            # 检查是否有最大化按钮
-            has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
-            return has_maximize
-        return None
+        for expected_class in expected_classes:
+            regex = StringUtils.wildcard_to_regex(expected_class)
+            if sw == SW.WECHAT:
+                # 旧版微信可直接通过窗口类名确定主窗口
+                if re.fullmatch(regex, class_name):
+                    return True
+                continue
+            elif sw == SW.WEIXIN:
+                if not re.fullmatch(regex, class_name):
+                    continue
+                # 新版微信需要通过窗口控件判定
+                style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+                # 检查是否有最大化按钮
+                has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
+                if has_maximize:
+                    return True
+                continue
+        return False
 
     @staticmethod
     def close_classes_but_sw_main_wnd(wnd_classes, sw):
@@ -640,16 +645,18 @@ class SwOperator:
             return
         for class_name in wnd_classes:
             try:
+                timeout = 5  # 最多等待5秒
+                start_time = time.time()
                 while True:
                     hwnd = win32gui.FindWindow(class_name, None)
                     if hwnd:
-                        print(hwnd)
                         if not SwOperator._is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-                            print("这个需要关闭")
                             win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-                            time.sleep(0.5)  # 等待窗口关闭
+                            time.sleep(0.5)
                     else:
-                        print(f"已清理所有{class_name}窗口！")
+                        break
+                    # 超时退出
+                    if time.time() - start_time > timeout:
                         break
             except Exception as ex:
                 logger.error(ex)
@@ -1013,7 +1020,7 @@ class SwInfoUtils:
         dll_name, executable = subfunc_file.get_remote_cfg(
             sw, dll_dir_check_suffix=None, executable=None)
         results = []
-        pids = process_utils.get_process_ids_by_name(executable)
+        pids = process_utils.get_process_ids_by_precise_name(executable)
         if len(pids) == 0:
             logger.warning(f"没有运行该程序。")
             return []

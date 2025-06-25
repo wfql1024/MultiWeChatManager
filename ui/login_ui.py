@@ -14,7 +14,7 @@ from public_class.global_members import GlobalMembers
 from resources import Constants, Config, Strings
 from ui import treeview_row_ui, classic_row_ui
 from ui.wnd_ui import WndCreator
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 
 
@@ -23,13 +23,11 @@ class LoginUI:
 
     def __init__(self):
         print("构建登录管理ui...")
-
         self.quick_refresh_mode = None
         # IDE初始化
         self.path_error = None
         self.acc_list_dict = None
         self.sw_class = None
-        self.detail_ui_class = None
         self.settings_button = None
         self.error_frame = None
         self.main_frame = None
@@ -153,7 +151,7 @@ class LoginUI:
             if sw_ver is not None:
                 sw_ver_label = ttk.Label(bottom_frame, text=f"{sw_ver}", foreground="grey")
                 sw_ver_label.pack(side=tk.BOTTOM)
-            prefix = Strings.MUTEX_SIGN if mutex is True and self.global_settings_value.sign_vis else ""
+            prefix = Strings.MUTEX_SIGN if has_mutex is True and self.global_settings_value.sign_vis else ""
             manual_login_text = f"{prefix}手动登录"
             manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
                                              command=self.to_manual_login, style='Custom.TButton')
@@ -164,7 +162,7 @@ class LoginUI:
             self.main_frame = self.scrollable_canvas.main_frame
 
         print(f"渲染账号列表...")
-        acc_list_dict, _, mutex = result
+        acc_list_dict, has_mutex = result
         self.acc_list_dict = acc_list_dict
         logins = self.sw_class.login_accounts = acc_list_dict["login"]
 
@@ -178,7 +176,7 @@ class LoginUI:
         elif self.sw_class.view == "tree":
             if self.quick_refresh_mode is True:
                 try:
-                    acc_list_dict, _, _ = result
+                    acc_list_dict, _ = result
                     tree_class = self.sw_class.tree_ui.tree_class
                     if all(tree_class[t].can_quick_refresh for t in tree_class):
                         # self.root.update_idletasks()
@@ -201,6 +199,7 @@ class LoginUI:
             self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(logins)), time.time() - self.start_time)
         last_msg = printer.print_vn(f"[{time.time() - self.start_time:.4f}s] 加载完成！")
         printer.last(last_msg)
+        Printer().print_last()
 
         self.after_success_create_acc_ui_when_start()
         self.after_success_create_acc_ui()

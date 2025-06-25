@@ -123,5 +123,9 @@ class OnlineStatus(str, Enum):
     UNKNOWN = "unknown"
 
 
+class CfgStatus(str, Enum):
+    NO_CFG = " 无配置"
+
+
 if __name__ == "__main__":
     print(str(SwStates.HIDDEN.value))

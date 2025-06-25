@@ -147,14 +147,6 @@ class MenuUI:
             self.file_menu.add_command(label="查看DLL目录", command=partial(SwOperator.open_dll_dir, self.sw))
             if self.sw_class.dll_dir is None:
                 self.file_menu.entryconfig(f"查看DLL目录", state="disable")
-            # # -创建快捷启动
-            # quick_start_sp, = subfunc_file.get_remote_cfg(self.sw, support_quick_start=None)
-            # # print(f"支持快捷启动：{quick_start_sp}")
-            # self.file_menu.add_command(label="创建快捷启动",
-            #                            command=partial(SwOperator.create_multiple_lnk,
-            #                                            self.sw, self.sw_class.can_freely_multirun,
-            #                                            self.create_root_menu_bar),
-            #                            state="normal" if quick_start_sp is True else "disabled")
             print(f"文件菜单用时：{time.time() - self.start_time:.4f}秒")
 
         # ————————————————————————————编辑菜单————————————————————————————
@@ -327,8 +319,6 @@ class MenuUI:
                 "call_mode")
             call_mode_var = self.global_settings_var.call_mode = tk.StringVar(value=call_mode_value)  # 设置初始选中的子程序
 
-            python_sp, python_s_sp, handle_sp = subfunc_file.get_remote_cfg(
-                self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
             # 添加 HANDLE 的单选按钮
             self.call_mode_menu.add_radiobutton(
                 label='HANDLE',
@@ -336,7 +326,6 @@ class MenuUI:
                 variable=call_mode_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
                                 "call_mode", "HANDLE", self.create_root_menu_bar),
-                state='disabled' if not python_sp else 'normal'
             )
             # 添加 DEFAULT 的单选按钮
             self.call_mode_menu.add_radiobutton(
@@ -345,7 +334,6 @@ class MenuUI:
                 variable=call_mode_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
                                 "call_mode", "DEFAULT", self.create_root_menu_bar),
-                state='disabled' if not python_s_sp else 'normal'
             )
             # 添加 LOGON 的单选按钮
             self.call_mode_menu.add_radiobutton(
@@ -354,7 +342,6 @@ class MenuUI:
                 variable=call_mode_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
                                 "call_mode", "handle", self.create_root_menu_bar),
-                state='disabled' if not handle_sp else 'normal'
             )
 
             auto_press_value = self.global_settings_value.auto_press = \
@@ -613,15 +600,12 @@ class MenuUI:
             # print("当前项", rest_mode_value)
             self.sw_class.multirun_mode = rest_mode_value
             rest_mode_var = self.global_settings_var.rest_mode = tk.StringVar(value=rest_mode_value)  # 设置初始选中的子程序
-            python_sp, python_s_sp, handle_sp = subfunc_file.get_remote_cfg(
-                self.sw, support_python_mode=None, support_python_s_mode=None, support_handle_mode=None)
             # 添加 Python 的单选按钮
             self.rest_mode_menu.add_radiobutton(
                 label='内置',
                 value='内置',
                 variable=rest_mode_var,
                 command=partial(self._calc_multirun_mode_and_save, MultirunMode.BUILTIN.value),
-                state='disabled' if not python_sp else 'normal'
             )
             # 添加 Handle 的单选按钮
             self.rest_mode_menu.add_radiobutton(
@@ -629,7 +613,6 @@ class MenuUI:
                 value='handle',
                 variable=rest_mode_var,
                 command=partial(self._calc_multirun_mode_and_save, MultirunMode.HANDLE.value),
-                state='disabled' if not handle_sp else 'normal'
             )
             # 动态添加外部子程序
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
@@ -691,5 +674,3 @@ class MenuUI:
             self.root.after(0, self._update_multirun_menu, res_dict, msg)
         except Exception as e:
             print(e)
-
-

@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 from typing import Any, Tuple, Union, Optional
 
@@ -5,6 +6,24 @@ from utils.logger_utils import mylogger as logger
 
 
 class StringUtils:
+    @staticmethod
+    def wildcard_to_regex(wildcard_pattern: str) -> str:
+        """
+        将通配符字符串转换为正则表达式：
+        ? → 任意单个字符（.）
+        * → 任意长度字符（.*）
+        其他字符会进行正则转义
+        """
+        regex = ''
+        for char in wildcard_pattern:
+            if char == '?':
+                regex += '.'
+            elif char == '*':
+                regex += '.*'
+            else:
+                regex += re.escape(char)
+        return '^' + regex + '$'  # 确保全匹配
+
     @staticmethod
     def clean_texts(*texts) -> Union[Tuple, str, Any]:
         """

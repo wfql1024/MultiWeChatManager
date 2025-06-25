@@ -4,8 +4,6 @@ import datetime as dt
 import glob
 import hashlib
 import json
-import mmap
-import os
 import re
 from pathlib import Path
 from typing import Any, Optional, Union, Tuple
@@ -19,7 +17,7 @@ from Crypto.Util.Padding import pad
 from Crypto.Util.Padding import unpad
 from readerwriterlock import rwlock
 
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger
 
 rw_lock = rwlock.RWLockFairD()
 
@@ -160,7 +158,6 @@ class DictUtils:
                 else:
                     # 拼接前置地址，获取中间根节点
                     sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr), default_value)
-
             # 2. 已经获得中间根节点
             # 若后续地址为空，则直接返回中间根节点
             if len(kwargs) == 0:
@@ -171,7 +168,7 @@ class DictUtils:
             return result
         except Exception as e:
             logger.error(e)
-            return tuple()
+            return tuple(None for _ in kwargs.keys())
 
     @staticmethod
     def set_nested_values(data: dict, value: Any, *front_addr: Optional[str], **kwargs) -> bool:
@@ -615,11 +612,13 @@ def find_file(start_dir, filename):
             return os.path.join(root, filename)
     return None
 
+
 def get_matching_exe_names(pattern_with_qmark: str, search_dir: str = "."):
     pattern = os.path.join(search_dir, pattern_with_qmark).replace("/", "\\")
     matched_paths = glob.glob(pattern)
-    Printer().debug(pattern, matched_paths)
+    # Printer().debug(pattern, matched_paths)
     return [os.path.basename(path) for path in matched_paths]
+
 
 def get_file_version(file_path):
     try:
@@ -771,3 +770,81 @@ class CryptoUtils:
         with rw_lock.gen_wlock():
             with open(output_file, 'wb') as f:
                 f.write(iv + ciphertext)
+
+
+import os
+import mmap
+
+
+def compare_binary_files_optimized(file1: str, file2: str):
+    if os.path.getsize(file1) != os.path.getsize(file2):
+        return f"文件大小不同：{os.path.getsize(file1)} vs {os.path.getsize(file2)} 字节，无法对比。"
+
+    result = []
+    with open(file1, "rb") as f1, open(file2, "rb") as f2:
+        size = os.path.getsize(file1)
+        mm1 = mmap.mmap(f1.fileno(), 0, access=mmap.ACCESS_READ)
+        mm2 = mmap.mmap(f2.fileno(), 0, access=mmap.ACCESS_READ)
+
+        i = 0
+        shown_ranges = []
+        while i < size:
+            if mm1[i] != mm2[i]:
+                range_start = max(i - 32, 0)
+                diff_set = set()
+                j = i
+                while j < size and j < i + 64:
+                    if mm1[j] != mm2[j]:
+                        diff_set.add(j - range_start)
+                    j += 1
+                range_end = j
+
+                if shown_ranges and shown_ranges[-1][1] >= range_start:
+                    prev_start, prev_end, prev_diff1, prev_diff2 = shown_ranges.pop()
+                    merged_start = prev_start
+                    merged_end = max(prev_end, range_end)
+                    new_diff1 = prev_diff1.union({x + (range_start - merged_start) for x in diff_set})
+                    new_diff2 = prev_diff2.union({x + (range_start - merged_start) for x in diff_set})
+                    shown_ranges.append((merged_start, merged_end, new_diff1, new_diff2))
+                else:
+                    shown_ranges.append((range_start, range_end, set(diff_set), set(diff_set)))
+
+                i = range_end
+            else:
+                i += 1
+
+        for start, end, diff1, diff2 in shown_ranges:
+            result.append(f"{start:08X}~{end:08X}")
+            data1 = mm1[start:end]
+            data2 = mm2[start:end]
+            result.append(f"{file1}:\n{format_bytes_line(data1, diff1)}")
+            result.append(f"{file2}:\n{format_bytes_line(data2, diff2)}")
+
+        mm1.close()
+        mm2.close()
+
+    return '\n'.join(result) if result else "两个文件完全一致！"
+
+
+def format_bytes_line(data: bytes, diff_indices: set, group_size: int = 64) -> str:
+    hexes = []
+    for i, byte in enumerate(data):
+        hex_str = f"{byte:02X}"
+        if i in diff_indices:
+            hexes.append(f"({hex_str})")
+        else:
+            hexes.append(hex_str)
+
+    # 连续括号合并成一个
+    result = " ".join(hexes)
+    while ") (" in result:
+        result = result.replace(") (", " ")
+
+    return result
+
+
+if __name__ == "__main__":
+    file1 = r"E:\Now\Desktop\[4.0.6.3]Weixin.dll"
+    file2 = r"E:\Now\Desktop\[4.0.6.3]Weixin_BuR.dll"
+    result = compare_binary_files_optimized(file1, file2)
+    print(result)

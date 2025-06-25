@@ -38,6 +38,8 @@ encrypt_and_append_key('origin_remote_setting_v3.json', '../remote_setting', sec
 print(f"文件已加密并保存为 remote_setting（无后缀名）")
 encrypt_and_append_key('origin_remote_setting_v4.json', '../remote_setting_v4', secure_key)
 print(f"文件已加密并保存为 remote_setting_v4（无后缀名）")
+encrypt_and_append_key('origin_remote_setting_v5.json', '../remote_setting_v5', secure_key)
+print(f"文件已加密并保存为 remote_setting_v5（无后缀名）")
 # 复制上级目录中的.old/version_config_v1.json到上上级的version_config.json
 shutil.copy('../.old/version_config_v1.json', '../../version_config.json')
 print(f"文件已复制项目目录的version_config.json")
