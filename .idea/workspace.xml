@@ -4,40 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="测试远程配置:共存识别">
-      <change afterPath="$PROJECT_DIR$/utils/collection_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/MultiWeChatManager.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="引入并兼容共存程序,列表可识别共存程序及其指向的账号.格式化代码.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.scripts/encrypt_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/.scripts/encrypt_data.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.scripts/origin_remote_setting_v5.json" beforeDir="false" afterPath="$PROJECT_DIR$/.scripts/origin_remote_setting_v5.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_new_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_new_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_unit.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_unit.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/acc_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/acc_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/acc_func_impl.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/acc_func_impl.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/func_tool.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/func_tool.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/main_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/main_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/subfunc_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/subfunc_file.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public_class/enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/enums.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public_class/widget_frameworks.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/widget_frameworks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/remote_setting" beforeDir="false" afterPath="$PROJECT_DIR$/remote_setting" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/remote_setting_v4" beforeDir="false" afterPath="$PROJECT_DIR$/remote_setting_v4" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/strings.py" beforeDir="false" afterPath="$PROJECT_DIR$/resources/strings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/acc_manager_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/acc_manager_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/classic_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/classic_row_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/login_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/login_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/sidebar_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/sidebar_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ui/treeview_row_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/treeview_row_ui.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/encoding_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/encoding_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/hwnd_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/hwnd_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/logger_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/logger_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/patch_utils.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/process_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/process_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -775,15 +745,7 @@
       <workItem from="1750401943738" duration="564000" />
       <workItem from="1750402530446" duration="7745000" />
       <workItem from="1750413993237" duration="65442000" />
-      <workItem from="1750645253416" duration="25603000" />
-    </task>
-    <task id="LOCAL-00302" summary="测试适配4.0.5.15防撤回气泡提醒">
-      <option name="closed" value="true" />
-      <created>1747902724735</created>
-      <option name="number" value="00302" />
-      <option name="presentableId" value="LOCAL-00302" />
-      <option name="project" value="LOCAL" />
-      <updated>1747902724735</updated>
+      <workItem from="1750645253416" duration="29249000" />
     </task>
     <task id="LOCAL-00303" summary="测试适配4.0.5.15防撤回气泡提醒">
       <option name="closed" value="true" />
@@ -1169,7 +1131,15 @@
       <option name="project" value="LOCAL" />
       <updated>1750867919363</updated>
     </task>
-    <option name="localTasksCounter" value="351" />
+    <task id="LOCAL-00351" summary="引入并兼容共存程序,列表可识别共存程序及其指向的账号.格式化代码.">
+      <option name="closed" value="true" />
+      <created>1750868468866</created>
+      <option name="number" value="00351" />
+      <option name="presentableId" value="LOCAL-00351" />
+      <option name="project" value="LOCAL" />
+      <updated>1750868468866</updated>
+    </task>
+    <option name="localTasksCounter" value="352" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1223,7 +1193,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="优化托盘图标,防止重复创建;新增提示:托盘,侧栏,刷新标签" />
     <MESSAGE value="添加反馈渠道;优化复制到剪贴板的方法." />
     <MESSAGE value="浅浅优化下侧栏;新增适配文件夹,以存放不同平台的功能实现." />
     <MESSAGE value="新增为账号创建启动器;优化移入文件到回收站功能;优化图标提取功能;代码布局调整" />
@@ -1248,7 +1217,8 @@
     <MESSAGE value="精确适配4063,4065,4067.特征码上传406" />
     <MESSAGE value="远程配置格式调整" />
     <MESSAGE value="测试远程配置:共存识别" />
-    <option name="LAST_COMMIT_MESSAGE" value="测试远程配置:共存识别" />
+    <MESSAGE value="引入并兼容共存程序,列表可识别共存程序及其指向的账号.格式化代码." />
+    <option name="LAST_COMMIT_MESSAGE" value="引入并兼容共存程序,列表可识别共存程序及其指向的账号.格式化代码." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1293,7 +1263,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_file.coverage" NAME="func_file Coverage Results" MODIFIED="1733325233358" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_wechat.coverage" NAME="get_path_of_wechat Coverage Results" MODIFIED="1723333662145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1750867951629" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1750878976229" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_setting.coverage" NAME="func_setting Coverage Results" MODIFIED="1735011292727" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_decrypt_utils.coverage" NAME="wechat_decrypt_utils Coverage Results" MODIFIED="1723959593571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$more_open.coverage" NAME="more_open Coverage Results" MODIFIED="1724791562833" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />

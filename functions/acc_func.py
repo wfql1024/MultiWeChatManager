@@ -288,23 +288,20 @@ class AccOperator:
         data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
         if not data_path:
             return False, "无法获取WeChat数据路径"
-        config_path_suffix, cfg_items = subfunc_file.get_remote_cfg(
+        config_path_suffix, cfg_basename_list = subfunc_file.get_remote_cfg(
             sw, config_path_suffix=None, config_file_list=None)
 
         origin_acc_dict = dict()
         # 构建相关文件列表
-        for item in cfg_items:
+        for cfg_basename in cfg_basename_list:
             # 拼接出源配置路径
-            origin_cfg_path = os.path.join(str(data_path), str(config_path_suffix), str(item)).replace("\\", "/")
-            # 提取源配置文件的后缀
-            item_suffix = item.split(".")[-1]
-            acc_cfg_item = f"{acc}.{item_suffix}"
+            origin_cfg_path = os.path.join(
+                str(data_path), str(config_path_suffix), str(cfg_basename)).replace("\\", "/")
+            acc_cfg_item = f"{acc}_{cfg_basename}"
             acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), acc_cfg_item)
                             .replace("\\", "/"))
-            # 构建配置字典
             origin_acc_dict.update({origin_cfg_path: acc_cfg_path})
-            # print("\n".join([item, origin_cfg_path, item_suffix, acc_cfg_item, acc_cfg_path]))
-            print(item, origin_acc_dict)
+            print(cfg_basename, origin_acc_dict)
 
         paths_to_del = list(origin_acc_dict.keys()) if method == "use" else list(origin_acc_dict.values())
 
@@ -900,17 +897,31 @@ class AccInfoFunc:
         :param account: 账号
         :return: 配置状态
         """
-        # print(sw, data_path, account)
         if not data_path:
             return "无配置路径"
-        config_path_suffix, config_files = subfunc_file.get_remote_cfg(
+        config_path_suffix, cfg_basename_list = subfunc_file.get_remote_cfg(
             sw, config_path_suffix=None, config_file_list=None)
-        if not isinstance(config_files, list) or len(config_files) == 0:
+        if not isinstance(cfg_basename_list, list) or len(cfg_basename_list) == 0:
             return "无法获取配置路径"
-        file = config_files[0]
-        file_suffix = file.split(".")[-1]
-        dest_filename = f"{account}.{file_suffix}"
-        acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), dest_filename)
+        # 版本更新,数据文件重命名
+        for cfg_basename in cfg_basename_list:
+            # 旧版
+            file_suffix = cfg_basename.split(".")[-1]
+            old_cfg_basename = f"{account}.{file_suffix}"
+            old_acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), old_cfg_basename)
+                            .replace("\\", "/"))
+            # 新版
+            cfg_basename = f"{account}_{cfg_basename}"
+            acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), cfg_basename)
+                            .replace("\\", "/"))
+            # 如果存在旧版配置,重命名为新版
+            if os.path.exists(old_acc_cfg_path):
+                os.rename(old_acc_cfg_path, acc_cfg_path)
+                print(f"重命名旧版配置文件：{old_acc_cfg_path} -> {acc_cfg_path}")
+
+        cfg_basename = cfg_basename_list[0]
+        cfg_basename = f"{account}_{cfg_basename}"
+        acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), cfg_basename)
                         .replace("\\", "/"))
         if os.path.exists(acc_cfg_path):
             mod_time = os.path.getmtime(acc_cfg_path)

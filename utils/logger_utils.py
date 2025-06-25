@@ -332,9 +332,6 @@ class Printer:
 
     def __init__(self):
         if Printer._initialized is not True:
-            # self.vital_msg = None
-            # self.last_msg = None
-            # self.normal_msg = None
             self.vital_msg = None  # 用于保存 Vital 级别的输出
             self.last_msg = None  # 用于存储最后一条消息
             self.normal_msg = None
@@ -366,9 +363,13 @@ class Printer:
         return self
 
     def debug(self, *args, **kwargs):
+        # 获取调用者函数名
+        caller_frame = inspect.stack()[1]
+        caller_func = caller_frame.function
+
         text = " ".join(str(arg) for arg in args)
         kwargs.setdefault("flush", True)
-        builtins.print(f"{self.BOLD}{self.BLUE}Debug: {text}{self.RESET}", **kwargs)
+        builtins.print(f"{self.BOLD}{self.BLUE}[{caller_func}] {text}{self.RESET}", **kwargs)
 
     def cmd_in(self, *args, **kwargs):
         print(f"{self.GREEN}{self.BOLD}>", *args, f"{self.RESET}", **kwargs)
