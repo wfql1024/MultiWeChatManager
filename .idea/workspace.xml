@@ -4,10 +4,10 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="引入并兼容共存程序,列表可识别共存程序及其指向的账号.格式化代码.">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="修改账号登录配置文件命名方式;优化debug打印方法.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/functions/acc_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/acc_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils/logger_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/logger_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/wnd_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/wnd_ui.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -745,15 +745,7 @@
       <workItem from="1750401943738" duration="564000" />
       <workItem from="1750402530446" duration="7745000" />
       <workItem from="1750413993237" duration="65442000" />
-      <workItem from="1750645253416" duration="29249000" />
-    </task>
-    <task id="LOCAL-00303" summary="测试适配4.0.5.15防撤回气泡提醒">
-      <option name="closed" value="true" />
-      <created>1747907046420</created>
-      <option name="number" value="00303" />
-      <option name="presentableId" value="LOCAL-00303" />
-      <option name="project" value="LOCAL" />
-      <updated>1747907046420</updated>
+      <workItem from="1750645253416" duration="33205000" />
     </task>
     <task id="LOCAL-00304" summary="优化适配4.0.3-4.0.5的静默防撤回">
       <option name="closed" value="true" />
@@ -1139,7 +1131,15 @@
       <option name="project" value="LOCAL" />
       <updated>1750868468866</updated>
     </task>
-    <option name="localTasksCounter" value="352" />
+    <task id="LOCAL-00352" summary="修改账号登录配置文件命名方式;优化debug打印方法.">
+      <option name="closed" value="true" />
+      <created>1750879534557</created>
+      <option name="number" value="00352" />
+      <option name="presentableId" value="LOCAL-00352" />
+      <option name="project" value="LOCAL" />
+      <updated>1750879534558</updated>
+    </task>
+    <option name="localTasksCounter" value="353" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1193,7 +1193,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="添加反馈渠道;优化复制到剪贴板的方法." />
     <MESSAGE value="浅浅优化下侧栏;新增适配文件夹,以存放不同平台的功能实现." />
     <MESSAGE value="新增为账号创建启动器;优化移入文件到回收站功能;优化图标提取功能;代码布局调整" />
     <MESSAGE value="适配企业微信的免扫码登录;格式代码" />
@@ -1218,7 +1217,8 @@
     <MESSAGE value="远程配置格式调整" />
     <MESSAGE value="测试远程配置:共存识别" />
     <MESSAGE value="引入并兼容共存程序,列表可识别共存程序及其指向的账号.格式化代码." />
-    <option name="LAST_COMMIT_MESSAGE" value="引入并兼容共存程序,列表可识别共存程序及其指向的账号.格式化代码." />
+    <MESSAGE value="修改账号登录配置文件命名方式;优化debug打印方法." />
+    <option name="LAST_COMMIT_MESSAGE" value="修改账号登录配置文件命名方式;优化debug打印方法." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1263,7 +1263,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_file.coverage" NAME="func_file Coverage Results" MODIFIED="1733325233358" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_wechat.coverage" NAME="get_path_of_wechat Coverage Results" MODIFIED="1723333662145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1750878976229" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1750905147861" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_setting.coverage" NAME="func_setting Coverage Results" MODIFIED="1735011292727" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_decrypt_utils.coverage" NAME="wechat_decrypt_utils Coverage Results" MODIFIED="1723959593571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$more_open.coverage" NAME="more_open Coverage Results" MODIFIED="1724791562833" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />

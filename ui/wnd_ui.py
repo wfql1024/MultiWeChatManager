@@ -157,8 +157,8 @@ class DetailUI(SubToolWndUI, ABC):
         avatar_operate_frame = ttk.Frame(avatar_frame)
         avatar_operate_frame.pack(**Constants.B_WGT_PACK)
         # 左右的占位符
-        ttk.Frame(avatar_operate_frame).pack(side=tk.LEFT, expand=True, fill=tk.BOTH)
-        ttk.Frame(avatar_operate_frame).pack(side=tk.RIGHT, expand=True, fill=tk.BOTH)
+        ttk.Frame(avatar_operate_frame).pack(side="left", expand=True, fill="both")
+        ttk.Frame(avatar_operate_frame).pack(side="right", expand=True, fill="both")
         # avatar_status_label = ttk.Label(avatar_frame, text="")
         # avatar_status_label.pack(**Constants.B_WGT_PACK)
 
@@ -171,15 +171,15 @@ class DetailUI(SubToolWndUI, ABC):
             return btn
 
         def _pack_btn(btn):
-            btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
+            btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
 
         change_avatar_btn = _create_btn_in_(avatar_operate_frame, "修改")
-        change_avatar_btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
+        change_avatar_btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
         (change_avatar_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_choose_avatar_for_acc, sw, account))})
          .apply_bind(self.root))
         delete_avatar_btn = _create_btn_in_(avatar_operate_frame, " × ")
-        delete_avatar_btn.pack(side=tk.LEFT, padx=customized_btn_pad, pady=customized_btn_pad)
+        delete_avatar_btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
         (delete_avatar_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.delete_avatar_for_acc, sw, account))})
          .apply_bind(self.root))
@@ -190,7 +190,7 @@ class DetailUI(SubToolWndUI, ABC):
         pid_frame = ttk.Frame(login_status_frame)
         pid_frame.pack(side=tk.TOP, anchor=tk.W)
         pid_label = ttk.Label(pid_frame)
-        pid_label.pack(side=tk.LEFT)
+        pid_label.pack(side="left")
         kill_pid_btn = _create_btn_in_(pid_frame, " × ")
         (kill_pid_btn
          .set_bind_map(
@@ -207,7 +207,7 @@ class DetailUI(SubToolWndUI, ABC):
         mutex_frame = ttk.Frame(login_status_frame)
         mutex_frame.pack(side=tk.TOP, anchor=tk.W)
         mutex_label = ttk.Label(mutex_frame)
-        mutex_label.pack(side=tk.LEFT)
+        mutex_label.pack(side="left")
         mutex_btn = _create_btn_in_(mutex_frame, " × ")
         (mutex_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(SwOperator.kill_mutex_of_pid, sw, account))})
@@ -217,7 +217,7 @@ class DetailUI(SubToolWndUI, ABC):
         hwnd_frame = ttk.Frame(login_status_frame)
         hwnd_frame.pack(side=tk.TOP, anchor=tk.W)
         hwnd_label = ttk.Label(hwnd_frame)
-        hwnd_label.pack(side=tk.LEFT)
+        hwnd_label.pack(side="left")
         unlink_hwnd_btn = _create_btn_in_(hwnd_frame, " × ")
         (unlink_hwnd_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.unlink_hwnd_of_account, sw, account))})
@@ -264,19 +264,19 @@ class DetailUI(SubToolWndUI, ABC):
         hidden, = subfunc_file.get_sw_acc_data(sw, account, hidden=False)
         hidden_var = tk.BooleanVar(value=hidden)
         hidden_checkbox = tk.Checkbutton(ckb_frm, text="未登录时隐藏", variable=hidden_var)
-        hidden_checkbox.pack(side=tk.LEFT)
+        hidden_checkbox.pack(side="left")
         # -账号自启动
         auto_start, = subfunc_file.get_sw_acc_data(sw, account, auto_start=False)
         auto_start_var = tk.BooleanVar(value=auto_start)
         auto_start_checkbox = tk.Checkbutton(
             ckb_frm, text="进入软件时自启动", variable=auto_start_var)
-        auto_start_checkbox.pack(side=tk.LEFT)
+        auto_start_checkbox.pack(side="left")
         # -头像禁用
         disable_avatar, = subfunc_file.get_sw_acc_data(sw, account, disable_avatar=False)
         disable_avatar_var = tk.BooleanVar(value=disable_avatar)
         disable_avatar_checkbox = tk.Checkbutton(
             ckb_frm, text="禁用头像", variable=disable_avatar_var)
-        disable_avatar_checkbox.pack(side=tk.LEFT)
+        disable_avatar_checkbox.pack(side="left")
         # 按钮区域
         button_frame = ttk.Frame(frame, padding=Constants.B_FRM_PAD)
         save_button = ttk.Button(button_frame, text="保存", command=self._save_acc_settings)
@@ -287,7 +287,7 @@ class DetailUI(SubToolWndUI, ABC):
         # 底部区域按从下至上的顺序pack
         button_frame.pack(**Constants.B_FRM_PACK)
 
-        ttk.Frame(frame).pack(fill=tk.BOTH, expand=True)  # 占位
+        ttk.Frame(frame).pack(fill="both", expand=True)  # 占位
 
         print(f"加载控件完成")
 
@@ -452,44 +452,44 @@ class DebugWndUI(SubToolWndUI, ABC):
 
         # 刷新按钮
         refresh_button = tk.Button(toolbar, text="刷新", command=self.refresh_text)
-        refresh_button.pack(side=tk.LEFT)
+        refresh_button.pack(side="left")
         # 打印日志按钮
         print_log_button = tk.Button(toolbar, text="生成日志文件", command=self.save_log_to_desktop)
-        print_log_button.pack(side=tk.LEFT)
+        print_log_button.pack(side="left")
         # 缩进复选框
         self.indent_var = tk.BooleanVar(value=True)
         indent_checkbox = tk.Checkbutton(toolbar, text="缩进", variable=self.indent_var, command=self.refresh_text)
-        indent_checkbox.pack(side=tk.LEFT)
+        indent_checkbox.pack(side="left")
         # 创建Frame用于包含两个滑块
         indent_frame = tk.Frame(toolbar)
-        indent_frame.pack(side=tk.LEFT)
+        indent_frame.pack(side="left")
         # 最小缩进尺
         min_indent_label = tk.Label(indent_frame, text="最小缩进:")
-        min_indent_label.pack(side=tk.LEFT)
+        min_indent_label.pack(side="left")
         self.min_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
                                          command=lambda x: self._update_indent_scales())
         self.min_indent_scale.set(0)  # 设置默认最小缩进
-        self.min_indent_scale.pack(side=tk.LEFT)
+        self.min_indent_scale.pack(side="left")
         # 最大缩进尺
         max_indent_label = tk.Label(indent_frame, text="最大缩进:")
-        max_indent_label.pack(side=tk.LEFT)
+        max_indent_label.pack(side="left")
         self.max_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
                                          command=lambda x: self._update_indent_scales())
         self.max_indent_scale.set(20)  # 设置默认最大缩进
-        self.max_indent_scale.pack(side=tk.LEFT)
+        self.max_indent_scale.pack(side="left")
         # 调用复选框
         self.callstack_var = tk.BooleanVar(value=True)
         callstack_checkbox = tk.Checkbutton(toolbar, text="调用栈", variable=self.callstack_var,
                                             command=self._update_simplify_checkbox)
-        callstack_checkbox.pack(side=tk.LEFT)
+        callstack_checkbox.pack(side="left")
         # 简化复选框
         self.simplify_var = tk.BooleanVar(value=True)
         self.simplify_checkbox = tk.Checkbutton(toolbar, text="简化调用栈",
                                                 variable=self.simplify_var, command=self.refresh_text)
-        self.simplify_checkbox.pack(side=tk.LEFT)
+        self.simplify_checkbox.pack(side="left")
         # 创建带滚动条的文本框
         self.text_area = scrolledtext.ScrolledText(self.wnd_frame, wrap=tk.NONE)
-        self.text_area.pack(fill=tk.BOTH, expand=True)
+        self.text_area.pack(fill="both", expand=True)
         self.text_area.tag_configure("unimportant", foreground="grey")
         # 设置字体
         font = Font(family="JetBrains Mono", size=10)
@@ -762,7 +762,7 @@ class AboutWndUI(SubToolWndUI, ABC):
         update_button = ttk.Button(bottom_frame, text=f"{prefix}检查更新", style='Custom.TButton',
                                    command=partial(self.check_for_updates,
                                                    current_full_version=current_full_version))
-        update_button.pack(side=tk.RIGHT)
+        update_button.pack(side="right")
 
         # 免责声明
         disclaimer_label = ttk.Label(disclaimer_frame, style="RedWarning.TLabel",
@@ -779,7 +779,7 @@ class AboutWndUI(SubToolWndUI, ABC):
 
     def pack_scrollable_text(self, frame, part, height):
         scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar.pack(side="right", fill=tk.Y)
         text = tk.Text(frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
                        height=height, bg=self.wnd.cget("bg"),
                        yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
@@ -790,7 +790,7 @@ class AboutWndUI(SubToolWndUI, ABC):
 
         widget_utils.add_hyperlink_events(text, self.scroll_text_str[part])
         text.config(state=tk.DISABLED)
-        text.pack(side=tk.LEFT, fill=tk.X, expand=False, padx=Constants.GRID_PAD)
+        text.pack(side="left", fill=tk.X, expand=False, padx=Constants.GRID_PAD)
         scrollbar.config(command=text.yview)
         # 创建方向对象
         self.scroll_direction[part] = Direction(1)  # 初始方向为向下
@@ -884,7 +884,7 @@ class RewardsWndUI(SubToolWndUI, ABC):
     def load_ui(self):
         # 创建Frame并填充
         frame = ttk.Frame(self.wnd_frame)
-        frame.pack(fill=tk.BOTH, expand=True)
+        frame.pack(fill="both", expand=True)
         # 调用方法在frame中显示图片
         self.show_image_in_frame(frame, self.img)
 
@@ -914,7 +914,7 @@ class FeedBackWndUI(SubToolWndUI, ABC):
     def load_ui(self):
         # 创建Frame并填充
         img_frame = ttk.Frame(self.wnd_frame)
-        img_frame.pack(fill=tk.BOTH, expand=True)
+        img_frame.pack(fill="both", expand=True)
         # 调用方法在frame中显示图片
         self.show_image_in_frame(img_frame, self.img)
         btn_grid_frm = ttk.Frame(self.wnd_frame)
@@ -978,11 +978,11 @@ class UpdateLogWndUI(SubToolWndUI, ABC):
         global_info = config_data["global"]
         # 创建一个用于放置滚动文本框的框架
         log_frame = ttk.Frame(main_frame)
-        log_frame.pack(pady=(5, 0), fill=tk.BOTH, expand=True)
+        log_frame.pack(pady=(5, 0), fill="both", expand=True)
 
         # 创建滚动条
         scrollbar = tk.Scrollbar(log_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar.pack(side="right", fill=tk.Y)
 
         # 创建不可编辑且可滚动的文本框
         self.log_text = tk.Text(log_frame, wrap=tk.WORD, font=("", 10), height=6, bg=self.wnd.cget("bg"),
@@ -999,17 +999,17 @@ class UpdateLogWndUI(SubToolWndUI, ABC):
                 bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)
                 cancel_button = ttk.Button(bottom_frame, text="以后再说",
                                            command=lambda: self.root.destroy())
-                cancel_button.pack(side=tk.RIGHT)
+                cancel_button.pack(side="right")
                 download_button = ttk.Button(bottom_frame, text="下载新版",
                                              command=partial(self.show_download_window,
                                                              ver_dicts=curr_sys_newest_ver_dicts))
-                download_button.pack(side=tk.RIGHT)
+                download_button.pack(side="right")
                 # 说明
                 information_label = ttk.Label(
                     bottom_frame,
                     text="发现新版本，是否下载？"
                 )
-                information_label.pack(side=tk.RIGHT, pady=(5, 0))
+                information_label.pack(side="right", pady=(5, 0))
 
                 self.log_text.insert(tk.END, "新版本：\n")
                 for v in new_versions:
@@ -1044,7 +1044,7 @@ class UpdateLogWndUI(SubToolWndUI, ABC):
 
         # 设置文本框为不可编辑
         self.log_text.config(state=tk.DISABLED)
-        self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.log_text.pack(side="left", fill="both", expand=True)
 
         # 配置滚动条
         scrollbar.config(command=self.log_text.yview)
@@ -1604,11 +1604,9 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def load_or_get_sw_inst_path(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.detect_sw_install_path(sw, ignore_local_rec)  # 此函数会应用路径
+        path = SwInfoFunc.detect_path_of_(sw, LocalCfg.INST_PATH, ignore_local_rec)
         if path:
             self.inst_path_var.set(path.replace('\\', '/'))
-        # else:
-        #     self.inst_path_var.set("获取失败，请登录后获取或手动选择路径")
 
     def choose_sw_inst_path(self, sw):
         """选择路径，若检验成功会进行保存"""
@@ -1634,11 +1632,9 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def load_or_get_sw_data_dir(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.detect_sw_data_dir(sw, ignore_local_rec)  # 此函数会保存路径
+        path = SwInfoFunc.detect_path_of_(sw, LocalCfg.DATA_DIR, ignore_local_rec)
         if path:
             self.data_dir_var.set(path.replace('\\', '/'))
-        # else:
-        #     self.data_dir_var.set("获取失败，请手动选择存储文件夹（可在平台设置中查看）")
 
     @staticmethod
     def _ask_for_directory():
@@ -1685,11 +1681,9 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def load_or_get_sw_dll_dir(self, sw, ignore_local_rec=False):
         """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.detect_sw_dll_dir(sw, ignore_local_rec)  # 此函数会保存路径
+        path = SwInfoFunc.detect_path_of_(sw, LocalCfg.DLL_DIR, ignore_local_rec)
         if path:
             self.dll_dir_var.set(path.replace('\\', '/'))
-        # else:
-        #     self.dll_dir_var.set("获取失败，请手动选择安装目录下最新版本号文件夹")
 
     def choose_sw_dll_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
@@ -1775,7 +1769,7 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
             return btn
 
         def _pack_btn(btn):
-            btn.pack(side=tk.LEFT, padx=customized_btn_pad * 2, pady=customized_btn_pad)
+            btn.pack(side="left", padx=customized_btn_pad * 2, pady=customized_btn_pad)
 
         for ip in ip_presets:
             b = _create_btn_in_(ip_btn_frame, ip["name"])
@@ -1796,7 +1790,7 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         ok_btn = _create_btn_in_(bottom_btn_frame, "确定")
         ok_btn.set_bind_map(
             **{"1": self.save_settings}).apply_bind(self.root)
-        ok_btn.pack(side=tk.RIGHT, padx=customized_btn_pad * 2, pady=customized_btn_pad)
+        ok_btn.pack(side="right", padx=customized_btn_pad * 2, pady=customized_btn_pad)
 
         self.proxy_detail_frame = proxy_detail_frame
         self.proxy_ip = ip_var

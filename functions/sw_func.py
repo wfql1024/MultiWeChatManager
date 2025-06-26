@@ -90,7 +90,7 @@ class SwInfoFunc:
                 compatible_ver_adaptations = mode_branches_dict["feature"][compatible_ver]
                 for channel in compatible_ver_adaptations.keys():
                     if ver_channels_dict is not None and channel in ver_channels_dict:
-                        print("已经存在精确适配,跳过")
+                        print("已获取精确适配")
                         continue
                     original_feature = compatible_ver_adaptations[channel]["original"]
                     modified_feature = compatible_ver_adaptations[channel]["modified"]
@@ -120,32 +120,41 @@ class SwInfoFunc:
         SwInfoFunc._update_adaptation_from_remote_to_extra(sw, mode, dll_dir)
         return SwInfoFunc._identify_dll_by_extra_cfg(sw, mode, dll_dir)
 
-    @staticmethod
-    def detect_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
-        """获取微信安装路径,ignore_local_record为True时忽略本地记录"""
-        print("获取安装路径...")
-        _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.INST_PATH, ignore_local_record)
-        return result
+    # @staticmethod
+    # def detect_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
+    #     """获取微信安装路径,ignore_local_record为True时忽略本地记录"""
+    #     print("获取安装路径...")
+    #     _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.INST_PATH, ignore_local_record)
+    #     return result
+    #
+    # @staticmethod
+    # def detect_sw_data_dir(sw: str, ignore_local_record=False):
+    #     """获取微信数据路径,ignore_local_record为True时忽略本地记录"""
+    #     print("获取数据存储路径...")
+    #     _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DATA_DIR, ignore_local_record)
+    #     return result
+    #
+    # @staticmethod
+    # def detect_sw_dll_dir(sw: str, ignore_local_record=False):
+    #     """获取微信dll所在文件夹,ignore_local_record为True时忽略本地记录"""
+    #     print("获取dll目录...")
+    #     _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DLL_DIR, ignore_local_record)
+    #     return result
 
     @staticmethod
-    def detect_sw_data_dir(sw: str, ignore_local_record=False):
-        """获取微信数据路径,ignore_local_record为True时忽略本地记录"""
-        print("获取数据存储路径...")
-        _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DATA_DIR, ignore_local_record)
-        return result
-
-    @staticmethod
-    def detect_sw_dll_dir(sw: str, ignore_local_record=False):
-        """获取微信dll所在文件夹,ignore_local_record为True时忽略本地记录"""
-        print("获取dll目录...")
-        _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DLL_DIR, ignore_local_record)
+    def detect_path_of_(sw, path_type, ignore_local_record=False):
+        """获取指定路径,ignore_local_record为True时忽略本地记录"""
+        _, _, result = SwInfoUtils.try_get_path(sw, path_type, ignore_local_record)
         return result
 
     @staticmethod
     def get_saved_path_of_(sw, path_type) -> Optional[str]:
-        """获取已保存的路径"""
+        """优先获取已保存的路径,若没有则"""
         path, = subfunc_file.get_settings(sw, **{path_type: None})
-        return path if PathUtils.is_valid_path(path) else None
+        if PathUtils.is_valid_path(path):
+            return path
+        return SwInfoFunc.detect_path_of_(sw, path_type, ignore_local_record=True)
+
 
     @staticmethod
     def calc_sw_ver(sw):
