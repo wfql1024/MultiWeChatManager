@@ -1447,12 +1447,12 @@
         "redundant_wnd_class": [
             "WeChatLoginWndForPC"
         ],
-        "redundant_wnd_class_regexes": [
+        "redundant_wnd_class_wildcards": [
             "?eChatLoginWndForPC"
         ],
         "label": "微信",
         "executable": "WeChat.exe",
-        "coexist_exe_regex": "WeChat?.exe",
+        "executable_wildcards": ["WeChat.exe", "WeChat?.exe"],
         "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
         "data_dir_guess_suffix": "Tencent\\WeChat",
         "data_dir_check_suffix": "All Users",
@@ -1470,11 +1470,11 @@
         "cfg_handle_regex_list": [
         ],
         "login_wnd_class": "WeChatLoginWndForPC",
-        "coexist_login_wnd_class_regexes": [
+        "login_wnd_class_wildcards": [
             "?eChatLoginWndForPC"
         ],
         "main_wnd_class": "WeChatMainWndForPC",
-        "coexist_main_wnd_class_regexes": [
+        "main_wnd_class_wildcards": [
             "?eChatMainWndForPC"
         ],
         "config_path_suffix": "All Users\\config",
@@ -2505,7 +2505,7 @@
         ],
         "label": "微信4.0",
         "executable": "Weixin.exe",
-        "coexist_exe_regex": "Weixin?.exe",
+        "executable_wildcards": ["Weixin?.exe", "Weixin.exe"],
         "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
         "data_dir_guess_suffix": "Tencent\\Weixin",
         "data_dir_check_suffix": "all_users",
@@ -2532,7 +2532,7 @@
         ],
         "login_wnd_class": "Qt51514QWindowIcon",
         "main_wnd_class": "Qt51514QWindowIcon",
-        "coexist_main_wnd_class_regexes": [
+        "main_wnd_class_wildcards": [
             "Qt51514QWindowIcon"
         ],
         "config_path_suffix": "all_users\\config",
@@ -2568,6 +2568,7 @@
         ],
         "label": "企微",
         "executable": "WXWork.exe",
+        "executable_wildcards": ["WXWork.exe"],
         "inst_path_guess_suffix": "Tencent\\WXWork\\WXWork.exe",
         "data_dir_guess_suffix": "Tencent\\WXWork",
         "data_dir_check_suffix": "Profiles",
@@ -2590,7 +2591,7 @@
         ],
         "login_wnd_class": "WeChatLogin",
         "main_wnd_class": "WeWorkWindow",
-        "coexist_main_wnd_class_regexes": [
+        "main_wnd_class_wildcards": [
             "WeWorkWindow"
         ],
         "config_path_suffix": "Global",
@@ -2623,6 +2624,7 @@
         ],
         "label": "QQNT",
         "executable": "QQ.exe",
+        "executable_wildcards": ["QQ.exe"],
         "inst_path_guess_suffix": "Tencent\\QQNT\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQNT",
         "data_dir_check_suffix": "nt_qq",
@@ -2637,7 +2639,7 @@
         ],
         "login_wnd_class": "Chrome_WidgetWin_1",
         "main_wnd_class": "Chrome_WidgetWin_1",
-        "coexist_main_wnd_class_regexes": [
+        "main_wnd_class_wildcards": [
             "Chrome_WidgetWin_1"
         ],
         "config_path_suffix": "nt_qq/global/nt_db",
@@ -2715,6 +2717,7 @@
         "redundant_wnd_class": [],
         "label": "QQ",
         "executable": "QQ.exe",
+        "executable_wildcards": ["QQ.exe"],
         "inst_path_guess_suffix": "Tencent\\QQ\\Bin\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQ",
         "data_dir_check_suffix": "All Users",
@@ -2729,7 +2732,7 @@
         ],
         "login_wnd_class": "TXGuiFoundation",
         "main_wnd_class": "TXGuiFoundation",
-        "coexist_main_wnd_class_regexes": [
+        "main_wnd_class_wildcards": [
             "TXGuiFoundation"
         ],
         "config_path_suffix": "All Users\\QQ",
@@ -2806,6 +2809,7 @@
         "redundant_wnd_class": [],
         "label": "TIM",
         "executable": "TIM.exe",
+        "executable_wildcards": ["TIM.exe"],
         "inst_path_guess_suffix": "Tencent\\TIM\\Bin\\TIM.exe",
         "data_dir_guess_suffix": "Tencent\\TIM",
         "data_dir_check_suffix": "All Users",
@@ -2820,7 +2824,7 @@
         ],
         "login_wnd_class": "TXGuiFoundation",
         "main_wnd_class": "TXGuiFoundation",
-        "coexist_main_wnd_class_regexes": [
+        "main_wnd_class_wildcards": [
             "TXGuiFoundation"
         ],
         "config_path_suffix": "All Users\\TIM",
@@ -2900,7 +2904,8 @@
         },
         "redundant_wnd_class": [
         ],
-        "executable": "QQ.exe",
+        "executable": "xx.exe",
+        "executable_wildcards": ["xxx.exe", "xxx?.exe"],
         "inst_path_guess_suffix": "Tencent\\QQ\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQ",
         "data_dir_check_suffix": "All Users",
@@ -2915,7 +2920,7 @@
         ],
         "login_wnd_class": "TXGuiFoundation",
         "main_wnd_class": "TXGuiFoundation",
-        "coexist_main_wnd_class_regexes": [
+        "main_wnd_class_wildcards": [
             "?eChatMainWndForPC"
         ],
         "config_path_suffix": "All Users",
