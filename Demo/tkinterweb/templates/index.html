@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tkinter + Flask Demo</title>
+</head>
+<body>
+    <h2>当前计数: <span id="count">0</span></h2>
+    <button onclick="increment()">点击增加</button>
+
+    <script>
+    async function increment() {
+        let res = await fetch('/increment', {method: 'POST'});
+        let data = await res.json();
+        document.getElementById('count').textContent = data.count;
+    }
+
+    async function fetchCount() {
+        let res = await fetch('/count');
+        let data = await res.json();
+        document.getElementById('count').textContent = data.count;
+    }
+
+    fetchCount();
+    </script>
+</body>
+</html>
