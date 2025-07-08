@@ -13,7 +13,6 @@ from typing import List, Optional, Tuple
 
 import psutil
 
-from utils import sys_utils
 from utils.logger_utils import mylogger as logger, Printer, Logger
 
 
@@ -52,7 +51,6 @@ def create_process_without_admin(executable, args=None, creation_flags=subproces
         return create_process_with_re_token_handle(executable, args, creation_flags)
     else:
         return create_process_for_win7(executable, args, creation_flags)
-
 
 
 # 定义必要的常量和结构体
@@ -433,11 +431,13 @@ def get_exe_name_by_pid(pid, precise=False):
 
 """PID信息"""
 
+
 def get_handle_by_pid(pid: int):
     handle = kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
     if not handle:
         raise ctypes.WinError()
     return handle
+
 
 def is_pid_elevated(pid):
     try:
@@ -493,7 +493,7 @@ def kill_process_tree_tasklist(pid):
         return False
 
 
-def psutil_kill_process_tree_if_matched_in_wildcards(pid, wildcards:Optional[list]=None) -> bool:
+def psutil_kill_process_tree_if_matched_in_wildcards(pid, wildcards: Optional[list] = None) -> bool:
     """
     强制结束指定 PID 且符合匹配模式的进程列表及其所有子进程。返回 True 表示成功杀掉（或已不存在），False 表示失败。
     wildcards不传入为无条件结束;若传入列表,则只结束匹配的进程(列表为空会没有匹配,不会结束进程)
@@ -536,6 +536,7 @@ def psutil_kill_process_tree_if_matched_in_wildcards(pid, wildcards:Optional[lis
         Logger().warning(f"发生错误：{e}")
         return False
 
+
 def check_pid_alive_and_get_process_psutil(pid) -> Tuple[Optional[bool], Optional[Process]]:
     """检查进程是否存活"""
     try:
@@ -549,6 +550,7 @@ def check_pid_alive_and_get_process_psutil(pid) -> Tuple[Optional[bool], Optiona
         return False, None
     except psutil.AccessDenied:
         return None, None
+
 
 def is_pid_alive_tasklist(pid):
     """判断进程id是否存在"""
@@ -610,7 +612,7 @@ def try_terminate_executable(executable_name):
     return None
 
 
-def psutil_get_pids_by_wildcards(wildcards:list) -> list:
+def psutil_get_pids_by_wildcards(wildcards: list) -> list:
     """
     使用 psutil 模糊匹配进程名，支持 Unix 和 Windows
     pattern 支持通配符，比如 "WeChat?.exe"

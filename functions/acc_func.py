@@ -195,7 +195,7 @@ class AccOperator:
             # )
             # 清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况 -------------------------------------------------------------------
             SwOperator.kill_sw_multiple_processes(sw)
-            kill_idle:bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.KILL_IDLE_LOGIN_WND)
+            kill_idle: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.KILL_IDLE_LOGIN_WND)
             kill_idle = True if kill_idle is True else False  # 是否需要关闭闲置的登录窗口
             remained_idle_wnd_list = SwOperator.get_idle_login_wnd_and_close_if_necessary(sw, kill_idle)
             all_excluded_hwnds.extend(remained_idle_wnd_list)
@@ -251,13 +251,13 @@ class AccOperator:
                     subfunc_file.set_pid_mutex_all_values_to_false(sw)
                     if sw_proc_pid is None:
                         _, sw_proc_pid = win32process.GetWindowThreadProcessId(sw_hwnd)
-                    subfunc_file.update_sw_acc_data(sw, AccKeys.PID_MUTEX, **{f"{sw_proc_pid}":True})
+                    subfunc_file.update_sw_acc_data(sw, AccKeys.PID_MUTEX, **{f"{sw_proc_pid}": True})
                 else:
                     all_opened_hwnds.append(None)
                     sw_opened_hwnds.append(None)
                 # 从第二个窗口开始,每打开一个窗口就安排上一个窗口的位置,上一个窗口若为空则不处理
                 if all_acc_turn >= 1:
-                    pre_hwnd =  all_opened_hwnds[all_acc_turn - 1]
+                    pre_hwnd = all_opened_hwnds[all_acc_turn - 1]
                     pre_wnd_pos = all_acc_positions[all_acc_turn - 1]
                     AccOperator._set_wnd_pos(pre_hwnd, pre_wnd_pos)
                 # 逐次统计时间 *******************************************************************
@@ -946,7 +946,7 @@ class AccInfoFunc:
             file_suffix = cfg_basename.split(".")[-1]
             old_cfg_basename = f"{account}.{file_suffix}"
             old_acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), old_cfg_basename)
-                            .replace("\\", "/"))
+                                .replace("\\", "/"))
             # 新版
             cfg_basename = f"{account}_{cfg_basename}"
             acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), cfg_basename)

@@ -46,8 +46,6 @@ class Config:
         }
     }
 
-
-
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))
     PROJ_EXTERNAL_RES_PATH = fr'{PROJ_PATH}/external_res'
     PROJ_USER_PATH = fr'{PROJ_PATH}/user_files'

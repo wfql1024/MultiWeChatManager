@@ -3,6 +3,7 @@ import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk, messagebox
+
 import customtkinter as ctk
 
 from functions import subfunc_file
@@ -12,7 +13,7 @@ from functions.sw_func import SwOperator, SwInfoFunc
 from public_class import reusable_widgets
 from public_class.enums import OnlineStatus, LocalCfg
 from public_class.global_members import GlobalMembers
-from resources import Constants, Config, Strings
+from resources import Constants, Config
 from ui import treeview_row_ui, classic_row_ui
 from ui.wnd_ui import WndCreator
 from utils.logger_utils import mylogger as logger, Printer
@@ -171,7 +172,7 @@ class LoginUI:
             self.btn_switch = ttk.Button(bottom_frame, text="切换", command=self._switch_mode, width=40)
             self.btn_switch.pack(side="left", padx=5, pady=5)
 
-            self.btn_login = ttk.Button(bottom_frame, text="共存登录", command=self.login_coexist,width=40)
+            self.btn_login = ttk.Button(bottom_frame, text="共存登录", command=self.login_coexist, width=40)
             self.btn_login.pack(side="left", expand=True, fill="x", padx=5, pady=5)
 
             self.btn_extra = ttk.Button(bottom_frame, text="+", command=self.plus_action, width=40)

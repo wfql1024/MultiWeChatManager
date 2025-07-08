@@ -1463,8 +1463,12 @@
         ],
         "cfg_handle_regex_list": [
         ],
-        "mutant_handle_wildcards": ["_WeChat_App_Instance_Identity_Mutex_Name"],
-        "config_handle_wildcards": ["config.data"],
+        "mutant_handle_wildcards": [
+            "_WeChat_App_Instance_Identity_Mutex_Name"
+        ],
+        "config_handle_wildcards": [
+            "config.data"
+        ],
         "login_wnd_class": "WeChatLoginWndForPC",
         "login_wnd_class_wildcards": [
             "?eChatLoginWndForPC"
@@ -1515,7 +1519,6 @@
                     }
                 }
             }
-
         },
         "multirun": {
             "channel": {
@@ -2201,8 +2204,13 @@
                 "type": "file"
             }
         ],
-        "mutant_handle_wildcards": ["?WeChat_App_Instance_Identity_Mutex_Name", "lock.ini"],
-        "config_handle_wildcards": ["global_conf?g"],
+        "mutant_handle_wildcards": [
+            "?WeChat_App_Instance_Identity_Mutex_Name",
+            "lock.ini"
+        ],
+        "config_handle_wildcards": [
+            "global_conf?g"
+        ],
         "login_wnd_class": "mmui::LoginWindow",
         "main_wnd_class": "mmui::MainWindow",
         "main_wnd_class_wildcards": [

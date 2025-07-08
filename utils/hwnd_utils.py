@@ -13,7 +13,6 @@ import win32gui
 import win32process
 
 from public_class.enums import Position
-from public_class.global_members import GlobalMembers
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger, Printer
 
@@ -172,9 +171,11 @@ def get_hwnds_by_pid_and_class(pid, target_class_name):
     EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
     return hwnd_list
 
+
 def win32_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
     """winAPI实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件"""
     hwnds_set = set()
+
     def enum_windows_callback(hwnd, _lParam):
         process_id = wintypes.DWORD()
         GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
@@ -197,6 +198,7 @@ def win32_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
     EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
     return list(hwnds_set)
 
+
 def uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
     """
     winAPI和uiautomation实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件.
@@ -217,6 +219,7 @@ def uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None)
             print(f"Failed on hwnd {hwnd}: {e}")
             continue
     return res
+
 
 def wait_hwnd_by_class(class_name, timeout=20, title=None):
     """等待指定类名的窗口打开，并返回窗口句柄"""
@@ -601,6 +604,7 @@ def wait_hwnd_close(hwnd, timeout=20):
         time.sleep(1)
     return False
 
+
 def wait_hwnds_close(hwnds, timeout=20):
     """等待所有指定句柄的窗口关闭"""
     ddl_time = time.time() + timeout
@@ -611,6 +615,7 @@ def wait_hwnds_close(hwnds, timeout=20):
             break
         if time.time() > ddl_time:
             break
+
 
 def try_close_hwnds_in_set_and_return_remained(hwnds_set: set, timeout=5):
     """尝试在限定时间内关闭所有窗口，成功或超时退出"""

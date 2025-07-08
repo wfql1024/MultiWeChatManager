@@ -296,11 +296,12 @@ def _pywinhandle_query_system_handle_information():
         else:
             return None
 
+
 def _traverse_system_handles_by_index(system_info, i, process_ids):
     handle_info = system_info.Handles[i]
     handle = handle_info.HandleValue
     process_id = handle_info.UniqueProcessId
-    process_ids = [int(x) if isinstance(x,str) and x.isdigit() else x for x in process_ids]
+    process_ids = [int(x) if isinstance(x, str) and x.isdigit() else x for x in process_ids]
     if isinstance(process_ids, list) and process_id not in process_ids:
         return None
     try:
@@ -343,6 +344,7 @@ def _traverse_system_handles_by_index(system_info, i, process_ids):
         pywinhandle.close(duplicated_handle)
     return process_id, handle, handle_name, handle_type
 
+
 def pywinhandle_find_handles_by_pids_and_handle_names(process_ids=None, handle_names=None):
     result = []
     system_info = _pywinhandle_query_system_handle_information()
@@ -369,6 +371,7 @@ def pywinhandle_find_handles_by_pids_and_handle_names(process_ids=None, handle_n
         result.append(dict(process_id=process_id, handle=handle, name=handle_name, type=handle_type))
         # Logger().info(str(result))
     return result
+
 
 def pywinhandle_find_handles_by_pids_and_handle_name_wildcards(process_ids=None, handle_name_wildcards=None):
     """根据传入的pid列表和句柄通配列表查找符合条件的句柄,传入空值表示不限制."""
@@ -400,6 +403,7 @@ def pywinhandle_find_handles_by_pids_and_handle_name_wildcards(process_ids=None,
         result.append(dict(process_id=process_id, handle=handle, name=handle_name, type=handle_type))
     return result
 
+
 def pywinhandle_close_handles(handle_dicts):
     try:
         processes = {}
@@ -417,5 +421,3 @@ def pywinhandle_close_handles(handle_dicts):
     except Exception as e:
         Logger().error(e)
         return False
-
-

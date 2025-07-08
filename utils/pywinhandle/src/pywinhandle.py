@@ -145,7 +145,8 @@ def query_system_handle_information():
 
         buf = SYSTEM_HANDLE_INFORMATION_EX()
         return_length = c_ulong(current_length)
-        status = ntdll.NtQuerySystemInformation(SystemExtendedHandleInformation, byref(buf), return_length, byref(return_length))
+        status = ntdll.NtQuerySystemInformation(SystemExtendedHandleInformation, byref(buf), return_length,
+                                                byref(return_length))
         if status == STATUS_SUCCESS:
             return buf
         elif status == STATUS_INFO_LENGTH_MISMATCH:
@@ -193,7 +194,8 @@ def query_object_type_info(h, length):
 
 def duplicate_object(source_process_handle, source_handle):
     h = HANDLE()
-    status = ntdll.NtDuplicateObject(source_process_handle, source_handle, current_process, byref(h), 0, 0, DUPLICATE_SAME_ACCESS | DUPLICATE_SAME_ATTRIBUTES)
+    status = ntdll.NtDuplicateObject(source_process_handle, source_handle, current_process, byref(h), 0, 0,
+                                     DUPLICATE_SAME_ACCESS | DUPLICATE_SAME_ATTRIBUTES)
     if status == STATUS_SUCCESS:
         return h
     else:
@@ -216,7 +218,8 @@ def find_handles(process_ids=None, handle_names=None):
         if process_ids and process_id not in process_ids:
             continue
         try:
-            source_process = OpenProcess(PROCESS_ALL_ACCESS | PROCESS_DUP_HANDLE | PROCESS_SUSPEND_RESUME, False, process_id)
+            source_process = OpenProcess(PROCESS_ALL_ACCESS | PROCESS_DUP_HANDLE | PROCESS_SUSPEND_RESUME, False,
+                                         process_id)
         except:
             continue
         handle_name = None

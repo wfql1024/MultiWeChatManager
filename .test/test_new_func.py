@@ -7,10 +7,10 @@ import psutil
 
 from functions import subfunc_file
 from functions.acc_func import AccOperator
-from functions.sw_func import SwInfoUtils, SwInfoFunc, SwOperator
+from functions.sw_func import SwInfoUtils, SwOperator
 from resources import Config
 from ui.sidebar_ui import SidebarUI, WndProperties
-from utils import handle_utils, hwnd_utils, pywinhandle
+from utils import handle_utils, hwnd_utils
 from utils.file_utils import IniUtils
 from utils.logger_utils import Printer
 
