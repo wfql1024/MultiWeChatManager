@@ -22,7 +22,7 @@ from utils.logger_utils import myprinter as printer
 class DetailWndFunc:
     @staticmethod
     def _get_decrypt_utils(platform):
-        module_name = None
+        module_name = "decrypt"
         class_name = None
         try:
             # # 动态加载模块，模块名称格式为 {platform}_decrypt_utils
@@ -36,7 +36,7 @@ class DetailWndFunc:
         except ModuleNotFoundError:
             raise ValueError(f"未找到模块: {module_name}")
         except AttributeError:
-            raise ValueError(f"模块 {module_name} 中未找到类: {class_name}")
+            raise ValueError(f"暂不支持! 模块 {module_name} 中未找到类: {class_name}")
 
     @staticmethod
     def _decrypt_db_and_return(sw, pid, account):

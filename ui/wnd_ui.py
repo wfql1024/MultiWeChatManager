@@ -24,7 +24,7 @@ from functions.app_func import AppFunc
 from functions.sw_func import SwOperator, SwInfoFunc, SwInfoUtils
 from functions.wnd_func import DetailWndFunc, UpdateLogWndFunc
 from public_class import reusable_widgets
-from public_class.custom_widget import CustomLabelBtn, CustomWidget
+from public_class.custom_widget import CustomLabelBtn, CustomBtn
 from public_class.enums import LocalCfg, RemoteCfg, SwStates
 from public_class.global_members import GlobalMembers
 from public_class.reusable_widgets import SubToolWndUI, DefaultEntry
@@ -199,7 +199,7 @@ class DetailUI(SubToolWndUI, ABC):
         _pack_btn(kill_pid_btn)
         re_login_btn = _create_btn_in_(pid_frame, "重登")
         re_login_btn.set_bind_map(
-            **{"1": partial(AccOperator.thread_to_auto_login_accounts, {sw: [account]})}).apply_bind(self.root)
+            **{"1": partial(AccOperator.start_auto_login_accounts_thread, {sw: [account]})}).apply_bind(self.root)
         re_login_btn.set_bind_map(
             **{"1": self.wnd.destroy}).apply_bind(self.root)
         _pack_btn(re_login_btn)
@@ -210,7 +210,7 @@ class DetailUI(SubToolWndUI, ABC):
         mutex_label.pack(side="left")
         mutex_btn = _create_btn_in_(mutex_frame, " × ")
         (mutex_btn.set_bind_map(
-            **{"1": lambda: self.do_and_update_ui(partial(SwOperator.kill_mutex_of_pid, sw, account))})
+            **{"1": lambda: self.do_and_update_ui(partial(AccOperator.kill_mutex_of_pid, sw, account))})
          .apply_bind(self.root))
         _pack_btn(mutex_btn)
         # hwnd
@@ -1807,9 +1807,9 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         # 若为True，则显示代理设置框架
         if self.use_proxy_var.get():
             # 将内部的控件设为可用
-            widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomWidget.State.NORMAL)
+            widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomBtn.State.NORMAL)
         else:
-            widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomWidget.State.DISABLED)
+            widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomBtn.State.DISABLED)
 
     def get_screen_size(self):
         screen_width = self.wnd.winfo_screenwidth()

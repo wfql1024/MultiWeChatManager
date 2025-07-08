@@ -4,7 +4,7 @@ from typing import Dict
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
-from public_class.enums import LocalCfg, SwStates
+from public_class.enums import LocalCfg, SwStates, RemoteCfg
 from public_class.global_members import GlobalMembers
 from utils.logger_utils import mylogger as logger
 
@@ -15,9 +15,9 @@ class MultiSwFunc:
     @staticmethod
     def get_all_enable_sw() -> list:
         """获取所有启用的平台"""
-        all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
+        all_sw_list, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, **{RemoteCfg.SP_SW: []})
         all_enable_sw = []
-        for sw in all_sw_dict:
+        for sw in all_sw_list:
             state = subfunc_file.get_settings(sw, LocalCfg.STATE)
             if state == SwStates.HIDDEN or state == SwStates.VISIBLE:
                 all_enable_sw.append(sw)
@@ -26,9 +26,9 @@ class MultiSwFunc:
     @staticmethod
     def get_all_visible_sw() -> list:
         """获取所有可见的平台"""
-        all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
+        all_sw_list, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, **{RemoteCfg.SP_SW: []})
         all_visible_sw = []
-        for sw in all_sw_dict:
+        for sw in all_sw_list:
             state = subfunc_file.get_settings(sw, LocalCfg.STATE)
             if state == SwStates.VISIBLE:
                 all_visible_sw.append(sw)
@@ -39,9 +39,6 @@ class MultiSwFunc:
         root_class = GlobalMembers.root_class
         root = root_class.root
         login_ui = root_class.login_ui
-
-        # all_sw_dict, = subfunc_file.get_remote_cfg(LocalCfg.GLOBAL_SECTION, all_sw=None)
-        # all_sw = [key for key in all_sw_dict.keys()]
         all_sw = MultiSwFunc.get_all_enable_sw()
 
         print("所有平台：", all_sw)
@@ -64,7 +61,6 @@ class MultiSwFunc:
 
         # 获取已经登录的账号
         for sw in all_sw:
-            # try:
             if sw == login_ui.sw:
                 logins = root_class.sw_classes[sw].login_accounts
             else:
@@ -73,11 +69,9 @@ class MultiSwFunc:
                     continue
                 acc_list_dict, _ = result
                 logins = acc_list_dict["login"]
-            for acc in logins:
-                can_auto_start[sw].discard(acc)
-        # except Exception as e:
-        #     logger.error(e.with_traceback())
-        #     continue
+            if isinstance(logins, list):
+                for acc in logins:
+                    can_auto_start[sw].discard(acc)
 
         if any(len(sw_set) != 0 for sw, sw_set in can_auto_start.items()):
             print(f"排除已登录之后需要登录：{can_auto_start}")
@@ -94,7 +88,7 @@ class MultiSwFunc:
 
             # 遍历登录需要自启但未登录的账号
             try:
-                AccOperator.thread_to_auto_login_accounts(login_dict)
+                AccOperator.start_auto_login_accounts_thread(login_dict)
             except Exception as e:
                 logger.error(e)
         else:

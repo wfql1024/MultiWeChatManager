@@ -1,18 +1,9 @@
 # -*- coding: utf-8 -*-
-# !/usr/bin/env python3
-# ------------------------------------------------------------------
-# 包含来自 pywinhandle (https://github.com/yihleego/pywinhandle) 的查杀线程的python实现
-# 原始代码未附带任何许可证声明
-# 本文件的全部内容（包括后续修改部分）特此声明放弃所有版权，贡献给公共领域
-# ------------------------------------------------------------------
-import time
 from ctypes import *
 from ctypes.wintypes import *
 
 from win32api import *
 from win32process import *
-
-from utils.logger_utils import mylogger as logger
 
 ntdll = WinDLL('ntdll')
 current_process = GetCurrentProcess()
@@ -140,12 +131,10 @@ class OBJECT_TYPE_INFORMATION(Structure):
 
 
 def query_system_handle_information():
-    current_length = 0x1000000
+    current_length = 0x10000
     while True:
-        # 添加了限制会容易找不到
-        # if current_length > 0x4000000:
-        #     return
-        start_time = time.time()
+        if current_length > 0x4000000:
+            return
 
         class SYSTEM_HANDLE_INFORMATION_EX(Structure):
             _fields_ = [
@@ -156,13 +145,11 @@ def query_system_handle_information():
 
         buf = SYSTEM_HANDLE_INFORMATION_EX()
         return_length = c_ulong(current_length)
-        status = ntdll.NtQuerySystemInformation(SystemExtendedHandleInformation, byref(buf), return_length,
-                                                byref(return_length))
-        # print(f"{current_length}:{time.time() - start_time}")
+        status = ntdll.NtQuerySystemInformation(SystemExtendedHandleInformation, byref(buf), return_length, byref(return_length))
         if status == STATUS_SUCCESS:
             return buf
         elif status == STATUS_INFO_LENGTH_MISMATCH:
-            current_length *= 4
+            current_length *= 8
             continue
         else:
             return None
@@ -206,8 +193,7 @@ def query_object_type_info(h, length):
 
 def duplicate_object(source_process_handle, source_handle):
     h = HANDLE()
-    status = ntdll.NtDuplicateObject(source_process_handle, source_handle, current_process, byref(h), 0, 0,
-                                     DUPLICATE_SAME_ACCESS | DUPLICATE_SAME_ATTRIBUTES)
+    status = ntdll.NtDuplicateObject(source_process_handle, source_handle, current_process, byref(h), 0, 0, DUPLICATE_SAME_ACCESS | DUPLICATE_SAME_ATTRIBUTES)
     if status == STATUS_SUCCESS:
         return h
     else:
@@ -230,8 +216,7 @@ def find_handles(process_ids=None, handle_names=None):
         if process_ids and process_id not in process_ids:
             continue
         try:
-            source_process = OpenProcess(PROCESS_ALL_ACCESS | PROCESS_DUP_HANDLE | PROCESS_SUSPEND_RESUME, False,
-                                         process_id)
+            source_process = OpenProcess(PROCESS_ALL_ACCESS | PROCESS_DUP_HANDLE | PROCESS_SUSPEND_RESUME, False, process_id)
         except:
             continue
         handle_name = None
@@ -260,34 +245,18 @@ def find_handles(process_ids=None, handle_names=None):
             if not matched:
                 continue
         result.append(dict(process_id=process_id, handle=handle, name=handle_name, type=handle_type))
-        logger.info(str(result))
     return result
 
 
 def close_handles(handles):
-    try:
-        processes = {}
-        for h in handles:
-            process_id = h['process_id']
-            handle = h['handle']
-            process = processes.get(process_id)
-            if not process:
-                process = OpenProcess(PROCESS_DUP_HANDLE, False, process_id)
-                processes[process_id] = process
-            DuplicateHandle(process, handle, 0, 0, 0, DUPLICATE_CLOSE_SOURCE)
-        for p in processes.values():
-            CloseHandle(p)
-            logger.info(f"Closed:{str(processes)}")
-        return True
-    except Exception as e:
-        logger.error(e)
-        return False
-
-
-if __name__ == '__main__':
-    start_time = time.time()
-    print(query_system_handle_information())
-    # handles = find_handles(process_ids=[63552], handle_names=['_WeChat_App_Instance_Identity_Mutex_Name'])
-    # print(handles)
-    # # close_handles(handles)
-    print(time.time() - start_time)
+    processes = {}
+    for h in handles:
+        process_id = h['process_id']
+        handle = h['handle']
+        process = processes.get(process_id)
+        if not process:
+            process = OpenProcess(PROCESS_DUP_HANDLE, False, process_id)
+            processes[process_id] = process
+        DuplicateHandle(process, handle, 0, 0, 0, DUPLICATE_CLOSE_SOURCE)
+    for p in processes.values():
+        CloseHandle(p)

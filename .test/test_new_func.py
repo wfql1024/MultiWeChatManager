@@ -1,19 +1,25 @@
+import os
+import shutil
 import time
 from unittest import TestCase
 
 import psutil
-from utils.patch_utils import *
 
 from functions import subfunc_file
 from functions.acc_func import AccOperator
-from functions.sw_func import SwInfoUtils
+from functions.sw_func import SwInfoUtils, SwInfoFunc, SwOperator
 from resources import Config
 from ui.sidebar_ui import SidebarUI, WndProperties
 from utils import handle_utils, hwnd_utils, pywinhandle
 from utils.file_utils import IniUtils
+from utils.logger_utils import Printer
 
 
 class Test(TestCase):
+    def test_get_wnd_by_classname(self):
+        hwnds = hwnd_utils.wait_hwnd_by_class("Qt51514QWindowIcon")
+        print(hwnds)
+
     def test_multi_new_weixin(self):
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
             "Weixin", redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
@@ -166,12 +172,21 @@ class Test(TestCase):
         for f in psutil.Process(27644).memory_maps():
             print(f)
 
-    def test_kill_handle_in_pid(self):
-        pid = 32704
-        # pid = 35776
-        handle_names = ["Tencent.WeWork.ExclusiveObjectInstance1", "Tencent.WeWork.ExclusiveObject"]
-        # handle_names = ["_WeChat_App_Instance_Identity_Mutex_Name"]
-        result = pywinhandle.find_handles(
+    def test_get_all_sw_mutant_handles(self):
+        sw = "Weixin"
+        mutant_handles = SwOperator.get_sw_all_mutex_handles_and_try_kill_if_need(sw)
+        Printer().debug(mutant_handles)
+
+    def test_get_handles_by_pids_and_handle_name_wildcards(self):
+        pids = [47632]
+        handle_names = ['_WeChat_App_Instance_Identity_Mutex_Name']
+        handles = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(pids, handle_names)
+        print(handles)
+
+    def test_my_find_handle_in_pid(self):
+        pid = 30556
+        handle_names = ["global_config"]
+        result = handle_utils.pywinhandle_find_handles_by_pids_and_handle_names(
             [pid],
             handle_names
         )

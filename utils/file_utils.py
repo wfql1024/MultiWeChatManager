@@ -613,11 +613,14 @@ def find_file(start_dir, filename):
     return None
 
 
-def get_matching_exe_names(pattern_with_qmark: str, search_dir: str = "."):
-    pattern = os.path.join(search_dir, pattern_with_qmark).replace("/", "\\")
-    matched_paths = glob.glob(pattern)
+def get_file_names_matching_wildcards(wildcards: list, search_dir: str = "."):
+    res_set = set()
+    for wildcard in wildcards:
+        pattern = os.path.join(search_dir, wildcard).replace("/", "\\")
+        matched_paths = glob.glob(pattern)
+        res_set.update(matched_paths)
     # Printer().debug(pattern, matched_paths)
-    return [os.path.basename(path) for path in matched_paths]
+    return [os.path.basename(path) for path in list(res_set)]
 
 
 def get_file_version(file_path):

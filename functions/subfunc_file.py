@@ -407,31 +407,31 @@ def get_sw_acc_data(*front_addr, **kwargs) -> Union[Any, Tuple[Any, ...]]:
 """账号互斥体相关"""
 
 
-def update_pid_mutex_of_(sw):
-    """
-    清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
-    :return: 是否成功
-    """
-    print("构建互斥体记录...")
-    # 加载当前账户数据
-    sw_data = get_sw_acc_data(sw)
-    if not isinstance(sw_data, dict):
-        return False
-    pid_mutex = {}
-    # 遍历所有的账户，从有pid的账户中获取pid和has_mutex，并存入pid_mutex
-    for account, details in sw_data.items():
-        if isinstance(details, dict):
-            pid = details.get(AccKeys.PID)
-            # 检查 pid 是否为整数
-            if isinstance(pid, int):
-                has_mutex = details.get(AccKeys.HAS_MUTEX, False)
-                pid_mutex[str(pid)] = has_mutex
-                print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
-    update_sw_acc_data(sw, AccKeys.PID_MUTEX, **pid_mutex)
-    return True
+# def update_pid_mutex_of_(sw):
+#     """
+#     清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
+#     :return: 是否成功
+#     """
+#     print("构建互斥体记录...")
+#     # 加载当前账户数据
+#     sw_data = get_sw_acc_data(sw)
+#     if not isinstance(sw_data, dict):
+#         return False
+#     pid_mutex = {}
+#     # 遍历所有的账户，从有pid的账户中获取pid和has_mutex，并存入pid_mutex
+#     for account, details in sw_data.items():
+#         if isinstance(details, dict):
+#             pid = details.get(AccKeys.PID)
+#             # 检查 pid 是否为整数
+#             if isinstance(pid, int):
+#                 has_mutex = details.get(AccKeys.HAS_MUTEX, False)
+#                 pid_mutex[str(pid)] = has_mutex
+#                 print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
+#     update_sw_acc_data(sw, AccKeys.PID_MUTEX, **pid_mutex)
+#     return True
 
 
-def set_pid_mutex_values_to_false(sw):
+def set_pid_mutex_all_values_to_false(sw):
     """
     将所有微信进程all_acc中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
     （因为登录好一个窗口，说明之前所有的微信都没有互斥体了）

@@ -1,5 +1,6 @@
 import ctypes
 import random
+import time
 from datetime import datetime
 from unittest import TestCase
 
@@ -25,7 +26,7 @@ class Test(TestCase):
         print(SwInfoFunc.detect_sw_data_dir(sw="Weixin"))
 
     def test_wait_for_wnd_open(self):
-        hwnd_utils.wait_open_to_get_hwnd("Qt51514QWindowIcon")
+        hwnd_utils.wait_hwnd_by_class("Qt51514QWindowIcon")
 
     def test_close_sw_mutex_by_handle(self):
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
@@ -35,7 +36,7 @@ class Test(TestCase):
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
     def test_get_all_open_files(self):
-        pids = process_utils.get_process_ids_by_precise_name("Weixin")
+        pids = process_utils.get_process_ids_by_precise_name_impl_by_tasklist("Weixin")
         for pid in pids:
             for f in psutil.Process(pid).memory_maps():
                 print(pid, f)
@@ -48,7 +49,7 @@ class Test(TestCase):
         print(f"DPI Awareness Level: {awareness.value}")
 
     def test_get_process_ids_by_name(self):
-        pids = process_utils.get_process_ids_by_precise_name("WeChat.exe")
+        pids = process_utils.get_process_ids_by_precise_name_impl_by_tasklist("WeChat.exe")
         print(pids)
 
     def test_lowercase(self):
@@ -62,7 +63,7 @@ class Test(TestCase):
     def test_hide_wnd(self):
         pid = 20468  # 替换为目标进程的 PID
         target_class = "WeChatMainWndForPC"  # 替换为目标窗口类名
-        test_hwnd = hwnd_utils.get_hwnd_list_by_pid_and_class(pid, target_class)
+        test_hwnd = hwnd_utils.get_hwnds_by_pid_and_class(pid, target_class)
         hwnd_utils.hide_all_by_wnd_classes([target_class])
         print("Found HWNDs:", test_hwnd)
 
@@ -204,3 +205,16 @@ class Test(TestCase):
 
     def test_equals(self):
         print(MultirunMode.BUILTIN == "python")
+
+    def test_win32_and_uiautomation_get_hwnds(self):
+        target_pid = 30556  # 这里替换成实际的 pid
+        start_time = time.time()
+        windows = hwnd_utils.get_wnd_dict_by_pid(target_pid)
+        for w in windows:
+            print(
+                f"Handle: {w['hwnd']}, Name: {w['Name']}, ClassName: {w['ClassName']}, ControlType: {w['ControlType']}")
+        print(f"用时: {time.time() - start_time}")
+        start_time = time.time()
+        hwnds = hwnd_utils.win32_get_hwnds_by_pid_and_class_wildcards(target_pid)
+        print(hwnds)
+        print(f"用时: {time.time() - start_time}")

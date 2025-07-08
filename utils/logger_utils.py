@@ -352,6 +352,10 @@ class Printer:
         self.vital_msg = str(obj)
         return self
 
+    def clear_vital(self):
+        self.vital_msg = None
+        return self
+
     def print_last(self, obj=None):
         if obj is not None:
             self.last(obj)

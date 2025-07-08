@@ -4,7 +4,6 @@ import os
 import random
 import re
 import shutil
-import subprocess
 import sys
 import threading
 import time
@@ -13,11 +12,12 @@ from collections.abc import Iterable
 from fnmatch import fnmatch
 from pathlib import Path
 from tkinter import messagebox, filedialog
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import psutil
 import win32con
 import win32gui
+import win32process
 import winshell
 from PIL import Image, ImageDraw, ImageFont
 
@@ -37,211 +37,22 @@ from utils.logger_utils import mylogger as logger, Printer
 
 class AccOperator:
     @staticmethod
-    def _auto_login_accounts(login_dict: Dict[str, List]):
-        """
-        对选择的账号，进行全自动登录
-        :param login_dict: 登录列表字典
-        :return: 是否成功
-        """
-        root_class = GlobalMembers.root_class
-        root = root_class.root
-        login_ui = root_class.login_ui
-
-        # print(login_dict)
-
-        # 统计一下数目
-        acc_cnt = 0
-        for sw, acc_list in login_dict.items():
-            if isinstance(acc_list, list):
-                acc_cnt += len(acc_list)
-        # print(acc_cnt)
-
-        # 检查要登录的账号数量
-        if acc_cnt is None or acc_cnt == 0:
-            return False
-        # 优先自动获取尺寸，若获取不到从配置中获取
+    def _get_screen_size() -> Tuple[int, int]:
+        """获取屏幕尺寸"""
         screen_width = int(tk.Tk().winfo_screenwidth())
         screen_height = int(tk.Tk().winfo_screenheight())
         if not screen_height or not screen_width:
             size = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SCREEN_SIZE).split('*')
             screen_width, screen_height = int(size[0]), int(size[1])
-        if not screen_width or screen_width == "":
-            messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
-            return False
-        # 检查是否有登录窗口大小配置
-        max_login_size = AccOperator._get_max_dimensions_from_sw_list(list(login_dict.keys()))
-        if not max_login_size or max_login_size is None:
-            messagebox.showinfo("提醒", "缺少登录窗口尺寸配置，请到应用设置中添加！")
-            return False
-
-        # 计算登录窗口的位置
-        acc_positions = hwnd_utils.layout_wnd_positions(acc_cnt, max_login_size, (screen_width, screen_height))
-
-        # 开始登录过程
-        acc_turn = 0
-        for sw, accounts in login_dict.items():
-            print(f"进行{sw}平台的登录")
-            if not isinstance(accounts, list) or len(accounts) == 0:
-                continue
-
-            # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
-            redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
-                subfunc_file.get_remote_cfg(
-                    sw,
-                    redundant_wnd_class=None,
-                    login_wnd_class=None,
-                    executable=None,
-                    cfg_handle_regex_list=None
-                )
-            )
-            SwOperator.close_classes_but_sw_main_wnd(redundant_wnd_list, sw)
-            SwOperator.kill_sw_multiple_processes(sw)
-            time.sleep(0.5)
-            subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
-            subfunc_file.update_pid_mutex_of_(sw)
-
-            multirun_mode = root_class.sw_classes[sw].multirun_mode
-
-            # 开始遍历登录账号过程
-            start_time = time.time()
-            opened_hwnd_list = []  # 记录新打开的登录窗口
-            for j in range(len(login_dict[sw])):
-                # 关闭配置文件锁
-                handle_utils.close_sw_mutex_by_handle(
-                    Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-
-                # 读取配置
-                success, _ = AccOperator.operate_acc_config('use', sw, accounts[j])
-                if success:
-                    print(f"{accounts[j]}:复制配置文件成功")
-                else:
-                    print(f"{accounts[j]}:复制配置文件失败")
-                    break
-
-                # 打开微信
-                sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
-
-                # 等待打开窗口
-                sw_hwnd = hwnd_utils.wait_open_to_get_hwnd_but_exclude_(opened_hwnd_list, login_wnd_class)
-                if sw_hwnd is not None and sw_hwnd not in opened_hwnd_list:
-                    # 确保打开了新的微信登录窗口
-                    opened_hwnd_list.append(sw_hwnd)
-                    if sub_exe_process:
-                        sub_exe_process.terminate()
-                    print(f"打开窗口成功：{sw_hwnd}")
-                    subfunc_file.set_pid_mutex_values_to_false(sw)
-                    subfunc_file.update_has_mutex_from_pid_mutex(sw)
-                else:
-                    continue
-
-                # 两个以上窗口才安排位置,打开一个窗口就安排上一个窗口的位置
-                if acc_turn >= 1:
-                    # 计算当前窗口的位置
-                    # 安排窗口位置
-                    new_left, new_top = acc_positions[acc_turn - 1]
-                    # 只调整窗口的位置，不改变大小
-                    try:
-                        win32gui.SetWindowPos(
-                            opened_hwnd_list[acc_turn - 1],
-                            win32con.HWND_TOP,
-                            new_left,
-                            new_top,
-                            0,  # 宽度设置为 0 表示不改变
-                            0,  # 高度设置为 0 表示不改变
-                            win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
-                        )
-                    except Exception as e:
-                        logger.error(e)
-
-                # 逐次统计时间
-                subfunc_file.update_statistic_data(sw, 'auto', str(j + 1), multirun_mode, time.time() - start_time)
-
-                acc_turn += 1
-
-            # 统计平均时间
-            subfunc_file.update_statistic_data(sw, 'auto', 'avg', multirun_mode,
-                                               (time.time() - start_time) / acc_cnt)
-
-            # 循环登录完成
-            # 如果有，关掉多余的多开器
-            SwOperator.kill_sw_multiple_processes(sw)
-
-            # 间隔一段时间后对最后一个窗口移动
-            time.sleep(3)
-            new_left, new_top = acc_positions[-1]
-            try:
-                win32gui.SetWindowPos(
-                    opened_hwnd_list[-1], win32con.HWND_TOP, new_left, new_top, 0, 0,
-                    win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
-                )
-            except Exception as e:
-                logger.error(e)
-
-            # 定义点击按钮并等待成功的线程，启动线程
-            def click_all_login_button(hwnds):
-                # 判断是否需要自动点击按钮
-                auto_press = root_class.global_settings_value.auto_press
-                if auto_press:
-                    # 两轮点击所有窗口的登录，防止遗漏
-                    time.sleep(0.5)
-                    inner_start_time = time.time()
-                    for i in range(1):
-                        for h in hwnds:
-                            hwnd_details = hwnd_utils.get_hwnd_details_of_(h)
-                            cx = int(hwnd_details["width"] * 0.5)
-                            cy = int(hwnd_details["height"] * 0.75)
-                            hwnd_utils.do_click_in_wnd(h, cx, cy)
-                            time.sleep(0.2)
-                        print(f"通过位置查找，用时：{time.time() - inner_start_time:.4f}s")
-
-                    inner_start_time = time.time()
-                    for h in hwnds:
-                        titles = ["进入微信", "进入WeChat", "Enter Weixin", "进入微信"]  # 添加所有需要查找的标题
-                        try:
-                            # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
-                            cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
-                            # print(hwnd_utils.get_child_hwnd_list_of_(h))
-                            # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
-                            # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
-                            # cx, cy = hwnd_utils.find_widget_with_uia(h, titles)  # 有问题，修复较复杂，不管
-                            print(f"通过控件查找，用时：{time.time() - inner_start_time:.4f}s")
-                            if cx is not None and cy is not None:
-                                hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
-                                break  # 找到有效坐标后退出循环
-                        except TypeError as te:
-                            logger.warning(te)
-                            print("没有按钮，应该是点过啦~")
-                        except Exception as fe:
-                            logger.error(fe)
-                else:
-                    print("请手动点击登录按钮")
-
-                # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
-                ddl_time = time.time() + 30
-                while True:
-                    hs = hwnd_utils.get_hwnd_list_by_class_and_title(login_wnd_class)
-                    # print("等待登录完成")
-                    if len(hs) == 0:
-                        break
-                    if time.time() > ddl_time:
-                        break
-                root.after(0, login_ui.refresh_frame, sw)
-
-            threading.Thread(target=click_all_login_button, args=(opened_hwnd_list,)).start()
-
-        return True
+        if not screen_height or not screen_width:
+            screen_width, screen_height = 1920, 1080
+        return screen_width, screen_height
 
     @staticmethod
     def _get_max_dimensions_from_sw_list(sw_list):
-        """
-        遍历 sw 列表，返回宽度最大的尺寸（宽度和高度），如果所有 sw 都没有有效的尺寸配置，返回 False。
-
-        :param sw_list: 列表，每个元素代表一个 sw 对象
-        :return: (最大宽度, 对应高度) 或 False（如果所有 sw 都没有有效尺寸配置）
-        """
+        """获取多个平台中最大的登录窗口尺寸"""
         max_width = 0
         max_height = 0
-
         for software in sw_list:
             # 获取尺寸配置
             siz = subfunc_file.fetch_sw_setting_or_set_default_or_none(software, "login_size")
@@ -255,11 +66,224 @@ class AccOperator:
                 except ValueError:
                     # 忽略尺寸配置格式错误的情况
                     continue
-
         return (max_width, max_height) if max_width > 0 else None
 
     @staticmethod
-    def thread_to_auto_login_accounts(login_dict: Dict[str, List]):
+    def _get_now_login_hwnd_from_cache(sw, acc, excluded_hwnd_list):
+        """用缓存类名来获取当前登录窗口hwnd"""
+        Printer().debug(f"传入参数: {sw}, {acc}, {excluded_hwnd_list}")
+        cached_class, = subfunc_file.get_sw_acc_data(sw, acc, login_wnd_class=None)
+        if cached_class is None:
+            return None
+        sw_hwnd = hwnd_utils.wait_hwnd_exclusively_by_class(excluded_hwnd_list, cached_class)
+        if sw_hwnd is None:
+            return None
+        return sw_hwnd
+
+    @staticmethod
+    def _set_wnd_pos(hwnd, pos):
+        if hwnd is not None:
+            new_left, new_top = pos
+            try:
+                win32gui.SetWindowPos(
+                    hwnd,
+                    win32con.HWND_TOP,
+                    new_left,
+                    new_top,
+                    0,  # 宽度设置为 0 表示不改变
+                    0,  # 高度设置为 0 表示不改变
+                    win32con.SWP_NOSIZE | win32con.SWP_SHOWWINDOW
+                )
+            except Exception as e:
+                logger.error(e)
+
+    @staticmethod
+    def _thread_to_click_all_login_buttons_and_wait_refresh(sw, hwnds):
+        """点击列表所有登录窗口的登录按钮,等待所有窗口关闭则刷新"""
+        # 判断是否需要自动点击按钮
+        root_class = GlobalMembers.root_class
+        root = root_class.root
+        login_ui = root_class.login_ui
+        auto_press = root_class.global_settings_value.auto_press
+        if auto_press:
+            # 两轮点击所有窗口的登录，防止遗漏
+            time.sleep(0.5)
+            inner_start_time = time.time()
+            for i in range(1):
+                for h in hwnds:
+                    hwnd_details = hwnd_utils.get_hwnd_details_of_(h)
+                    cx = int(hwnd_details["width"] * 0.5)
+                    cy = int(hwnd_details["height"] * 0.75)
+                    hwnd_utils.do_click_in_wnd(h, cx, cy)
+                    time.sleep(0.2)
+                print(f"通过位置查找，用时：{time.time() - inner_start_time:.4f}s")
+
+            inner_start_time = time.time()
+            for h in hwnds:
+                titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
+                try:
+                    # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
+                    cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
+                    # print(hwnd_utils.get_child_hwnd_list_of_(h))
+                    # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
+                    # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
+                    # cx, cy = hwnd_utils.find_widget_with_uia(h, titles)  # 有问题，修复较复杂，不管
+                    print(f"通过控件查找，用时：{time.time() - inner_start_time:.4f}s")
+                    if cx is not None and cy is not None:
+                        hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
+                        break  # 找到有效坐标后退出循环
+                except TypeError as te:
+                    logger.warning(te)
+                    print("没有按钮，应该是点过啦~")
+                except Exception as fe:
+                    logger.error(fe)
+        else:
+            print("请手动点击登录按钮")
+
+        # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
+        ddl_time = time.time() + 30
+        while True:
+            # 判断所有 hwnd 是否都不存在了
+            all_closed = all(not win32gui.IsWindow(hwnd) for hwnd in hwnds)
+            if all_closed:
+                break
+            if time.time() > ddl_time:
+                break
+        root.after(0, login_ui.refresh_frame, sw)
+
+    @staticmethod
+    def _auto_login_accounts(login_dict: Dict[str, List]):
+        """传入{平台: 账号列表}字典，进行全自动登录"""
+        root_class = GlobalMembers.root_class
+        # 统计一下数目,若为0则直接返回 ===================================================================
+        acc_cnt = 0
+        for sw, acc_list in login_dict.items():
+            if isinstance(acc_list, list):
+                acc_cnt += len(acc_list)
+        if acc_cnt is None or acc_cnt == 0:
+            return
+        # 计算窗口排列位置 ===================================================================
+        screen_size = AccOperator._get_screen_size()
+        max_login_size = AccOperator._get_max_dimensions_from_sw_list(list(login_dict.keys()))
+        if max_login_size is None:
+            max_login_size = (int(screen_size[0] / 6), int(screen_size[1] / 3))
+        all_acc_positions = hwnd_utils.layout_wnd_positions(acc_cnt, max_login_size, screen_size)
+        # 开始登录过程 ===================================================================
+        all_acc_turn = 0  # 所有账号队列的当前轮次
+        all_opened_hwnds = []  # 记录新打开的登录窗口
+        all_excluded_hwnds = []  # 记录要排除的已存在的登录窗口
+        for sw, accounts in login_dict.items():
+            Printer().vital(f"{sw}登录")
+            if not isinstance(accounts, list) or len(accounts) == 0:
+                continue
+            # 初始化获取数据 -------------------------------------------------------------------
+            multirun_mode = root_class.sw_classes[sw].multirun_mode
+            origin_exe_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+            login_wnd_class, exec_name, cfg_handles_regexes, login_wildcards = (
+                subfunc_file.get_remote_cfg(
+                    sw,
+                    login_wnd_class=None,
+                    executable=None,
+                    cfg_handle_regex_list=None,
+                    login_wnd_class_wildcards=None
+                )
+            )
+            # mutant_wildcards, config_wildcards = subfunc_file.get_remote_cfg(
+            #     sw,
+            #     mutant_handle_wildcards=None,
+            #     config_handle_wildcards=None
+            # )
+            # 清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况 -------------------------------------------------------------------
+            SwOperator.kill_sw_multiple_processes(sw)
+            kill_idle:bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.KILL_IDLE_LOGIN_WND)
+            kill_idle = True if kill_idle is True else False  # 是否需要关闭闲置的登录窗口
+            remained_idle_wnd_list = SwOperator.get_idle_login_wnd_and_close_if_necessary(sw, kill_idle)
+            all_excluded_hwnds.extend(remained_idle_wnd_list)
+            # 检查所有pid及互斥体情况 -------------------------------------------------------------------
+            SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
+            # 开始平台的账号列表登录 -------------------------------------------------------------------
+            sw_opened_hwnds = []  # 当前平台的登录窗口列表
+
+            start_time = time.time()
+            for j in range(len(login_dict[sw])):
+                # 调取配置,打开登录窗口 *******************************************************************
+                sub_proc = None
+                if AccInfoFunc.is_acc_coexist(sw, accounts[j]):
+                    # 共存账号
+                    print(f"[OK]{accounts[j]}是共存号,无需登录配置")
+                    coexist_exe_path = os.path.join(os.path.dirname(origin_exe_path), accounts[j])
+                    sw_proc = process_utils.create_process_without_admin(coexist_exe_path)
+                else:
+                    # 主程序账号
+                    handle_utils.close_sw_mutex_by_handle(
+                        Config.HANDLE_EXE_PATH, exec_name, cfg_handles_regexes)
+                    success, _ = AccOperator.operate_acc_config('use', sw, accounts[j])
+                    if success:
+                        Printer().print_vn(f"[OK]应用{accounts[j]}的登录配置")
+                    else:
+                        Printer().print_vn(f"[ERR]应用{accounts[j]}配置失败")
+                        continue
+                    sw_proc, sub_proc = SwOperator.open_sw(sw, multirun_mode)
+                sw_proc_pid = sw_proc.pid if sw_proc else None
+                # 等待打开窗口并获取hwnd *******************************************************************
+                sw_hwnd = AccOperator._get_now_login_hwnd_from_cache(
+                    sw, accounts[j], all_excluded_hwnds)
+                # Printer().debug(f"通过缓存类名获取到的登录窗口：{sw_hwnd}")
+                if sw_hwnd is None:
+                    # 从精确类名未能获取,只能用类名通配模式来获取,并缓存起来
+                    sw_hwnd, class_name = hwnd_utils.wait_hwnd_exclusively_by_pid_and_class_wildcards(
+                        all_excluded_hwnds, sw_proc_pid, login_wildcards)
+                    if class_name is not None:
+                        subfunc_file.update_sw_acc_data(sw, accounts[j], login_wnd_class=class_name)
+                if sub_proc:
+                    sub_proc.terminate()
+                Printer().debug(sw_hwnd)
+                # 对hwnd进行处理 *******************************************************************
+                # 确保打开了新的微信登录窗口
+                if sw_hwnd is not None:
+                    if sw_hwnd not in all_opened_hwnds:
+                        all_opened_hwnds.append(sw_hwnd)
+                    if sw_hwnd not in all_excluded_hwnds:
+                        all_excluded_hwnds.append(sw_hwnd)
+                    if sw_hwnd not in sw_opened_hwnds:
+                        sw_opened_hwnds.append(sw_hwnd)
+                    print(f"打开窗口成功：{sw_hwnd}")
+                    subfunc_file.set_pid_mutex_all_values_to_false(sw)
+                    if sw_proc_pid is None:
+                        _, sw_proc_pid = win32process.GetWindowThreadProcessId(sw_hwnd)
+                    subfunc_file.update_sw_acc_data(sw, AccKeys.PID_MUTEX, **{f"{sw_proc_pid}":True})
+                else:
+                    all_opened_hwnds.append(None)
+                    sw_opened_hwnds.append(None)
+                # 从第二个窗口开始,每打开一个窗口就安排上一个窗口的位置,上一个窗口若为空则不处理
+                if all_acc_turn >= 1:
+                    pre_hwnd =  all_opened_hwnds[all_acc_turn - 1]
+                    pre_wnd_pos = all_acc_positions[all_acc_turn - 1]
+                    AccOperator._set_wnd_pos(pre_hwnd, pre_wnd_pos)
+                # 逐次统计时间 *******************************************************************
+                subfunc_file.update_statistic_data(
+                    sw, 'auto', str(j + 1), multirun_mode, time.time() - start_time)
+                all_acc_turn += 1
+
+            # 统计平台平均时间 -------------------------------------------------------------------
+            subfunc_file.update_statistic_data(sw, 'auto', 'avg', multirun_mode,
+                                               (time.time() - start_time) / acc_cnt)
+            # 间隔一段时间后对平台的最后一个窗口移动 -------------------------------------------------------------------
+            SwOperator.kill_sw_multiple_processes(sw)
+            time.sleep(3)
+            Printer().debug(sw_opened_hwnds, all_opened_hwnds, all_excluded_hwnds, all_acc_turn)
+            sw_last_hwnd = all_opened_hwnds[all_acc_turn - 1]
+            sw_last_pos = all_acc_positions[all_acc_turn - 1]
+            AccOperator._set_wnd_pos(sw_last_hwnd, sw_last_pos)
+            # 启动善后线程 -------------------------------------------------------------------
+            threading.Thread(
+                target=AccOperator._thread_to_click_all_login_buttons_and_wait_refresh,
+                args=(sw, sw_opened_hwnds,)
+            ).start()
+        return
+
+    @staticmethod
+    def start_auto_login_accounts_thread(login_dict: Dict[str, List]):
         """
         开启一个线程来执行登录操作
         :param login_dict: 登录列表字典
@@ -301,7 +325,6 @@ class AccOperator:
             acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), acc_cfg_item)
                             .replace("\\", "/"))
             origin_acc_dict.update({origin_cfg_path: acc_cfg_path})
-            print(cfg_basename, origin_acc_dict)
 
         paths_to_del = list(origin_acc_dict.keys()) if method == "use" else list(origin_acc_dict.values())
 
@@ -319,7 +342,6 @@ class AccOperator:
         success_list = []
         # 拷贝配置项
         for origin, acc in origin_acc_dict.items():
-            print(origin, acc)
             source_path = acc if method == "use" else origin
             dest_path = origin if method == "use" else acc
 
@@ -350,33 +372,41 @@ class AccOperator:
         root_class = GlobalMembers.root_class
         root = root_class.root
         login_ui = root_class.login_ui
-
+        if AccInfoFunc.is_acc_coexist(sw, account):
+            messagebox.showwarning("提示", "共存账号无需配置!")
+            return
         if messagebox.askyesno(
                 "确认",
                 "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
         ):
-            redundant_wnd_classes, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
-                sw, redundant_wnd_class=None, executable=None, cfg_handle_regex_list=None)
-            SwOperator.close_classes_but_sw_main_wnd(redundant_wnd_classes, sw)
-            handle_utils.close_sw_mutex_by_handle(
-                Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
+            # 手动登录原始程序
+            all_excluded_hwnds = []
             SwOperator.kill_sw_multiple_processes(sw)
-            time.sleep(0.5)
-            sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
+            remained_idle_wnd_list = SwOperator.get_idle_login_wnd_and_close_if_necessary(sw, False)
+            all_excluded_hwnds.extend(remained_idle_wnd_list)
+            SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
+            sw_proc, sub_proc = SwOperator.open_sw(sw, multirun_mode)
+            sw_proc_pid = sw_proc.pid if sw_proc else None
             login_wnd_class, = subfunc_file.get_remote_cfg(sw, login_wnd_class=None)
-            wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
-            print(wechat_hwnd)
-            if wechat_hwnd:
-                if sub_exe_process:
-                    sub_exe_process.terminate()
+            sw_hwnd = AccOperator._get_now_login_hwnd_from_cache(
+                sw, account, all_excluded_hwnds)
+            if sw_hwnd is None:
+                # 从精确类名未能获取,只能用类名通配模式来获取,并缓存起来
+                sw_hwnd, class_name = hwnd_utils.wait_hwnd_exclusively_by_pid_and_class_wildcards(
+                    all_excluded_hwnds, sw_proc_pid, [login_wnd_class])
+                if class_name is not None:
+                    subfunc_file.update_sw_acc_data(sw, account, login_wnd_class=class_name)
+            if sub_proc:
+                sub_proc.terminate()
+            if sw_hwnd:
                 time.sleep(1)
-                hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(wechat_hwnd, root.winfo_id())
+                hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(sw_hwnd, root.winfo_id())
                 if messagebox.askyesno("确认", "是否为对应的账号？"):
                     success, result = AccOperator.operate_acc_config('add', sw, account)
                     if success is True:
                         created_list_text = "\n".join(result)
                         messagebox.showinfo("成功", f"已生成：\n{created_list_text}")
-                hwnd_utils.close_by_wnd_class(login_wnd_class)
+                hwnd_utils.close_a_wnd_by_win32_classname(login_wnd_class)
             else:
                 messagebox.showerror("错误", "打开登录窗口失败")
         root.after(0, login_ui.refresh_frame, sw)
@@ -426,32 +456,16 @@ class AccOperator:
     def _quit_accounts(sw, accounts):
         quited_accounts = []
         for account in accounts:
-            try:
-                pid, = subfunc_file.get_sw_acc_data(sw, account, pid=None)
-                display_name = AccInfoFunc.get_acc_origin_display_name(sw, account)
-                cleaned_display_name = StringUtils.clean_texts(display_name)
-                executable_name, = subfunc_file.get_remote_cfg(sw, executable=None)
-                process = psutil.Process(pid)
-                if process_utils.is_pid_alive(pid) and process.name() == executable_name:
-                    startupinfo = None
-                    if sys.platform == 'win32':
-                        startupinfo = subprocess.STARTUPINFO()
-                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-                    result = subprocess.run(
-                        ['taskkill', '/T', '/F', '/PID', f'{pid}'],
-                        startupinfo=startupinfo,
-                        capture_output=True,
-                        text=True
-                    )
-                    if result.returncode == 0:
-                        print(f"结束了 {pid} 的进程树")
-                        quited_accounts.append(f"[{cleaned_display_name}: {pid}]")
-                    else:
-                        print(f"无法结束 PID {pid} 的进程树，错误：{result.stderr.strip()}")
-                else:
-                    print(f"进程 {pid} 已经不存在。")
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
+            pid, = subfunc_file.get_sw_acc_data(sw, account, pid=None)
+            display_name = AccInfoFunc.get_acc_origin_display_name(sw, account)
+            cleaned_display_name = StringUtils.clean_texts(display_name)
+            executable_wildcards, = subfunc_file.get_remote_cfg(
+                sw, executable_wildcards=None)
+            if isinstance(executable_wildcards, list):
+                success = process_utils.psutil_kill_process_tree_if_matched_in_wildcards(pid, executable_wildcards)
+                if success is True:
+                    quited_accounts.append(f"[{cleaned_display_name}: {pid}]")
+                    subfunc_file.update_sw_acc_data(sw, account, pid=None)
         return quited_accounts
 
     @staticmethod
@@ -709,8 +723,8 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
 
         # 互斥体名称列表
         mutex_names = []
-        lock_handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=[])
-        for handle_regex_dict in lock_handle_regex_list:
+        mutant_handle_infos, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=[])
+        for handle_regex_dict in mutant_handle_infos:
             print(handle_regex_dict)
             mutex_name = handle_regex_dict.get("handle_name")
             mutex_names.append(mutex_name)
@@ -742,6 +756,29 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
                     err_dict[f"{sw / acc}"] = e
         success = len(err_dict) == 0
         return success, err_dict
+
+    @staticmethod
+    def kill_mutex_of_pid(sw, acc):
+        """关闭指定进程的所有互斥体"""
+        pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
+        if pid is None:
+            return False
+        handle_regex_list, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=None)
+        if handle_regex_list is None:
+            return True
+        handle_names = [handle["handle_name"] for handle in handle_regex_list]
+        if handle_names is None or len(handle_names) == 0:
+            return True
+        success = handle_utils.pywinhandle_close_handles(
+            handle_utils.pywinhandle_find_handles_by_pids_and_handle_names(
+                [pid],
+                handle_names
+            )
+        )
+        print(f"kill mutex: {success}")
+        if success:
+            subfunc_file.update_sw_acc_data(sw, acc, has_mutex=False)
+        return success
 
 
 class AccInfoFunc:
@@ -914,10 +951,10 @@ class AccInfoFunc:
             cfg_basename = f"{account}_{cfg_basename}"
             acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), cfg_basename)
                             .replace("\\", "/"))
-            # 如果存在旧版配置,重命名为新版
-            if os.path.exists(old_acc_cfg_path):
-                os.rename(old_acc_cfg_path, acc_cfg_path)
-                print(f"重命名旧版配置文件：{old_acc_cfg_path} -> {acc_cfg_path}")
+            # 如果无新版配置但存在旧版配置，复制为新版
+            if os.path.exists(old_acc_cfg_path) and not os.path.exists(acc_cfg_path):
+                shutil.copy2(old_acc_cfg_path, acc_cfg_path)
+                print(f"复制旧版配置文件：{old_acc_cfg_path} -> {acc_cfg_path}")
 
         cfg_basename = cfg_basename_list[0]
         cfg_basename = f"{account}_{cfg_basename}"
@@ -1074,6 +1111,13 @@ class AccInfoFunc:
         return FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_curr_wx_id_from_config_file(sw, data_dir)
 
     @staticmethod
+    def is_acc_coexist(sw, acc):
+        acc_dict = subfunc_file.get_sw_acc_data(sw, acc)
+        if not isinstance(acc_dict, dict) or "linked_acc" not in acc_dict:
+            return False
+        return True
+
+    @staticmethod
     def get_real_acc(sw, acc):
         acc_dict = subfunc_file.get_sw_acc_data(sw, acc)
         if not isinstance(acc_dict, dict):
@@ -1084,7 +1128,7 @@ class AccInfoFunc:
 
     @staticmethod
     def _update_acc_list_by_pid(pid: int, data_dir, pid_acc_dict, exclude_folders):
-        """为存在的微信进程匹配出对应的账号，并更新[已登录账号]和[(已登录进程,账号)]"""
+        """为存在的进程匹配出对应的账号，并更新[已登录账号]和[(已登录进程,账号)]"""
 
         def identify_by_file(file):
             # print(process_id, f)
@@ -1128,6 +1172,40 @@ class AccInfoFunc:
             logger.error(f"发生意外错误: {e}")
 
     @staticmethod
+    def _link_acc_to_coexist_exe(sw, pid_acc_dict, executable_wildcards):
+        # 共存程序,将账号id赋给共存字典,将共存id赋给账号id
+        origin_exe, = subfunc_file.get_remote_cfg(sw, executable=None)
+        if origin_exe is None:
+            raise Exception("无法区分共存程序")
+        for pid, acc in pid_acc_dict.items():
+            pid_exe = process_utils.get_exe_name_by_pid(pid)
+            for wildcard in executable_wildcards:
+                if fnmatch(pid_exe, wildcard) and pid_exe != origin_exe:
+                    # 只筛选出共存但不是原生程序的
+                    subfunc_file.update_sw_acc_data(sw, pid_exe, linked_acc=acc)
+                    pid_acc_dict[pid] = pid_exe
+                    break
+
+    @staticmethod
+    def _get_all_coexist_acc_and_let_dist_exists(sw, inst_dir, executable_wildcards):
+        """获取所有的共存程序,并在字典中确保存在对应的账号节点和 linked_acc 属性"""
+        # 处理共存版账号,创建字典和节点
+        all_exes = file_utils.get_file_names_matching_wildcards(executable_wildcards, inst_dir)
+        origin_exe, = subfunc_file.get_remote_cfg(sw, executable=None)
+        all_coexist_exes = []
+        for coexist_exe in all_exes:
+            if coexist_exe == origin_exe:
+                continue
+            all_coexist_exes.append(coexist_exe)
+            coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
+            if not isinstance(coexist_exe_dict, dict):
+                subfunc_file.update_sw_acc_data(sw, **{coexist_exe: {}})
+            coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
+            if "linked_acc" not in coexist_exe_dict:
+                subfunc_file.update_sw_acc_data(sw, coexist_exe, linked_acc=None)
+        return all_coexist_exes
+
+    @staticmethod
     def get_sw_acc_list(_root, root_class, sw):
         """
         获取账号及其登录情况
@@ -1142,102 +1220,82 @@ class AccInfoFunc:
         inst_dir = os.path.dirname(inst_path)
         if data_dir is None or os.path.isdir(data_dir) is False:
             return False, "数据路径不存在"
-        exe, excluded_dirs, coexist_exe_regex = subfunc_file.get_remote_cfg(
-            sw, executable=None, excluded_dir_list=None, coexist_exe_regex=None)
-        if exe is None or excluded_dirs is None:
+        origin_exe, excluded_dirs, executable_wildcards, origin_login_wnd_class = subfunc_file.get_remote_cfg(
+            sw,
+            executable=None,
+            excluded_dir_list=None,
+            executable_wildcards=None,
+            login_wnd_class=None,
+        )
+        if not isinstance(executable_wildcards, list):
             messagebox.showerror("错误", f"{sw}平台未适配")
             return False, "该平台未适配"
 
         start_time = time.time()
         pid_acc_dict = {}
 
-        # 获取在线进程及对应的账号
-        pids = []
-        pids.extend(process_utils.get_pids_by_name_pattern_psutil(exe))
-        pids.extend(process_utils.get_pids_by_name_pattern_psutil(coexist_exe_regex))
-        pids = process_utils.remove_child_pids(pids)
-        pids = process_utils.remove_pids_not_in_path(pids, inst_dir)
+        # 获取在线进程及对应的账号字典 pid_acc_dict --------------------------------------------
+        pids = SwInfoFunc.get_sw_all_exe_pids(sw)
         print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
+        Printer().debug(pids)
         if isinstance(pids, Iterable):
-            Printer().debug(pids)
             for pid in pids:
                 AccInfoFunc._update_acc_list_by_pid(pid, data_dir, pid_acc_dict, excluded_dirs)
         Printer().debug(pid_acc_dict)
-
-        # 对字典进行处理:若pid对应共存程序,则将账号id赋给共存字典,将共存id赋给账号id
-        if coexist_exe_regex is not None:
-            for pid, acc in pid_acc_dict.items():
-                pid_exe = process_utils.get_exe_name_by_pid(pid)
-                if fnmatch(pid_exe, coexist_exe_regex):
-                    subfunc_file.update_sw_acc_data(sw, pid_exe, linked_acc=acc)
-                    pid_acc_dict[pid] = pid_exe
+        # 对 pid_acc_dict 字典中的账号匹配共存程序 --------------------------------------------
+        AccInfoFunc._link_acc_to_coexist_exe(sw, pid_acc_dict, executable_wildcards)
         Printer().debug(pid_acc_dict)
-
-        # 得到在线与离线账号
+        # 得到所有账号列表,并存入结果集 --------------------------------------------
         acc_dirs_set = set(
             item for item in os.listdir(data_dir)
             if os.path.isdir(os.path.join(data_dir, item))
         ) - set(excluded_dirs)
-        if coexist_exe_regex is not None:
-            # 处理共存版程序转移,将账号信息挂载到共存程序中
-            all_coexist_exes = file_utils.get_matching_exe_names(coexist_exe_regex, inst_dir)
-            for coexist_exe in all_coexist_exes:
-                coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
-                if not isinstance(coexist_exe_dict, dict):
-                    subfunc_file.update_sw_acc_data(sw, **{coexist_exe: {}})
-                coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
-                if "linked_acc" not in coexist_exe_dict:
-                    subfunc_file.update_sw_acc_data(sw, coexist_exe, linked_acc=None)
+        if executable_wildcards is not None:
+            # 处理共存版账号,确保创建字典和节点
+            all_coexist_exes = AccInfoFunc._get_all_coexist_acc_and_let_dist_exists(sw, inst_dir, executable_wildcards)
+            Printer().debug(all_coexist_exes)
             acc_dirs_set.update(all_coexist_exes)
+        all_acc_list = list(acc_dirs_set)
         logins_set = set(pid_acc_dict.values())
         logins = list(logins_set & acc_dirs_set)
         logouts = list(acc_dirs_set - logins_set)
-        # print(f"完成账号分类，用时：{time.time() - start_time:.4f} 秒")
-        Printer().debug(logins, logouts)
-
-        # 反转字典,更新账号数据
+        acc_list_dict = {"login": logins, "logout": logouts}
+        Printer().debug(acc_list_dict)
+        # 反转字典,更新账号数据 --------------------------------------------
         acc_pid_dict = dict()
         for k, v in pid_acc_dict.items():
             acc_pid_dict[v] = k
         Printer().debug(acc_pid_dict)
+        # 先从pid_mutex加载回互斥体情况,再更新
+        _, has_mutex = subfunc_file.update_has_mutex_from_pid_mutex(sw)
         multirun_mode = sw_class.multirun_mode
-        if multirun_mode == MultirunMode.FREELY_MULTIRUN:
-            # print(f"由于是全局多开模式，直接所有has_mutex都为false")
-            for acc in logins + logouts:
-                subfunc_file.update_sw_acc_data(sw, acc, pid=acc_pid_dict.get(acc, None), has_mutex=False)
-            has_mutex = False
-        else:
-            for acc in logins + logouts:
-                pid = acc_pid_dict.get(acc, None)
-                if pid is None:
-                    subfunc_file.update_sw_acc_data(sw, acc, has_mutex=None)
+        for acc in all_acc_list:
+            pid = acc_pid_dict.get(acc, None)
+            if pid is None:
+                subfunc_file.update_sw_acc_data(sw, acc, pid=None, has_mutex=False)
+            else:
                 subfunc_file.update_sw_acc_data(sw, acc, pid=pid)
-            # 更新json表中各微信进程的互斥体情况
-            _, has_mutex = subfunc_file.update_has_mutex_from_pid_mutex(sw)
-        # print(f"完成记录账号对应pid，用时：{time.time() - start_time:.4f} 秒")
-        acc_list_dict = {
-            "login": logins,
-            "logout": logouts
-        }
-        Printer().debug(acc_list_dict, pid_acc_dict, has_mutex)
+                if multirun_mode == MultirunMode.FREELY_MULTIRUN:
+                    subfunc_file.update_sw_acc_data(sw, acc, has_mutex=False)
+        # 对账号添加窗口类名属性
+        for acc in all_acc_list:
+            login_wnd_class, = subfunc_file.get_sw_acc_data(sw, acc, login_wnd_class=None)
+            if login_wnd_class is None:
+                subfunc_file.update_sw_acc_data(sw, acc, login_wnd_class=origin_login_wnd_class)
         return True, (acc_list_dict, has_mutex)
 
     @staticmethod
     def get_main_hwnd_of_accounts(sw, acc_list):
-        Printer().debug(sw, acc_list)
-        coexist_main_wnd_class_regexes, = subfunc_file.get_remote_cfg(
-            sw, coexist_main_wnd_class_regexes=None)
-        if coexist_main_wnd_class_regexes is None:
+        # Printer().debug(sw, acc_list)
+        main_wildcards, = subfunc_file.get_remote_cfg(
+            sw, main_wnd_class_wildcards=None)
+        if main_wildcards is None:
             messagebox.showerror("错误", f"{sw}平台未适配")
             return False
         for acc in acc_list:
             correct_hwnd = None
             pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
-            hwnd_list = []
-            for regex in coexist_main_wnd_class_regexes:
-                hwnd_list = hwnd_utils.get_hwnd_list_by_pid_and_class_wildcard(pid, regex)
-                if len(hwnd_list) > 0:
-                    break
+            hwnd_list = hwnd_utils.uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, main_wildcards)
             Printer().debug(pid, hwnd_list)
             if len(hwnd_list) == 0:
                 continue
@@ -1271,24 +1329,12 @@ class AccInfoFunc:
         # 判断hwnd是否属于指定的pid
         if hwnd_utils.get_hwnd_details_of_(hwnd)["pid"] != pid:
             return False
-        expected_classes, = subfunc_file.get_remote_cfg(sw, coexist_main_wnd_class_regexes=None)
+        expected_classes, = subfunc_file.get_remote_cfg(sw, main_wnd_class_wildcards=None)
         class_name = win32gui.GetClassName(hwnd)
         for expected_class in expected_classes:
-            regex = StringUtils.wildcard_to_regex(expected_class)
-            # print(expected_class, class_name)
-            if sw == SW.WEIXIN or sw == SW.TIM:
-                if not re.fullmatch(regex, class_name):
-                    continue
-                # 新版微信需要通过窗口控件判定
-                style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
-                # 检查是否有最大化按钮
-                has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
-                # print("有最大化按钮", hwnd, has_maximize)
-                return has_maximize
-            else:
-                if re.fullmatch(regex, class_name):
-                    return True
-                continue
+            if fnmatch(class_name, expected_class):
+                return True
+            continue
         return False
 
     @staticmethod

@@ -875,6 +875,10 @@
         }
     },
     "WeChat": {
+        "coexist": {
+            "exe_wildcards": "WeChat?.exe",
+            "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+        },
         "multirun": {
             "channel": {
                 "default": {
@@ -882,6 +886,13 @@
                     "introduce": "可以在全局进行多开",
                     "author": [
                         "huiyadanli"
+                    ]
+                },
+                "default2": {
+                    "label": "默认2",
+                    "introduce": "可以在全局进行多开",
+                    "author": [
+                        "afaa1991"
                     ]
                 }
             },
@@ -911,302 +922,292 @@
                 "3.9.12.51": {
                     "default": {
                         "original": [
-                            "0f 84 bd 00 00 00 ff 15 44 d5 6d 01"
+                            "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
                         ],
                         "modified": [
-                            "90 e9 bd 00 00 00 ff 15 44 d5 6d 01"
+                            "E9 BE 00 00 00 00 FF 15 44 D5 6D 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 44 D5 6D 01"
+                        ]
+                    }
+                },
+                "3.9.12.45": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 F4 C3 6D 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 F4 C3 6D 01"
+                        ]
+                    }
+                },
+                "3.9.12.37": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 A4 FD 6D 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 A4 FD 6D 01"
+                        ]
+                    }
+                },
+                "3.9.12.31": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 24 00 6E 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 24 00 6E 01"
+                        ]
+                    }
+                },
+                "3.9.12.19": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 94 AE 65 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 94 AE 65 01"
+                        ]
+                    }
+                },
+                "3.9.12.17": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 C4 A8 65 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 C4 A8 65 01"
+                        ]
+                    }
+                },
+                "3.9.12.15": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 A4 64 65 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 A4 64 65 01"
+                        ]
+                    }
+                },
+                "3.9.12.11": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 84 5F 65 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 84 5F 65 01"
+                        ]
+                    }
+                },
+                "3.9.12.9": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 24 65 65 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 24 65 65 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 24 65 65 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 24 65 65 01"
+                        ]
+                    }
+                },
+                "3.9.11.25": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 F4 24 65 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 F4 24 65 01"
+                        ]
+                    }
+                },
+                "3.9.11.23": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 64 1F 65 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 64 1F 65 01"
+                        ]
+                    }
+                },
+                "3.9.11.19": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 24 99 63 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 24 99 63 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 24 99 63 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 24 99 63 01"
+                        ]
+                    }
+                },
+                "3.9.11.17": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 14 99 63 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 14 99 63 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 14 99 63 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 14 99 63 01"
+                        ]
+                    }
+                },
+                "3.9.11.9": {
+                    "default": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 D4 58 62 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 D4 58 62 01"
+                        ]
+                    }
+                },
+                "3.9.10.27": {
+                    "default": {
+                        "original": [
+                            "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 8F 6F D7 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 8F 6F D7 01"
+                        ]
+                    }
+                },
+                "3.9.10.19": {
+                    "default": {
+                        "original": [
+                            "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
+                        ],
+                        "modified": [
+                            "E9 BE 00 00 00 00 FF 15 8F 76 D7 01"
+                        ]
+                    },
+                    "default2": {
+                        "original": [
+                            "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
+                        ],
+                        "modified": [
+                            "90 E9 BD 00 00 00 FF 15 8F 76 D7 01"
                         ]
                     }
                 }
-            },
-            "3.9.12.51": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 44 D5 6D 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 44 D5 6D 01"
-                    ]
-                }
-            ],
-            "3.9.12.45": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 F4 C3 6D 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 F4 C3 6D 01"
-                    ]
-                }
-            ],
-            "3.9.12.37": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 A4 FD 6D 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 A4 FD 6D 01"
-                    ]
-                }
-            ],
-            "3.9.12.31": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 24 00 6E 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 24 00 6E 01"
-                    ]
-                }
-            ],
-            "3.9.12.19": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 94 AE 65 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 94 AE 65 01"
-                    ]
-                }
-            ],
-            "3.9.12.17": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 C4 A8 65 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 C4 A8 65 01"
-                    ]
-                }
-            ],
-            "3.9.12.15": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 A4 64 65 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 A4 64 65 01"
-                    ]
-                }
-            ],
-            "3.9.12.11": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 84 5F 65 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 84 5F 65 01"
-                    ]
-                }
-            ],
-            "3.9.12.9": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 24 65 65 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 24 65 65 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 24 65 65 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 24 65 65 01"
-                    ]
-                }
-            ],
-            "3.9.11.25": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 F4 24 65 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 F4 24 65 01"
-                    ]
-                }
-            ],
-            "3.9.11.23": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 64 1F 65 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 64 1F 65 01"
-                    ]
-                }
-            ],
-            "3.9.11.19": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 24 99 63 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 24 99 63 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 24 99 63 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 24 99 63 01"
-                    ]
-                }
-            ],
-            "3.9.11.17": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 14 99 63 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 14 99 63 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 14 99 63 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 14 99 63 01"
-                    ]
-                }
-            ],
-            "3.9.11.9": [
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 D4 58 62 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 D4 58 62 01"
-                    ]
-                }
-            ],
-            "3.9.10.27": [
-                {
-                    "original": [
-                        "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 8F 6F D7 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 8F 6F D7 01"
-                    ]
-                }
-            ],
-            "3.9.10.19": [
-                {
-                    "original": [
-                        "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
-                    ],
-                    "modified": [
-                        "E9 BE 00 00 00 00 FF 15 8F 76 D7 01"
-                    ]
-                },
-                {
-                    "original": [
-                        "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
-                    ],
-                    "modified": [
-                        "90 E9 BD 00 00 00 FF 15 8F 76 D7 01"
-                    ]
-                }
-            ]
+            }
         },
         "anti-revoke": {
             "channel": {
@@ -1235,214 +1236,204 @@
                 "3.9.12.51": {
                     "alert": {
                         "original": [
-                            "c0 0f 84 3a fd ff ff eb bf 41 8b 00 24 0f 3c 02"
+                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
                         ],
                         "modified": [
-                            "c0 0f 84 3a fd ff ff 90 90 41 8b 00 24 0f 3c 02"
+                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.12.45": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.12.37": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.12.31": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.12.19": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.12.17": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.12.15": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.12.11": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.12.9": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.11.25": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.11.23": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.11.19": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.11.17": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.11.9": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.10.27": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.10.19": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.9.43": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.9.35": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.9.27": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                        ]
+                    }
+                },
+                "3.9.8.25": {
+                    "alert": {
+                        "original": [
+                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                        ],
+                        "modified": [
+                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
                         ]
                     }
                 }
-            },
-            "3.9.12.51": [
-                {
-                    "original": [
-                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.12.45": [
-                {
-                    "original": [
-                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.12.37": [
-                {
-                    "original": [
-                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.12.31": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.12.19": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.12.17": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.12.15": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.12.11": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.12.9": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.11.25": [
-                {
-                    "original": [
-                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.11.23": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.11.19": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.11.17": [
-                {
-                    "original": [
-                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.11.9": [
-                {
-                    "original": [
-                        "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.10.27": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.10.19": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.9.43": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.9.35": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.9.27": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ],
-            "3.9.8.25": [
-                {
-                    "original": [
-                        "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                    ],
-                    "modified": [
-                        "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                    ]
-                }
-            ]
+            }
         },
         "redundant_wnd_class": [
             "WeChatLoginWndForPC"
@@ -1452,7 +1443,10 @@
         ],
         "label": "微信",
         "executable": "WeChat.exe",
-        "executable_wildcards": ["WeChat.exe", "WeChat?.exe"],
+        "executable_wildcards": [
+            "WeChat.exe",
+            "WeChat?.exe"
+        ],
         "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
         "data_dir_guess_suffix": "Tencent\\WeChat",
         "data_dir_check_suffix": "All Users",
@@ -1461,7 +1455,7 @@
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",
         "user_reg_sub_key": "Software\\Tencent\\WeChat",
         "data_dir_name": "WeChat Files",
-        "lock_handle_regex_list": [
+        "mutant_handle_infos": [
             {
                 "handle_name": "_WeChat_App_Instance_Identity_Mutex_Name",
                 "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
@@ -1469,6 +1463,8 @@
         ],
         "cfg_handle_regex_list": [
         ],
+        "mutant_handle_wildcards": ["_WeChat_App_Instance_Identity_Mutex_Name"],
+        "config_handle_wildcards": ["config.data"],
         "login_wnd_class": "WeChatLoginWndForPC",
         "login_wnd_class_wildcards": [
             "?eChatLoginWndForPC"
@@ -1499,22 +1495,27 @@
     },
     "Weixin": {
         "coexist": {
-            "4.0.5": [
-                {
-                    "original": [
-                        "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 EF 4A CC 08 C7 05 ED 4A CC 08 6F 6E 66 69 66 C7 05 E8 4A CC 08 67 00",
-                        "62 00 61 00 63 00 6B 00 75 00 70 00 00 00 58 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00",
-                        "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 77 00 00 00 74 00 6D 00 70 00",
-                        "25 5F 00 00 00 00 00 00 2F 68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C 00 00 00 00 00 00 6D"
-                    ],
-                    "modified": [
-                        "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 EF 4A CC 08 C7 05 ED 4A CC 08 6F 6E 66 {ord(n):02X} 66 C7 05 E8 4A CC 08 67 00",
-                        "62 00 61 00 63 00 6B 00 75 00 70 00 00 00 {ord(n):02X} 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00",
-                        "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 {ord(n):02X} 00 00 00 74 00 6D 00 70 00",
-                        "25 5F 00 00 00 00 00 00 2F 68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D {ord(n):02X} 00 00 00 00 00 00 6D"
-                    ]
+            "exe_wildcards": "Weixin?.exe",
+            "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+            "feature": {
+                "4.0.5": {
+                    "default": {
+                        "original": [
+                            "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 EF 4A CC 08 C7 05 ED 4A CC 08 6F 6E 66 69 66 C7 05 E8 4A CC 08 67 00",
+                            "62 00 61 00 63 00 6B 00 75 00 70 00 00 00 58 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00",
+                            "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 77 00 00 00 74 00 6D 00 70 00",
+                            "25 5F 00 00 00 00 00 00 2F 68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C 00 00 00 00 00 00 6D"
+                        ],
+                        "modified": [
+                            "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 EF 4A CC 08 C7 05 ED 4A CC 08 6F 6E 66 {ord(n):02X} 66 C7 05 E8 4A CC 08 67 00",
+                            "62 00 61 00 63 00 6B 00 75 00 70 00 00 00 {ord(n):02X} 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00",
+                            "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 {ord(n):02X} 00 00 00 74 00 6D 00 70 00",
+                            "25 5F 00 00 00 00 00 00 2F 68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D {ord(n):02X} 00 00 00 00 00 00 6D"
+                        ]
+                    }
                 }
-            ]
+            }
+
         },
         "multirun": {
             "channel": {
@@ -1626,37 +1627,7 @@
                         ]
                     }
                 },
-                "4.0.5.17": {
-                    "default": {
-                        "original": [
-                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ],
-                        "modified": [
-                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ]
-                    }
-                },
-                "4.0.5.16": {
-                    "default": {
-                        "original": [
-                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ],
-                        "modified": [
-                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ]
-                    }
-                },
-                "4.0.5.15": {
-                    "default": {
-                        "original": [
-                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ],
-                        "modified": [
-                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ]
-                    }
-                },
-                "4.0.5.13": {
+                "4.0.3.43": {
                     "default": {
                         "original": [
                             "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
@@ -1665,168 +1636,118 @@
                             "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
                         ]
                     }
+                },
+                "4.0.3.42": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ],
+                        "modified": [
+                            "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ]
+                    }
+                },
+                "4.0.3.22": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ],
+                        "modified": [
+                            "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ]
+                    }
+                },
+                "4.0.3.19": {
+                    "default": {
+                        "original": [
+                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ],
+                        "modified": [
+                            "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                        ]
+                    }
+                },
+                "4.0.2.28": {
+                    "default": {
+                        "original": [
+                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ],
+                        "modified": [
+                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ]
+                    }
+                },
+                "4.0.2.26": {
+                    "default": {
+                        "original": [
+                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ],
+                        "modified": [
+                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ]
+                    }
+                },
+                "4.0.2.20": {
+                    "default": {
+                        "original": [
+                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ],
+                        "modified": [
+                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ]
+                    }
+                },
+                "4.0.2.17": {
+                    "default": {
+                        "original": [
+                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ],
+                        "modified": [
+                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ]
+                    }
+                },
+                "4.0.2.13": {
+                    "default": {
+                        "original": [
+                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ],
+                        "modified": [
+                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                        ]
+                    }
+                },
+                "4.0.1.20": {
+                    "default": {
+                        "original": [
+                            "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 75 0F"
+                        ],
+                        "modified": [
+                            "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 EB 0F"
+                        ]
+                    }
+                },
+                "4.0.1.13": {
+                    "default": {
+                        "original": [
+                            "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 75 0F"
+                        ],
+                        "modified": [
+                            "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 EB 0F"
+                        ]
+                    }
+                },
+                "4.0.1.11": {
+                    "default": {
+                        "original": [
+                            "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 75 0F"
+                        ],
+                        "modified": [
+                            "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 EB 0F"
+                        ]
+                    }
                 }
-            },
-            "4.0.5.17": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                    ],
-                    "modified": [
-                        "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                    ]
-                }
-            ],
-            "4.0.5.16": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                    ],
-                    "modified": [
-                        "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                    ]
-                }
-            ],
-            "4.0.5.15": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                    ],
-                    "modified": [
-                        "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                    ]
-                }
-            ],
-            "4.0.5.13": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ],
-                    "modified": [
-                        "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ]
-                }
-            ],
-            "4.0.3.43": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ],
-                    "modified": [
-                        "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ]
-                }
-            ],
-            "4.0.3.42": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ],
-                    "modified": [
-                        "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ]
-                }
-            ],
-            "4.0.3.22": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ],
-                    "modified": [
-                        "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ]
-                }
-            ],
-            "4.0.3.19": [
-                {
-                    "original": [
-                        "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ],
-                    "modified": [
-                        "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                    ]
-                }
-            ],
-            "4.0.2.28": [
-                {
-                    "original": [
-                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ],
-                    "modified": [
-                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ]
-                }
-            ],
-            "4.0.2.26": [
-                {
-                    "original": [
-                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ],
-                    "modified": [
-                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ]
-                }
-            ],
-            "4.0.2.20": [
-                {
-                    "original": [
-                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ],
-                    "modified": [
-                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ]
-                }
-            ],
-            "4.0.2.17": [
-                {
-                    "original": [
-                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ],
-                    "modified": [
-                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ]
-                }
-            ],
-            "4.0.2.13": [
-                {
-                    "original": [
-                        "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ],
-                    "modified": [
-                        "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                    ]
-                }
-            ],
-            "4.0.1.20": [
-                {
-                    "original": [
-                        "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 75 0F"
-                    ],
-                    "modified": [
-                        "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 EB 0F"
-                    ]
-                }
-            ],
-            "4.0.1.13": [
-                {
-                    "original": [
-                        "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 75 0F"
-                    ],
-                    "modified": [
-                        "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 EB 0F"
-                    ]
-                }
-            ],
-            "4.0.1.11": [
-                {
-                    "original": [
-                        "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 75 0F"
-                    ],
-                    "modified": [
-                        "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 EB 0F"
-                    ]
-                }
-            ]
+            }
         },
         "anti-revoke": {
             "channel": {
@@ -2142,370 +2063,117 @@
                         ]
                     }
                 },
-                "4.0.5.17": {
-                    "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 71 12 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
-                    },
+                "4.0.3.22": {
                     "silence": {
                         "original": [
-                            "74 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
+                            "74 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
                         ],
                         "modified": [
-                            "eb 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
+                            "EB 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
                         ]
                     }
                 },
-                "4.0.5.16": {
-                    "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 61 11 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
-                    },
+                "4.0.3.19": {
                     "silence": {
                         "original": [
-                            "74 6e 48 8d 8d 28 04 00 00 e8 80 f2 d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 7d 3b 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 9a c3 31 fe 48 8d 8d b0 00 00 00 e8 7e 08 06 fe"
+                            "74 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
                         ],
                         "modified": [
-                            "eb 6e 48 8d 8d 28 04 00 00 e8 80 f2 d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 7d 3b 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 9a c3 31 fe 48 8d 8d b0 00 00 00 e8 7e 08 06 fe"
+                            "EB 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
                         ]
                     }
                 },
-                "4.0.5.15": {
-                    "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 b1 31 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
-                    },
+                "4.0.2.28": {
                     "silence": {
                         "original": [
-                            "74 6e 48 8d 8d 28 04 00 00 e8 40 37 d4 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 7e 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 aa 06 32 fe 48 8d 8d b0 00 00 00 e8 8e 4b 06 fe"
+                            "74 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
                         ],
                         "modified": [
-                            "eb 6e 48 8d 8d 28 04 00 00 e8 40 37 d4 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 7e 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 aa 06 32 fe 48 8d 8d b0 00 00 00 e8 8e 4b 06 fe"
+                            "EB 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
                         ]
                     }
                 },
-                "4.0.5.13": {
-                    "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 41 78 f6 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
-                    },
+                "4.0.2.26": {
                     "silence": {
                         "original": [
-                            "74 6e 48 8d 8d 28 04 00 00 e8 10 8a d1 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 9d e8 01 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 3a 5f 2f fe 48 8d 8d b0 00 00 00 e8 9e b5 03 fe"
+                            "74 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
                         ],
                         "modified": [
-                            "eb 6e 48 8d 8d 28 04 00 00 e8 10 8a d1 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 9d e8 01 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 3a 5f 2f fe 48 8d 8d b0 00 00 00 e8 9e b5 03 fe"
+                            "EB 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
                         ]
                     }
                 },
-                "4.0.3.43": {
-                    "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 91 58 00 ff 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
-                    },
+                "4.0.2.20": {
                     "silence": {
                         "original": [
-                            "74 6e 48 8d 8d 28 04 00 00 e8 b0 44 e8 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 0d b9 17 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 6a 74 44 fe 48 8d 8d b0 00 00 00 e8 ee 37 e6 fd"
+                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
                         ],
                         "modified": [
-                            "eb 6e 48 8d 8d 28 04 00 00 e8 b0 44 e8 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 0d b9 17 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 6a 74 44 fe 48 8d 8d b0 00 00 00 e8 ee 37 e6 fd"
+                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
                         ]
                     }
                 },
-                "4.0.3.42": {
-                    "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 c1 4d 00 ff 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
-                    },
+                "4.0.2.17": {
                     "silence": {
                         "original": [
-                            "74 6e 48 8d 8d 28 04 00 00 e8 b0 65 e8 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 5d d3 17 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 7a 75 44 fe 48 8d 8d b0 00 00 00 e8 ee 58 e6 fd"
+                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
                         ],
                         "modified": [
-                            "eb 6e 48 8d 8d 28 04 00 00 e8 b0 65 e8 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 5d d3 17 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 7a 75 44 fe 48 8d 8d b0 00 00 00 e8 ee 58 e6 fd"
+                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
+                        ]
+                    }
+                },
+                "4.0.2.13": {
+                    "silence": {
+                        "original": [
+                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
+                        ],
+                        "modified": [
+                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
+                        ]
+                    }
+                },
+                "4.0.1.20": {
+                    "silence": {
+                        "original": [
+                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
+                        ],
+                        "modified": [
+                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
+                        ]
+                    }
+                },
+                "4.0.1.13": {
+                    "silence": {
+                        "original": [
+                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
+                        ],
+                        "modified": [
+                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
+                        ]
+                    }
+                },
+                "4.0.1.11": {
+                    "silence": {
+                        "original": [
+                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
+                        ],
+                        "modified": [
+                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
                         ]
                     }
                 }
-            },
-            "4.0.5.17": [
-                {
-                    "original": [
-                        "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                        "e8 71 12 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                        "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                        "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                    ],
-                    "modified": [
-                        "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                        "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                        "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                        "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                    ]
-                }
-            ],
-            "4.0.5.16": [
-                {
-                    "original": [
-                        "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                        "e8 61 11 f9 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                        "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                        "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                    ],
-                    "modified": [
-                        "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                        "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                        "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                        "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                    ]
-                }
-            ],
-            "4.0.5.15": [
-                {
-                    "original": [
-                        "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                        "E8 B1 31 F9 FE 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                        "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
-                        "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
-                    ],
-                    "modified": [
-                        "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
-                        "8B B5 20 04 00 00 81 C6 12 27 00 00 F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                        "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 5D 00",
-                        "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 BC 8C"
-                    ]
-                }
-            ],
-            "4.0.5.13": [
-                {
-                    "original": [
-                        "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                        "E8 41 78 F6 FE 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                        "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
-                        "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
-                    ],
-                    "modified": [
-                        "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
-                        "8B B5 20 04 00 00 81 C6 12 27 00 00 F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                        "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 5D 00",
-                        "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 BC 8C"
-                    ]
-                }
-            ],
-            "4.0.3.43": [
-                {
-                    "original": [
-                        "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                        "E8 91 58 00 FF 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                        "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
-                        "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
-                    ],
-                    "modified": [
-                        "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
-                        "8B B5 20 04 00 00 81 C6 12 27 00 00 F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                        "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 5D 00",
-                        "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 BC 8C"
-                    ]
-                },
-                {
-                    "original": [
-                        "74 6E 48 8D 8D 28 04 00 00 E8 B0 44 E8 FD 48 8B"
-                    ],
-                    "modified": [
-                        "EB 6E 48 8D 8D 28 04 00 00 E8 B0 44 E8 FD 48 8B"
-                    ]
-                }
-            ],
-            "4.0.3.42": [
-                {
-                    "original": [
-                        "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                        "E8 C1 4D 00 FF 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                        "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
-                        "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
-                    ],
-                    "modified": [
-                        "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
-                        "8B B5 20 04 00 00 81 C6 12 27 00 00 F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                        "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 5D 00",
-                        "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 BC 8C"
-                    ]
-                },
-                {
-                    "original": [
-                        "74 6E 48 8D 8D 28 04 00 00 E8 B0 65 E8 FD 48 8B"
-                    ],
-                    "modified": [
-                        "EB 6E 48 8D 8D 28 04 00 00 E8 B0 65 E8 FD 48 8B"
-                    ]
-                }
-            ],
-            "4.0.3.22": [
-                {
-                    "original": [
-                        "74 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
-                    ],
-                    "modified": [
-                        "EB 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
-                    ]
-                }
-            ],
-            "4.0.3.19": [
-                {
-                    "original": [
-                        "74 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
-                    ],
-                    "modified": [
-                        "EB 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
-                    ]
-                }
-            ],
-            "4.0.2.28": [
-                {
-                    "original": [
-                        "74 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
-                    ],
-                    "modified": [
-                        "EB 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
-                    ]
-                }
-            ],
-            "4.0.2.26": [
-                {
-                    "original": [
-                        "74 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
-                    ],
-                    "modified": [
-                        "EB 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
-                    ]
-                }
-            ],
-            "4.0.2.20": [
-                {
-                    "original": [
-                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
-                    ],
-                    "modified": [
-                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
-                    ]
-                }
-            ],
-            "4.0.2.17": [
-                {
-                    "original": [
-                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
-                    ],
-                    "modified": [
-                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
-                    ]
-                }
-            ],
-            "4.0.2.13": [
-                {
-                    "original": [
-                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
-                    ],
-                    "modified": [
-                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
-                    ]
-                }
-            ],
-            "4.0.1.20": [
-                {
-                    "original": [
-                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
-                    ],
-                    "modified": [
-                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
-                    ]
-                }
-            ],
-            "4.0.1.13": [
-                {
-                    "original": [
-                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
-                    ],
-                    "modified": [
-                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
-                    ]
-                }
-            ],
-            "4.0.1.11": [
-                {
-                    "original": [
-                        "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
-                    ],
-                    "modified": [
-                        "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
-                    ]
-                }
-            ]
+            }
         },
         "redundant_wnd_class": [
             "Qt51514QWindowIcon"
         ],
         "label": "微信4.0",
         "executable": "Weixin.exe",
-        "executable_wildcards": ["Weixin?.exe", "Weixin.exe"],
+        "executable_wildcards": [
+            "Weixin?.exe",
+            "Weixin.exe"
+        ],
         "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
         "data_dir_guess_suffix": "Tencent\\Weixin",
         "data_dir_check_suffix": "all_users",
@@ -2514,26 +2182,31 @@
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Weixin",
         "user_reg_sub_key": "Software\\Tencent\\Weixin",
         "data_dir_name": "xwechat_files",
-        "lock_handle_regex_list": [
+        "mutant_handle_infos": [
             {
                 "handle_name": "lock.ini",
-                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):"
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
+                "type": "file"
             },
             {
                 "handle_name": "XWeChat_App_Instance_Identity_Mutex_Name",
-                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions",
+                "type": "mutant"
             }
         ],
         "cfg_handle_regex_list": [
             {
                 "handle_name": "global_config",
-                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):"
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
+                "type": "file"
             }
         ],
-        "login_wnd_class": "Qt51514QWindowIcon",
-        "main_wnd_class": "Qt51514QWindowIcon",
+        "mutant_handle_wildcards": ["?WeChat_App_Instance_Identity_Mutex_Name", "lock.ini"],
+        "config_handle_wildcards": ["global_conf?g"],
+        "login_wnd_class": "mmui::LoginWindow",
+        "main_wnd_class": "mmui::MainWindow",
         "main_wnd_class_wildcards": [
-            "Qt51514QWindowIcon"
+            "mmui::MainWindow"
         ],
         "config_path_suffix": "all_users\\config",
         "config_file_list": [
@@ -2559,6 +2232,10 @@
         }
     },
     "WXWork": {
+        "coexist": {
+            "exe_wildcards": "WXWork?.exe",
+            "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+        },
         "multirun": {
         },
         "anti-revoke": {
@@ -2568,7 +2245,9 @@
         ],
         "label": "企微",
         "executable": "WXWork.exe",
-        "executable_wildcards": ["WXWork.exe"],
+        "executable_wildcards": [
+            "WXWork.exe"
+        ],
         "inst_path_guess_suffix": "Tencent\\WXWork\\WXWork.exe",
         "data_dir_guess_suffix": "Tencent\\WXWork",
         "data_dir_check_suffix": "Profiles",
@@ -2577,7 +2256,7 @@
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WXWork",
         "user_reg_sub_key": "Software\\Tencent\\WXWork",
         "data_dir_name": "WXWork",
-        "lock_handle_regex_list": [
+        "mutant_handle_infos": [
             {
                 "handle_name": "Tencent.WeWork.ExclusiveObjectInstance1",
                 "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
@@ -2624,7 +2303,9 @@
         ],
         "label": "QQNT",
         "executable": "QQ.exe",
-        "executable_wildcards": ["QQ.exe"],
+        "executable_wildcards": [
+            "QQ.exe"
+        ],
         "inst_path_guess_suffix": "Tencent\\QQNT\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQNT",
         "data_dir_check_suffix": "nt_qq",
@@ -2633,7 +2314,7 @@
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQNT",
         "user_reg_sub_key": "Software\\Tencent\\QQNT",
         "data_dir_name": "QQNT",
-        "lock_handle_regex_list": [
+        "mutant_handle_infos": [
         ],
         "cfg_handle_regex_list": [
         ],
@@ -2717,7 +2398,9 @@
         "redundant_wnd_class": [],
         "label": "QQ",
         "executable": "QQ.exe",
-        "executable_wildcards": ["QQ.exe"],
+        "executable_wildcards": [
+            "QQ.exe"
+        ],
         "inst_path_guess_suffix": "Tencent\\QQ\\Bin\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQ",
         "data_dir_check_suffix": "All Users",
@@ -2726,7 +2409,7 @@
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQ",
         "user_reg_sub_key": "Software\\Tencent\\QQ",
         "data_dir_name": "Tencent Files",
-        "lock_handle_regex_list": [
+        "mutant_handle_infos": [
         ],
         "cfg_handle_regex_list": [
         ],
@@ -2809,7 +2492,9 @@
         "redundant_wnd_class": [],
         "label": "TIM",
         "executable": "TIM.exe",
-        "executable_wildcards": ["TIM.exe"],
+        "executable_wildcards": [
+            "TIM.exe"
+        ],
         "inst_path_guess_suffix": "Tencent\\TIM\\Bin\\TIM.exe",
         "data_dir_guess_suffix": "Tencent\\TIM",
         "data_dir_check_suffix": "All Users",
@@ -2818,7 +2503,7 @@
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TIM",
         "user_reg_sub_key": "Software\\Tencent\\TIM",
         "data_dir_name": "Tencent Files",
-        "lock_handle_regex_list": [
+        "mutant_handle_infos": [
         ],
         "cfg_handle_regex_list": [
         ],
@@ -2905,7 +2590,10 @@
         "redundant_wnd_class": [
         ],
         "executable": "xx.exe",
-        "executable_wildcards": ["xxx.exe", "xxx?.exe"],
+        "executable_wildcards": [
+            "xxx.exe",
+            "xxx?.exe"
+        ],
         "inst_path_guess_suffix": "Tencent\\QQ\\QQ.exe",
         "data_dir_guess_suffix": "Tencent\\QQ",
         "data_dir_check_suffix": "All Users",
@@ -2914,7 +2602,7 @@
         "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQ",
         "user_reg_sub_key": "Software\\Tencent\\QQ",
         "data_dir_name": "Tencent Files",
-        "lock_handle_regex_list": [
+        "mutant_handle_infos": [
         ],
         "cfg_handle_regex_list": [
         ],

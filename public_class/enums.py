@@ -29,6 +29,7 @@ class RemoteCfg(str, Enum):
     GLOBAL = "global"
     ALL_SW = "all_sw"
     SP_SW = "support_sw"
+    COEXIST_SEQUENCE = "coexist_sequence"
 
     REVOKE = "anti-revoke"
     MULTI = "multirun"
@@ -81,6 +82,7 @@ class LocalCfg(str, Enum):
     LOGOUT_SORT = "logout_sort"
     STATE = "state"
     NOTE = "note"
+    KILL_IDLE_LOGIN_WND = "kill_idle_login_wnd"
 
 
 class SwStates(str, Enum):

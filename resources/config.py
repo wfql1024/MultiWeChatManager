@@ -33,7 +33,8 @@ class Config:
             LocalCfg.USE_TXT_AVT: True,
             LocalCfg.USED_TRAY: False,
             LocalCfg.USED_REFRESH: False,
-            LocalCfg.USED_SIDEBAR: False
+            LocalCfg.USED_SIDEBAR: False,
+            LocalCfg.KILL_IDLE_LOGIN_WND: False,
         },
         SW.DEFAULT: {
             LocalCfg.VIEW: "tree",
@@ -41,9 +42,11 @@ class Config:
             LocalCfg.LOGOUT_SORT: "配置,False",
             LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
             LocalCfg.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
-            LocalCfg.STATE: SwStates.VISIBLE
+            LocalCfg.STATE: SwStates.VISIBLE,
         }
     }
+
+
 
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))
     PROJ_EXTERNAL_RES_PATH = fr'{PROJ_PATH}/external_res'

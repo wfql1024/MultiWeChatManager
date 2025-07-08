@@ -291,6 +291,56 @@ class WidgetUtils:
                 widget.destroy()
 
 
+class CanvasUtils:
+    @classmethod
+    def draw_rounded_rect(cls, canvas, x1, y1, x2, y2, radius, border_width=0,
+                          bg_color="#FFFFFF", border_color="#000000"):
+        """
+        在Canvas中画一个圆角矩形，可指定边框粗细和颜色。
+
+        参数:
+            canvas: Canvas对象
+            x1, y1, x2, y2: 外层矩形坐标
+            radius: 外层圆角半径
+            border_width: 边框宽度(像素)，0表示无边框
+            bg_color: 内层背景色
+            border_color: 边框颜色
+        """
+        r = min(radius, abs(x2 - x1) / 2, abs(y2 - y1) / 2)
+
+        if border_width > 0:
+            # 外层：画边框色的圆角矩形
+            cls._draw_rounded_rect(canvas, x1, y1, x2, y2, r, fill=border_color, outline="")
+            # 内层：缩小后的圆角矩形
+            bw = border_width
+            inner_w = (x2 - x1) - 2 * bw
+            inner_h = (y2 - y1) - 2 * bw
+            scale = min(inner_w, inner_h) / min((x2 - x1), (y2 - y1))
+            r_inner = max(int(r * scale + 0.5), 1)  # 四舍五入并保证至少为1
+            cls._draw_rounded_rect(canvas, x1 + bw, y1 + bw, x2 - bw, y2 - bw, r_inner, fill=bg_color, outline="")
+        else:
+            # 无边框：只画背景
+            cls._draw_rounded_rect(canvas, x1, y1, x2, y2, r, fill=bg_color, outline="")
+
+    @classmethod
+    def _draw_rounded_rect(cls, canvas, x1, y1, x2, y2, r, **kwargs):
+        """
+        实际在Canvas上画圆角矩形（四个圆+两个矩形拼接）
+        """
+        r = min(r, abs(x2 - x1) / 2, abs(y2 - y1) / 2)
+        d = r * 2
+        cx1, cx2 = x1, x2 - 1
+        cy1, cy2 = y1, y2 - 1
+        # 四个角
+        canvas.create_oval(cx1, cy1, cx1 + d, cy1 + d, **kwargs)  # 左上
+        canvas.create_oval(cx2 - d, cy1, cx2, cy1 + d, **kwargs)  # 右上
+        canvas.create_oval(cx1, cy2 - d, cx1 + d, cy2, **kwargs)  # 左下
+        canvas.create_oval(cx2 - d, cy2 - d, cx2, cy2, **kwargs)  # 右下
+        # 两个矩形
+        canvas.create_rectangle(x1 + r, y1, x2 - r, y2, **kwargs)
+        canvas.create_rectangle(x1, y1 + r, x2, y2 - r, **kwargs)
+
+
 def add_hyperlink_events(text_widget, text_content):
     """为文本框中的URL添加点击事件，并在鼠标移动到链接时变成手型"""
 

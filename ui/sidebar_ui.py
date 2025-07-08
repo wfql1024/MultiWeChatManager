@@ -40,7 +40,6 @@ class SidebarUI:
     # TODO: 若无法找到窗口，联动详情窗口来获取窗口句柄
     # TODO: 列表选中状态应该是根据目前已经链接的窗口来确定
     # TODO: 增加最大化判断
-    # TODO: 完善侧栏功能：手动登录，自动登录
     def __init__(self, wnd, title):
         self.thread_result = None
         self.find_acc_wnd_thread = None

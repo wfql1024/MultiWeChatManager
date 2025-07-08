@@ -3,6 +3,7 @@ import time
 import tkinter as tk
 from functools import partial
 from tkinter import ttk, messagebox
+import customtkinter as ctk
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
@@ -83,15 +84,15 @@ class LoginUI:
             return
         # 刷新界面
         try:
-            self.root.after(0, self.refresh_frame, self.sw)
+            self.root.after(0, self.refresh_frame)
         except Exception as e:
             logger.error(e)
-            self.root.after(3000, self.refresh_frame, self.sw)
+            self.root.after(3000, self.refresh_frame)
 
     def refresh_frame(self, sw=None):
         """加载或刷新主界面"""
         # 如果要刷新的页面不是当前选定选项卡，不用处理
-        if sw != self.sw:
+        if sw is not None and sw != self.sw:
             return
 
         def _get_data_thread(callback):
@@ -144,18 +145,37 @@ class LoginUI:
                 for widget in self.tab_frame.winfo_children():
                     widget.destroy()
 
+            ctk.set_appearance_mode("Light")
             # 底部框架=版本号+手动登录
+            # bottom_frame = ctk.CTkFrame(self.tab_frame, corner_radius=0)  # padding 参数在 CTkFrame 里没有，可用 padx/pady
+            # bottom_frame.pack(side=tk.BOTTOM, padx=5, pady=5)
+            #
+            # sw_ver = SwInfoFunc.calc_sw_ver(self.sw)
+            # if sw_ver is not None:
+            #     sw_ver_label = ctk.CTkLabel(bottom_frame, text=f"{sw_ver}", text_color="grey")
+            #     sw_ver_label.pack(side=tk.BOTTOM, pady=2)
             bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
             bottom_frame.pack(side=tk.BOTTOM)
             sw_ver = SwInfoFunc.calc_sw_ver(self.sw)
             if sw_ver is not None:
                 sw_ver_label = ttk.Label(bottom_frame, text=f"{sw_ver}", foreground="grey")
                 sw_ver_label.pack(side=tk.BOTTOM)
-            prefix = Strings.MUTEX_SIGN if has_mutex is True and self.global_settings_value.sign_vis else ""
-            manual_login_text = f"{prefix}手动登录"
-            manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
-                                             command=self.to_manual_login, style='Custom.TButton')
-            manual_login_button.pack(side=tk.BOTTOM)
+            # prefix = Strings.MUTEX_SIGN if has_mutex is True and self.global_settings_value.sign_vis else ""
+            # manual_login_text = f"{prefix}手动登录"
+            # manual_login_button = ttk.Button(bottom_frame, text=manual_login_text,
+            #                                  command=self.to_manual_login, style='Custom.TButton')
+            # manual_login_button.pack(side=tk.BOTTOM)
+
+            self.is_original = False
+
+            self.btn_switch = ttk.Button(bottom_frame, text="切换", command=self._switch_mode, width=40)
+            self.btn_switch.pack(side="left", padx=5, pady=5)
+
+            self.btn_login = ttk.Button(bottom_frame, text="共存登录", command=self.login_coexist,width=40)
+            self.btn_login.pack(side="left", expand=True, fill="x", padx=5, pady=5)
+
+            self.btn_extra = ttk.Button(bottom_frame, text="+", command=self.plus_action, width=40)
+            self.btn_extra.pack(side="left", padx=5, pady=5)
 
             # 创建一个可以滚动的画布，并放置一个主框架在画布上
             self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
@@ -203,6 +223,27 @@ class LoginUI:
 
         self.after_success_create_acc_ui_when_start()
         self.after_success_create_acc_ui()
+
+    def login_coexist(self):
+        print("共存登录")
+
+    def login_original(self):
+        print("原生登录")
+
+    def plus_action(self):
+        print("+")
+
+    def lightning_action(self):
+        print("⚡")
+
+    def _switch_mode(self):
+        self.is_original = not self.is_original
+        if self.is_original:
+            self.btn_login.configure(text="原生登录", command=self.login_original)
+            self.btn_extra.configure(text="⚡", command=self.lightning_action)
+        else:
+            self.btn_login.configure(text="共存登录", command=self.login_coexist)
+            self.btn_extra.configure(text="+", command=self.plus_action)
 
     def show_setting_error(self):
         """出错的话，选择已经有的界面中创建错误信息显示"""
@@ -259,7 +300,7 @@ class LoginUI:
         """按钮：手动登录"""
         print("手动登录")
         try:
-            SwOperator.thread_to_manual_login(self.sw)
+            SwOperator.start_thread_to_manual_login(self.sw)
         except Exception as e:
             logger.error(e)
 
@@ -269,7 +310,7 @@ class LoginUI:
         if self.global_settings_value.hide_wnd is True:
             self.root.iconify()  # 最小化主窗口
         try:
-            AccOperator.thread_to_auto_login_accounts(login_dict)
+            AccOperator.start_auto_login_accounts_thread(login_dict)
         except Exception as e:
             logger.error(e)
 

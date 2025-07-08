@@ -22,12 +22,12 @@ from functions import subfunc_file
 from public_class.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Config, Strings, Constants
-from utils import file_utils, process_utils, pywinhandle, handle_utils, hwnd_utils, sys_utils, image_utils
+from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
 from utils.better_wx.inner_utils import wildcard_tokenize, patt2hex
 from utils.encoding_utils import VersionUtils, PathUtils, StringUtils
 from utils.file_utils import DllUtils
 from utils.hwnd_utils import TkWndUtils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 
 
@@ -155,7 +155,6 @@ class SwInfoFunc:
             return path
         return SwInfoFunc.detect_path_of_(sw, path_type, ignore_local_record=True)
 
-
     @staticmethod
     def calc_sw_ver(sw):
         """获取软件版本"""
@@ -243,8 +242,62 @@ class SwInfoFunc:
                 break
         return display_name
 
+    @staticmethod
+    def get_sw_all_exe_pids(sw):
+        """获得平台所有进程的pid"""
+        executable_wildcards, = subfunc_file.get_remote_cfg(
+            sw,
+            executable_wildcards=None,
+        )
+        inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        inst_dir = os.path.dirname(inst_path)
+        pids = []
+        if isinstance(executable_wildcards, list):
+            pids.extend(process_utils.psutil_get_pids_by_wildcards(executable_wildcards))
+        pids = process_utils.remove_child_pids(pids)
+        pids = process_utils.remove_pids_not_in_path(pids, inst_dir)
+        return pids
+
+    @staticmethod
+    def record_sw_pid_mutex_dict_when_start_login(sw) -> dict:
+        """在该平台登录之前,存储 pid 和 互斥体 的映射关系字典"""
+        pids = SwInfoFunc.get_sw_all_exe_pids(sw)
+        pid_mutex_dict = {}
+        for pid in pids:
+            pid_mutex_dict[pid] = True
+        subfunc_file.update_sw_acc_data(sw, **{AccKeys.PID_MUTEX: pid_mutex_dict})
+        return pid_mutex_dict
+
 
 class SwOperator:
+    @staticmethod
+    def get_sw_all_mutex_handles_and_try_kill_if_need(sw, kill=None):
+        """获得平台所有互斥锁的句柄"""
+        Printer().debug("查杀平台互斥体中...")
+        mutant_wildcards, = subfunc_file.get_remote_cfg(
+            sw,
+            mutant_handle_wildcards=None,
+        )
+        if not isinstance(mutant_wildcards, list):
+            print("未获取到互斥体通配词,将不进行查找...")
+            return None
+        pids = SwInfoFunc.get_sw_all_exe_pids(sw)
+        Printer().debug(f"当前所有进程: {pids}")
+        # 清空互斥体节点,维护本次登录的互斥体情况
+        subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
+        pid_mutex_dict = {}
+        for pid in pids:
+            pid_mutex_dict[pid] = []
+        mutant_handle_dicts = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+            pids, mutant_wildcards)
+        Printer().debug(f"查杀前所有互斥体: {mutant_handle_dicts}")
+        if kill is True and len(mutant_handle_dicts) != 0:
+            handle_utils.pywinhandle_close_handles(mutant_handle_dicts)
+            mutant_handle_dicts = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                pids, mutant_wildcards)
+            Printer().debug(f"查杀后所有互斥体: {mutant_handle_dicts}")
+        return mutant_handle_dicts
+
     @staticmethod
     def _ask_for_manual_terminate_or_force(sw_exe_path):
         """询问手动退出,否则强制退出"""
@@ -368,8 +421,62 @@ class SwOperator:
             return False, f"{str(e)}"
 
     @staticmethod
-    def _manual_login(sw):
-        """手动登录"""
+    def _wait_hwnds_close_and_do_in_root(hwnds, timeout=20, callback=None):
+        """等待所有窗口关闭后,主线程执行 callback"""
+        root = GlobalMembers.root_class.root
+        hwnd_utils.wait_hwnds_close(hwnds, timeout)
+        if callable(callback):
+            root.after(0, callback)
+
+    @staticmethod
+    def _open_sw_origin(sw):
+        """打开平台原始程序并返回窗口hwnd"""
+        # 获取需要的数据
+        root_class = GlobalMembers.root_class
+        multirun_mode = root_class.sw_classes[sw].multirun_mode
+        login_wnd_class, = subfunc_file.get_remote_cfg(
+            sw, login_wnd_class=None)
+        if login_wnd_class is None:
+            messagebox.showinfo("错误", "尚未适配！")
+            return None
+        all_excluded_hwnds = []
+        # 关闭多余的多开器,记录已经存在的窗口 -------------------------------------------------------------------
+        SwOperator.kill_sw_multiple_processes(sw)
+        remained_idle_wnd_list = SwOperator.get_idle_login_wnd_and_close_if_necessary(sw)
+        all_excluded_hwnds.extend(remained_idle_wnd_list)
+        # 检查所有pid及互斥体情况 -------------------------------------------------------------------
+        SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
+        sw_proc, sub_proc = SwOperator.open_sw(sw, multirun_mode)
+        sw_proc_pid = sw_proc.pid if sw_proc else None
+        # 等待打开窗口并获取hwnd *******************************************************************
+        sw_hwnd, class_name = hwnd_utils.wait_hwnd_exclusively_by_pid_and_class_wildcards(
+            all_excluded_hwnds, sw_proc_pid, [login_wnd_class])
+        if sub_proc:
+            sub_proc.terminate()
+        Printer().debug(sw_hwnd)
+        return sw_hwnd
+
+    @staticmethod
+    def _manual_login_origin(sw):
+        """手动登录原生平台"""
+        root_class = GlobalMembers.root_class
+        multirun_mode = GlobalMembers.root_class.sw_classes[sw].multirun_mode
+        start_time = time.time()
+        sw_hwnd = SwOperator._open_sw_origin(sw)
+        if isinstance(sw_hwnd, int):
+            subfunc_file.set_pid_mutex_all_values_to_false(sw)
+            subfunc_file.update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
+            print(f"打开了登录窗口{sw_hwnd}")
+        else:
+            logger.warning(f"打开失败，请重试！")
+            messagebox.showerror("错误", "手动登录失败，请重试")
+        callback = lambda: root_class.login_ui.refresh_frame(sw)
+        SwOperator._wait_hwnds_close_and_do_in_root([sw_hwnd], callback=callback)
+
+    @staticmethod
+    def _manual_login_coexist(sw):
+        """手动登录共存平台,按顺序,登录第一个还未打开的共存程序,若都已经打开,则创造一个新的共存程序后打开"""
+        sequence = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.COEXIST_SEQUENCE: ""})
         root_class = GlobalMembers.root_class
         root = root_class.root
         login_ui = root_class.login_ui
@@ -386,15 +493,16 @@ class SwOperator:
 
         SwOperator.kill_sw_multiple_processes(sw)
         time.sleep(0.5)
-        subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
-        subfunc_file.update_pid_mutex_of_(sw)
+        SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
+        # subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
+        # subfunc_file.update_pid_mutex_of_(sw)
 
         multirun_mode = root_class.sw_classes[sw].multirun_mode
-        sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
-        wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, 20)
+        _, sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
+        wechat_hwnd = hwnd_utils.wait_hwnd_by_class(login_wnd_class, 20)
         if wechat_hwnd:
-            subfunc_file.set_pid_mutex_values_to_false(sw)
-            subfunc_file.update_has_mutex_from_pid_mutex(sw)
+            subfunc_file.set_pid_mutex_all_values_to_false(sw)
+            # subfunc_file.update_has_mutex_from_pid_mutex(sw)
             subfunc_file.update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
             print(f"打开了登录窗口{wechat_hwnd}")
             if sub_exe_process:
@@ -412,16 +520,16 @@ class SwOperator:
         TkWndUtils.bring_wnd_to_front(root, root)
 
     @staticmethod
-    def thread_to_manual_login(sw):
+    def start_thread_to_manual_login(sw):
+        """建议使用此方式,以线程的方式手动登录,避免阻塞"""
         threading.Thread(
-            target=SwOperator._manual_login,
+            target=SwOperator._manual_login_origin,
             args=(sw,)
         ).start()
 
     @staticmethod
     def kill_sw_multiple_processes(sw):
         """清理多开器的进程"""
-        print("清理多余多开器窗口...")
         # 遍历所有的进程
         for proc in psutil.process_iter(['pid', 'name']):
             try:
@@ -431,7 +539,7 @@ class SwOperator:
                     print(f"Killed process tree for {proc.name()} (PID: {proc.pid})")
             except Exception as e:
                 logger.error(e)
-        print(f"清理{sw}Multiple_***子程序完成!")
+        Printer().print_vn(f"[OK]清理多余多开工具{sw}Multiple_***完成!")
 
     @staticmethod
     def _organize_sw_mutex_dict_from_record(sw):
@@ -440,13 +548,13 @@ class SwOperator:
         executable, = subfunc_file.get_remote_cfg(sw, executable=None)
         if executable is None:
             return dict()
-        pids = process_utils.get_process_ids_by_precise_name(executable)
+        pids = SwInfoFunc.get_sw_all_exe_pids(sw)
         print(f"获取到的{sw}进程列表：{pids}")
         has_mutex_dict = dict()
         for pid in pids:
             # 没有在all_wechat节点中，则这个是尚未判断的，默认有互斥体
-            has_mutex, = subfunc_file.get_sw_acc_data(sw, AccKeys.PID_MUTEX, **{f"{pid}": True})
-            if has_mutex:
+            has_mutex, = subfunc_file.get_sw_acc_data(sw, AccKeys.PID_MUTEX, **{f"{pid}": None})
+            if has_mutex is None:
                 subfunc_file.update_sw_acc_data(sw, AccKeys.PID_MUTEX, **{f"{pid}": True})
                 has_mutex_dict.update({pid: has_mutex})
         print(f"获取互斥体情况完成!互斥体列表：{has_mutex_dict}")
@@ -455,19 +563,19 @@ class SwOperator:
     @staticmethod
     def _kill_mutex_by_forced_inner_mode(sw, multirun_mode):
         executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
-            sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
+            sw, executable=None, mutant_handle_infos=None, cfg_handle_regex_list=None)
         # ————————————————————————————————python[强力]————————————————————————————————
         if multirun_mode == MultirunMode.BUILTIN:
-            pids = process_utils.get_process_ids_by_precise_name(executable_name)
-            handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
+            pids = SwInfoFunc.get_sw_all_exe_pids(sw)
+            handle_regex_list, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=None)
             if handle_regex_list is None:
                 return True
             handle_names = [handle["handle_name"] for handle in handle_regex_list]
             if handle_names is None or len(handle_names) == 0:
                 return True
             if len(pids) > 0:
-                success = pywinhandle.close_handles(
-                    pywinhandle.find_handles(
+                success = handle_utils.pywinhandle_close_handles(
+                    handle_utils.pywinhandle_find_handles_by_pids_and_handle_names(
                         pids,
                         handle_names
                     )
@@ -485,25 +593,21 @@ class SwOperator:
     @staticmethod
     def _kill_mutex_by_inner_mode(sw, multirun_mode):
         """关闭平台进程的所有互斥体，如果不选择python模式，则使用handle模式"""
-        executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
-            sw, executable=None, lock_handle_regex_list=None, cfg_handle_regex_list=None)
-        # ————————————————————————————————python————————————————————————————————
+        executable_name, lock_handles, cfg_handles, mutant_handle_wildcards = subfunc_file.get_remote_cfg(
+            sw, executable=None, mutant_handle_infos=None,
+            cfg_handle_regex_list=None, mutant_handle_wildcards=None)
+        # ————————————————————————————————builtin————————————————————————————————
         if multirun_mode == MultirunMode.BUILTIN:
-            handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
-            if handle_regex_list is None:
-                return True
-            handle_names = [handle["handle_name"] for handle in handle_regex_list]
-            if handle_names is None or len(handle_names) == 0:
-                return True
-            has_mutex_dict = SwOperator._organize_sw_mutex_dict_from_record(sw)
-            if len(has_mutex_dict) > 0:
-                print("互斥体列表：", has_mutex_dict)
-                pids, values = zip(*has_mutex_dict.items())
-                success = pywinhandle.close_handles(
-                    pywinhandle.find_handles(
-                        pids,
-                        handle_names
-                    )
+            has_mutex_dict = subfunc_file.get_sw_acc_data(sw, AccKeys.PID_MUTEX)
+            pids_has_mutex = [pid for pid in has_mutex_dict.keys() if has_mutex_dict[pid] is True]
+            pids_has_mutex = [int(x) if isinstance(x, str) and x.isdigit() else x for x in pids_has_mutex]  # 将字符串转换为整数
+            if len(pids_has_mutex) > 0 and len(mutant_handle_wildcards) > 0:
+                Printer().print_vn(f"[INFO]以下进程含有互斥体：{has_mutex_dict}", )
+                handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                    pids_has_mutex, mutant_handle_wildcards)
+                Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
+                success = handle_utils.pywinhandle_close_handles(
+                    handle_infos
                 )
                 return success
             return True
@@ -511,66 +615,65 @@ class SwOperator:
         else:
             success, success_lists = handle_utils.close_sw_mutex_by_handle(
                 Config.HANDLE_EXE_PATH, executable_name, lock_handles)
-            if len(success_lists) > 0:
-                print(f"成功关闭：{success_lists}")
             return success
 
-    @staticmethod
-    def kill_mutex_of_pid(sw, acc):
-        """关闭指定进程的所有互斥体"""
-        pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
-        if pid is None:
-            return False
-        handle_regex_list, = subfunc_file.get_remote_cfg(sw, lock_handle_regex_list=None)
-        if handle_regex_list is None:
-            return True
-        handle_names = [handle["handle_name"] for handle in handle_regex_list]
-        if handle_names is None or len(handle_names) == 0:
-            return True
-        success = pywinhandle.close_handles(
-            pywinhandle.find_handles(
-                [pid],
-                handle_names
-            )
-        )
-        print(f"kill mutex: {success}")
-        if success:
-            subfunc_file.update_sw_acc_data(sw, acc, has_mutex=False)
-        return success
+    # @staticmethod
+    # def kill_mutex_of_pid(sw, acc):
+    #     """关闭指定进程的所有互斥体"""
+    #     pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
+    #     if pid is None:
+    #         return False
+    #     handle_regex_list, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=None)
+    #     if handle_regex_list is None:
+    #         return True
+    #     handle_names = [handle["handle_name"] for handle in handle_regex_list]
+    #     if handle_names is None or len(handle_names) == 0:
+    #         return True
+    #     success = handle_utils.pywinhandle_close_handles(
+    #         handle_utils.pywinhandle_find_handles(
+    #             [pid],
+    #             handle_names
+    #         )
+    #     )
+    #     print(f"kill mutex: {success}")
+    #     if success:
+    #         subfunc_file.update_sw_acc_data(sw, acc, has_mutex=False)
+    #     return success
 
-    @staticmethod
-    def _create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
-        """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
-        cur_sys_ver = sys_utils.get_sys_major_version_name()
-        if cur_sys_ver == "win11" or cur_sys_ver == "win10":
-            # return process_utils.create_process_with_logon(
-            #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
-            # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
-            # # 拿默认令牌通过资源管理器身份创建
-            # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
-            # # 拿Handle令牌通过资源管理器身份创建
-            return process_utils.create_process_with_re_token_handle(executable, args, creation_flags)
-        else:
-            return process_utils.create_process_for_win7(executable, args, creation_flags)
+    # @staticmethod
+    # def _create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
+    #     """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
+    #     cur_sys_ver = sys_utils.get_sys_major_version_name()
+    #     if cur_sys_ver == "win11" or cur_sys_ver == "win10":
+    #         # return process_utils.create_process_with_logon(
+    #         #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
+    #         # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
+    #         # # 拿默认令牌通过资源管理器身份创建
+    #         # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
+    #         # # 拿Handle令牌通过资源管理器身份创建
+    #         return process_utils.create_process_with_re_token_handle(executable, args, creation_flags)
+    #     else:
+    #         return process_utils.create_process_for_win7(executable, args, creation_flags)
 
     @staticmethod
     def _open_sw_without_freely_multirun(sw, multirun_mode):
         """非全局多开模式下打开微信"""
         start_time = time.time()
-        sub_exe_process = None
+        proc = None
+        sub_proc = None
         sw_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
         # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
         if multirun_mode == "WeChatMultiple_Anhkgg.exe":
-            sub_exe_process = SwOperator._create_process_without_admin(
+            sub_proc = process_utils.create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}",
                 creation_flags=subprocess.CREATE_NO_WINDOW
             )
         # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
         elif multirun_mode == "WeChatMultiple_lyie15.exe":
-            sub_exe_process = SwOperator._create_process_without_admin(
+            sub_proc = process_utils.create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}"
             )
-            sub_exe_hwnd = hwnd_utils.wait_open_to_get_hwnd("WTWindow", 8)
+            sub_exe_hwnd = hwnd_utils.wait_hwnd_by_class("WTWindow", 8)
             print(f"子程序窗口：{sub_exe_hwnd}")
             if sub_exe_hwnd:
                 button_handle = hwnd_utils.get_child_hwnd_list_of_(
@@ -584,14 +687,14 @@ class SwOperator:
         # ————————————————————————————————handle————————————————————————————————
         elif multirun_mode == MultirunMode.HANDLE or multirun_mode == MultirunMode.BUILTIN:
             success = SwOperator._kill_mutex_by_inner_mode(sw, multirun_mode)
-            if success:
-                # 更新 has_mutex 为 False 并保存
-                print(f"成功关闭：{time.time() - start_time:.4f}秒")
-            else:
-                print(f"关闭互斥体失败！")
-            SwOperator._create_process_without_admin(sw_path, None)
+            # if success:
+            #     # 更新 has_mutex 为 False 并保存
+            #     print(f"成功关闭：{time.time() - start_time:.4f}秒")
+            # else:
+            #     print(f"关闭互斥体失败！")
+            proc = process_utils.create_process_without_admin(sw_path, None)
 
-        return sub_exe_process
+        return proc, sub_proc
 
     @staticmethod
     def open_sw(sw, multirun_mode):
@@ -601,18 +704,16 @@ class SwOperator:
         :param multirun_mode: 多开模式
         :return: 微信窗口句柄
         """
-        print(f"进入了打开微信的方法...")
-        sub_exe_process = None
+        Printer().print_vn(f"[INFO]使用{multirun_mode}模式打开{sw}...")
+        sub_proc = None
         sw_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
         if not sw_path:
             return None
-
         if multirun_mode == MultirunMode.FREELY_MULTIRUN:
-            print(f"当前是全局多开模式")
-            SwOperator._create_process_without_admin(sw_path)
+            proc = process_utils.create_process_without_admin(sw_path)
         else:
-            sub_exe_process = SwOperator._open_sw_without_freely_multirun(sw, multirun_mode)
-        return sub_exe_process
+            proc, sub_proc = SwOperator._open_sw_without_freely_multirun(sw, multirun_mode)
+        return proc, sub_proc
 
     @staticmethod
     def _is_hwnd_a_main_wnd_of_sw(hwnd, sw):
@@ -623,7 +724,7 @@ class SwOperator:
         pid = hwnd_utils.get_hwnd_details_of_(hwnd)["pid"]
         if psutil.Process(pid).exe() != executable:
             return False
-        expected_classes, = subfunc_file.get_remote_cfg(sw, coexist_main_wnd_class_regexes=None)
+        expected_classes, = subfunc_file.get_remote_cfg(sw, main_wnd_class_wildcards=None)
         class_name = win32gui.GetClassName(hwnd)
         for expected_class in expected_classes:
             regex = StringUtils.wildcard_to_regex(expected_class)
@@ -645,45 +746,50 @@ class SwOperator:
         return False
 
     @staticmethod
-    def close_classes_but_sw_main_wnd(wnd_classes, sw):
-        """关闭某些类名的窗口，但排除主窗口"""
-        # TODO: 优化排除逻辑
-        if wnd_classes is None:
-            return
-        if len(wnd_classes) == 0:
-            return
-        for class_name in wnd_classes:
-            try:
-                timeout = 5  # 最多等待5秒
-                start_time = time.time()
-                while True:
-                    hwnd = win32gui.FindWindow(class_name, None)
-                    if hwnd:
-                        if not SwOperator._is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-                            win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
-                            time.sleep(0.5)
-                    else:
-                        break
-                    # 超时退出
-                    if time.time() - start_time > timeout:
-                        break
-            except Exception as ex:
-                logger.error(ex)
+    def get_idle_login_wnd_and_close_if_necessary(sw, close=False):
+        """获取所有多余窗口,如果有需要,关闭这些窗口"""
+        login_wnd_class, login_wildcards = subfunc_file.get_remote_cfg(
+            sw, login_wnd_class=None, coexist_login_wnd_class_wildcards=None)
+        # 多余的窗口类名模式
+        all_idle_classes = []
+        if isinstance(login_wnd_class, str):
+            all_idle_classes.append(login_wnd_class)
+        if isinstance(login_wildcards, list):
+            for wildcard in login_wildcards:
+                if isinstance(wildcard, str) and wildcard not in all_idle_classes:
+                    all_idle_classes.append(wildcard)
+
+        # 平台所有进程和对应窗口句柄
+        all_sw_pids = SwInfoFunc.get_sw_all_exe_pids(sw)
+        all_idle_hwnds_set = set()
+        for pid in all_sw_pids:
+            all_idle_hwnds_set.update(
+                hwnd_utils.uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, all_idle_classes))
+        # 排除主窗口
+        for hwnd in all_idle_hwnds_set:
+            if SwOperator._is_hwnd_a_main_wnd_of_sw(hwnd, sw):
+                all_idle_hwnds_set.remove(hwnd)
+        all_idle_hwnds = list(all_idle_hwnds_set)
+        Printer().print_vn(f"[INFO]{sw}登录任务前已存在的登录窗口：{all_idle_hwnds}")
+        if close:
+            all_idle_hwnds = hwnd_utils.try_close_hwnds_in_set_and_return_remained(all_idle_hwnds_set)
+            print(f"[OK]用户选择不保留!清理后剩余的登录窗口:{all_idle_hwnds}")
+        return all_idle_hwnds
 
     @staticmethod
     def get_login_size(sw, multirun_mode):
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
             sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
         print(login_wnd_class)
-        SwOperator.close_classes_but_sw_main_wnd(redundant_wnd_list, sw)
+        SwOperator.get_idle_login_wnd_and_close_if_necessary(redundant_wnd_list, sw)
 
         # 关闭配置文件锁
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
         SwOperator.kill_sw_multiple_processes(sw)
-        sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
-        wechat_hwnd = hwnd_utils.wait_open_to_get_hwnd(login_wnd_class, timeout=8)
+        _, sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
+        wechat_hwnd = hwnd_utils.wait_hwnd_by_class(login_wnd_class, timeout=8)
         if wechat_hwnd:
             print(f"打开了登录窗口{wechat_hwnd}")
             if sub_exe_process:
@@ -1029,7 +1135,7 @@ class SwInfoUtils:
         dll_name, executable = subfunc_file.get_remote_cfg(
             sw, dll_dir_check_suffix=None, executable=None)
         results = []
-        pids = process_utils.get_process_ids_by_precise_name(executable)
+        pids = process_utils.psutil_get_pids_by_wildcards([executable])
         if len(pids) == 0:
             logger.warning(f"没有运行该程序。")
             return []
@@ -1038,10 +1144,8 @@ class SwInfoUtils:
             try:
                 for f in psutil.Process(process_id).memory_maps():
                     normalized_path = f.path.replace('\\', '/')
-                    # print(normalized_path)
                     if normalized_path.endswith(dll_name):
                         dll_dir_path = os.path.dirname(normalized_path)
-                        # print(dll_dir_path)
                         results.append(dll_dir_path)
             except psutil.AccessDenied:
                 logger.error(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")

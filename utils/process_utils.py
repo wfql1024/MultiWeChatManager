@@ -2,23 +2,33 @@ import ctypes
 import datetime
 import fnmatch
 import os
+import platform
 import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
 from ctypes import wintypes
 from ctypes.wintypes import DWORD, HANDLE, LPCWSTR, BOOL
-from typing import List
+from typing import List, Optional, Tuple
 
 import psutil
 
-from utils.logger_utils import mylogger as logger, Printer
+from utils import sys_utils
+from utils.logger_utils import mylogger as logger, Printer, Logger
 
 
 class Process:
     def __init__(self, handle_process, handle_thread):
         self.h_process = handle_process
         self.h_thread = handle_thread
+        self.pid = self._get_pid()
+
+    def _get_pid(self):
+        """从句柄获取进程 PID"""
+        GetProcessId = ctypes.windll.kernel32.GetProcessId
+        GetProcessId.argtypes = [wintypes.HANDLE]
+        GetProcessId.restype = wintypes.DWORD
+        return GetProcessId(self.h_process)
 
     def terminate(self):
         kernel32.TerminateProcess(self.h_process, 0)
@@ -27,6 +37,23 @@ class Process:
 
 
 """创建进程的各种方式"""
+
+
+def create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
+    """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
+    cur_sys_ver = platform.release()
+    if cur_sys_ver == "11" or cur_sys_ver == "10":
+        # return process_utils.create_process_with_logon(
+        #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
+        # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
+        # # 拿默认令牌通过资源管理器身份创建
+        # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
+        # # 拿Handle令牌通过资源管理器身份创建
+        return create_process_with_re_token_handle(executable, args, creation_flags)
+    else:
+        return create_process_for_win7(executable, args, creation_flags)
+
+
 
 # 定义必要的常量和结构体
 LOGON_WITH_PROFILE = 0x00000001
@@ -264,6 +291,8 @@ def create_process_with_re_token_handle(executable, args=None, creation_flags=su
         kernel32.CloseHandle(re_token) if re_token is not None else None
         kernel32.CloseHandle(re_process) if re_process is not None else None
 
+    return None
+
 
 def create_process_with_task_scheduler(executable, args):
     """
@@ -306,7 +335,7 @@ def create_process_with_task_scheduler(executable, args):
     pid = None
     end_time = time.time() + 5
     while len(pids) == 0:
-        pids: list = get_process_ids_by_precise_name(os.path.basename(executable))
+        pids: list = psutil_get_pids_by_wildcards(os.path.basename(executable))
         if time.time() > end_time:
             break
     if len(pids) > 0:
@@ -338,7 +367,8 @@ def create_process_for_win7(executable, args=None, creation_flags=0):
             stderr=subprocess.PIPE
         )
         print("Process started successfully:", executable)
-        return process
+        h_process = get_handle_by_pid(process.pid)
+        return Process(h_process, None)
     except Exception as e:
         print("Error starting process:", e)
         return None
@@ -380,7 +410,7 @@ def remove_pids_not_in_path(pids: List[int], path_keyword: str) -> List[int]:
         try:
             proc = psutil.Process(pid)
             exe_path = proc.exe() or ""
-            Printer().debug(exe_path)
+            # Printer().debug(exe_path)
             if path_keyword in exe_path.lower():
                 filtered.append(pid)
         except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -403,6 +433,11 @@ def get_exe_name_by_pid(pid, precise=False):
 
 """PID信息"""
 
+def get_handle_by_pid(pid: int):
+    handle = kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
+    if not handle:
+        raise ctypes.WinError()
+    return handle
 
 def is_pid_elevated(pid):
     try:
@@ -439,7 +474,83 @@ def iter_open_files(pid):
         print(f"An error occurred: {e}")
 
 
-def is_pid_alive(pid):
+def kill_process_tree_tasklist(pid):
+    cmd_args = ['taskkill', '/T', '/F', '/PID', f'{pid}']
+    cmd = ' '.join(cmd_args)
+    Printer().cmd_in(cmd)
+    result = subprocess.run(
+        cmd_args,
+        startupinfo=None,
+        capture_output=True,
+        text=True
+    )
+    if result.returncode == 0:
+        print(f"结束了 {pid} 的进程树")
+        return True
+    else:
+        Printer().cmd_out(f"{result.stderr.strip()}")
+        print(f"结束 {pid} 进程树失败!")
+        return False
+
+
+def psutil_kill_process_tree_if_matched_in_wildcards(pid, wildcards:Optional[list]=None) -> bool:
+    """
+    强制结束指定 PID 且符合匹配模式的进程列表及其所有子进程。返回 True 表示成功杀掉（或已不存在），False 表示失败。
+    wildcards不传入为无条件结束;若传入列表,则只结束匹配的进程(列表为空会没有匹配,不会结束进程)
+    """
+    matched = False
+    try:
+        process = psutil.Process(pid)
+        # 获取所有子进程（递归）
+        children = process.children(recursive=True)
+        if wildcards is None:
+            matched = True
+        else:
+            if isinstance(wildcards, list):
+                matched = any(fnmatch.fnmatch(process.name(), wildcard) for wildcard in wildcards)
+
+        if matched:
+            for child in children:
+                try:
+                    child.kill()
+                    print(f"已结束子进程 {child.pid}")
+                except Exception as e:
+                    print(f"无法结束子进程 {child.pid}：{e}")
+            try:
+                process.kill()
+                print(f"已结束主进程 {pid}")
+                return True
+            except Exception as e:
+                print(f"无法结束主进程 {pid}：{e}")
+                return False
+        else:
+            print(f"进程 {pid} 不匹配指定的通配符列表")
+        return False
+    except psutil.NoSuchProcess:
+        print(f"进程 {pid} 已经不存在。")
+        return True
+    except psutil.AccessDenied:
+        print(f"对进程 {pid} 无权限")
+        return False
+    except Exception as e:
+        Logger().warning(f"发生错误：{e}")
+        return False
+
+def check_pid_alive_and_get_process_psutil(pid) -> Tuple[Optional[bool], Optional[Process]]:
+    """检查进程是否存活"""
+    try:
+        process = psutil.Process(pid)
+        alive = process.is_running()
+        if alive:
+            return True, process
+        else:
+            return False, None
+    except psutil.NoSuchProcess:
+        return False, None
+    except psutil.AccessDenied:
+        return None, None
+
+def is_pid_alive_tasklist(pid):
     """判断进程id是否存在"""
     output = 'default'
     try:
@@ -499,26 +610,28 @@ def try_terminate_executable(executable_name):
     return None
 
 
-def get_pids_by_name_pattern_psutil(pattern):
+def psutil_get_pids_by_wildcards(wildcards:list) -> list:
     """
     使用 psutil 模糊匹配进程名，支持 Unix 和 Windows
-    pattern 支持通配符，比如 "WeChat*.exe"
+    pattern 支持通配符，比如 "WeChat?.exe"
     返回匹配的 pid 列表
     """
-    if pattern is None:
+    if wildcards is None:
         return []
     pids = []
     for proc in psutil.process_iter(['name']):
         try:
             name = proc.info['name']
-            if name and fnmatch.fnmatch(name, pattern):
-                pids.append(proc.pid)
+            for wildcard in wildcards:
+                if name and fnmatch.fnmatch(name, wildcard):
+                    pids.append(proc.pid)
+                    break
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
     return pids
 
 
-def get_process_ids_by_precise_name(process_name) -> list:
+def get_process_ids_by_precise_name_impl_by_tasklist(process_name) -> list:
     """通过进程名获取所有的进程id"""
     matching_processes = []
     try:
@@ -566,7 +679,7 @@ class SubFunc:
     @staticmethod
     def redirect_type_to_(mode):
         if mode == "handle":
-            print("使用HANDLE变量")
+            # print("使用HANDLE变量")
             # 函数声明
             # GetShellWindow: 获取Shell窗口的句柄
             GetShellWindow.restype = HANDLE  # 返回值是句柄（HANDLE）
@@ -595,7 +708,7 @@ class SubFunc:
                                                 ctypes.c_void_p]  # 参数类型：令牌、登录标志、应用程序名、命令行、创建标志、环境变量、当前目录、启动信息、进程信息
 
         elif mode == "default":
-            print("使用默认变量")
+            # print("使用默认变量")
             # 设置函数的重定义（默认值）
             GetShellWindow.restype = ctypes.c_void_p  # 默认返回值类型（指针）
 

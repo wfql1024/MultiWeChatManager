@@ -13,7 +13,7 @@ from win32com.client import Dispatch
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
-from public_class.enums import LocalCfg
+from public_class.enums import LocalCfg, RemoteCfg
 from resources import Config
 from utils import file_utils, sys_utils
 from utils.logger_utils import mylogger as logger
@@ -316,7 +316,7 @@ class AppFunc:
             items_to_del = []
             try:
                 # 恢复每个平台的补丁dll
-                all_sw, = subfunc_file.get_remote_cfg('global', all_sw={})
+                all_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
                 # print(all_sw)
                 for sw in all_sw:
                     dll_dir_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)

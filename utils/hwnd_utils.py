@@ -1,13 +1,11 @@
-import ctypes
-import re
+import fnmatch
 import sys
-import time
 import tkinter as tk
-from ctypes import wintypes
-from typing import Tuple, List
+from typing import Tuple, List, Optional
 
 import comtypes.client
 import pygetwindow as gw
+import uiautomation
 import uiautomation as auto
 import win32api
 import win32con
@@ -15,32 +13,49 @@ import win32gui
 import win32process
 
 from public_class.enums import Position
+from public_class.global_members import GlobalMembers
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
 from pywinauto.controls.hwndwrapper import HwndWrapper
 from pywinauto import Application
+import re
+import time
+import ctypes
+from ctypes import wintypes
 
-# 定义一些必要的 Windows API 函数和结构
-EnumWindows = ctypes.windll.user32.EnumWindows
-EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
-GetClassName = ctypes.windll.user32.GetClassNameW
-GetWindowThreadProcessId = ctypes.windll.user32.GetWindowThreadProcessId
-
-EnumChildWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
-
-# 定义常量：窗口显示状态
-SW_HIDE = 0  # 隐藏窗口
-SW_SHOWNORMAL = 1  # 恢复窗口（普通显示）
-SW_SHOWMINIMIZED = 2  # 最小化窗口
-SW_SHOWMAXIMIZED = 3  # 最大化窗口
-
-# 加载 user32.dll 动态库
+# ========= 加载 user32.dll =========
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 
-# 定义 Windows API 函数
+# ========= 枚举窗口 =========
+EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+EnumWindows = user32.EnumWindows
+EnumWindows.argtypes = [EnumWindowsProc, wintypes.LPARAM]
+EnumWindows.restype = wintypes.BOOL
+
+EnumChildWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+EnumChildWindows = user32.EnumChildWindows  # 如果后续有需要可以补 argtypes/restype
+
+# ========= 获取窗口属性 =========
+GetClassName = user32.GetClassNameW
+GetClassName.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+GetClassName.restype = ctypes.c_int
+
+GetWindowText = user32.GetWindowTextW
+GetWindowText.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+GetWindowText.restype = ctypes.c_int
+
+GetWindowThreadProcessId = user32.GetWindowThreadProcessId
+GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+GetWindowThreadProcessId.restype = wintypes.DWORD
+
+IsWindowVisible = user32.IsWindowVisible
+IsWindowVisible.argtypes = [wintypes.HWND]
+IsWindowVisible.restype = wintypes.BOOL
+
+# ========= 查找与操作窗口 =========
 FindWindow = user32.FindWindowW
 FindWindow.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
 FindWindow.restype = wintypes.HWND
@@ -49,9 +64,11 @@ ShowWindow = user32.ShowWindow
 ShowWindow.argtypes = [wintypes.HWND, wintypes.INT]
 ShowWindow.restype = wintypes.BOOL
 
-IsWindowVisible = user32.IsWindowVisible
-IsWindowVisible.argtypes = [wintypes.HWND]
-IsWindowVisible.restype = wintypes.BOOL
+# ========= 常量：窗口显示状态 =========
+SW_HIDE = 0  # 隐藏窗口
+SW_SHOWNORMAL = 1  # 正常显示
+SW_SHOWMINIMIZED = 2  # 最小化
+SW_SHOWMAXIMIZED = 3  # 最大化
 
 
 class HwndUtils:
@@ -137,17 +154,15 @@ def get_hwnd_list_by_class_and_title(class_name, window_title=None):
     return hwnd_list
 
 
-def get_hwnd_list_by_pid_and_class(pid, target_class_name):
+def get_hwnds_by_pid_and_class(pid, target_class_name):
     def enum_windows_callback(hwnd, _lParam):
         # 获取窗口所属的进程 ID
         process_id = wintypes.DWORD()
         GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
-
         # 检查是否是目标进程的窗口
         if process_id.value == pid:
             class_name = ctypes.create_unicode_buffer(256)
             GetClassName(hwnd, class_name, 256)
-
             # 检查窗口类名是否匹配
             if class_name.value == target_class_name:
                 hwnd_list.append(hwnd)
@@ -157,41 +172,60 @@ def get_hwnd_list_by_pid_and_class(pid, target_class_name):
     EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
     return hwnd_list
 
-
-def get_hwnd_list_by_pid_and_class_wildcard(pid, class_wildcard):
+def win32_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
+    """winAPI实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件"""
+    hwnds_set = set()
     def enum_windows_callback(hwnd, _lParam):
-        # 获取窗口所属的进程 ID
         process_id = wintypes.DWORD()
         GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
-
-        # 检查是否是目标进程的窗口
         if process_id.value == pid:
             class_name = ctypes.create_unicode_buffer(256)
             GetClassName(hwnd, class_name, 256)
-            # 检查窗口类名是否匹配
-            if re.match(regex, class_name.value):
-                hwnd_list.append(hwnd)
+            if not class_wildcards:
+                # 不传入则直接收集所有
+                hwnds_set.add(hwnd)
+            else:
+                for class_wildcard in class_wildcards:
+                    if class_wildcard is None:
+                        continue
+                    regex = StringUtils.wildcard_to_regex(class_wildcard)
+                    if re.match(regex, class_name.value):
+                        hwnds_set.add(hwnd)
+                        break  # 匹配到就跳出循环
         return True
 
-    hwnd_list = []
-    regex = StringUtils.wildcard_to_regex(class_wildcard)
     EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
-    return hwnd_list
+    return list(hwnds_set)
 
+def uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
+    """
+    winAPI和uiautomation实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件.
+    对于Qt类型窗口,仅使用winAPI获取将会无法获取更细的类名
+    """
+    hwnds = win32_get_hwnds_by_pid_and_class_wildcards(pid)
+    if class_wildcards is None:
+        return hwnds
+    res = []
+    for hwnd in hwnds:
+        try:
+            ctrl = uiautomation.ControlFromHandle(hwnd)
+            for wildcard in class_wildcards:
+                if fnmatch.fnmatch(ctrl.ClassName, wildcard):
+                    res.append(hwnd)
+                    break
+        except Exception as e:
+            print(f"Failed on hwnd {hwnd}: {e}")
+            continue
+    return res
 
-def wait_open_to_get_hwnd(class_name, timeout=30, title=None):
+def wait_hwnd_by_class(class_name, timeout=20, title=None):
     """等待指定类名的窗口打开，并返回窗口句柄"""
-    end_time = time.time() + timeout
-    while time.time() < end_time:
-        hwnd = win32gui.FindWindow(class_name, title)
-        if hwnd:
-            return hwnd  # 返回窗口句柄
-        time.sleep(0.5)
-    return None  # 未找到窗口，返回 None
+    return wait_hwnd_exclusively_by_class(None, class_name, timeout, title)
 
 
-def wait_open_to_get_hwnd_but_exclude_(exclude_hwnd_list, class_name, timeout=30, title=None):
+def wait_hwnd_exclusively_by_class(exclude_hwnd_list, class_name, timeout=20, title=None):
     """等待指定类名的窗口打开，并返回窗口句柄"""
+    exclude_hwnd_list = exclude_hwnd_list or []
     end_time = time.time() + timeout
     while time.time() < end_time:
         hwnd = win32gui.FindWindow(class_name, title)
@@ -199,6 +233,55 @@ def wait_open_to_get_hwnd_but_exclude_(exclude_hwnd_list, class_name, timeout=30
             return hwnd  # 返回窗口句柄
         time.sleep(0.5)
     return None
+
+
+def wait_hwnd_by_pid_and_class_wildcards(pid, class_wildcards, timeout=20, title=None):
+    """等待类名匹配通配符的窗口打开，并返回句柄（可选匹配标题）"""
+    return wait_hwnd_exclusively_by_pid_and_class_wildcards(None, pid, class_wildcards, timeout, title)
+
+
+def wait_hwnd_exclusively_by_pid_and_class_wildcards(
+        exclude_hwnds, pid, class_wildcards, timeout=20, title=None) -> Tuple[Optional[int], Optional[str]]:
+    """等待匹配通配符的窗口类名打开，并返回窗口句柄（可排除指定句柄列表）,并返回hwnd和类名"""
+    exclude_hwnds = exclude_hwnds or []
+    end_time = time.time() + timeout
+
+    while time.time() < end_time:
+        def enum_callback(hwnd, _):
+            if hwnd in exclude_hwnds:
+                return True  # 跳过排除的句柄
+            if title:
+                buffer = ctypes.create_unicode_buffer(256)
+                GetWindowText(hwnd, buffer, 256)
+                if buffer.value != title:
+                    return True  # 标题不符，跳过
+            if pid:
+                # 获取窗口所属的进程 ID
+                process_id = wintypes.DWORD()
+                GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
+                # 检查是否是目标进程的窗口
+                if process_id.value != pid:
+                    return True  # 不是目标进程的窗口，跳过
+            class_name = ctypes.create_unicode_buffer(256)
+            GetClassName(hwnd, class_name, 256)
+            for class_wildcard in class_wildcards:
+                regex = StringUtils.wildcard_to_regex(class_wildcard)
+                Printer().debug(regex)
+                Printer().debug(class_name.value)
+                if re.match(regex, class_name.value):
+                    found_hwnds.append(hwnd)
+                    return False  # 找到后终止枚举
+            return True
+
+        found_hwnds = []
+        EnumWindows(EnumWindowsProc(enum_callback), 0)
+        if len(found_hwnds) > 0:
+            hwnd = found_hwnds[0]
+            classname = ctypes.create_unicode_buffer(256)
+            GetClassName(hwnd, classname, 256)
+            return hwnd, classname.value
+        time.sleep(0.5)
+    return None, None
 
 
 """hwnd内部控件获取"""
@@ -509,7 +592,7 @@ def bring_hwnd_next_to_left_of_hwnd2(hwnd1, hwnd2):
     )
 
 
-def wait_hwnd_close(hwnd, timeout=30):
+def wait_hwnd_close(hwnd, timeout=20):
     """等待指定窗口句柄的窗口关闭"""
     start_time = time.time()
     while time.time() - start_time < timeout:
@@ -518,34 +601,45 @@ def wait_hwnd_close(hwnd, timeout=30):
         time.sleep(1)
     return False
 
+def wait_hwnds_close(hwnds, timeout=20):
+    """等待所有指定句柄的窗口关闭"""
+    ddl_time = time.time() + timeout
+    while True:
+        # 判断所有 hwnd 是否都不存在了
+        all_closed = all(not win32gui.IsWindow(hwnd) for hwnd in hwnds)
+        if all_closed:
+            break
+        if time.time() > ddl_time:
+            break
+
+def try_close_hwnds_in_set_and_return_remained(hwnds_set: set, timeout=5):
+    """尝试在限定时间内关闭所有窗口，成功或超时退出"""
+    start_time = time.time()
+    hwnds = list(hwnds_set)  # 拷贝一份，避免修改原列表
+    while hwnds and (time.time() - start_time < timeout):
+        for hwnd in hwnds[:]:
+            if not win32gui.IsWindow(hwnd):
+                hwnds.remove(hwnd)  # 已经不存在的窗口移除
+                continue
+            try:
+                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)  # 尝试关闭窗口
+            except Exception as e:
+                print(f"尝试关闭窗口 {hwnd} 时出错: {e}")
+        time.sleep(0.5)  # 小延迟避免过于频繁轮询
+    return hwnds  # 返回未关闭的窗口句柄
+
 
 """通过class操作"""
 
 
-def close_by_wnd_class(wnd_class):
+def close_a_wnd_by_win32_classname(wnd_class):
+    """关闭符合类名的一个窗口"""
     login_window = win32gui.FindWindow(wnd_class, None)
     if login_window:
         win32gui.PostMessage(login_window, win32con.WM_CLOSE, 0, 0)
 
 
-def hide_all_by_wnd_classes(wnd_classes):
-    """
-    根据窗口类名隐藏所有匹配的窗口
-    :param wnd_classes: 窗口类名列表
-    :return: 无
-    """
-    for class_name in wnd_classes:
-        try:
-            hwnd_list = get_hwnd_list_by_class_and_title(class_name)
-            for hwnd in hwnd_list:
-                win32gui.ShowWindow(hwnd, win32con.SW_HIDE)  # 隐藏窗口
-                print(f"隐藏了{hwnd}")
-                time.sleep(0.01)  # 短暂延时避免过快查找
-        except Exception as ex:
-            logger.error(ex)
-
-
-def close_all_by_wnd_classes(wnd_classes):
+def _close_all_wnd_by_win32_classnames(wnd_classes):
     """
     根据窗口类名关闭所有匹配的窗口
     :param wnd_classes: 窗口类名列表
@@ -635,18 +729,17 @@ def bring_tk_wnd_to_front(root, wnd, use_delay=True):
 """窗口排列"""
 
 
-def layout_wnd_positions(wnd_cnt, login_size, screen_size):
+def layout_wnd_positions(wnd_cnt: int, wnd_size: tuple, screen_size: tuple):
     """
     计算窗口布局位置，并以字符画形式展示布局示例。
 
     :param wnd_cnt: 窗口数量
-    :param login_size: 单个窗口的尺寸 (宽, 高)
+    :param wnd_size: 单个窗口的尺寸 (宽, 高)
     :param screen_size: 屏幕的尺寸 (宽, 高)
     :return: 每个窗口的左上角位置列表
     """
-    login_width, login_height = login_size
+    login_width, login_height = wnd_size
     screen_width, screen_height = screen_size
-
     # 计算一行最多可以显示多少个
     max_column = int(screen_width / login_width)
     cnt_in_row = min(wnd_cnt, max_column)
@@ -665,7 +758,6 @@ def layout_wnd_positions(wnd_cnt, login_size, screen_size):
             x + (i % cnt_in_row) * (login_width + actual_gap_width),
             y + int((i // cnt_in_row - 0.618) * login_width)
         ))
-
     # 打印窗口分布示例
     print(positions)
     return positions
@@ -722,5 +814,24 @@ def print_window_layout_scaled(login_size: Tuple[int, int], screen_size: Tuple[i
     print(horizontal_border)  # 底边框
 
 
-if __name__ == '__main__':
-    pass
+def get_wnd_dict_by_pid(pid):
+    """
+    获取指定进程 pid 的所有顶层窗口控件
+    :param pid: 进程 pid
+    :return: List[Control]
+    """
+    hwnds = win32_get_hwnds_by_pid_and_class_wildcards(pid)
+    windows = []
+    for hwnd in hwnds:
+        try:
+            ctrl = uiautomation.ControlFromHandle(hwnd)
+            windows.append({
+                'hwnd': hwnd,
+                'Name': ctrl.Name,
+                'ClassName': ctrl.ClassName,
+                'ControlType': ctrl.ControlTypeName
+            })
+        except Exception as e:
+            print(f"Failed on hwnd {hwnd}: {e}")
+            continue
+    return windows

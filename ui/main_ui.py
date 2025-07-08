@@ -29,28 +29,6 @@ from utils.widget_utils import WidgetUtils
 # 本程序文件层次:
 # main_ui > 基本ui > 窗口ui > func > utils > public_class > resources
 # ------------------------------------------------------------------
-"""
-"50 03 00 00 48 8D 95 D0 01 00 00 44 0F B6 85 F7 03 00 00 E8 15 40 00 00 48 89 F2 E8 BD 41 00 00 (E9 68 02) 00 00 0F (1F 84 00) 00 00 (00 00) 48 89 D9 48 89 F2 E8 95 5A FF FF 84 C0 0F 85 4D 02 00 00 4C 8B B5 58 03 00 00 4C 3B B5 60 03 00 00 0F 84 B7 00 00 00 4C 89 F1 48 89 F2 E8 ?? ?? ?? FE 48"
-"?? F4 FD 48 8B 8D 30 03 00 00 48 8D 95 B0 00 00 00 E8 ?? ?? 21 FE 48 8B 8D B0 00 00 00 48 89 F2 (E8 ?? ?? ?? FE 89 C6) 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 38 03 00 00 48 85 FF 74 1D F0 FF 4F 08"
-"87 5D 00 5B E5 B0 8F E8 A7 86 E9 A2 91 5D 00 E6 88 AA E5 9B BE 00 5B E7 94 B5 E8 A7 86 5D 00 5B (E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B) E6 B6 88 E6 81 AF 5D 00 E4 BB A5 E4 B8 8B E6 98 AF E6 96 B0 E6 B6 88 E6 81 AF 00 E6 94 B6 E5 88 B0 E4 BB 98 E8 B4 B9 E7 9B B4 E6 92 AD E6 B6 88 E6",
-"E9 A1 B6 00 E5 B7 B2 E7 BD AE E9 A1 B6 00 E6 9C 8B E5 8F 8B E5 9C 88 00 E7 BD AE E9 A1 B6 00 E6 (9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF) BC 8C E8 AF B7 E5 9C A8 E6 89 8B E6 9C BA E4 B8 8A E6 9F A5 E7 9C 8B 00 E8 AF A5 E6 9C 8B E5 8F 8B E5 9C 88 E4 B8 BA E4 B8 8D E6"
-
-"50 03 00 00 48 8D 95 D0 01 00 00 44 0F B6 85 F7 03 00 00 E8 15 40 00 00 48 89 F2 E8 BD 41 00 00 (E9 68 02) 00 00 0F (1F 84 00) 00 00 (00 00) 48 89 D9 48 89 F2 E8 95 5A FF FF 84 C0 0F 85 4D 02 00 00 4C 8B B5 58 03 00 00 4C 3B B5 60 03 00 00 0F 84 B7 00 00 00 4C 89 F1 48 89 F2 E8 EE A6 97 FE 48",
-"C9 F4 FD 48 8B 8D 30 03 00 00 48 8D 95 B0 00 00 00 E8 D9 B2 21 FE 48 8B 8D B0 00 00 00 48 89 F2 (E8 FA 01 F6 FE 89 C6) 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 38 03 00 00 48 85 FF 74 1D F0 FF 4F 08",
-"87 5D 00 5B E5 B0 8F E8 A7 86 E9 A2 91 5D 00 E6 88 AA E5 9B BE 00 5B E7 94 B5 E8 A7 86 5D 00 5B (E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B) E6 B6 88 E6 81 AF 5D 00 E4 BB A5 E4 B8 8B E6 98 AF E6 96 B0 E6 B6 88 E6 81 AF 00 E6 94 B6 E5 88 B0 E4 BB 98 E8 B4 B9 E7 9B B4 E6 92 AD E6 B6 88 E6",
-"E9 A1 B6 00 E5 B7 B2 E7 BD AE E9 A1 B6 00 E6 9C 8B E5 8F 8B E5 9C 88 00 E7 BD AE E9 A1 B6 00 E6 (9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF) BC 8C E8 AF B7 E5 9C A8 E6 89 8B E6 9C BA E4 B8 8A E6 9F A5 E7 9C 8B 00 E8 AF A5 E6 9C 8B E5 8F 8B E5 9C 88 E4 B8 BA E4 B8 8D E6"
-
-"50 03 00 00 48 8D 95 D0 01 00 00 44 0F B6 85 F7 03 00 00 E8 15 40 00 00 48 89 F2 E8 BD 41 00 00 (E9 68 02) 00 00 0F (1F 84 00) 00 00 (00 00) 48 89 D9 48 89 F2 E8 95 5A FF FF 84 C0 0F 85 4D 02 00 00 4C 8B B5 58 03 00 00 4C 3B B5 60 03 00 00 0F 84 B7 00 00 00 4C 89 F1 48 89 F2 E8 CE A3 97 FE 48",
-"BF F4 FD 48 8B 8D 30 03 00 00 48 8D 95 B0 00 00 00 E8 39 AF 21 FE 48 8B 8D B0 00 00 00 48 89 F2 (E8 FA 01 F6 FE 89 C6) 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 38 03 00 00 48 85 FF 74 1D F0 FF 4F 08",
-"87 5D 00 5B E5 B0 8F E8 A7 86 E9 A2 91 5D 00 E6 88 AA E5 9B BE 00 5B E7 94 B5 E8 A7 86 5D 00 5B (E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B) E6 B6 88 E6 81 AF 5D 00 E4 BB A5 E4 B8 8B E6 98 AF E6 96 B0 E6 B6 88 E6 81 AF 00 E6 94 B6 E5 88 B0 E4 BB 98 E8 B4 B9 E7 9B B4 E6 92 AD E6 B6 88 E6",
-"E9 A1 B6 00 E5 B7 B2 E7 BD AE E9 A1 B6 00 E6 9C 8B E5 8F 8B E5 9C 88 00 E7 BD AE E9 A1 B6 00 E6 (9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF) BC 8C E8 AF B7 E5 9C A8 E6 89 8B E6 9C BA E4 B8 8A E6 9F A5 E7 9C 8B 00 E8 AF A5 E6 9C 8B E5 8F 8B E5 9C 88 E4 B8 BA E4 B8 8D E6"
-
-"50 03 00 00 48 8D 95 D0 01 00 00 44 0F B6 85 F7 03 00 00 E8 15 40 00 00 48 89 F2 E8 BD 41 00 00 (E9 68 02) 00 00 0F (1F 84 00) 00 00 (00 00) 48 89 D9 48 89 F2 E8 95 5A FF FF 84 C0 0F 85 4D 02 00 00 4C 8B B5 58 03 00 00 4C 3B B5 60 03 00 00 0F 84 B7 00 00 00 4C 89 F1 48 89 F2 E8 2E 9E 97 FE 48",
-"B6 F4 FD 48 8B 8D 30 03 00 00 48 8D 95 B0 00 00 00 E8 B9 A1 21 FE 48 8B 8D B0 00 00 00 48 89 F2 (E8 3A FD F5 FE 89 C6) 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 38 03 00 00 48 85 FF 74 1D F0 FF 4F 08",
-"87 5D 00 5B E5 B0 8F E8 A7 86 E9 A2 91 5D 00 E6 88 AA E5 9B BE 00 5B E7 94 B5 E8 A7 86 5D 00 5B (E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B) E6 B6 88 E6 81 AF 5D 00 E4 BB A5 E4 B8 8B E6 98 AF E6 96 B0 E6 B6 88 E6 81 AF 00 E6 94 B6 E5 88 B0 E4 BB 98 E8 B4 B9 E7 9B B4 E6 92 AD E6 B6 88 E6",
-"E9 A1 B6 00 E5 B7 B2 E7 BD AE E9 A1 B6 00 E6 9C 8B E5 8F 8B E5 9C 88 00 E7 BD AE E9 A1 B6 00 E6 (9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF) BC 8C E8 AF B7 E5 9C A8 E6 89 8B E6 9C BA E4 B8 8A E6 9F A5 E7 9C 8B 00 E8 AF A5 E6 9C 8B E5 8F 8B E5 9C 88 E4 B8 BA E4 B8 8D E6"
-                        
-"""
 
 
 class RootWnd:
@@ -412,12 +390,12 @@ class RootUI:
                     tab_text = tab_text.replace(Strings.REFRESH_HINT, "")
                     subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_REFRESH: True})
                     self.used_refresh = True
-                tab_dict["tab"].config(text=f"⟳{tab_text}")
+                tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
                 self.root.update_idletasks()
                 self.root_class.acc_manager_ui = None
                 self.root_class.sw_manager_ui = None
                 self._load_manage_frame()
-                tab_dict["tab"].config(text=tab_text)
+                tab_dict["tab_widget"].set_text(tab_text)
             # 自动选择下一级标签
             manage_tab = self.manage_nb_cls.curr_tab_id
             if not manage_tab:
@@ -435,11 +413,11 @@ class RootUI:
                 if not isinstance(login_nb_cls, CustomNotebook):
                     self._load_login_frame()
             elif click_time >= 2:
-                tab_dict["tab"].config(text=f"⟳{tab_text}")
+                tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
                 self.root.update_idletasks()
                 self.root_class.login_ui = None
                 self._load_login_frame()
-                tab_dict["tab"].config(text=tab_text)
+                tab_dict["tab_widget"].set_text(tab_text)
             # 自动选择下一级标签
             login_tab = self.login_nb_cls.curr_tab_id
             if not login_tab:
@@ -461,10 +439,10 @@ class RootUI:
         if click_time <= 1:
             self.root_class.login_ui.init_login_ui()
         elif click_time >= 2:
-            tab_dict["tab"].config(text=f"⟳{tab_text}")
+            tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
             self.root.update_idletasks()
             self.root_class.login_ui.refresh()
-            tab_dict["tab"].config(text=tab_text)
+            tab_dict["tab_widget"].set_text(tab_text)
 
     def _on_tab_in_manage_selected(self, click_time):
         self.manage_tab = self.manage_nb_cls.curr_tab_id
@@ -476,19 +454,19 @@ class RootUI:
             if click_time <= 1:
                 self.root_class.acc_manager_ui.init_acc_manager_ui()
             elif click_time >= 2:
-                tab_dict["tab"].config(text=f"⟳{tab_text}")
+                tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
                 self.root.update_idletasks()
                 self.root_class.acc_manager_ui.refresh()
-                tab_dict["tab"].config(text=tab_text)
+                tab_dict["tab_widget"].set_text(tab_text)
 
         elif self.manage_tab == "sw":
             if click_time <= 1:
                 self.root_class.sw_manager_ui.init_sw_manager_ui()
             elif click_time >= 2:
-                tab_dict["tab"].config(text=f"⟳{tab_text}")
+                tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
                 self.root.update_idletasks()
                 self.root_class.sw_manager_ui.refresh()
-                tab_dict["tab"].config(text=tab_text)
+                tab_dict["tab_widget"].set_text(tab_text)
 
     @staticmethod
     def _get_random_hint():
