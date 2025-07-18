@@ -83,8 +83,8 @@ class Constants:
     CUS_BTN_PAD_X = int(4 * SF)  # 定制按钮内边距x
     CUS_BTN_PAD_Y = int(4 * SF)  # 定制按钮内边距y
     CUS_BTN_PAD = (CUS_BTN_PAD_X, CUS_BTN_PAD_Y)  # 普通按钮内边距
-    CUS_BTN_WIDTH = int(
-        10 * ((SF - 1) / 3 + 1) if SF > 1 else 10 * (1 - (1 - SF) / 3))  # 普通按钮宽度
+    TK_BTN_WIDTH = int(10 * (1 + (SF - 1) / 3))  # 普通按钮宽度
+    CUS_BTN_WIDTH = int(50 * SF)  # 定制按钮宽度
 
     LOG_IO_LBL_FONTSIZE = 10  # 登录登出表标签字体大小
     LOG_IO_FRM_PAD_X = (int(12 * SF), int(0 * SF))  # 登录登出表框架左右边距

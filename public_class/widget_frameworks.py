@@ -398,7 +398,7 @@ class ActionableTreeView(ABC):
 
         # 默认情况下
         selected_bg = "#B2E0F7"
-        hover_bg = ColorUtils.lighten_color(selected_bg, 0.8)
+        hover_bg = ColorUtils.fade_color(selected_bg, 0.8)
         tree.tag_configure("disabled", background="#F5F7FA", foreground="grey")
         tree.tag_configure("selected", background=selected_bg, foreground="black")
         tree.tag_configure("hover", background=hover_bg, foreground="black")

@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from pathlib import Path
-from typing import Any, Optional, Union, Tuple
+from typing import Any, Optional, Union, Tuple, Dict, List
 
 import win32api
 import win32com.client
@@ -406,34 +406,52 @@ class DllUtils:
         return [pattern in dll_content for pattern in patterns]
 
     @staticmethod
-    def batch_atomic_replace_hex_patterns(dll_path, *hex_patterns_tuples):
+    def batch_atomic_replace_multi_files(file_patterns_map: Dict[str, List[Tuple[List[str], List[str]]]]) -> bool:
         """
-        在 DLL 文件中批量查找并替换指定的十六进制模式（高效版本）。
-        :param dll_path: DLL 文件的路径
-        :param hex_patterns_tuples: 一个或多个十六进制模式的元组列表，每个元组包含旧模式列表和新模式列表
-        :return: 一个布尔列表，每个元素对应一个模式，True 表示替换成功，False 表示未找到对应模式
+        对多个文件执行原子替换操作，若任一文件替换失败，则回滚所有已处理文件的改动。
+        :param file_patterns_map: {dll_path: [hex_patterns_tuples]}
+        :return: transaction_success: 所有文件都成功则为 True，否则为 False（已回滚）
         """
-        results = []
+        mmap_map = {}  # {dll_path: mmap_file}
+        backup_map = {}  # {dll_path: 原始字节数据}
+        transaction_success = True
+
         try:
             with rw_lock.gen_wlock():
-                with open(dll_path, 'r+b') as f:
-                    # 创建内存映射（整个批量操作只创建一次）
-                    mmap_file = mmap.mmap(f.fileno(), 0)
-                    try:
-                        for hex_patterns_tuple in hex_patterns_tuples:
-                            success, msg = DllUtils._atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple)
-                            results.append(success)
-                    finally:
-                        # 确保无论如何都会关闭 mmap
-                        mmap_file.close()
-        except Exception as e:
-            print(f"发生错误: {str(e)}")
-            return [False] * len(hex_patterns_tuples)
+                for dll_path, hex_patterns_tuples in file_patterns_map.items():
+                    with open(dll_path, 'r+b') as f:
+                        mmap_file = mmap.mmap(f.fileno(), 0)
+                        mmap_map[dll_path] = mmap_file
+                        backup_map[dll_path] = mmap_file[:]
 
-        return results if len(results) > 1 else results[0]
+                        for hex_patterns_tuple in hex_patterns_tuples:
+                            success, _ = DllUtils._atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple)
+                            if not success:
+                                print(f"替换失败: {dll_path}的{hex_patterns_tuple}")
+                                transaction_success = False
+                                break
+
+                    if not transaction_success:
+                        break  # 提前跳出，避免处理后续文件
+
+            if not transaction_success:
+                # 回滚所有已处理文件
+                for dll_path, mmap_file in mmap_map.items():
+                    mmap_file[:] = backup_map[dll_path]
+                    mmap_file.flush()
+
+        except Exception as e:
+            print(f"发生异常: {str(e)}")
+            transaction_success = False
+
+        finally:
+            for mmap_file in mmap_map.values():
+                mmap_file.close()
+
+        return transaction_success
 
     @staticmethod
-    def _atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple):
+    def _atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple: tuple):
         """
         单次处理dll的多处替换（高效版本，使用已打开的mmap文件）
         :param mmap_file: 已打开的mmap文件对象

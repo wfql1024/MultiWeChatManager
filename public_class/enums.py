@@ -27,12 +27,12 @@ class Position(Enum):
 class RemoteCfg(str, Enum):
     """远程配置中的字段"""
     GLOBAL = "global"
-    ALL_SW = "all_sw"
     SP_SW = "support_sw"
     COEXIST_SEQUENCE = "coexist_sequence"
 
     REVOKE = "anti-revoke"
     MULTI = "multirun"
+    COEXIST = "coexist"
     NATIVE_MULTI = "native-multirun"
     # dll模式字段
     ORIGINAL = "original"

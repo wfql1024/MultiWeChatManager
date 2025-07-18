@@ -10,7 +10,7 @@ from public_class.custom_classes import Condition, Conditions
 
 
 class UnlimitedClickHandler:
-    _widget_events_map = {}
+    _widget_events_sum_map = {}
 
     def __init__(self, root, widget, click_func=None, **click_map):
         """
@@ -21,11 +21,11 @@ class UnlimitedClickHandler:
         self.down = False
         self.root = root
         self.widget = widget
-        if widget not in self._widget_events_map:
-            self._widget_events_map[widget] = 1
+        if widget not in self._widget_events_sum_map:
+            self._widget_events_sum_map[widget] = 1
         else:
-            self._widget_events_map[widget] += 1
-        self.turn = self._widget_events_map[widget]
+            self._widget_events_sum_map[widget] += 1
+        self.turn = self._widget_events_sum_map[widget]
         self.is_menu = isinstance(widget.nametowidget(widget), tk.Menu)
         self.click_func = self._wrap_click_func(click_func) if click_func else None
         self.click_count = 0
@@ -44,6 +44,16 @@ class UnlimitedClickHandler:
         # 绑定鼠标点击事件
         widget.bind("<ButtonRelease-1>", self.on_click_up, add=True)
         widget.bind("<Button-1>", self.on_click_down, add=True)
+
+    @staticmethod
+    def unbind_widget(widget, event_type=None):
+        if widget in UnlimitedClickHandler._widget_events_sum_map:
+            del UnlimitedClickHandler._widget_events_sum_map[widget]
+        events = [
+            "<Button-1>", "<ButtonRelease-1>"
+        ]
+        for event in events:
+            widget.unbind(event)
 
     @staticmethod
     def _wrap_click_func(func):
@@ -289,6 +299,20 @@ class WidgetUtils:
         if (isinstance(frame, tk.Frame) or isinstance(frame, ttk.Frame)) and frame.winfo_exists():
             for widget in frame.winfo_children():
                 widget.destroy()
+
+    @staticmethod
+    def unbind_all_events(widget):
+        """
+        解绑所有通过 widget.bind() 添加的事件，但保留默认行为
+        """
+        tags = list(widget.bindtags())
+        try:
+            tags.remove(str(widget))  # 移除 widget_name tag
+            # 重新添加 widget_name tag，确保默认行为
+            tags.append(str(widget))
+            widget.bindtags(tuple(tags))
+        except ValueError:
+            pass  # 有可能 widget_name 不在 bindtags 中
 
 
 class CanvasUtils:

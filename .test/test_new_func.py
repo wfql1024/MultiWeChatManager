@@ -7,10 +7,12 @@ import psutil
 
 from functions import subfunc_file
 from functions.acc_func import AccOperator
-from functions.sw_func import SwInfoUtils, SwOperator
+from functions.sw_func import SwInfoUtils, SwOperator, SwInfoFunc
+from public_class.enums import RemoteCfg
 from resources import Config
 from ui.sidebar_ui import SidebarUI, WndProperties
 from utils import handle_utils, hwnd_utils
+from utils.encoding_utils import VersionUtils
 from utils.file_utils import IniUtils
 from utils.logger_utils import Printer
 
@@ -210,6 +212,53 @@ class Test(TestCase):
         res = SwInfoUtils.search_patterns_and_replaces_by_features(dll_path, features_tuple)
         print(res)
 
-    def test__create_lnk_for_account(self):
+    def test_create_lnk_for_account(self):
         AccOperator._create_starter_lnk_for_acc("WeChat", "wxid_5daddxikoccs22")
         AccOperator._create_starter_lnk_for_acc("WeChat", "wxid_h5m0aq1uvr2f22")
+
+    def test_add_coexist_extra_cfg(self):
+        sw = "WXWork"
+        mode = RemoteCfg.COEXIST.value
+        # dll_dir = r"D:\software\Tencent\Weixin\4.0.6.21"
+        # SwInfoFunc._update_adaptation_from_remote_to_extra(sw, mode, dll_dir)
+        """根据远程表内容更新额外表"""
+        config_data = subfunc_file.read_remote_cfg_in_rules()
+        if not config_data:
+            return
+        patch_dll, mode_branches_dict = subfunc_file.get_remote_cfg(sw, patch_dll=None, **{mode: None})
+        if patch_dll is None or mode_branches_dict is None:
+            return
+        dll_path = r"D:\software\Tencent\WXWork\WXWork.exe"
+        # 尝试寻找兼容版本并添加到额外表中
+        cur_sw_ver = SwInfoFunc.calc_sw_ver(sw)
+        subfunc_file.update_extra_cfg(sw, patch_dll=os.path.basename(dll_path))
+        if "precise" in mode_branches_dict:
+            precise_vers_dict = mode_branches_dict["precise"]
+            if cur_sw_ver in precise_vers_dict:
+                # 用精确版本特征码查找适配
+                precise_ver_adaptations = precise_vers_dict[cur_sw_ver]
+                for channel, adaptation in precise_ver_adaptations.items():
+                    subfunc_file.update_extra_cfg(
+                        sw, mode, "precise", cur_sw_ver, **{channel: adaptation})
+        if "feature" in mode_branches_dict:
+            feature_vers = list(mode_branches_dict["feature"].keys())
+            compatible_ver = VersionUtils.find_compatible_version(cur_sw_ver, feature_vers)
+            ver_channels_dict = subfunc_file.get_extra_cfg(sw, mode, "precise", cur_sw_ver)
+            if compatible_ver:
+                # 用兼容版本特征码查找适配
+                compatible_ver_adaptations = mode_branches_dict["feature"][compatible_ver]
+                for channel in compatible_ver_adaptations.keys():
+                    if ver_channels_dict is not None and channel in ver_channels_dict:
+                        print("已存在缓存的精确适配")
+                        continue
+                    original_feature = compatible_ver_adaptations[channel]["original"]
+                    modified_feature = compatible_ver_adaptations[channel]["modified"]
+                    result_dict = SwInfoUtils.search_patterns_and_replaces_by_features(
+                        dll_path, (original_feature, modified_feature))
+                    if result_dict:
+                        # 添加到额外表中
+                        subfunc_file.update_extra_cfg(
+                            sw, mode, "precise", cur_sw_ver, **{channel: result_dict})
+
+    def test_create_new_coexist(self):
+        """测试"""

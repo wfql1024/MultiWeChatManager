@@ -164,7 +164,7 @@ class RootClass:
         # 统一管理style
         style = ttk.Style()
         style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
-                        width=Constants.CUS_BTN_WIDTH, relief="flat", borderwidth=0)
+                        width=Constants.TK_BTN_WIDTH, relief="sunken", borderwidth=3)
         style.configure("Treeview")
         # style.configure('Tool.TButton', width=2)
         style.configure('FirstTitle.TLabel', font=("", Constants.FIRST_TITLE_FONTSIZE, "bold"))
@@ -391,12 +391,12 @@ class RootUI:
                     tab_text = tab_text.replace(Strings.REFRESH_HINT, "")
                     subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_REFRESH: True})
                     self.used_refresh = True
-                tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
+                tab_dict["tab_widget"].set_text(f"⟳{tab_text}").redraw()
                 self.root.update_idletasks()
                 self.root_class.acc_manager_ui = None
                 self.root_class.sw_manager_ui = None
                 self._load_manage_frame()
-                tab_dict["tab_widget"].set_text(tab_text)
+                tab_dict["tab_widget"].set_text(tab_text).redraw()
             # 自动选择下一级标签
             manage_tab = self.manage_nb_cls.curr_tab_id
             if not manage_tab:
@@ -414,11 +414,11 @@ class RootUI:
                 if not isinstance(login_nb_cls, CustomNotebook):
                     self._load_login_frame()
             elif click_time >= 2:
-                tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
+                tab_dict["tab_widget"].set_text(f"⟳{tab_text}").redraw()
                 self.root.update_idletasks()
                 self.root_class.login_ui = None
                 self._load_login_frame()
-                tab_dict["tab_widget"].set_text(tab_text)
+                tab_dict["tab_widget"].set_text(tab_text).redraw()
             # 自动选择下一级标签
             login_tab = self.login_nb_cls.curr_tab_id
             if not login_tab:
@@ -440,10 +440,10 @@ class RootUI:
         if click_time <= 1:
             self.root_class.login_ui.init_login_ui()
         elif click_time >= 2:
-            tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
+            tab_dict["tab_widget"].set_text(f"⟳{tab_text}").redraw()
             self.root.update_idletasks()
             self.root_class.login_ui.refresh()
-            tab_dict["tab_widget"].set_text(tab_text)
+            tab_dict["tab_widget"].set_text(tab_text).redraw()
 
     def _on_tab_in_manage_selected(self, click_time):
         self.manage_tab = self.manage_nb_cls.curr_tab_id
@@ -455,19 +455,19 @@ class RootUI:
             if click_time <= 1:
                 self.root_class.acc_manager_ui.init_acc_manager_ui()
             elif click_time >= 2:
-                tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
+                tab_dict["tab_widget"].set_text(f"⟳{tab_text}").redraw()
                 self.root.update_idletasks()
                 self.root_class.acc_manager_ui.refresh()
-                tab_dict["tab_widget"].set_text(tab_text)
+                tab_dict["tab_widget"].set_text(tab_text).redraw()
 
         elif self.manage_tab == "sw":
             if click_time <= 1:
                 self.root_class.sw_manager_ui.init_sw_manager_ui()
             elif click_time >= 2:
-                tab_dict["tab_widget"].set_text(f"⟳{tab_text}")
+                tab_dict["tab_widget"].set_text(f"⟳{tab_text}").redraw()
                 self.root.update_idletasks()
                 self.root_class.sw_manager_ui.refresh()
-                tab_dict["tab_widget"].set_text(tab_text)
+                tab_dict["tab_widget"].set_text(tab_text).redraw()
 
     @staticmethod
     def _get_random_hint():

@@ -33,18 +33,6 @@
                 }
             ]
         },
-        "all_sw": {
-            "WeChat": {
-                "text": "微信",
-                "name": "微信",
-                "frame": ""
-            },
-            "Weixin": {
-                "text": "微信4.0",
-                "name": "微信4.0",
-                "frame": ""
-            }
-        },
         "support_sw": [
             "WeChat",
             "Weixin",
@@ -53,16 +41,6 @@
             "QQ",
             "TIM"
         ],
-        "all_login_status": {
-            "login": {
-                "text": "已登录",
-                "frame": ""
-            },
-            "logout": {
-                "text": "未登录",
-                "frame": ""
-            }
-        },
         "about": {
             "reference": [
                 {
@@ -891,36 +869,38 @@
             "feature": {
                 "3.9.12": {
                     "default": {
-                        "original": [
-                            "57 00 65 00 43 00 68 00 61 00 74 00 4C 00 6F 00 67 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
-                            "57 00 65 00 43 00 68 00 61 00 74 00 4D 00 61 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
-                            "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
-                            "57 65 43 68 61 74 57 69 6E 2E 64 6C 6C",
-                            "77 00 65 00 63 00 68 00 61 00 74 00 77 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
-                            "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
-                            "63 00 6F 00 6E 00 66 00 69 00 67 00 2E 00 64 00 61 00 74 00 61 00",
-                            "5F 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00"
-                        ],
-                        "modified": [
-                            "!! ...",
-                            "!! ...",
-                            "... !!",
-                            "... !!",
-                            "... !! 00",
-                            "... !! 00",
-                            "... !! 00 67 00 2E 00 64 00 61 00 74 00 61 00",
-                            "5F 00 57 00 !! ..."
-                        ],
-                        "meanings": [
-                            " ̲W  .  e  .  C  .  h  .  a  .  t  .  L  .  o  .  g  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
-                            " ̲W  .  e  .  C  .  h  .  a  .  t  .  M  .  a  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
-                            " h  o  s  t  -  r  e  d  i  r  e  c  t  .  x  m  ̲l",
-                            " W  e  C  h  a  t  W  i  n  .  d  l  ̲l",
-                            " w  .  e  .  c  .  h  .  a  .  t  .  w  .  i  .  n  .  .  .  d  .  l  .  ̲l  .",
-                            " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  n  .  .  .  d  .  l  .  ̲l  .",
-                            " c  .  o  .  n  .  f  .  ̲i  .  g  .  .  .  d  .  a  .  t  .  a  .",
-                            " _  .  W  .  ̲e  .  C  .  h  .  a  .  t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  ."
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "57 00 65 00 43 00 68 00 61 00 74 00 4C 00 6F 00 67 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
+                                "57 00 65 00 43 00 68 00 61 00 74 00 4D 00 61 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
+                                "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
+                                "57 65 43 68 61 74 57 69 6E 2E 64 6C 6C",
+                                "77 00 65 00 63 00 68 00 61 00 74 00 77 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                "63 00 6F 00 6E 00 66 00 69 00 67 00 2E 00 64 00 61 00 74 00 61 00",
+                                "5F 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00"
+                            ],
+                            "modified": [
+                                "!! ...",
+                                "!! ...",
+                                "... !!",
+                                "... !!",
+                                "... !! 00",
+                                "... !! 00",
+                                "... !! 00 67 00 2E 00 64 00 61 00 74 00 61 00",
+                                "5F 00 57 00 !! ..."
+                            ],
+                            "meanings": [
+                                " ̲W  .  e  .  C  .  h  .  a  .  t  .  L  .  o  .  g  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
+                                " ̲W  .  e  .  C  .  h  .  a  .  t  .  M  .  a  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
+                                " h  o  s  t  -  r  e  d  i  r  e  c  t  .  x  m  ̲l",
+                                " W  e  C  h  a  t  W  i  n  .  d  l  ̲l",
+                                " w  .  e  .  c  .  h  .  a  .  t  .  w  .  i  .  n  .  .  .  d  .  l  .  ̲l  .",
+                                " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  n  .  .  .  d  .  l  .  ̲l  .",
+                                " c  .  o  .  n  .  f  .  ̲i  .  g  .  .  .  d  .  a  .  t  .  a  .",
+                                " _  .  W  .  ̲e  .  C  .  h  .  a  .  t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  ."
+                            ]
+                        }
                     }
                 }
             }
@@ -945,312 +925,380 @@
             "feature": {
                 "3.9.11": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 ?? ?? ?? ??"
-                        ],
-                        "modified": [
-                            "90 E9 ..."
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 ?? ?? ?? ??"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
                     }
                 },
                 "3.9.10": {
                     "default": {
-                        "original": [
-                            "00 B9 BD 00 00 00 FF 15"
-                        ],
-                        "modified": [
-                            "90 E9 ..."
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "00 B9 BD 00 00 00 FF 15"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
                     }
                 }
             },
             "precise": {
                 "3.9.12.51": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 44 D5 6D 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 44 D5 6D 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 44 D5 6D 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 44 D5 6D 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.45": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 F4 C3 6D 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 F4 C3 6D 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 F4 C3 6D 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 F4 C3 6D 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.37": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 A4 FD 6D 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 A4 FD 6D 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 A4 FD 6D 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 A4 FD 6D 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.31": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 24 00 6E 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 24 00 6E 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 24 00 6E 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 24 00 6E 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 24 00 6E 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.19": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 94 AE 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 94 AE 65 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 94 AE 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 94 AE 65 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 94 AE 65 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.17": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 C4 A8 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 C4 A8 65 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 C4 A8 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 C4 A8 65 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 C4 A8 65 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.15": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 A4 64 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 A4 64 65 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 A4 64 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 A4 64 65 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 A4 64 65 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.11": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 84 5F 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 84 5F 65 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 84 5F 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 84 5F 65 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 84 5F 65 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.9": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 24 65 65 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 24 65 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 24 65 65 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 24 65 65 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 24 65 65 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 24 65 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 24 65 65 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 24 65 65 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.25": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 F4 24 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 F4 24 65 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 F4 24 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 F4 24 65 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 F4 24 65 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.23": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 64 1F 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 64 1F 65 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 64 1F 65 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 64 1F 65 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 64 1F 65 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.19": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 24 99 63 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 24 99 63 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 24 99 63 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 24 99 63 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 24 99 63 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 24 99 63 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 24 99 63 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 24 99 63 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.17": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 14 99 63 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 14 99 63 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 14 99 63 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 14 99 63 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 14 99 63 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 14 99 63 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 14 99 63 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 14 99 63 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.9": {
                     "default": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 D4 58 62 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 D4 58 62 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 D4 58 62 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 D4 58 62 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 D4 58 62 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.10.27": {
                     "default": {
-                        "original": [
-                            "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 8F 6F D7 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 8F 6F D7 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 8F 6F D7 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "00 B9 BD 00 00 00 FF 15 8F 6F D7 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 8F 6F D7 01"
+                            ]
+                        }
                     }
                 },
                 "3.9.10.19": {
                     "default": {
-                        "original": [
-                            "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
-                        ],
-                        "modified": [
-                            "E9 BE 00 00 00 00 FF 15 8F 76 D7 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
+                            ],
+                            "modified": [
+                                "E9 BE 00 00 00 00 FF 15 8F 76 D7 01"
+                            ]
+                        }
                     },
                     "default2": {
-                        "original": [
-                            "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
-                        ],
-                        "modified": [
-                            "90 E9 BD 00 00 00 FF 15 8F 76 D7 01"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "00 B9 BD 00 00 00 FF 15 8F 76 D7 01"
+                            ],
+                            "modified": [
+                                "90 E9 BD 00 00 00 FF 15 8F 76 D7 01"
+                            ]
+                        }
                     }
                 }
             }
@@ -1269,214 +1317,256 @@
             "feature": {
                 "3.9": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 ?? FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "... 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 ?? FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "... 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 }
             },
             "precise": {
                 "3.9.12.51": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.45": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.37": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.31": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.19": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.17": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.15": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.11": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.12.9": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.25": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.23": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.19": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.17": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.11.9": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.10.27": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.10.19": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.9.43": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.9.35": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.9.27": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 },
                 "3.9.8.25": {
                     "alert": {
-                        "original": [
-                            "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
-                        ],
-                        "modified": [
-                            "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
-                        ]
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 38 FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "C0 0F 84 38 FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
                     }
                 }
             }
@@ -1570,24 +1660,26 @@
             "feature": {
                 "4.0.6": {
                     "default": {
-                        "original": [
-                            "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
-                            "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 ?? ?? ?? ?? C7 05 ?? ?? ?? ?? 6F 6E 66 69 66 C7 05 ?? ?? ?? ?? 67 00",
-                            "58 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00",
-                            "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 77 00"
-                        ],
-                        "modified": [
-                            "... !!",
-                            "... !! 66 C7 05 ?? ?? ?? ?? 67 00",
-                            "57 00 !! ...",
-                            "... !! 00"
-                        ],
-                        "meanings": [
-                            " h  o  s  t  -  r  e  d  i  r  e  c  t  .  x  m  ̲l",
-                            " H  .  g  l  o  b  a  l  _  c  H  .  .  .  A  .  .  .  .  .  A  .  .  o  n  f  ̲i  f  .  .  .  A  .  .  g  .",
-                            " ̲X  .  W  .  e  .  C  .  h  .  a  .  t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  .",
-                            " x  .  W  .  e  .  c  .  h  .  a  .  t  .  W  .  i  .  n  .  d  .  o  .  ̲w  ."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
+                                "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 ?? ?? ?? ?? C7 05 ?? ?? ?? ?? 6F 6E 66 69 66 C7 05 ?? ?? ?? ?? 67 00",
+                                "58 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00",
+                                "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 77 00"
+                            ],
+                            "modified": [
+                                "... !!",
+                                "... !! 66 C7 05 ?? ?? ?? ?? 67 00",
+                                "57 00 !! ...",
+                                "... !! 00"
+                            ],
+                            "meanings": [
+                                " h  o  s  t  -  r  e  d  i  r  e  c  t  .  x  m  ̲l",
+                                " H  .  g  l  o  b  a  l  _  c  H  .  .  .  A  .  .  .  .  .  A  .  .  o  n  f  ̲i  f  .  .  .  A  .  .  g  .",
+                                " ̲X  .  W  .  e  .  C  .  h  .  a  .  t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  .",
+                                " x  .  W  .  e  .  c  .  h  .  a  .  t  .  W  .  i  .  n  .  d  .  o  .  ̲w  ."
+                            ]
+                        }
                     }
                 }
             }
@@ -1602,224 +1694,268 @@
             "feature": {
                 "4.0.6": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ],
-                        "modified": [
-                            "C3 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.5": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ],
-                        "modified": [
-                            "C3 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.3": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ],
-                        "modified": [
-                            "C3 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.2": {
                     "default": {
-                        "original": [
-                            "55 41 57 41 56 41 54 56 57 53 48 81 EC ?? ?? ?? ?? 48 8D AC 24 ?? ?? ?? ?? 48 C7 85 ?? ?? ?? ?? FE FF FF FF 48 C7 45 ?? 00 00 00 00"
-                        ],
-                        "modified": [
-                            "C3 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 41 57 41 56 41 54 56 57 53 48 81 EC ?? ?? ?? ?? 48 8D AC 24 ?? ?? ?? ?? 48 C7 85 ?? ?? ?? ?? FE FF FF FF 48 C7 45 ?? 00 00 00 00"
+                            ],
+                            "modified": [
+                                "C3 ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.1": {
                     "default": {
-                        "original": [
-                            "C7 44 24 ?? FF FF FF FF 31 F6 45 31 C0 41 B9 FF FF FF FF FF 15 ?? ?? ?? ?? 85 C0 75 0F"
-                        ],
-                        "modified": [
-                            "... EB 0F"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "C7 44 24 ?? FF FF FF FF 31 F6 45 31 C0 41 B9 FF FF FF FF FF 15 ?? ?? ?? ?? 85 C0 75 0F"
+                            ],
+                            "modified": [
+                                "... EB 0F"
+                            ]
+                        }
                     }
                 }
             },
             "precise": {
                 "4.0.6.7": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ],
-                        "modified": [
-                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ],
+                            "modified": [
+                                "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ]
+                        }
                     }
                 },
                 "4.0.6.5": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ],
-                        "modified": [
-                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ],
+                            "modified": [
+                                "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ]
+                        }
                     }
                 },
                 "4.0.6.3": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ],
-                        "modified": [
-                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ],
+                            "modified": [
+                                "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ]
+                        }
                     }
                 },
                 "4.0.5.23": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ],
-                        "modified": [
-                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ],
+                            "modified": [
+                                "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ]
+                        }
                     }
                 },
                 "4.0.5.18": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ],
-                        "modified": [
-                            "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ],
+                            "modified": [
+                                "c3 56 57 53 48 81 ec c8 01 00 00 48 8d ac 24 80 00 00 00 48 c7 85 40 01 00 00 fe ff ff ff 48 c7 85 a8"
+                            ]
+                        }
                     }
                 },
                 "4.0.3.43": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ],
-                        "modified": [
-                            "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ]
+                        }
                     }
                 },
                 "4.0.3.42": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ],
-                        "modified": [
-                            "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ]
+                        }
                     }
                 },
                 "4.0.3.22": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ],
-                        "modified": [
-                            "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ]
+                        }
                     }
                 },
                 "4.0.3.19": {
                     "default": {
-                        "original": [
-                            "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ],
-                        "modified": [
-                            "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.28": {
                     "default": {
-                        "original": [
-                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ],
-                        "modified": [
-                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ],
+                            "modified": [
+                                "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.26": {
                     "default": {
-                        "original": [
-                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ],
-                        "modified": [
-                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ],
+                            "modified": [
+                                "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.20": {
                     "default": {
-                        "original": [
-                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ],
-                        "modified": [
-                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ],
+                            "modified": [
+                                "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.17": {
                     "default": {
-                        "original": [
-                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ],
-                        "modified": [
-                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ],
+                            "modified": [
+                                "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.13": {
                     "default": {
-                        "original": [
-                            "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ],
-                        "modified": [
-                            "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ],
+                            "modified": [
+                                "C3 41 57 41 56 41 54 56 57 53 48 81 EC D0 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 48 01 00 00 FE FF FF FF 48 C7 45 18 00 00 00 00"
+                            ]
+                        }
                     }
                 },
                 "4.0.1.20": {
                     "default": {
-                        "original": [
-                            "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 75 0F"
-                        ],
-                        "modified": [
-                            "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 EB 0F"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 75 0F"
+                            ],
+                            "modified": [
+                                "41 B9 FF FF FF FF FF 15 A3 F3 D2 06 85 C0 EB 0F"
+                            ]
+                        }
                     }
                 },
                 "4.0.1.13": {
                     "default": {
-                        "original": [
-                            "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 75 0F"
-                        ],
-                        "modified": [
-                            "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 EB 0F"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 75 0F"
+                            ],
+                            "modified": [
+                                "41 B9 FF FF FF FF FF 15 BB E4 D0 06 85 C0 EB 0F"
+                            ]
+                        }
                     }
                 },
                 "4.0.1.11": {
                     "default": {
-                        "original": [
-                            "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 75 0F"
-                        ],
-                        "modified": [
-                            "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 EB 0F"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 75 0F"
+                            ],
+                            "modified": [
+                                "41 B9 FF FF FF FF FF 15 BB 2A D0 06 85 C0 EB 0F"
+                            ]
+                        }
                     }
                 }
             }
@@ -1852,424 +1988,500 @@
             "feature": {
                 "4.0.6.12": {
                     "alert": {
-                        "original": [
-                            "00 E8 BE DA FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 56 57 53 48 81",
-                            "45 31 C0 ?? ?? ?? ?? FE 48 8B BD 48 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89"
-                        ],
-                        "modified": [
-                            "01 ...",
-                            "48 83 85 C0 02 00 00 01 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 E8 BE DA FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 56 57 53 48 81",
+                                "45 31 C0 ?? ?? ?? ?? FE 48 8B BD 48 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89"
+                            ],
+                            "modified": [
+                                "01 ...",
+                                "48 83 85 C0 02 00 00 01 ..."
+                            ]
+                        }
                     },
                     "bubble": {
-                        "original": [
-                            "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                            "E8 ?? ?? ?? FE 89 C6 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89",
-                            "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
-                            "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
-                        ],
-                        "modified": [
-                            "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
-                            "BE 12 27 00 00 90 90 ...",
-                            "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
-                            "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 ?? ?? ?? FE 89 C6 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                                "BE 12 27 00 00 90 90 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
                     },
                     "silence": {
-                        "original": [
-                            "0F 84 CF 00 00 00 48 8D 8D B0 03 00 00 E8 ?? ?? ?? FD 48 8B 8D B0 03 00 00 48 8D 95 30 03 00 00 E8 ?? ?? ?? FD 48 8B 8D 30 03 00 00 48 8D"
-                        ],
-                        "modified": [
-                            "90 E9 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "0F 84 CF 00 00 00 48 8D 8D B0 03 00 00 E8 ?? ?? ?? FD 48 8B 8D B0 03 00 00 48 8D 95 30 03 00 00 E8 ?? ?? ?? FD 48 8B 8D 30 03 00 00 48 8D"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.6": {
                     "alert": {
-                        "original": [
-                            "00 E8 BE DA FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 56 57 53 48 81",
-                            "45 31 C0 ?? ?? ?? 55 FE 48 8B BD 48 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89"
-                        ],
-                        "modified": [
-                            "01 ...",
-                            "48 83 85 C0 02 00 00 01 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 E8 BE DA FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 56 57 53 48 81",
+                                "45 31 C0 ?? ?? ?? 55 FE 48 8B BD 48 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89"
+                            ],
+                            "modified": [
+                                "01 ...",
+                                "48 83 85 C0 02 00 00 01 ..."
+                            ]
+                        }
                     },
                     "bubble": {
-                        "original": [
-                            "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                            "E8 ?? ?? ?? FE 89 C6 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89",
-                            "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
-                            "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
-                        ],
-                        "modified": [
-                            "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
-                            "BE 12 27 00 00 90 90 ...",
-                            "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
-                            "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 ?? ?? ?? FE 89 C6 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                                "BE 12 27 00 00 90 90 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
                     },
                     "silence": {
-                        "original": [
-                            "0F 84 CF 00 00 00 48 8D 8D B0 03 00 00 E8 ?? ?? C1 FD 48 8B 8D B0 03 00 00 48 8D 95 30 03 00 00 E8 ?? ?? F4 FD 48 8B 8D 30 03 00 00 48 8D"
-                        ],
-                        "modified": [
-                            "90 E9 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "0F 84 CF 00 00 00 48 8D 8D B0 03 00 00 E8 ?? ?? C1 FD 48 8B 8D B0 03 00 00 48 8D 95 30 03 00 00 E8 ?? ?? F4 FD 48 8B 8D 30 03 00 00 48 8D"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.5": {
                     "alert": {
-                        "original": [
-                            "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
-                            "45 31 C0 E8 ?? ?? ?? FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
-                            "45 31 C0 E8 ?? ?? ?? FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
-                        ],
-                        "modified": [
-                            "01 ...",
-                            "48 83 85 C0 02 00 00 01 ...",
-                            "48 83 85 C0 02 00 00 01 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                                "45 31 C0 E8 ?? ?? ?? FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                                "45 31 C0 E8 ?? ?? ?? FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                            ],
+                            "modified": [
+                                "01 ...",
+                                "48 83 85 C0 02 00 00 01 ...",
+                                "48 83 85 C0 02 00 00 01 ..."
+                            ]
+                        }
                     },
                     "bubble": {
-                        "original": [
-                            "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                            "E8 ?? ?? ?? ?? 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                            "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
-                            "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
-                        ],
-                        "modified": [
-                            "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
-                            "8B B5 20 04 00 00 81 C6 12 27 00 00 ...",
-                            "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
-                            "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 ?? ?? ?? ?? 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                                "8B B5 20 04 00 00 81 C6 12 27 00 00 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
                     },
                     "silence": {
-                        "original": [
-                            "74 6E 48 8D 8D 28 04 00 00 E8 ?? ?? ?? ?? 48 8B 8D 28 04 00 00 48 8D 95 B0 03 00 00 E8 ?? ?? ?? FE 48 8B 8D B0 03 00 00 48 8D 95 B0 00 00 00 E8 ?? ?? ?? ?? 48 8D 8D B0 00 00 00 E8 ?? ?? ?? ??"
-                        ],
-                        "modified": [
-                            "EB ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 28 04 00 00 E8 ?? ?? ?? ?? 48 8B 8D 28 04 00 00 48 8D 95 B0 03 00 00 E8 ?? ?? ?? FE 48 8B 8D B0 03 00 00 48 8D 95 B0 00 00 00 E8 ?? ?? ?? ?? 48 8D 8D B0 00 00 00 E8 ?? ?? ?? ??"
+                            ],
+                            "modified": [
+                                "EB ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.3": {
                     "bubble": {
-                        "original": [
-                            "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                            "E8 ?? ?? ?? ?? 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
-                            "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
-                            "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
-                        ],
-                        "modified": [
-                            "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
-                            "8B B5 20 04 00 00 81 C6 12 27 00 00 ...",
-                            "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
-                            "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 ?? ?? ?? ?? 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                                "8B B5 20 04 00 00 81 C6 12 27 00 00 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
                     },
                     "silence": {
-                        "original": [
-                            "74 6E 48 8D 8D 28 04 00 00 E8 ?? ?? ?? ?? 48 8B 8D 28 04 00 00 48 8D 95 B0 03 00 00 E8 ?? ?? ?? FE 48 8B 8D B0 03 00 00 48 8D 95 B0 00 00 00 E8 ?? ?? ?? ?? 48 8D 8D B0 00 00 00 E8 ?? ?? ?? ??"
-                        ],
-                        "modified": [
-                            "EB ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 28 04 00 00 E8 ?? ?? ?? ?? 48 8B 8D 28 04 00 00 48 8D 95 B0 03 00 00 E8 ?? ?? ?? FE 48 8B 8D B0 03 00 00 48 8D 95 B0 00 00 00 E8 ?? ?? ?? ?? 48 8D 8D B0 00 00 00 E8 ?? ?? ?? ??"
+                            ],
+                            "modified": [
+                                "EB ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.2.26": {
                     "silence": {
-                        "original": [
-                            "74 6E 48 8D 8D 08 04 00 00 E8 ?? ?? ?? ?? 48 8B"
-                        ],
-                        "modified": [
-                            "EB ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 08 04 00 00 E8 ?? ?? ?? ?? 48 8B"
+                            ],
+                            "modified": [
+                                "EB ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.2": {
                     "silence": {
-                        "original": [
-                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 ?? ?? ?? ?? 66 C7 05 ?? ?? ?? ?? 67 00 C6 05 ?? ?? ?? ?? 01 48 8D"
-                        ],
-                        "modified": [
-                            "EB 21 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 ?? ?? ?? ?? 66 C7 05 ?? ?? ?? ?? 67 00 C6 05 ?? ?? ?? ?? 01 48 8D"
+                            ],
+                            "modified": [
+                                "EB 21 ..."
+                            ]
+                        }
                     }
                 },
                 "4.0.1": {
                     "silence": {
-                        "original": [
-                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 ?? ?? ?? ?? 66 C7 05 ?? ?? ?? ?? 67 00 C6 05 ?? ?? ?? ?? 01 48 8D 3D"
-                        ],
-                        "modified": [
-                            "EB 21 ..."
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 ?? ?? ?? ?? 66 C7 05 ?? ?? ?? ?? 67 00 C6 05 ?? ?? ?? ?? 01 48 8D 3D"
+                            ],
+                            "modified": [
+                                "EB 21 ..."
+                            ]
+                        }
                     }
                 }
             },
             "precise": {
                 "4.0.6.7": {
                     "alert": {
-                        "original": [
-                            "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
-                            "45 31 c0 e8 a0 3b 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
-                        ],
-                        "modified": [
-                            "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
-                            "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                                "45 31 c0 e8 a0 3b 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                            ],
+                            "modified": [
+                                "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                                "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                            ]
+                        }
                     },
                     "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 3a fd f5 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                                "e8 3a fd f5 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                                "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                                "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                            ],
+                            "modified": [
+                                "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                                "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                                "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                                "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                            ]
+                        }
                     },
                     "silence": {
-                        "original": [
-                            "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 3f b5 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 7c b6 f4 fd 48 8b 8d 30 03 00 00 48 8d"
-                        ],
-                        "modified": [
-                            "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 3f b5 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 7c b6 f4 fd 48 8b 8d 30 03 00 00 48 8d"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 3f b5 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 7c b6 f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                            ],
+                            "modified": [
+                                "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 3f b5 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 7c b6 f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                            ]
+                        }
                     }
                 },
                 "4.0.6.5": {
                     "alert": {
-                        "original": [
-                            "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
-                            "45 31 c0 e8 80 58 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
-                        ],
-                        "modified": [
-                            "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
-                            "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                                "45 31 c0 e8 80 58 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                            ],
+                            "modified": [
+                                "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                                "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                            ]
+                        }
                     },
                     "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 fa 01 f6 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                                "e8 fa 01 f6 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                                "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                                "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                            ],
+                            "modified": [
+                                "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                                "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                                "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                                "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                            ]
+                        }
                     },
                     "silence": {
-                        "original": [
-                            "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 6f be c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 ac bf f4 fd 48 8b 8d 30 03 00 00 48 8d"
-                        ],
-                        "modified": [
-                            "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 6f be c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 ac bf f4 fd 48 8b 8d 30 03 00 00 48 8d"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 6f be c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 ac bf f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                            ],
+                            "modified": [
+                                "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 6f be c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 ac bf f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                            ]
+                        }
                     }
                 },
                 "4.0.6.3": {
                     "alert": {
-                        "original": [
-                            "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
-                            "45 31 c0 e8 30 51 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
-                        ],
-                        "modified": [
-                            "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
-                            "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                                "45 31 c0 e8 30 51 55 fe 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                            ],
+                            "modified": [
+                                "01 e8 be da ff ff 48 89 f0 48 83 c4 30 5e c3 cc cc cc cc cc 55 41 57 41 56 56 57 53 48 81",
+                                "48 83 85 c0 02 00 00 01 48 8b bd 48 04 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89"
+                            ]
+                        }
                     },
                     "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 fa 01 f6 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                                "e8 fa 01 f6 fe 89 c6 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                                "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                                "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                            ],
+                            "modified": [
+                                "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                                "be 12 27 00 00 90 90 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89",
+                                "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                                "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                            ]
+                        }
                     },
                     "silence": {
-                        "original": [
-                            "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 af c7 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 3c c9 f4 fd 48 8b 8d 30 03 00 00 48 8d"
-                        ],
-                        "modified": [
-                            "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 af c7 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 3c c9 f4 fd 48 8b 8d 30 03 00 00 48 8d"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "0f 84 cf 00 00 00 48 8d 8d b0 03 00 00 e8 af c7 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 3c c9 f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                            ],
+                            "modified": [
+                                "90 e9 cf 00 00 00 48 8d 8d b0 03 00 00 e8 af c7 c1 fd 48 8b 8d b0 03 00 00 48 8d 95 30 03 00 00 e8 3c c9 f4 fd 48 8b 8d 30 03 00 00 48 8d"
+                            ]
+                        }
                     }
                 },
                 "4.0.5.26": {
                     "alert": {
-                        "original": [
-                            "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
-                            "45 31 C0 E8 F7 AF 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
-                            "45 31 C0 E8 1C 71 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
-                        ],
-                        "modified": [
-                            "01 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
-                            "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
-                            "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                                "45 31 C0 E8 F7 AF 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                                "45 31 C0 E8 1C 71 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                            ],
+                            "modified": [
+                                "01 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                                "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                                "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                            ]
+                        }
                     }
                 },
                 "4.0.5.23": {
                     "alert": {
-                        "original": [
-                            "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
-                            "45 31 C0 E8 67 A7 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
-                            "45 31 C0 E8 8C 68 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
-                        ],
-                        "modified": [
-                            "01 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
-                            "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
-                            "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                                "45 31 C0 E8 67 A7 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                                "45 31 C0 E8 8C 68 5B FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                            ],
+                            "modified": [
+                                "01 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                                "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                                "48 83 85 C0 02 00 00 01 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                            ]
+                        }
                     },
                     "bubble": {
-                        "original": [
-                            "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
-                            "e8 d1 81 f8 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
-                            "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
-                        ],
-                        "modified": [
-                            "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
-                            "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
-                            "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
-                            "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "e9 68 02 00 00 0f 1f 84 00 00 00 00 00",
+                                "e8 d1 81 f8 fe 89 c6 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                                "e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                                "9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c"
+                            ],
+                            "modified": [
+                                "3d 12 27 00 00 0f 85 62 02 00 00 90 90",
+                                "8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 08 75 17 48 8b 07 48 89 f9 ff 10 f0 ff 4f 0c 75 09 48 8b 07 48 89 f9 ff 50 08 48 8b bd b8 00 00 00 48 85 ff 74 1d f0 ff 4f 08 75 17 48 8b 07 48 89",
+                                "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                                "92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c"
+                            ]
+                        }
                     },
                     "silence": {
-                        "original": [
-                            "74 6e 48 8d 8d 28 04 00 00 e8 c0 e8 d2 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 bd 31 03 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 ea b5 30 fe 48 8d 8d b0 00 00 00 e8 be fe 04 fe"
-                        ],
-                        "modified": [
-                            "eb 6e 48 8d 8d 28 04 00 00 e8 c0 e8 d2 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 bd 31 03 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 ea b5 30 fe 48 8d 8d b0 00 00 00 e8 be fe 04 fe"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6e 48 8d 8d 28 04 00 00 e8 c0 e8 d2 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 bd 31 03 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 ea b5 30 fe 48 8d 8d b0 00 00 00 e8 be fe 04 fe"
+                            ],
+                            "modified": [
+                                "eb 6e 48 8d 8d 28 04 00 00 e8 c0 e8 d2 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 bd 31 03 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 ea b5 30 fe 48 8d 8d b0 00 00 00 e8 be fe 04 fe"
+                            ]
+                        }
                     }
                 },
                 "4.0.5.18": {
                     "silence": {
-                        "original": [
-                            "74 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
-                        ],
-                        "modified": [
-                            "eb 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
+                            ],
+                            "modified": [
+                                "eb 6e 48 8d 8d 28 04 00 00 e8 a0 fb d3 fd 48 8b 8d 28 04 00 00 48 8d 95 b0 03 00 00 e8 8d 44 04 fe 48 8b 8d b0 03 00 00 48 8d 95 b0 00 00 00 e8 1a c2 31 fe 48 8d 8d b0 00 00 00 e8 8e 11 06 fe"
+                            ]
+                        }
                     }
                 },
                 "4.0.3.22": {
                     "silence": {
-                        "original": [
-                            "74 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
-                        ],
-                        "modified": [
-                            "EB 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
+                            ],
+                            "modified": [
+                                "EB 6E 48 8D 8D 28 04 00 00 E8 10 EC F3 FD 48 8B"
+                            ]
+                        }
                     }
                 },
                 "4.0.3.19": {
                     "silence": {
-                        "original": [
-                            "74 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
-                        ],
-                        "modified": [
-                            "EB 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
+                            ],
+                            "modified": [
+                                "EB 6E 48 8D 8D 28 04 00 00 E8 50 3A F4 FD 48 8B"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.28": {
                     "silence": {
-                        "original": [
-                            "74 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
-                        ],
-                        "modified": [
-                            "EB 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
+                            ],
+                            "modified": [
+                                "EB 6E 48 8D 8D 08 04 00 00 E8 CB 29 CC FD 48 8B"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.26": {
                     "silence": {
-                        "original": [
-                            "74 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
-                        ],
-                        "modified": [
-                            "EB 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
+                            ],
+                            "modified": [
+                                "EB 6E 48 8D 8D 08 04 00 00 E8 8B 31 CC FD 48 8B"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.20": {
                     "silence": {
-                        "original": [
-                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
-                        ],
-                        "modified": [
-                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
+                            ],
+                            "modified": [
+                                "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 66 BE 11 08 66 C7 05 65 BE 11 08 67 00 C6 05 60 BE 11 08 01 48 8D"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.17": {
                     "silence": {
-                        "original": [
-                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
-                        ],
-                        "modified": [
-                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
+                            ],
+                            "modified": [
+                                "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 06 1C 11 08 66 C7 05 05 1C 11 08 67 00 C6 05 00 1C 11 08 01 48 8D"
+                            ]
+                        }
                     }
                 },
                 "4.0.2.13": {
                     "silence": {
-                        "original": [
-                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
-                        ],
-                        "modified": [
-                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
+                            ],
+                            "modified": [
+                                "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 B6 3D 0E 08 66 C7 05 B5 3D 0E 08 67 00 C6 05 B0 3D 0E 08 01 48 8D"
+                            ]
+                        }
                     }
                 },
                 "4.0.1.20": {
                     "silence": {
-                        "original": [
-                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
-                        ],
-                        "modified": [
-                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
+                            ],
+                            "modified": [
+                                "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 A4 E8 B0 06 66 C7 05"
+                            ]
+                        }
                     }
                 },
                 "4.0.1.13": {
                     "silence": {
-                        "original": [
-                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
-                        ],
-                        "modified": [
-                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
+                            ],
+                            "modified": [
+                                "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 E8 AF 06 66 C7 05"
+                            ]
+                        }
                     }
                 },
                 "4.0.1.11": {
                     "silence": {
-                        "original": [
-                            "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
-                        ],
-                        "modified": [
-                            "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
-                        ]
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
+                            ],
+                            "modified": [
+                                "EB 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 74 41 AF 06 66 C7 05"
+                            ]
+                        }
                     }
                 }
             }
@@ -2347,8 +2559,64 @@
     },
     "WXWork": {
         "coexist": {
-            "exe_wildcards": "WXWork?.exe",
-            "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+            "channel": {
+                "default": {
+                    "label": "默认",
+                    "introduce": "对host文件,窗口类名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
+                    "author": [
+                        "afaa1991"
+                    ],
+                    "exe_wildcard": "WXWork?.exe",
+                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                }
+            },
+            "feature": {
+                "4.1.38": {
+                    "default": {
+                        "%inst_path%": {
+                            "original": [
+                                "80 79 08 00 74 16 83 C1 0C 83 79 14 07 76 02 8B 09 51 8D 4A 18 51 FF 15 00 20 22 06 8D 8B DC 00 00 00 51 E8 06 B6 DC 01 8B 45 08 59",
+                                "74 5D 39 B3 C4 00 00 00 74 55 8B CB E8 E4 D5 FF FF 8B CB E8 49 D0 FF FF 84 C0 75 43 8B BB CC 00 00 00 8B 07 C7 45 CC FC AD A1 06 C7",
+                                "73 76 69 64 3A 20 00 63 6F 6E 66 69 67 2E 64 62",
+                                "43 6F 6E 66 69 67 2E 63 66 67",
+                                "57 00 65 00 57 00 6F 00 72 00 6B 00 2E 00 41 00 63 00 74 00 69 00 76 00 61 00 74 00 65 00 41 00 70 00 70 00 6C 00 69 00 63 00 61 00 74 00 69 00 6F 00 6E 00",
+                                "43 00 6F 00 6E 00 66 00 69 00 67 00 2E 00 63 00 66 00 67 00",
+                                "63 00 6F 00 72 00 70 00 5F 00 6C 00 6F 00 67 00 6F 00",
+                                "54 00 65 00 6E 00 63 00 65 00 6E 00 74 00 2E 00 57 00 65 00 57 00 6F 00 72 00 6B 00 2E 00 45 00 78 00 63 00 6C 00 75 00 73 00 69 00 76 00 65 00",
+                                "63 6F 72 70 5F 6C 6F 67 6F",
+                                "71 72 63 6F 64 65 5F 6C 6F 67 69 6E 5F 75 73 65 72 5F 61 76 61 74 6F 72",
+                                "68 74 74 70 64 6E 73 2E 63 66 67 00 77 65 77 6F 72 6B"
+                            ],
+                            "modified": [
+                                "83 42 08 !! 83 42 08 10 83 6A 0C 20 90 EB 0D ...",
+                                "EB ...",
+                                "... !! 2E 64 62",
+                                "... !! 2E 63 66 67",
+                                "... !! 00",
+                                "... !! 00 2E 00 63 00 66 00 67 00",
+                                "... !! 00",
+                                "... !! 00 73 00 69 00 76 00 65 00",
+                                "... !!",
+                                "... !!",
+                                "68 74 74 70 64 6E !! ..."
+                            ],
+                            "meanings": [
+                                " ̲.  ̲B  .  ̲0  ̲.  ̲B  ̲.  ̲.  ̲.  ̲j  ̲.  ̲   ̲.  ̲.  ̲.  .  .  Q  .  J  .  Q  .  .  .     \"  .  .  .  .  .  .  .  Q  .  .  .  .  .  .  E  .  Y",
+                                " ̲t  ]  9  .  .  .  .  .  t  U  .  .  .  .  .  .  .  .  .  .  I  .  .  .  .  .  u  C  .  .  .  .  .  .  .  .  .  E  .  .  .  .  .  .",
+                                " s  v  i  d  :     .  c  o  n  f  i  ̲g  .  d  b",
+                                " C  o  n  f  i  ̲g  .  c  f  g",
+                                " W  .  e  .  W  .  o  .  r  .  k  .  .  .  A  .  c  .  t  .  i  .  v  .  a  .  t  .  e  .  A  .  p  .  p  .  l  .  i  .  c  .  a  .  t  .  i  .  o  .  ̲n  .",
+                                " C  .  o  .  n  .  f  .  i  .  ̲g  .  .  .  c  .  f  .  g  .",
+                                " c  .  o  .  r  .  p  .  _  .  l  .  o  .  g  .  ̲o  .",
+                                " T  .  e  .  n  .  c  .  e  .  n  .  t  .  .  .  W  .  e  .  W  .  o  .  r  .  k  .  .  .  E  .  x  .  c  .  l  .  ̲u  .  s  .  i  .  v  .  e  .",
+                                " c  o  r  p  _  l  o  g  ̲o",
+                                " q  r  c  o  d  e  _  l  o  g  i  n  _  u  s  e  r  _  a  v  a  t  o  ̲r",
+                                " h  t  t  p  d  n  ̲s  .  c  f  g  .  w  e  w  o  r  k"
+                            ]
+                        }
+                    }
+                }
+            }
         },
         "multirun": {
         },
@@ -2481,30 +2749,34 @@
             "feature": {
                 "9.7": {
                     "silence": {
-                        "original": [
-                            "68 ?? ?? ?? 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C ?? ?? ?? 56 50 68 ?? ?? ?? 56 FF",
-                            "51 ?? ?? ?? ?? 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C ?? ?? ?? ?? 50 68 ?? ?? ?? ?? FF 35"
-                        ],
-                        "modified": [
-                            "EB 09 90 90 90 ...",
-                            "EB 08 90 90 90 90 ..."
-                        ]
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "68 ?? ?? ?? 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C ?? ?? ?? 56 50 68 ?? ?? ?? 56 FF",
+                                "51 ?? ?? ?? ?? 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C ?? ?? ?? ?? 50 68 ?? ?? ?? ?? FF 35"
+                            ],
+                            "modified": [
+                                "EB 09 90 90 90 ...",
+                                "EB 08 90 90 90 90 ..."
+                            ]
+                        }
                     }
                 }
             },
             "precise": {
                 "9.7.23.29406": {
                     "silence": {
-                        "original": [
-                            "68 68 BB 2D 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
-                            "68 68 BB 2D 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
-                            "51 68 D8 B7 2D 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C E8 B7 2D 56 50 68 5C A3 2B 56 FF 35"
-                        ],
-                        "modified": [
-                            "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
-                            "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
-                            "EB 08 90 90 90 90 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C E8 B7 2D 56 50 68 5C A3 2B 56 FF 35"
-                        ]
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "68 68 BB 2D 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                                "68 68 BB 2D 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                                "51 68 D8 B7 2D 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C E8 B7 2D 56 50 68 5C A3 2B 56 FF 35"
+                            ],
+                            "modified": [
+                                "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                                "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                                "EB 08 90 90 90 90 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C E8 B7 2D 56 50 68 5C A3 2B 56 FF 35"
+                            ]
+                        }
                     }
                 }
             }
@@ -2575,30 +2847,34 @@
             "feature": {
                 "3.4": {
                     "silence": {
-                        "original": [
-                            "68 ?? ?? ?? 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C ?? ?? ?? 56 50 68 ?? ?? ?? 56 FF",
-                            "51 ?? ?? ?? ?? 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C ?? ?? ?? ?? 50 68 ?? ?? ?? ?? FF 35"
-                        ],
-                        "modified": [
-                            "EB 09 90 90 90 ...",
-                            "EB 08 90 90 90 90 ..."
-                        ]
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "68 ?? ?? ?? 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C ?? ?? ?? 56 50 68 ?? ?? ?? 56 FF",
+                                "51 ?? ?? ?? ?? 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C ?? ?? ?? ?? 50 68 ?? ?? ?? ?? FF 35"
+                            ],
+                            "modified": [
+                                "EB 09 90 90 90 ...",
+                                "EB 08 90 90 90 90 ..."
+                            ]
+                        }
                     }
                 }
             },
             "precise": {
                 "3.4.8.22121": {
                     "silence": {
-                        "original": [
-                            "68 F8 2B 21 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
-                            "68 F8 2B 21 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
-                            "51 68 68 28 21 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C 78 28 21 56 50 68 28 50 1F 56 FF 35"
-                        ],
-                        "modified": [
-                            "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
-                            "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
-                            "EB 08 90 90 90 90 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C 78 28 21 56 50 68 28 50 1F 56 FF 35"
-                        ]
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "68 F8 2B 21 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                                "68 F8 2B 21 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                                "51 68 68 28 21 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C 78 28 21 56 50 68 28 50 1F 56 FF 35"
+                            ],
+                            "modified": [
+                                "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                                "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                                "EB 08 90 90 90 90 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C 78 28 21 56 50 68 28 50 1F 56 FF 35"
+                            ]
+                        }
                     }
                 }
             }
@@ -2665,32 +2941,36 @@
             "precise": {
                 "x.x.x.x": {
                     "channel1": {
-                        "original": [
-                            "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                            "E8 41 78 F6 FE 89 C6 48 85 FF 74 1D",
-                            "aa bb cc dd dd ee ee"
-                        ],
-                        "modified": [
-                            "E9 68 02 00 00 0F 1F 84 00 00 00 00 90",
-                            "8B 41 78 F6 FE 89 C6 48 85 FF 74 1D",
-                            "aa cc cc dd dd ee aa"
-                        ]
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 41 78 F6 FE 89 C6 48 85 FF 74 1D",
+                                "aa bb cc dd dd ee ee"
+                            ],
+                            "modified": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 90",
+                                "8B 41 78 F6 FE 89 C6 48 85 FF 74 1D",
+                                "aa cc cc dd dd ee aa"
+                            ]
+                        }
                     }
                 }
             },
             "feature": {
                 "x.x.x": {
                     "channel1": {
-                        "original": [
-                            "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                            "E8 41 78 F6 FE 89 C6 48 85 FF 74 1D",
-                            "aa bb cc dd ?? ?? ee"
-                        ],
-                        "modified": [
-                            "... 90",
-                            "8B ...",
-                            "aa cc ..."
-                        ]
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 41 78 F6 FE 89 C6 48 85 FF 74 1D",
+                                "aa bb cc dd ?? ?? ee"
+                            ],
+                            "modified": [
+                                "... 90",
+                                "8B ...",
+                                "aa cc ..."
+                            ]
+                        }
                     }
                 }
             }

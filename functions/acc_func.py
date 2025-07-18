@@ -1149,8 +1149,8 @@ class AccInfoFunc:
                         # print(f"进程{process_id}对应账号{acc_dir}，已用时：{time.time() - start_time:.4f}秒")
                         return True
                     return None
-                except Exception as e:
-                    logger.error(e)
+                except Exception as se:
+                    logger.error(se)
                     return None
             return None
 

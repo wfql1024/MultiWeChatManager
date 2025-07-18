@@ -243,6 +243,7 @@ def wait_hwnd_by_pid_and_class_wildcards(pid, class_wildcards, timeout=20, title
     return wait_hwnd_exclusively_by_pid_and_class_wildcards(None, pid, class_wildcards, timeout, title)
 
 
+# TODO: uiautomation实现窗口等待
 def wait_hwnd_exclusively_by_pid_and_class_wildcards(
         exclude_hwnds, pid, class_wildcards, timeout=20, title=None) -> Tuple[Optional[int], Optional[str]]:
     """等待匹配通配符的窗口类名打开，并返回窗口句柄（可排除指定句柄列表）,并返回hwnd和类名"""

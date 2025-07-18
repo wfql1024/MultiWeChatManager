@@ -218,3 +218,7 @@ class Test(TestCase):
         hwnds = hwnd_utils.win32_get_hwnds_by_pid_and_class_wildcards(target_pid)
         print(hwnds)
         print(f"用时: {time.time() - start_time}")
+
+    def test_resolve_addr(self):
+        path = SwInfoFunc.resolve_sw_path("Weixin", "%dll_dir%/Weixin.dll")
+        print(path)

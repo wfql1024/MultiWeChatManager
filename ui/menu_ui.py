@@ -17,7 +17,7 @@ from resources import Strings, Config
 from ui import sidebar_ui
 from ui.wnd_ui import WndCreator
 from utils import widget_utils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 from utils.sys_utils import Tk2Sys
 
@@ -432,7 +432,7 @@ class MenuUI:
     def _toggle_patch_mode(self, mode, channel):
         """切换是否全局多开或防撤回"""
         try:
-            success, msg = SwOperator.switch_dll(self.sw, mode, channel, self.sw_class.dll_dir)  # 执行切换操作
+            success, msg = SwOperator.switch_dll(self.sw, mode, channel)  # 执行切换操作
             if success:
                 channel_des, = subfunc_file.get_remote_cfg(
                     self.sw, mode, "channel", **{channel: None})
@@ -479,7 +479,7 @@ class MenuUI:
             new_label = self._to_tray_label.replace(Strings.TRAY_HINT, "")
             self.menu_bar.entryconfigure(self._to_tray_label, label=new_label)
             self._to_tray_label = new_label
-        if self.root_class.global_settings_value.in_tray is not True:
+        if not (self.root_class.global_settings_value.in_tray is True):
             AppFunc.create_tray(self.root)
             self.root_class.global_settings_value.in_tray = True
 
@@ -508,13 +508,14 @@ class MenuUI:
 
     def _update_anti_revoke_menu(self, res_dict, msg):
         # 原来的防撤回菜单创建代码
+        Printer().debug(res_dict)
         if res_dict is None:
             self.settings_menu.entryconfig("防撤回", label="！防撤回", foreground="red")
             self.anti_revoke_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
                                               command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
-            for channel, res_tuple in res_dict.items():
-                if not isinstance(res_tuple, tuple) or len(res_tuple) != 4:
+            for channel, channel_res_tuple in res_dict.items():
+                if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
                     continue
                 channel_des, = subfunc_file.get_remote_cfg(
                     self.sw, RemoteCfg.REVOKE.value, "channel", **{channel: None})
@@ -523,15 +524,15 @@ class MenuUI:
                 if channel_des is not None and isinstance(channel_des, dict):
                     if "label" in channel_des:
                         channel_label = channel_des["label"]
-                anti_revoke, info, _, _ = res_tuple
-                if anti_revoke is None:
+                anti_revoke_status, channel_msg, _ = channel_res_tuple
+                if anti_revoke_status is None:
                     menu = self.anti_revoke_channel_menus_dict[channel] = tk.Menu(
                         self.anti_revoke_menu, tearoff=False)
                     self.anti_revoke_menu.add_cascade(label=channel_label, menu=menu)
-                    menu.add_command(label=f"[点击复制]{info}", foreground="red",
-                                     command=lambda i=info: Tk2Sys.copy_to_clipboard(self.root, i))
+                    menu.add_command(label=f"[点击复制]{channel_msg}", foreground="red",
+                                     command=lambda i=channel_msg: Tk2Sys.copy_to_clipboard(self.root, i))
                 else:
-                    self.anti_revoke_channel_vars_dict[channel] = tk.BooleanVar(value=anti_revoke)
+                    self.anti_revoke_channel_vars_dict[channel] = tk.BooleanVar(value=anti_revoke_status)
                     self.anti_revoke_menu.add_checkbutton(
                         label=channel_label, variable=self.anti_revoke_channel_vars_dict[channel],
                         command=partial(self._toggle_patch_mode, mode=RemoteCfg.REVOKE, channel=channel))
@@ -556,8 +557,8 @@ class MenuUI:
                                                command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
             # 列出所有频道
-            for channel, res_tuple in res_dict.items():
-                if not isinstance(res_tuple, tuple) or len(res_tuple) != 4:
+            for channel, channel_res_tuple in res_dict.items():
+                if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
                     continue
                 channel_des, = subfunc_file.get_remote_cfg(
                     self.sw, RemoteCfg.MULTI.value, "channel", **{channel: None})
@@ -566,18 +567,18 @@ class MenuUI:
                 if channel_des is not None and isinstance(channel_des, dict):
                     if "label" in channel_des:
                         channel_label = channel_des["label"]
-                channel_freely_multirun, info, _, _ = res_tuple
-                if channel_freely_multirun is None:
+                freely_multirun_status, channel_msg, _ = channel_res_tuple
+                if freely_multirun_status is None:
                     menu = self.multirun_channel_menus_dict[channel] = tk.Menu(
                         self.multirun_menu, tearoff=False)
                     self.multirun_menu.add_cascade(label=channel_label, menu=menu)
-                    menu.add_command(label=f"[点击复制]{info}", foreground="red",
-                                     command=lambda i=info: Tk2Sys.copy_to_clipboard(self.root, i))
+                    menu.add_command(label=f"[点击复制]{channel_msg}", foreground="red",
+                                     command=lambda i=channel_msg: Tk2Sys.copy_to_clipboard(self.root, i))
                 else:
                     # 只要有freely_multirun为True，就将其设为True
-                    if channel_freely_multirun is True:
+                    if freely_multirun_status is True:
                         self.sw_class.can_freely_multirun = True
-                    self.multirun_channel_vars_dict[channel] = tk.BooleanVar(value=channel_freely_multirun)
+                    self.multirun_channel_vars_dict[channel] = tk.BooleanVar(value=freely_multirun_status)
                     self.multirun_menu.add_checkbutton(
                         label=channel_label, variable=self.multirun_channel_vars_dict[channel],
                         command=partial(self._toggle_patch_mode, mode=RemoteCfg.MULTI, channel=channel))
@@ -589,7 +590,7 @@ class MenuUI:
 
         # >多开子程序选择
         # 得出使用的多开模式,若开了全局多开,则使用全局多开模式,否则使用其他模式
-        if self.sw_class.can_freely_multirun is True:
+        if self.sw_class.can_freely_multirun:
             self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN
             self.multirun_menu.add_command(label="其余模式", state="disabled")
         else:
@@ -666,11 +667,11 @@ class MenuUI:
         try:
             # 防撤回部分
             res_dict, msg = SwInfoFunc.identify_dll(
-                self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
+                self.sw, RemoteCfg.REVOKE.value)
             self.root.after(0, self._update_anti_revoke_menu, res_dict, msg)
             # 全局多开部分
             res_dict, msg = SwInfoFunc.identify_dll(
-                self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
+                self.sw, RemoteCfg.MULTI.value)
             self.root.after(0, self._update_multirun_menu, res_dict, msg)
         except Exception as e:
             print(e)

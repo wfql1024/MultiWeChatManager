@@ -1,3 +1,4 @@
+import colorsys
 import re
 from pathlib import Path
 from typing import Any, Tuple, Union, Optional
@@ -119,17 +120,17 @@ class ColorUtils:
         return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
 
     @staticmethod
-    def lighten_color(color, white_ratio):
+    def fade_color(color, white_ratio=0.5):
         """
-        颜色淡化工具方法,支持RGB元组或十六进制颜色值
+        颜色淡化工具方法,支持RGB元组或十六进制颜色值.输入负数时会变成加深.
         :param color: RGB元组(如(255,0,0))或十六进制颜色值(如'#FF0000')
         :param white_ratio: 白色混合比例（0~1）
         :return: 与输入格式相同的淡化后的颜色值
         :raises ValueError: 当颜色格式不正确或white_ratio不在0-1之间时抛出异常
         """
         # 验证white_ratio
-        if not isinstance(white_ratio, (int, float)) or white_ratio < 0 or white_ratio > 1:
-            raise ValueError("white_ratio必须是0-1之间的数值")
+        if not isinstance(white_ratio, (int, float)) or white_ratio < -1 or white_ratio > 1:
+            raise ValueError("white_ratio必须是-1到1之间的数值")
 
         # 判断输入格式并统一转为RGB
         is_hex = isinstance(color, str)
@@ -144,10 +145,48 @@ class ColorUtils:
         else:
             raise ValueError("颜色值必须是RGB元组或十六进制字符串")
 
-        # 与白色混合
-        result_rgb = tuple(int(v * (1 - white_ratio) + 255 * white_ratio) for v in rgb)
+        if white_ratio >= 0:
+            # 比例为正值,与白色混合
+            result_rgb = tuple(int(v * (1 - white_ratio) + 255 * white_ratio) for v in rgb)
+        else:
+            # 比例为负值,与黑色混合
+            black_ratio = -white_ratio
+            result_rgb = tuple(int(v * (1 - black_ratio)) for v in rgb)
 
         # 返回对应格式
+        if is_hex:
+            return ColorUtils.rgb_to_hex(result_rgb)
+        return result_rgb
+
+    @staticmethod
+    def brighten_color(color):
+        """
+        提亮颜色，更鲜艳（通过增加亮度和/或饱和度）
+        :param color: RGB元组或十六进制字符串
+        # :param brighten_ratio: 提亮比例 0~1
+        """
+        # if not isinstance(brighten_ratio, (int, float)) or brighten_ratio < 0 or brighten_ratio > 1:
+        #     raise ValueError("brighten_ratio必须是0-1之间的数值")
+
+        is_hex = isinstance(color, str)
+        if is_hex:
+            rgb = ColorUtils.hex_to_rgb(color)
+        else:
+            rgb = color
+
+        # RGB -> HLS
+        r, g, b = [v / 255 for v in rgb]
+        h, l, s = colorsys.rgb_to_hls(r, g, b)
+
+        # 提亮：增加亮度
+        l = 0.5
+        # 或者同时增加饱和度:
+        s = 0.75
+
+        # HLS -> RGB
+        r_new, g_new, b_new = colorsys.hls_to_rgb(h, l, s)
+        result_rgb = (int(r_new * 255), int(g_new * 255), int(b_new * 255))
+
         if is_hex:
             return ColorUtils.rgb_to_hex(result_rgb)
         return result_rgb

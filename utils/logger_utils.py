@@ -443,6 +443,16 @@ class Logger:
         # 避免转发自身已有的属性或方法
         if name in self.__dict__ or hasattr(type(self), name):
             return self.__dict__[name] if name in self.__dict__ else getattr(type(self), name)
+        # 自动捕获 traceback 的包装
+        if name in ["error", "exception", "critical"]:
+            def wrapper(msg, *args, **kwargs):
+                # 若未传 exc_info，自动补上
+                if 'exc_info' not in kwargs:
+                    kwargs['exc_info'] = True
+                return getattr(self.logger, name)(msg, *args, **kwargs)
+
+            return wrapper
+        # 普通 log 方法转发
         return getattr(self.logger, name)
 
 

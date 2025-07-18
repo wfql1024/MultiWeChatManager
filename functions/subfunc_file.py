@@ -98,7 +98,7 @@ def read_remote_cfg_in_rules():
     """
     # 获取存储的日期
     next_check_time_str = fetch_global_setting_or_set_default_or_none("next_check_time")
-    if next_check_time_str is None:
+    if not isinstance(next_check_time_str, str):
         next_check_time = dt.datetime.today().date()
         today = dt.datetime.today().date()
     else:
@@ -190,12 +190,8 @@ def get_extra_cfg(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     :param kwargs: 需要获取的键地址及其默认值（如 note="", nickname=None）
     :return: 包含所请求数据的元组
     """
-    try:
-        data = load_extra_cfg()
-        return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
-    except Exception as e:
-        logger.error(e)
-        return tuple()
+    data = load_extra_cfg()
+    return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
 
 
 """本地设置:为了线程安全,写方法仅在设置界面可以使用"""

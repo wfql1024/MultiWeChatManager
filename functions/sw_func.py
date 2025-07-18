@@ -23,11 +23,11 @@ from public_class.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg
 from public_class.global_members import GlobalMembers
 from resources import Config, Strings, Constants
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
-from utils.better_wx.inner_utils import wildcard_tokenize, patt2hex
+from utils.better_wx.inner_utils import patt2hex, custom_wildcard_tokenize
 from utils.encoding_utils import VersionUtils, PathUtils, StringUtils
 from utils.file_utils import DllUtils
 from utils.hwnd_utils import TkWndUtils
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger, Printer, Logger
 from utils.logger_utils import myprinter as printer
 
 
@@ -42,7 +42,110 @@ class SwInfoFunc:
     """
 
     @staticmethod
-    def _identify_dll_by_precise_channel_in_mode_dict(sw, dll_dir, mode_branches_dict) -> Tuple[Optional[dict], str]:
+    def resolve_sw_path(sw, addr: str):
+        """解析补丁路径, 路径中可以包含%包裹的引用地址, 如%dll_dir%/WeChatWin.dll"""
+        resolved_parts = []
+        for part in addr.replace("\\", "/").split("/"):
+            if not part:
+                continue
+            if part.startswith("%") and part.endswith("%") and len(part) > 2:
+                var_name = part[1:-1]
+                try:
+                    resolved = SwInfoFunc.get_saved_path_of_(sw, var_name)
+                    resolved_parts.append(resolved.strip("/\\"))
+                except KeyError:
+                    raise ValueError(f"路径变量未定义: %{var_name}%")
+            else:
+                resolved_parts.append(part)
+        return "/".join(resolved_parts)
+
+    @staticmethod
+    def _identify_patching_of_files_in_channel(sw, channel_addresses_dict) -> dict:
+        """
+        使用特征码识别dll的状态（收集所有通道的匹配结果）
+        参数:
+            ver_adaptation: 版本适配字典 {addr: {"original": [...], "modified": [...]}}
+        返回:
+            {
+                channel1: (status, message, patch_file, original_list, modified_list),
+                channel2: (status, message, patch_file, original_list, modified_list),
+                ...
+            }
+            status: True/False/None
+            message: 状态描述字符串
+        """
+        addr_res_dict = {}
+        for addr in channel_addresses_dict.keys():
+            Printer().debug(f"检查通道 {addr} 的特征码适配")
+            patch_file = SwInfoFunc.resolve_sw_path(sw, addr)
+            original_list = channel_addresses_dict[addr]["original"]
+            modified_list = channel_addresses_dict[addr]["modified"]
+            has_original_list = DllUtils.find_patterns_from_dll_in_hexadecimal(patch_file, *original_list)
+            has_modified_list = DllUtils.find_patterns_from_dll_in_hexadecimal(patch_file, *modified_list)
+            # 转换为集合检查一致性,集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
+            has_original_set = set(has_original_list)
+            has_modified_set = set(has_modified_list)
+            # 初始化默认值
+            status = None
+            message = "未知状态"
+            # 判断匹配状态
+            if len(has_original_set) == 1 and len(has_modified_set) == 1:
+                all_original = True if True in has_original_set else False if False in has_original_set else None
+                all_modified = True if True in has_modified_set else False if False in has_modified_set else None
+                if all_original is True and all_modified is False:
+                    status = False
+                    message = "未开启"
+                elif all_original is False and all_modified is True:
+                    status = True
+                    message = "已开启"
+                elif all_original is True or all_modified is True:
+                    message = "文件有多处匹配，建议优化补丁替换列表"
+            else:
+                message = "文件匹配结果不一致"
+            # 将结果存入字典
+            addr_res_dict[addr] = (status, message, patch_file, original_list, modified_list)
+
+        return addr_res_dict
+
+    @staticmethod
+    def _identify_patching_of_channels_in_ver(sw, ver_channels_dict) -> dict:
+        """
+        使用特征码识别dll的状态（收集所有通道的匹配结果）
+        参数:
+            ver_adaptation: 版本适配字典 {channel: {addr: {"original": [...], "modified": [...]}}}
+            dll_path: DLL文件路径
+        返回:
+            {
+                channel1: (status, message, original_list, modified_list),
+                channel2: (status, message, original_list, modified_list),
+                ...
+            }
+            status: True/False/None
+            message: 状态描述字符串
+        """
+        results = {}
+        status_set = set()
+        for channel in ver_channels_dict.keys():
+            addr_msg_dict = {}
+            channel_files_dict = ver_channels_dict[channel]
+            addr_res_dict = SwInfoFunc._identify_patching_of_files_in_channel(sw, channel_files_dict)
+            # 对频道的所有地址状态进行判定,全为True则为True,全为False则为False,其他情况为None
+            for addr in addr_res_dict.keys():
+                if isinstance(addr_res_dict[addr], tuple) and len(addr_res_dict[addr]) == 5:
+                    status, addr_msg, _, _, _ = addr_res_dict[addr]
+                    if status is None:
+                        addr_msg_dict[addr] = addr_msg
+                else:
+                    status = None
+                    addr_msg_dict[addr] = "返回格式错误"
+                status_set.add(status)
+            channel_status = status_set.pop() \
+                if len(status_set) == 1 and next(iter(status_set)) in (True, False) else None
+            results[channel] = channel_status, f"文件情况:{addr_msg_dict}", addr_res_dict
+        return results
+
+    @staticmethod
+    def _identify_dll_by_precise_channel_in_mode_dict(sw, mode_branches_dict) -> Tuple[Optional[dict], str]:
         """通过精确版本分支进行识别dll状态"""
         cur_sw_ver = SwInfoFunc.calc_sw_ver(sw)
         if cur_sw_ver is None:
@@ -53,72 +156,84 @@ class SwInfoFunc:
         if cur_sw_ver not in precise_vers_dict:
             return None, f"错误：未找到版本{cur_sw_ver}的适配"
         ver_channels_dict = precise_vers_dict[cur_sw_ver]
-        patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
-        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
-        res_dict = SwInfoUtils.identify_dll_of_ver_by_dict(ver_channels_dict, dll_path)
-        if len(res_dict) == 0:
+        channel_res_dict = SwInfoFunc._identify_patching_of_channels_in_ver(sw, ver_channels_dict)
+        if len(channel_res_dict) == 0:
             return None, f"错误：该版本{cur_sw_ver}没有适配"
-        return res_dict, f"成功：找到版本{cur_sw_ver}的适配"
+        return channel_res_dict, f"成功：找到版本{cur_sw_ver}的适配"
 
     @staticmethod
-    def _update_adaptation_from_remote_to_extra(sw, mode, dll_dir):
+    def _update_adaptation_from_remote_to_extra(sw, mode):
         """根据远程表内容更新额外表"""
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if not config_data:
             return
-        patch_dll, mode_branches_dict = subfunc_file.get_remote_cfg(sw, patch_dll=None, **{mode: None})
-        if patch_dll is None or mode_branches_dict is None:
+        remote_mode_branches_dict, = subfunc_file.get_remote_cfg(sw, **{mode: None})
+        if remote_mode_branches_dict is None:
             return
-        dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
         # 尝试寻找兼容版本并添加到额外表中
         cur_sw_ver = SwInfoFunc.calc_sw_ver(sw)
-        subfunc_file.update_extra_cfg(sw, patch_dll=os.path.basename(dll_path))
-        if "precise" in mode_branches_dict:
-            precise_vers_dict = mode_branches_dict["precise"]
+        if "precise" in remote_mode_branches_dict:
+            precise_vers_dict = remote_mode_branches_dict["precise"]
             if cur_sw_ver in precise_vers_dict:
                 # 用精确版本特征码查找适配
                 precise_ver_adaptations = precise_vers_dict[cur_sw_ver]
                 for channel, adaptation in precise_ver_adaptations.items():
                     subfunc_file.update_extra_cfg(
                         sw, mode, "precise", cur_sw_ver, **{channel: adaptation})
-        if "feature" in mode_branches_dict:
-            feature_vers = list(mode_branches_dict["feature"].keys())
+        if "feature" in remote_mode_branches_dict:
+            feature_vers = list(remote_mode_branches_dict["feature"].keys())
             compatible_ver = VersionUtils.find_compatible_version(cur_sw_ver, feature_vers)
-            ver_channels_dict = subfunc_file.get_extra_cfg(sw, mode, "precise", cur_sw_ver)
+            cache_ver_channels_dict = subfunc_file.get_extra_cfg(sw, mode, "precise", cur_sw_ver)
             if compatible_ver:
                 # 用兼容版本特征码查找适配
-                compatible_ver_adaptations = mode_branches_dict["feature"][compatible_ver]
-                for channel in compatible_ver_adaptations.keys():
-                    if ver_channels_dict is not None and channel in ver_channels_dict:
-                        print("已获取精确适配")
+                feature_ver_channels_dict = remote_mode_branches_dict["feature"][compatible_ver]
+                for channel in feature_ver_channels_dict.keys():
+                    if cache_ver_channels_dict is not None and channel in cache_ver_channels_dict:
+                        print("已存在缓存的精确适配")
                         continue
-                    original_feature = compatible_ver_adaptations[channel]["original"]
-                    modified_feature = compatible_ver_adaptations[channel]["modified"]
-                    result_dict = SwInfoUtils.search_patterns_and_replaces_by_features(
-                        dll_path, (original_feature, modified_feature))
-                    if result_dict:
+                    channel_res_dict = {}
+                    channel_failed = False
+                    feature_channel_addr_dict = feature_ver_channels_dict[channel]
+                    for addr in feature_channel_addr_dict.keys():
+                        addr_feature_dict = feature_channel_addr_dict[addr]
+                        patch_file = SwInfoFunc.resolve_sw_path(sw, addr)
+                        original_feature = addr_feature_dict["original"]
+                        modified_feature = addr_feature_dict["modified"]
+                        addr_res_dict = SwInfoUtils.search_patterns_and_replaces_by_features(
+                            patch_file, (original_feature, modified_feature))
+                        if not addr_res_dict:
+                            channel_failed = True
+                            break
+                        channel_res_dict[addr] = addr_res_dict
+                    if not channel_failed:
                         # 添加到额外表中
                         subfunc_file.update_extra_cfg(
-                            sw, mode, "precise", cur_sw_ver, **{channel: result_dict})
+                            sw, mode, "precise", cur_sw_ver, **{channel: channel_res_dict})
 
     @staticmethod
-    def _identify_dll_by_extra_cfg(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:
+    def _identify_dll_by_extra_cfg(sw, mode) -> Tuple[Optional[dict], str]:
         """从额外表中获取"""
-        config_data = subfunc_file.load_extra_cfg()
-        if not config_data:
-            return None, "错误：没有数据"
-        patch_dll, mode_branches_dict = subfunc_file.get_extra_cfg(sw, patch_dll=None, **{mode: None})
-        if patch_dll is None or mode_branches_dict is None:
-            return None, f"错误：平台未适配{mode}"
-        return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, dll_dir, mode_branches_dict)
+        # config_data = subfunc_file.load_extra_cfg()
+        # if not config_data:
+        #     return None, "错误：没有数据"
+        try:
+            mode_branches_dict, = subfunc_file.get_extra_cfg(sw, **{mode: None})
+            if mode_branches_dict is None:
+                return None, f"错误：平台未适配{mode}"
+            return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, mode_branches_dict)
+        except Exception as e:
+            Logger().error(e)
+            return None, f"错误：{e}"
 
     @staticmethod
-    def identify_dll(sw, mode, dll_dir) -> Tuple[Optional[dict], str]:
+    def identify_dll(sw, mode) -> Tuple[Optional[dict], str]:
         """检查当前的dll状态，返回结果字典,若没有适配则返回None"""
+        dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
         if dll_dir is None:
             return None, "错误：没有找到dll目录"
-        SwInfoFunc._update_adaptation_from_remote_to_extra(sw, mode, dll_dir)
-        return SwInfoFunc._identify_dll_by_extra_cfg(sw, mode, dll_dir)
+        SwInfoFunc._update_adaptation_from_remote_to_extra(sw, mode)
+        res_dict, msg = SwInfoFunc._identify_dll_by_extra_cfg(sw, mode)
+        return res_dict, msg
 
     # @staticmethod
     # def detect_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
@@ -164,9 +279,8 @@ class SwInfoFunc:
             if cur_sw_ver is not None:
                 return cur_sw_ver
             dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
-            patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
-            # print(patch_dll)
-            dll_path = os.path.join(dll_dir, patch_dll).replace("\\", "/")
+            dll_dir_check_suffix, = subfunc_file.get_remote_cfg(sw, dll_dir_check_suffix=None)
+            dll_path = os.path.join(dll_dir, dll_dir_check_suffix).replace("\\", "/")
             cur_sw_ver = file_utils.get_file_version(dll_path)
             if cur_sw_ver is not None:
                 return cur_sw_ver
@@ -335,27 +449,33 @@ class SwOperator:
         return True
 
     @staticmethod
-    def _backup_dll(sw, dll_dir):
+    def _backup_dll(addr_res_tuple_dict):
         """备份当前的dll"""
         desktop_path = winshell.desktop()
-        patch_dll, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
-        dll_path = os.path.join(dll_dir, patch_dll)
-        dll_bak_path = os.path.join(dll_dir, f"{patch_dll}.bak")
-        bak_desktop_path = os.path.join(desktop_path, f"{patch_dll}.bak")
-        curr_ver = file_utils.get_file_version(dll_path)
-        not_same_version = True
-        if os.path.exists(dll_bak_path):
-            not_same_version = file_utils.get_file_version(dll_bak_path) != curr_ver
-        if not os.path.exists(dll_bak_path) or (
-                os.path.exists(dll_bak_path) and not_same_version):
-            print("没有备份")
-            messagebox.showinfo("提醒",
-                                "当前是您该版本首次切换模式，已将原本的WeChatWin.dll拷贝为WeChatWin_bak.dll，并也拷贝到桌面，可另外备份保存。")
-            shutil.copyfile(dll_path, dll_bak_path)
-            shutil.copyfile(dll_path, bak_desktop_path)
+        has_noticed = False
+        for addr in addr_res_tuple_dict:
+            _, _, patch_path, _, _ = addr_res_tuple_dict[addr]
+            dll_dir = os.path.dirname(patch_path)
+            patch_file_name = os.path.basename(patch_path)
+            dll_bak_path = os.path.join(dll_dir, f"{patch_file_name}.bak")
+            bak_desktop_path = os.path.join(desktop_path, f"{patch_file_name}.bak")
+            curr_ver = file_utils.get_file_version(patch_path)
+            not_same_version = True
+            if os.path.exists(dll_bak_path):
+                not_same_version = file_utils.get_file_version(dll_bak_path) != curr_ver
+            if not os.path.exists(dll_bak_path) or (
+                    os.path.exists(dll_bak_path) and not_same_version):
+                print("没有备份")
+                if not (has_noticed is True):
+                    messagebox.showinfo(
+                        "提醒",
+                        "当前是您在该版本首次切换模式，已将原本的文件命名添加.bak后缀备份，桌面亦有备份，可另外保存。")
+                    has_noticed = True
+                shutil.copyfile(patch_path, dll_bak_path)
+                shutil.copyfile(patch_path, bak_desktop_path)
 
     @staticmethod
-    def switch_dll(sw, mode, channel, dll_dir) -> Tuple[Optional[bool], str]:
+    def switch_dll(sw, mode, channel) -> Tuple[Optional[bool], str]:
         """切换sw平台中,mode模式下,channel频道的dll状态,返回成功与否及携带信息"""
         try:
             if mode == RemoteCfg.MULTI:
@@ -374,38 +494,42 @@ class SwOperator:
                 return False, "该平台暂未适配"
             # 提醒用户手动终止微信进程
             answer = SwOperator._ask_for_manual_terminate_or_force(sw_exe_path)
-            if answer is not True:
+            if not (answer is True):
                 return False, "用户取消操作"
 
             # 操作过程
-            res, msg = SwInfoFunc.identify_dll(sw, mode, dll_dir)
+            res, msg = SwInfoFunc.identify_dll(sw, mode)
             if res is None:
                 return False, msg
             if channel not in res:
                 return False, f"错误：未找到频道{channel}的适配"
-            channel_result_tuple = res[channel]
-            if not isinstance(channel_result_tuple, tuple) or len(channel_result_tuple) != 4:
-                return False, f"错误：频道{channel}的适配格式不正确"
-            tag, msg, original_patterns, modified_patterns = channel_result_tuple
-            patch_dll, ver_dict = subfunc_file.get_remote_cfg(sw, patch_dll=None, **{mode: None})
-            if patch_dll is None or ver_dict is None:
-                return False, "该平台暂未适配"
+            tag, msg, addr_res_tuple_dict = res[channel]
+            for addr in addr_res_tuple_dict:
+                addr_res_tuple = addr_res_tuple_dict[addr]
+                if not isinstance(addr_res_tuple, tuple) or len(addr_res_tuple) != 5:
+                    return False, f"错误：频道{channel}的适配格式不正确"
+            # mode_branches_dict, = subfunc_file.get_remote_cfg(sw, **{mode: None})
+            # if mode_branches_dict is None:
+            #     return False, "该平台暂未适配"
 
-            dll_path = os.path.join(dll_dir, patch_dll)
+            file_replaces_dict = {}
             try:
                 if tag is True:
                     print(f"当前：{mode}已开启")
-                    success = DllUtils.batch_atomic_replace_hex_patterns(
-                        dll_path, (modified_patterns, original_patterns))
+                    for addr in addr_res_tuple_dict:
+                        _, _, patch_path, original_patterns, modified_patterns = addr_res_tuple_dict[addr]
+                        file_replaces_dict[patch_path] = [(modified_patterns, original_patterns)]
+                    success = DllUtils.batch_atomic_replace_multi_files(file_replaces_dict)
                     if success:
                         return True, f"成功关闭:{mode_text}"
-
                 elif tag is False:
                     print(f"当前：{mode}未开启")
-                    SwOperator._backup_dll(sw, dll_dir)
-
-                    success = DllUtils.batch_atomic_replace_hex_patterns(
-                        dll_path, (original_patterns, modified_patterns))
+                    SwOperator._backup_dll(addr_res_tuple_dict)
+                    for addr in addr_res_tuple_dict:
+                        Printer().debug(addr_res_tuple_dict)
+                        _, _, patch_path, original_patterns, modified_patterns = addr_res_tuple_dict[addr]
+                        file_replaces_dict[patch_path] = [(original_patterns, modified_patterns)]
+                    success = DllUtils.batch_atomic_replace_multi_files(file_replaces_dict)
                     if success:
                         return True, f"成功开启:{mode_text}"
                 return False, f"切换{mode_text}失败！请稍后重试！"
@@ -859,14 +983,12 @@ class SwOperator:
         """打开注册表所在文件夹，并将光标移动到文件"""
         dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
         if os.path.exists(dll_dir):
-            dll_file, = subfunc_file.get_remote_cfg(sw, patch_dll=None)
-            if dll_file is None:
-                messagebox.showinfo("提醒", f"{sw}平台还没有适配")
-                return
+            dll_dir_check_suffix, = subfunc_file.get_remote_cfg(sw, dll_dir_check_suffix=None)
             # 打开文件夹
             shell = win32com.client.Dispatch("WScript.Shell")
             shell.CurrentDirectory = dll_dir
-            shell.Run(f'explorer /select,{dll_file}')
+            if dll_dir_check_suffix is not None:
+                shell.Run(f'explorer /select,{dll_dir_check_suffix}')
 
 
 #     @staticmethod
@@ -1157,9 +1279,9 @@ class SwInfoUtils:
 
     @staticmethod
     def _get_replacement_pairs(regex, repl_bytes, data):
+        """返回(匹配的串,相应替换后的串)元祖列表"""
         matches = list(regex.finditer(data))
         replacement_pairs = []
-
         for match in matches:
             original = match.group()  # 原始匹配的字节串
             replaced = regex.sub(repl_bytes, original)  # 替换后的字节串
@@ -1200,8 +1322,8 @@ class SwInfoUtils:
             print(f"原始特征码: {original_feature}")
             print(f"补丁特征码: {modified_feature}")
             # print("分词器处理:去除末尾的省略号;若开头有省略号,则识别为{省略号}")
-            listed_original_hex = wildcard_tokenize(original_feature)
-            listed_modified_hex = wildcard_tokenize(modified_feature)
+            listed_original_hex = custom_wildcard_tokenize(original_feature)
+            listed_modified_hex = custom_wildcard_tokenize(modified_feature)
             # print("判断类型:若...在开头,则以??补充至相同长度;...仅能出现在开头或不存在,否则报错")
             if listed_modified_hex[0] is ...:
                 listed_modified_hex = ["??"] * (
@@ -1226,12 +1348,18 @@ class SwInfoUtils:
             modified_regex_bytes = b""
             repl_bytes = b""
             group_count = 1
+            repl_pos_list = []  # 索引列表
+            cur_pos = 0
             for p, r in zip(listed_original_hex, listed_modified_hex):
                 if p == "??":
                     original_regex_bytes += b"(.)"
-                    modified_regex_bytes += b"(.)"
                     if r == "??":
                         repl_bytes += b"\\" + str(group_count).encode()
+                        modified_regex_bytes += b"(.)"
+                    elif r == "!!":
+                        repl_bytes += b"!"
+                        modified_regex_bytes += re.escape(b"!")
+                        repl_pos_list.append(cur_pos)
                     else:
                         repl_bytes += bytes.fromhex(r)
                         modified_regex_bytes += re.escape(bytes.fromhex(r))
@@ -1241,9 +1369,14 @@ class SwInfoUtils:
                     if r == "??":
                         repl_bytes += bytes.fromhex(p)
                         modified_regex_bytes += re.escape(bytes.fromhex(p))
+                    elif r == "!!":
+                        repl_bytes += b"!"
+                        modified_regex_bytes += re.escape(b"!")
+                        repl_pos_list.append(cur_pos)
                     else:
                         repl_bytes += bytes.fromhex(r)
                         modified_regex_bytes += re.escape(bytes.fromhex(r))
+                cur_pos += 1
             print("构建匹配模式：")
             print(f"original_regex_bytes: {original_regex_bytes}")
             print(f"modified_regex_bytes: {modified_regex_bytes}")
@@ -1261,6 +1394,11 @@ class SwInfoUtils:
                 original, modified = pair
                 original_hex = SwInfoUtils.bytes_to_hex_str(original)
                 modified_hex = SwInfoUtils.bytes_to_hex_str(modified)
+                # repl_pos_list 中记录的是第几个字节需要替换
+                for pos in repl_pos_list:
+                    hex_pos = pos * 3  # 每个字节对应两个 hex 字符 和 一个 空格
+                    modified_hex = modified_hex[:hex_pos] + "!!" + modified_hex[hex_pos + 2:]
+
                 print("识别到：")
                 print(f"Original: {original_hex}")
                 print(f"Modified: {modified_hex}")
@@ -1268,52 +1406,6 @@ class SwInfoUtils:
                 result_dict["modified"].append(modified_hex)
 
         return result_dict
-
-    @staticmethod
-    def identify_dll_of_ver_by_dict(ver_channels_dict, dll_path) -> dict:
-        """
-        使用特征码识别dll的状态（收集所有通道的匹配结果）
-        参数:
-            ver_adaptation: 版本适配字典 {channel: {"original": [...], "modified": [...]}}
-            dll_path: DLL文件路径
-        返回:
-            {
-                channel1: (status, message, original_list, modified_list),
-                channel2: (status, message, original_list, modified_list),
-                ...
-            }
-            status: True/False/None
-            message: 状态描述字符串
-        """
-        results = {}
-        for channel in ver_channels_dict.keys():
-            original_list = ver_channels_dict[channel]["original"]
-            modified_list = ver_channels_dict[channel]["modified"]
-            has_original_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *original_list)
-            has_modified_list = DllUtils.find_patterns_from_dll_in_hexadecimal(dll_path, *modified_list)
-            # 转换为集合检查一致性,集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
-            has_original_set = set(has_original_list)
-            has_modified_set = set(has_modified_list)
-            # 初始化默认值
-            status = None
-            message = "未知状态"
-            # 判断匹配状态
-            if len(has_original_set) == 1 and len(has_modified_set) == 1:
-                all_original = True if True in has_original_set else False if False in has_original_set else None
-                all_modified = True if True in has_modified_set else False if False in has_modified_set else None
-                if all_original is True and all_modified is False:
-                    status = False
-                    message = "未开启"
-                elif all_original is False and all_modified is True:
-                    status = True
-                    message = "已开启"
-                elif all_original is True or all_modified is True:
-                    message = "有多处匹配，建议优化补丁替换列表"
-            else:
-                message = "匹配结果不一致"
-            # 将结果存入字典
-            results[channel] = (status, message, original_list, modified_list)
-        return results
 
     @staticmethod
     def _create_path_finders_of_(path_tag, ignore_local_record=False) -> list:

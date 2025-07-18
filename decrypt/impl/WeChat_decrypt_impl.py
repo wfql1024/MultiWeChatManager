@@ -85,11 +85,12 @@ class WeChatDecryptImpl(DecryptInterface):
             # 在wechat.exe打开文件列表里面，找到最后文件名是Misc.db的，用这个做db_file,做校验
             misc_db = misc_dbs[0]
             logger.info(f"misc_db:{misc_db}")
-
+            # -遍历wechat载入的所有模块（包括它自己），找到所有模块最小的入口地址
             min_entrypoint = min([m.EntryPoint for m in pm.list_modules() if
-                                  m.EntryPoint is not None])  # 遍历wechat载入的所有模块（包括它自己），找到所有模块最小的入口地址
+                                  hasattr(m, "EntryPoint") and m.EntryPoint is not None])
+            # -遍历wechat载入的所有模块（包括它自己），找到所有模块最小的基址
             min_base = min([m.lpBaseOfDll for m in pm.list_modules() if
-                            m.lpBaseOfDll is not None])  # 遍历wechat载入的所有模块（包括它自己），找到所有模块最小的基址
+                            hasattr(m, "lpBaseOfDll") and m.lpBaseOfDll is not None])
             min_address = min(min_entrypoint, min_base)  # 找到wechat最低的内存地址段
             logger.info(f"min_entrypoint:{min_entrypoint}, min_base:{min_base}")
 
@@ -113,10 +114,10 @@ class WeChatDecryptImpl(DecryptInterface):
             # 判断操作系统位数，只需执行一次
             if phone_addr <= 2 ** 32:  # 如果是32位
                 logger.info(f"使用32位寻址去找key")
-                unpack_key_addr = lambda addr: struct.unpack('<I', pm.read_bytes(addr, 4))[0]
+                _unpack_key_addr = lambda addr: struct.unpack('<I', pm.read_bytes(addr, 4))[0]
             else:  # 如果是64位
                 logger.info(f"使用64位寻址去找key")
-                unpack_key_addr = lambda addr: struct.unpack('<Q', pm.read_bytes(addr, 8))[0]
+                _unpack_key_addr = lambda addr: struct.unpack('<Q', pm.read_bytes(addr, 8))[0]
 
             # 开始寻址...
             address = phone_addr  # 从找到的电话类型地址，作为基址，在附近查找
@@ -138,7 +139,7 @@ class WeChatDecryptImpl(DecryptInterface):
                 j = (k if k % 2 != 0 else -k)
                 address += j
                 # logger.info(i)
-                key_addr = unpack_key_addr(address)
+                key_addr = _unpack_key_addr(address)
                 addr_cnt += 1
                 # printer.normal(f"成功{correct_cnt}/可读{read_cnt}/遍历{addr_cnt}")
 

@@ -307,6 +307,43 @@ def wildcard_replace(data: bytes, pattern: Union[str, list], replace: Union[str,
     return new_data
 
 
+"""以下方法为新增方法"""
+
+
+def custom_wildcard_tokenize(wildcard: str) -> list:
+    wildcard = re.sub(r"\s+", "", wildcard).upper()
+
+    tokens = []
+    if wildcard.startswith("..."):
+        wildcard = wildcard[3:]
+        tokens.append(...)
+    elif wildcard.endswith("..."):
+        wildcard = wildcard[:-3]
+
+    if len(wildcard) % 2 != 0:
+        print(
+            f"{RED}[ERR] Wildcard <{wildcard}> has invalid byte {wildcard[-1]}_{RESET}"
+        )
+        pause()
+        exit()
+    for i in range(0, len(wildcard), 2):
+        a = wildcard[i]
+        b = wildcard[i + 1]
+        if a not in "0123456789ABCDEF?!" or b not in "0123456789ABCDEF?!":
+            print(f"{RED}[ERR] Wildcard <{wildcard}> has invalid byte {a}{b}{RESET}")
+            pause()
+            exit()
+        elif "?" == a == b:
+            tokens.append("??")
+        elif a == "?" or b == "?":
+            print(f"{RED}[ERR] Wildcard <{wildcard}> has invalid byte {a}{b}{RESET}")
+            pause()
+            exit()
+        else:
+            tokens.append(f"{a}{b}")
+    return tokens
+
+
 def debugged_wildcard_replace(data: bytes, pattern: Union[str, list], replace: Union[str, list]):
     """这个方法详细解释了替换过程，便于调试"""
 
@@ -329,7 +366,7 @@ def debugged_wildcard_replace(data: bytes, pattern: Union[str, list], replace: U
     data_str = bytes_to_hex_str(data)
     pattern = "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 ?? ?? ?? ?? 66 C7 05 ?? ?? ?? ?? 67 00 C6 05 ?? ?? ?? ?? 01 48 8D"
     # replace = "EB 21..."
-    replace = "... 48 9D"
+    replace = "... AA AA 48 9D"
     print(f"原始数据: {data_str}")
     print(f"原始特征码: {pattern}")
     print(f"补丁特征码: {replace}")
@@ -372,9 +409,9 @@ def debugged_wildcard_replace(data: bytes, pattern: Union[str, list], replace: U
     for p, r in zip(pattern, replace):
         if p == "??":
             regex_bytes += b"(.)"
-            patched_bytes += b"(.)"
             if r == "??":
                 repl_bytes += b"\\" + str(group_count).encode()
+                patched_bytes += b"(.)"
             else:
                 repl_bytes += bytes.fromhex(r)
                 patched_bytes += re.escape(bytes.fromhex(r))
@@ -430,3 +467,7 @@ def debugged_wildcard_replace(data: bytes, pattern: Union[str, list], replace: U
         print(new_data)
         print(bytes_to_hex_str(new_data))
         # return new_data
+
+
+if __name__ == "__main__":
+    debugged_wildcard_replace(None, None, None)
