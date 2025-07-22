@@ -243,7 +243,7 @@ class Test(TestCase):
         if "feature" in mode_branches_dict:
             feature_vers = list(mode_branches_dict["feature"].keys())
             compatible_ver = VersionUtils.find_compatible_version(cur_sw_ver, feature_vers)
-            ver_channels_dict = subfunc_file.get_extra_cfg(sw, mode, "precise", cur_sw_ver)
+            ver_channels_dict = subfunc_file.get_cache_cfg(sw, mode, "precise", cur_sw_ver)
             if compatible_ver:
                 # 用兼容版本特征码查找适配
                 compatible_ver_adaptations = mode_branches_dict["feature"][compatible_ver]

@@ -28,6 +28,7 @@ from utils.sys_utils import Tk2Sys
 class MenuUI:
     def __init__(self):
         """获取必要的设置项信息"""
+        self.coexist_menu = None
         self._to_tray_label = None
         self.used_tray = None
         self.sidebar_menu_label = None
@@ -41,10 +42,12 @@ class MenuUI:
         self.anti_revoke_menu_index = None
         self.menu_queue = None
         self.start_time = None
+        self.coexist_channel_menus_dict = {}
         self.multirun_channel_menus_dict = {}
+        self.anti_revoke_channel_menus_dict = {}
+        self.coexist_channel_radio_list = []
         self.multirun_channel_vars_dict = {}
         self.anti_revoke_channel_vars_dict = {}
-        self.anti_revoke_channel_menus_dict = {}
         self.multirun_menu = None
         self.anti_revoke_menu = None
         self.freely_multirun_var = None
@@ -294,6 +297,8 @@ class MenuUI:
             # -应用设置
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
             self.settings_menu.add_command(label="平台设置", command=partial(WndCreator.open_sw_settings, self.sw))
+            self.coexist_menu = tk.Menu(self.settings_menu, tearoff=False)
+            self.settings_menu.add_cascade(label="共存", menu=self.coexist_menu)
             self.anti_revoke_menu = tk.Menu(self.settings_menu, tearoff=False)
             self.settings_menu.add_cascade(label="防撤回", menu=self.anti_revoke_menu)
             self.multirun_menu = tk.Menu(self.settings_menu, tearoff=False)
@@ -341,7 +346,7 @@ class MenuUI:
                 value='LOGON',
                 variable=call_mode_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                "call_mode", "handle", self.create_root_menu_bar),
+                                "call_mode", "LOGON", self.create_root_menu_bar),
             )
 
             auto_press_value = self.global_settings_value.auto_press = \
@@ -486,11 +491,10 @@ class MenuUI:
     def _introduce_channel(self, mode, res_dict):
         text = ""
         for channel, res_tuple in res_dict.items():
-            if not isinstance(res_tuple, tuple) or len(res_tuple) != 4:
+            if not isinstance(res_tuple, tuple) or len(res_tuple) != 3:
                 continue
             channel_des, = subfunc_file.get_remote_cfg(
                 self.sw, mode, "channel", **{channel: None})
-            # print(channel_des)
             channel_label = channel
             channel_introduce = "暂无介绍"
             channel_author = "未知"
@@ -504,24 +508,91 @@ class MenuUI:
             text = f"{text}\n[{channel_label}]\n{channel_introduce}\n作者：{channel_author}\n"
         messagebox.showinfo("简介", text)
 
-    """更新多开,防撤回子菜单的线程"""
+    def _clear_cache(self, mode):
+        """清除缓存"""
+        # 询问用户
+        if messagebox.askyesno(
+                "确认",
+                "清除缓存将重新尝试基于特征码扫描精确适配.\n"
+                "注意: 对已经开启的模式,清除缓存后可能导致该模式扫描失败,请确保已经关闭该模式!\n"
+                "是否继续?"):
+            SwInfoFunc.clear_adaptation_cache(self.sw, mode)
+            messagebox.showinfo("提示", "缓存已清除！")
+            self.create_root_menu_bar()
 
-    def _update_anti_revoke_menu(self, res_dict, msg):
+    """更新多开,共存,防撤回子菜单的线程"""
+
+    def _update_coexist_menu(self, mode_channel_res_dict, msg):
+        Printer().debug(mode_channel_res_dict)
+        if mode_channel_res_dict is None:
+            self.settings_menu.entryconfig("共存", label="！共存", foreground="red")
+            self.coexist_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
+                                              command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
+        else:
+            for channel, channel_res_tuple in mode_channel_res_dict.items():
+                if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
+                    continue
+                channel_des, = subfunc_file.get_remote_cfg(
+                    self.sw, RemoteCfg.COEXIST.value, "channel", **{channel: None})
+                # print(channel_des)
+                channel_label = channel
+                if isinstance(channel_des, dict):
+                    if "label" in channel_des:
+                        channel_label = channel_des["label"]
+                coexist_status, channel_msg, _ = channel_res_tuple
+                if coexist_status is None or coexist_status is False:
+                    menu = self.coexist_channel_menus_dict[channel] = tk.Menu(
+                        self.coexist_menu, tearoff=False)
+                    self.coexist_menu.add_cascade(label=channel_label, menu=menu)
+                    menu.add_command(label=f"[点击复制]{channel_msg}", foreground="red",
+                                     command=lambda i=channel_msg: Tk2Sys.copy_to_clipboard(self.root, i))
+                else:
+                    self.coexist_channel_var = tk.StringVar()
+                    self.coexist_menu.add_radiobutton(
+                        label=channel_label,
+                        value=channel,
+                        variable=self.coexist_channel_var,
+                        command=partial(
+                            subfunc_file.save_a_setting_and_callback,
+                            self.sw, LocalCfg.COEXIST_MODE.value, channel, self.create_root_menu_bar),
+                    )
+                    self.coexist_channel_radio_list.append(channel)
+            current_coexist_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(
+                self.sw, LocalCfg.COEXIST_MODE.value)
+            # 如果这个模式在单选值列表中,则选择这个值,否则选择第一个值
+            if current_coexist_mode in self.coexist_channel_radio_list:
+                self.coexist_channel_var.set(current_coexist_mode)
+            else:
+                if len(self.coexist_channel_radio_list) > 0:
+                    self.coexist_channel_var.set(self.coexist_channel_radio_list[0])
+
+            # 频道简介菜单
+            self.coexist_menu.add_separator()  # ————————————————分割线————————————————
+            self.coexist_menu.add_command(
+                label="频道简介", command=partial(
+                    self._introduce_channel, RemoteCfg.COEXIST.value, mode_channel_res_dict))
+        self.coexist_menu.add_separator()  # ————————————————分割线————————————————
+        self.coexist_menu.add_command(
+            label="清除缓存",
+            command=partial(self._clear_cache, RemoteCfg.COEXIST.value))
+        printer.print_last()
+
+    def _update_anti_revoke_menu(self, mode_channel_res_dict, msg):
         # 原来的防撤回菜单创建代码
-        Printer().debug(res_dict)
-        if res_dict is None:
+        Printer().debug(mode_channel_res_dict)
+        if mode_channel_res_dict is None:
             self.settings_menu.entryconfig("防撤回", label="！防撤回", foreground="red")
             self.anti_revoke_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
                                               command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
-            for channel, channel_res_tuple in res_dict.items():
+            for channel, channel_res_tuple in mode_channel_res_dict.items():
                 if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
                     continue
                 channel_des, = subfunc_file.get_remote_cfg(
                     self.sw, RemoteCfg.REVOKE.value, "channel", **{channel: None})
                 # print(channel_des)
                 channel_label = channel
-                if channel_des is not None and isinstance(channel_des, dict):
+                if isinstance(channel_des, dict):
                     if "label" in channel_des:
                         channel_label = channel_des["label"]
                 anti_revoke_status, channel_msg, _ = channel_res_tuple
@@ -539,13 +610,18 @@ class MenuUI:
             self.anti_revoke_menu.add_separator()  # ————————————————分割线————————————————
             # 频道简介菜单
             self.anti_revoke_menu.add_command(
-                label="频道简介", command=partial(self._introduce_channel, RemoteCfg.REVOKE.value, res_dict))
+                label="频道简介",
+                command=partial(self._introduce_channel, RemoteCfg.REVOKE.value, mode_channel_res_dict))
+        self.anti_revoke_menu.add_separator()  # ————————————————分割线————————————————
+        self.anti_revoke_menu.add_command(
+            label="清除缓存",
+            command=partial(self._clear_cache, RemoteCfg.REVOKE.value))
         printer.print_last()
 
-    def _update_multirun_menu(self, res_dict, msg):
+    def _update_multirun_menu(self, mode_channel_res_dict, msg):
         self.sw_class.can_freely_multirun = None
         # 以有无适配为准;
-        if res_dict is None:
+        if mode_channel_res_dict is None:
             # 若没有适配,检查是否是原生支持多开
             native_multirun, = subfunc_file.get_remote_cfg(self.sw, **{RemoteCfg.NATIVE_MULTI.value: None})
             if native_multirun is True:
@@ -557,7 +633,7 @@ class MenuUI:
                                                command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
             # 列出所有频道
-            for channel, channel_res_tuple in res_dict.items():
+            for channel, channel_res_tuple in mode_channel_res_dict.items():
                 if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
                     continue
                 channel_des, = subfunc_file.get_remote_cfg(
@@ -585,7 +661,8 @@ class MenuUI:
             self.multirun_menu.add_separator()  # ————————————————分割线————————————————
             # 频道简介菜单
             self.multirun_menu.add_command(
-                label="频道简介", command=partial(self._introduce_channel, RemoteCfg.MULTI.value, res_dict))
+                label="频道简介",
+                command=partial(self._introduce_channel, RemoteCfg.MULTI.value, mode_channel_res_dict))
         self.multirun_menu.add_separator()  # ————————————————分割线————————————————
 
         # >多开子程序选择
@@ -618,7 +695,6 @@ class MenuUI:
             # 动态添加外部子程序
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH
             exe_files = [str(p) for p in Path(external_res_path).rglob(f"{self.sw}Multiple_*.exe")]
-            # exe_files = glob.glob(os.path.join(external_res_path, f"{self.sw}Multiple_*.exe"))
             if len(exe_files) != 0:
                 self.rest_mode_menu.add_separator()  # ————————————————分割线————————————————
                 for exe_file in exe_files:
@@ -630,34 +706,11 @@ class MenuUI:
                         variable=rest_mode_var,
                         command=partial(self._calc_multirun_mode_and_save, exe_name),
                     )
+        self.multirun_menu.add_separator()  # ————————————————分割线————————————————
+        self.multirun_menu.add_command(
+            label="清除缓存",
+            command=partial(self._clear_cache, RemoteCfg.MULTI.value))
         printer.print_last()
-
-    # def update_settings_menu_thread(self):
-    #     self.menu_updater = TkThreadWorker(self.root, after_interval=100)
-    #     self.menu_updater.thread_method = self._identify_dll_and_update_menu
-    #     self.menu_updater.start_thread()
-    #
-    # def _identify_dll_and_update_menu(self):
-    #     """实现抽象方法（原_create_menus_thread逻辑）"""
-    #     try:
-    #         # 防撤回部分
-    #         print("线程收集防撤回数据中...")
-    #         res_dict, msg = SwInfoFunc.identify_dll(
-    #             self.sw, RemoteCfg.REVOKE.value, self.sw_class.dll_dir)
-    #         print("数据收集好...")
-    #         self.menu_updater.main_thread_do_(
-    #             "revoke", partial(self._update_anti_revoke_menu, res_dict, msg))
-    #         # 全局多开部分
-    #         print("线程收集全局多开数据中...")
-    #         res_dict, msg = SwInfoFunc.identify_dll(
-    #             self.sw, RemoteCfg.MULTI.value, self.sw_class.dll_dir)
-    #         time.sleep(10)
-    #         print("数据收集好...")
-    #         self.menu_updater.main_thread_do_(
-    #             "multi", partial(self._update_multirun_menu, res_dict, msg))
-    #         self.menu_updater.stop_task()
-    #     except Exception as e:
-    #         print(e)
 
     def update_settings_menu_thread(self):
         threading.Thread(target=self._identify_dll_and_update_menu).start()
@@ -665,6 +718,10 @@ class MenuUI:
     def _identify_dll_and_update_menu(self):
         """实现抽象方法（原_create_menus_thread逻辑）"""
         try:
+            # 共存部分
+            res_dict, msg = SwInfoFunc.identify_dll(
+                self.sw, RemoteCfg.COEXIST.value, True)
+            self.root.after(0, self._update_coexist_menu, res_dict, msg)
             # 防撤回部分
             res_dict, msg = SwInfoFunc.identify_dll(
                 self.sw, RemoteCfg.REVOKE.value)

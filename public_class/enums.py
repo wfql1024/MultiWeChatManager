@@ -83,6 +83,7 @@ class LocalCfg(str, Enum):
     STATE = "state"
     NOTE = "note"
     KILL_IDLE_LOGIN_WND = "kill_idle_login_wnd"
+    COEXIST_MODE = "coexist_mode"
 
 
 class SwStates(str, Enum):

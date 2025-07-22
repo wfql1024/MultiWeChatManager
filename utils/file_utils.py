@@ -390,15 +390,15 @@ class IniUtils:
 
 class DllUtils:
     @staticmethod
-    def find_patterns_from_dll_in_hexadecimal(dll_path, *hex_patterns):
+    def find_hex_patterns_from_file(file_path, *hex_patterns):
         """
-        在 DLL 文件中查找指定的十六进制模式，并返回一个布尔列表。
-        :param dll_path: DLL 文件的路径
+        在文件中查找指定的十六进制模式，并返回一个布尔列表。
+        :param file_path: 文件的路径
         :param hex_patterns: 一个或多个十六进制模式，每个模式为一个字符串
         :return: 一个布尔列表，每个元素对应一个模式，True 表示找到，False 表示未找到
         """
         with rw_lock.gen_rlock():
-            with open(dll_path, 'rb') as f:
+            with open(file_path, 'rb') as f:
                 dll_content = f.read()
         # 将所有传入的 hex_patterns 转换为字节模式
         patterns = [bytes.fromhex(pattern) for pattern in hex_patterns]

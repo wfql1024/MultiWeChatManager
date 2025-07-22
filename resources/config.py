@@ -43,6 +43,7 @@ class Config:
             LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
             LocalCfg.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
             LocalCfg.STATE: SwStates.VISIBLE,
+            LocalCfg.COEXIST_MODE: "default"
         }
     }
 

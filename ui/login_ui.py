@@ -1,6 +1,5 @@
 import threading
 import time
-import tkinter as tk
 from functools import partial
 from tkinter import ttk, messagebox
 
@@ -17,6 +16,7 @@ from public_class.global_members import GlobalMembers
 from resources import Constants, Config
 from ui import treeview_row_ui, classic_row_ui
 from ui.wnd_ui import WndCreator
+from utils import handle_utils
 from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 
@@ -221,17 +221,28 @@ class LoginUI:
     def _to_manual_login(self):
         if self.is_original is not True:
             print("共存登录")
+            SwOperator.start_thread_to_manual_login_coexist(self.sw)
 
         else:
             print("原生登录")
-            SwOperator.start_thread_to_manual_login(self.sw)
+            SwOperator.start_thread_to_manual_login_origin(self.sw)
 
     def _to_extra_func(self):
         if self.is_original is not True:
             print("+")
-
+            SwOperator.create_coexist_exe(self.sw)
+            self.refresh_frame()
         else:
             print("⚡")
+            pids = SwInfoFunc.get_sw_all_exe_pids(self.sw)
+
+            handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                pids, mutant_handle_wildcards)
+            Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
+            success = handle_utils.pywinhandle_close_handles(
+                handle_infos
+            )
+            self.refresh_frame()
 
     def _switch_mode(self):
         self.is_original = not self.is_original
@@ -251,7 +262,7 @@ class LoginUI:
 
         self.error_frame.pack(**Constants.T_FRM_PACK)
         error_label = ttk.Label(self.error_frame, text="路径设置错误，请点击按钮修改", foreground="red",
-                                anchor=tk.CENTER)
+                                anchor="center")
         error_label.pack(**Constants.T_WGT_PACK)
         self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
                                           command=partial(WndCreator.open_sw_settings, self.sw))
@@ -297,7 +308,7 @@ class LoginUI:
         """按钮：手动登录"""
         print("手动登录")
         try:
-            SwOperator.start_thread_to_manual_login(self.sw)
+            SwOperator.start_thread_to_manual_login_origin(self.sw)
         except Exception as e:
             logger.error(e)
 

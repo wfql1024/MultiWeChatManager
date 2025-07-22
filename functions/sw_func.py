@@ -26,7 +26,6 @@ from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_uti
 from utils.better_wx.inner_utils import patt2hex, custom_wildcard_tokenize
 from utils.encoding_utils import VersionUtils, PathUtils, StringUtils
 from utils.file_utils import DllUtils
-from utils.hwnd_utils import TkWndUtils
 from utils.logger_utils import mylogger as logger, Printer, Logger
 from utils.logger_utils import myprinter as printer
 
@@ -34,7 +33,7 @@ from utils.logger_utils import myprinter as printer
 class SwInfoFunc:
     """
     当前版本，所使用的适配表结构如下：
-    平台sw -> 补丁模式mode -> 分支(精确precise,特征feature,说明channel) -> 版本号 -> 频道 -> 特征码
+    平台sw -> 补丁模式mode -> 分支(精确precise,特征feature,说明channel) -> 版本号 -> 频道 -> 路径地址 -> 特征码
     其中,
         precise: 精确版本适配，只适配当前版本. 结构为 版本号 -> 频道 -> 特征码
         feature: 特征码适配，适配当前版本及其兼容版本. 结构为 版本号 -> 频道 -> 特征码
@@ -60,28 +59,49 @@ class SwInfoFunc:
         return "/".join(resolved_parts)
 
     @staticmethod
-    def _identify_patching_of_files_in_channel(sw, channel_addresses_dict) -> dict:
-        """
-        使用特征码识别dll的状态（收集所有通道的匹配结果）
-        参数:
-            ver_adaptation: 版本适配字典 {addr: {"original": [...], "modified": [...]}}
-        返回:
-            {
-                channel1: (status, message, patch_file, original_list, modified_list),
-                channel2: (status, message, patch_file, original_list, modified_list),
-                ...
-            }
-            status: True/False/None
-            message: 状态描述字符串
-        """
+    def _identify_multi_state_patching_of_files_in_channel(sw, channel_addresses_dict):
+        """对于非二元状态切换的, 只需要检测原始串即可"""
         addr_res_dict = {}
         for addr in channel_addresses_dict.keys():
-            Printer().debug(f"检查通道 {addr} 的特征码适配")
+            # Printer().debug(f"检查文件地址 {addr} 的特征码适配")
             patch_file = SwInfoFunc.resolve_sw_path(sw, addr)
             original_list = channel_addresses_dict[addr]["original"]
             modified_list = channel_addresses_dict[addr]["modified"]
-            has_original_list = DllUtils.find_patterns_from_dll_in_hexadecimal(patch_file, *original_list)
-            has_modified_list = DllUtils.find_patterns_from_dll_in_hexadecimal(patch_file, *modified_list)
+            has_original_list = DllUtils.find_hex_patterns_from_file(patch_file, *original_list)
+            # 转换为集合检查一致性,集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
+            Printer().debug(f"特征码列表:\n{has_original_list}")
+            has_original_set = set(has_original_list)
+            # 判断匹配状态
+            if len(has_original_set) == 1 and True in has_original_set:
+                available = True
+                message = "包含该模式"
+            else:
+                available = False
+                message = "没有该模式"
+            # 将结果存入字典
+            addr_res_dict[addr] = (available, message, patch_file, original_list, modified_list)
+
+        return addr_res_dict
+
+    @staticmethod
+    def _identify_binary_state_patching_of_files_in_channel(sw, channel_addresses_dict) -> dict:
+        """
+        二元状态, 对渠道内的文件分别检测原始串和补丁串来识别状态
+        参数: channel_addresses_dict: 渠道-文件适配字典 {addr: {"original": [...], "modified": [...]}}
+        返回:
+            { addr1: (status, message, patch_file, original_list, modified_list),
+                addr2: (status, message, patch_file, original_list, modified_list), ...}
+            其中, status: True/False/None; message: 状态描述字符串; patch_file: 补丁文件路径;
+                original_list: 原始串列表; modified_list: 补丁串列表
+        """
+        addr_res_dict = {}
+        for addr in channel_addresses_dict.keys():
+            # Printer().debug(f"检查文件地址 {addr} 的特征码适配")
+            patch_file = SwInfoFunc.resolve_sw_path(sw, addr)
+            original_list = channel_addresses_dict[addr]["original"]
+            modified_list = channel_addresses_dict[addr]["modified"]
+            has_original_list = DllUtils.find_hex_patterns_from_file(patch_file, *original_list)
+            has_modified_list = DllUtils.find_hex_patterns_from_file(patch_file, *modified_list)
             # 转换为集合检查一致性,集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
             has_original_set = set(has_original_list)
             has_modified_set = set(has_modified_list)
@@ -108,18 +128,15 @@ class SwInfoFunc:
         return addr_res_dict
 
     @staticmethod
-    def _identify_patching_of_channels_in_ver(sw, ver_channels_dict) -> dict:
+    def _identify_patching_of_channels_in_ver(sw, ver_channels_dict, multi_state=False) -> dict:
         """
-        使用特征码识别dll的状态（收集所有通道的匹配结果）
+        对版本适配字典中的所有通道进行状态识别
         参数:
             ver_adaptation: 版本适配字典 {channel: {addr: {"original": [...], "modified": [...]}}}
-            dll_path: DLL文件路径
+            only_original: 是否为多元状态, 二元状态为False, 多元状态为True; 多元状态只需要检测原始串
         返回:
-            {
-                channel1: (status, message, original_list, modified_list),
-                channel2: (status, message, original_list, modified_list),
-                ...
-            }
+            { channel1: (status, message, addr_res_dict),
+                channel2: (status, message, addr_res_dict), ...}
             status: True/False/None
             message: 状态描述字符串
         """
@@ -128,12 +145,15 @@ class SwInfoFunc:
         for channel in ver_channels_dict.keys():
             addr_msg_dict = {}
             channel_files_dict = ver_channels_dict[channel]
-            addr_res_dict = SwInfoFunc._identify_patching_of_files_in_channel(sw, channel_files_dict)
+            if multi_state:
+                addr_res_dict = SwInfoFunc._identify_multi_state_patching_of_files_in_channel(sw, channel_files_dict)
+            else:
+                addr_res_dict = SwInfoFunc._identify_binary_state_patching_of_files_in_channel(sw, channel_files_dict)
             # 对频道的所有地址状态进行判定,全为True则为True,全为False则为False,其他情况为None
             for addr in addr_res_dict.keys():
                 if isinstance(addr_res_dict[addr], tuple) and len(addr_res_dict[addr]) == 5:
                     status, addr_msg, _, _, _ = addr_res_dict[addr]
-                    if status is None:
+                    if (multi_state is False and status is None) or (multi_state is True and status is not True):
                         addr_msg_dict[addr] = addr_msg
                 else:
                     status = None
@@ -145,24 +165,25 @@ class SwInfoFunc:
         return results
 
     @staticmethod
-    def _identify_dll_by_precise_channel_in_mode_dict(sw, mode_branches_dict) -> Tuple[Optional[dict], str]:
+    def _identify_dll_by_precise_channel_in_mode_dict(
+            sw, mode_branches_dict, multi_state=False) -> Tuple[Optional[dict], str]:
         """通过精确版本分支进行识别dll状态"""
         cur_sw_ver = SwInfoFunc.calc_sw_ver(sw)
         if cur_sw_ver is None:
-            return None, f"错误：识别不到版本"
+            return None, f"错误：未知当前版本"
         if "precise" not in mode_branches_dict:
-            return None, f"错误：无法通过精确版本找到适配"
+            return None, f"错误：该模式没有精确版本分支用以适配"
         precise_vers_dict = mode_branches_dict["precise"]
         if cur_sw_ver not in precise_vers_dict:
-            return None, f"错误：未找到版本{cur_sw_ver}的适配"
+            return None, f"错误：精确分支中未找到版本{cur_sw_ver}的适配"
         ver_channels_dict = precise_vers_dict[cur_sw_ver]
-        channel_res_dict = SwInfoFunc._identify_patching_of_channels_in_ver(sw, ver_channels_dict)
+        channel_res_dict = SwInfoFunc._identify_patching_of_channels_in_ver(sw, ver_channels_dict, multi_state)
         if len(channel_res_dict) == 0:
-            return None, f"错误：该版本{cur_sw_ver}没有适配"
+            return None, f"错误：该版本{cur_sw_ver}的适配在本地平台中未找到"
         return channel_res_dict, f"成功：找到版本{cur_sw_ver}的适配"
 
     @staticmethod
-    def _update_adaptation_from_remote_to_extra(sw, mode):
+    def _update_adaptation_from_remote_to_cache(sw, mode):
         """根据远程表内容更新额外表"""
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if not config_data:
@@ -183,7 +204,7 @@ class SwInfoFunc:
         if "feature" in remote_mode_branches_dict:
             feature_vers = list(remote_mode_branches_dict["feature"].keys())
             compatible_ver = VersionUtils.find_compatible_version(cur_sw_ver, feature_vers)
-            cache_ver_channels_dict = subfunc_file.get_extra_cfg(sw, mode, "precise", cur_sw_ver)
+            cache_ver_channels_dict = subfunc_file.get_cache_cfg(sw, mode, "precise", cur_sw_ver)
             if compatible_ver:
                 # 用兼容版本特征码查找适配
                 feature_ver_channels_dict = remote_mode_branches_dict["feature"][compatible_ver]
@@ -196,6 +217,7 @@ class SwInfoFunc:
                     feature_channel_addr_dict = feature_ver_channels_dict[channel]
                     for addr in feature_channel_addr_dict.keys():
                         addr_feature_dict = feature_channel_addr_dict[addr]
+                        # 对原始串和补丁串需要扫描匹配, 其余节点拷贝
                         patch_file = SwInfoFunc.resolve_sw_path(sw, addr)
                         original_feature = addr_feature_dict["original"]
                         modified_feature = addr_feature_dict["modified"]
@@ -205,73 +227,74 @@ class SwInfoFunc:
                             channel_failed = True
                             break
                         channel_res_dict[addr] = addr_res_dict
+                        for key in addr_feature_dict:
+                            if key not in ["original", "modified"]:
+                                channel_res_dict[addr][key] = addr_feature_dict[key]
                     if not channel_failed:
-                        # 添加到额外表中
+                        # 添加到缓存表中
                         subfunc_file.update_extra_cfg(
                             sw, mode, "precise", cur_sw_ver, **{channel: channel_res_dict})
 
     @staticmethod
-    def _identify_dll_by_extra_cfg(sw, mode) -> Tuple[Optional[dict], str]:
-        """从额外表中获取"""
-        # config_data = subfunc_file.load_extra_cfg()
-        # if not config_data:
-        #     return None, "错误：没有数据"
+    def _identify_dll_by_cache_cfg(sw, mode, multi_state=False) -> Tuple[Optional[dict], str]:
+        """从缓存表中获取"""
         try:
-            mode_branches_dict, = subfunc_file.get_extra_cfg(sw, **{mode: None})
+            mode_branches_dict, = subfunc_file.get_cache_cfg(sw, **{mode: None})
             if mode_branches_dict is None:
                 return None, f"错误：平台未适配{mode}"
-            return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, mode_branches_dict)
+            return SwInfoFunc._identify_dll_by_precise_channel_in_mode_dict(sw, mode_branches_dict, multi_state)
         except Exception as e:
             Logger().error(e)
             return None, f"错误：{e}"
 
     @staticmethod
-    def identify_dll(sw, mode) -> Tuple[Optional[dict], str]:
-        """检查当前的dll状态，返回结果字典,若没有适配则返回None"""
+    def identify_dll(sw, mode, multi_state=False) -> Tuple[Optional[dict], str]:
+        """
+        检查当前补丁状态，返回结果字典,若没有适配则返回None
+        结果字典格式: {channel1: (status, msg, addr_res_dict), channel2: (status, msg, addr_res_dict) ...}
+        地址字典addr_res_dict格式: {addr1: (status, msg, patch_path, original, modified),
+                                    addr2: (status, msg, patch_path, original, modified) ...}
+        """
         dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
         if dll_dir is None:
             return None, "错误：没有找到dll目录"
-        SwInfoFunc._update_adaptation_from_remote_to_extra(sw, mode)
-        res_dict, msg = SwInfoFunc._identify_dll_by_extra_cfg(sw, mode)
-        return res_dict, msg
+        SwInfoFunc._update_adaptation_from_remote_to_cache(sw, mode)
+        mode_channel_res_dict, msg = SwInfoFunc._identify_dll_by_cache_cfg(sw, mode, multi_state)
+        return mode_channel_res_dict, msg
 
-    # @staticmethod
-    # def detect_sw_install_path(sw: str, ignore_local_record=False) -> Union[None, str]:
-    #     """获取微信安装路径,ignore_local_record为True时忽略本地记录"""
-    #     print("获取安装路径...")
-    #     _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.INST_PATH, ignore_local_record)
-    #     return result
-    #
-    # @staticmethod
-    # def detect_sw_data_dir(sw: str, ignore_local_record=False):
-    #     """获取微信数据路径,ignore_local_record为True时忽略本地记录"""
-    #     print("获取数据存储路径...")
-    #     _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DATA_DIR, ignore_local_record)
-    #     return result
-    #
-    # @staticmethod
-    # def detect_sw_dll_dir(sw: str, ignore_local_record=False):
-    #     """获取微信dll所在文件夹,ignore_local_record为True时忽略本地记录"""
-    #     print("获取dll目录...")
-    #     _, _, result = SwInfoUtils.try_get_path(sw, LocalCfg.DLL_DIR, ignore_local_record)
-    #     return result
+    @staticmethod
+    def clear_adaptation_cache(sw, mode):
+        """清除当前版本模式的适配缓存"""
+        curr_ver = SwInfoFunc.calc_sw_ver(sw)
+        subfunc_file.clear_some_extra_cfg(sw, mode, "precise", curr_ver)
+
+    @staticmethod
+    def get_available_coexist_mode(sw):
+        """选择一个可用的共存构造模式, 优先返回用户选择的, 若其不可用则返回可用的第一个模式"""
+        user_coexist_channel = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.COEXIST_MODE)
+        channel_res_dict, msg = SwInfoFunc.identify_dll(sw, RemoteCfg.COEXIST, True)
+        if isinstance(channel_res_dict, dict):
+            if user_coexist_channel in channel_res_dict:
+                return user_coexist_channel
+            return list(channel_res_dict.keys())[0]
+        return None
 
     @staticmethod
     def detect_path_of_(sw, path_type, ignore_local_record=False):
-        """获取指定路径,ignore_local_record为True时忽略本地记录"""
+        """获取指定路径, ignore_local_record为True时忽略本地记录"""
         _, _, result = SwInfoUtils.try_get_path(sw, path_type, ignore_local_record)
         return result
 
     @staticmethod
     def get_saved_path_of_(sw, path_type) -> Optional[str]:
-        """优先获取已保存的路径,若没有则"""
+        """优先获取已保存的路径, 若没有则通过方法自动搜寻"""
         path, = subfunc_file.get_settings(sw, **{path_type: None})
         if PathUtils.is_valid_path(path):
             return path
         return SwInfoFunc.detect_path_of_(sw, path_type, ignore_local_record=True)
 
     @staticmethod
-    def calc_sw_ver(sw):
+    def calc_sw_ver(sw) -> Optional[str]:
         """获取软件版本"""
         try:
             exec_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
@@ -290,7 +313,7 @@ class SwInfoFunc:
             return None
 
     @staticmethod
-    def get_sw_logo(sw):
+    def get_sw_logo(sw) -> Image:
         """获取平台图标作为logo"""
         # 构建头像文件路径
         user_sw_dir = os.path.join(Config.PROJ_USER_PATH, sw)
@@ -357,7 +380,7 @@ class SwInfoFunc:
         return display_name
 
     @staticmethod
-    def get_sw_all_exe_pids(sw):
+    def get_sw_all_exe_pids(sw) -> list:
         """获得平台所有进程的pid"""
         executable_wildcards, = subfunc_file.get_remote_cfg(
             sw,
@@ -386,7 +409,7 @@ class SwInfoFunc:
 class SwOperator:
     @staticmethod
     def get_sw_all_mutex_handles_and_try_kill_if_need(sw, kill=None):
-        """获得平台所有互斥锁的句柄"""
+        """获得平台所有剩余互斥锁的句柄"""
         Printer().debug("查杀平台互斥体中...")
         mutant_wildcards, = subfunc_file.get_remote_cfg(
             sw,
@@ -431,7 +454,7 @@ class SwOperator:
                 "警告",
                 f"检测到正在使用{executable}。该操作需要退出进程，请先手动退出，直接继续将会强制关闭。是否继续？"
             )
-            if answer is not True:
+            if not (answer is True):
                 return None
             for proc in processes:
                 try:
@@ -476,7 +499,7 @@ class SwOperator:
 
     @staticmethod
     def switch_dll(sw, mode, channel) -> Tuple[Optional[bool], str]:
-        """切换sw平台中,mode模式下,channel频道的dll状态,返回成功与否及携带信息"""
+        """对二元状态的渠道, 检测当前状态并切换"""
         try:
             if mode == RemoteCfg.MULTI:
                 mode_text = "全局多开"
@@ -498,12 +521,12 @@ class SwOperator:
                 return False, "用户取消操作"
 
             # 操作过程
-            res, msg = SwInfoFunc.identify_dll(sw, mode)
-            if res is None:
+            channel_res_dict, msg = SwInfoFunc.identify_dll(sw, mode)
+            if channel_res_dict is None:
                 return False, msg
-            if channel not in res:
+            if channel not in channel_res_dict:
                 return False, f"错误：未找到频道{channel}的适配"
-            tag, msg, addr_res_tuple_dict = res[channel]
+            tag, msg, addr_res_tuple_dict = channel_res_dict[channel]
             for addr in addr_res_tuple_dict:
                 addr_res_tuple = addr_res_tuple_dict[addr]
                 if not isinstance(addr_res_tuple, tuple) or len(addr_res_tuple) != 5:
@@ -553,7 +576,7 @@ class SwOperator:
             root.after(0, callback)
 
     @staticmethod
-    def _open_sw_origin(sw):
+    def _open_sw_origin_and_return_hwnd(sw):
         """打开平台原始程序并返回窗口hwnd"""
         # 获取需要的数据
         root_class = GlobalMembers.root_class
@@ -586,7 +609,7 @@ class SwOperator:
         root_class = GlobalMembers.root_class
         multirun_mode = GlobalMembers.root_class.sw_classes[sw].multirun_mode
         start_time = time.time()
-        sw_hwnd = SwOperator._open_sw_origin(sw)
+        sw_hwnd = SwOperator._open_sw_origin_and_return_hwnd(sw)
         if isinstance(sw_hwnd, int):
             subfunc_file.set_pid_mutex_all_values_to_false(sw)
             subfunc_file.update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
@@ -600,54 +623,135 @@ class SwOperator:
     @staticmethod
     def _manual_login_coexist(sw):
         """手动登录共存平台,按顺序,登录第一个还未打开的共存程序,若都已经打开,则创造一个新的共存程序后打开"""
-        sequence = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.COEXIST_SEQUENCE: ""})
-        root_class = GlobalMembers.root_class
-        root = root_class.root
-        login_ui = root_class.login_ui
-        # 初始化操作：清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况
         start_time = time.time()
-        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
-            sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
-        if redundant_wnd_list is None or login_wnd_class is None or cfg_handles is None or executable_name is None:
-            messagebox.showinfo("错误", "尚未适配！")
+        root_class = GlobalMembers.root_class
+        coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
+        if not isinstance(coexist_channel, str):
+            messagebox.showinfo("错误", f"没有可用的共存构造模式!")
             return
-        # 关闭配置文件锁
-        handle_utils.close_sw_mutex_by_handle(
-            Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-
+        exe_wildcard, sequence = subfunc_file.get_remote_cfg(
+            sw, "coexist", "channel", coexist_channel,
+            exe_wildcard=None, sequence=None)
+        if not isinstance(exe_wildcard, str) or not isinstance(sequence, str):
+            messagebox.showinfo("错误", f"尚未适配[exe_wildcard, sequence]!")
+            return
+        login_wnd_wildcards, = subfunc_file.get_remote_cfg(
+            sw, login_wnd_class_wildcards=None)
+        if not isinstance(login_wnd_wildcards, list):
+            messagebox.showinfo("错误", "尚未适配[login_wnd_wildcards]!")
+            return
+        all_excluded_hwnds = []
+        # 关闭多余的多开器,记录已经存在的窗口 -------------------------------------------------------------------
         SwOperator.kill_sw_multiple_processes(sw)
-        time.sleep(0.5)
+        remained_idle_wnd_list = SwOperator.get_idle_login_wnd_and_close_if_necessary(sw)
+        all_excluded_hwnds.extend(remained_idle_wnd_list)
+        # 检查所有pid及互斥体情况 -------------------------------------------------------------------
         SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
-        # subfunc_file.clear_some_acc_data(sw, AccKeys.PID_MUTEX)
-        # subfunc_file.update_pid_mutex_of_(sw)
+        sw_proc = None
+        for s in sequence:
+            exe_name = exe_wildcard.replace("?", s)
+            # 查找是否有exe_name进程
+            exe_pids = process_utils.psutil_get_pids_by_wildcards([exe_name])
+            if len(exe_pids) > 0:
+                continue
+            inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+            inst_dir = os.path.dirname(inst_path)
+            need_open_exe = os.path.join(inst_dir, exe_name)
+            if not os.path.exists(need_open_exe):
+                # 建立这个标号的共存程序
+                if messagebox.askokcancel("错误", f"不存在{need_open_exe}!是否创建?"):
+                    SwOperator.create_coexist_exe(sw, s)
+                    if os.path.isfile(need_open_exe):
+                        sw_proc = process_utils.create_process_without_admin(need_open_exe)
+                    break
+                else:
+                    return
+            if os.path.isfile(need_open_exe):
+                sw_proc = process_utils.create_process_without_admin(need_open_exe)
+                break
+        sw_proc_pid = sw_proc.pid if sw_proc else None
+        # 等待打开窗口并获取hwnd *******************************************************************
+        sw_hwnd, class_name = hwnd_utils.wait_hwnd_exclusively_by_pid_and_class_wildcards(
+            all_excluded_hwnds, sw_proc_pid, login_wnd_wildcards)
+        Printer().debug(sw_hwnd)
 
-        multirun_mode = root_class.sw_classes[sw].multirun_mode
-        _, sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
-        wechat_hwnd = hwnd_utils.wait_hwnd_by_class(login_wnd_class, 20)
-        if wechat_hwnd:
+        if isinstance(sw_hwnd, int):
             subfunc_file.set_pid_mutex_all_values_to_false(sw)
-            # subfunc_file.update_has_mutex_from_pid_mutex(sw)
-            subfunc_file.update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
-            print(f"打开了登录窗口{wechat_hwnd}")
-            if sub_exe_process:
-                sub_exe_process.terminate()
-            if hwnd_utils.wait_hwnd_close(wechat_hwnd, timeout=60):
-                print(f"手动登录成功，正在刷新...")
-            else:
-                messagebox.showinfo("提示", "登录窗口长时间未操作，即将刷新列表")
+            subfunc_file.update_statistic_data(sw, 'manual', '_', MultirunMode.BUILTIN, time.time() - start_time)
+            print(f"打开了登录窗口{sw_hwnd}")
         else:
             logger.warning(f"打开失败，请重试！")
             messagebox.showerror("错误", "手动登录失败，请重试")
-
-        # 刷新菜单和窗口前置
-        root_class.root.after(0, login_ui.refresh_frame, sw)
-        TkWndUtils.bring_wnd_to_front(root, root)
+        callback = lambda: root_class.login_ui.refresh_frame(sw)
+        SwOperator._wait_hwnds_close_and_do_in_root([sw_hwnd], callback=callback)
 
     @staticmethod
-    def start_thread_to_manual_login(sw):
+    def create_coexist_exe(sw, s=None):
+        """创建共存程序"""
+        if s is None:
+            coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
+            exe_wildcard, sequence = subfunc_file.get_remote_cfg(
+                sw, "coexist", "channel", coexist_channel,
+                exe_wildcard=None, sequence=None)
+            for sq in sequence:
+                exe_name = exe_wildcard.replace("?", sq)
+                # 查找是否有exe_name进程
+                exe_pids = process_utils.psutil_get_pids_by_wildcards([exe_name])
+                if len(exe_pids) > 0:
+                    continue
+                inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+                inst_dir = os.path.dirname(inst_path)
+                need_open_exe = os.path.join(inst_dir, exe_name)
+                if not os.path.exists(need_open_exe):
+                    s = sq
+                    break
+
+        coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
+        if not isinstance(coexist_channel, str):
+            messagebox.showerror("错误", f"没有可用的共存构造模式!")
+            return
+        curr_ver = SwInfoFunc.calc_sw_ver(sw)
+        channel_addresses_dict = subfunc_file.get_cache_cfg(sw, RemoteCfg.COEXIST, "precise", curr_ver, coexist_channel)
+        if not isinstance(channel_addresses_dict, dict):
+            messagebox.showerror("错误", f"尚未适配[coexist_channel]!")
+            return
+        for addr in channel_addresses_dict:
+            if "wildcard" not in channel_addresses_dict[addr]:
+                messagebox.showerror("错误", f"适配格式错误!")
+                return
+        new_files = []
+        for addr in channel_addresses_dict:
+            origin_path = SwInfoFunc.resolve_sw_path(sw, addr)
+            name_wildcard = channel_addresses_dict[addr]["wildcard"]
+            new_path = os.path.join(os.path.dirname(origin_path), name_wildcard.replace("?", s))
+            # 拷贝到新文件
+            shutil.copyfile(origin_path, new_path)
+            new_files.append(new_path)
+            # 修改新文件
+            original = channel_addresses_dict[addr]["original"]
+            modified = channel_addresses_dict[addr]["modified"]
+            coexist_modified = [m.replace("!!", f"{ord(s):02X}") for m in modified]
+            success = DllUtils.batch_atomic_replace_multi_files({new_path: [(original, coexist_modified)]})
+            if not success:
+                messagebox.showerror("错误", f"创建共存程序[{s}]号失败!")
+                for new_file in new_files:
+                    os.remove(new_file)
+                return
+
+
+    @staticmethod
+    def start_thread_to_manual_login_origin(sw):
         """建议使用此方式,以线程的方式手动登录,避免阻塞"""
         threading.Thread(
             target=SwOperator._manual_login_origin,
+            args=(sw,)
+        ).start()
+
+    @staticmethod
+    def start_thread_to_manual_login_coexist(sw):
+        """建议使用此方式,以线程的方式手动登录,避免阻塞"""
+        threading.Thread(
+            target=SwOperator._manual_login_coexist,
             args=(sw,)
         ).start()
 
@@ -688,7 +792,7 @@ class SwOperator:
     def _kill_mutex_by_forced_inner_mode(sw, multirun_mode):
         executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
             sw, executable=None, mutant_handle_infos=None, cfg_handle_regex_list=None)
-        # ————————————————————————————————python[强力]————————————————————————————————
+        # ————————————————————————————————python————————————————————————————————
         if multirun_mode == MultirunMode.BUILTIN:
             pids = SwInfoFunc.get_sw_all_exe_pids(sw)
             handle_regex_list, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=None)
@@ -717,10 +821,9 @@ class SwOperator:
     @staticmethod
     def _kill_mutex_by_inner_mode(sw, multirun_mode):
         """关闭平台进程的所有互斥体，如果不选择python模式，则使用handle模式"""
-        executable_name, lock_handles, cfg_handles, mutant_handle_wildcards = subfunc_file.get_remote_cfg(
-            sw, executable=None, mutant_handle_infos=None,
-            cfg_handle_regex_list=None, mutant_handle_wildcards=None)
         # ————————————————————————————————builtin————————————————————————————————
+        mutant_handle_wildcards, = subfunc_file.get_remote_cfg(
+            sw, mutant_handle_wildcards=None)
         if multirun_mode == MultirunMode.BUILTIN:
             has_mutex_dict = subfunc_file.get_sw_acc_data(sw, AccKeys.PID_MUTEX)
             pids_has_mutex = [pid for pid in has_mutex_dict.keys() if has_mutex_dict[pid] is True]
@@ -737,47 +840,11 @@ class SwOperator:
             return True
         # ————————————————————————————————handle————————————————————————————————
         else:
+            executable_name, lock_handles = subfunc_file.get_remote_cfg(
+                sw, executable=None, mutant_handle_infos=None)
             success, success_lists = handle_utils.close_sw_mutex_by_handle(
                 Config.HANDLE_EXE_PATH, executable_name, lock_handles)
             return success
-
-    # @staticmethod
-    # def kill_mutex_of_pid(sw, acc):
-    #     """关闭指定进程的所有互斥体"""
-    #     pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
-    #     if pid is None:
-    #         return False
-    #     handle_regex_list, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=None)
-    #     if handle_regex_list is None:
-    #         return True
-    #     handle_names = [handle["handle_name"] for handle in handle_regex_list]
-    #     if handle_names is None or len(handle_names) == 0:
-    #         return True
-    #     success = handle_utils.pywinhandle_close_handles(
-    #         handle_utils.pywinhandle_find_handles(
-    #             [pid],
-    #             handle_names
-    #         )
-    #     )
-    #     print(f"kill mutex: {success}")
-    #     if success:
-    #         subfunc_file.update_sw_acc_data(sw, acc, has_mutex=False)
-    #     return success
-
-    # @staticmethod
-    # def _create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
-    #     """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
-    #     cur_sys_ver = sys_utils.get_sys_major_version_name()
-    #     if cur_sys_ver == "win11" or cur_sys_ver == "win10":
-    #         # return process_utils.create_process_with_logon(
-    #         #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
-    #         # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
-    #         # # 拿默认令牌通过资源管理器身份创建
-    #         # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
-    #         # # 拿Handle令牌通过资源管理器身份创建
-    #         return process_utils.create_process_with_re_token_handle(executable, args, creation_flags)
-    #     else:
-    #         return process_utils.create_process_for_win7(executable, args, creation_flags)
 
     @staticmethod
     def _open_sw_without_freely_multirun(sw, multirun_mode):
@@ -991,153 +1058,6 @@ class SwOperator:
                 shell.Run(f'explorer /select,{dll_dir_check_suffix}')
 
 
-#     @staticmethod
-#     def _create_lnk_for_account(sw, account, multiple_status):
-#         """
-#         为账号创建快捷开启
-#         :param sw: 选择的软件标签
-#         :param account: 账号
-#         :param multiple_status: 是否多开状态
-#         :return: 是否成功
-#         """
-#         # 确保可以创建快捷启动
-#         data_path = SwInfoFunc.get_sw_data_dir(sw)
-#         wechat_path = SwInfoFunc.get_sw_install_path(sw)
-#         if not data_path or not wechat_path:
-#             messagebox.showerror("错误", "无法获取数据路径")
-#             return False
-#         avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{account}", f"{account}.jpg")
-#         if not os.path.exists(avatar_path):
-#             avatar_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
-#
-#         # 构建源文件和目标文件路径
-#         source_file = os.path.join(data_path, "All Users", "config", f"{account}.data").replace('/', '\\')
-#         target_file = os.path.join(data_path, "All Users", "config", "config.data").replace('/', '\\')
-#         close_mutex_executable = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, "WeChatMultiple_Anhkgg.exe")
-#         if multiple_status == "已开启":
-#             close_mutex_code = ""
-#             prefix = "[要开全局] - "
-#             exe_path = wechat_path
-#         else:
-#             close_mutex_code = \
-# f"""
-# \n{close_mutex_executable}
-# """
-#             prefix = ""
-#             # 判断环境
-#             if getattr(sys, 'frozen', False):  # 打包环境
-#                 exe_path = sys.executable  # 当前程序的 exe
-#             else:  # PyCharm 或其他开发环境
-#                 exe_path = close_mutex_executable  # 使用 handle_path
-#
-#         bat_content = \
-# f"""
-# @echo off
-# chcp 65001
-# REM 复制配置文件
-# copy "{source_file}" "{target_file}"
-# if errorlevel 1 (
-#     echo 复制配置文件失败
-#     exit /b 1
-# )
-# echo 复制配置文件成功
-#
-# REM 根据状态启动微信
-# @echo off{close_mutex_code}
-# cmd /u /c "start "" "{wechat_path}""
-# if errorlevel 1 (
-#     echo 启动微信失败，请检查路径是否正确。
-#     pause
-#     exit /b 1
-# )
-# """
-#
-#         # 确保路径存在
-#         account_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}')
-#         if not os.path.exists(account_file_path):
-#             os.makedirs(account_file_path)
-#         # 保存为批处理文件
-#         bat_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{account}', f'{prefix}{account}.bat')
-#         # 以带有BOM的UTF-8格式写入bat文件
-#         with open(bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
-#             bat_file.write(bat_content)
-#         print(f"批处理文件已生成: {bat_file_path}")
-#
-#         # 获取桌面路径
-#         desktop = winshell.desktop()
-#         # 获取批处理文件名并去除后缀
-#         bat_file_name = os.path.splitext(os.path.basename(bat_file_path))[0]
-#         # 构建快捷方式路径
-#         shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
-#
-#         # 图标文件路径
-#         acc_dir = os.path.join(Config.PROJ_USER_PATH, str(sw), f"{account}")
-#         exe_name = os.path.splitext(os.path.basename(exe_path))[0]
-#
-#         # 步骤1：提取图标为图片
-#         extracted_exe_png_path = os.path.join(acc_dir, f"{exe_name}_extracted.png")
-#         image_utils.extract_icon_to_png(exe_path, extracted_exe_png_path)
-#
-#         # 步骤2：合成图片
-#         ico_jpg_path = os.path.join(acc_dir, f"{account}_{exe_name}.png")
-#         image_utils.add_diminished_se_corner_mark_to_image(avatar_path, extracted_exe_png_path, ico_jpg_path)
-#
-#         # 步骤3：对图片转格式
-#         ico_path = os.path.join(acc_dir, f"{account}_{exe_name}.ico")
-#         image_utils.png_to_ico(ico_jpg_path, ico_path)
-#
-#         # 清理临时文件
-#         os.remove(extracted_exe_png_path)
-#
-#         # 创建快捷方式
-#         with winshell.shortcut(shortcut_path) as shortcut:
-#             shortcut.path = bat_file_path
-#             shortcut.working_directory = os.path.dirname(bat_file_path)
-#             # 修正icon_location的传递方式，传入一个包含路径和索引的元组
-#             shortcut.icon_location = (ico_path, 0)
-#
-#         print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
-#         return True
-
-# @staticmethod
-# def create_multiple_lnk(sw, status, after):
-#     """
-#     创建快捷多开
-#     :return: 是否成功
-#     """
-#
-#     def get_all_configs():
-#         """
-#         获取已经配置的账号列表
-#         :return: 已经配置的账号列表
-#         """
-#         target_path = os.path.join(SwInfoFunc.get_sw_data_dir(sw), 'All Users', 'config')
-#         all_configs = []
-#         # 遍历目标目录中的所有文件
-#         for file_name in os.listdir(target_path):
-#             # 只处理以 .data 结尾的文件
-#             if file_name.endswith('.data') and file_name != 'config.data':
-#                 # 获取不含扩展名的文件名
-#                 file_name_without_ext = os.path.splitext(file_name)[0]
-#                 # 添加到列表中
-#                 all_configs.append(file_name_without_ext)
-#
-#         return all_configs
-#
-#     # 获取已经配置的列表
-#     configured_accounts = get_all_configs()
-#     if len(configured_accounts) == 0:
-#         messagebox.showinfo("提醒", "您还没有创建过登录配置")
-#         return False
-#
-#     for account in configured_accounts:
-#         # 对每一个账号进行创建
-#         result = SwOperator._create_lnk_for_account(sw, account, status)
-#         if result is False:
-#             continue
-#     after()
-#     print("创建快捷启动成功！")
-#     return True
 
 
 class SwInfoUtils:

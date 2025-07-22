@@ -362,12 +362,13 @@ def debugged_wildcard_replace(data: bytes, pattern: Union[str, list], replace: U
 
         return replacement_pairs
 
-    data = b'\x89\xF3\x12\xA0\x75\x21\x48\xB8\x72\x65\x76\x6F\x6B\x65\x6D\x73\x48\x89\x05\x3A\xDB\x7F\x00\x66\xC7\x05\x44\x12\x91\xFF\x67\x00\xC6\x05\x88\x42\x33\x11\x01\x48\x8D\xF0\xCC\x21\x9E'
-    data_str = bytes_to_hex_str(data)
-    pattern = "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 ?? ?? ?? ?? 66 C7 05 ?? ?? ?? ?? 67 00 C6 05 ?? ?? ?? ?? 01 48 8D"
-    # replace = "EB 21..."
-    replace = "... AA AA 48 9D"
-    print(f"原始数据: {data_str}")
+    # data_hex_str = bytes_to_hex_str(data)
+    # 测试数据: 原始串将??换为30, 替换串也放进数据, 用三个00分隔开来
+    data_hex_str = "00 00 00 E8 30 30 30 30 89 C6 48 85 FF 74 1D F0 FF 4F 00 00 00 8b b5 20 04 00 00 81 c6 12 27 00 00 f0 ff 4f 00 00 00"
+    data = bytes.fromhex(data_hex_str.strip())
+    pattern = "E8 ?? ?? ?? ?? 89 C6 48 85 FF 74 1D F0 FF 4F"
+    replace = "8B B5 20 04 00 00 81 C6 12 27 00 00 ..."
+    print(f"原始数据: {data_hex_str}")
     print(f"原始特征码: {pattern}")
     print(f"补丁特征码: {replace}")
     print("--------------------------------------------------------")
@@ -409,9 +410,10 @@ def debugged_wildcard_replace(data: bytes, pattern: Union[str, list], replace: U
     for p, r in zip(pattern, replace):
         if p == "??":
             regex_bytes += b"(.)"
+            # patched_bytes += b"(.)"  # 原位置
             if r == "??":
                 repl_bytes += b"\\" + str(group_count).encode()
-                patched_bytes += b"(.)"
+                patched_bytes += b"(.)"  # 新位置
             else:
                 repl_bytes += bytes.fromhex(r)
                 patched_bytes += re.escape(bytes.fromhex(r))

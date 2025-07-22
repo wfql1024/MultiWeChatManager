@@ -188,7 +188,7 @@ class DetailUI(SubToolWndUI, ABC):
         login_status_frame.grid(row=0, column=1, **Constants.W_GRID_PACK)
         # pid
         pid_frame = ttk.Frame(login_status_frame)
-        pid_frame.pack(side=tk.TOP, anchor=tk.W)
+        pid_frame.pack(side="top", anchor="w")
         pid_label = ttk.Label(pid_frame)
         pid_label.pack(side="left")
         kill_pid_btn = _create_btn_in_(pid_frame, " × ")
@@ -205,7 +205,7 @@ class DetailUI(SubToolWndUI, ABC):
         _pack_btn(re_login_btn)
         # mutex
         mutex_frame = ttk.Frame(login_status_frame)
-        mutex_frame.pack(side=tk.TOP, anchor=tk.W)
+        mutex_frame.pack(side="top", anchor="w")
         mutex_label = ttk.Label(mutex_frame)
         mutex_label.pack(side="left")
         mutex_btn = _create_btn_in_(mutex_frame, " × ")
@@ -215,7 +215,7 @@ class DetailUI(SubToolWndUI, ABC):
         _pack_btn(mutex_btn)
         # hwnd
         hwnd_frame = ttk.Frame(login_status_frame)
-        hwnd_frame.pack(side=tk.TOP, anchor=tk.W)
+        hwnd_frame.pack(side="top", anchor="w")
         hwnd_label = ttk.Label(hwnd_frame)
         hwnd_label.pack(side="left")
         unlink_hwnd_btn = _create_btn_in_(hwnd_frame, " × ")
@@ -448,7 +448,7 @@ class DebugWndUI(SubToolWndUI, ABC):
     def load_ui(self):
         # 创建工具栏
         toolbar = tk.Frame(self.wnd_frame)
-        toolbar.pack(side=tk.TOP, fill=tk.X)
+        toolbar.pack(side="top", fill="x")
 
         # 刷新按钮
         refresh_button = tk.Button(toolbar, text="刷新", command=self.refresh_text)
@@ -466,14 +466,14 @@ class DebugWndUI(SubToolWndUI, ABC):
         # 最小缩进尺
         min_indent_label = tk.Label(indent_frame, text="最小缩进:")
         min_indent_label.pack(side="left")
-        self.min_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
+        self.min_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient="horizontal",
                                          command=lambda x: self._update_indent_scales())
         self.min_indent_scale.set(0)  # 设置默认最小缩进
         self.min_indent_scale.pack(side="left")
         # 最大缩进尺
         max_indent_label = tk.Label(indent_frame, text="最大缩进:")
         max_indent_label.pack(side="left")
-        self.max_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient=tk.HORIZONTAL,
+        self.max_indent_scale = tk.Scale(indent_frame, from_=0, to=20, orient="horizontal",
                                          command=lambda x: self._update_indent_scales())
         self.max_indent_scale.set(20)  # 设置默认最大缩进
         self.max_indent_scale.pack(side="left")
@@ -515,7 +515,7 @@ class DebugWndUI(SubToolWndUI, ABC):
         if self.callstack_var.get():
             self.simplify_checkbox.config(state=tk.NORMAL)  # 启用
         else:
-            self.simplify_checkbox.config(state=tk.DISABLED)  # 禁用
+            self.simplify_checkbox.config(state="disabled")  # 禁用
         self.refresh_text()
 
     def refresh_text(self):
@@ -558,7 +558,7 @@ class DebugWndUI(SubToolWndUI, ABC):
             self.text_area.insert(tk.END, output_content)
         self.text_area.update_idletasks()  # 确保插入文本后所有更新完成
         self.text_area.yview_moveto(current_scroll_position[0])  # 恢复滚动条位置
-        self.text_area.config(state=tk.DISABLED)
+        self.text_area.config(state="disabled")
 
     def save_log_to_desktop(self):
         desktop = winshell.desktop()
@@ -772,15 +772,15 @@ class AboutWndUI(SubToolWndUI, ABC):
         # 版权信息标签
         copyright_label = ttk.Label(
             disclaimer_frame,
-            text="Copyright © 2024 吾峰起浪. All rights reserved.",
+            text="Copyright © 2025 吾峰起浪. All rights reserved.",
             style="LittleText.TLabel",
         )
         copyright_label.pack(**Constants.T_WGT_PACK)
 
     def pack_scrollable_text(self, frame, part, height):
         scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side="right", fill=tk.Y)
-        text = tk.Text(frame, wrap=tk.WORD, font=("", Constants.LITTLE_FONTSIZE),
+        scrollbar.pack(side="right", fill="y")
+        text = tk.Text(frame, wrap="word", font=("", Constants.LITTLE_FONTSIZE),
                        height=height, bg=self.wnd.cget("bg"),
                        yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
 
@@ -789,8 +789,8 @@ class AboutWndUI(SubToolWndUI, ABC):
         text.insert(tk.END, '\n')
 
         widget_utils.add_hyperlink_events(text, self.scroll_text_str[part])
-        text.config(state=tk.DISABLED)
-        text.pack(side="left", fill=tk.X, expand=False, padx=Constants.GRID_PAD)
+        text.config(state="disabled")
+        text.pack(side="left", fill="x", expand=False, padx=Constants.GRID_PAD)
         scrollbar.config(command=text.yview)
         # 创建方向对象
         self.scroll_direction[part] = Direction(1)  # 初始方向为向下
@@ -982,10 +982,10 @@ class UpdateLogWndUI(SubToolWndUI, ABC):
 
         # 创建滚动条
         scrollbar = tk.Scrollbar(log_frame)
-        scrollbar.pack(side="right", fill=tk.Y)
+        scrollbar.pack(side="right", fill="y")
 
         # 创建不可编辑且可滚动的文本框
-        self.log_text = tk.Text(log_frame, wrap=tk.WORD, font=("", 10), height=6, bg=self.wnd.cget("bg"),
+        self.log_text = tk.Text(log_frame, wrap="word", font=("", 10), height=6, bg=self.wnd.cget("bg"),
                                 yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
 
         # 需要显示新版本
@@ -996,7 +996,7 @@ class UpdateLogWndUI(SubToolWndUI, ABC):
                 curr_sys_ver_name = sys_utils.get_sys_major_version_name()
                 curr_sys_newest_ver_dicts = global_info["update"][newest_version]["pkgs"][curr_sys_ver_name]
                 bottom_frame = ttk.Frame(main_frame)
-                bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=20, pady=20)
+                bottom_frame.pack(side="bottom", fill="x", padx=20, pady=20)
                 cancel_button = ttk.Button(bottom_frame, text="以后再说",
                                            command=lambda: self.root.destroy())
                 cancel_button.pack(side="right")
@@ -1043,7 +1043,7 @@ class UpdateLogWndUI(SubToolWndUI, ABC):
             messagebox.showerror("错误", f"发生错误：{e}")
 
         # 设置文本框为不可编辑
-        self.log_text.config(state=tk.DISABLED)
+        self.log_text.config(state="disabled")
         self.log_text.pack(side="left", fill="both", expand=True)
 
         # 配置滚动条
@@ -1178,7 +1178,7 @@ class StatisticWndUI(SubToolWndUI, ABC):
                                      command=lambda c=col: self.sort_column("manual", c))
             self.manual_tree.column(col, anchor='center' if col == "模式" else 'e', width=100)  # 设置列宽
 
-        self.manual_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
+        self.manual_tree.pack(fill="x", expand=True, padx=(20, 5), pady=(0, 10))
         self.tree_dict["manual"]["tree"] = self.manual_tree
 
     def create_auto_table(self):
@@ -1202,7 +1202,7 @@ class StatisticWndUI(SubToolWndUI, ABC):
                                    command=lambda c=col: self.sort_column("auto", c))
             self.auto_tree.column(col, anchor='center' if col == "模式" else 'e', width=100)  # 设置列宽
 
-        self.auto_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
+        self.auto_tree.pack(fill="x", expand=True, padx=(20, 5), pady=(0, 10))
         self.tree_dict["auto"]["tree"] = self.auto_tree
 
     def create_refresh_table(self):
@@ -1226,7 +1226,7 @@ class StatisticWndUI(SubToolWndUI, ABC):
                                       command=lambda c=col: self.sort_column("refresh", c))
             self.refresh_tree.column(col, anchor='center' if col == "账号数" else 'e', width=100)  # 设置列宽
 
-        self.refresh_tree.pack(fill=tk.X, expand=True, padx=(20, 5), pady=(0, 10))
+        self.refresh_tree.pack(fill="x", expand=True, padx=(20, 5), pady=(0, 10))
         self.refresh_tree.var = "refresh"
         self.tree_dict["refresh"]["tree"] = self.refresh_tree
 
@@ -1745,16 +1745,16 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
 
         # 代理框架=使用代理复选框+代理设置框架
         proxy_frame = ttk.Frame(main_frame)
-        proxy_frame.pack(side=tk.TOP, fill=tk.X)
+        proxy_frame.pack(side="top", fill="x")
         # 使用代理复选框
         proxy_checkbox = ttk.Checkbutton(
             proxy_frame, text="使用代理", variable=self.use_proxy_var,
             command=lambda: self.do_and_update(
                 partial(subfunc_file.save_a_global_setting_and_callback, LocalCfg.USE_PROXY, self.use_proxy_var.get())))
-        proxy_checkbox.pack(side=tk.TOP, fill=tk.X)
+        proxy_checkbox.pack(side="top", fill="x")
         # 代理设置框架，将会根据是否使用代理而显示或隐藏
         proxy_detail_frame = ttk.Frame(proxy_frame)
-        proxy_detail_frame.pack(side=tk.TOP, fill=tk.X)
+        proxy_detail_frame.pack(side="top", fill="x")
         # 使用方法创建地址和端口的grid
         _, ip_btn_frame, _, ip_var = self._create_label_btn_entry_grid(proxy_detail_frame, "地址:", "")
         _, port_btn_frame, _, port_var = self._create_label_btn_entry_grid(proxy_detail_frame, "端口:", "")
@@ -1784,7 +1784,7 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
 
         # 底部放三个按钮：确定，取消，应用
         bottom_btn_frame = ttk.Frame(main_frame)
-        bottom_btn_frame.pack(side=tk.BOTTOM, fill=tk.X)
+        bottom_btn_frame.pack(side="bottom", fill="x")
 
         # 确定按钮
         ok_btn = _create_btn_in_(bottom_btn_frame, "确定")

@@ -183,7 +183,7 @@ def update_extra_cfg(*front_addr, **kwargs) -> bool:
         return False
 
 
-def get_extra_cfg(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
+def get_cache_cfg(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     """
     根据用户输入的变量名，获取对应的账户信息
     :param front_addr: 前置地址，如：("wechat", "account1")

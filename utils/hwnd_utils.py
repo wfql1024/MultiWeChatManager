@@ -243,49 +243,41 @@ def wait_hwnd_by_pid_and_class_wildcards(pid, class_wildcards, timeout=20, title
     return wait_hwnd_exclusively_by_pid_and_class_wildcards(None, pid, class_wildcards, timeout, title)
 
 
-# TODO: uiautomation实现窗口等待
 def wait_hwnd_exclusively_by_pid_and_class_wildcards(
         exclude_hwnds, pid, class_wildcards, timeout=20, title=None) -> Tuple[Optional[int], Optional[str]]:
-    """等待匹配通配符的窗口类名打开，并返回窗口句柄（可排除指定句柄列表）,并返回hwnd和类名"""
-    exclude_hwnds = exclude_hwnds or []
+    """
+    等待符合指定 pid 和通配类名的窗口出现，排除已知句柄，返回 hwnd 和类名（支持精确获取 Qt 类名）
+    """
+    exclude_hwnds = set(exclude_hwnds or [])
     end_time = time.time() + timeout
 
     while time.time() < end_time:
-        def enum_callback(hwnd, _):
-            if hwnd in exclude_hwnds:
-                return True  # 跳过排除的句柄
+        # 初步获取该 pid 下的 hwnds（不含 exclude_hwnds）
+        hwnds = win32_get_hwnds_by_pid_and_class_wildcards(pid)
+        hwnds = [h for h in hwnds if h not in exclude_hwnds]
+        Printer().debug(hwnds)
+
+        for hwnd in hwnds:
             if title:
                 buffer = ctypes.create_unicode_buffer(256)
                 GetWindowText(hwnd, buffer, 256)
                 if buffer.value != title:
-                    return True  # 标题不符，跳过
-            if pid:
-                # 获取窗口所属的进程 ID
-                process_id = wintypes.DWORD()
-                GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
-                # 检查是否是目标进程的窗口
-                if process_id.value != pid:
-                    return True  # 不是目标进程的窗口，跳过
-            class_name = ctypes.create_unicode_buffer(256)
-            GetClassName(hwnd, class_name, 256)
-            for class_wildcard in class_wildcards:
-                regex = StringUtils.wildcard_to_regex(class_wildcard)
-                Printer().debug(regex)
-                Printer().debug(class_name.value)
-                if re.match(regex, class_name.value):
-                    found_hwnds.append(hwnd)
-                    return False  # 找到后终止枚举
-            return True
+                    continue  # 跳过标题不符
 
-        found_hwnds = []
-        EnumWindows(EnumWindowsProc(enum_callback), 0)
-        if len(found_hwnds) > 0:
-            hwnd = found_hwnds[0]
-            classname = ctypes.create_unicode_buffer(256)
-            GetClassName(hwnd, classname, 256)
-            return hwnd, classname.value
+            try:
+                ctrl = uiautomation.ControlFromHandle(hwnd)
+                for wildcard in class_wildcards:
+                    if fnmatch.fnmatch(ctrl.ClassName, wildcard):
+                        return hwnd, ctrl.ClassName
+            except Exception as e:
+                # uiautomation 获取失败的窗口直接跳过
+                print(f"uiautomation failed for hwnd {hwnd}: {e}")
+                continue
+
         time.sleep(0.5)
+
     return None, None
+
 
 
 """hwnd内部控件获取"""

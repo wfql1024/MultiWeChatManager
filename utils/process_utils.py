@@ -38,7 +38,8 @@ class Process:
 """创建进程的各种方式"""
 
 
-def create_process_without_admin(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
+def create_process_without_admin(
+        executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW) -> Optional[Process]:
     """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
     cur_sys_ver = platform.release()
     if cur_sys_ver == "11" or cur_sys_ver == "10":
@@ -225,7 +226,8 @@ def create_process_with_re_token_default(executable, args=None, creation_flags=s
         CloseHandle(re_process) if re_process is not None else None
 
 
-def create_process_with_re_token_handle(executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW):
+def create_process_with_re_token_handle(
+        executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW) -> Optional[Process]:
     """
     以文件管理器的令牌打开可执行文件
     :param executable: 可执行文件
@@ -474,7 +476,7 @@ def iter_open_files(pid):
         print(f"An error occurred: {e}")
 
 
-def kill_process_tree_tasklist(pid):
+def taskkill_kill_process_tree(pid):
     cmd_args = ['taskkill', '/T', '/F', '/PID', f'{pid}']
     cmd = ' '.join(cmd_args)
     Printer().cmd_in(cmd)

@@ -463,7 +463,7 @@ class AccOperator:
                 sw, executable_wildcards=None)
             if isinstance(executable_wildcards, list):
                 success = process_utils.psutil_kill_process_tree_if_matched_in_wildcards(pid, executable_wildcards)
-                if success is True:
+                if success:
                     quited_accounts.append(f"[{cleaned_display_name}: {pid}]")
                     subfunc_file.update_sw_acc_data(sw, account, pid=None)
         return quited_accounts
