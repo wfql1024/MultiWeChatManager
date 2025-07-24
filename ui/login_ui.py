@@ -77,6 +77,7 @@ class LoginUI:
         self.sw_class.dll_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DLL_DIR)
         self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw)
 
+        # 创建菜单
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
         except Exception as re:
@@ -84,14 +85,15 @@ class LoginUI:
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
             self.root.destroy()
 
-        if only_menu is True:
-            return
-        # 刷新界面
-        try:
-            self.root.after(0, self.refresh_frame)
-        except Exception as e:
-            logger.error(e)
-            self.root.after(3000, self.refresh_frame)
+        if not (only_menu is True):
+            # 刷新界面
+            try:
+                self.root.after(0, self.refresh_frame)
+            except Exception as e:
+                logger.error(e)
+                self.root.after(3000, self.refresh_frame)
+
+
 
     def refresh_frame(self, sw=None):
         """加载或刷新主界面"""
@@ -122,7 +124,7 @@ class LoginUI:
         #     self.show_setting_error()
         success, result = self.get_acc_list_answer
         print(success, result)
-        printer.print_vn(f"[{time.time() - self.start_time:.4f}s] 数据收集完成！")
+        printer.print_vn(f"[{time.time() - self.start_time:.4f}s] 进程检测完成！")
         if success is not True:
             self.show_setting_error()
         else:
@@ -229,19 +231,18 @@ class LoginUI:
 
     def _to_extra_func(self):
         if self.is_original is not True:
-            print("+")
-            SwOperator.create_coexist_exe(self.sw)
-            self.refresh_frame()
+            print("+新建共存程序")
+            SwOperator.start_thread_to_create_coexist_exe(self.sw)
         else:
-            print("⚡")
+            print("⚡强制关闭互斥体")
             pids = SwInfoFunc.get_sw_all_exe_pids(self.sw)
-
-            handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
-                pids, mutant_handle_wildcards)
-            Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
-            success = handle_utils.pywinhandle_close_handles(
-                handle_infos
-            )
+            mutant_handle_wildcards, = subfunc_file.get_sw_acc_data(self.sw, mutant_handle_wildcards=None)
+            if isinstance(mutant_handle_wildcards, list):
+                handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                    pids, mutant_handle_wildcards)
+                success = handle_utils.pywinhandle_close_handles(
+                    handle_infos
+                )
             self.refresh_frame()
 
     def _switch_mode(self):

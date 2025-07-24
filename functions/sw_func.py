@@ -50,7 +50,11 @@ class SwInfoFunc:
             if part.startswith("%") and part.endswith("%") and len(part) > 2:
                 var_name = part[1:-1]
                 try:
-                    resolved = SwInfoFunc.get_saved_path_of_(sw, var_name)
+                    if var_name == LocalCfg.INST_DIR:
+                        inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+                        resolved = os.path.dirname(inst_path).replace("\\", "/")
+                    else:
+                        resolved = SwInfoFunc.get_saved_path_of_(sw, var_name)
                     resolved_parts.append(resolved.strip("/\\"))
                 except KeyError:
                     raise ValueError(f"路径变量未定义: %{var_name}%")
@@ -596,7 +600,7 @@ class SwOperator:
         sw_proc, sub_proc = SwOperator.open_sw(sw, multirun_mode)
         sw_proc_pid = sw_proc.pid if sw_proc else None
         # 等待打开窗口并获取hwnd *******************************************************************
-        sw_hwnd, class_name = hwnd_utils.wait_hwnd_exclusively_by_pid_and_class_wildcards(
+        sw_hwnd, class_name = hwnd_utils.uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
             all_excluded_hwnds, sw_proc_pid, [login_wnd_class])
         if sub_proc:
             sub_proc.terminate()
@@ -660,7 +664,7 @@ class SwOperator:
             if not os.path.exists(need_open_exe):
                 # 建立这个标号的共存程序
                 if messagebox.askokcancel("错误", f"不存在{need_open_exe}!是否创建?"):
-                    SwOperator.create_coexist_exe(sw, s)
+                    SwOperator._create_coexist_exe_core(sw, s)
                     if os.path.isfile(need_open_exe):
                         sw_proc = process_utils.create_process_without_admin(need_open_exe)
                     break
@@ -671,7 +675,7 @@ class SwOperator:
                 break
         sw_proc_pid = sw_proc.pid if sw_proc else None
         # 等待打开窗口并获取hwnd *******************************************************************
-        sw_hwnd, class_name = hwnd_utils.wait_hwnd_exclusively_by_pid_and_class_wildcards(
+        sw_hwnd, class_name = hwnd_utils.uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
             all_excluded_hwnds, sw_proc_pid, login_wnd_wildcards)
         Printer().debug(sw_hwnd)
 
@@ -686,7 +690,7 @@ class SwOperator:
         SwOperator._wait_hwnds_close_and_do_in_root([sw_hwnd], callback=callback)
 
     @staticmethod
-    def create_coexist_exe(sw, s=None):
+    def _create_coexist_exe_core(sw, s=None):
         """创建共存程序"""
         if s is None:
             coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
@@ -740,6 +744,13 @@ class SwOperator:
 
 
     @staticmethod
+    def create_coexist_exe_and_refresh(sw):
+        root_class = GlobalMembers.root_class
+        root = root_class.root
+        SwOperator._create_coexist_exe_core(sw)
+        root.after(0, root_class.login_ui.refresh_frame, sw)
+
+    @staticmethod
     def start_thread_to_manual_login_origin(sw):
         """建议使用此方式,以线程的方式手动登录,避免阻塞"""
         threading.Thread(
@@ -752,6 +763,13 @@ class SwOperator:
         """建议使用此方式,以线程的方式手动登录,避免阻塞"""
         threading.Thread(
             target=SwOperator._manual_login_coexist,
+            args=(sw,)
+        ).start()
+
+    @staticmethod
+    def start_thread_to_create_coexist_exe(sw):
+        threading.Thread(
+            target=SwOperator.create_coexist_exe_and_refresh,
             args=(sw,)
         ).start()
 
@@ -864,7 +882,7 @@ class SwOperator:
             sub_proc = process_utils.create_process_without_admin(
                 f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}"
             )
-            sub_exe_hwnd = hwnd_utils.wait_hwnd_by_class("WTWindow", 8)
+            sub_exe_hwnd = hwnd_utils.win32_wait_hwnd_by_class("WTWindow", 8)
             print(f"子程序窗口：{sub_exe_hwnd}")
             if sub_exe_hwnd:
                 button_handle = hwnd_utils.get_child_hwnd_list_of_(
@@ -980,7 +998,7 @@ class SwOperator:
 
         SwOperator.kill_sw_multiple_processes(sw)
         _, sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
-        wechat_hwnd = hwnd_utils.wait_hwnd_by_class(login_wnd_class, timeout=8)
+        wechat_hwnd = hwnd_utils.win32_wait_hwnd_by_class(login_wnd_class, timeout=8)
         if wechat_hwnd:
             print(f"打开了登录窗口{wechat_hwnd}")
             if sub_exe_process:

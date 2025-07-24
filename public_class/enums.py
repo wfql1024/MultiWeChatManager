@@ -72,6 +72,7 @@ class LocalCfg(str, Enum):
 
     # 设置项中的平台设置
     INST_PATH = "inst_path"
+    INST_DIR = "inst_dir"
     DATA_DIR = "data_dir"
     DLL_DIR = "dll_dir"
     VIEW = "view"

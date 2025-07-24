@@ -26,7 +26,7 @@ class Test(TestCase):
         print(SwInfoFunc.detect_sw_data_dir(sw="Weixin"))
 
     def test_wait_for_wnd_open(self):
-        hwnd_utils.wait_hwnd_by_class("Qt51514QWindowIcon")
+        hwnd_utils.win32_wait_hwnd_by_class("Qt51514QWindowIcon")
 
     def test_close_sw_mutex_by_handle(self):
         redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (

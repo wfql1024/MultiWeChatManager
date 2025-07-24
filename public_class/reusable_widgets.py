@@ -215,8 +215,8 @@ class StatusBarUI:
         # 创建状态栏
         self.create_status_bar()
         self.message_queue = QueueWithUpdate(self.update_status)  # 创建消息队列
+        # self.original_stdout = sys.stdout
         sys.stdout = RedirectText(self.statusbar_output_var, self.message_queue, self.debug)  # 重定向 stdout
-        self.update_status()
 
     def create_status_bar(self):
         """创建状态栏"""
@@ -231,13 +231,11 @@ class StatusBarUI:
         try:
             # 从队列中获取消息并更新状态栏
             message = self.message_queue.get_nowait()
-            if message.strip():  # 如果消息不为空，更新状态栏
-                self.statusbar_output_var.set(message)
-                # self.root.after(0, self.statusbar_output_var.set, message)
+            if message is not None and message.strip():  # 如果消息不为空，更新状态栏
+                # self.original_stdout.write(f"{message}\n")
+                # self.original_stdout.flush()
+                self.root.after(0, self.statusbar_output_var.set, message)
         except queue.Empty:
-            pass
-        except Exception as e:
-            print(e)
             pass
 
 

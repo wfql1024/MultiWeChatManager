@@ -19,7 +19,7 @@ from utils.logger_utils import Printer
 
 class Test(TestCase):
     def test_get_wnd_by_classname(self):
-        hwnds = hwnd_utils.wait_hwnd_by_class("Qt51514QWindowIcon")
+        hwnds = hwnd_utils.win32_wait_hwnd_by_class("Qt51514QWindowIcon")
         print(hwnds)
 
     def test_multi_new_weixin(self):

@@ -3,6 +3,8 @@ import threading
 import time
 from enum import Enum
 
+from public_class.global_members import GlobalMembers
+
 
 class TkThreadWorker:
     """
@@ -85,7 +87,8 @@ class QueueWithUpdate(queue.Queue):
     def put(self, item, block=True, timeout=None):
         """重写入队方法，入队时立即更新状态栏"""
         super().put(item, block, timeout)
-        self.update_callback()  # 入队后，立即触发更新状态栏
+        root = GlobalMembers.root_class.root
+        root.after(0, self.update_callback)  # 入队后，立即触发更新状态栏
 
     def get(self, block=True, timeout=None):
         """重写出队方法，返回消息"""
@@ -131,6 +134,7 @@ class Condition:
             # self.condition 必须是由 Condition 组成的列表
             if not isinstance(self.condition, list):
                 return False
+        return False
 
     def check_int_scope(self):
         # 或区间检验：若 value 落在任意一个区间内，则返回 True
@@ -155,6 +159,7 @@ class Condition:
                     if not (left is None or self.value >= left) or not (right is None or self.value <= right):
                         return False
             return True
+        return False
 
 
 class Conditions:
@@ -177,3 +182,4 @@ class Conditions:
                 if not condition.check():
                     return False
             return True
+        return False

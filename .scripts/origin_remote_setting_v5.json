@@ -862,12 +862,11 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "WeChat?.exe",
-                    "dll_wildcard": "WeChatWin.dl?",
                     "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
                 }
             },
             "feature": {
-                "3.9.12": {
+                "3.9": {
                     "default": {
                         "%dll_dir%/WeChatWin.dll": {
                             "original": [
@@ -899,7 +898,20 @@
                                 " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  n  .  .  .  d  .  l  .  ̲l  .",
                                 " c  .  o  .  n  .  f  .  ̲i  .  g  .  .  .  d  .  a  .  t  .  a  .",
                                 " _  .  W  .  ̲e  .  C  .  h  .  a  .  t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  ."
-                            ]
+                            ],
+                            "wildcard": "WeChatWin.dl?"
+                        },
+                        "%inst_path%": {
+                            "original": [
+                                "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "modified": [
+                                "... !! 00"
+                            ],
+                            "meanings": [
+                                " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  n  .  .  .  d  .  l  .  ̲l  ."
+                            ],
+                            "wildcard": "WeChat?.exe"
                         }
                     }
                 }
@@ -1600,10 +1612,12 @@
         "cfg_handle_regex_list": [
         ],
         "mutant_handle_wildcards": [
-            "_WeChat_App_Instance_Identity_Mutex_Name"
+            "_WeChat_App_Instance_Identity_Mutex_Name",
+            "_W?Chat_App_Instance_Identity_Mutex_Name"
         ],
         "config_handle_wildcards": [
-            "config.data"
+            "config.data",
+            "conf?g.data"
         ],
         "login_wnd_class": "WeChatLoginWndForPC",
         "login_wnd_class_wildcards": [
@@ -1616,6 +1630,9 @@
         "config_path_suffix": "All Users\\config",
         "config_file_list": [
             "config.data"
+        ],
+        "config_addresses": [
+            "%data_dir%/All Users/config.data"
         ],
         "excluded_dir_list": [
             "All Users",
@@ -1643,7 +1660,6 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "Weixin?.exe",
-                    "dll_wildcard": "Weixin.dl?",
                     "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
                 },
                 "default2": {
@@ -1653,7 +1669,6 @@
                         "zetaloop"
                     ],
                     "exe_wildcard": "Weixin?.exe",
-                    "dll_wildcard": "Weixin.dl?",
                     "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
                 }
             },
@@ -1678,7 +1693,20 @@
                                 " H  .  g  l  o  b  a  l  _  c  H  .  .  .  A  .  .  .  .  .  A  .  .  o  n  f  ̲i  f  .  .  .  A  .  .  g  .",
                                 " ̲X  .  W  .  e  .  C  .  h  .  a  .  t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  .",
                                 " x  .  W  .  e  .  c  .  h  .  a  .  t  .  W  .  i  .  n  .  d  .  o  .  ̲w  ."
-                            ]
+                            ],
+                            "wildcard": "Weixin.dl?"
+                        },
+                        "%inst_path%": {
+                            "original": [
+                                "57 00 65 00 69 00 78 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "modified": [
+                                "... !! 00"
+                            ],
+                            "meanings": [
+                                " W  .  e  .  i  .  x  .  i  .  n  .  .  .  d  .  l  .  ̲l  ."
+                            ],
+                            "wildcard": "Weixin?.exe"
                         }
                     }
                 }
@@ -2530,6 +2558,9 @@
             "global_conf?g"
         ],
         "login_wnd_class": "mmui::LoginWindow",
+        "login_wnd_class_wildcards": [
+            "mmui::LoginWindow"
+        ],
         "main_wnd_class": "mmui::MainWindow",
         "main_wnd_class_wildcards": [
             "mmui::MainWindow"
@@ -2538,6 +2569,10 @@
         "config_file_list": [
             "global_config",
             "global_config.crc"
+        ],
+        "config_addresses": [
+            "%data_dir%/all_users/config/global_config",
+            "%data_dir%/all_users/config/global_config.crc"
         ],
         "excluded_dir_list": [
             "All Users",
@@ -2575,8 +2610,8 @@
                     "default": {
                         "%inst_path%": {
                             "original": [
-                                "80 79 08 00 74 16 83 C1 0C 83 79 14 07 76 02 8B 09 51 8D 4A 18 51 FF 15 00 20 22 06 8D 8B DC 00 00 00 51 E8 06 B6 DC 01 8B 45 08 59",
-                                "74 5D 39 B3 C4 00 00 00 74 55 8B CB E8 E4 D5 FF FF 8B CB E8 49 D0 FF FF 84 C0 75 43 8B BB CC 00 00 00 8B 07 C7 45 CC FC AD A1 06 C7",
+                                "80 79 08 00 74 16 83 C1 0C 83 79 14 07 76 02 8B 09 51 8D 4A 18 51 FF 15 ?? ?? ?? 06 8D 8B DC 00 00 00 51 E8 ?? ?? ?? 01 8B 45 08 59",
+                                "74 5D 39 B3 C4 00 00 00 74 55 8B CB E8 ?? D5 FF FF 8B CB E8 49 D0 FF FF 84 C0 75 43 8B BB CC 00 00 00 8B 07 C7 45 CC ?? ?? ?? 06 C7",
                                 "73 76 69 64 3A 20 00 63 6F 6E 66 69 67 2E 64 62",
                                 "43 6F 6E 66 69 67 2E 63 66 67",
                                 "57 00 65 00 57 00 6F 00 72 00 6B 00 2E 00 41 00 63 00 74 00 69 00 76 00 61 00 74 00 65 00 41 00 70 00 70 00 6C 00 69 00 63 00 61 00 74 00 69 00 6F 00 6E 00",
@@ -2612,7 +2647,8 @@
                                 " c  o  r  p  _  l  o  g  ̲o",
                                 " q  r  c  o  d  e  _  l  o  g  i  n  _  u  s  e  r  _  a  v  a  t  o  ̲r",
                                 " h  t  t  p  d  n  ̲s  .  c  f  g  .  w  e  w  o  r  k"
-                            ]
+                            ],
+                            "wildcard": "WXWork?.exe"
                         }
                     }
                 }
@@ -2628,6 +2664,7 @@
         "label": "企微",
         "executable": "WXWork.exe",
         "executable_wildcards": [
+            "WXWork?.exe",
             "WXWork.exe"
         ],
         "inst_path_guess_suffix": "Tencent\\WXWork\\WXWork.exe",
@@ -2651,13 +2688,20 @@
         "cfg_handle_regex_list": [
         ],
         "login_wnd_class": "WeChatLogin",
+        "login_wnd_class_wildcards": [
+            "WeChatLogin"
+        ],
         "main_wnd_class": "WeWorkWindow",
         "main_wnd_class_wildcards": [
             "WeWorkWindow"
         ],
         "config_path_suffix": "Global",
         "config_file_list": [
-            "Config.cfg"
+            "Config.cfg",
+            "Confi?.cfg"
+        ],
+        "config_addresses": [
+            "%data_dir%/Global/Config.cfg"
         ],
         "excluded_dir_list": [
             "BrowserMetrics",
@@ -2709,6 +2753,10 @@
         "config_file_list": [
             "login.db",
             "sign.db"
+        ],
+        "config_addresses": [
+            "%data_dir%/nt_qq/global/nt_db/login.db",
+            "%data_dir%/nt_qq/global/nt_db/sign.db"
         ],
         "excluded_dir_list": [
             "All Users",
@@ -2808,6 +2856,9 @@
         "config_file_list": [
             "History.db"
         ],
+        "config_addresses": [
+            "%data_dir%/All Users/QQ/History.db"
+        ],
         "excluded_dir_list": [
             "All Users",
             "nt_data",
@@ -2905,6 +2956,9 @@
         "config_path_suffix": "All Users\\TIM",
         "config_file_list": [
             "History.db"
+        ],
+        "config_addresses": [
+            "%data_dir%/All Users/TIM/History.db"
         ],
         "excluded_dir_list": [
             "All Users",

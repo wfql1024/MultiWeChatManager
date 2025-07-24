@@ -7,12 +7,15 @@ import io
 import logging
 import os
 import sys
+import threading
 import time
 import traceback
 from dataclasses import dataclass
 from typing import Optional, Callable, Any, List, Tuple
 
 import colorlog
+
+from public_class.global_members import GlobalMembers
 
 
 @dataclass
@@ -257,11 +260,38 @@ class RedirectText(io.TextIOBase):
         self.debug = debug
         self.text_var = text_var
         self.message_queue = message_queue
+        self.buffer = ""
         self.original_stdout = sys.stdout  # 保存原始标准输出
         self.logs = []  # 用于保存结构化的输出
+        self.root = GlobalMembers.root_class.root
+
+    def print_direct(self, text: str):
+        if self.original_stdout:
+            self.original_stdout.write(text + '\n')
+            self.original_stdout.flush()
 
     def write(self, text):
-        lines = text.splitlines()  # 分割成行
+        self._do_write(text)
+
+    def _do_write(self, text):
+        # # 在控制台输出
+        # if self.original_stdout:
+        #     self.original_stdout.write(text)
+        #     self.original_stdout.flush()
+        # lines = text.splitlines()  # 分割成行
+
+        # self.print_direct(f"\033[91m{text}\033[0m")
+        self.buffer += text
+        if not text.endswith("\n"):
+            return  # 继续等数据补齐
+
+        full_text = self.buffer
+        self.buffer = ""  # 清空缓冲
+        # 在控制台输出
+        if self.original_stdout:
+            self.original_stdout.write(full_text)
+            self.original_stdout.flush()
+        lines = full_text.splitlines()  # 分割成行
         for line in lines:
             if self.debug:
                 # 去掉最后一行（可能为空或包含特殊符号）
@@ -286,9 +316,7 @@ class RedirectText(io.TextIOBase):
             else:
                 self.message_queue.put(line)  # 仅将内容放入队列
 
-        # 继续在控制台输出
-        if self.original_stdout:
-            self.original_stdout.write(text)
+
 
     def flush(self):
         """确保标准输出的缓冲区被清空"""

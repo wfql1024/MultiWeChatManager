@@ -221,12 +221,12 @@ def uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None)
     return res
 
 
-def wait_hwnd_by_class(class_name, timeout=20, title=None):
+def win32_wait_hwnd_by_class(class_name, timeout=20, title=None):
     """等待指定类名的窗口打开，并返回窗口句柄"""
-    return wait_hwnd_exclusively_by_class(None, class_name, timeout, title)
+    return win32_wait_hwnd_exclusively_by_class(None, class_name, timeout, title)
 
 
-def wait_hwnd_exclusively_by_class(exclude_hwnd_list, class_name, timeout=20, title=None):
+def win32_wait_hwnd_exclusively_by_class(exclude_hwnd_list, class_name, timeout=20, title=None):
     """等待指定类名的窗口打开，并返回窗口句柄"""
     exclude_hwnd_list = exclude_hwnd_list or []
     end_time = time.time() + timeout
@@ -238,12 +238,12 @@ def wait_hwnd_exclusively_by_class(exclude_hwnd_list, class_name, timeout=20, ti
     return None
 
 
-def wait_hwnd_by_pid_and_class_wildcards(pid, class_wildcards, timeout=20, title=None):
+def uiautomation_wait_hwnd_by_pid_and_class_wildcards(pid, class_wildcards, timeout=20, title=None):
     """等待类名匹配通配符的窗口打开，并返回句柄（可选匹配标题）"""
-    return wait_hwnd_exclusively_by_pid_and_class_wildcards(None, pid, class_wildcards, timeout, title)
+    return uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(None, pid, class_wildcards, timeout, title)
 
 
-def wait_hwnd_exclusively_by_pid_and_class_wildcards(
+def uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
         exclude_hwnds, pid, class_wildcards, timeout=20, title=None) -> Tuple[Optional[int], Optional[str]]:
     """
     等待符合指定 pid 和通配类名的窗口出现，排除已知句柄，返回 hwnd 和类名（支持精确获取 Qt 类名）

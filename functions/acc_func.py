@@ -9,6 +9,7 @@ import threading
 import time
 import tkinter as tk
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from fnmatch import fnmatch
 from pathlib import Path
 from tkinter import messagebox, filedialog
@@ -73,9 +74,10 @@ class AccOperator:
         """用缓存类名来获取当前登录窗口hwnd"""
         Printer().debug(f"传入参数: {sw}, {acc}, {excluded_hwnd_list}")
         cached_class, = subfunc_file.get_sw_acc_data(sw, acc, login_wnd_class=None)
+        Printer().debug(cached_class)
         if cached_class is None:
             return None
-        sw_hwnd = hwnd_utils.wait_hwnd_exclusively_by_class(excluded_hwnd_list, cached_class)
+        sw_hwnd = hwnd_utils.win32_wait_hwnd_exclusively_by_class(excluded_hwnd_list, cached_class, 1)
         if sw_hwnd is None:
             return None
         return sw_hwnd
@@ -117,7 +119,6 @@ class AccOperator:
                     hwnd_utils.do_click_in_wnd(h, cx, cy)
                     time.sleep(0.2)
                 print(f"通过位置查找，用时：{time.time() - inner_start_time:.4f}s")
-
             inner_start_time = time.time()
             for h in hwnds:
                 titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
@@ -140,16 +141,14 @@ class AccOperator:
         else:
             print("请手动点击登录按钮")
 
-        # 结束条件为所有窗口消失或等待超过20秒（网络不好则会这样）
+        # 结束条件为限定时间内所有窗口消失（网络不好则会这样）
         ddl_time = time.time() + 30
-        while True:
+        while time.time() > ddl_time:
             # 判断所有 hwnd 是否都不存在了
             all_closed = all(not win32gui.IsWindow(hwnd) for hwnd in hwnds)
             if all_closed:
+                root.after(0, login_ui.refresh_frame, sw)
                 break
-            if time.time() > ddl_time:
-                break
-        root.after(0, login_ui.refresh_frame, sw)
 
     @staticmethod
     def _auto_login_accounts(login_dict: Dict[str, List]):
@@ -231,7 +230,7 @@ class AccOperator:
                 # Printer().debug(f"通过缓存类名获取到的登录窗口：{sw_hwnd}")
                 if sw_hwnd is None:
                     # 从精确类名未能获取,只能用类名通配模式来获取,并缓存起来
-                    sw_hwnd, class_name = hwnd_utils.wait_hwnd_exclusively_by_pid_and_class_wildcards(
+                    sw_hwnd, class_name = hwnd_utils.uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
                         all_excluded_hwnds, sw_proc_pid, login_wildcards)
                     if class_name is not None:
                         subfunc_file.update_sw_acc_data(sw, accounts[j], login_wnd_class=class_name)
@@ -392,7 +391,7 @@ class AccOperator:
                 sw, account, all_excluded_hwnds)
             if sw_hwnd is None:
                 # 从精确类名未能获取,只能用类名通配模式来获取,并缓存起来
-                sw_hwnd, class_name = hwnd_utils.wait_hwnd_exclusively_by_pid_and_class_wildcards(
+                sw_hwnd, class_name = hwnd_utils.uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
                     all_excluded_hwnds, sw_proc_pid, [login_wnd_class])
                 if class_name is not None:
                     subfunc_file.update_sw_acc_data(sw, account, login_wnd_class=class_name)
@@ -1129,8 +1128,8 @@ class AccInfoFunc:
     @staticmethod
     def _update_acc_list_by_pid(pid: int, data_dir, pid_acc_dict, exclude_folders):
         """为存在的进程匹配出对应的账号，并更新[已登录账号]和[(已登录进程,账号)]"""
-
         def identify_by_file(file):
+            lock = threading.Lock()  # 用于保护 pid_acc_dict
             # print(process_id, f)
             # 将路径中的反斜杠替换为正斜杠
             normalized_path = file.path.replace('\\', '/')
@@ -1145,7 +1144,8 @@ class AccInfoFunc:
                     acc_dir_index = path_parts.index(os.path.basename(data_dir)) + 1
                     acc_dir = path_parts[acc_dir_index]
                     if acc_dir not in exclude_folders:
-                        pid_acc_dict[pid] = acc_dir
+                        with lock:
+                            pid_acc_dict[pid] = acc_dir
                         # print(f"进程{process_id}对应账号{acc_dir}，已用时：{time.time() - start_time:.4f}秒")
                         return True
                     return None
@@ -1231,20 +1231,29 @@ class AccInfoFunc:
             messagebox.showerror("错误", f"{sw}平台未适配")
             return False, "该平台未适配"
 
+        Printer().vital("进程检测")
         start_time = time.time()
         pid_acc_dict = {}
 
         # 获取在线进程及对应的账号字典 pid_acc_dict --------------------------------------------
         pids = SwInfoFunc.get_sw_all_exe_pids(sw)
-        print(f"读取到{sw}所有进程，用时：{time.time() - start_time:.4f} 秒")
-        Printer().debug(pids)
+        Printer().print_vn(f"读取到{sw}所有进程, 用时：{time.time() - start_time:.4f} 秒")
+        Printer().print_vn(f"所有进程: {pids}")
         if isinstance(pids, Iterable):
+            # for pid in pids:
+            #     threading.Thread(target=AccInfoFunc._update_acc_list_by_pid, args=(pid, data_dir, pid_acc_dict, excluded_dirs)).start()
+            # for pid in pids:
+            #     AccInfoFunc._update_acc_list_by_pid(pid, data_dir, pid_acc_dict, excluded_dirs)
+            executor = ThreadPoolExecutor(max_workers=8)
             for pid in pids:
-                AccInfoFunc._update_acc_list_by_pid(pid, data_dir, pid_acc_dict, excluded_dirs)
-        Printer().debug(pid_acc_dict)
+                executor.submit(AccInfoFunc._update_acc_list_by_pid, pid, data_dir, pid_acc_dict, excluded_dirs)
+
+        Printer().print_vn(f"{sw}所有进程与账号匹配, 用时：{time.time() - start_time:.4f} 秒")
+        Printer().print_vn(pid_acc_dict)
         # 对 pid_acc_dict 字典中的账号匹配共存程序 --------------------------------------------
         AccInfoFunc._link_acc_to_coexist_exe(sw, pid_acc_dict, executable_wildcards)
-        Printer().debug(pid_acc_dict)
+        Printer().print_vn(f"进程与账号或共存程序关联, 用时：{time.time() - start_time:.4f} 秒")
+        Printer().print_vn(pid_acc_dict)
         # 得到所有账号列表,并存入结果集 --------------------------------------------
         acc_dirs_set = set(
             item for item in os.listdir(data_dir)
@@ -1253,19 +1262,22 @@ class AccInfoFunc:
         if executable_wildcards is not None:
             # 处理共存版账号,确保创建字典和节点
             all_coexist_exes = AccInfoFunc._get_all_coexist_acc_and_let_dist_exists(sw, inst_dir, executable_wildcards)
-            Printer().debug(all_coexist_exes)
+            Printer().print_vn(f"获取所有的共存账号, 用时：{time.time() - start_time:.4f} 秒")
+            Printer().print_vn(all_coexist_exes)
             acc_dirs_set.update(all_coexist_exes)
         all_acc_list = list(acc_dirs_set)
         logins_set = set(pid_acc_dict.values())
         logins = list(logins_set & acc_dirs_set)
         logouts = list(acc_dirs_set - logins_set)
         acc_list_dict = {"login": logins, "logout": logouts}
-        Printer().debug(acc_list_dict)
+        Printer().print_vn(f"获取已登录和未登录字典, 用时：{time.time() - start_time:.4f} 秒")
+        Printer().print_vn(acc_list_dict)
         # 反转字典,更新账号数据 --------------------------------------------
         acc_pid_dict = dict()
         for k, v in pid_acc_dict.items():
             acc_pid_dict[v] = k
-        Printer().debug(acc_pid_dict)
+        Printer().print_vn(f"进程账号字典反转, 用时：{time.time() - start_time:.4f} 秒")
+        Printer().print_vn(acc_pid_dict)
         # 先从pid_mutex加载回互斥体情况,再更新
         _, has_mutex = subfunc_file.update_has_mutex_from_pid_mutex(sw)
         multirun_mode = sw_class.multirun_mode
