@@ -113,6 +113,8 @@ class AccOperator:
             inner_start_time = time.time()
             for i in range(1):
                 for h in hwnds:
+                    if not isinstance(h, int):
+                        continue
                     hwnd_details = hwnd_utils.get_hwnd_details_of_(h)
                     cx = int(hwnd_details["width"] * 0.5)
                     cy = int(hwnd_details["height"] * 0.75)
@@ -121,6 +123,8 @@ class AccOperator:
                 print(f"通过位置查找，用时：{time.time() - inner_start_time:.4f}s")
             inner_start_time = time.time()
             for h in hwnds:
+                if not isinstance(h, int):
+                    continue
                 titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
                 try:
                     # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
@@ -177,7 +181,7 @@ class AccOperator:
                 continue
             # 初始化获取数据 -------------------------------------------------------------------
             multirun_mode = root_class.sw_classes[sw].multirun_mode
-            origin_exe_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+            origin_exe_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             login_wnd_class, exec_name, cfg_handles_regexes, login_wildcards = (
                 subfunc_file.get_remote_cfg(
                     sw,
@@ -187,11 +191,11 @@ class AccOperator:
                     login_wnd_class_wildcards=None
                 )
             )
-            # mutant_wildcards, config_wildcards = subfunc_file.get_remote_cfg(
-            #     sw,
-            #     mutant_handle_wildcards=None,
-            #     config_handle_wildcards=None
-            # )
+            mutant_wildcards, config_wildcards = subfunc_file.get_remote_cfg(
+                sw,
+                mutant_handle_wildcards=None,
+                config_handle_wildcards=None
+            )
             # 清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况 -------------------------------------------------------------------
             SwOperator.kill_sw_multiple_processes(sw)
             kill_idle: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.KILL_IDLE_LOGIN_WND)
@@ -207,15 +211,35 @@ class AccOperator:
             for j in range(len(login_dict[sw])):
                 # 调取配置,打开登录窗口 *******************************************************************
                 sub_proc = None
+                pids_has_mutex = SwInfoFunc.get_pids_has_mutex_from_record(sw)
+                handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                    pids_has_mutex, config_wildcards)
+                Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
+                handle_utils.pywinhandle_close_handles(
+                    handle_infos
+                )
                 if AccInfoFunc.is_acc_coexist(sw, accounts[j]):
-                    # 共存账号
+                    # 共存程序账号: 尝试查找有无同名打开进程, 有则需要去除互斥体, 共存账号无需替换配置文件
                     print(f"[OK]{accounts[j]}是共存号,无需登录配置")
                     coexist_exe_path = os.path.join(os.path.dirname(origin_exe_path), accounts[j])
+                    # pids = SwInfoFunc.get_root_pids_by_name_wildcards([accounts[j]])
+                    # if len(pids) > 0:
+                    #     handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                    #         pids, mutant_wildcards + config_wildcards)
+                    #     Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
+                    #     handle_utils.pywinhandle_close_handles(
+                    #         handle_infos
+                    #     )
                     sw_proc = process_utils.create_process_without_admin(coexist_exe_path)
                 else:
-                    # 主程序账号
-                    handle_utils.close_sw_mutex_by_handle(
-                        Config.HANDLE_EXE_PATH, exec_name, cfg_handles_regexes)
+                    # 原生程序账号: 去除文件锁, 替换登录配置文件后, 打开平台原生程序
+                    # pids_has_mutex = SwInfoFunc.get_pids_has_mutex_from_record(sw)
+                    # handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                    #     pids_has_mutex, config_wildcards)
+                    # Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
+                    # handle_utils.pywinhandle_close_handles(
+                    #     handle_infos
+                    # )
                     success, _ = AccOperator.operate_acc_config('use', sw, accounts[j])
                     if success:
                         Printer().print_vn(f"[OK]应用{accounts[j]}的登录配置")
@@ -273,7 +297,8 @@ class AccOperator:
             Printer().debug(sw_opened_hwnds, all_opened_hwnds, all_excluded_hwnds, all_acc_turn)
             sw_last_hwnd = all_opened_hwnds[all_acc_turn - 1]
             sw_last_pos = all_acc_positions[all_acc_turn - 1]
-            AccOperator._set_wnd_pos(sw_last_hwnd, sw_last_pos)
+            if sw_last_hwnd is not None:
+                AccOperator._set_wnd_pos(sw_last_hwnd, sw_last_pos)
             # 启动善后线程 -------------------------------------------------------------------
             threading.Thread(
                 target=AccOperator._thread_to_click_all_login_buttons_and_wait_refresh,
@@ -308,7 +333,7 @@ class AccOperator:
         if method not in ["use", "add"]:
             logger.error("未知字段：" + method)
             return False, "未知字段"
-        data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
+        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
         if not data_path:
             return False, "无法获取WeChat数据路径"
         config_path_suffix, cfg_basename_list = subfunc_file.get_remote_cfg(
@@ -696,7 +721,7 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
             # 修正icon_location的传递方式，传入一个包含路径和索引的元组
             shortcut.icon_location = (ico_path, 0)
 
-        print(f"桌面快捷方式已生成: {os.path.basename(shortcut_path)}")
+        print(f"账号快捷方式已生成在桌面: {os.path.basename(shortcut_path)}")
 
     @staticmethod
     def _create_starter_lnk_for_acc(sw, acc):
@@ -707,8 +732,8 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
         :return: 是否成功
         """
         # 确保可以创建快捷启动
-        data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
-        sw_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
+        sw_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
         if not data_path or not sw_path:
             messagebox.showerror("错误", "无法获取数据路径")
             return False
@@ -988,11 +1013,13 @@ class AccInfoFunc:
             now_r = None if now_r == 0 else -now_r
 
             # 加载其他平台的账号列表
-            other_acc_list = subfunc_file.get_sw_acc_data(other_sw)
+            other_acc_dict:dict = subfunc_file.get_sw_acc_data(other_sw)
+            if other_acc_dict is None or len(other_acc_dict.keys()) == 0:
+                continue
             # 预处理：构建一个 dict，key 是裁切后的 other_acc，value 是原账号
             other_cut_map = {
                 other_acc[other_l:other_r]: other_acc
-                for other_acc in other_acc_list
+                for other_acc in other_acc_dict
             }
 
             for now_acc in now_acc_list:
@@ -1036,11 +1063,13 @@ class AccInfoFunc:
             now_r = None if now_r == 0 else -now_r
 
             # 加载其他平台的账号列表
-            other_acc_list = subfunc_file.get_sw_acc_data(other_sw)
+            other_acc_dict:dict = subfunc_file.get_sw_acc_data(other_sw)
+            if other_acc_dict is None or len(other_acc_dict.keys()) == 0:
+                continue
             # 预处理：构建一个 dict，key 是裁切后的 other_acc，value 是原账号
             other_cut_map = {
                 other_acc[other_l:other_r]: other_acc
-                for other_acc in other_acc_list
+                for other_acc in other_acc_dict
             }
 
             for now_acc in now_acc_list:
@@ -1216,7 +1245,7 @@ class AccInfoFunc:
         """
         sw_class = root_class.sw_classes[sw]
         data_dir = sw_class.data_dir
-        inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
         inst_dir = os.path.dirname(inst_path)
         if data_dir is None or os.path.isdir(data_dir) is False:
             return False, "数据路径不存在"

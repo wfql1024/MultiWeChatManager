@@ -8,11 +8,14 @@ import os
 import pathlib
 import re
 import shutil
+import subprocess
 from typing import Union, List
 
 if os.name == "nt":
     # ANSI Support for OLD Windows
-    os.system("color")
+    # os.system("color")
+    # @wfql1024: 打包GUI应用时, os.system 会导致闪窗问题, 改成无窗口运行cmd命令
+    subprocess.call("cmd /c color", creationflags=0x08000000)
 
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -469,7 +472,3 @@ def debugged_wildcard_replace(data: bytes, pattern: Union[str, list], replace: U
         print(new_data)
         print(bytes_to_hex_str(new_data))
         # return new_data
-
-
-if __name__ == "__main__":
-    debugged_wildcard_replace(None, None, None)

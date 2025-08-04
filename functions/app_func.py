@@ -8,7 +8,7 @@ from typing import Union, Tuple
 import win32com
 import winshell
 from PIL import Image
-from pystray import Icon, MenuItem as item, Menu
+
 from win32com.client import Dispatch
 
 from functions import subfunc_file
@@ -22,6 +22,7 @@ from utils.logger_utils import mylogger as logger
 class AppFunc:
     @staticmethod
     def create_tray(root):
+        from pystray import Icon, MenuItem as item, Menu
         def on_restore(icon, item=None):
             root.after(0, lambda: root.deiconify())
 
@@ -230,7 +231,7 @@ class AppFunc:
         if getattr(sys, 'frozen', False):
             exe_path = sys.executable
         else:
-            exe_path = os.path.abspath(r'./dist/微信多开管理器38/微信多开管理器.exe')
+            exe_path = os.path.abspath(r'./dist/极峰多聊38/极峰多聊/极峰多聊.exe')
 
         notice = []
         exe_dir = os.path.dirname(exe_path)
@@ -319,7 +320,7 @@ class AppFunc:
                 all_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
                 # print(all_sw)
                 for sw in all_sw:
-                    dll_dir_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
+                    dll_dir_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
                     if dll_dir_path is None:
                         continue
                     patch_dll, = subfunc_file.get_remote_cfg(

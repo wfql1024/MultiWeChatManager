@@ -523,10 +523,17 @@ class MenuUI:
     """更新多开,共存,防撤回子菜单的线程"""
 
     def _update_coexist_menu(self, mode_channel_res_dict, msg):
-        Printer().debug(mode_channel_res_dict)
+        # Printer().debug(mode_channel_res_dict)
+        # 以有无适配为准; 若没有适配,检查是否是原生支持多开
         if mode_channel_res_dict is None:
-            self.settings_menu.entryconfig("共存", label="！共存", foreground="red")
-            self.coexist_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
+            # 没有适配, 检查是否是原生支持多开
+            native_coexist, = subfunc_file.get_remote_cfg(
+                self.sw, RemoteCfg.COEXIST, **{RemoteCfg.NATIVE.value: None})
+            if native_coexist is True:
+                self.coexist_menu.add_command(label="无需共存", state="disabled")
+            else:
+                self.settings_menu.entryconfig("共存", label="！共存", foreground="red")
+                self.coexist_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
                                               command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
             for channel, channel_res_tuple in mode_channel_res_dict.items():
@@ -561,9 +568,11 @@ class MenuUI:
                 self.sw, LocalCfg.COEXIST_MODE.value)
             # 如果这个模式在单选值列表中,则选择这个值,否则选择第一个值
             if current_coexist_mode in self.coexist_channel_radio_list:
+                Printer().debug("该模式在单选列表中...")
                 self.coexist_channel_var.set(current_coexist_mode)
             else:
                 if len(self.coexist_channel_radio_list) > 0:
+                    Printer().debug("该模式不在单选列表中...")
                     self.coexist_channel_var.set(self.coexist_channel_radio_list[0])
 
             # 频道简介菜单
@@ -620,10 +629,11 @@ class MenuUI:
 
     def _update_multirun_menu(self, mode_channel_res_dict, msg):
         self.sw_class.can_freely_multirun = None
-        # 以有无适配为准;
+        # 以有无适配为准; 若没有适配,检查是否是原生支持多开
         if mode_channel_res_dict is None:
-            # 若没有适配,检查是否是原生支持多开
-            native_multirun, = subfunc_file.get_remote_cfg(self.sw, **{RemoteCfg.NATIVE_MULTI.value: None})
+            # 没有适配, 检查是否是原生支持多开
+            native_multirun, = subfunc_file.get_remote_cfg(
+                self.sw, RemoteCfg.MULTI, **{RemoteCfg.NATIVE.value: None})
             if native_multirun is True:
                 self.sw_class.can_freely_multirun = True
                 self.multirun_menu.add_command(label="原生支持多开", state="disabled")

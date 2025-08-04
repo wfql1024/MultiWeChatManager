@@ -12,6 +12,7 @@ from win32process import *
 
 from resources import Config
 from utils import process_utils
+from utils.encoding_utils import StringUtils
 from utils.logger_utils import Printer, Logger
 from utils.pywinhandle.src import pywinhandle
 
@@ -161,7 +162,7 @@ def get_process_handle(pid):
     return handle
 
 
-def close_handles_by_matches(handle_exe, matches):
+def close_handles_matched(handle_exe, matches):
     """
     封装关闭句柄的操作，遍历所有匹配项并尝试关闭每个句柄。
 
@@ -231,21 +232,21 @@ def close_sw_mutex_by_handle(handle_exe, exe, handle_regex_dicts):
     successes = []
     for handle_regex_dict in handle_regex_dicts:
         try:
-            handle_name, regex = handle_regex_dict.get("handle_name"), handle_regex_dict.get("regex")
+            wildcard, regex = handle_regex_dict.get("wildcard"), handle_regex_dict.get("regex")
             Printer().vital(f"handle模式")
             Printer().print_vn(f"进入了关闭互斥体的方法...")
-            Printer().print_vn(f"句柄名：{handle_name}")
+            Printer().print_vn(f"句柄名：{wildcard}")
             Printer().print_vn(f"模式：{regex}")
             start_time = time.time()
 
             formatted_handle_exe = handle_exe.replace("\\", "/")
             formatted_exe = exe.replace("\\", "/")
-            formatted_handle_name = handle_name.replace("\\", "/")
+            formatted_wildcard = wildcard.replace("\\", "/")
+            formatted_handle_name = StringUtils.extract_longest_substring(formatted_wildcard)
             # 获取句柄信息
             handle_cmd = " ".join([f'"{formatted_handle_exe}"', '-a', '-p',
                                    f'"{formatted_exe}"', f'"{formatted_handle_name}"'])
             Printer().vital(f"handle-查找句柄")
-            # Printer().print_vn(f"指令：{handle_cmd}")
             Printer().cmd_in(handle_cmd)
             handle_output = subprocess.check_output(
                 handle_cmd, creationflags=subprocess.CREATE_NO_WINDOW, text=True)
@@ -259,7 +260,7 @@ def close_sw_mutex_by_handle(handle_exe, exe, handle_regex_dicts):
             if matches:
                 Printer().print_vn(f"含互斥体：{matches}")
                 Printer().vital("handle-关闭句柄")
-                success, handles_closed = close_handles_by_matches(Config.HANDLE_EXE_PATH, matches)
+                success, handles_closed = close_handles_matched(Config.HANDLE_EXE_PATH, matches)
                 handles_closed_lists.append(handles_closed)
                 successes.append(success)
             else:

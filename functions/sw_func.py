@@ -3,7 +3,6 @@ import glob
 import os
 import re
 import shutil
-import subprocess
 import threading
 import time
 import winreg
@@ -51,10 +50,10 @@ class SwInfoFunc:
                 var_name = part[1:-1]
                 try:
                     if var_name == LocalCfg.INST_DIR:
-                        inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+                        inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
                         resolved = os.path.dirname(inst_path).replace("\\", "/")
                     else:
-                        resolved = SwInfoFunc.get_saved_path_of_(sw, var_name)
+                        resolved = SwInfoFunc.try_get_path_of_(sw, var_name)
                     resolved_parts.append(resolved.strip("/\\"))
                 except KeyError:
                     raise ValueError(f"路径变量未定义: %{var_name}%")
@@ -259,7 +258,7 @@ class SwInfoFunc:
         地址字典addr_res_dict格式: {addr1: (status, msg, patch_path, original, modified),
                                     addr2: (status, msg, patch_path, original, modified) ...}
         """
-        dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
+        dll_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
         if dll_dir is None:
             return None, "错误：没有找到dll目录"
         SwInfoFunc._update_adaptation_from_remote_to_cache(sw, mode)
@@ -284,28 +283,38 @@ class SwInfoFunc:
         return None
 
     @staticmethod
-    def detect_path_of_(sw, path_type, ignore_local_record=False):
-        """获取指定路径, ignore_local_record为True时忽略本地记录"""
-        _, _, result = SwInfoUtils.try_get_path(sw, path_type, ignore_local_record)
+    def detect_path_of_(sw, path_type) -> Optional[str]:
+        """通过内置方法列表获取路径"""
+        _, _, result = SwInfoUtils.try_detect_path(sw, path_type)
         return result
 
     @staticmethod
-    def get_saved_path_of_(sw, path_type) -> Optional[str]:
+    def try_get_path_of_(sw, path_type) -> Optional[str]:
         """优先获取已保存的路径, 若没有则通过方法自动搜寻"""
+        path = SwInfoFunc.get_saved_path_of_(sw, path_type)
+        # Printer().debug(f"从本地记录获取{sw}的{path_type}路径: {path}")
+        if path is not None:
+            return path
+        return SwInfoFunc.detect_path_of_(sw, path_type)
+
+
+    @staticmethod
+    def get_saved_path_of_(sw, path_type) -> Optional[str]:
         path, = subfunc_file.get_settings(sw, **{path_type: None})
         if PathUtils.is_valid_path(path):
             return path
-        return SwInfoFunc.detect_path_of_(sw, path_type, ignore_local_record=True)
+        return None
 
     @staticmethod
     def calc_sw_ver(sw) -> Optional[str]:
         """获取软件版本"""
         try:
-            exec_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+            exec_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             cur_sw_ver = file_utils.get_file_version(exec_path)
             if cur_sw_ver is not None:
                 return cur_sw_ver
-            dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
+            # Printer().debug(f"未能通过应用程序获取{sw}的版本, 尝试通过动态链接库版本获取...")
+            dll_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
             dll_dir_check_suffix, = subfunc_file.get_remote_cfg(sw, dll_dir_check_suffix=None)
             dll_path = os.path.join(dll_dir, dll_dir_check_suffix).replace("\\", "/")
             cur_sw_ver = file_utils.get_file_version(dll_path)
@@ -390,13 +399,20 @@ class SwInfoFunc:
             sw,
             executable_wildcards=None,
         )
-        inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
         inst_dir = os.path.dirname(inst_path)
         pids = []
         if isinstance(executable_wildcards, list):
             pids.extend(process_utils.psutil_get_pids_by_wildcards(executable_wildcards))
         pids = process_utils.remove_child_pids(pids)
         pids = process_utils.remove_pids_not_in_path(pids, inst_dir)
+        return pids
+
+    @staticmethod
+    def get_root_pids_by_name_wildcards(name_wildcards) -> list:
+        """根据软件名称通配词获取所有进程的pid, 并移除子进程"""
+        pids = process_utils.psutil_get_pids_by_wildcards(name_wildcards)
+        pids = process_utils.remove_child_pids(pids)
         return pids
 
     @staticmethod
@@ -408,6 +424,14 @@ class SwInfoFunc:
             pid_mutex_dict[pid] = True
         subfunc_file.update_sw_acc_data(sw, **{AccKeys.PID_MUTEX: pid_mutex_dict})
         return pid_mutex_dict
+
+    @staticmethod
+    def get_pids_has_mutex_from_record(sw) -> list:
+        """从记录中获取所有有互斥体的pid"""
+        has_mutex_dict = subfunc_file.get_sw_acc_data(sw, AccKeys.PID_MUTEX)
+        pids_has_mutex = [pid for pid in has_mutex_dict.keys() if has_mutex_dict[pid] is True]
+        pids_has_mutex = [int(x) if isinstance(x, str) and x.isdigit() else x for x in pids_has_mutex]  # 将字符串转换为整数
+        return pids_has_mutex
 
 
 class SwOperator:
@@ -516,7 +540,7 @@ class SwOperator:
             config_data = subfunc_file.read_remote_cfg_in_rules()
             if not config_data:
                 return False, "没有数据"
-            sw_exe_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+            sw_exe_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             if not sw_exe_path:
                 return False, "该平台暂未适配"
             # 提醒用户手动终止微信进程
@@ -573,10 +597,10 @@ class SwOperator:
 
     @staticmethod
     def _wait_hwnds_close_and_do_in_root(hwnds, timeout=20, callback=None):
-        """等待所有窗口关闭后,主线程执行 callback"""
+        """等待所有窗口成功关闭后, 主线程执行 callback, 失败则不执行"""
         root = GlobalMembers.root_class.root
-        hwnd_utils.wait_hwnds_close(hwnds, timeout)
-        if callable(callback):
+        success = hwnd_utils.wait_hwnds_close(hwnds, timeout)
+        if success and callable(callback):
             root.after(0, callback)
 
     @staticmethod
@@ -621,6 +645,7 @@ class SwOperator:
         else:
             logger.warning(f"打开失败，请重试！")
             messagebox.showerror("错误", "手动登录失败，请重试")
+            return
         callback = lambda: root_class.login_ui.refresh_frame(sw)
         SwOperator._wait_hwnds_close_and_do_in_root([sw_hwnd], callback=callback)
 
@@ -658,7 +683,7 @@ class SwOperator:
             exe_pids = process_utils.psutil_get_pids_by_wildcards([exe_name])
             if len(exe_pids) > 0:
                 continue
-            inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+            inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             inst_dir = os.path.dirname(inst_path)
             need_open_exe = os.path.join(inst_dir, exe_name)
             if not os.path.exists(need_open_exe):
@@ -686,31 +711,33 @@ class SwOperator:
         else:
             logger.warning(f"打开失败，请重试！")
             messagebox.showerror("错误", "手动登录失败，请重试")
+            return
         callback = lambda: root_class.login_ui.refresh_frame(sw)
         SwOperator._wait_hwnds_close_and_do_in_root([sw_hwnd], callback=callback)
 
     @staticmethod
     def _create_coexist_exe_core(sw, s=None):
         """创建共存程序"""
+        coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
+        if not isinstance(coexist_channel, str):
+            messagebox.showinfo("错误", f"没有可用的共存构造模式!")
+            return
         if s is None:
-            coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
             exe_wildcard, sequence = subfunc_file.get_remote_cfg(
                 sw, "coexist", "channel", coexist_channel,
                 exe_wildcard=None, sequence=None)
+            if not isinstance(exe_wildcard, str) or not isinstance(sequence, str):
+                messagebox.showinfo("错误", f"尚未适配[exe_wildcard, sequence]!")
+                return
             for sq in sequence:
                 exe_name = exe_wildcard.replace("?", sq)
-                # 查找是否有exe_name进程
-                exe_pids = process_utils.psutil_get_pids_by_wildcards([exe_name])
-                if len(exe_pids) > 0:
-                    continue
-                inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+                inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
                 inst_dir = os.path.dirname(inst_path)
                 need_open_exe = os.path.join(inst_dir, exe_name)
                 if not os.path.exists(need_open_exe):
                     s = sq
                     break
 
-        coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
         if not isinstance(coexist_channel, str):
             messagebox.showerror("错误", f"没有可用的共存构造模式!")
             return
@@ -806,35 +833,35 @@ class SwOperator:
         print(f"获取互斥体情况完成!互斥体列表：{has_mutex_dict}")
         return has_mutex_dict
 
-    @staticmethod
-    def _kill_mutex_by_forced_inner_mode(sw, multirun_mode):
-        executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
-            sw, executable=None, mutant_handle_infos=None, cfg_handle_regex_list=None)
-        # ————————————————————————————————python————————————————————————————————
-        if multirun_mode == MultirunMode.BUILTIN:
-            pids = SwInfoFunc.get_sw_all_exe_pids(sw)
-            handle_regex_list, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=None)
-            if handle_regex_list is None:
-                return True
-            handle_names = [handle["handle_name"] for handle in handle_regex_list]
-            if handle_names is None or len(handle_names) == 0:
-                return True
-            if len(pids) > 0:
-                success = handle_utils.pywinhandle_close_handles(
-                    handle_utils.pywinhandle_find_handles_by_pids_and_handle_names(
-                        pids,
-                        handle_names
-                    )
-                )
-                return success
-            return True
-        # ————————————————————————————————handle————————————————————————————————
-        else:
-            success, success_lists = handle_utils.close_sw_mutex_by_handle(
-                Config.HANDLE_EXE_PATH, executable_name, lock_handles)
-            if len(success_lists) > 0:
-                print(f"成功关闭：{success_lists}")
-            return success
+    # @staticmethod
+    # def _kill_mutex_by_forced_inner_mode(sw, multirun_mode):
+    #     executable_name, lock_handles, cfg_handles = subfunc_file.get_remote_cfg(
+    #         sw, executable=None, mutant_handle_infos=None, cfg_handle_regex_list=None)
+    #     # ————————————————————————————————python————————————————————————————————
+    #     if multirun_mode == MultirunMode.BUILTIN:
+    #         pids = SwInfoFunc.get_sw_all_exe_pids(sw)
+    #         handle_regex_list, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=None)
+    #         if handle_regex_list is None:
+    #             return True
+    #         handle_names = [handle["handle_name"] for handle in handle_regex_list]
+    #         if handle_names is None or len(handle_names) == 0:
+    #             return True
+    #         if len(pids) > 0:
+    #             success = handle_utils.pywinhandle_close_handles(
+    #                 handle_utils.pywinhandle_find_handles_by_pids_and_handle_names(
+    #                     pids,
+    #                     handle_names
+    #                 )
+    #             )
+    #             return success
+    #         return True
+    #     # ————————————————————————————————handle————————————————————————————————
+    #     else:
+    #         success, success_lists = handle_utils.close_sw_mutex_by_handle(
+    #             Config.HANDLE_EXE_PATH, executable_name, lock_handles)
+    #         if len(success_lists) > 0:
+    #             print(f"成功关闭：{success_lists}")
+    #         return success
 
     @staticmethod
     def _kill_mutex_by_inner_mode(sw, multirun_mode):
@@ -843,11 +870,9 @@ class SwOperator:
         mutant_handle_wildcards, = subfunc_file.get_remote_cfg(
             sw, mutant_handle_wildcards=None)
         if multirun_mode == MultirunMode.BUILTIN:
-            has_mutex_dict = subfunc_file.get_sw_acc_data(sw, AccKeys.PID_MUTEX)
-            pids_has_mutex = [pid for pid in has_mutex_dict.keys() if has_mutex_dict[pid] is True]
-            pids_has_mutex = [int(x) if isinstance(x, str) and x.isdigit() else x for x in pids_has_mutex]  # 将字符串转换为整数
+            pids_has_mutex = SwInfoFunc.get_pids_has_mutex_from_record(sw)
             if len(pids_has_mutex) > 0 and len(mutant_handle_wildcards) > 0:
-                Printer().print_vn(f"[INFO]以下进程含有互斥体：{has_mutex_dict}", )
+                Printer().print_vn(f"[INFO]以下进程含有互斥体：{pids_has_mutex}", )
                 handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
                     pids_has_mutex, mutant_handle_wildcards)
                 Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
@@ -870,31 +895,9 @@ class SwOperator:
         start_time = time.time()
         proc = None
         sub_proc = None
-        sw_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
-        # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
-        if multirun_mode == "WeChatMultiple_Anhkgg.exe":
-            sub_proc = process_utils.create_process_without_admin(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}",
-                creation_flags=subprocess.CREATE_NO_WINDOW
-            )
-        # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
-        elif multirun_mode == "WeChatMultiple_lyie15.exe":
-            sub_proc = process_utils.create_process_without_admin(
-                f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}"
-            )
-            sub_exe_hwnd = hwnd_utils.win32_wait_hwnd_by_class("WTWindow", 8)
-            print(f"子程序窗口：{sub_exe_hwnd}")
-            if sub_exe_hwnd:
-                button_handle = hwnd_utils.get_child_hwnd_list_of_(
-                    sub_exe_hwnd
-                )[1]
-                if button_handle:
-                    button_details = hwnd_utils.get_hwnd_details_of_(button_handle)
-                    button_cx = int(button_details["width"] / 2)
-                    button_cy = int(button_details["height"] / 2)
-                    hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
+        sw_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
         # ————————————————————————————————handle————————————————————————————————
-        elif multirun_mode == MultirunMode.HANDLE or multirun_mode == MultirunMode.BUILTIN:
+        if multirun_mode == MultirunMode.HANDLE or multirun_mode == MultirunMode.BUILTIN:
             success = SwOperator._kill_mutex_by_inner_mode(sw, multirun_mode)
             # if success:
             #     # 更新 has_mutex 为 False 并保存
@@ -902,6 +905,29 @@ class SwOperator:
             # else:
             #     print(f"关闭互斥体失败！")
             proc = process_utils.create_process_without_admin(sw_path, None)
+        # # ————————————————————————————————WeChatMultiple_Anhkgg.exe————————————————————————————————
+        # elif multirun_mode == "WeChatMultiple_Anhkgg.exe":
+        #     sub_proc = process_utils.create_process_without_admin(
+        #         f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}",
+        #         creation_flags=subprocess.CREATE_NO_WINDOW
+        #     )
+        # # ————————————————————————————————WeChatMultiple_lyie15.exe————————————————————————————————
+        # elif multirun_mode == "WeChatMultiple_lyie15.exe":
+        #     sub_proc = process_utils.create_process_without_admin(
+        #         f"{Config.PROJ_EXTERNAL_RES_PATH}/{multirun_mode}"
+        #     )
+        #     sub_exe_hwnd = hwnd_utils.win32_wait_hwnd_by_class("WTWindow", 8)
+        #     print(f"子程序窗口：{sub_exe_hwnd}")
+        #     if sub_exe_hwnd:
+        #         button_handle = hwnd_utils.get_child_hwnd_list_of_(
+        #             sub_exe_hwnd
+        #         )[1]
+        #         if button_handle:
+        #             button_details = hwnd_utils.get_hwnd_details_of_(button_handle)
+        #             button_cx = int(button_details["width"] / 2)
+        #             button_cy = int(button_details["height"] / 2)
+        #             hwnd_utils.do_click_in_wnd(button_handle, button_cx, button_cy)
+
 
         return proc, sub_proc
 
@@ -915,7 +941,7 @@ class SwOperator:
         """
         Printer().print_vn(f"[INFO]使用{multirun_mode}模式打开{sw}...")
         sub_proc = None
-        sw_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
+        sw_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
         if not sw_path:
             return None
         if multirun_mode == MultirunMode.FREELY_MULTIRUN:
@@ -987,36 +1013,33 @@ class SwOperator:
 
     @staticmethod
     def get_login_size(sw, multirun_mode):
-        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
-            sw, redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
-        print(login_wnd_class)
-        SwOperator.get_idle_login_wnd_and_close_if_necessary(redundant_wnd_list, sw)
-
-        # 关闭配置文件锁
-        handle_utils.close_sw_mutex_by_handle(
-            Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
-
-        SwOperator.kill_sw_multiple_processes(sw)
-        _, sub_exe_process = SwOperator.open_sw(sw, multirun_mode)
-        wechat_hwnd = hwnd_utils.win32_wait_hwnd_by_class(login_wnd_class, timeout=8)
-        if wechat_hwnd:
-            print(f"打开了登录窗口{wechat_hwnd}")
-            if sub_exe_process:
-                sub_exe_process.terminate()
-            time.sleep(2)
-            login_wnd_details = hwnd_utils.get_hwnd_details_of_(wechat_hwnd)
-            login_wnd = login_wnd_details["window"]
-            login_width = login_wnd_details["width"]
-            login_height = login_wnd_details["height"]
-            logger.info(f"获得了窗口尺寸：{login_width}, {login_height}")
-            login_wnd.close()
-            return login_width, login_height
-        return None
+        """获取登录窗口尺寸"""
+        login_wnd_class_wildcards, = subfunc_file.get_remote_cfg(sw, login_wnd_class_wildcards=None)
+        if not isinstance(login_wnd_class_wildcards, list):
+            return None
+        # 首先检测当前是否有登录窗口, 若有则直接获取
+        sw_pids = SwInfoFunc.get_sw_all_exe_pids(sw)
+        for pid in sw_pids:
+            login_hwnds = hwnd_utils.uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, login_wnd_class_wildcards)
+            if len(login_hwnds) > 0:
+                login_hwnd = login_hwnds[0]
+                login_wnd_details = hwnd_utils.get_hwnd_details_of_(login_hwnd)
+                login_width = login_wnd_details["width"]
+                login_height = login_wnd_details["height"]
+                return login_width, login_height
+        # 若没有登录窗口, 则打开一个登录窗口再获取
+        login_hwnd = SwOperator._open_sw_origin_and_return_hwnd(sw)
+        login_wnd_details = hwnd_utils.get_hwnd_details_of_(login_hwnd)
+        login_width = login_wnd_details["width"]
+        login_height = login_wnd_details["height"]
+        # 关闭登录窗口
+        win32gui.PostMessage(login_hwnd, win32con.WM_CLOSE, 0, 0)  # 尝试关闭窗口
+        return login_width, login_height
 
     @staticmethod
     def open_config_file(sw):
         """打开配置文件夹"""
-        data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
+        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
         if os.path.exists(data_path):
             config_path_suffix, = subfunc_file.get_remote_cfg(sw, config_path_suffix=None)
             if config_path_suffix is None:
@@ -1028,13 +1051,13 @@ class SwOperator:
 
     @staticmethod
     def clear_config_file(sw, after):
-        """清除配置文件"""
+        """清除登录配置文件"""
         confirm = messagebox.askokcancel(
             "确认清除",
             f"该操作将会清空{sw}登录配置文件，请确认是否需要清除？"
         )
         if confirm:
-            data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
+            data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
             config_path_suffix, config_file_list = subfunc_file.get_remote_cfg(
                 sw, config_path_suffix=None, config_file_list=None)
             if (config_path_suffix is None or config_file_list is None or
@@ -1049,9 +1072,6 @@ class SwOperator:
                 file_suffix = file.split(".")[-1]
                 data_files = glob.glob(os.path.join(config_path, f'*.{file_suffix}').replace("\\", "/"))
                 files_to_delete.extend([f for f in data_files if not os.path.split(config_path) == config_path_suffix])
-                # print(file_suffix)
-                # print(data_files)
-                # print(files_to_delete)
             if len(files_to_delete) > 0:
                 # 删除这些文件
                 file_utils.move_files_to_recycle_bin(files_to_delete)
@@ -1066,7 +1086,7 @@ class SwOperator:
     @staticmethod
     def open_dll_dir(sw):
         """打开注册表所在文件夹，并将光标移动到文件"""
-        dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
+        dll_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
         if os.path.exists(dll_dir):
             dll_dir_check_suffix, = subfunc_file.get_remote_cfg(sw, dll_dir_check_suffix=None)
             # 打开文件夹
@@ -1346,29 +1366,29 @@ class SwInfoUtils:
         return result_dict
 
     @staticmethod
-    def _create_path_finders_of_(path_tag, ignore_local_record=False) -> list:
+    def _create_path_finders_of_(path_tag) -> list:
         """定义方法列表"""
         if path_tag == LocalCfg.INST_PATH:
             return [
                 SwInfoUtils.get_sw_install_path_from_process,
-                ((lambda sw: []) if ignore_local_record
-                 else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.INST_PATH)),
+                # ((lambda sw: []) if ignore_local_record
+                #  else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.INST_PATH)),
                 SwInfoUtils.get_sw_install_path_from_machine_register,
                 SwInfoUtils.get_sw_install_path_from_user_register,
                 SwInfoUtils.get_sw_install_path_by_guess,
             ]
         elif path_tag == LocalCfg.DATA_DIR:
             return [
-                ((lambda sw: []) if ignore_local_record
-                 else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.DATA_DIR)),
+                # ((lambda sw: []) if ignore_local_record
+                #  else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.DATA_DIR)),
                 SwInfoUtils.get_sw_data_dir_from_user_register,
                 SwInfoUtils.get_sw_data_dir_by_guess,
                 SwInfoUtils._get_sw_data_dir_from_other_sw,
             ]
         elif path_tag == LocalCfg.DLL_DIR:
             return [
-                ((lambda sw: []) if ignore_local_record
-                 else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.DLL_DIR)),
+                # ((lambda sw: []) if ignore_local_record
+                #  else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.DLL_DIR)),
                 SwInfoUtils.get_sw_dll_dir_by_memo_maps,
                 SwInfoUtils._get_sw_dll_dir_by_files,
             ]
@@ -1386,26 +1406,25 @@ class SwInfoUtils:
 
         return check_sw_path_func
 
+    # @staticmethod
+    # def _create_sw_method_to_get_path_from_local_record(path_tag):
+    #     """
+    #     创建路径查找函数
+    #     :param path_tag: 路径类型
+    #     :return: 路径查找函数
+    #     """
+    #
+    #     def get_sw_path_from_local_record(sw: str) -> list:
+    #         path = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, path_tag)
+    #         return [path] if path is not None else []
+    #
+    #     return get_sw_path_from_local_record
+
     @staticmethod
-    def _create_sw_method_to_get_path_from_local_record(path_tag):
-        """
-        创建路径查找函数
-        :param path_tag: 路径类型
-        :return: 路径查找函数
-        """
-
-        def get_sw_path_from_local_record(sw: str) -> list:
-            path = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, path_tag)
-            return [path] if path is not None else []
-
-        return get_sw_path_from_local_record
-
-    @staticmethod
-    def try_get_path(sw: str, path_type: str, ignore_local_record) \
+    def try_detect_path(sw: str, path_type: str) \
             -> Union[Tuple[bool, bool, Union[None, str]]]:
         """
         获取微信数据路径的结果元组
-        :param ignore_local_record: 是否忽略本地记录
         :param path_type: 路径类型
         :param sw: 平台
         :return: 成功，是否改变，结果
@@ -1414,7 +1433,7 @@ class SwInfoUtils:
         changed = False
         result = None
 
-        path_finders = SwInfoUtils._create_path_finders_of_(path_type, ignore_local_record)
+        path_finders = SwInfoUtils._create_path_finders_of_(path_type)
         check_sw_path_func = SwInfoUtils._create_check_method_of_(path_type)
         if check_sw_path_func is None:
             return success, changed, result

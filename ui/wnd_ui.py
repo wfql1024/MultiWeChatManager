@@ -1327,6 +1327,7 @@ class StatisticWndUI(SubToolWndUI, ABC):
 
 class SettingWndUI(SubToolWndUI, ABC):
     def __init__(self, wnd, sw, title):
+        self.path_var_dict = {}
         self.clear_acc_var = None
         self.title_entry = None
         self.need_to_reinit = None
@@ -1346,11 +1347,8 @@ class SettingWndUI(SubToolWndUI, ABC):
         self.version_entry = None
         self.version_var = None
         self.dll_path_entry = None
-        self.dll_dir_var = None
         self.data_path_entry = None
-        self.data_dir_var = None
         self.install_path_entry = None
-        self.inst_path_var = None
 
         self.sw = sw
         self.need_to_clear_acc = False
@@ -1403,11 +1401,11 @@ class SettingWndUI(SubToolWndUI, ABC):
         current_row = _get_new_row_in_grid(settings_grid_frm)
         install_label = tk.Label(settings_grid_frm, text="程序路径：")
         install_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
-        self.inst_path_var = tk.StringVar()
-        install_path_entry = tk.Entry(settings_grid_frm, textvariable=self.inst_path_var, width=70)
+        self.path_var_dict[LocalCfg.INST_PATH] = tk.StringVar()
+        install_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.INST_PATH], width=70)
         install_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
-        install_get_button = ttk.Button(settings_grid_frm, text="获取",
-                                        command=partial(self.load_or_get_sw_inst_path, self.sw, True))
+        install_get_button = ttk.Button(
+            settings_grid_frm, text="获取", command=partial(self.load_or_detect_path_of, LocalCfg.INST_PATH, True))
         install_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
         install_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                            command=partial(self.choose_sw_inst_path, self.sw))
@@ -1416,11 +1414,11 @@ class SettingWndUI(SubToolWndUI, ABC):
         current_row = _get_new_row_in_grid(settings_grid_frm)
         data_label = tk.Label(settings_grid_frm, text="存储路径：")
         data_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
-        self.data_dir_var = tk.StringVar()
-        data_path_entry = tk.Entry(settings_grid_frm, textvariable=self.data_dir_var, width=70)
+        self.path_var_dict[LocalCfg.DATA_DIR] = tk.StringVar()
+        data_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.DATA_DIR], width=70)
         data_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
         data_get_button = ttk.Button(settings_grid_frm, text="获取",
-                                     command=partial(self.load_or_get_sw_data_dir, self.sw, True))
+                                     command=partial(self.load_or_detect_path_of, LocalCfg.DATA_DIR, True))
         data_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
         data_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                         command=partial(self.choose_sw_data_dir, self.sw))
@@ -1429,11 +1427,11 @@ class SettingWndUI(SubToolWndUI, ABC):
         current_row = _get_new_row_in_grid(settings_grid_frm)
         dll_label = tk.Label(settings_grid_frm, text="DLL所在路径：")
         dll_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
-        self.dll_dir_var = tk.StringVar()
-        dll_path_entry = tk.Entry(settings_grid_frm, textvariable=self.dll_dir_var, width=70)
+        self.path_var_dict[LocalCfg.DLL_DIR] = tk.StringVar()
+        dll_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.DLL_DIR], width=70)
         dll_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
         dll_get_button = ttk.Button(settings_grid_frm, text="获取",
-                                    command=partial(self.load_or_get_sw_dll_dir, self.sw, True))
+                                    command=partial(self.load_or_detect_path_of, LocalCfg.DLL_DIR, True))
         dll_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
         dll_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                        command=partial(self.choose_sw_dll_dir, self.sw))
@@ -1445,7 +1443,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         self.login_size_var = tk.StringVar()
         login_size_entry = tk.Entry(settings_grid_frm, textvariable=self.login_size_var, width=70)
         login_size_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
-        login_size_get_button = ttk.Button(settings_grid_frm, text="获取", command=self.to_get_login_size)
+        login_size_get_button = ttk.Button(settings_grid_frm, text="获取", command=self.thread_to_get_login_size)
         login_size_get_button.grid(row=current_row, column=2, columnspan=2, **Constants.WE_GRID_PACK)
         # 新增第五行 - 平台禁用与显示
         current_row = _get_new_row_in_grid(settings_grid_frm)
@@ -1477,9 +1475,9 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def update_content(self):
         # 初始加载已经配置的，或是没有配置的话自动获取
-        self.inst_path_var.set(self.origin_values[LocalCfg.INST_PATH])
-        self.data_dir_var.set(self.origin_values[LocalCfg.DATA_DIR])
-        self.dll_dir_var.set(self.origin_values[LocalCfg.DLL_DIR])
+        self.path_var_dict[LocalCfg.INST_PATH].set(self.origin_values[LocalCfg.INST_PATH])
+        self.path_var_dict[LocalCfg.DATA_DIR].set(self.origin_values[LocalCfg.DATA_DIR])
+        self.path_var_dict[LocalCfg.DLL_DIR].set(self.origin_values[LocalCfg.DLL_DIR])
         self.login_size_var.set(self.origin_values[LocalCfg.LOGIN_SIZE])
         self.set_sw_state_cb_from_(self.origin_values[LocalCfg.STATE])
 
@@ -1518,9 +1516,11 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def check_bools(self):
         # 需要检验是否更改的属性
-        self.changed[LocalCfg.INST_PATH] = self.inst_path_var.get() != self.origin_values[LocalCfg.INST_PATH]
-        self.changed[LocalCfg.DATA_DIR] = self.data_dir_var.get() != self.origin_values[LocalCfg.DATA_DIR]
-        self.changed[LocalCfg.DLL_DIR] = self.dll_dir_var.get() != self.origin_values[LocalCfg.DLL_DIR]
+        for path_type in [LocalCfg.INST_PATH, LocalCfg.DATA_DIR, LocalCfg.DLL_DIR]:
+            self.changed[path_type] = self.path_var_dict[path_type].get() != self.origin_values[path_type]
+        # self.changed[LocalCfg.INST_PATH] = self.path_var_dict[LocalCfg.INST_PATH].get() != self.origin_values[LocalCfg.INST_PATH]
+        # self.changed[LocalCfg.DATA_DIR] = self.data_dir_var.get() != self.origin_values[LocalCfg.DATA_DIR]
+        # self.changed[LocalCfg.DLL_DIR] = self.dll_dir_var.get() != self.origin_values[LocalCfg.DLL_DIR]
         self.changed[LocalCfg.LOGIN_SIZE] = self.login_size_var.get() != self.origin_values[LocalCfg.LOGIN_SIZE]
         self.changed[LocalCfg.STATE] = self.get_sw_state_from_ckb() != self.origin_values[LocalCfg.STATE]
 
@@ -1534,9 +1534,9 @@ class SettingWndUI(SubToolWndUI, ABC):
     def on_ok(self):
         if not self.validate_paths_and_ask():
             return
-        inst_path = self.inst_path_var.get()
-        data_dir = self.data_dir_var.get()
-        dll_dir = self.dll_dir_var.get()
+        inst_path = self.path_var_dict[LocalCfg.INST_PATH].get()
+        data_dir = self.path_var_dict[LocalCfg.DATA_DIR].get()
+        dll_dir = self.path_var_dict[LocalCfg.DLL_DIR].get()
         login_size = self.login_size_var.get()
         inst_path = None if inst_path.startswith("获取失败") else inst_path
         data_dir = None if data_dir.startswith("获取失败") else data_dir
@@ -1576,9 +1576,9 @@ class SettingWndUI(SubToolWndUI, ABC):
 
     def validate_paths_and_ask(self):
         invalid_vars = []
-        inst_path = self.inst_path_var.get()
-        data_dir = self.data_dir_var.get()
-        dll_dir = self.dll_dir_var.get()
+        inst_path = self.path_var_dict[LocalCfg.INST_PATH].get()
+        data_dir = self.path_var_dict[LocalCfg.DATA_DIR].get()
+        dll_dir = self.path_var_dict[LocalCfg.DLL_DIR].get()
         login_size = self.login_size_var.get()
 
         if not SwInfoUtils.is_valid_sw_path(LocalCfg.INST_PATH, self.sw, inst_path):
@@ -1602,11 +1602,23 @@ class SettingWndUI(SubToolWndUI, ABC):
             icon="warning"
         )
 
-    def load_or_get_sw_inst_path(self, sw, ignore_local_rec=False):
-        """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.detect_path_of_(sw, LocalCfg.INST_PATH, ignore_local_rec)
+    def load_or_detect_path_of(self, path_type, detect=False):
+        """获取路径, 若成功会进行保存, detect为是否忽略本地记录重新探索"""
+        if detect is False:
+            path = SwInfoFunc.try_get_path_of_(self.sw, path_type)
+        else:
+            path = SwInfoFunc.detect_path_of_(self.sw, path_type)
         if path:
-            self.inst_path_var.set(path.replace('\\', '/'))
+            self.path_var_dict[path_type].set(path.replace('\\', '/'))
+
+    # def load_or_get_sw_inst_path(self, sw, detect=False):
+    #     """获取路径, 若成功会进行保存, detect为是否忽略本地记录重新探索"""
+    #     if detect is False:
+    #         path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
+    #     else:
+    #         path = SwInfoFunc.detect_path_of_(sw, LocalCfg.INST_PATH)
+    #     if path:
+    #         self.inst_path_var.set(path.replace('\\', '/'))
 
     def choose_sw_inst_path(self, sw):
         """选择路径，若检验成功会进行保存"""
@@ -1628,13 +1640,13 @@ class SettingWndUI(SubToolWndUI, ABC):
                 break
 
         if selected_path:
-            self.inst_path_var.set(selected_path)
+            self.path_var_dict[LocalCfg.INST_PATH].set(selected_path)
 
-    def load_or_get_sw_data_dir(self, sw, ignore_local_rec=False):
-        """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.detect_path_of_(sw, LocalCfg.DATA_DIR, ignore_local_rec)
-        if path:
-            self.data_dir_var.set(path.replace('\\', '/'))
+    # def load_or_get_sw_data_dir(self, sw, ignore_local_rec=False):
+    #     """获取路径，若成功会进行保存"""
+    #     path = SwInfoFunc.detect_path_of_(sw, LocalCfg.DATA_DIR, ignore_local_rec)
+    #     if path:
+    #         self.data_dir_var.set(path.replace('\\', '/'))
 
     @staticmethod
     def _ask_for_directory():
@@ -1677,13 +1689,13 @@ class SettingWndUI(SubToolWndUI, ABC):
                 break
 
         if selected_path:
-            self.data_dir_var.set(selected_path)
+            self.path_var_dict[LocalCfg.DATA_DIR].set(selected_path)
 
-    def load_or_get_sw_dll_dir(self, sw, ignore_local_rec=False):
-        """获取路径，若成功会进行保存"""
-        path = SwInfoFunc.detect_path_of_(sw, LocalCfg.DLL_DIR, ignore_local_rec)
-        if path:
-            self.dll_dir_var.set(path.replace('\\', '/'))
+    # def load_or_get_sw_dll_dir(self, sw, ignore_local_rec=False):
+    #     """获取路径，若成功会进行保存"""
+    #     path = SwInfoFunc.detect_path_of_(sw, LocalCfg.DLL_DIR, ignore_local_rec)
+    #     if path:
+    #         self.dll_dir_var.set(path.replace('\\', '/'))
 
     def choose_sw_dll_dir(self, sw):
         """选择路径，若检验成功会进行保存"""
@@ -1705,15 +1717,18 @@ class SettingWndUI(SubToolWndUI, ABC):
                 break
 
         if selected_path:
-            self.dll_dir_var.set(selected_path)
+            self.path_var_dict[LocalCfg.DLL_DIR].set(selected_path)
 
-    def to_get_login_size(self):
-        sw = self.sw
-        self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
-        result = SwOperator.get_login_size(sw, self.multirun_mode)
-        if result:
-            login_width, login_height = result
-            self.login_size_var.set(f"{login_width}*{login_height}")
+    def thread_to_get_login_size(self):
+        def thread():
+            sw = self.sw
+            self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
+            result = SwOperator.get_login_size(sw, self.multirun_mode)
+            if isinstance(result, tuple):
+                login_width, login_height = result
+                self.root.after(0, self.login_size_var.set, f"{login_width}*{login_height}")
+
+        threading.Thread(target=thread).start()
 
 
 class GlobalSettingWndUI(SubToolWndUI, ABC):

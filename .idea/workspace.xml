@@ -4,18 +4,34 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="">
+    <list default="true" id="5951bf31-a62a-4ea7-88b3-0f263eafe6a4" name="Changes" comment="调整文件结构,优化打包脚本&#10;优化路径获取逻辑&#10;共存账号也可以多开(不建议)&#10;优化强制关闭平台所有互斥体&#10;修复一些潜在bug&#10;优化刷新逻辑:只在成功执行登录后才自动刷新,超时或未成功打开登录窗口都不刷新&#10;远程配置4.0微信共存特征码勘误">
+      <change afterPath="$PROJECT_DIR$/.scripts/Build.bat" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.scripts/requirements.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/encodings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/encodings.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.meta/app.manifest" beforeDir="false" afterPath="$PROJECT_DIR$/.meta/app.manifest" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.scripts/origin_remote_setting_v5.json" beforeDir="false" afterPath="$PROJECT_DIR$/.scripts/origin_remote_setting_v5.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_new_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_new_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.test/test_unit.py" beforeDir="false" afterPath="$PROJECT_DIR$/.test/test_unit.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Build4Win10+.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Build4Win7.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/click_me_to_create_lnk.bat" beforeDir="false" afterPath="$PROJECT_DIR$/.scripts/click_me_to_create_lnk.bat" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/external_res/SunnyMultiWxMng.ico" beforeDir="false" afterPath="$PROJECT_DIR$/.old/external_res/SunnyMultiWxMng.ico" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/external_res/WeChatMultiple_Anhkgg.exe" beforeDir="false" afterPath="$PROJECT_DIR$/.old/external_res/WeChatMultiple_Anhkgg.exe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/external_res/WeChatMultiple_lyie15.exe" beforeDir="false" afterPath="$PROJECT_DIR$/.old/external_res/WeChatMultiple_lyie15.exe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/external_res/wechat-dump-rs.exe" beforeDir="false" afterPath="$PROJECT_DIR$/.old/external_res/wechat-dump-rs.exe" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/acc_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/acc_func.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/app_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/app_func.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/functions/sw_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/sw_func.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public_class/custom_classes.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/custom_classes.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/functions/wnd_func.py" beforeDir="false" afterPath="$PROJECT_DIR$/functions/wnd_func.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/public_class/enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/enums.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/public_class/reusable_widgets.py" beforeDir="false" afterPath="$PROJECT_DIR$/public_class/reusable_widgets.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/login_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/login_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/main_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/main_ui.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ui/menu_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/menu_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ui/wnd_ui.py" beforeDir="false" afterPath="$PROJECT_DIR$/ui/wnd_ui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/better_wx/inner_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/better_wx/inner_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/encoding_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/encoding_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils/handle_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/handle_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/hwnd_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/hwnd_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils/logger_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils/logger_utils.py" afterDir="false" />
     </list>
@@ -198,30 +214,30 @@
     &quot;ShowUsagesActions.previewPropertyKey&quot;: &quot;true&quot;,
     &quot;com.codeium.enabled&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/SpaceDev/MyProj/MultiWeChatManager/utils/better_wx&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/SpaceDev/MyProj/MultiWeChatManager/.scripts&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
     &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
     &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;,
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\.scripts" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\utils\better_wx" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\utils" />
-      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\.scripts" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\external_res" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\ui" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\.old\external_res" />
+      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\.scripts" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\Demo\tkinterweb\templates" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\Demo\tkinterweb" />
       <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\.old" />
-      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager\functions" />
-      <recent name="D:\SpaceDev\MyProj\MultiWeChatManager" />
     </key>
   </component>
   <component name="RunManager" selected="Python.MultiWeChatManager">
@@ -423,12 +439,12 @@
       <item itemvalue="Python.MultiWeChatManager" />
       <item itemvalue="Python.UpdateRemote" />
       <item itemvalue="Python.[debug]MWM" />
+      <item itemvalue="Python.update_program" />
       <item itemvalue="Python.custom_widget" />
       <item itemvalue="Python.inner_utils" />
       <item itemvalue="Python.tmp_coexist" />
-      <item itemvalue="Python.update_program" />
-      <item itemvalue="Python tests.Python tests for test_new_func.Test.test_add_coexist_extra_cfg" />
       <item itemvalue="Python tests.Python tests for test_unit.Test.test_resolve_addr" />
+      <item itemvalue="Python tests.Python tests for test_new_func.Test.test_add_coexist_extra_cfg" />
     </list>
     <recent_temporary>
       <list>
@@ -801,14 +817,11 @@
       <workItem from="1753161333614" duration="11526000" />
       <workItem from="1753242698286" duration="24200000" />
       <workItem from="1753336928079" duration="6029000" />
-    </task>
-    <task id="LOCAL-00314" summary="为新标签页功能更新新的结构">
-      <option name="closed" value="true" />
-      <created>1748337657684</created>
-      <option name="number" value="00314" />
-      <option name="presentableId" value="LOCAL-00314" />
-      <option name="project" value="LOCAL" />
-      <updated>1748337657684</updated>
+      <workItem from="1753374106808" duration="19973000" />
+      <workItem from="1753463013859" duration="30164000" />
+      <workItem from="1753556560271" duration="17994000" />
+      <workItem from="1753771139886" duration="7405000" />
+      <workItem from="1754161419820" duration="13929000" />
     </task>
     <task id="LOCAL-00315" summary="精确适配4.0.5.17">
       <option name="closed" value="true" />
@@ -1194,7 +1207,15 @@
       <option name="project" value="LOCAL" />
       <updated>1753161475176</updated>
     </task>
-    <option name="localTasksCounter" value="363" />
+    <task id="LOCAL-00363" summary="优化登录:只在登录成功后才刷新,超时或登录失败都不自动刷新&#10;使用多线程及线程锁优化账号列表获取效率&#10;新增内部地址表示inst_dir&#10;线程方式执行新建共存程序过程,增加强制关闭互斥体功能&#10;调整远程配置结构,调整企业微信共存特征码">
+      <option name="closed" value="true" />
+      <created>1753375287537</created>
+      <option name="number" value="00363" />
+      <option name="presentableId" value="LOCAL-00363" />
+      <option name="project" value="LOCAL" />
+      <updated>1753375287538</updated>
+    </task>
+    <option name="localTasksCounter" value="364" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -1248,7 +1269,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="发布前的测试与修复(代理,快捷方式,版本显示,侧栏菜单显示,解密,同类平台数据路径获取" />
     <MESSAGE value="发布3.3.0.3718" />
     <MESSAGE value="远程适配表增加新版本3.3.0.3718-Beta" />
     <MESSAGE value="UPDATE README" />
@@ -1273,7 +1293,8 @@
     <MESSAGE value="适配4.0.6.12及以上的多开和防撤回" />
     <MESSAGE value="定制圆角按钮(包括不限于颜色的淡化和提亮操作,提取公共修改按钮文字等方法);&#10;优化文件对比脚本,提高适配效率;&#10;优化补丁适配表架构及代码;&#10;特征码增加&quot;!!&quot;标识用于共存生成;&#10;优化logger,可以记录调用栈;&#10;登录界面按钮改用定制圆角按钮,可以切换原生登录和共存登录;&#10;格式化代码." />
     <MESSAGE value="共存:菜单,添加,登录&#10;补丁菜单增加&quot;清除缓存&quot;功能&#10;优化等待窗口打开方法&#10;betterwx内部子方法修改示例数据" />
-    <option name="LAST_COMMIT_MESSAGE" value="共存:菜单,添加,登录&#10;补丁菜单增加&quot;清除缓存&quot;功能&#10;优化等待窗口打开方法&#10;betterwx内部子方法修改示例数据" />
+    <MESSAGE value="优化登录:只在登录成功后才刷新,超时或登录失败都不自动刷新&#10;使用多线程及线程锁优化账号列表获取效率&#10;新增内部地址表示inst_dir&#10;线程方式执行新建共存程序过程,增加强制关闭互斥体功能&#10;调整远程配置结构,调整企业微信共存特征码" />
+    <option name="LAST_COMMIT_MESSAGE" value="优化登录:只在登录成功后才刷新,超时或登录失败都不自动刷新&#10;使用多线程及线程锁优化账号列表获取效率&#10;新增内部地址表示inst_dir&#10;线程方式执行新建共存程序过程,增加强制关闭互斥体功能&#10;调整远程配置结构,调整企业微信共存特征码" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -1319,7 +1340,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_file.coverage" NAME="func_file Coverage Results" MODIFIED="1733325233358" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$get_path_of_wechat.coverage" NAME="get_path_of_wechat Coverage Results" MODIFIED="1723333662145" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$sys_utils.coverage" NAME="sys_utils Coverage Results" MODIFIED="1733758751732" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1753371507566" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$MultiWeChatManager.coverage" NAME="MultiWeChatManager Coverage Results" MODIFIED="1754287138053" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_setting.coverage" NAME="func_setting Coverage Results" MODIFIED="1735011292727" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$wechat_decrypt_utils.coverage" NAME="wechat_decrypt_utils Coverage Results" MODIFIED="1723959593571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/utils" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$more_open.coverage" NAME="more_open Coverage Results" MODIFIED="1724791562833" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
@@ -1330,7 +1351,7 @@
     <SUITE FILE_PATH="coverage/MultiWeChatManager$change.coverage" NAME="change Coverage Results" MODIFIED="1745071352553" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$func_path.coverage" NAME="func_path Coverage Results" MODIFIED="1723587474270" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/functions" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$custom_tkinter_example.coverage" NAME="custom_tkinter_example Coverage Results" MODIFIED="1751781618286" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
-    <SUITE FILE_PATH="coverage/MultiWeChatManager$UpdateRemote.coverage" NAME="UpdateRemote Coverage Results" MODIFIED="1752848643588" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
+    <SUITE FILE_PATH="coverage/MultiWeChatManager$UpdateRemote.coverage" NAME="UpdateRemote Coverage Results" MODIFIED="1753375277675" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/.scripts" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$hwnd.coverage" NAME="hwnd Coverage Results" MODIFIED="1732032782606" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$rewards_ui.coverage" NAME="rewards_ui Coverage Results" MODIFIED="1733621223266" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/ui" />
     <SUITE FILE_PATH="coverage/MultiWeChatManager$search_wechat_key.coverage" NAME="search_wechat_key Coverage Results" MODIFIED="1723953330536" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/Demo/decrypt" />

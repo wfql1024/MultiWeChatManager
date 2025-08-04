@@ -3,8 +3,6 @@ import time
 from functools import partial
 from tkinter import ttk, messagebox
 
-import customtkinter as ctk
-
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
 from functions.main_func import MultiSwFunc
@@ -72,9 +70,9 @@ class LoginUI:
             self.root.destroy()
 
         # 路径检查
-        self.sw_class.data_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DATA_DIR)
-        self.sw_class.inst_path = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.INST_PATH)
-        self.sw_class.dll_dir = SwInfoFunc.get_saved_path_of_(self.sw, LocalCfg.DLL_DIR)
+        self.sw_class.data_dir = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.DATA_DIR)
+        self.sw_class.inst_path = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.INST_PATH)
+        self.sw_class.dll_dir = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.DLL_DIR)
         self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw)
 
         # 创建菜单
@@ -147,7 +145,6 @@ class LoginUI:
             for widget in self.tab_frame.winfo_children():
                 widget.destroy()
 
-        ctk.set_appearance_mode("Light")
         bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
         bottom_frame.pack(side='bottom')
         sw_ver = SwInfoFunc.calc_sw_ver(self.sw)
@@ -236,13 +233,22 @@ class LoginUI:
         else:
             print("⚡强制关闭互斥体")
             pids = SwInfoFunc.get_sw_all_exe_pids(self.sw)
-            mutant_handle_wildcards, = subfunc_file.get_sw_acc_data(self.sw, mutant_handle_wildcards=None)
+            mutant_handle_wildcards, config_handle_wildcards = subfunc_file.get_remote_cfg(
+                self.sw, mutant_handle_wildcards=None, config_handle_wildcards=None)
+            handle_wildcards = []
             if isinstance(mutant_handle_wildcards, list):
+                handle_wildcards.extend(mutant_handle_wildcards)
+            if isinstance(config_handle_wildcards, list):
+                handle_wildcards.extend(config_handle_wildcards)
+            if isinstance(handle_wildcards, list) and len(handle_wildcards) > 0:
                 handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
-                    pids, mutant_handle_wildcards)
+                    pids, handle_wildcards)
+                Printer().debug(f"[INFO]查询到互斥体: {handle_infos}")
                 success = handle_utils.pywinhandle_close_handles(
                     handle_infos
                 )
+                if success:
+                    messagebox.showinfo("提示", "已关闭互斥体, 即将刷新!")
             self.refresh_frame()
 
     def _switch_mode(self):

@@ -5,7 +5,6 @@ from enum import Enum
 class MultirunMode(str, Enum):
     BUILTIN = "内置"
     HANDLE = "handle"
-    SUPER_PYTHON = "*python"
     FREELY_MULTIRUN = "全局多开"
 
 
@@ -34,6 +33,7 @@ class RemoteCfg(str, Enum):
     MULTI = "multirun"
     COEXIST = "coexist"
     NATIVE_MULTI = "native-multirun"
+    NATIVE = "natively"
     # dll模式字段
     ORIGINAL = "original"
     MODIFIED = "modified"

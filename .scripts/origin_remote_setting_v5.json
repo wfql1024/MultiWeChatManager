@@ -861,6 +861,15 @@
                     "author": [
                         "afaa1991"
                     ],
+                    "exe_wildcard": "WeCha?.exe",
+                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                },
+                "default2": {
+                    "label": "默认2",
+                    "introduce": "对host文件,窗口类名,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
+                    "author": [
+                        "afaa1991"
+                    ],
                     "exe_wildcard": "WeChat?.exe",
                     "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
                 }
@@ -868,6 +877,53 @@
             "feature": {
                 "3.9": {
                     "default": {
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "57 00 65 00 43 00 68 00 61 00 74 00 4C 00 6F 00 67 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
+                                "57 00 65 00 43 00 68 00 61 00 74 00 4D 00 61 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
+                                "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
+                                "57 65 43 68 61 74 57 69 6E 2E 64 6C 6C",
+                                "77 00 65 00 63 00 68 00 61 00 74 00 77 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                "63 00 6F 00 6E 00 66 00 69 00 67 00 2E 00 64 00 61 00 74 00 61 00",
+                                "5F 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00"
+                            ],
+                            "modified": [
+                                "57 00 65 00 43 00 68 00 61 00 !! ...",
+                                "57 00 65 00 43 00 68 00 61 00 !! ...",
+                                "... !! 2E 78 6D 6C",
+                                "... !! 2E 64 6C 6C",
+                                "... !! 00 2E 00 64 00 6C 00 6C 00",
+                                "... !! 00 2E 00 64 00 6C 00 6C 00",
+                                "... !! 00 2E 00 64 00 61 00 74 00 61 00",
+                                "5F 00 57 00 65 00 43 00 68 00 61 00 !! ..."
+                            ],
+                            "meanings": [
+                                " W  .  e  .  C  .  h  .  a  .  ̲t  .  L  .  o  .  g  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
+                                " W  .  e  .  C  .  h  .  a  .  ̲t  .  M  .  a  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
+                                " h  o  s  t  -  r  e  d  i  r  e  c  ̲t  .  x  m  l",
+                                " W  e  C  h  a  t  W  i  ̲n  .  d  l  l",
+                                " w  .  e  .  c  .  h  .  a  .  t  .  w  .  i  .  ̲n  .  .  .  d  .  l  .  l  .",
+                                " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  ̲n  .  .  .  d  .  l  .  l  .",
+                                " c  .  o  .  n  .  f  .  i  .  ̲g  .  .  .  d  .  a  .  t  .  a  .",
+                                " _  .  W  .  e  .  C  .  h  .  a  .  ̲t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  ."
+                            ],
+                            "wildcard": "WeChatWi?.dll"
+                        },
+                        "%inst_path%": {
+                            "original": [
+                                "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "modified": [
+                                "... !! 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "meanings": [
+                                " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  ̲n  .  .  .  d  .  l  .  l  ."
+                            ],
+                            "wildcard": "WeCha?.exe"
+                        }
+                    },
+                    "default2": {
                         "%dll_dir%/WeChatWin.dll": {
                             "original": [
                                 "57 00 65 00 43 00 68 00 61 00 74 00 4C 00 6F 00 67 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
@@ -945,6 +1001,16 @@
                                 "90 E9 ..."
                             ]
                         }
+                    },
+                    "default2": {
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 ?? ?? ?? ??"
+                            ],
+                            "modified": [
+                                "E9 BE 00 ..."
+                            ]
+                        }
                     }
                 },
                 "3.9.10": {
@@ -962,7 +1028,7 @@
             },
             "precise": {
                 "3.9.12.51": {
-                    "default": {
+                    "default2": {
                         "%dll_dir%/WeChatWin.dll": {
                             "original": [
                                 "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
@@ -972,7 +1038,7 @@
                             ]
                         }
                     },
-                    "default2": {
+                    "default": {
                         "%dll_dir%/WeChatWin.dll": {
                             "original": [
                                 "0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
@@ -1593,7 +1659,8 @@
         "executable": "WeChat.exe",
         "executable_wildcards": [
             "WeChat.exe",
-            "WeChat?.exe"
+            "WeChat?.exe",
+            "WeCha?.exe"
         ],
         "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
         "data_dir_guess_suffix": "Tencent\\WeChat",
@@ -1685,7 +1752,7 @@
                             "modified": [
                                 "... !!",
                                 "... !! 66 C7 05 ?? ?? ?? ?? 67 00",
-                                "57 00 !! ...",
+                                "!! ...",
                                 "... !! 00"
                             ],
                             "meanings": [
@@ -2722,9 +2789,13 @@
         }
     },
     "QQNT": {
-        "native-multirun": true,
-        "multirun": {},
+        "multirun": {
+            "natively": true
+        },
         "anti-revoke": {},
+        "coexist": {
+            "natively": true
+        },
         "redundant_wnd_class": [
         ],
         "label": "QQNT",
@@ -2782,8 +2853,9 @@
         }
     },
     "QQ": {
-        "native-multirun": true,
-        "multirun": {},
+        "multirun": {
+            "natively": true
+        },
         "anti-revoke": {
             "channel": {
                 "silence": {
@@ -2828,6 +2900,9 @@
                     }
                 }
             }
+        },
+        "coexist": {
+            "natively": true
         },
         "redundant_wnd_class": [],
         "label": "QQ",
@@ -2883,8 +2958,9 @@
         }
     },
     "TIM": {
-        "native-multirun": true,
-        "multirun": {},
+        "multirun": {
+            "natively": true
+        },
         "anti-revoke": {
             "channel": {
                 "silence": {
@@ -2929,6 +3005,9 @@
                     }
                 }
             }
+        },
+        "coexist": {
+            "natively": true
         },
         "redundant_wnd_class": [],
         "label": "TIM",

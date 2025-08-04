@@ -98,7 +98,7 @@ class DetailWndFunc:
         decrypted_mm_db_path = result
         print(f"解密成功，数据库临时存在：{decrypted_mm_db_path}")
 
-        data_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
+        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
         excluded_folders, = subfunc_file.get_remote_cfg(
             sw, excluded_dir_list=None)
         excluded_folders = set(excluded_folders)

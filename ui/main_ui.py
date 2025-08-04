@@ -62,7 +62,7 @@ class RootClass:
     管理数据: 全局配置global_settings,软件配置sw_classes
     """
 
-    def __init__(self, args=None):
+    def __init__(self, root, args=None):
         # 未分类
         self._menu_ui = None
         self._root_ui = None
@@ -96,13 +96,11 @@ class RootClass:
 
         # 进入程序的操作
         # -主窗口
-        root = tk.Tk()
         self.root = root
         self.root_wnd = RootWnd(self.root)
         # -载入窗口
         self.loading_wnd = tk.Toplevel(self.root)
         self.loading_wnd_class = LoadingWndUI(self.loading_wnd, "加载中...")
-        # try:
         # -初次使用
         if self.new is True:
             self.root.after(3000, WndCreator.open_update_log)
@@ -112,9 +110,6 @@ class RootClass:
         self.root.after(2000, self.wait_for_loading_close_and_bind)
         # -初始化构建...
         self.initialize_in_root()
-        # except Exception as e:
-        #     logger.error(e)
-        self.root.mainloop()
 
     @property
     def menu_ui(self):
@@ -282,7 +277,7 @@ class RootUI:
 
     def initialize_in_root_ui(self):
         self._load_root_nb_frame()
-        threading.Thread(target=self._get_path_thread).start()
+        threading.Thread(target=RootUI._get_path_thread).start()
         root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
         self.root_nb_cls.select(root_tab)
 
@@ -352,7 +347,8 @@ class RootUI:
             tmp_label = ttk.Label(self.login_frm_pool, text=hint, style="FirstTitle.TLabel")
             tmp_label.pack(pady=20)
 
-    def _get_path_thread(self):
+    @staticmethod
+    def _get_path_thread():
         sp_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
         if not isinstance(sp_sw, list):
             return
@@ -363,9 +359,9 @@ class RootUI:
                 continue
             print(f"创建{sw}的信息体...")
             sw_cls = SoftwareInfo(sw)
-            sw_cls.data_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DATA_DIR)
-            sw_cls.inst_path = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.INST_PATH)
-            sw_cls.dll_dir = SwInfoFunc.get_saved_path_of_(sw, LocalCfg.DLL_DIR)
+            sw_cls.data_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
+            sw_cls.inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
+            sw_cls.dll_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
             sw_cls.ver = SwInfoFunc.calc_sw_ver(sw)
             # sw_cls.multirun_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.MULTIRUN_MODE)
         # print("载入完成,所有信息体:", [sw.__dict__ for sw in self.sw_classes.values()])

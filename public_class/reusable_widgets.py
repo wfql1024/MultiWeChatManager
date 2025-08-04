@@ -115,7 +115,7 @@ class HotkeyEntry4Tkinter:
         self.current_keys = set()
         self.hotkey_var = tk.StringVar(value="") if set_hotkey is None else tk.StringVar(value=set_hotkey)
         self.hotkey_entry = ttk.Entry(hotkey_frame, textvariable=self.hotkey_var, width=30)
-        self.hotkey_entry.pack(side=tk.LEFT)
+        self.hotkey_entry.pack(side="left")
 
         # 绑定事件
         self.hotkey_entry.bind("<FocusIn>", self.start_recording)
@@ -223,8 +223,8 @@ class StatusBarUI:
         print(f"加载状态栏...")
         self.statusbar_output_var = tk.StringVar()
         self.status_bar = tk.Label(self.root, textvariable=self.statusbar_output_var, bd=Constants.STATUS_BAR_BD,
-                                   relief=tk.SUNKEN, anchor=tk.W, height=Constants.STATUS_BAR_HEIGHT)
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
+                                   relief="sunken", anchor="w", height=Constants.STATUS_BAR_HEIGHT)
+        self.status_bar.pack(side="bottom", fill="x")
 
     def update_status(self):
         """即时更新状态栏"""
@@ -249,14 +249,14 @@ class ScrollableCanvas:
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
         scrollbar_frame = tk.Frame(self.master_frame)
-        scrollbar_frame.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar_frame.pack(side="right", fill="y")
         self.canvas = tk.Canvas(self.master_frame, highlightthickness=0)
-        self.canvas.pack(fill=tk.BOTH, side=tk.LEFT, expand=True)
+        self.canvas.pack(fill="both", side="left", expand=True)
 
         # 创建滚动条
         # print("创建滚动条...")
         self.scrollbar = ttk.Scrollbar(scrollbar_frame, orient="vertical", command=self.canvas.yview)
-        self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
+        self.scrollbar.pack(side="left", fill="y")
         # 创建一个Frame在Canvas中
         self.main_frame = ttk.Frame(self.canvas)
         # 将main_frame放置到Canvas的窗口中，并禁用Canvas的宽高跟随调整
@@ -304,7 +304,7 @@ class ScrollableCanvas:
             self.canvas.itemconfig(tagOrId=self.canvas_window, width=width)
             if self.main_frame.winfo_height() > self.canvas.winfo_height():
                 self.bind_mouse_wheel(self.canvas)
-                self.scrollbar.pack(side=tk.LEFT, fill=tk.Y)
+                self.scrollbar.pack(side="left", fill="y")
             else:
                 self.unbind_mouse_wheel(self.canvas)
                 self.scrollbar.pack_forget()
@@ -345,7 +345,7 @@ class SubToolWndUI(ABC):
         wnd.title(self.title)
         wnd.attributes('-toolwindow', True)
         self.wnd_frame = tk.Frame(wnd)
-        self.wnd_frame.pack(fill=tk.BOTH, expand=True)
+        self.wnd_frame.pack(fill="both", expand=True)
         self.set_wnd()
         self.load_ui()
         self.update_content()
@@ -397,6 +397,7 @@ class SubToolWndUI(ABC):
 
 
 class DefaultEntry(tk.Entry):
+    """会提前填入默认内容的文本框"""
     def __init__(self, master=None, default_label="请输入内容", **kwargs):
         self.var = tk.StringVar()
         super().__init__(master, textvariable=self.var, **kwargs)
@@ -415,12 +416,16 @@ class DefaultEntry(tk.Entry):
         self.config(fg=("grey" if self._is_default else "black"))
 
     def _on_focus_in(self, event):
+        if event:
+            pass
         if self._is_default:
             self.var.set("")
             self._is_default = False
             self._set_style()
 
     def _on_focus_out(self, event):
+        if event:
+            pass
         var = self.var.get()
         if not var or not self.var.get().strip():
             # 空值情况下恢复默认值

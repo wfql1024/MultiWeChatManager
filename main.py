@@ -3,31 +3,8 @@ import ctypes
 import os
 import sys
 
-import pygetwindow as gw
-from pynput import keyboard
-
 from ui import main_ui
-
-global root_class
-
-
-def on_press(key):
-    try:
-        if key == keyboard.Key.tab:
-            current_window = gw.getActiveWindow()
-            if current_window and "微信（测试版）" in current_window.title:
-                current_window.minimize()
-    except AttributeError:
-        pass
-
-
-def start_keyboard_listener():
-    """启动键盘监听器"""
-    with keyboard.Listener(on_press=on_press) as listener:
-        listener.join()
-
-
-# SCALE_FACTOR = ctypes.windll.shcore.GetScaleFactorForDevice(0)
+import tkinter as tk
 
 
 def elevate():
@@ -72,10 +49,23 @@ def main():
     print("权限：" + "管理员身份" if ctypes.windll.shell32.IsUserAnAdmin() == 1 else "非管理员身份")
     print("调试模式：" + str(args.debug))
 
-    main_ui.RootClass(args)
+    root = tk.Tk()
+    main_ui.RootClass(root, args)
+    root.mainloop()
 
 
 if __name__ == "__main__":
+    # if sys.platform == 'win32':
+    #     kernel32 = ctypes.WinDLL('kernel32')
+    #     user32 = ctypes.WinDLL('user32')
+    #     # 立即隐藏窗口
+    #     user32.ShowWindow(kernel32.GetConsoleWindow(), 0)  # 0=SW_HIDE
+    #     # 防止后续创建新控制台
+    #     kernel32.FreeConsole()
+    #     # 重定向所有输出到黑洞
+    #     sys.stdout = open(os.devnull, 'w')
+    #     sys.stderr = open(os.devnull, 'w')
+
     if not is_admin():
         print("当前没有管理员权限，尝试获取...")
         if not elevate():

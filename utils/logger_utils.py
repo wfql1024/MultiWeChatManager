@@ -478,7 +478,6 @@ class Logger:
                 if 'exc_info' not in kwargs:
                     kwargs['exc_info'] = True
                 return getattr(self.logger, name)(msg, *args, **kwargs)
-
             return wrapper
         # 普通 log 方法转发
         return getattr(self.logger, name)

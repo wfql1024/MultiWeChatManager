@@ -3,7 +3,6 @@ import sys
 import tkinter as tk
 from typing import Tuple, List, Optional
 
-import comtypes.client
 import pygetwindow as gw
 import uiautomation
 import uiautomation as auto
@@ -14,7 +13,7 @@ import win32process
 
 from public_class.enums import Position
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
@@ -199,7 +198,7 @@ def win32_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
     return list(hwnds_set)
 
 
-def uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
+def uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None) -> list:
     """
     winAPI和uiautomation实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件.
     对于Qt类型窗口,仅使用winAPI获取将会无法获取更细的类名
@@ -255,7 +254,7 @@ def uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
         # 初步获取该 pid 下的 hwnds（不含 exclude_hwnds）
         hwnds = win32_get_hwnds_by_pid_and_class_wildcards(pid)
         hwnds = [h for h in hwnds if h not in exclude_hwnds]
-        Printer().debug(hwnds)
+        # Printer().debug(hwnds)
 
         for hwnd in hwnds:
             if title:
@@ -401,6 +400,7 @@ def find_widget_with_pygetwindow(hwnd, title, _control_type="Button"):
 # 方法 4: 使用 Windows Automation API (UIAutomationCore)（：问题较大，择日再看吧）
 def find_widget_with_uia(hwnd, title, _control_type="Button"):
     try:
+        import comtypes.client
         uia = comtypes.client.CreateObject('UIAutomationClient.CUIAutomation')
         element = uia.ElementFromHandle(hwnd)
         for t in title:
@@ -598,16 +598,16 @@ def wait_hwnd_close(hwnd, timeout=20):
     return False
 
 
-def wait_hwnds_close(hwnds, timeout=20):
+def wait_hwnds_close(hwnds, timeout=20) -> bool:
     """等待所有指定句柄的窗口关闭"""
     ddl_time = time.time() + timeout
     while True:
         # 判断所有 hwnd 是否都不存在了
         all_closed = all(not win32gui.IsWindow(hwnd) for hwnd in hwnds)
         if all_closed:
-            break
+            return True
         if time.time() > ddl_time:
-            break
+            return False
 
 
 def try_close_hwnds_in_set_and_return_remained(hwnds_set: set, timeout=5):

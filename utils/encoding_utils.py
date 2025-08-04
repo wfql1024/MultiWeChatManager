@@ -8,6 +8,14 @@ from utils.logger_utils import mylogger as logger
 
 class StringUtils:
     @staticmethod
+    def extract_longest_substring(wildcard: str) -> str:
+        """从通配符中提取最长的子字符串。"""
+        # 使用 * 和 ? 作为分隔符切分
+        parts = re.split(r'[*?]', wildcard)
+        # 过滤空串，返回最长的那一段
+        return max((part for part in parts if part), key=len, default='')
+
+    @staticmethod
     def wildcard_to_regex(wildcard_pattern: str) -> str:
         """
         将通配符字符串转换为正则表达式：
