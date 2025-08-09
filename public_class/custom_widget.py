@@ -5,9 +5,52 @@ from functools import partial
 from tkinter import ttk
 
 from public_class.enums import NotebookDirection
-from utils import widget_utils
 from utils.encoding_utils import ColorUtils
 from utils.widget_utils import UnlimitedClickHandler, CanvasUtils, WidgetUtils
+
+
+class CustomDialog:
+    @classmethod
+    def ask_username_password(cls):
+        result = []  # 使用列表封装以在内部函数中修改
+
+        def on_ok():
+            result[0] = (entry_username.get(), entry_password.get())
+            window.destroy()
+
+        def on_close():
+            result[0] = None
+            window.destroy()
+
+        window = tk.Tk()
+        window.title("登录")
+        window.protocol("WM_DELETE_WINDOW", on_close)
+
+        # 居中窗口
+        window.update_idletasks()
+        w = window.winfo_width()
+        h = window.winfo_height()
+        screen_w = window.winfo_screenwidth()
+        screen_h = window.winfo_screenheight()
+        x = (screen_w - w) // 2
+        y = (screen_h - h) // 2
+        window.geometry(f"{w}x{h}+{x}+{y}")
+
+        # 用户名标签和输入框
+        tk.Label(window, text="微软注册邮箱:").pack(pady=(10, 0))
+        entry_username = tk.Entry(window)
+        entry_username.pack()
+
+        # 密码标签和输入框
+        tk.Label(window, text="密码:").pack(pady=(5, 0))
+        entry_password = tk.Entry(window, show="*")
+        entry_password.pack()
+
+        # 确认按钮
+        tk.Button(window, text="确定", command=on_ok).pack(pady=(8, 0))
+
+        window.mainloop()
+        return result[0]
 
 
 class CustomBtn(tk.Widget):
@@ -86,6 +129,7 @@ class CustomBtn(tk.Widget):
             tkinter_root,
             self._core_widget,
             self._click_func,
+            self,
             **self._click_map
         )
         # 绑定后清空map和func
@@ -102,11 +146,14 @@ class CustomBtn(tk.Widget):
         self._core_widget.bind("<Button-1>", self._on_button_down)
         self._core_widget.bind("<ButtonRelease-1>", self._on_button_up)
         self._core_widget.bind("<Configure>", lambda e: self._draw())
-        # self._draw()
 
     def redraw(self):
         """应用并重绘,前面可以链式修改"""
         self._draw()
+
+    def get_state(self):
+        """获取当前状态"""
+        return self._state
 
     def set_state(self, state):
         """设置状态"""
@@ -116,7 +163,7 @@ class CustomBtn(tk.Widget):
         self._draw()
 
     def set_major_colors(self, major_color):
-        """设置主要颜色（选中背景色和悬浮背景色）"""
+        """设置主要颜色（选中背景色和悬浮背景色）, 格式必须是#开头的16进制颜色"""
         lighten_color = ColorUtils.fade_color(major_color)
         brighten_color = ColorUtils.brighten_color(major_color)
         self._styles[self.State.HOVERED]['bg'] = lighten_color
@@ -205,7 +252,7 @@ class CustomBtn(tk.Widget):
         if event:
             pass
         if self._state == self.State.DISABLED:
-            self._shake()
+            # self._shake()
             return
         if self._state == self.State.SELECTED:
             return
@@ -256,8 +303,8 @@ class CustomBtn(tk.Widget):
 
 class CustomCornerBtn(tk.Frame, CustomBtn):
     """
-    基于Frame+Canvas的定制按钮,可以设定宽高,圆角,边框,边距等属性.
-    当传入边距时,会根据文本内容自动调整大小以适应边距.
+    基于Frame+Canvas的定制按钮, 可以设定宽高, 圆角, 边框, 边距等属性.
+    当传入边距时, 会覆盖宽高的设置, 根据文本内容自动调整大小以适应边距. 边距只传入一个时, 会自适应调整宽高成方形按钮.
     """
 
     def __init__(self, parent, text="Button", corner_radius=4, width=100, height=30,
@@ -308,6 +355,7 @@ class CustomCornerBtn(tk.Frame, CustomBtn):
         """如果有边距,会根据文本内容自动调整大小以适应边距"""
 
         def _try_unpack(v):
+            # 可处理二元组,单个值或None
             try:
                 a, b = v
                 return int(a), int(b)
@@ -342,6 +390,16 @@ class CustomCornerBtn(tk.Frame, CustomBtn):
         tx = (w + pl - pr) // 2
         ty = (h + pb - pt) // 2
         # print(w, h, tx, ty)
+        # 如果只设置了垂直 padding（想生成正方形），则用 h 替代 w
+        if self.i_padx is None and self.i_pady is not None:
+            w = h
+            tx = w // 2
+            self.config(width=w)
+        # 如果只设置了水平 padding，生成正方形
+        elif self.i_pady is None and self.i_padx is not None:
+            h = w
+            ty = h // 2
+            self.config(height=h)
         return w, h, tx, ty
 
     def set_corner_radius(self, radius):
@@ -574,73 +632,3 @@ class CustomNotebook:
 
         if callable(self.select_callback):
             self.select_callback(self.click_time)
-
-
-if __name__ == '__main__':
-    tk_root = tk.Tk()
-    tk_root.geometry("400x300")
-
-
-    def printer(click_time):
-        print("按钮功能:连点次数为", click_time)
-
-
-    # 创建竖向Notebook（左侧）
-    my_nb_cls = CustomNotebook(tk_root, tk_root, direction=NotebookDirection.LEFT)
-
-    # 创建横向Notebook（顶部）
-    # my_nb_cls = CustomNotebook(tk_root, tk_root, direction=NotebookDirection.TOP)
-
-    # 设置颜色（使用正绿色）
-    my_nb_cls.set_major_color(selected_bg='#00FF00')
-
-    nb_frm_pools = my_nb_cls.frames_pool
-
-    # 创建标签页
-    frame1 = ttk.Frame(nb_frm_pools)
-    frame2 = ttk.Frame(nb_frm_pools)
-    frame3 = ttk.Frame(nb_frm_pools)
-    frame4 = ttk.Frame(nb_frm_pools)
-
-    # 在标签页1中添加CustomLabelBtn
-    btn1 = CustomCornerBtn(frame1, text="标签按钮1")
-    # btn1.on_click(lambda: print("按钮1被点击"))
-    btn1.pack(pady=10)
-    widget_utils.UnlimitedClickHandler(
-        tk_root, btn1,
-        printer
-    )
-    btn2 = CustomLabelBtn(frame1, text="标签按钮2")
-    # btn2.on_click(lambda: print("按钮2被点击"))
-    btn2.pack(pady=10)
-
-    # 在标签页2中添加CustomLabelBtn和标签
-    ttk.Label(frame2, text="这是标签页2").pack(pady=10)
-    btn3 = CustomLabelBtn(frame2, text="标签按钮3")
-    # btn3.on_click(lambda: print("按钮3被点击"))
-    btn3.pack(pady=10)
-
-    # 在标签页3中添加CustomLabelBtn组
-    btn_frame = ttk.Frame(frame3)
-    btn_frame.pack(pady=20)
-    btn4 = CustomLabelBtn(btn_frame, text="标签按钮4")
-    # btn4.on_click(lambda: print("按钮4被点击"))
-    btn4.pack(side='left', padx=5)
-    btn5 = CustomLabelBtn(btn_frame, text="标签按钮5")
-    # btn5.on_click(lambda: print("按钮5被点击"))
-    btn5.pack(side='left', padx=5)
-
-    # 添加标签页
-    my_nb_cls.add("tab1", "标签1", frame1)
-    my_nb_cls.add("tab2", "标签2", frame2)
-    my_nb_cls.add("tab3", "标签3", frame3)
-    my_nb_cls.all_set_bind_func(printer).all_apply_bind(tk_root)
-
-    my_nb_cls.add("tab4", "标签4", frame4)
-
-    btn = CustomCornerBtn(frame1, text="MI", corner_radius=100, width=300, height=300)
-    btn.set_major_colors("#ffc500").redraw()
-    btn.pack(padx=20, pady=20)
-    print(btn.__dict__)
-
-    tk_root.mainloop()

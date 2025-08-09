@@ -12,15 +12,17 @@ from public_class.custom_classes import Condition, Conditions
 class UnlimitedClickHandler:
     _widget_events_sum_map = {}
 
-    def __init__(self, root, widget, click_func=None, **click_map):
+    def __init__(self, root, widget, click_func=None, packing_instance=None, **click_map):
         """
         初始化 ClickHandler 类，接收 root 和外部提供的点击处理函数。
+        :param packing_instance: 打包实例，其中要有get_state方法用于获取状态，可选
         :param click_func: 通用点击处理函数，接受参数 click_time 和 event,不能有其他参数名
-        :param click_map: 若指定每次点击对应的函数，可传入字典杰宝形式，如 **{"1":func1, "2":func2}
+        :param click_map: 若指定每次点击对应的函数，可传入字典解包形式，如 **{"1":func1, "2":func2}
         """
         self.down = False
         self.root = root
         self.widget = widget
+        self.packing_instance = packing_instance
         if widget not in self._widget_events_sum_map:
             self._widget_events_sum_map[widget] = 1
         else:
@@ -126,6 +128,9 @@ class UnlimitedClickHandler:
         print(f"{self.widget}第{self.turn}份事件处理器监听:连续点击{self.click_count}次")
         click_count = self.click_count
         self.click_count = 0
+        if self.packing_instance and self.packing_instance.get_state() == self.packing_instance.State.DISABLED:
+            print("禁用状态，不处理点击事件")
+            return
         if not self.is_menu and self.down and click_count == 1:
             print("  单击但仍在按下，不处理点击事件")
             return
@@ -442,9 +447,17 @@ def insert_as_two_per_line(text_widget, line_list):
     text_widget.see(tk.END)  # 确保插入的文本可以显示在视图中
 
 
-def bind_event_to_frame_when_(widget, event, func, condition: Union[Condition, Conditions, bool]):
+def exclusively_bind_event_to_frame_when_(
+        exclusive_widgets, widget, event, func, condition: Union[Condition, Conditions, bool]):
+    bind_event_to_frame_when_(widget, event, func, condition, exclusive_widgets)
+
+
+def bind_event_to_frame_when_(
+        widget, event, func,
+        condition: Union[Condition, Conditions, bool], exclusive_widgets=None):
     """
     当条件满足时，绑定事件到控件范围内所有位置
+    :param exclusive_widgets: 不绑定的控件列表
     :param widget: 控件
     :param event: 事件
     :param func: 函数
@@ -456,10 +469,12 @@ def bind_event_to_frame_when_(widget, event, func, condition: Union[Condition, C
     for child in widget.winfo_children():
         child.unbind(event)
 
+    # 递归绑定
     if condition is True or hasattr(condition, "check") and condition.check():
-        widget.bind(event, func, add=True)
-        for child in widget.winfo_children():
-            child.bind(event, func, add=True)
+        if exclusive_widgets is None or widget not in exclusive_widgets:
+            widget.bind(event, func, add=True)
+            for child in widget.winfo_children():
+                bind_event_to_frame_when_(child, event, func, True, exclusive_widgets)
 
 
 def enable_widget_when_(widget, condition: Union[Condition, Conditions, bool]):

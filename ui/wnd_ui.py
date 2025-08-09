@@ -24,7 +24,7 @@ from functions.app_func import AppFunc
 from functions.sw_func import SwOperator, SwInfoFunc, SwInfoUtils
 from functions.wnd_func import DetailWndFunc, UpdateLogWndFunc
 from public_class import reusable_widgets
-from public_class.custom_widget import CustomLabelBtn, CustomBtn
+from public_class.custom_widget import CustomBtn, CustomCornerBtn
 from public_class.enums import LocalCfg, RemoteCfg, SwStates
 from public_class.global_members import GlobalMembers
 from public_class.reusable_widgets import SubToolWndUI, DefaultEntry
@@ -164,21 +164,28 @@ class DetailUI(SubToolWndUI, ABC):
 
         # 登录状态=pid+hwnd
         customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
-        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 0.2)
+        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 0.8)
 
         def _create_btn_in_(frame_of_btn, text):
-            btn = CustomLabelBtn(frame_of_btn, text=text, padx=customized_btn_ipad, pady=customized_btn_ipad)
+            btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
+            return btn
+
+        def _create_square_btn_in(frame_of_btn, text):
+            btn = CustomCornerBtn(frame_of_btn, text=text, i_pady=customized_btn_ipad)
             return btn
 
         def _pack_btn(btn):
             btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
+
+        def _set_negative_style(btn):
+            btn.set_major_colors("#FF0000")
 
         change_avatar_btn = _create_btn_in_(avatar_operate_frame, "修改")
         change_avatar_btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
         (change_avatar_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_choose_avatar_for_acc, sw, account))})
          .apply_bind(self.root))
-        delete_avatar_btn = _create_btn_in_(avatar_operate_frame, " × ")
+        delete_avatar_btn = _create_square_btn_in(avatar_operate_frame, "×")
         delete_avatar_btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
         (delete_avatar_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.delete_avatar_for_acc, sw, account))})
@@ -191,7 +198,7 @@ class DetailUI(SubToolWndUI, ABC):
         pid_frame.pack(side="top", anchor="w")
         pid_label = ttk.Label(pid_frame)
         pid_label.pack(side="left")
-        kill_pid_btn = _create_btn_in_(pid_frame, " × ")
+        kill_pid_btn = _create_square_btn_in(pid_frame, "×")
         (kill_pid_btn
          .set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccOperator.quit_selected_accounts, sw, [account]))})
@@ -208,17 +215,17 @@ class DetailUI(SubToolWndUI, ABC):
         mutex_frame.pack(side="top", anchor="w")
         mutex_label = ttk.Label(mutex_frame)
         mutex_label.pack(side="left")
-        mutex_btn = _create_btn_in_(mutex_frame, " × ")
-        (mutex_btn.set_bind_map(
+        kill_mutex_btn = _create_square_btn_in(mutex_frame, "×")
+        (kill_mutex_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccOperator.kill_mutex_of_pid, sw, account))})
          .apply_bind(self.root))
-        _pack_btn(mutex_btn)
+        _pack_btn(kill_mutex_btn)
         # hwnd
         hwnd_frame = ttk.Frame(login_status_frame)
         hwnd_frame.pack(side="top", anchor="w")
         hwnd_label = ttk.Label(hwnd_frame)
         hwnd_label.pack(side="left")
-        unlink_hwnd_btn = _create_btn_in_(hwnd_frame, " × ")
+        unlink_hwnd_btn = _create_square_btn_in(hwnd_frame, "×")
         (unlink_hwnd_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.unlink_hwnd_of_account, sw, account))})
          .apply_bind(self.root))
@@ -235,7 +242,10 @@ class DetailUI(SubToolWndUI, ABC):
         _pack_btn(manual_link_hwnd_btn)
         hidden_hwnd_btn = _create_btn_in_(hwnd_frame, "隐藏")
         _pack_btn(hidden_hwnd_btn)
-        hidden_hwnd_btn.set_state(CustomLabelBtn.State.DISABLED)
+        hidden_hwnd_btn.set_state(CustomBtn.State.DISABLED)
+        # 将隐藏按钮设为负样式
+        for negative_btn in [delete_avatar_btn, kill_pid_btn, kill_mutex_btn, unlink_hwnd_btn]:
+            _set_negative_style(negative_btn)
 
         # 原始微信号
         _, _, origin_id_var = DetailUI._create_label_entry_grid(
@@ -919,12 +929,12 @@ class FeedBackWndUI(SubToolWndUI, ABC):
         self.show_image_in_frame(img_frame, self.img)
         btn_grid_frm = ttk.Frame(self.wnd_frame)
         btn_grid_frm.pack(**Constants.B_FRM_PACK)
-        copy_qq_channel_num_btn = CustomLabelBtn(btn_grid_frm, "复制频道号")
+        copy_qq_channel_num_btn = CustomCornerBtn(btn_grid_frm, "复制频道号")
         copy_qq_channel_num_btn.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
         btn_grid_frm.grid_columnconfigure(0, weight=1)
         UnlimitedClickHandler(
             self.root, copy_qq_channel_num_btn, **{"1": lambda: Tk2Sys.copy_to_clipboard(self.root, "pd94878499")})
-        copy_qq_group_num_btn = CustomLabelBtn(btn_grid_frm, "复制群号")
+        copy_qq_group_num_btn = CustomCornerBtn(btn_grid_frm, "复制群号")
         copy_qq_group_num_btn.grid(row=0, column=1, sticky="nsew", padx=2, pady=2)
         btn_grid_frm.grid_columnconfigure(1, weight=1)
         UnlimitedClickHandler(
@@ -1723,7 +1733,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         def thread():
             sw = self.sw
             self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
-            result = SwOperator.get_login_size(sw, self.multirun_mode)
+            result = SwOperator.get_login_size(sw)
             if isinstance(result, tuple):
                 login_width, login_height = result
                 self.root.after(0, self.login_size_var.set, f"{login_width}*{login_height}")
@@ -1776,11 +1786,10 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         # 添加预设按钮
         ip_presets, port_presets = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, "proxy",
                                                                ip_presets=None, port_presets=None)
-        customized_btn_ipad = int(Constants.CUS_BTN_PAD_X * 0.2)
         customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
 
         def _create_btn_in_(frame_of_btn, text):
-            btn = CustomLabelBtn(frame_of_btn, text=text, padx=customized_btn_ipad, pady=customized_btn_ipad)
+            btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=8, i_pady=2)
             return btn
 
         def _pack_btn(btn):
@@ -1822,8 +1831,10 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         # 若为True，则显示代理设置框架
         if self.use_proxy_var.get():
             # 将内部的控件设为可用
+            CustomBtn.set_all_custom_widgets_to_(self.proxy_detail_frame, CustomBtn.State.NORMAL)
             widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomBtn.State.NORMAL)
         else:
+            CustomBtn.set_all_custom_widgets_to_(self.proxy_detail_frame, CustomBtn.State.DISABLED)
             widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomBtn.State.DISABLED)
 
     def get_screen_size(self):

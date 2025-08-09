@@ -398,6 +398,7 @@ class SubToolWndUI(ABC):
 
 class DefaultEntry(tk.Entry):
     """会提前填入默认内容的文本框"""
+
     def __init__(self, master=None, default_label="请输入内容", **kwargs):
         self.var = tk.StringVar()
         super().__init__(master, textvariable=self.var, **kwargs)

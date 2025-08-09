@@ -12,9 +12,6 @@ import win32api
 import win32com.client
 import winshell
 import yaml
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
-from Crypto.Util.Padding import unpad
 from readerwriterlock import rwlock
 
 from utils.logger_utils import mylogger as logger
@@ -754,43 +751,6 @@ def create_shortcut_for_(target_path, shortcut_path, ico_path=None):
         # 修正icon_location的传递方式，传入一个包含路径和索引的元组
         if ico_path:
             shortcut.icon_location = (ico_path, 0)
-
-
-class CryptoUtils:
-    @staticmethod
-    def decrypt_json_file(input_file, output_file, key):
-        # 确保密钥长度为 16、24 或 32 字节
-        key = key.ljust(16)[:16].encode()
-
-        with rw_lock.gen_rlock():
-            with open(input_file, 'rb') as f:
-                file_data = f.read()
-
-        iv = file_data[:16]
-        ciphertext = file_data[16:]
-        cipher = AES.new(key, AES.MODE_CBC, iv)
-
-        plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
-        with rw_lock.gen_wlock():
-            with open(output_file, 'wb') as f:
-                f.write(plaintext)
-
-    @staticmethod
-    def encrypt_json_file(input_file, output_file, key):
-        # 确保密钥长度为 16、24 或 32 字节
-        key = key.ljust(16)[:16].encode()
-        cipher = AES.new(key, AES.MODE_CBC)
-        iv = cipher.iv
-
-        with rw_lock.gen_rlock():
-            with open(input_file, 'rb') as f:
-                plaintext = f.read()
-
-        # 加密并写入文件
-        ciphertext = cipher.encrypt(pad(plaintext, AES.block_size))
-        with rw_lock.gen_wlock():
-            with open(output_file, 'wb') as f:
-                f.write(iv + ciphertext)
 
 
 import os

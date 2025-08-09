@@ -1,9 +1,88 @@
+import base64
 import colorsys
 import re
 from pathlib import Path
 from typing import Any, Tuple, Union, Optional
 
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import unpad, pad
+
 from utils.logger_utils import mylogger as logger
+
+
+class CryptoUtils:
+    @staticmethod
+    def get_device_fingerprint():
+        # 示例：获取 MAC 地址 + 主板序列号等信息
+        import uuid
+        mac = uuid.getnode()
+        return f"{mac}"  # 可拼接更多字段
+
+    @staticmethod
+    def _derive_key(device_info: str, salt: bytes) -> bytes:
+        # 通过 PBKDF2 从设备信息派生 AES 密钥
+        return PBKDF2(device_info, salt, dkLen=32, count=100000)
+
+    @classmethod
+    def encrypt_data(cls, data: str, device_info: str) -> dict:
+        """将str加密为dict, 和decrypt_data配套使用"""
+        salt = get_random_bytes(16)
+        key = cls._derive_key(device_info, salt)
+        cipher = AES.new(key, AES.MODE_GCM)
+        ciphertext, tag = cipher.encrypt_and_digest(data.encode('utf-8'))
+        return {
+            'salt': base64.b64encode(salt).decode(),
+            'nonce': base64.b64encode(cipher.nonce).decode(),
+            'tag': base64.b64encode(tag).decode(),
+            'ciphertext': base64.b64encode(ciphertext).decode()
+        }
+
+    @classmethod
+    def decrypt_data(cls, enc_dict: dict, device_info: str) -> str:
+        """将dict解密为str, 和encrypt_data配套使用"""
+        salt = base64.b64decode(enc_dict['salt'])
+        key = cls._derive_key(device_info, salt)
+        cipher = AES.new(key, AES.MODE_GCM, nonce=base64.b64decode(enc_dict['nonce']))
+        data = cipher.decrypt_and_verify(
+            base64.b64decode(enc_dict['ciphertext']),
+            base64.b64decode(enc_dict['tag'])
+        )
+        return data.decode('utf-8')
+
+    @classmethod
+    def decrypt_response(cls, response_text):
+        """将远端加密的response解密, 和encrypt_and_append_key配套使用"""
+        # 分割加密数据和密钥
+        encrypted_data, key = response_text.rsplit(' ', 1)
+
+        # 解码 Base64 数据
+        encrypted_data = base64.b64decode(encrypted_data)
+        aes_key = key.ljust(16)[:16].encode()  # 确保密钥长度
+
+        # 提取 iv 和密文
+        iv = encrypted_data[:16]
+        ciphertext = encrypted_data[16:]
+
+        # 解密
+        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
+        plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
+
+        return plaintext.decode()
+
+    @classmethod
+    def encrypt_and_append_key(cls, json_data, key) -> str:
+        """将json文件加密并追加key, 适合加密远端配置数据, 和decrypt_response配套使用"""
+        # 确保密钥长度为16、24或32字节
+        aes_key = key.ljust(16)[:16].encode()  # 调整密钥长度
+        cipher = AES.new(aes_key, AES.MODE_CBC)
+        iv = cipher.iv
+        # 加密数据
+        ciphertext = cipher.encrypt(pad(json_data.encode(), AES.block_size))
+        # 将加密结果和 iv 转为 Base64 字符串
+        encrypted_data = base64.b64encode(iv + ciphertext).decode()
+        return encrypted_data + " " + key
 
 
 class StringUtils:

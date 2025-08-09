@@ -28,6 +28,8 @@ class Config:
             LocalCfg.ALL_SORT: "#0,True",
             LocalCfg.AUTO_PRESS: True,
             LocalCfg.CALL_MODE: "HANDLE",
+            LocalCfg.ENCRYPTED_USERNAME: None,
+            LocalCfg.ENCRYPTED_PASSWORD: None,
             LocalCfg.NEXT_CHECK_TIME: None,
             LocalCfg.USE_PROXY: False,
             LocalCfg.USE_TXT_AVT: True,

@@ -11,7 +11,7 @@ from functions import subfunc_file
 from functions.app_func import AppFunc
 from functions.main_func import MultiSwFunc
 from functions.sw_func import SwInfoFunc, SwOperator
-from public_class.enums import LocalCfg, MultirunMode, RemoteCfg
+from public_class.enums import LocalCfg, MultirunMode, RemoteCfg, CallMode
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
 from ui import sidebar_ui
@@ -210,23 +210,19 @@ class MenuUI:
         self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"窗口缩放", menu=self.wnd_scale_menu)
         self.wnd_scale_menu.add_radiobutton(label="跟随系统", variable=scale_var, value="auto",
-                                            command=partial(self._set_wnd_scale,
-                                                            self.create_root_menu_bar, "auto"))
+                                            command=partial(self._set_wnd_scale, "auto"))
         options = ["100", "125", "150", "175", "200"]
         for option in options:
             self.wnd_scale_menu.add_radiobutton(label=f"{option}%", variable=scale_var, value=option,
-                                                command=partial(self._set_wnd_scale,
-                                                                self.create_root_menu_bar, option))
+                                                command=partial(self._set_wnd_scale, option))
         if scale_value != "auto" and scale_value not in options:
             self.wnd_scale_menu.add_radiobutton(label=f"自定义:{scale_value}%",
                                                 variable=scale_var, value=scale_value,
-                                                command=partial(self._set_wnd_scale,
-                                                                self.create_root_menu_bar))
+                                                command=partial(self._set_wnd_scale))
         else:
             self.wnd_scale_menu.add_radiobutton(label=f"自定义",
                                                 variable=scale_var, value="0",
-                                                command=partial(self._set_wnd_scale,
-                                                                self.create_root_menu_bar))
+                                                command=partial(self._set_wnd_scale))
         print(f"视图菜单用时：{time.time() - self.start_time:.4f}秒")
 
         # ————————————————————————————设置菜单————————————————————————————
@@ -327,26 +323,26 @@ class MenuUI:
             # 添加 HANDLE 的单选按钮
             self.call_mode_menu.add_radiobutton(
                 label='HANDLE',
-                value='HANDLE',
+                value=CallMode.HANDLE.value,
                 variable=call_mode_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                "call_mode", "HANDLE", self.create_root_menu_bar),
+                                LocalCfg.CALL_MODE, CallMode.HANDLE.value, self.create_root_menu_bar),
             )
             # 添加 DEFAULT 的单选按钮
             self.call_mode_menu.add_radiobutton(
                 label='DEFAULT',
-                value='DEFAULT',
+                value=CallMode.DEFAULT.value,
                 variable=call_mode_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                "call_mode", "DEFAULT", self.create_root_menu_bar),
+                                LocalCfg.CALL_MODE, CallMode.DEFAULT.value, self.create_root_menu_bar),
             )
             # 添加 LOGON 的单选按钮
             self.call_mode_menu.add_radiobutton(
                 label='LOGON',
-                value='LOGON',
+                value=CallMode.LOGON.value,
                 variable=call_mode_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                "call_mode", "LOGON", self.create_root_menu_bar),
+                                LocalCfg.CALL_MODE, CallMode.LOGON.value, self.create_root_menu_bar),
             )
 
             auto_press_value = self.global_settings_value.auto_press = \
@@ -505,7 +501,7 @@ class MenuUI:
                     channel_introduce = channel_des["introduce"]
                 if "author" in channel_des:
                     channel_author = channel_des["author"]
-            text = f"{text}\n[{channel_label}]\n{channel_introduce}\n作者：{channel_author}\n"
+            text = f"[{channel_label}]\n{channel_introduce}\n作者：{channel_author}\n"
         messagebox.showinfo("简介", text)
 
     def _clear_cache(self, mode):
@@ -536,6 +532,7 @@ class MenuUI:
                 self.coexist_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
                                               command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
+            self.coexist_menu.add_command(label="请选择一个开启:", state="disabled")
             for channel, channel_res_tuple in mode_channel_res_dict.items():
                 if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
                     continue
@@ -578,7 +575,7 @@ class MenuUI:
             # 频道简介菜单
             self.coexist_menu.add_separator()  # ————————————————分割线————————————————
             self.coexist_menu.add_command(
-                label="频道简介", command=partial(
+                label="怎么选?", command=partial(
                     self._introduce_channel, RemoteCfg.COEXIST.value, mode_channel_res_dict))
         self.coexist_menu.add_separator()  # ————————————————分割线————————————————
         self.coexist_menu.add_command(
@@ -594,6 +591,7 @@ class MenuUI:
             self.anti_revoke_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
                                               command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
+            self.anti_revoke_menu.add_command(label="请选择一个开启:", state="disabled")
             for channel, channel_res_tuple in mode_channel_res_dict.items():
                 if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
                     continue
@@ -619,7 +617,7 @@ class MenuUI:
             self.anti_revoke_menu.add_separator()  # ————————————————分割线————————————————
             # 频道简介菜单
             self.anti_revoke_menu.add_command(
-                label="频道简介",
+                label="怎么选?",
                 command=partial(self._introduce_channel, RemoteCfg.REVOKE.value, mode_channel_res_dict))
         self.anti_revoke_menu.add_separator()  # ————————————————分割线————————————————
         self.anti_revoke_menu.add_command(
@@ -642,6 +640,7 @@ class MenuUI:
                 self.multirun_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
                                                command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
+            self.multirun_menu.add_command(label="请选择一个开启:", state="disabled")
             # 列出所有频道
             for channel, channel_res_tuple in mode_channel_res_dict.items():
                 if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
@@ -671,7 +670,7 @@ class MenuUI:
             self.multirun_menu.add_separator()  # ————————————————分割线————————————————
             # 频道简介菜单
             self.multirun_menu.add_command(
-                label="频道简介",
+                label="怎么选?",
                 command=partial(self._introduce_channel, RemoteCfg.MULTI.value, mode_channel_res_dict))
         self.multirun_menu.add_separator()  # ————————————————分割线————————————————
 
@@ -679,10 +678,10 @@ class MenuUI:
         # 得出使用的多开模式,若开了全局多开,则使用全局多开模式,否则使用其他模式
         if self.sw_class.can_freely_multirun:
             self.sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN
-            self.multirun_menu.add_command(label="其余模式", state="disabled")
+            self.multirun_menu.add_command(label="非全局多开使用", state="disabled")
         else:
             self.rest_mode_menu = tk.Menu(self.multirun_menu, tearoff=False)
-            self.multirun_menu.add_cascade(label="其余模式", menu=self.rest_mode_menu)
+            self.multirun_menu.add_cascade(label="非全局多开使用", menu=self.rest_mode_menu)
             rest_mode_value = self.global_settings_value.rest_mode = subfunc_file.fetch_sw_setting_or_set_default_or_none(
                 self.sw, LocalCfg.REST_MULTIRUN_MODE)
             # print("当前项", rest_mode_value)
@@ -694,13 +693,6 @@ class MenuUI:
                 value='内置',
                 variable=rest_mode_var,
                 command=partial(self._calc_multirun_mode_and_save, MultirunMode.BUILTIN.value),
-            )
-            # 添加 Handle 的单选按钮
-            self.rest_mode_menu.add_radiobutton(
-                label='handle',
-                value='handle',
-                variable=rest_mode_var,
-                command=partial(self._calc_multirun_mode_and_save, MultirunMode.HANDLE.value),
             )
             # 动态添加外部子程序
             external_res_path = Config.PROJ_EXTERNAL_RES_PATH

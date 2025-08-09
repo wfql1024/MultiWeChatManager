@@ -17,7 +17,7 @@ from resources import Constants, Strings
 from ui.wnd_ui import WndCreator
 from utils import widget_utils
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import Logger, Printer
+from utils.logger_utils import Logger
 
 
 class ClassicLoginUI:
@@ -143,7 +143,6 @@ class LoginCkRow(CkBoxRow, ABC):
         start_time = time.time()
 
         curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw, self.data_dir)
-        Printer().debug(curr_config_acc)
 
         # 未登录账号中，隐藏的账号不显示
         hidden, = subfunc_file.get_sw_acc_data(self.sw, account, hidden=None)
@@ -231,8 +230,8 @@ class LoginCkRow(CkBoxRow, ABC):
 
         if login_status == "login":
             # 绑定事件到控件范围内所有位置
-            widget_utils.bind_event_to_frame_when_(
-                self.row_frame, "<Button-1>", self.toggle_checkbox, True)
+            widget_utils.exclusively_bind_event_to_frame_when_(
+                [avatar_label], self.row_frame, "<Button-1>", self.toggle_checkbox, True)
         else:
             # 设置控件状态
             widget_utils.enable_widget_when_(
@@ -246,10 +245,8 @@ class LoginCkRow(CkBoxRow, ABC):
                     self.disabled, Condition.ConditionType.EQUAL, True)}
             )
             # 绑定事件到控件范围内所有位置
-            widget_utils.bind_event_to_frame_when_(
-                self.row_frame,
-                "<Button-1>",
-                self.toggle_checkbox,
+            widget_utils.exclusively_bind_event_to_frame_when_(
+                [avatar_label], self.row_frame, "<Button-1>", self.toggle_checkbox,
                 Condition(self.disabled, Condition.ConditionType.NOT_EQUAL, True)
             )
             # 复选框的状态
@@ -274,7 +271,7 @@ class LoginCkRow(CkBoxRow, ABC):
         else:
             self.row_frame.pack(fill="x", padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.CLZ_ROW_FRM_PAD_Y)
 
-        print(f"加载{account}界面用时{time.time() - start_time:.4f}秒")
+        print(f"加载 {account} 行用时{time.time() - start_time:.4f}秒")
 
     def create_avatar_label(self, account):
         """

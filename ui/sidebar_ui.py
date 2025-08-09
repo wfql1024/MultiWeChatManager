@@ -12,8 +12,8 @@ from PIL import Image, ImageTk
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
-from public_class.custom_widget import CustomLabelBtn
-from public_class.enums import OnlineStatus, AccKeys
+from public_class.custom_widget import CustomCornerBtn
+from public_class.enums import OnlineStatus
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import RadioTreeView
 from resources import Constants
@@ -115,9 +115,9 @@ class SidebarUI:
         # self.tip_label.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
         # 置底控件
-        self.home_btn = CustomLabelBtn(self.bar_frame, text="管理器")
+        self.home_btn = CustomCornerBtn(self.bar_frame, text="管理器")
         self.home_btn.set_bind_map(**{"1": self.switch_root_wnd}).apply_bind(self.root)
-        self.home_btn.pack(side=tk.BOTTOM, fill=tk.X)
+        self.home_btn.pack(side="bottom", fill="x")
         # self.logout_frame = ttk.Frame(self.bar_frame)
         # self.logout_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
@@ -598,8 +598,6 @@ class SidebarTree(RadioTreeView, ABC):
         for sw in sw_acc_data:
             sw_data = sw_acc_data[sw]
             for acc in sw_data.keys():
-                if acc == AccKeys.PID_MUTEX:
-                    continue
                 if table_tag == OnlineStatus.LOGIN and sw_data[acc].get("pid", None) is None:
                     continue
                 if table_tag == OnlineStatus.LOGOUT and sw_data[acc].get("pid", None) is not None:

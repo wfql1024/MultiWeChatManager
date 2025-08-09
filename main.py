@@ -2,9 +2,9 @@ import argparse
 import ctypes
 import os
 import sys
+import tkinter as tk
 
 from ui import main_ui
-import tkinter as tk
 
 
 def elevate():

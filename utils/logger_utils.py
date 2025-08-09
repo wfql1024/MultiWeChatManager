@@ -7,7 +7,6 @@ import io
 import logging
 import os
 import sys
-import threading
 import time
 import traceback
 from dataclasses import dataclass
@@ -316,8 +315,6 @@ class RedirectText(io.TextIOBase):
             else:
                 self.message_queue.put(line)  # 仅将内容放入队列
 
-
-
     def flush(self):
         """确保标准输出的缓冲区被清空"""
         if self.original_stdout:
@@ -474,10 +471,26 @@ class Logger:
         # 自动捕获 traceback 的包装
         if name in ["error", "exception", "critical"]:
             def wrapper(msg, *args, **kwargs):
-                # 若未传 exc_info，自动补上
+                # 自动补充异常信息
                 if 'exc_info' not in kwargs:
                     kwargs['exc_info'] = True
+
+                # 获取调用者帧（wrapper → 调用者）
+                frame = inspect.currentframe()
+                outer = frame.f_back
+                filename = os.path.basename(outer.f_code.co_filename)
+                lineno = outer.f_lineno
+                funcname = outer.f_code.co_name
+
+                # 插入调用位置信息作为 msg 前缀
+                prefix = f"{filename}[line:{lineno}][{funcname}] - "
+                if not isinstance(msg, str):
+                    msg = str(msg)  # 避免 msg 为 Exception 等非字符串类型
+
+                msg = prefix + msg
+
                 return getattr(self.logger, name)(msg, *args, **kwargs)
+
             return wrapper
         # 普通 log 方法转发
         return getattr(self.logger, name)

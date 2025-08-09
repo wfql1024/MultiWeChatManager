@@ -10,7 +10,7 @@ from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
 from public_class.enums import MultirunMode
 from resources import Config
-from utils import hwnd_utils, handle_utils, process_utils, file_utils
+from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
 
 
 class Test(TestCase):
@@ -222,3 +222,74 @@ class Test(TestCase):
     def test_resolve_addr(self):
         path = SwInfoFunc.resolve_sw_path("Weixin", "%dll_dir%/Weixin.dll")
         print(path)
+
+    def test_custom_notebook_and_custom_btn(self):
+        import tkinter as tk
+        from tkinter import ttk
+        from public_class.custom_widget import CustomNotebook, NotebookDirection, CustomCornerBtn, CustomLabelBtn
+
+        tk_root = tk.Tk()
+        tk_root.geometry("400x300")
+
+        def printer(click_time):
+            print("按钮功能:连点次数为", click_time)
+
+        # 创建竖向Notebook（左侧）
+        my_nb_cls = CustomNotebook(tk_root, tk_root, direction=NotebookDirection.LEFT)
+
+        # 创建横向Notebook（顶部）
+        # my_nb_cls = CustomNotebook(tk_root, tk_root, direction=NotebookDirection.TOP)
+
+        # 设置颜色（使用正绿色）
+        my_nb_cls.set_major_color(selected_bg='#00FF00')
+
+        nb_frm_pools = my_nb_cls.frames_pool
+
+        # 创建标签页
+        frame1 = ttk.Frame(nb_frm_pools)
+        frame2 = ttk.Frame(nb_frm_pools)
+        frame3 = ttk.Frame(nb_frm_pools)
+        frame4 = ttk.Frame(nb_frm_pools)
+
+        # 在标签页1中添加CustomLabelBtn
+        btn1 = CustomCornerBtn(frame1, text="标签按钮1")
+        # btn1.on_click(lambda: print("按钮1被点击"))
+        btn1.pack(pady=10)
+        widget_utils.UnlimitedClickHandler(
+            tk_root, btn1,
+            printer
+        )
+        btn2 = CustomLabelBtn(frame1, text="标签按钮2")
+        # btn2.on_click(lambda: print("按钮2被点击"))
+        btn2.pack(pady=10)
+
+        # 在标签页2中添加CustomLabelBtn和标签
+        ttk.Label(frame2, text="这是标签页2").pack(pady=10)
+        btn3 = CustomLabelBtn(frame2, text="标签按钮3")
+        # btn3.on_click(lambda: print("按钮3被点击"))
+        btn3.pack(pady=10)
+
+        # 在标签页3中添加CustomLabelBtn组
+        btn_frame = ttk.Frame(frame3)
+        btn_frame.pack(pady=20)
+        btn4 = CustomLabelBtn(btn_frame, text="标签按钮4")
+        # btn4.on_click(lambda: print("按钮4被点击"))
+        btn4.pack(side='left', padx=5)
+        btn5 = CustomLabelBtn(btn_frame, text="标签按钮5")
+        # btn5.on_click(lambda: print("按钮5被点击"))
+        btn5.pack(side='left', padx=5)
+
+        # 添加标签页
+        my_nb_cls.add("tab1", "标签1", frame1)
+        my_nb_cls.add("tab2", "标签2", frame2)
+        my_nb_cls.add("tab3", "标签3", frame3)
+        my_nb_cls.all_set_bind_func(printer).all_apply_bind(tk_root)
+
+        my_nb_cls.add("tab4", "标签4", frame4)
+
+        btn = CustomCornerBtn(frame1, text="MI", corner_radius=100, width=300)
+        btn.set_major_colors("#ffc500").redraw()
+        btn.pack(padx=20, pady=20)
+        print(btn.__dict__)
+
+        tk_root.mainloop()

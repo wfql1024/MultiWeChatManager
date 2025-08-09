@@ -262,8 +262,6 @@ class AccManagerTreeView(ActionableTreeView, ABC):
         for sw in sw_acc_data.keys():
             sw_data = sw_acc_data[sw]
             for acc in sw_data.keys():
-                if acc == AccKeys.PID_MUTEX:
-                    continue
                 if table_tag == "hidden" and sw_data[acc].get("hidden", None) != True:
                     continue
                 if table_tag == "auto_start" and sw_data[acc].get("auto_start", None) != True:

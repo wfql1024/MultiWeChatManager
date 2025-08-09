@@ -2,7 +2,6 @@ import ctypes
 import datetime
 import fnmatch
 import os
-import platform
 import subprocess
 import sys
 import time
@@ -35,24 +34,23 @@ class Process:
         kernel32.CloseHandle(self.h_process)
 
 
+# def create_process_without_admin(
+#         executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW) -> Optional[Process]:
+#     """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
+#     cur_sys_ver = platform.release()
+#     if cur_sys_ver not in ["11", "10"]:
+#
+#         # return process_utils.create_process_with_logon(
+#         #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
+#         # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
+#         # # 拿默认令牌通过资源管理器身份创建
+#         # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
+#         # # 拿Handle令牌通过资源管理器身份创建
+#         return create_process_with_re_token_handle(executable, args, creation_flags)
+#     else:
+#         return create_process_for_win7(executable, args, creation_flags)
+
 """创建进程的各种方式"""
-
-
-def create_process_without_admin(
-        executable, args=None, creation_flags=subprocess.CREATE_NO_WINDOW) -> Optional[Process]:
-    """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
-    cur_sys_ver = platform.release()
-    if cur_sys_ver == "11" or cur_sys_ver == "10":
-        # return process_utils.create_process_with_logon(
-        #     "xxxxx@xx.com", "xxxx", executable, args, creation_flags)  # 使用微软账号登录，下策
-        # return process_utils.create_process_with_task_scheduler(executable, args)  # 会继承父进程的权限，废弃
-        # # 拿默认令牌通过资源管理器身份创建
-        # return process_utils.create_process_with_re_token_default(executable, args, creation_flags)
-        # # 拿Handle令牌通过资源管理器身份创建
-        return create_process_with_re_token_handle(executable, args, creation_flags)
-    else:
-        return create_process_for_win7(executable, args, creation_flags)
-
 
 # 定义必要的常量和结构体
 LOGON_WITH_PROFILE = 0x00000001
@@ -335,7 +333,8 @@ def create_process_with_task_scheduler(executable, args):
     pid = None
     end_time = time.time() + 5
     while len(pids) == 0:
-        pids: list = psutil_get_pids_by_wildcards(os.path.basename(executable))
+        name_pids_dict = psutil_get_pids_by_wildcards_and_grouping_to_dict(os.path.basename(executable))
+        pids: list = name_pids_dict.get(os.path.basename(executable), [])
         if time.time() > end_time:
             break
     if len(pids) > 0:
@@ -381,24 +380,19 @@ PROCESS_ALL_ACCESS = 0x1F0FFF
 
 
 def remove_child_pids(pids):
-    """从 pids 列表中删除所有子进程 PID，并跳过删除后的 PID"""
-    # 获取所有进程信息
-    all_processes = {p.pid: p for p in psutil.process_iter(['pid', 'name'])}
+    """从 pids 列表中删除所有子进程 PID"""
+    pid_set = set(pids)
 
-    i = 0
-    while i < len(pids):
-        pid = pids[i]
-        if pid in all_processes:
-            process = all_processes[pid]
-            children = process.children()  # 获取当前进程的所有子进程
+    for pid in pids:
+        try:
+            process = psutil.Process(pid)
+            for child in process.children(recursive=True):
+                pid_set.discard(child.pid)
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            pass  # 忽略无权限或进程不存在的情况
 
-            # 遍历子进程，删除 pids 中存在的 PID
-            for child in children:
-                if child.pid in pids:
-                    pids.remove(child.pid)  # 删除子进程 PID
-        i += 1
-
-    return pids
+    # 保留原顺序
+    return [pid for pid in pids if pid in pid_set]
 
 
 def remove_pids_not_in_path(pids: List[int], path_keyword: str) -> List[int]:
@@ -614,25 +608,27 @@ def try_terminate_executable(executable_name):
     return None
 
 
-def psutil_get_pids_by_wildcards(wildcards: list) -> list:
+def psutil_get_pids_by_wildcards_and_grouping_to_dict(wildcards: list) -> dict:
     """
     使用 psutil 模糊匹配进程名，支持 Unix 和 Windows
-    pattern 支持通配符，比如 "WeChat?.exe"
-    返回匹配的 pid 列表
+    wildcards 支持通配符，比如 "WeChat?.exe"
+    返回 dict：key 为进程名，value 为匹配到的 pid 列表
     """
     if wildcards is None:
-        return []
-    pids = []
+        return {}
+
+    result = {}
     for proc in psutil.process_iter(['name']):
         try:
             name = proc.info['name']
-            for wildcard in wildcards:
-                if name and fnmatch.fnmatch(name, wildcard):
-                    pids.append(proc.pid)
-                    break
+            if name:
+                for wildcard in wildcards:
+                    if fnmatch.fnmatch(name, wildcard):
+                        result.setdefault(name, []).append(proc.pid)
+                        break
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
-    return pids
+    return result
 
 
 def get_process_ids_by_precise_name_impl_by_tasklist(process_name) -> list:

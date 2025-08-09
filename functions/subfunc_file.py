@@ -1,4 +1,3 @@
-import base64
 import datetime as dt
 import json
 import math
@@ -9,12 +8,11 @@ from enum import Enum
 from typing import *
 
 import requests
-from Crypto.Cipher import AES
-from Crypto.Util.Padding import unpad
 
-from public_class.enums import LocalCfg, AccKeys, SW
+from public_class.enums import LocalCfg, SW
 from resources import Config, Strings
 from utils import file_utils
+from utils.encoding_utils import CryptoUtils
 from utils.file_utils import JsonUtils, DictUtils
 from utils.logger_utils import mylogger as logger
 
@@ -23,24 +21,6 @@ from utils.logger_utils import mylogger as logger
 
 def force_fetch_remote_encrypted_cfg(url=None):
     """强制从网络中获取最新的配置文件"""
-
-    def decrypt_response(response_text):
-        # 分割加密数据和密钥
-        encrypted_data, key = response_text.rsplit(' ', 1)
-
-        # 解码 Base64 数据
-        encrypted_data = base64.b64decode(encrypted_data)
-        aes_key = key.ljust(16)[:16].encode()  # 确保密钥长度
-
-        # 提取 iv 和密文
-        iv = encrypted_data[:16]
-        ciphertext = encrypted_data[16:]
-
-        # 解密
-        cipher = AES.new(aes_key, AES.MODE_CBC, iv)
-        plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
-
-        return plaintext.decode()
 
     print(f"正从远程源下载...")
     urls = [Strings.REMOTE_SETTING_JSON_GITEE, Strings.REMOTE_SETTING_JSON_GITHUB]
@@ -54,7 +34,7 @@ def force_fetch_remote_encrypted_cfg(url=None):
             response = requests.get(url, timeout=2)
             if response.status_code == 200:
                 with open(Config.REMOTE_SETTING_JSON_PATH, 'w', encoding='utf-8') as config_file:
-                    decrypted_data = decrypt_response(response.text)
+                    decrypted_data = CryptoUtils.decrypt_response(response.text)
                     config_file.write(decrypted_data)  # 将下载的 JSON 保存到文件
                 print(f"成功从 {url} 获取并保存 JSON 文件")
                 return json.loads(decrypted_data)  # 返回加载的 JSON 数据
@@ -398,76 +378,6 @@ def get_sw_acc_data(*front_addr, **kwargs) -> Union[Any, Tuple[Any, ...]]:
     except Exception as e:
         logger.error(e)
         return tuple(None for _ in kwargs.keys())
-
-
-"""账号互斥体相关"""
-
-
-# def update_pid_mutex_of_(sw):
-#     """
-#     清空后将json中所有已登录账号的情况加载到登录列表all_wechat结点中，适合登录之前使用
-#     :return: 是否成功
-#     """
-#     print("构建互斥体记录...")
-#     # 加载当前账户数据
-#     sw_data = get_sw_acc_data(sw)
-#     if not isinstance(sw_data, dict):
-#         return False
-#     pid_mutex = {}
-#     # 遍历所有的账户，从有pid的账户中获取pid和has_mutex，并存入pid_mutex
-#     for account, details in sw_data.items():
-#         if isinstance(details, dict):
-#             pid = details.get(AccKeys.PID)
-#             # 检查 pid 是否为整数
-#             if isinstance(pid, int):
-#                 has_mutex = details.get(AccKeys.HAS_MUTEX, False)
-#                 pid_mutex[str(pid)] = has_mutex
-#                 print(f"更新 {account} 的 has_mutex 为 {has_mutex}")
-#     update_sw_acc_data(sw, AccKeys.PID_MUTEX, **pid_mutex)
-#     return True
-
-
-def set_pid_mutex_all_values_to_false(sw):
-    """
-    将所有微信进程all_acc中都置为没有互斥体，适合每次成功打开一个登录窗口后使用
-    （因为登录好一个窗口，说明之前所有的微信都没有互斥体了）
-    :return: 是否成功
-    """
-    # 加载当前账户数据
-    pid_mutex_data = get_sw_acc_data(sw, AccKeys.PID_MUTEX)
-    if pid_mutex_data is None:
-        return False
-
-    # 将所有字段的值设置为 False
-    for pid in pid_mutex_data:
-        update_sw_acc_data(sw, AccKeys.PID_MUTEX, **{pid: False})
-    return True
-
-
-def update_has_mutex_from_pid_mutex(sw):
-    """
-    将json中登录列表pid_mutex结点中的情况加载回所有已登录账号，适合刷新结束时使用
-    :return: 是否成功
-    """
-    has_mutex = False
-    sw_dict = get_sw_acc_data(sw)
-    if not isinstance(sw_dict, dict):
-        return False, has_mutex
-    pid_mutex_dict = get_sw_acc_data(sw, AccKeys.PID_MUTEX)
-    if not isinstance(pid_mutex_dict, dict):
-        return False, has_mutex
-
-    for acc, acc_details in sw_dict.items():
-        if acc == AccKeys.PID_MUTEX:
-            continue
-        if isinstance(acc_details, dict):
-            pid = acc_details.get(AccKeys.PID, None)
-            if pid is not None:
-                acc_mutex = pid_mutex_dict.get(f"{pid}", True)
-                if acc_mutex is True:
-                    has_mutex = True
-                update_sw_acc_data(sw, acc, has_mutex=acc_mutex)
-    return True, has_mutex
 
 
 """统计数据相关"""

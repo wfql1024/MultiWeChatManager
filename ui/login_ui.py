@@ -91,8 +91,6 @@ class LoginUI:
                 logger.error(e)
                 self.root.after(3000, self.refresh_frame)
 
-
-
     def refresh_frame(self, sw=None):
         """加载或刷新主界面"""
         # 如果要刷新的页面不是当前选定选项卡，不用处理
@@ -295,7 +293,7 @@ class LoginUI:
 
         # 进行静默获取头像及配置
         def func():
-            AccInfoFunc.silent_get_and_config(self.sw)
+            AccOperator.silent_get_and_config(self.sw)
 
         threading.Thread(target=func).start()
 

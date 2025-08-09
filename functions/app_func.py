@@ -8,7 +8,6 @@ from typing import Union, Tuple
 import win32com
 import winshell
 from PIL import Image
-
 from win32com.client import Dispatch
 
 from functions import subfunc_file

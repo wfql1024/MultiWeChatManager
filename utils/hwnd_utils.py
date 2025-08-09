@@ -278,7 +278,6 @@ def uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
     return None, None
 
 
-
 """hwnd内部控件获取"""
 
 

@@ -4,8 +4,13 @@ from enum import Enum
 
 class MultirunMode(str, Enum):
     BUILTIN = "内置"
-    HANDLE = "handle"
     FREELY_MULTIRUN = "全局多开"
+
+
+class CallMode(str, Enum):
+    HANDLE = "HANDLE"
+    DEFAULT = "DEFAULT"
+    LOGON = "LOGON"
 
 
 class NotebookDirection(Enum):
@@ -59,6 +64,8 @@ class LocalCfg(str, Enum):
     ALL_SORT = "all_sort"
     AUTO_PRESS = "auto_press"
     CALL_MODE = "call_mode"
+    ENCRYPTED_USERNAME = "encrypted_username"
+    ENCRYPTED_PASSWORD = "encrypted_password"
     NEXT_CHECK_TIME = "next_check_time"
     USE_PROXY = "use_proxy"
     PROXY_IP = "proxy_ip"
@@ -98,6 +105,7 @@ class AccKeys(str, Enum):
     """账号数据中的字段"""
     # 平台字段
     PID_MUTEX = "pid_mutex"
+    RELAY = "::RELAY"
     # 账号数据中的平台字段
     NICKNAME = "nickname"
     AVATAR_URL = "avatar_url"
