@@ -13,9 +13,10 @@ from concurrent.futures import ThreadPoolExecutor
 from fnmatch import fnmatch
 from pathlib import Path
 from tkinter import messagebox, filedialog
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import psutil
+import uiautomation
 import win32con
 import win32gui
 import win32process
@@ -26,13 +27,13 @@ from functions import subfunc_file
 from functions.acc_func_impl import AccInfoFuncImpl
 from functions.func_tool import FuncTool
 from functions.sw_func import SwOperator, SwInfoFunc
-from public_class.enums import AccKeys, SW, LocalCfg, MultirunMode, CfgStatus
+from public_class.enums import AccKeys, SW, LocalCfg, MultirunMode, CfgStatus, RemoteCfg, WndType
 from public_class.global_members import GlobalMembers
 from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
-from utils.encoding_utils import StringUtils
+from utils.encoding_utils import StringUtils, VersionUtils
 from utils.logger_utils import mylogger as logger, Printer
 
 
@@ -476,8 +477,8 @@ class AccOperator:
                 # 先恢复窗口，再模拟双击以激活窗口
                 hwnd_utils.restore_window(main_hwnd)
                 time.sleep(0.2)
-                hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
-                hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+                # hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+                # hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
         else:
             hwnd_utils.restore_window(main_hwnd)
 
@@ -930,18 +931,20 @@ class AccInfoFunc:
     @classmethod
     def get_acc_avatar_from_files(cls, sw, acc):
         """
-        从本地缓存或json文件中的url地址获取头像，失败则默认头像
+        从本地缓存或json文件中的url地址获取头像
+        成功返回(True, 头像头像)
+        失败返回(False, 默认头像)
         """
         disable_avatar, = subfunc_file.get_sw_acc_data(sw, acc, disable_avatar=None)
         if disable_avatar is True:
-            return cls._get_acc_avatar_without_files(sw, acc)
+            return True, cls._get_acc_avatar_without_files(sw, acc)
 
         # 构建头像文件路径
         avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
 
         # 检查是否存在对应account的头像
         if os.path.exists(avatar_path):
-            return Image.open(avatar_path)
+            return True, Image.open(avatar_path)
         # 如果没有，从网络下载
         url, = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None)
         if url is not None and url.endswith("/0"):
@@ -949,9 +952,9 @@ class AccInfoFunc:
 
         # 第二次检查是否存在对应account的头像
         if os.path.exists(avatar_path):
-            return Image.open(avatar_path)
+            return True, Image.open(avatar_path)
 
-        return cls._get_acc_avatar_without_files(sw, acc)
+        return False, cls._get_acc_avatar_without_files(sw, acc)
 
     @classmethod
     def _get_acc_avatar_without_files(cls, sw, acc):
@@ -1015,14 +1018,6 @@ class AccInfoFunc:
             return f"{date.year % 100:02}/{date.month:02}/{date.day:02} {date.hour:02}:{date.minute:02}"
         else:
             return CfgStatus.NO_CFG.value
-
-    @classmethod
-    def get_acc_wrapped_display_name(cls, sw, account) -> str:
-        """获取账号的折叠展示名"""
-        return StringUtils.balanced_wrap_text(
-            cls.get_acc_origin_display_name(sw, account),
-            18
-        )
 
     @staticmethod
     def get_avatar_from_other_sw(now_sw, now_acc_list):
@@ -1303,45 +1298,56 @@ class AccInfoFunc:
                 subfunc_file.update_sw_acc_data(sw, acc, login_wnd_class=origin_login_wnd_class)
         return True, (acc_list_dict, has_mutex)
 
+    @staticmethod
+    def get_sw_wnd_class_check_dict(sw, wnd_type) -> Optional[dict]:
+        """从远程配置中获取适合当前版本的窗口类名检查字典"""
+        curr_ver = SwInfoFunc.calc_sw_ver(sw)
+        type_vers_dict:dict = subfunc_file.get_remote_cfg(sw, RemoteCfg.WND_CLASS, wnd_type)
+        if not isinstance(type_vers_dict, dict):
+            return None
+        compatible_version = VersionUtils.pkg_find_compatible_version(curr_ver, list(type_vers_dict.keys()))
+        if compatible_version is None:
+            return None
+        return type_vers_dict[compatible_version]
+
     @classmethod
-    def get_main_hwnd_of_accounts(cls, sw, acc_list):
+    def get_main_hwnd_of_accounts(cls, sw, acc_list) -> Tuple[Optional[dict], str]:
+        """
+        获取账号列表的主窗口句柄
+        返回结果字典, 信息
+        """
         # Printer().debug(sw, acc_list)
-        main_wildcards, = subfunc_file.get_remote_cfg(
-            sw, main_wnd_class_wildcards=None)
-        if main_wildcards is None:
-            messagebox.showerror("错误", f"{sw}平台未适配")
-            return False
+        wnd_class_check_dict = cls.get_sw_wnd_class_check_dict(sw, WndType.MAIN)
+        if wnd_class_check_dict is None:
+            return None, f"{sw}平台未适配"
+        acc_hwnd_dict = {}
         for acc in acc_list:
-            correct_hwnd = None
             pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
-            hwnd_list = hwnd_utils.uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, main_wildcards)
-            Printer().debug(pid, hwnd_list)
+            hwnd_list = hwnd_utils.uiautomation_get_hwnds_by_pid_and_rules_dict(pid, wnd_class_check_dict)
+            Printer().debug(acc, pid, hwnd_list)
             if len(hwnd_list) == 0:
                 continue
             if len(hwnd_list) == 1:
-                correct_hwnd = hwnd_list[0]
-            for hwnd in hwnd_list:
-                if cls.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
-                    correct_hwnd = hwnd
-                    break
-            if correct_hwnd is not None:
-                subfunc_file.update_sw_acc_data(sw, acc, main_hwnd=correct_hwnd)
-                display_name = cls.get_acc_origin_display_name(sw, acc)
+                acc_hwnd_dict[acc] = hwnd_list[0]
+        return acc_hwnd_dict, ""
+
+    @classmethod
+    def bind_main_wnd_to_accounts_in_sw(cls, sw, acc_list):
+        """为平台的账号列表绑定对应的主窗口, 并修改标题"""
+        res, msg = cls.get_main_hwnd_of_accounts(sw, acc_list)
+        Printer().debug(f"账号-窗口绑定结果:{res}")
+        if isinstance(res, dict):
+            for acc, hwnd in res.items():
+                subfunc_file.update_sw_acc_data(sw, acc, main_hwnd=hwnd)
+                acc_display_name = cls.get_acc_origin_display_name(sw, acc)
                 sw_display_name = SwInfoFunc.get_sw_origin_display_name(sw)
-                hwnd_utils.set_window_title(correct_hwnd, f"{sw_display_name} - {display_name}")
-                Printer().debug(acc, correct_hwnd)
-                return None
-            return None
-        return None
+                hwnd_utils.set_window_title(hwnd, f"{sw_display_name} - {acc_display_name}")
 
     @staticmethod
     def is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
         """检测窗口是否是某个账号的主窗口"""
         # hwnd_utils.restore_window(hwnd)
         Printer().debug(hwnd, sw, acc)
-        acc_dict: dict = subfunc_file.get_sw_acc_data(sw, acc)
-        if "linked_acc" in acc_dict:
-            acc = acc_dict["linked_acc"]
         pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
         if pid is None:
             return False
@@ -1356,6 +1362,66 @@ class AccInfoFunc:
             continue
         return False
 
+    @classmethod
+    def get_acc_details(cls, sw, account):
+        """获取账号详情, 返回字典"""
+        details = {}
+
+        # 头像,配置文件状态比较特殊,需要看账号类型以及是否链接来分别判定
+        data_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
+        linked_acc = cls.get_real_acc(sw, account)
+        coexist = cls.is_acc_coexist(sw, account)
+        config_status = account if coexist else AccInfoFunc.get_sw_acc_login_cfg(sw, account, data_dir)
+        if coexist and linked_acc == account:
+            # 共存程序但是没有登录链接过账号
+            img = SwInfoFunc.get_sw_logo(sw)
+        else:
+            # 主程序 或 共存程序并且已经登录链接过账号
+            success, img = AccInfoFunc.get_acc_avatar_from_files(sw, account)
+            if not success:
+                _, img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
+
+        # - 实际账号的展示名优先级更高
+        linked_display_name = AccInfoFunc.get_acc_origin_display_name(sw, linked_acc)
+        acc_display_name = AccInfoFunc.get_acc_origin_display_name(sw, account)
+        if acc_display_name == account:
+            # 实际账号并没有备注
+            if linked_display_name == linked_acc:
+                # 链接账号也没有备注和昵称, 则以实际账号的展示名为准
+                display_name = acc_display_name
+            else:
+                display_name = linked_display_name
+        else:
+            display_name = acc_display_name
+        wrapped_display_name = StringUtils.balanced_wrap_text(
+            cls.get_acc_origin_display_name(sw, account),
+            50
+        )
+
+        # - 别名,昵称由链接账号查询
+        alias, nickname = subfunc_file.get_sw_acc_data(
+            sw, linked_acc, alias="请获取数据", nickname="请获取数据")
+        # - pid, 互斥体由实际账号/程序查询
+        pid, has_mutex, hotkey, hidden, auto_start = subfunc_file.get_sw_acc_data(
+            sw, account, pid=None, has_mutex=None, hotkey=None, hidden=None, auto_start=None)
+        iid = f"{sw}/{account}"
+
+        details[AccKeys.IID] = iid
+        details[AccKeys.AVATAR] = img
+        details[AccKeys.DISPLAY] = display_name
+        details[AccKeys.WRAP_DISPLAY] = wrapped_display_name
+        details[AccKeys.CONFIG_STATUS] = config_status
+        details[AccKeys.PID] = pid
+        details[AccKeys.HAS_MUTEX] = has_mutex
+        details[AccKeys.HOTKEY] = hotkey
+        details[AccKeys.HIDDEN] = hidden
+        details[AccKeys.AUTO_START] = auto_start
+        details[AccKeys.LINKED_ACC] = linked_acc
+        details[AccKeys.ALIAS] = alias
+        details[AccKeys.NICKNAME] = nickname
+
+        return details
+
     @staticmethod
     def unlink_hwnd_of_account(sw, account):
         """
@@ -1369,7 +1435,7 @@ class AccInfoFunc:
 
     @classmethod
     def relink_hwnd_of_account(cls, sw, account):
-        cls.get_main_hwnd_of_accounts(sw, [account])
+        cls.bind_main_wnd_to_accounts_in_sw(sw, [account])
         messagebox.showinfo("成功", "已重新绑定！")
 
     @classmethod

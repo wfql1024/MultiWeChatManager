@@ -108,7 +108,7 @@ def load_remote_cfg() -> dict:
     return data
 
 
-def get_remote_cfg(*pre_nodes: str, **kwargs) -> Tuple[Any, ...]:
+def get_remote_cfg(*pre_nodes: str, **kwargs) -> Union[Any, Tuple[Any, ...]]:
     """
     从远程设置json中获取数据
     :param pre_nodes: 选择的软件标签
@@ -120,7 +120,7 @@ def get_remote_cfg(*pre_nodes: str, **kwargs) -> Tuple[Any, ...]:
         return DictUtils.get_nested_values(data, None, *pre_nodes, **kwargs)
     except Exception as e:
         logger.error(e)
-        return tuple()
+        return None
 
 
 """额外配置"""

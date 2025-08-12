@@ -289,7 +289,7 @@ class LoginUI:
         """成功创建账号列表才会执行"""
         # 获取已登录的窗口hwnd
         logins = self.acc_list_dict[OnlineStatus.LOGIN]
-        AccInfoFunc.get_main_hwnd_of_accounts(self.sw, logins)
+        AccInfoFunc.bind_main_wnd_to_accounts_in_sw(self.sw, logins)
 
         # 进行静默获取头像及配置
         def func():

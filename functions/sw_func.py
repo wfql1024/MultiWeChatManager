@@ -210,7 +210,7 @@ class SwInfoFunc:
                         sw, mode, "precise", cur_sw_ver, **{channel: adaptation})
         if "feature" in remote_mode_branches_dict:
             feature_vers = list(remote_mode_branches_dict["feature"].keys())
-            compatible_ver = VersionUtils.find_compatible_version(cur_sw_ver, feature_vers)
+            compatible_ver = VersionUtils.pkg_find_compatible_version(cur_sw_ver, feature_vers)
             cache_ver_channels_dict = subfunc_file.get_cache_cfg(sw, mode, "precise", cur_sw_ver)
             if compatible_ver:
                 # 用兼容版本特征码查找适配

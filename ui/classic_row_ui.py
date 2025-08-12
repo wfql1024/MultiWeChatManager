@@ -8,9 +8,8 @@ from PIL import ImageTk, Image
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
-from functions.sw_func import SwInfoFunc
 from public_class.custom_classes import Condition
-from public_class.enums import OnlineStatus, LocalCfg, CfgStatus
+from public_class.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableClassicTable, CkBoxRow
 from resources import Constants, Strings
@@ -117,6 +116,7 @@ class ClassicLoginTable(ActionableClassicTable, ABC):
 
 class LoginCkRow(CkBoxRow, ABC):
     def __init__(self, parent_class, parent_frame, item, table_tag):
+        self.photo_images = []
         self.tooltips = None
         self.data_dir = None
         self.sw_class = None
@@ -132,11 +132,9 @@ class LoginCkRow(CkBoxRow, ABC):
         self.sw = self.login_ui.sw
         self.sw_class = self.root_class.sw_classes[self.sw]
         self.data_dir = self.sw_class.data_dir
-        self.iid = f"{self.sw}/{self.item}"
 
     def create_row(self):
         rows_frame = self.main_frame
-        iid = self.iid
         account = self.item
         login_status = self.table_tag
         sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
@@ -149,29 +147,24 @@ class LoginCkRow(CkBoxRow, ABC):
         if hidden is True and login_status == "logout":
             self.hidden = True
             return
-        # 根据原始id得到真实id(共存程序会用linked_acc指向)
-        acc_dict: dict = subfunc_file.get_sw_acc_data(self.sw, account)
-        if "linked_acc" in acc_dict:
-            config_status = account
-            self.coexist_flag = True
-            if acc_dict["linked_acc"] is not None:
-                # 共存程序并且曾经登录过--------------------------------------------------------------------------
-                linked_acc = acc_dict["linked_acc"]
-            else:
-                # 共存程序但不没有登录过--------------------------------------------------------------------------
-                linked_acc = account
-        else:
-            # 主程序
-            linked_acc = account
-            config_status = AccInfoFunc.get_sw_acc_login_cfg(self.sw, linked_acc, self.data_dir)
-            suffix = Strings.CFG_SIGN if linked_acc == curr_config_acc and sign_visible else ""
-            config_status = "" + str(config_status) + suffix
+        # 账号详情
+        details = AccInfoFunc.get_acc_details(self.sw, account)
+        iid = details[AccKeys.IID]
+        img = details[AccKeys.AVATAR]
+        wrapped_display_name = details[AccKeys.WRAP_DISPLAY]
+        config_status = details[AccKeys.CONFIG_STATUS]
+        has_mutex = details[AccKeys.HAS_MUTEX]
+        # 对详情中的数据进行处理
+        img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+        photo = ImageTk.PhotoImage(img)
+        self.photo_images.append(photo)
+        cs_suffix = Strings.CFG_SIGN if account == curr_config_acc and sign_visible else ""
+        config_status = "" + str(config_status) + cs_suffix
 
         # 行框架=复选框+头像标签+账号标签+按钮区域+配置标签
         self.row_frame = ttk.Frame(rows_frame)
         if config_status == CfgStatus.NO_CFG:
             self.disabled = True
-        # Printer().debug(self.item, config_status, self.coexist_flag, self.disabled)
 
         # 复选框
         self.checkbox_var = tk.BooleanVar(value=False)
@@ -179,15 +172,16 @@ class LoginCkRow(CkBoxRow, ABC):
         self.checkbox.pack(side="left")
 
         # 头像标签
-        avatar_label = self.create_avatar_label(account)
+        img = img.resize(Constants.AVT_SIZE)
+        photo = ImageTk.PhotoImage(img)
+        avatar_label = ttk.Label(self.row_frame, image=photo)
+        avatar_label.image = photo
         avatar_label.pack(side="left")
         avatar_label.bind("<Enter>", lambda event: event.widget.config(cursor="hand2"))
         avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
         # print(f"加载头像区域用时{time.time() - start_time:.4f}秒")
 
         # 账号标签
-        wrapped_display_name = AccInfoFunc.get_acc_wrapped_display_name(self.sw, linked_acc)
-        has_mutex, = subfunc_file.get_sw_acc_data(self.sw, account, has_mutex=None)
         sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
         if has_mutex and sign_visible:
             try:
@@ -273,34 +267,34 @@ class LoginCkRow(CkBoxRow, ABC):
 
         print(f"加载 {account} 行用时{time.time() - start_time:.4f}秒")
 
-    def create_avatar_label(self, account):
-        """
-        创建头像标签
-        :param account: 原始微信号
-        :return: 头像标签 -> Label
-        """
-        try:
-            acc_dict: dict = subfunc_file.get_sw_acc_data(self.sw, account)
-            if "linked_acc" in acc_dict:
-                if acc_dict["linked_acc"] is not None:
-                    # 共存程序曾经登录过--------------------------------------------------------------------------
-                    linked_acc = acc_dict["linked_acc"]
-                    img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
-                else:
-                    # 共存程序但没登录过--------------------------------------------------------------------------
-                    img = SwInfoFunc.get_sw_logo(self.sw)
-            else:
-                # 主程序
-                linked_acc = account
-                img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
-            img = img.resize(Constants.AVT_SIZE)
-            photo = ImageTk.PhotoImage(img)
-            avatar_label = ttk.Label(self.row_frame, image=photo)
-
-        except Exception as e:
-            print(f"Error creating avatar label: {e}")
-            # 如果加载失败，使用一个空白标签
-            photo = ImageTk.PhotoImage(image=Image.new('RGB', Constants.AVT_SIZE, color='white'))
-            avatar_label = ttk.Label(self.row_frame, image=photo)
-        avatar_label.image = photo  # 保持对图像的引用
-        return avatar_label
+    # def create_avatar_label(self, account):
+    #     """
+    #     创建头像标签
+    #     :param account: 原始微信号
+    #     :return: 头像标签 -> Label
+    #     """
+    #     try:
+    #         acc_dict: dict = subfunc_file.get_sw_acc_data(self.sw, account)
+    #         if "linked_acc" in acc_dict:
+    #             if acc_dict["linked_acc"] is not None:
+    #                 # 共存程序曾经登录过--------------------------------------------------------------------------
+    #                 linked_acc = acc_dict["linked_acc"]
+    #                 img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
+    #             else:
+    #                 # 共存程序但没登录过--------------------------------------------------------------------------
+    #                 img = SwInfoFunc.get_sw_logo(self.sw)
+    #         else:
+    #             # 主程序
+    #             linked_acc = account
+    #             img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
+    #         img = img.resize(Constants.AVT_SIZE)
+    #         photo = ImageTk.PhotoImage(img)
+    #         avatar_label = ttk.Label(self.row_frame, image=photo)
+    #
+    #     except Exception as e:
+    #         print(f"Error creating avatar label: {e}")
+    #         # 如果加载失败，使用一个空白标签
+    #         photo = ImageTk.PhotoImage(image=Image.new('RGB', Constants.AVT_SIZE, color='white'))
+    #         avatar_label = ttk.Label(self.row_frame, image=photo)
+    #     avatar_label.image = photo  # 保持对图像的引用
+    #     return avatar_label

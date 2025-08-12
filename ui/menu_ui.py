@@ -393,7 +393,7 @@ class MenuUI:
             if self.sidebar_ui is not None:
                 self.sidebar_ui.listener_running = False
                 self.sidebar_ui = None
-            self.sidebar_wnd.destroy()
+            # self.sidebar_wnd.destroy()
         else:
             print("创建", self.sidebar_wnd)
             new_label = "❯"
@@ -401,8 +401,8 @@ class MenuUI:
             if len(self.sidebar_menu_label) > 1:
                 subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_SIDEBAR: True})
             self.sidebar_menu_label = new_label
-            self.sidebar_wnd = tk.Toplevel(self.root)
-            self.sidebar_ui = sidebar_ui.SidebarUI(self.sidebar_wnd, "导航条")
+            # self.sidebar_wnd = tk.Toplevel(self.root)
+            # self.sidebar_ui = sidebar_ui.SidebarUI(self.sidebar_wnd, "导航条")
 
     def _set_wnd_scale(self, scale=None):
         if scale is None:
@@ -533,6 +533,7 @@ class MenuUI:
                                               command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
             self.coexist_menu.add_command(label="请选择一个开启:", state="disabled")
+            self.coexist_channel_var = tk.StringVar()
             for channel, channel_res_tuple in mode_channel_res_dict.items():
                 if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
                     continue
@@ -551,7 +552,6 @@ class MenuUI:
                     menu.add_command(label=f"[点击复制]{channel_msg}", foreground="red",
                                      command=lambda i=channel_msg: Tk2Sys.copy_to_clipboard(self.root, i))
                 else:
-                    self.coexist_channel_var = tk.StringVar()
                     self.coexist_menu.add_radiobutton(
                         label=channel_label,
                         value=channel,

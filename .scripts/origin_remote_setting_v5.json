@@ -1649,12 +1649,22 @@
                 }
             }
         },
-        "redundant_wnd_class": [
-            "WeChatLoginWndForPC"
-        ],
-        "redundant_wnd_class_wildcards": [
-            "?eChatLoginWndForPC"
-        ],
+        "wnd_class": {
+            "login": {
+                "3.0": {
+                    "ClassNameWildcards": [
+                        "WeChatLoginWndForPC"
+                    ]
+                }
+            },
+            "main": {
+                "3.0": {
+                    "ClassNameWildcards": [
+                        "WeChatMainWndForPC"
+                    ]
+                }
+            }
+        },
         "label": "微信",
         "executable": "WeChat.exe",
         "executable_wildcards": [
@@ -1688,11 +1698,13 @@
         ],
         "login_wnd_class": "WeChatLoginWndForPC",
         "login_wnd_class_wildcards": [
-            "?eChatLoginWndForPC"
+            "?eChatLoginWndForPC",
+            "WeCha?LoginWndForPC"
         ],
         "main_wnd_class": "WeChatMainWndForPC",
         "main_wnd_class_wildcards": [
-            "?eChatMainWndForPC"
+            "?eChatMainWndForPC",
+            "WeCha?MainWndForPC"
         ],
         "config_path_suffix": "All Users\\config",
         "config_file_list": [
@@ -1722,18 +1734,18 @@
             "channel": {
                 "default": {
                     "label": "默认",
-                    "introduce": "对host文件,窗口类名,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
+                    "introduce": "对host文件,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.共存标号从1开始.",
                     "author": [
                         "afaa1991"
                     ],
-                    "exe_wildcard": "Weixin?.exe",
-                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                    "exe_wildcard": "Weixi?.exe",
+                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
                 },
                 "default2": {
                     "label": "默认2",
-                    "introduce": "可以在全局进行多开",
+                    "introduce": "对host文件,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.共存标号从0开始.",
                     "author": [
-                        "zetaloop"
+                        "afaa1991"
                     ],
                     "exe_wildcard": "Weixin?.exe",
                     "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
@@ -1742,6 +1754,41 @@
             "feature": {
                 "4.0.6": {
                     "default": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
+                                "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 ?? ?? ?? ?? C7 05 ?? ?? ?? ?? 6F 6E 66 69 66 C7 05 ?? ?? ?? ?? 67 00",
+                                "58 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00",
+                                "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 77 00"
+                            ],
+                            "modified": [
+                                "... !! 2E 78 6D 6C",
+                                "... !! 00",
+                                "58 00 57 00 65 00 43 00 68 00 61 00 !! ...",
+                                "78 00 57 00 65 00 63 00 68 00 61 00 !! ..."
+                            ],
+                            "meanings": [
+                                " h  o  s  t  -  r  e  d  i  r  e  c  ̲t  .  x  m  l",
+                                " H  .  g  l  o  b  a  l  _  c  H  .  .  .  A  .  .  .  .  .  A  .  .  o  n  f  ̲i  f  .  .  .  A  .  .  g  .",
+                                " X  .  W  .  e  .  C  .  h  .  a  .  ̲t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  .",
+                                " x  .  W  .  e  .  c  .  h  .  a  .  ̲t  .  W  .  i  .  n  .  d  .  o  .  w  ."
+                            ],
+                            "wildcard": "Weixi?.dll"
+                        },
+                        "%inst_path%": {
+                            "original": [
+                                "57 00 65 00 69 00 78 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "modified": [
+                                "... !! 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "meanings": [
+                                " W  .  e  .  i  .  x  .  i  .  ̲n  .  .  .  d  .  l  .  l  ."
+                            ],
+                            "wildcard": "Weixi?.exe"
+                        }
+                    },
+                    "default2": {
                         "%dll_dir%/Weixin.dll": {
                             "original": [
                                 "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
@@ -2581,9 +2628,35 @@
                 }
             }
         },
-        "redundant_wnd_class": [
-            "Qt51514QWindowIcon"
-        ],
+        "wnd_class": {
+            "login": {
+                "4.0": {
+                    "ClassNameWildcards": [
+                        "mmui::LoginWindow"
+                    ]
+                }
+            },
+            "main": {
+                "4.0.6.30": {
+                    "ClassNameWildcards": [
+                        "Qt51514QWindowIcon"
+                    ],
+                    "FirstChild": {
+                        "ClassNameWildcards": [
+                            "Qt51514QWindowIcon"
+                        ]
+                    },
+                    "FinalSelect": {
+                        "Size": "max"
+                    }
+                },
+                "4.0": {
+                    "ClassNameWildcards": [
+                        "mmui::MainWindow"
+                    ]
+                }
+            }
+        },
         "label": "微信4.0",
         "executable": "Weixin.exe",
         "executable_wildcards": [
@@ -2630,7 +2703,8 @@
         ],
         "main_wnd_class": "mmui::MainWindow",
         "main_wnd_class_wildcards": [
-            "mmui::MainWindow"
+            "mmui::MainWindow",
+            "Qt51514QWindowIcon"
         ],
         "config_path_suffix": "all_users\\config",
         "config_file_list": [
@@ -2725,9 +2799,6 @@
         },
         "anti-revoke": {
         },
-        "redundant_wnd_class": [
-            "WeChatLogin"
-        ],
         "label": "企微",
         "executable": "WXWork.exe",
         "executable_wildcards": [
@@ -2796,8 +2867,6 @@
         "coexist": {
             "natively": true
         },
-        "redundant_wnd_class": [
-        ],
         "label": "QQNT",
         "executable": "QQ.exe",
         "executable_wildcards": [
@@ -2904,7 +2973,6 @@
         "coexist": {
             "natively": true
         },
-        "redundant_wnd_class": [],
         "label": "QQ",
         "executable": "QQ.exe",
         "executable_wildcards": [
@@ -3009,7 +3077,6 @@
         "coexist": {
             "natively": true
         },
-        "redundant_wnd_class": [],
         "label": "TIM",
         "executable": "TIM.exe",
         "executable_wildcards": [
@@ -3046,108 +3113,6 @@
             "nt_qq",
             "nt_temp",
             "Tencent Files"
-        ],
-        "sw_id_trims": {
-            "QQ": [
-                0,
-                0,
-                0,
-                0
-            ],
-            "QQNT": [
-                0,
-                0,
-                0,
-                0
-            ]
-        }
-    },
-    "default": {
-        "multirun": {
-            "channel": {
-                "channel1": {
-                    "label": "channel1",
-                    "introduce": "channel1",
-                    "author": "author1"
-                }
-            },
-            "precise": {
-                "x.x.x.x": {
-                    "channel1": {
-                        "%dll_dir%/IM.dll": {
-                            "original": [
-                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                                "E8 41 78 F6 FE 89 C6 48 85 FF 74 1D",
-                                "aa bb cc dd dd ee ee"
-                            ],
-                            "modified": [
-                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 90",
-                                "8B 41 78 F6 FE 89 C6 48 85 FF 74 1D",
-                                "aa cc cc dd dd ee aa"
-                            ]
-                        }
-                    }
-                }
-            },
-            "feature": {
-                "x.x.x": {
-                    "channel1": {
-                        "%dll_dir%/IM.dll": {
-                            "original": [
-                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
-                                "E8 41 78 F6 FE 89 C6 48 85 FF 74 1D",
-                                "aa bb cc dd ?? ?? ee"
-                            ],
-                            "modified": [
-                                "... 90",
-                                "8B ...",
-                                "aa cc ..."
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "anti-revoke": {
-            "like to": "multirun"
-        },
-        "coexist": {
-            "like to": "multirun"
-        },
-        "redundant_wnd_class": [
-        ],
-        "executable": "xx.exe",
-        "executable_wildcards": [
-            "xxx.exe",
-            "xxx?.exe"
-        ],
-        "inst_path_guess_suffix": "Tencent\\QQ\\QQ.exe",
-        "data_dir_guess_suffix": "Tencent\\QQ",
-        "data_dir_check_suffix": "All Users",
-        "dll_dir_check_suffix": "IM.dll",
-        "patch_dll": "IM.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQ",
-        "user_reg_sub_key": "Software\\Tencent\\QQ",
-        "data_dir_name": "Tencent Files",
-        "mutant_handle_infos": [
-        ],
-        "cfg_handle_regex_list": [
-        ],
-        "login_wnd_class": "TXGuiFoundation",
-        "main_wnd_class": "TXGuiFoundation",
-        "main_wnd_class_wildcards": [
-            "?eChatMainWndForPC"
-        ],
-        "config_path_suffix": "All Users",
-        "config_file_list": [
-            "Registry.db"
-        ],
-        "excluded_dir_list": [
-            "All Users",
-            "nt_data",
-            "nt_db",
-            "nt_qq",
-            "nt_temp"
         ],
         "sw_id_trims": {
             "QQ": [

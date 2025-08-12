@@ -341,7 +341,7 @@ class DetailUI(SubToolWndUI, ABC):
             sw, account, has_mutex=True, main_hwnd=None)
         avatar_url, alias, nickname, pid = subfunc_file.get_sw_acc_data(
             sw, account, avatar_url=None, alias="请获取数据", nickname="请获取数据", pid=None)
-        img = AccInfoFunc.get_acc_avatar_from_files(sw, account)
+        _, img = AccInfoFunc.get_acc_avatar_from_files(sw, account)
         self._update_avatar_and_bind(img, avatar_url)
         # 刷新其他信息
         pid_str = f"{pid}" if pid is not None else "未登录"

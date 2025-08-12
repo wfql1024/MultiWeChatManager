@@ -9,7 +9,7 @@ from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
 from functions.sw_func import SwInfoFunc
 from public_class.custom_classes import Condition
-from public_class.enums import OnlineStatus, LocalCfg, CfgStatus
+from public_class.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
 from public_class.global_members import GlobalMembers
 from public_class.widget_frameworks import ActionableTreeView
 from resources import Constants, Strings
@@ -128,7 +128,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.data_dir = self.root_class.sw_classes[self.sw].data_dir
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
-        self.columns = (" ", "配置", "pid", "原始id", "当前id", "昵称")
+        self.columns = (" ", "配置", "pid", "账号标识", "平台id", "昵称")
         sort_str = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
@@ -147,8 +147,8 @@ class AccLoginTreeView(ActionableTreeView, ABC):
                     width=Constants.TREE_CFG_WIDTH, anchor='w', stretch=tk.NO)
         tree.column(" ", minwidth=Constants.TREE_DSP_MIN_WIDTH,
                     width=Constants.TREE_DSP_WIDTH, anchor='w')
-        tree.column("原始id", anchor='center')
-        tree.column("当前id", anchor='center')
+        tree.column("账号标识", anchor='center')
+        tree.column("平台id", anchor='center')
         tree.column("昵称", anchor='center')
 
     def display_table(self):
@@ -156,7 +156,6 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         tree = self.tree.nametowidget(self.tree)
         accounts = self.data_src
         login_status = self.table_tag
-        # print(f"tree={tree}, accounts={accounts}, login_status={login_status}")
 
         curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw, self.data_dir)
 
@@ -165,52 +164,33 @@ class AccLoginTreeView(ActionableTreeView, ABC):
             hidden, = subfunc_file.get_sw_acc_data(self.sw, account, hidden=None)
             if hidden is True and login_status == "logout":
                 continue
-            # 根据原始id得到真实id(共存程序会用linked_acc指向)
-            acc_dict: dict = subfunc_file.get_sw_acc_data(self.sw, account)
-            if "linked_acc" in acc_dict:
-                config_status = account
-                if acc_dict["linked_acc"] is not None:
-                    # 共存程序并且在线--------------------------------------------------------------------------
-                    linked_acc = acc_dict["linked_acc"]
-                    img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
-                else:
-                    # 共存程序但不在线--------------------------------------------------------------------------
-                    linked_acc = account
-                    img = SwInfoFunc.get_sw_logo(self.sw)
-            else:
-                # 主程序
-                linked_acc = account
-                img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
-                config_status = AccInfoFunc.get_sw_acc_login_cfg(self.sw, linked_acc, self.data_dir)
-                suffix = Strings.CFG_SIGN if linked_acc == curr_config_acc and self.sign_visible else ""
-                config_status = "" + str(config_status) + suffix
-            # 展示名,别名,昵称,互斥体等都由真实id查询
-            display_name = "  " + AccInfoFunc.get_acc_origin_display_name(self.sw, linked_acc)
-            alias, nickname, has_mutex = subfunc_file.get_sw_acc_data(
-                self.sw,
-                linked_acc,
-                alias="请获取数据",
-                nickname="请获取数据",
-                has_mutex=None
-            )
+            # 账号详情
+            details = AccInfoFunc.get_acc_details(self.sw, account)
+            iid = details[AccKeys.IID]
+            img = details[AccKeys.AVATAR]
+            display_name = details[AccKeys.DISPLAY]
+            config_status = details[AccKeys.CONFIG_STATUS]
+            pid = details[AccKeys.PID]
+            has_mutex = details[AccKeys.HAS_MUTEX]
+            alias = details[AccKeys.ALIAS]
+            nickname = details[AccKeys.NICKNAME]
+            # 对详情中的数据进行处理
+            display_name = "  " + display_name
             img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.photo_images.append(photo)
-
-            pid, = subfunc_file.get_sw_acc_data(self.sw, account, pid=None)
-            suffix = Strings.MUTEX_SIGN if has_mutex and self.sign_visible else ""
-            pid_str = " " + str(pid) + suffix
-
-            iid = f"{self.sw}/{account}"
-
+            cs_suffix = Strings.CFG_SIGN if account == curr_config_acc and self.sign_visible else ""
+            config_status = "" + str(config_status) + cs_suffix
+            pid_suffix = Strings.MUTEX_SIGN if has_mutex and self.sign_visible else ""
+            pid_str = " " + str(pid) + pid_suffix
             try:
                 tree.insert("", "end", iid=iid, image=photo,
-                            values=(display_name, config_status, pid_str, linked_acc, alias, nickname))
+                            values=(display_name, config_status, pid_str, account, alias, nickname))
             except Exception as ec:
                 logger.warning(ec)
                 tree.insert("", "end", iid=iid, image=photo,
                             values=StringUtils.clean_texts(
-                                display_name, config_status, pid_str, linked_acc, alias, nickname))
+                                display_name, config_status, pid_str, account, alias, nickname))
             if config_status == CfgStatus.NO_CFG and login_status == "logout":
                 TreeUtils.add_a_tag_to_item(tree, iid, "disabled")
 
@@ -249,7 +229,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
 
     def on_tree_configure(self, event):
         # 在非全屏时，隐藏特定列
-        columns_to_hide = ["原始id", "当前id", "昵称"]
+        columns_to_hide = ["账号标识", "平台id", "昵称"]
         col_width_to_show = int(self.root.winfo_screenwidth() / 5)
         self.tree.bind("<Configure>", lambda e: self.adjust_columns(
             e, self.root, col_width_to_show, columns_to_hide), add='+')

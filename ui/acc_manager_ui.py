@@ -6,7 +6,6 @@ from PIL import Image, ImageTk
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
-from functions.sw_func import SwInfoFunc
 from public_class import reusable_widgets
 from public_class.custom_classes import Condition
 from public_class.enums import AccKeys
@@ -226,7 +225,7 @@ class AccManagerTreeView(ActionableTreeView, ABC):
         self.wnd = self.parent_class.wnd
         # print(f"self.wnd={self.wnd}")
         self.data_src = self.parent_class.acc_data
-        self.columns = (" ", "快捷键", "隐藏", "自启动", "原始id", "昵称")
+        self.columns = (" ", "快捷键", "隐藏", "自启动", "账号标识", "昵称")
         self.main_frame = self.parent_class.frame_dict[self.table_tag]
         sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
@@ -248,7 +247,7 @@ class AccManagerTreeView(ActionableTreeView, ABC):
                     width=Constants.COLUMN_WIDTH["自启动"], anchor='center', stretch=tk.NO)
         tree.column("隐藏", minwidth=Constants.COLUMN_MIN_WIDTH["隐藏"],
                     width=Constants.COLUMN_WIDTH["隐藏"], anchor='center', stretch=tk.NO)
-        tree.column("原始id", anchor='center')
+        tree.column("账号标识", anchor='center')
         tree.column("昵称", anchor='center')
 
     def display_table(self):
@@ -267,43 +266,20 @@ class AccManagerTreeView(ActionableTreeView, ABC):
                 if table_tag == "auto_start" and sw_data[acc].get("auto_start", None) != True:
                     continue
 
-                # 根据原始id得到真实id(共存程序会用linked_acc指向)
-                acc_dict: dict = subfunc_file.get_sw_acc_data(sw, acc)
-                if "linked_acc" in acc_dict:
-                    config_status = acc
-                    if acc_dict["linked_acc"] is not None:
-                        # 共存程序且曾经登录过--------------------------------------------------------------------------
-                        linked_acc = acc_dict["linked_acc"]
-                        img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
-                    else:
-                        # 共存程序还未登录过--------------------------------------------------------------------------
-                        linked_acc = acc
-                        img = SwInfoFunc.get_sw_logo(sw)
-                else:
-                    # 主程序
-                    linked_acc = acc
-                    img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
-
-                display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
-                hotkey, hidden, auto_start, nickname = subfunc_file.get_sw_acc_data(
-                    sw,
-                    acc,
-                    hotkey=None,
-                    hidden=None,
-                    auto_start=None,
-                    nickname=None,
-                )
-                nickname, = subfunc_file.get_sw_acc_data(
-                    sw,
-                    linked_acc,
-                    nickname=None,
-                )
+                # 账号详情
+                details = AccInfoFunc.get_acc_details(sw, acc)
+                img = details[AccKeys.AVATAR]
+                display_name = details[AccKeys.DISPLAY]
+                hotkey = details[AccKeys.HOTKEY]
+                hidden = details[AccKeys.HIDDEN]
+                auto_start = details[AccKeys.AUTO_START]
+                nickname = details[AccKeys.NICKNAME]
+                # 对详情数据进行处理
+                display_name = "  " + display_name
                 hotkey = hotkey if hotkey != "" else "-"
                 hidden = "√" if hidden is True else "-"
                 auto_start = "√" if auto_start is True else "-"
                 nickname = nickname if nickname else "请获取数据"
-
-                # 获取头像图像
                 img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)
@@ -366,7 +342,7 @@ class AccManagerTreeView(ActionableTreeView, ABC):
         :return:
         """
         # 在非全屏时，隐藏特定列
-        columns_to_hide = ["原始id", "当前id", "昵称"]
+        columns_to_hide = ["账号标识", "平台id", "昵称"]
         col_width_to_show = int(self.root.winfo_screenwidth() / 5)
         self.tree.bind("<Configure>", lambda e: self.adjust_columns(
             e, self.wnd, col_width_to_show, columns_to_hide), add='+')

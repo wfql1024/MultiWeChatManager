@@ -8,6 +8,7 @@ from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 from Crypto.Util.Padding import unpad, pad
+from packaging.version import Version
 
 from utils.logger_utils import mylogger as logger
 
@@ -315,6 +316,12 @@ class VersionUtils:
         candidates.sort(reverse=True, key=lambda x: x[0])
 
         return candidates[0][1]
+
+    @staticmethod
+    def pkg_find_compatible_version(current_version: str, version_list: list) -> Optional[str]:
+        current = Version(current_version)
+        candidates = [ver for ver in version_list if Version(ver) <= current]
+        return max(candidates, key=Version, default=None)
 
 
 class PathUtils:

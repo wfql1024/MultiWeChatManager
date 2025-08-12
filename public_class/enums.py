@@ -37,6 +37,7 @@ class RemoteCfg(str, Enum):
     REVOKE = "anti-revoke"
     MULTI = "multirun"
     COEXIST = "coexist"
+    WND_CLASS = "wnd_class"
     NATIVE_MULTI = "native-multirun"
     NATIVE = "natively"
     # dll模式字段
@@ -94,6 +95,11 @@ class LocalCfg(str, Enum):
     COEXIST_MODE = "coexist_mode"
 
 
+class WndType(str, Enum):
+    """窗口类型"""
+    MAIN = "main"
+    LOGIN = "login"
+
 class SwStates(str, Enum):
     """平台状态"""
     VISIBLE = "visible"
@@ -103,11 +109,19 @@ class SwStates(str, Enum):
 
 class AccKeys(str, Enum):
     """账号数据中的字段"""
-    # 平台字段
-    PID_MUTEX = "pid_mutex"
+    # 中转字段
     RELAY = "::RELAY"
-    # 账号数据中的平台字段
+    PID_MUTEX = "pid_mutex"
+    # 以下为账号详情获取字段
+    IID = "iid"
+    AVATAR = "img"
+    DISPLAY = "display_name"
+    WRAP_DISPLAY = "wrapped_display_name"
+    CONFIG_STATUS = "config_status"
+    LINKED_ACC = "linked_acc"
+    # 以下为账号详情存储字段
     NICKNAME = "nickname"
+    ALIAS = "alias"
     AVATAR_URL = "avatar_url"
     PID = "pid"
     HAS_MUTEX = "has_mutex"

@@ -37,6 +37,7 @@ class WndProperties(str, Enum):
 
 
 class SidebarUI:
+    # 暂时下架
     # TODO: 若无法找到窗口，联动详情窗口来获取窗口句柄
     # TODO: 列表选中状态应该是根据目前已经链接的窗口来确定
     # TODO: 增加最大化判断
@@ -360,6 +361,9 @@ class SidebarUI:
             old_linked_wnd_rect = win32gui.GetWindowRect(old_linked_hwnd)
             # 将主窗口调整到侧栏右侧，并设置相同高度
             hwnd_utils.restore_window(new_linked_hwnd)
+            time.sleep(0.2)
+            # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
+            # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
             try:
                 win32gui.SetWindowPos(
                     new_linked_hwnd,
@@ -375,6 +379,9 @@ class SidebarUI:
         else:
             print("管理器切换到账号窗口...")
             hwnd_utils.restore_window(new_linked_hwnd)
+            time.sleep(0.2)
+            # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
+            # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
             # 使用保存的原始位置和大小
             new_linked_wnd_rect = win32gui.GetWindowRect(new_linked_hwnd)
             try:
@@ -606,7 +613,7 @@ class SidebarTree(RadioTreeView, ABC):
                 # display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
                 # 获取头像图像
                 linked_acc = AccInfoFunc.get_real_acc(sw, acc)
-                img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
+                _, img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
                 img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)
