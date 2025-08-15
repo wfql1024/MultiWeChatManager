@@ -1,0 +1,2120 @@
+{
+    "global": {
+        "app_name": "极峰多聊",
+        "app_author": "吾峰起浪",
+        "new_func_hint": "狂按",
+        "proxy": {
+            "ip_presets": [
+                {
+                    "name": "本地回环",
+                    "value": "http://127.0.0.1"
+                },
+                {
+                    "name": "localhost",
+                    "value": "http://localhost"
+                },
+                {
+                    "name": "局域网网关",
+                    "value": "http://192.168.1.1"
+                }
+            ],
+            "port_presets": [
+                {
+                    "name": "Clash",
+                    "value": "7890"
+                },
+                {
+                    "name": "v2rayN",
+                    "value": "10809"
+                },
+                {
+                    "name": "Shadowsocks",
+                    "value": "1080"
+                }
+            ]
+        },
+        "support_sw": [
+            "WeChat",
+            "Weixin",
+            "WXWork",
+            "QQNT",
+            "QQ",
+            "TIM"
+        ],
+        "about": {
+            "reference": [
+                {
+                    "title": "通过python解密微信3.x数据库",
+                    "link": "https://www.52pojie.cn/thread-1950632-1-1.html"
+                },
+                {
+                    "title": "如何通过python窗口句柄、后台鼠标点击",
+                    "link": "https://blog.csdn.net/weixin_43407838/article/details/125255441"
+                },
+                {
+                    "title": "python通过句柄值移动窗口的位置",
+                    "link": "https://blog.51cto.com/u_16213427/7225602"
+                },
+                {
+                    "title": "Python - tkinter之filedialog.askdirectory() 某个情况下无法运行的解决办法",
+                    "link": "https://www.cnblogs.com/flyinghou/p/14606383.html"
+                },
+                {
+                    "title": "微信逆向之自己动手去除微信多开限制，小白也能看懂",
+                    "link": "https://www.52pojie.cn/thread-1951224-1-1.html"
+                },
+                {
+                    "title": "管理员权限程序以普通用户的权限运行不需要管理员权限的程序",
+                    "link": "https://blog.csdn.net/qq411633267/article/details/56291270"
+                },
+                {
+                    "title": "查看程序的所有句柄的对象类型和名称，或关闭程序的任何句柄",
+                    "link": "https://github.com/yihleego/pywinhandle"
+                },
+                {
+                    "title": "使用x64dbg实现微信私聊与群消息防撤回",
+                    "link": "https://www.52pojie.cn/thread-1777652-1-1.html"
+                },
+                {
+                    "title": "微信4.0及之前版本的多开与防撤回的实现",
+                    "link": "https://github.com/huiyadanli/RevokeMsgPatcher"
+                },
+                {
+                    "title": "微信多开与防撤回的实现各版本特征码收集",
+                    "link": "https://www.52pojie.cn/thread-1964251-1-1.html"
+                },
+                {
+                    "title": "微信4.0及之前版本的数据库解密（rust版本）",
+                    "link": "https://github.com/0xlane/wechat-dump-rs"
+                }
+            ],
+            "sponsor": [
+                {
+                    "date": "24-09-13",
+                    "currency": "￥",
+                    "amount": "0.10",
+                    "user": "*械"
+                },
+                {
+                    "date": "24-09-30",
+                    "currency": "￥",
+                    "amount": "6.66",
+                    "user": "绚*9"
+                },
+                {
+                    "date": "24-10-21",
+                    "currency": "￥",
+                    "amount": "1.00",
+                    "user": "*叶"
+                },
+                {
+                    "date": "24-10-22",
+                    "currency": "￥",
+                    "amount": "8.88",
+                    "user": "*."
+                },
+                {
+                    "date": "24-10-22",
+                    "currency": "￥",
+                    "amount": "18.88",
+                    "user": "*."
+                },
+                {
+                    "date": "24-11-29",
+                    "currency": "￥",
+                    "amount": "8.88",
+                    "user": "*子"
+                },
+                {
+                    "date": "24-12-14",
+                    "currency": "￥",
+                    "amount": "20.00",
+                    "user": "*华"
+                },
+                {
+                    "date": "25-01-03",
+                    "currency": "luckin coffee(29)",
+                    "amount": "*1.00",
+                    "user": "*子"
+                },
+                {
+                    "date": "25-01-19",
+                    "currency": "￥",
+                    "amount": "66.66",
+                    "user": "**江"
+                },
+                {
+                    "date": "25-02-09",
+                    "currency": "￥",
+                    "amount": "8.80",
+                    "user": "*财"
+                },
+                {
+                    "date": "25-02-14",
+                    "currency": "￥",
+                    "amount": "20.00",
+                    "user": "*人"
+                },
+                {
+                    "date": "25-03-03",
+                    "currency": "￥",
+                    "amount": "8.88",
+                    "user": "*制"
+                },
+                {
+                    "date": "25-03-08",
+                    "currency": "￥",
+                    "amount": "0.66",
+                    "user": "*源"
+                },
+                {
+                    "date": "25-04-18",
+                    "currency": "￥",
+                    "amount": "8.88",
+                    "user": "*”"
+                },
+                {
+                    "date": "25-04-21",
+                    "currency": "￥",
+                    "amount": "88.00",
+                    "user": "*袋"
+                },
+                {
+                    "date": "25-04-29",
+                    "currency": "￥",
+                    "amount": "1.88",
+                    "user": "*着"
+                }
+            ],
+            "author": {
+                "bilibili": {
+                    "text": "哔哩哔哩主页",
+                    "links": {
+                        "bilibili": "https://space.bilibili.com/3546733357304606"
+                    }
+                },
+                "Github": {
+                    "text": "GitHub主页",
+                    "links": {
+                        "Github": "https://github.com/wfql1024"
+                    }
+                },
+                "Gitee": {
+                    "text": "Gitee主页",
+                    "links": {
+                        "Gitee": "https://gitee.com/wfql1024"
+                    }
+                }
+            },
+            "project": {
+                "Github": {
+                    "text": "GitHub",
+                    "links": {
+                        "Github": "https://github.com/wfql1024/MultiWeChatManager"
+                    }
+                },
+                "Gitee": {
+                    "text": "Gitee",
+                    "links": {
+                        "Gitee": "https://gitee.com/wfql1024/MultiWeChatManager"
+                    }
+                }
+            },
+            "thanks": {
+                "lyie15": {
+                    "text": "lyie15",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=2030303"
+                    }
+                },
+                "windion": {
+                    "text": "windion",
+                    "links": {
+                        "bilibili": "https://space.bilibili.com/256019141",
+                        "52pj": "https://www.52pojie.cn/home.php?mod=follow&uid=1529783&do=view&from=space"
+                    }
+                },
+                "JackLSQ": {
+                    "text": "JackLSQ",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=1784521"
+                    }
+                },
+                "Anhkgg": {
+                    "text": "Anhkgg",
+                    "links": {
+                        "github": "https://github.com/anhkgg"
+                    }
+                },
+                "de52": {
+                    "text": "de52",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=1703408"
+                    }
+                },
+                "yihleego": {
+                    "text": "yihleego",
+                    "links": {
+                        "github": "https://github.com/yihleego"
+                    }
+                },
+                "cherub0507": {
+                    "text": "cherub0507",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=681049"
+                    }
+                },
+                "tnxts": {
+                    "text": "tnxts",
+                    "links": {
+                        "52pj": "https://www.52pojie.cn/home.php?mod=space&uid=1705928"
+                    }
+                },
+                "huiyadanli": {
+                    "text": "huiyadanli",
+                    "links": {
+                        "github": "https://github.com/huiyadanli"
+                    }
+                },
+                "zetaloop": {
+                    "text": "zetaloop",
+                    "links": {
+                        "github": "https://github.com/zetaloop"
+                    }
+                },
+                "0xlane": {
+                    "text": "0xlane",
+                    "links": {
+                        "github": "https://github.com/0xlane"
+                    }
+                }
+            }
+        },
+        "update": {
+            "v3.3.0.3718-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win7_x64_v3.3.0.3718-Beta.zip",
+                            "md5": "d2d7385ebcc80b5085d52b5fb4b380f6",
+                            "sha-256": "c1fa93bf00f9eeba5b0e485e457f399df38262cb74e48a7fb9942652f6db5b18"
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win10%20_x64_v3.3.0.3718-Beta.zip",
+                            "md5": "edf0fc07829584bfd8c7ceda321713fe",
+                            "sha-256": "b8bd9dd85489a3470f78a76c5ef38c99a8c2aa04dd6dcbdc5f8914c307b81640"
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win10%20_x64_v3.3.0.3718-Beta.zip",
+                            "md5": "edf0fc07829584bfd8c7ceda321713fe",
+                            "sha-256": "b8bd9dd85489a3470f78a76c5ef38c99a8c2aa04dd6dcbdc5f8914c307b81640"
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win7_x64_v3.3.0.3718-Beta.zip",
+                            "md5": "d2d7385ebcc80b5085d52b5fb4b380f6",
+                            "sha-256": "c1fa93bf00f9eeba5b0e485e457f399df38262cb74e48a7fb9942652f6db5b18"
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新标签页新UI, 新名字新图标",
+                        "☆新增平台管理,初步适配企业微信,QQ,QQNT,TIM等平台. 账号管理,不止微信~",
+                        "☆新增特征码适配, 多开与防撤回, 无需等待精确版本适配, 自动根据特征码查找, 快人一步~",
+                        "☆可以对已配置的账号创建启动器(原快捷启动), 无需管理软件, 双击即可选号启动~",
+                        "新增缩小到托盘, 静默运行, 保障体验不打扰~",
+                        "新增反馈渠道, `帮助-反馈渠道`欢迎进群畅聊~"
+                    ],
+                    "优化": [
+                        "优化侧栏, 窗口找不到时将弹出详情页获取窗口, 防止卡死;",
+                        "优化菜单刷新逻辑, 菜单对应界面, 不混乱; 优化刷新逻辑, 可快速刷新表格, 也可刷新整个页面;",
+                        "优化平台设置的路径获取与保存逻辑, 告别各种检测限制;",
+                        "优化结束进程区分, 避免误杀同名进程;",
+                        "优化头像显示, 对于暂时无法获取头像昵称的账号, 可以自行添加头像啦, 也可以使用文字头像;",
+                        "优化文件读写, 添加读写锁, 避免文件写入错误导致设置损失."
+                    ],
+                    "修复": [
+                        "修复已知问题."
+                    ]
+                }
+            },
+            "v3.0.0.3087-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win7_x64_v3.0.0.3087-Beta.zip",
+                            "md5": "8ad4ed3e275bd1319e1fe7bbfd11247f",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win10%20_x64_v3.0.0.3087-Beta.zip",
+                            "md5": "9f3bda50aba28a2c5c54106631cfea4a",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win10%20_x64_v3.0.0.3087-Beta.zip",
+                            "md5": "9f3bda50aba28a2c5c54106631cfea4a",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win7_x64_v3.0.0.3087-Beta.zip",
+                            "md5": "8ad4ed3e275bd1319e1fe7bbfd11247f",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "大版本更新！新增侧栏工具，欢迎尝鲜，开启方式为视图->侧栏",
+                        "新增代理设置",
+                        "新增4.0微信支持python模式多开",
+                        "新增4.0微信带提示的防撤回"
+                    ],
+                    "修复": [
+                        "修复部分已知问题"
+                    ]
+                }
+            },
+            "v2.15.0.1458-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win7_x64_v2.15.0.1458-Beta.zip",
+                            "md5": "7aa3246b9a64779ffca1cbeadff481bc",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win10%20_x64_v2.15.0.1458-Beta.zip",
+                            "md5": "7ca85d3179f13f33d23fdc04c7fc8e8f",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win10%20_x64_v2.15.0.1458-Beta.zip",
+                            "md5": "7ca85d3179f13f33d23fdc04c7fc8e8f",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win7_x64_v2.15.0.1458-Beta.zip",
+                            "md5": "7aa3246b9a64779ffca1cbeadff481bc",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增自启动功能：软件自启动，以及设置自动登录的账号",
+                        "新增隐藏账号功能：设置在未登录时隐藏的账号",
+                        "新增快捷键功能：可以对账号设置显示的快捷键，唤起窗口",
+                        "新增任务栏窗口标题显示账号名的功能"
+                    ],
+                    "修复": [
+                        "修复若干问题"
+                    ]
+                }
+            },
+            "v2.11.1.911-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win7_x64_v2.11.1.911-Beta.zip",
+                            "md5": "5fc3a5d0ae5aa72c31a291d9ddae3a22",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win10%20_x64_v2.11.1.911-Beta.zip",
+                            "md5": "3c63cd2d88d247f930bb3e970ec73043",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win10%20_x64_v2.11.1.911-Beta.zip",
+                            "md5": "3c63cd2d88d247f930bb3e970ec73043",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win7_x64_v2.11.1.911-Beta.zip",
+                            "md5": "5fc3a5d0ae5aa72c31a291d9ddae3a22",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增对微信4.0的适配",
+                        "新增高分屏适配"
+                    ],
+                    "修复": [
+                        "修复若干问题"
+                    ]
+                }
+            },
+            "v2.9.1.698-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                            "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                            "md5": "19758698771099dfdf57d4230217d30b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                            "md5": "19758698771099dfdf57d4230217d30b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                            "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增新增自动配置未配置的账号"
+                    ],
+                    "修复": [
+                        "修复列表视图下配置失败等的问题"
+                    ]
+                }
+            },
+            "v2.8.7.668-Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "ad73222d3069e2a60c9aad3318012110",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "75e7cb3e7610df3c911a0bd520bb0397",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "75e7cb3e7610df3c911a0bd520bb0397",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+                            "md5": "ad73222d3069e2a60c9aad3318012110",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增“列表”视图",
+                        "新增“在线升级”功能",
+                        "新增自动静默获取头像昵称的功能"
+                    ],
+                    "修复": [
+                        "修复Python模式下多开微信失败的问题",
+                        "修复某些表情符号溢出无法显示的问题",
+                        "修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题"
+                    ],
+                    "优化": [
+                        "防撤回功能已默认显示",
+                        "优化按钮点击逻辑",
+                        "优化日志显示",
+                        "优化在线升级，避免重复下载"
+                    ]
+                }
+            },
+            "v2.6.0.420-test": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "测试在线升级"
+                    ]
+                }
+            },
+            "v2.5.0.411.Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "适配": [
+                        "适配win7系统"
+                    ],
+                    "优化": [
+                        "为了适配win7，降低python版本：3.12->3.7，由此安装包体积大幅缩减"
+                    ]
+                }
+            },
+            "v2.4.0.365.Alpha": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增防撤回"
+                    ]
+                }
+            },
+            "v2.3.3.333.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增调试窗口",
+                        "新增原生多开（加入互斥体概念，可在主界面和账号详情中查看是否含有互斥体）",
+                        "新增统计面板，可以用来统计对比各个多开器的性能"
+                    ],
+                    "修复": [
+                        "修复设置界面仍会出现的打不开选择文件夹的问题",
+                        "修复获取dll文件夹和版本号的逻辑会因为用户文件结构不同而可能出现错误的问题",
+                        "修复多选登录可能出现窗口错位的问题（延长了等待新登录窗口的时间）"
+                    ],
+                    "优化": [
+                        "优化微信更新适配全局多开的方式，由源码修改改为从网站获取",
+                        "优化常规模式和调试模式的实现方式，由两个程序改为快捷方式是否携带“--debug”参数来区分模式"
+                    ]
+                }
+            },
+            "v2.0.8.208.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "修复": [
+                        "修复初次使用时未获取到路径无处设置的问题",
+                        "修复无法拖动文件发送到微信的问题"
+                    ],
+                    "优化": [
+                        "优化微信新版本的适配，目前支持微信 3.9.11.25、3.9.12.9、3.9.12.11 多开",
+                        "优化获取登录窗口尺寸的逻辑"
+                    ],
+                    "新增": [
+                        "新增打赏（你懂的~）"
+                    ]
+                }
+            },
+            "v2.0.0.200.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增全局多开模式和多种子多开器",
+                        "新增多选自动登录",
+                        "新增状态栏",
+                        "新增快捷启动",
+                        "新的UI界面，新增头像、昵称等详情显示"
+                    ]
+                }
+            },
+            "v1.0.79.100.Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                            "md5": "",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "新增全局多开模式和多种子多开器",
+                        "新增多选自动登录",
+                        "新增状态栏",
+                        "新增快捷启动",
+                        "新的UI界面，新增头像、昵称等详情显示"
+                    ]
+                }
+            }
+        }
+    },
+    "WeChat": {
+        "coexist": {
+            "channel": {
+                "default": {
+                    "label": "默认",
+                    "introduce": "对host文件,窗口类名,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
+                    "author": [
+                        "afaa1991"
+                    ],
+                    "exe_wildcard": "WeCha?.exe",
+                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                },
+                "default2": {
+                    "label": "默认2",
+                    "introduce": "对host文件,窗口类名,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
+                    "author": [
+                        "afaa1991"
+                    ],
+                    "exe_wildcard": "WeChat?.exe",
+                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                }
+            },
+            "feature": {
+                "3.9": {
+                    "default": {
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "57 00 65 00 43 00 68 00 61 00 74 00 4C 00 6F 00 67 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
+                                "57 00 65 00 43 00 68 00 61 00 74 00 4D 00 61 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
+                                "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
+                                "57 65 43 68 61 74 57 69 6E 2E 64 6C 6C",
+                                "77 00 65 00 63 00 68 00 61 00 74 00 77 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                "63 00 6F 00 6E 00 66 00 69 00 67 00 2E 00 64 00 61 00 74 00 61 00",
+                                "5F 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00"
+                            ],
+                            "modified": [
+                                "57 00 65 00 43 00 68 00 61 00 !! ...",
+                                "57 00 65 00 43 00 68 00 61 00 !! ...",
+                                "... !! 2E 78 6D 6C",
+                                "... !! 2E 64 6C 6C",
+                                "... !! 00 2E 00 64 00 6C 00 6C 00",
+                                "... !! 00 2E 00 64 00 6C 00 6C 00",
+                                "... !! 00 2E 00 64 00 61 00 74 00 61 00",
+                                "5F 00 57 00 65 00 43 00 68 00 61 00 !! ..."
+                            ],
+                            "meanings": [
+                                " W  .  e  .  C  .  h  .  a  .  ̲t  .  L  .  o  .  g  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
+                                " W  .  e  .  C  .  h  .  a  .  ̲t  .  M  .  a  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
+                                " h  o  s  t  -  r  e  d  i  r  e  c  ̲t  .  x  m  l",
+                                " W  e  C  h  a  t  W  i  ̲n  .  d  l  l",
+                                " w  .  e  .  c  .  h  .  a  .  t  .  w  .  i  .  ̲n  .  .  .  d  .  l  .  l  .",
+                                " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  ̲n  .  .  .  d  .  l  .  l  .",
+                                " c  .  o  .  n  .  f  .  i  .  ̲g  .  .  .  d  .  a  .  t  .  a  .",
+                                " _  .  W  .  e  .  C  .  h  .  a  .  ̲t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  ."
+                            ],
+                            "wildcard": "WeChatWi?.dll"
+                        },
+                        "%inst_path%": {
+                            "original": [
+                                "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "modified": [
+                                "... !! 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "meanings": [
+                                " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  ̲n  .  .  .  d  .  l  .  l  ."
+                            ],
+                            "wildcard": "WeCha?.exe"
+                        }
+                    },
+                    "default2": {
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "57 00 65 00 43 00 68 00 61 00 74 00 4C 00 6F 00 67 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
+                                "57 00 65 00 43 00 68 00 61 00 74 00 4D 00 61 00 69 00 6E 00 57 00 6E 00 64 00 46 00 6F 00 72 00 50 00 43 00",
+                                "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
+                                "57 65 43 68 61 74 57 69 6E 2E 64 6C 6C",
+                                "77 00 65 00 63 00 68 00 61 00 74 00 77 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                "63 00 6F 00 6E 00 66 00 69 00 67 00 2E 00 64 00 61 00 74 00 61 00",
+                                "5F 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00"
+                            ],
+                            "modified": [
+                                "!! ...",
+                                "!! ...",
+                                "... !!",
+                                "... !!",
+                                "... !! 00",
+                                "... !! 00",
+                                "... !! 00 67 00 2E 00 64 00 61 00 74 00 61 00",
+                                "5F 00 57 00 !! ..."
+                            ],
+                            "meanings": [
+                                " ̲W  .  e  .  C  .  h  .  a  .  t  .  L  .  o  .  g  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
+                                " ̲W  .  e  .  C  .  h  .  a  .  t  .  M  .  a  .  i  .  n  .  W  .  n  .  d  .  F  .  o  .  r  .  P  .  C  .",
+                                " h  o  s  t  -  r  e  d  i  r  e  c  t  .  x  m  ̲l",
+                                " W  e  C  h  a  t  W  i  n  .  d  l  ̲l",
+                                " w  .  e  .  c  .  h  .  a  .  t  .  w  .  i  .  n  .  .  .  d  .  l  .  ̲l  .",
+                                " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  n  .  .  .  d  .  l  .  ̲l  .",
+                                " c  .  o  .  n  .  f  .  ̲i  .  g  .  .  .  d  .  a  .  t  .  a  .",
+                                " _  .  W  .  ̲e  .  C  .  h  .  a  .  t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  ."
+                            ],
+                            "wildcard": "WeChatWin.dl?"
+                        },
+                        "%inst_path%": {
+                            "original": [
+                                "57 00 65 00 43 00 68 00 61 00 74 00 57 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "modified": [
+                                "... !! 00"
+                            ],
+                            "meanings": [
+                                " W  .  e  .  C  .  h  .  a  .  t  .  W  .  i  .  n  .  .  .  d  .  l  .  ̲l  ."
+                            ],
+                            "wildcard": "WeChat?.exe"
+                        }
+                    }
+                }
+            }
+        },
+        "multirun": {
+            "channel": {
+                "default": {
+                    "label": "默认",
+                    "introduce": "可以在全局进行多开",
+                    "author": [
+                        "huiyadanli"
+                    ]
+                },
+                "default2": {
+                    "label": "默认2",
+                    "introduce": "可以在全局进行多开",
+                    "author": [
+                        "afaa1991"
+                    ]
+                }
+            },
+            "feature": {
+                "3.9.11": {
+                    "default": {
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 ?? ?? ?? ??"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
+                    },
+                    "default2": {
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "0F 84 BD 00 00 00 FF 15 ?? ?? ?? ??"
+                            ],
+                            "modified": [
+                                "E9 BE 00 ..."
+                            ]
+                        }
+                    }
+                },
+                "3.9.10": {
+                    "default": {
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "00 B9 BD 00 00 00 FF 15"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
+                    }
+                }
+            },
+            "precise": {
+
+            }
+        },
+        "anti-revoke": {
+            "channel": {
+                "alert": {
+                    "label": "通知",
+                    "introduce": "通过通知进行防撤回提示",
+                    "author": [
+                        "EEEEhex",
+                        "afaa1991"
+                    ]
+                }
+            },
+            "feature": {
+                "3.9": {
+                    "alert": {
+                        "%dll_dir%/WeChatWin.dll": {
+                            "original": [
+                                "C0 0F 84 ?? FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+                            ],
+                            "modified": [
+                                "... 90 90 41 8B 00 24 0F 3C 02"
+                            ]
+                        }
+                    }
+                }
+            },
+            "precise": {
+
+            }
+        },
+        "wnd_class": {
+            "login": {
+                "3.0": [
+                    {
+                        "ClassNameWildcards": [
+                            "WeChatLoginWndForPC"
+                        ]
+                    }
+                ]
+            },
+            "main": {
+                "3.0": [
+                    {
+                        "ClassNameWildcards": [
+                            "WeChatMainWndForPC"
+                        ]
+                    }
+                ]
+            }
+        },
+        "label": "微信",
+        "executable": "WeChat.exe",
+        "executable_wildcards": [
+            "WeChat?.exe",
+            "WeCha?.exe"
+        ],
+        "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
+        "data_dir_guess_suffix": "Tencent\\WeChat",
+        "data_dir_check_suffix": "All Users",
+        "dll_dir_check_suffix": "WeChatWin.dll",
+        "patch_dll": "WeChatWin.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",
+        "user_reg_sub_key": "Software\\Tencent\\WeChat",
+        "data_dir_name": "WeChat Files",
+        "mutant_handle_infos": [
+            {
+                "handle_name": "_WeChat_App_Instance_Identity_Mutex_Name",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+            }
+        ],
+        "cfg_handle_regex_list": [
+        ],
+        "mutant_handle_wildcards": [
+            "_WeChat_App_Instance_Identity_Mutex_Name",
+            "_W?Chat_App_Instance_Identity_Mutex_Name",
+            "_WeCha?_App_Instance_Identity_Mutex_Name"
+        ],
+        "config_handle_wildcards": [
+            "config.data",
+            "conf?g.data"
+        ],
+        "login_wnd_class": "WeChatLoginWndForPC",
+        "login_wnd_class_wildcards": [
+            "?eChatLoginWndForPC",
+            "WeCha?LoginWndForPC"
+        ],
+        "main_wnd_class": "WeChatMainWndForPC",
+        "main_wnd_class_wildcards": [
+            "?eChatMainWndForPC",
+            "WeCha?MainWndForPC"
+        ],
+        "config_path_suffix": "All Users\\config",
+        "config_file_list": [
+            "config.data"
+        ],
+        "config_addresses": [
+            "%data_dir%/All Users/config.data"
+        ],
+        "excluded_dir_list": [
+            "All Users",
+            "Applet",
+            "Plugins",
+            "WMPF",
+            "all_users"
+        ],
+        "sw_id_trims": {
+            "Weixin": [
+                0,
+                5,
+                0,
+                0
+            ]
+        }
+    },
+    "Weixin": {
+        "coexist": {
+            "channel": {
+                "default": {
+                    "label": "默认",
+                    "introduce": "对host文件,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.共存标号从1开始.",
+                    "author": [
+                        "afaa1991"
+                    ],
+                    "exe_wildcard": "Weixi?.exe",
+                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                },
+                "default2": {
+                    "label": "默认2",
+                    "introduce": "对host文件,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.共存标号从0开始.",
+                    "author": [
+                        "afaa1991"
+                    ],
+                    "exe_wildcard": "Weixin?.exe",
+                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                }
+            },
+            "feature": {
+                "4.0.6": {
+                    "default": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
+                                "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 ?? ?? ?? ?? C7 05 ?? ?? ?? ?? 6F 6E 66 69 66 C7 05 ?? ?? ?? ?? 67 00",
+                                "58 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00",
+                                "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 77 00"
+                            ],
+                            "modified": [
+                                "... !! 2E 78 6D 6C",
+                                "... !! 00",
+                                "58 00 57 00 65 00 43 00 68 00 61 00 !! ...",
+                                "78 00 57 00 65 00 63 00 68 00 61 00 !! ..."
+                            ],
+                            "meanings": [
+                                " h  o  s  t  -  r  e  d  i  r  e  c  ̲t  .  x  m  l",
+                                " H  .  g  l  o  b  a  l  _  c  H  .  .  .  A  .  .  .  .  .  A  .  .  o  n  f  ̲i  f  .  .  .  A  .  .  g  .",
+                                " X  .  W  .  e  .  C  .  h  .  a  .  ̲t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  .",
+                                " x  .  W  .  e  .  c  .  h  .  a  .  ̲t  .  W  .  i  .  n  .  d  .  o  .  w  ."
+                            ],
+                            "wildcard": "Weixi?.dll"
+                        },
+                        "%inst_path%": {
+                            "original": [
+                                "57 00 65 00 69 00 78 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "modified": [
+                                "... !! 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "meanings": [
+                                " W  .  e  .  i  .  x  .  i  .  ̲n  .  .  .  d  .  l  .  l  ."
+                            ],
+                            "wildcard": "Weixi?.exe"
+                        }
+                    },
+                    "default2": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "68 6F 73 74 2D 72 65 64 69 72 65 63 74 2E 78 6D 6C",
+                                "48 B8 67 6C 6F 62 61 6C 5F 63 48 89 05 ?? ?? ?? ?? C7 05 ?? ?? ?? ?? 6F 6E 66 69 66 C7 05 ?? ?? ?? ?? 67 00",
+                                "58 00 57 00 65 00 43 00 68 00 61 00 74 00 5F 00 41 00 70 00 70 00 5F 00 49 00 6E 00 73 00 74 00 61 00 6E 00 63 00 65 00 5F 00 49 00 64 00 65 00 6E 00 74 00 69 00 74 00 79 00 5F 00 4D 00 75 00 74 00 65 00 78 00 5F 00 4E 00 61 00 6D 00 65 00",
+                                "78 00 57 00 65 00 63 00 68 00 61 00 74 00 57 00 69 00 6E 00 64 00 6F 00 77 00"
+                            ],
+                            "modified": [
+                                "... !!",
+                                "... !! 66 C7 05 ?? ?? ?? ?? 67 00",
+                                "!! ...",
+                                "... !! 00"
+                            ],
+                            "meanings": [
+                                " h  o  s  t  -  r  e  d  i  r  e  c  t  .  x  m  ̲l",
+                                " H  .  g  l  o  b  a  l  _  c  H  .  .  .  A  .  .  .  .  .  A  .  .  o  n  f  ̲i  f  .  .  .  A  .  .  g  .",
+                                " ̲X  .  W  .  e  .  C  .  h  .  a  .  t  .  _  .  A  .  p  .  p  .  _  .  I  .  n  .  s  .  t  .  a  .  n  .  c  .  e  .  _  .  I  .  d  .  e  .  n  .  t  .  i  .  t  .  y  .  _  .  M  .  u  .  t  .  e  .  x  .  _  .  N  .  a  .  m  .  e  .",
+                                " x  .  W  .  e  .  c  .  h  .  a  .  t  .  W  .  i  .  n  .  d  .  o  .  ̲w  ."
+                            ],
+                            "wildcard": "Weixin.dl?"
+                        },
+                        "%inst_path%": {
+                            "original": [
+                                "57 00 65 00 69 00 78 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00"
+                            ],
+                            "modified": [
+                                "... !! 00"
+                            ],
+                            "meanings": [
+                                " W  .  e  .  i  .  x  .  i  .  n  .  .  .  d  .  l  .  ̲l  ."
+                            ],
+                            "wildcard": "Weixin?.exe"
+                        }
+                    }
+                }
+            }
+        },
+        "multirun": {
+            "channel": {
+                "default": {
+                    "label": "默认",
+                    "introduce": "可以在全局进行多开"
+                }
+            },
+            "feature": {
+                "4.0.6": {
+                    "default": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.5": {
+                    "default": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.3": {
+                    "default": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC C8 01 00 00 48 8D AC 24 80 00 00 00 48 C7 85 40 01 00 00 FE FF FF FF 48 C7 85 A8"
+                            ],
+                            "modified": [
+                                "C3 ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.2": {
+                    "default": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 41 57 41 56 41 54 56 57 53 48 81 EC ?? ?? ?? ?? 48 8D AC 24 ?? ?? ?? ?? 48 C7 85 ?? ?? ?? ?? FE FF FF FF 48 C7 45 ?? 00 00 00 00"
+                            ],
+                            "modified": [
+                                "C3 ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.1": {
+                    "default": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "C7 44 24 ?? FF FF FF FF 31 F6 45 31 C0 41 B9 FF FF FF FF FF 15 ?? ?? ?? ?? 85 C0 75 0F"
+                            ],
+                            "modified": [
+                                "... EB 0F"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "anti-revoke": {
+            "channel": {
+                "silence": {
+                    "label": "静默",
+                    "introduce": "不含防撤回提示",
+                    "author": [
+                        "zetaloop"
+                    ]
+                },
+                "bubble": {
+                    "label": "气泡",
+                    "introduce": "通过气泡进行防撤回提示",
+                    "author": [
+                        "afaa1991"
+                    ]
+                },
+                "alert": {
+                    "label": "通知",
+                    "introduce": "通过系统通知进行防撤回提示",
+                    "author": [
+                        "EEEEhex",
+                        "afaa1991"
+                    ]
+                }
+            },
+            "feature": {
+                "4.0.6.12": {
+                    "alert": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 E8 BE DA FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 56 57 53 48 81",
+                                "45 31 C0 ?? ?? ?? ?? FE 48 8B BD 48 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89"
+                            ],
+                            "modified": [
+                                "01 ...",
+                                "48 83 85 C0 02 00 00 01 ..."
+                            ]
+                        }
+                    },
+                    "bubble": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 ?? ?? ?? FE 89 C6 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                                "BE 12 27 00 00 90 90 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
+                    },
+                    "silence": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "0F 84 CF 00 00 00 48 8D 8D B0 03 00 00 E8 ?? ?? ?? FD 48 8B 8D B0 03 00 00 48 8D 95 30 03 00 00 E8 ?? ?? ?? FD 48 8B 8D 30 03 00 00 48 8D"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.6": {
+                    "alert": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 E8 BE DA FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 56 57 53 48 81",
+                                "45 31 C0 ?? ?? ?? 55 FE 48 8B BD 48 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89"
+                            ],
+                            "modified": [
+                                "01 ...",
+                                "48 83 85 C0 02 00 00 01 ..."
+                            ]
+                        }
+                    },
+                    "bubble": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 ?? ?? ?? FE 89 C6 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                                "BE 12 27 00 00 90 90 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
+                    },
+                    "silence": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "0F 84 CF 00 00 00 48 8D 8D B0 03 00 00 E8 ?? ?? C1 FD 48 8B 8D B0 03 00 00 48 8D 95 30 03 00 00 E8 ?? ?? F4 FD 48 8B 8D 30 03 00 00 48 8D"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.5": {
+                    "alert": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 E8 EE D8 FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 41 54 56 57 53 48 81",
+                                "45 31 C0 E8 ?? ?? ?? FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75",
+                                "45 31 C0 E8 ?? ?? ?? FE 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75"
+                            ],
+                            "modified": [
+                                "01 ...",
+                                "48 83 85 C0 02 00 00 01 ...",
+                                "48 83 85 C0 02 00 00 01 ..."
+                            ]
+                        }
+                    },
+                    "bubble": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 ?? ?? ?? ?? 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                                "8B B5 20 04 00 00 81 C6 12 27 00 00 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
+                    },
+                    "silence": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 28 04 00 00 E8 ?? ?? ?? ?? 48 8B 8D 28 04 00 00 48 8D 95 B0 03 00 00 E8 ?? ?? ?? FE 48 8B 8D B0 03 00 00 48 8D 95 B0 00 00 00 E8 ?? ?? ?? ?? 48 8D 8D B0 00 00 00 E8 ?? ?? ?? ??"
+                            ],
+                            "modified": [
+                                "EB ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.3": {
+                    "bubble": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "E9 68 02 00 00 0F 1F 84 00 00 00 00 00",
+                                "E8 ?? ?? ?? ?? 89 C6 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "3D 12 27 00 00 0F 85 62 02 00 00 90 90",
+                                "8B B5 20 04 00 00 81 C6 12 27 00 00 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
+                    },
+                    "silence": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 28 04 00 00 E8 ?? ?? ?? ?? 48 8B 8D 28 04 00 00 48 8D 95 B0 03 00 00 E8 ?? ?? ?? FE 48 8B 8D B0 03 00 00 48 8D 95 B0 00 00 00 E8 ?? ?? ?? ?? 48 8D 8D B0 00 00 00 E8 ?? ?? ?? ??"
+                            ],
+                            "modified": [
+                                "EB ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.2.26": {
+                    "silence": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "74 6E 48 8D 8D 08 04 00 00 E8 ?? ?? ?? ?? 48 8B"
+                            ],
+                            "modified": [
+                                "EB ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.2": {
+                    "silence": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 ?? ?? ?? ?? 66 C7 05 ?? ?? ?? ?? 67 00 C6 05 ?? ?? ?? ?? 01 48 8D"
+                            ],
+                            "modified": [
+                                "EB 21 ..."
+                            ]
+                        }
+                    }
+                },
+                "4.0.1": {
+                    "silence": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 21 48 B8 72 65 76 6F 6B 65 6D 73 48 89 05 ?? ?? ?? ?? 66 C7 05 ?? ?? ?? ?? 67 00 C6 05 ?? ?? ?? ?? 01 48 8D 3D"
+                            ],
+                            "modified": [
+                                "EB 21 ..."
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "wnd_class": {
+            "login": {
+                "4.0": [
+                    {
+                        "ClassNameWildcards": [
+                            "mmui::LoginWindow"
+                        ]
+                    }
+                ]
+            },
+            "main": {
+                "4.0.6.30": [
+                    {
+                        "ClassNameWildcards": [
+                            "mmui::MainWindow"
+                        ]
+                    },
+                    {
+                        "ClassNameWildcards": [
+                            "Qt51514QWindowIcon"
+                        ],
+                        "FinalSelect": [
+                            {
+                                "SizeEquals": 0
+                            },
+                            {
+                                "SizeExtreme": "max"
+                            }
+                        ]
+                    }
+                ],
+                "4.0": [
+                    {
+                        "ClassNameWildcards": [
+                            "mmui::MainWindow"
+                        ]
+                    }
+                ]
+            }
+        },
+        "label": "微信4.0",
+        "executable": "Weixin.exe",
+        "executable_wildcards": [
+            "Weixin?.exe",
+            "Weixi?.exe"
+        ],
+        "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
+        "data_dir_guess_suffix": "Tencent\\Weixin",
+        "data_dir_check_suffix": "all_users",
+        "dll_dir_check_suffix": "Weixin.dll",
+        "patch_dll": "Weixin.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Weixin",
+        "user_reg_sub_key": "Software\\Tencent\\Weixin",
+        "data_dir_name": "xwechat_files",
+        "mutant_handle_infos": [
+            {
+                "handle_name": "lock.ini",
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
+                "type": "file"
+            },
+            {
+                "handle_name": "XWeChat_App_Instance_Identity_Mutex_Name",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions",
+                "type": "mutant"
+            }
+        ],
+        "cfg_handle_regex_list": [
+            {
+                "handle_name": "global_config",
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
+                "type": "file"
+            }
+        ],
+        "mutant_handle_wildcards": [
+            "?WeChat_App_Instance_Identity_Mutex_Name",
+            "XWeCha?_App_Instance_Identity_Mutex_Name",
+            "lock.ini"
+        ],
+        "config_handle_wildcards": [
+            "global_conf?g"
+        ],
+        "login_wnd_class": "mmui::LoginWindow",
+        "login_wnd_class_wildcards": [
+            "mmui::LoginWindow"
+        ],
+        "main_wnd_class": "mmui::MainWindow",
+        "main_wnd_class_wildcards": [
+            "mmui::MainWindow",
+            "Qt51514QWindowIcon"
+        ],
+        "config_path_suffix": "all_users\\config",
+        "config_file_list": [
+            "global_config",
+            "global_config.crc"
+        ],
+        "config_addresses": [
+            "%data_dir%/all_users/config/global_config",
+            "%data_dir%/all_users/config/global_config.crc"
+        ],
+        "excluded_dir_list": [
+            "All Users",
+            "Applet",
+            "Plugins",
+            "WMPF",
+            "all_users",
+            "Backup",
+            "old_backup"
+        ],
+        "sw_id_trims": {
+            "WeChat": [
+                0,
+                0,
+                0,
+                5
+            ]
+        }
+    },
+    "WXWork": {
+        "coexist": {
+            "channel": {
+                "default": {
+                    "label": "默认",
+                    "introduce": "对host文件,窗口类名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
+                    "author": [
+                        "afaa1991"
+                    ],
+                    "exe_wildcard": "WXWork?.exe",
+                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                }
+            },
+            "feature": {
+                "4.1.38": {
+                    "default": {
+                        "%inst_path%": {
+                            "original": [
+                                "80 79 08 00 74 16 83 C1 0C 83 79 14 07 76 02 8B 09 51 8D 4A 18 51 FF 15 ?? ?? ?? 06 8D 8B DC 00 00 00 51 E8 ?? ?? ?? 01 8B 45 08 59",
+                                "74 5D 39 B3 C4 00 00 00 74 55 8B CB E8 ?? D5 FF FF 8B CB E8 49 D0 FF FF 84 C0 75 43 8B BB CC 00 00 00 8B 07 C7 45 CC ?? ?? ?? 06 C7",
+                                "73 76 69 64 3A 20 00 63 6F 6E 66 69 67 2E 64 62",
+                                "43 6F 6E 66 69 67 2E 63 66 67",
+                                "57 00 65 00 57 00 6F 00 72 00 6B 00 2E 00 41 00 63 00 74 00 69 00 76 00 61 00 74 00 65 00 41 00 70 00 70 00 6C 00 69 00 63 00 61 00 74 00 69 00 6F 00 6E 00",
+                                "43 00 6F 00 6E 00 66 00 69 00 67 00 2E 00 63 00 66 00 67 00",
+                                "63 00 6F 00 72 00 70 00 5F 00 6C 00 6F 00 67 00 6F 00",
+                                "54 00 65 00 6E 00 63 00 65 00 6E 00 74 00 2E 00 57 00 65 00 57 00 6F 00 72 00 6B 00 2E 00 45 00 78 00 63 00 6C 00 75 00 73 00 69 00 76 00 65 00",
+                                "63 6F 72 70 5F 6C 6F 67 6F",
+                                "71 72 63 6F 64 65 5F 6C 6F 67 69 6E 5F 75 73 65 72 5F 61 76 61 74 6F 72",
+                                "68 74 74 70 64 6E 73 2E 63 66 67 00 77 65 77 6F 72 6B"
+                            ],
+                            "modified": [
+                                "83 42 08 !! 83 42 08 10 83 6A 0C 20 90 EB 0D ...",
+                                "EB ...",
+                                "... !! 2E 64 62",
+                                "... !! 2E 63 66 67",
+                                "... !! 00",
+                                "... !! 00 2E 00 63 00 66 00 67 00",
+                                "... !! 00",
+                                "... !! 00 73 00 69 00 76 00 65 00",
+                                "... !!",
+                                "... !!",
+                                "68 74 74 70 64 6E !! ..."
+                            ],
+                            "meanings": [
+                                " ̲.  ̲B  .  ̲0  ̲.  ̲B  ̲.  ̲.  ̲.  ̲j  ̲.  ̲   ̲.  ̲.  ̲.  .  .  Q  .  J  .  Q  .  .  .     \"  .  .  .  .  .  .  .  Q  .  .  .  .  .  .  E  .  Y",
+                                " ̲t  ]  9  .  .  .  .  .  t  U  .  .  .  .  .  .  .  .  .  .  I  .  .  .  .  .  u  C  .  .  .  .  .  .  .  .  .  E  .  .  .  .  .  .",
+                                " s  v  i  d  :     .  c  o  n  f  i  ̲g  .  d  b",
+                                " C  o  n  f  i  ̲g  .  c  f  g",
+                                " W  .  e  .  W  .  o  .  r  .  k  .  .  .  A  .  c  .  t  .  i  .  v  .  a  .  t  .  e  .  A  .  p  .  p  .  l  .  i  .  c  .  a  .  t  .  i  .  o  .  ̲n  .",
+                                " C  .  o  .  n  .  f  .  i  .  ̲g  .  .  .  c  .  f  .  g  .",
+                                " c  .  o  .  r  .  p  .  _  .  l  .  o  .  g  .  ̲o  .",
+                                " T  .  e  .  n  .  c  .  e  .  n  .  t  .  .  .  W  .  e  .  W  .  o  .  r  .  k  .  .  .  E  .  x  .  c  .  l  .  ̲u  .  s  .  i  .  v  .  e  .",
+                                " c  o  r  p  _  l  o  g  ̲o",
+                                " q  r  c  o  d  e  _  l  o  g  i  n  _  u  s  e  r  _  a  v  a  t  o  ̲r",
+                                " h  t  t  p  d  n  ̲s  .  c  f  g  .  w  e  w  o  r  k"
+                            ],
+                            "wildcard": "WXWork?.exe"
+                        }
+                    }
+                }
+            }
+        },
+        "multirun": {
+        },
+        "anti-revoke": {
+        },
+        "wnd_class": {
+            "login": {
+                "4.1": [
+                    {
+                        "ClassNameWildcards": [
+                            "WeChatLogin"
+                        ]
+                    }
+                ]
+            },
+            "main": {
+                "4.1": [
+                    {
+                        "ClassNameWildcards": [
+                            "WeWorkWindow"
+                        ]
+                    }
+                ]
+            }
+        },
+        "label": "企微",
+        "executable": "WXWork.exe",
+        "executable_wildcards": [
+            "WXWork?.exe",
+            "WXWork.exe"
+        ],
+        "inst_path_guess_suffix": "Tencent\\WXWork\\WXWork.exe",
+        "data_dir_guess_suffix": "Tencent\\WXWork",
+        "data_dir_check_suffix": "Profiles",
+        "dll_dir_check_suffix": "WXWorkResources.dll",
+        "patch_dll": "WXWorkResources.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WXWork",
+        "user_reg_sub_key": "Software\\Tencent\\WXWork",
+        "data_dir_name": "WXWork",
+        "mutant_handle_infos": [
+            {
+                "handle_name": "Tencent.WeWork.ExclusiveObjectInstance1",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+            },
+            {
+                "handle_name": "Tencent.WeWork.ExclusiveObject",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+            }
+        ],
+        "cfg_handle_regex_list": [
+        ],
+        "login_wnd_class": "WeChatLogin",
+        "login_wnd_class_wildcards": [
+            "WeChatLogin"
+        ],
+        "main_wnd_class": "WeWorkWindow",
+        "main_wnd_class_wildcards": [
+            "WeWorkWindow"
+        ],
+        "config_path_suffix": "Global",
+        "config_file_list": [
+            "Config.cfg",
+            "Confi?.cfg"
+        ],
+        "config_addresses": [
+            "%data_dir%/Global/Config.cfg"
+        ],
+        "excluded_dir_list": [
+            "BrowserMetrics",
+            "Default",
+            "Dictionaries",
+            "extensions_crx_cache",
+            "Global",
+            "GraphiteDawnCache",
+            "GrShaderCache",
+            "Profiles",
+            "qtCef",
+            "Safe Browsing",
+            "segmentation_platform",
+            "ShaderCache",
+            "WeDrive"
+        ],
+        "sw_id_trims": {
+        }
+    },
+    "QQNT": {
+        "multirun": {
+            "natively": true
+        },
+        "anti-revoke": {},
+        "coexist": {
+            "natively": true
+        },
+        "wnd_class": {
+            "login": {
+                "9.9": [
+                    {
+                        "ClassNameWildcards": [
+                            "Chrome_WidgetWin_1"
+                        ]
+                    }
+                ]
+            },
+            "main": {
+                "9.9": [
+                    {
+                        "ClassNameWildcards": [
+                            "Chrome_WidgetWin_1"
+                        ]
+                    }
+                ]
+            }
+        },
+        "label": "QQNT",
+        "executable": "QQ.exe",
+        "executable_wildcards": [
+            "QQ.exe"
+        ],
+        "inst_path_guess_suffix": "Tencent\\QQNT\\QQ.exe",
+        "data_dir_guess_suffix": "Tencent\\QQNT",
+        "data_dir_check_suffix": "nt_qq",
+        "dll_dir_check_suffix": "QQNT.dll",
+        "patch_dll": "QQNT.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQNT",
+        "user_reg_sub_key": "Software\\Tencent\\QQNT",
+        "data_dir_name": "QQNT",
+        "mutant_handle_infos": [
+        ],
+        "cfg_handle_regex_list": [
+        ],
+        "login_wnd_class": "Chrome_WidgetWin_1",
+        "main_wnd_class": "Chrome_WidgetWin_1",
+        "main_wnd_class_wildcards": [
+            "Chrome_WidgetWin_1"
+        ],
+        "config_path_suffix": "nt_qq/global/nt_db",
+        "config_file_list": [
+            "login.db",
+            "sign.db"
+        ],
+        "config_addresses": [
+            "%data_dir%/nt_qq/global/nt_db/login.db",
+            "%data_dir%/nt_qq/global/nt_db/sign.db"
+        ],
+        "excluded_dir_list": [
+            "All Users",
+            "nt_data",
+            "nt_db",
+            "nt_qq",
+            "nt_temp",
+            "Tencent Files"
+        ],
+        "sw_id_trims": {
+            "QQ": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "TIM": [
+                0,
+                0,
+                0,
+                0
+            ]
+        }
+    },
+    "QQ": {
+        "multirun": {
+            "natively": true
+        },
+        "anti-revoke": {
+            "channel": {
+                "silence": {
+                    "label": "静默",
+                    "introduce": "不含防撤回提示",
+                    "author": [
+                        "huiyadanli"
+                    ]
+                }
+            },
+            "feature": {
+                "9.7": {
+                    "silence": {
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "68 ?? ?? ?? 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C ?? ?? ?? 56 50 68 ?? ?? ?? 56 FF",
+                                "51 ?? ?? ?? ?? 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C ?? ?? ?? ?? 50 68 ?? ?? ?? ?? FF 35"
+                            ],
+                            "modified": [
+                                "EB 09 90 90 90 ...",
+                                "EB 08 90 90 90 90 ..."
+                            ]
+                        }
+                    }
+                }
+            },
+            "precise": {
+                "9.7.23.29406": {
+                    "silence": {
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "68 68 BB 2D 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                                "68 68 BB 2D 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                                "51 68 D8 B7 2D 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C E8 B7 2D 56 50 68 5C A3 2B 56 FF 35"
+                            ],
+                            "modified": [
+                                "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                                "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 78 BB 2D 56 50 68 5C A3 2B 56 FF",
+                                "EB 08 90 90 90 90 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C E8 B7 2D 56 50 68 5C A3 2B 56 FF 35"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "coexist": {
+            "natively": true
+        },
+        "wnd_class": {
+            "login": {
+                "9.7": [
+                    {
+                        "ClassNameWildcards": [
+                            "TXGuiFoundation"
+                        ]
+                    }
+                ]
+            },
+            "main": {
+                "9.7": [
+                    {
+                        "ClassNameWildcards": [
+                            "TXGuiFoundation"
+                        ]
+                    }
+                ]
+            }
+        },
+        "label": "QQ",
+        "executable": "QQ.exe",
+        "executable_wildcards": [
+            "QQ.exe"
+        ],
+        "inst_path_guess_suffix": "Tencent\\QQ\\Bin\\QQ.exe",
+        "data_dir_guess_suffix": "Tencent\\QQ",
+        "data_dir_check_suffix": "All Users",
+        "dll_dir_check_suffix": "IM.dll",
+        "patch_dll": "IM.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQ",
+        "user_reg_sub_key": "Software\\Tencent\\QQ",
+        "data_dir_name": "Tencent Files",
+        "mutant_handle_infos": [
+        ],
+        "cfg_handle_regex_list": [
+        ],
+        "login_wnd_class": "TXGuiFoundation",
+        "main_wnd_class": "TXGuiFoundation",
+        "main_wnd_class_wildcards": [
+            "TXGuiFoundation"
+        ],
+        "config_path_suffix": "All Users\\QQ",
+        "config_file_list": [
+            "History.db"
+        ],
+        "config_addresses": [
+            "%data_dir%/All Users/QQ/History.db"
+        ],
+        "excluded_dir_list": [
+            "All Users",
+            "nt_data",
+            "nt_db",
+            "nt_qq",
+            "nt_temp",
+            "Tencent Files"
+        ],
+        "sw_id_trims": {
+            "QQNT": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "TIM": [
+                0,
+                0,
+                0,
+                0
+            ]
+        }
+    },
+    "TIM": {
+        "multirun": {
+            "natively": true
+        },
+        "anti-revoke": {
+            "channel": {
+                "silence": {
+                    "label": "静默",
+                    "introduce": "不含防撤回提示",
+                    "author": [
+                        "huiyadanli"
+                    ]
+                }
+            },
+            "feature": {
+                "3.4": {
+                    "silence": {
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "68 ?? ?? ?? 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C ?? ?? ?? 56 50 68 ?? ?? ?? 56 FF",
+                                "51 ?? ?? ?? ?? 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C ?? ?? ?? ?? 50 68 ?? ?? ?? ?? FF 35"
+                            ],
+                            "modified": [
+                                "EB 09 90 90 90 ...",
+                                "EB 08 90 90 90 90 ..."
+                            ]
+                        }
+                    }
+                }
+            },
+            "precise": {
+                "3.4.8.22121": {
+                    "silence": {
+                        "%dll_dir%/IM.dll": {
+                            "original": [
+                                "68 F8 2B 21 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                                "68 F8 2B 21 56 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                                "51 68 68 28 21 56 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C 78 28 21 56 50 68 28 50 1F 56 FF 35"
+                            ],
+                            "modified": [
+                                "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                                "EB 09 90 90 90 8B 08 50 FF 51 78 85 C0 79 2D 8D 45 0C C7 45 0C 08 2C 21 56 50 68 28 50 1F 56 FF",
+                                "EB 08 90 90 90 90 56 FF 50 78 85 C0 79 39 8D 45 0C C7 45 0C 78 28 21 56 50 68 28 50 1F 56 FF 35"
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "coexist": {
+            "natively": true
+        },
+        "wnd_class": {
+            "login": {
+                "3.4": [
+                    {
+                        "ClassNameWildcards": [
+                            "TXGuiFoundation"
+                        ]
+                    }
+                ]
+            },
+            "main": {
+                "3.4": [
+                    {
+                        "ClassNameWildcards": [
+                            "TXGuiFoundation"
+                        ]
+                    }
+                ]
+            }
+        },
+        "label": "TIM",
+        "executable": "TIM.exe",
+        "executable_wildcards": [
+            "TIM.exe"
+        ],
+        "inst_path_guess_suffix": "Tencent\\TIM\\Bin\\TIM.exe",
+        "data_dir_guess_suffix": "Tencent\\TIM",
+        "data_dir_check_suffix": "All Users",
+        "dll_dir_check_suffix": "IM.dll",
+        "patch_dll": "IM.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TIM",
+        "user_reg_sub_key": "Software\\Tencent\\TIM",
+        "data_dir_name": "Tencent Files",
+        "mutant_handle_infos": [
+        ],
+        "cfg_handle_regex_list": [
+        ],
+        "login_wnd_class": "TXGuiFoundation",
+        "main_wnd_class": "TXGuiFoundation",
+        "main_wnd_class_wildcards": [
+            "TXGuiFoundation"
+        ],
+        "config_path_suffix": "All Users\\TIM",
+        "config_file_list": [
+            "History.db"
+        ],
+        "config_addresses": [
+            "%data_dir%/All Users/TIM/History.db"
+        ],
+        "excluded_dir_list": [
+            "All Users",
+            "nt_data",
+            "nt_db",
+            "nt_qq",
+            "nt_temp",
+            "Tencent Files"
+        ],
+        "sw_id_trims": {
+            "QQ": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "QQNT": [
+                0,
+                0,
+                0,
+                0
+            ]
+        }
+    }
+}
