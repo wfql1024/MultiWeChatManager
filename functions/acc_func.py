@@ -16,7 +16,6 @@ from tkinter import messagebox, filedialog
 from typing import Dict, List, Tuple, Optional
 
 import psutil
-import uiautomation
 import win32con
 import win32gui
 import win32process
@@ -27,13 +26,14 @@ from functions import subfunc_file
 from functions.acc_func_impl import AccInfoFuncImpl
 from functions.func_tool import FuncTool
 from functions.sw_func import SwOperator, SwInfoFunc
-from public_class.enums import AccKeys, SW, LocalCfg, MultirunMode, CfgStatus, RemoteCfg, WndType
+from public_class.enums import AccKeys, SW, LocalCfg, MultirunMode, CfgStatus, WndType
 from public_class.global_members import GlobalMembers
 from resources import Constants
 from resources.config import Config
 from resources.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
-from utils.encoding_utils import StringUtils, VersionUtils
+from utils.encoding_utils import StringUtils
+from utils.hwnd_utils import HwndGetter, Win32HwndGetter
 from utils.logger_utils import mylogger as logger, Printer
 
 
@@ -78,7 +78,7 @@ class AccOperator:
         Printer().debug(cached_class)
         if cached_class is None:
             return None
-        sw_hwnd = hwnd_utils.win32_wait_hwnd_exclusively_by_class(excluded_hwnd_list, cached_class, 1)
+        sw_hwnd = Win32HwndGetter.win32_wait_hwnd_exclusively_by_class(excluded_hwnd_list, cached_class, 1)
         if sw_hwnd is None:
             return None
         return sw_hwnd
@@ -86,7 +86,7 @@ class AccOperator:
     @classmethod
     def _open_acc_return_hwnd_and_pid(cls, sw, acc, all_excluded_hwnds):
         """对单个账号尝试打开并返回pid和窗口hwnd"""
-        login_wildcards, = subfunc_file.get_remote_cfg(sw, login_wnd_class_wildcards=None)
+        login_rules_dicts = SwInfoFunc.get_sw_wnd_class_check_dict(sw, WndType.LOGIN)
         # 调取配置,打开登录窗口 *******************************************************************
         if AccInfoFunc.is_acc_coexist(sw, acc):
             # 共存程序账号: 尝试查找有无同名打开进程, 有则需要去除互斥体, 共存账号无需替换配置文件
@@ -108,8 +108,8 @@ class AccOperator:
         # Printer().debug(f"通过缓存类名获取到的登录窗口：{sw_hwnd}")
         if sw_hwnd is None:
             # 从精确类名未能获取,只能用类名通配模式来获取,并缓存起来
-            sw_hwnd, class_name = hwnd_utils.uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
-                all_excluded_hwnds, sw_proc_pid, login_wildcards)
+            sw_hwnd, class_name = HwndGetter.uiautomation_wait_hwnd_exclusively_by_pid_and_rules_dicts(
+                all_excluded_hwnds, sw_proc_pid, login_rules_dicts)
             if class_name is not None:
                 subfunc_file.update_sw_acc_data(sw, acc, login_wnd_class=class_name)
         if sub_proc:
@@ -185,6 +185,7 @@ class AccOperator:
         ddl_time = time.time() + 30
         while time.time() > ddl_time:
             # 判断所有 hwnd 是否都不存在了
+            print("登录完成, 刷新...")
             all_closed = all(not win32gui.IsWindow(hwnd) for hwnd in hwnds)
             if all_closed:
                 root.after(0, login_ui.refresh_frame, sw)
@@ -215,6 +216,7 @@ class AccOperator:
         all_opened_hwnds = []  # 记录新打开的登录窗口
         all_excluded_hwnds = []  # 记录要排除的已存在的登录窗口
         for sw, accounts in login_dict.items():
+            start_time = time.time()
             Printer().vital(f"{sw}登录")
             if not isinstance(accounts, list) or len(accounts) == 0:
                 continue
@@ -228,21 +230,29 @@ class AccOperator:
             SwOperator.kill_sw_multiple_processes(sw)
             kill_idle: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.KILL_IDLE_LOGIN_WND)
             kill_idle = True if kill_idle is True else False  # 是否需要关闭闲置的登录窗口
+            Printer().print_vn(f"[INFO]需要关闭闲置窗口: {kill_idle}")
             remained_idle_wnd_list = SwOperator.get_idle_login_wnd_and_close_if_necessary(sw, kill_idle)
+            unlock_cfg: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.UNLOCK_CFG)
+            unlock_cfg = True if unlock_cfg is True else False  # 是否需要解锁配置文件
+            Printer().print_vn(f"[INFO]需要解锁配置文件: {unlock_cfg}")
             all_excluded_hwnds.extend(remained_idle_wnd_list)
-            # 检查所有pid及互斥体情况 -------------------------------------------------------------------
-            SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
+            # 根据是否全局多开, 检查记录所有pid及互斥体情况 -------------------------------------------------------------------
+            if multirun_mode == MultirunMode.FREELY_MULTIRUN:
+                print("[INFO]全局多开模式下, 不含有互斥体...")
+                SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw, False)
+            else:
+                SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
             # 开始平台的账号列表登录 -------------------------------------------------------------------
             sw_opened_hwnds = []  # 当前平台的登录窗口列表
 
-            start_time = time.time()
             for j in range(len(login_dict[sw])):
-                # 解锁配置文件锁
-                pids_has_mutex = SwInfoFunc.get_pids_has_mutex_from_record(sw)
-                handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
-                    pids_has_mutex, config_wildcards)
-                Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
-                handle_utils.pywinhandle_close_handles(handle_infos)
+                if unlock_cfg:
+                    # 解锁配置文件锁
+                    pids_has_mutex = SwInfoFunc.get_pids_has_mutex_from_record(sw)
+                    handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                        pids_has_mutex, config_wildcards)
+                    Printer().print_vn(f"[INFO]查询到登录配置文件锁：{handle_infos}")
+                    handle_utils.pywinhandle_close_handles(handle_infos)
                 sw_hwnd, sw_proc_pid = cls._open_acc_return_hwnd_and_pid(sw, accounts[j], all_excluded_hwnds)
                 if sw_hwnd is not None:
                     if sw_hwnd not in all_opened_hwnds:
@@ -314,21 +324,16 @@ class AccOperator:
         if method not in ["use", "add"]:
             logger.error("未知字段：" + method)
             return False, "未知字段"
-        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
-        if not data_path:
-            return False, "无法获取WeChat数据路径"
-        config_path_suffix, cfg_basename_list = subfunc_file.get_remote_cfg(
-            sw, config_path_suffix=None, config_file_list=None)
+        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        if not isinstance(config_addresses, list):
+            return False, "无法获取登录配置文件地址"
 
-        origin_acc_dict = dict()
         # 构建相关文件列表
-        for cfg_basename in cfg_basename_list:
-            # 拼接出源配置路径
-            origin_cfg_path = os.path.join(
-                str(data_path), str(config_path_suffix), str(cfg_basename)).replace("\\", "/")
-            acc_cfg_item = f"{acc}_{cfg_basename}"
-            acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), acc_cfg_item)
-                            .replace("\\", "/"))
+        origin_acc_dict = dict()
+        for config_address in config_addresses:
+            origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, config_address)
+            acc_cfg_path = os.path.join(os.path.dirname(origin_cfg_path), f"{acc}_{os.path.basename(origin_cfg_path)}")
+            acc_cfg_path = acc_cfg_path.replace("\\", "/")
             origin_acc_dict.update({origin_cfg_path: acc_cfg_path})
 
         paths_to_del = list(origin_acc_dict.keys()) if method == "use" else list(origin_acc_dict.values())
@@ -384,24 +389,7 @@ class AccOperator:
                 "建议在只登录了一个账号时，或刚刚登录了此账号时进行配置，\n成功率更高。将唤起登录窗口，请勿重复登录。是否继续？"
         ):
             # 手动登录原始程序
-            all_excluded_hwnds = []
-            SwOperator.kill_sw_multiple_processes(sw)
-            remained_idle_wnd_list = SwOperator.get_idle_login_wnd_and_close_if_necessary(sw, False)
-            all_excluded_hwnds.extend(remained_idle_wnd_list)
-            SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
-            sw_proc, sub_proc = SwOperator.open_sw(sw)
-            sw_proc_pid = sw_proc.pid if sw_proc else None
-            login_wnd_class, = subfunc_file.get_remote_cfg(sw, login_wnd_class=None)
-            sw_hwnd = cls._get_now_login_hwnd_from_cache(
-                sw, account, all_excluded_hwnds)
-            if sw_hwnd is None:
-                # 从精确类名未能获取,只能用类名通配模式来获取,并缓存起来
-                sw_hwnd, class_name = hwnd_utils.uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
-                    all_excluded_hwnds, sw_proc_pid, [login_wnd_class])
-                if class_name is not None:
-                    subfunc_file.update_sw_acc_data(sw, account, login_wnd_class=class_name)
-            if sub_proc:
-                sub_proc.terminate()
+            sw_hwnd, msg = SwOperator.open_sw_and_return_hwnd(sw)
             if sw_hwnd:
                 time.sleep(1)
                 hwnd_utils.bring_hwnd_next_to_left_of_hwnd2(sw_hwnd, root.winfo_id())
@@ -410,7 +398,7 @@ class AccOperator:
                     if success is True:
                         created_list_text = "\n".join(result)
                         messagebox.showinfo("成功", f"已生成：\n{created_list_text}")
-                hwnd_utils.close_a_wnd_by_win32_classname(login_wnd_class)
+                hwnd_utils.try_close_hwnds_in_set_and_return_remained({sw_hwnd})
             else:
                 messagebox.showerror("错误", "打开登录窗口失败")
         root.after(0, login_ui.refresh_frame, sw)
@@ -422,6 +410,7 @@ class AccOperator:
         login_ui = root_class.login_ui
         root = root_class.root
         data_dir = root_class.sw_classes[sw].data_dir
+        Printer().vital("静默获取")
 
         # 线程执行检测昵称和头像
         need_to_notice = []
@@ -440,20 +429,23 @@ class AccOperator:
         # print(accounts_need_to_get_avatar, accounts_need_to_get_nickname)
         # 2. 对待获取url的账号遍历尝试获取
         if len(accounts_need_to_get_avatar) > 0:
+            Printer().print_vn(f"无头像: {accounts_need_to_get_avatar}")
             need_to_notice.append(
                 FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_avatar_url_from_file(
                     sw, accounts_need_to_get_avatar, data_dir))
             need_to_notice.append(AccInfoFunc.get_avatar_from_other_sw(sw, accounts_need_to_get_avatar))
         # 3. 对待获取昵称的账号尝试遍历获取
         if len(accounts_need_to_get_nickname) > 0:
+            Printer().print_vn(f"无昵称: {accounts_need_to_get_nickname}")
             need_to_notice.append(
                 FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_nickname_from_file(
                     sw, accounts_need_to_get_nickname, data_dir))
             need_to_notice.append(AccInfoFunc.get_nickname_from_other_sw(sw, accounts_need_to_get_nickname))
         # 4. 偷偷创建配置文件
-        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(sw, data_dir)
+        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(sw)
         if curr_config_acc is not None:
-            if AccInfoFunc.get_sw_acc_login_cfg(sw, curr_config_acc, data_dir) == CfgStatus.NO_CFG.value:
+            Printer().print_vn(f"当前配置账号: {curr_config_acc}")
+            if AccInfoFunc.get_sw_acc_login_cfg(sw, curr_config_acc) == CfgStatus.NO_CFG.value:
                 changed, _ = cls.operate_acc_config('add', sw, curr_config_acc)
                 need_to_notice.append(changed)
         # 5. 通知
@@ -477,8 +469,8 @@ class AccOperator:
                 # 先恢复窗口，再模拟双击以激活窗口
                 hwnd_utils.restore_window(main_hwnd)
                 time.sleep(0.2)
-                # hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
-                # hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+                hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
+                hwnd_utils.do_click_in_wnd(main_hwnd, 8, 8)
         else:
             hwnd_utils.restore_window(main_hwnd)
 
@@ -565,21 +557,16 @@ echo 所有互斥体处理完成
         return content
 
     @staticmethod
-    def _generate_replace_cfg_cmds(sw, acc, data_path):
+    def _generate_replace_cfg_cmds(sw, acc):
         """生成用于替换配置文件的bat指令"""
-        config_path_suffix, cfg_items = subfunc_file.get_remote_cfg(
-            sw, config_path_suffix=None, config_file_list=None)
+        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+
         # 构建相关文件列表
         replace_cmd_list = []
-        for item in cfg_items:
-            # 拼接出源配置路径
-            origin_cfg_path = os.path.join(
-                str(data_path), str(config_path_suffix), str(item)).replace("/", "\\")
-            # 提取源配置文件的后缀
-            item_suffix = item.split(".")[-1]
-            acc_cfg_item = f"{acc}.{item_suffix}"
-            acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), acc_cfg_item)
-                            .replace("/", "\\"))
+        for addr in config_addresses:
+            origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, addr).replace("/", "\\")
+            acc_cfg_path = os.path.join(os.path.dirname(origin_cfg_path), f"{acc}_{os.path.basename(origin_cfg_path)}")
+            acc_cfg_path = acc_cfg_path.replace("/", "\\")
             remove_cmd = f'echo y | del "{origin_cfg_path}"'
             copy_cmd = f'echo y | copy "{acc_cfg_path}" "{origin_cfg_path}"'
             replace_cmd = f"{remove_cmd}\n{copy_cmd}"
@@ -758,12 +745,10 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
         :return: 是否成功
         """
         # 确保可以创建快捷启动
-        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
         sw_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
-        if not data_path or not sw_path:
+        if not sw_path:
             messagebox.showerror("错误", "无法获取数据路径")
             return False
-        data_path = data_path.replace("/", "\\")
         sw_path = sw_path.replace("/", "\\")
         handle_exe_path = Config.HANDLE_EXE_PATH.replace("/", "\\")
         # 头像
@@ -780,7 +765,7 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
             mutex_names.append(mutex_name)
         print(f"互斥体名称列表：{mutex_names}")
 
-        replace_cfg_cmd = cls._generate_replace_cfg_cmds(sw, acc, data_path)
+        replace_cfg_cmd = cls._generate_replace_cfg_cmds(sw, acc)
         operate_list = []
         operate_list.extend(cls._generate_start_cmds_if_freely_multirun(sw_path))
         operate_list.extend(cls._generate_start_cmds_for_handle(
@@ -978,42 +963,38 @@ class AccInfoFunc:
         return display_name
 
     @staticmethod
-    def get_sw_acc_login_cfg(sw, account, data_path) -> str:
+    def get_sw_acc_login_cfg(sw, account) -> str:
         """
         通过账号的配置状态
         :param sw: 选择的软件标签
-        :param data_path: 数据存储路径
         :param account: 账号
         :return: 配置状态
         """
-        if not data_path:
-            return "无配置路径"
-        config_path_suffix, cfg_basename_list = subfunc_file.get_remote_cfg(
-            sw, config_path_suffix=None, config_file_list=None)
-        if not isinstance(cfg_basename_list, list) or len(cfg_basename_list) == 0:
-            return "无法获取配置路径"
-        # 版本更新,数据文件重命名
-        for cfg_basename in cfg_basename_list:
+        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        if not isinstance(config_addresses, list) or len(config_addresses) == 0:
+            return "无法获取登录配置文件地址"
+        for addr in config_addresses:
+            origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, addr)
+            origin_cfg_basename = os.path.basename(origin_cfg_path)
             # 旧版
-            file_suffix = cfg_basename.split(".")[-1]
-            old_cfg_basename = f"{account}.{file_suffix}"
-            old_acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), old_cfg_basename)
+            old_file_suffix = origin_cfg_basename.split(".")[-1]
+            old_acc_cfg_basename = f"{account}.{old_file_suffix}"
+            old_acc_cfg_path = (os.path.join(os.path.dirname(origin_cfg_path), old_acc_cfg_basename)
                                 .replace("\\", "/"))
             # 新版
-            cfg_basename = f"{account}_{cfg_basename}"
-            acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), cfg_basename)
+            new_acc_cfg_basename = f"{account}_{origin_cfg_basename}"
+            acc_cfg_path = (os.path.join(os.path.dirname(origin_cfg_path), new_acc_cfg_basename)
                             .replace("\\", "/"))
             # 如果无新版配置但存在旧版配置，复制为新版
             if os.path.exists(old_acc_cfg_path) and not os.path.exists(acc_cfg_path):
                 shutil.copy2(old_acc_cfg_path, acc_cfg_path)
                 print(f"复制旧版配置文件：{old_acc_cfg_path} -> {acc_cfg_path}")
-
-        cfg_basename = cfg_basename_list[0]
-        cfg_basename = f"{account}_{cfg_basename}"
-        acc_cfg_path = (os.path.join(str(data_path), str(config_path_suffix), cfg_basename)
-                        .replace("\\", "/"))
-        if os.path.exists(acc_cfg_path):
-            mod_time = os.path.getmtime(acc_cfg_path)
+        one_origin_cfg_path = (SwInfoFunc.resolve_sw_path(sw, config_addresses[0]).replace("\\", "/"))
+        one_acc_cfg_path = os.path.join(
+            os.path.dirname(one_origin_cfg_path),
+            f"{account}_{os.path.basename(one_origin_cfg_path)}")
+        if os.path.exists(one_acc_cfg_path):
+            mod_time = os.path.getmtime(one_acc_cfg_path)
             date = datetime.datetime.fromtimestamp(mod_time)
             return f"{date.year % 100:02}/{date.month:02}/{date.day:02} {date.hour:02}:{date.minute:02}"
         else:
@@ -1106,9 +1087,9 @@ class AccInfoFunc:
         return changed
 
     @staticmethod
-    def get_curr_wx_id_from_config_file(sw, data_dir):
+    def get_curr_wx_id_from_config_file(sw):
         # Printer().debug(FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw))
-        return FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_curr_wx_id_from_config_file(sw, data_dir)
+        return FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_curr_wx_id_from_config_file(sw)
 
     @staticmethod
     def is_acc_coexist(sw, acc):
@@ -1222,12 +1203,10 @@ class AccInfoFunc:
         inst_dir = os.path.dirname(inst_path)
         if data_dir is None or os.path.isdir(data_dir) is False:
             return False, "数据路径不存在"
-        origin_exe, excluded_dirs, executable_wildcards, origin_login_wnd_class = subfunc_file.get_remote_cfg(
+        excluded_dirs, executable_wildcards = subfunc_file.get_remote_cfg(
             sw,
-            executable=None,
             excluded_dir_list=None,
-            executable_wildcards=None,
-            login_wnd_class=None,
+            executable_wildcards=None
         )
         if not isinstance(executable_wildcards, list):
             messagebox.showerror("错误", f"{sw}平台未适配")
@@ -1280,35 +1259,21 @@ class AccInfoFunc:
             acc_pid_dict[v] = k
         Printer().print_vn(f"进程账号字典反转, 用时：{time.time() - start_time:.4f} 秒")
         Printer().print_vn(acc_pid_dict)
-        # 先从pid_mutex加载回互斥体情况,再更新
-        _, has_mutex = SwInfoFunc.update_has_mutex_from_pid_mutex(sw)
-        multirun_mode = sw_class.multirun_mode
+        # 先将账号对应pid记录, 再从pid_mutex加载回互斥体情况
         for acc in all_acc_list:
             pid = acc_pid_dict.get(acc, None)
             if pid is None:
                 subfunc_file.update_sw_acc_data(sw, acc, pid=None, has_mutex=False)
             else:
                 subfunc_file.update_sw_acc_data(sw, acc, pid=pid)
-                if multirun_mode == MultirunMode.FREELY_MULTIRUN:
-                    subfunc_file.update_sw_acc_data(sw, acc, has_mutex=False)
+        _, has_mutex = SwInfoFunc.update_has_mutex_from_pid_mutex(sw)
         # 对账号添加窗口类名属性
+        origin_login_wnd_class = SwInfoFunc.get_sw_original_wnd_class_name(sw, WndType.LOGIN)
         for acc in all_acc_list:
             login_wnd_class, = subfunc_file.get_sw_acc_data(sw, acc, login_wnd_class=None)
             if login_wnd_class is None:
                 subfunc_file.update_sw_acc_data(sw, acc, login_wnd_class=origin_login_wnd_class)
         return True, (acc_list_dict, has_mutex)
-
-    @staticmethod
-    def get_sw_wnd_class_check_dict(sw, wnd_type) -> Optional[dict]:
-        """从远程配置中获取适合当前版本的窗口类名检查字典"""
-        curr_ver = SwInfoFunc.calc_sw_ver(sw)
-        type_vers_dict:dict = subfunc_file.get_remote_cfg(sw, RemoteCfg.WND_CLASS, wnd_type)
-        if not isinstance(type_vers_dict, dict):
-            return None
-        compatible_version = VersionUtils.pkg_find_compatible_version(curr_ver, list(type_vers_dict.keys()))
-        if compatible_version is None:
-            return None
-        return type_vers_dict[compatible_version]
 
     @classmethod
     def get_main_hwnd_of_accounts(cls, sw, acc_list) -> Tuple[Optional[dict], str]:
@@ -1317,50 +1282,61 @@ class AccInfoFunc:
         返回结果字典, 信息
         """
         # Printer().debug(sw, acc_list)
-        wnd_class_check_dict = cls.get_sw_wnd_class_check_dict(sw, WndType.MAIN)
-        if wnd_class_check_dict is None:
+        wnd_class_check_dicts = SwInfoFunc.get_sw_wnd_class_check_dict(sw, WndType.MAIN)
+        if wnd_class_check_dicts is None:
             return None, f"{sw}平台未适配"
         acc_hwnd_dict = {}
         for acc in acc_list:
             pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
-            hwnd_list = hwnd_utils.uiautomation_get_hwnds_by_pid_and_rules_dict(pid, wnd_class_check_dict)
-            Printer().debug(acc, pid, hwnd_list)
-            if len(hwnd_list) == 0:
-                continue
-            if len(hwnd_list) == 1:
-                acc_hwnd_dict[acc] = hwnd_list[0]
+            Printer().print_vn(f"账号{acc} pid:{pid} -----------------------------------------------")
+            hwnds_of_pid = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
+            Printer().print_vn(f"进程{pid}的窗口总数: {len(hwnds_of_pid)}")
+            for check_dict in wnd_class_check_dicts:
+                hwnd_list = HwndGetter.uiautomation_filter_hwnds_by_rules_dict(hwnds_of_pid, check_dict)
+                if len(hwnd_list) == 1:
+                    acc_hwnd_dict[acc] = hwnd_list[0]
+                    Printer().print_vn(f"账号{acc}绑定窗口{hwnd_list[0]}")
+                    break
         return acc_hwnd_dict, ""
 
     @classmethod
     def bind_main_wnd_to_accounts_in_sw(cls, sw, acc_list):
         """为平台的账号列表绑定对应的主窗口, 并修改标题"""
+        Printer().vital("账号-窗口绑定")
         res, msg = cls.get_main_hwnd_of_accounts(sw, acc_list)
-        Printer().debug(f"账号-窗口绑定结果:{res}")
+        Printer().print_vn(f"结果:{res}")
         if isinstance(res, dict):
             for acc, hwnd in res.items():
-                subfunc_file.update_sw_acc_data(sw, acc, main_hwnd=hwnd)
-                acc_display_name = cls.get_acc_origin_display_name(sw, acc)
-                sw_display_name = SwInfoFunc.get_sw_origin_display_name(sw)
-                hwnd_utils.set_window_title(hwnd, f"{sw_display_name} - {acc_display_name}")
+                cls._record_hwnd_and_set_title(sw, acc, hwnd)
+        Printer().print_last()
+
+    @classmethod
+    def _record_hwnd_and_set_title(cls, sw, acc, hwnd):
+        """记录窗口句柄并设置标题"""
+        subfunc_file.update_sw_acc_data(sw, acc, main_hwnd=hwnd)
+        acc_display_name = cls.get_acc_origin_display_name(sw, acc)
+        sw_display_name = SwInfoFunc.get_sw_origin_display_name(sw)
+        hwnd_utils.set_window_title(hwnd, f"{sw_display_name} - {acc_display_name}")
 
     @staticmethod
     def is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
-        """检测窗口是否是某个账号的主窗口"""
-        # hwnd_utils.restore_window(hwnd)
-        Printer().debug(hwnd, sw, acc)
-        pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
-        if pid is None:
-            return False
-        # 判断hwnd是否属于指定的pid
-        if hwnd_utils.get_hwnd_details_of_(hwnd)["pid"] != pid:
-            return False
-        expected_classes, = subfunc_file.get_remote_cfg(sw, main_wnd_class_wildcards=None)
-        class_name = win32gui.GetClassName(hwnd)
-        for expected_class in expected_classes:
-            if fnmatch(class_name, expected_class):
-                return True
-            continue
-        return False
+        ...
+        # """检测窗口是否是某个账号的主窗口"""
+        # # hwnd_utils.restore_window(hwnd)
+        # Printer().debug(hwnd, sw, acc)
+        # pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
+        # if pid is None:
+        #     return False
+        # # 判断hwnd是否属于指定的pid
+        # if hwnd_utils.get_hwnd_details_of_(hwnd)["pid"] != pid:
+        #     return False
+        # expected_classes, = subfunc_file.get_remote_cfg(sw, main_wnd_class_wildcards=None)
+        # class_name = win32gui.GetClassName(hwnd)
+        # for expected_class in expected_classes:
+        #     if fnmatch(class_name, expected_class):
+        #         return True
+        #     continue
+        # return False
 
     @classmethod
     def get_acc_details(cls, sw, account):
@@ -1368,10 +1344,9 @@ class AccInfoFunc:
         details = {}
 
         # 头像,配置文件状态比较特殊,需要看账号类型以及是否链接来分别判定
-        data_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
         linked_acc = cls.get_real_acc(sw, account)
         coexist = cls.is_acc_coexist(sw, account)
-        config_status = account if coexist else AccInfoFunc.get_sw_acc_login_cfg(sw, account, data_dir)
+        config_status = account if coexist else AccInfoFunc.get_sw_acc_login_cfg(sw, account)
         if coexist and linked_acc == account:
             # 共存程序但是没有登录链接过账号
             img = SwInfoFunc.get_sw_logo(sw)
@@ -1443,12 +1418,10 @@ class AccInfoFunc:
         # 一个确定和取消的提示框
         if messagebox.askyesno("提示", "请先手动将平台对应窗口置于前台，是否完成？"):
             # 将桌面中可见的窗口从顶部到底部遍历
-            hwnds = hwnd_utils.get_visible_windows_sorted_by_top()
+            hwnds = Win32HwndGetter.get_visible_windows_by_zOrder()
+            pid, = subfunc_file.get_sw_acc_data(sw, account, pid=None)
             for hwnd in hwnds:
                 print(hwnd_utils.get_hwnd_details_of_(hwnd)["class"])
-                if cls.is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, account):
-                    subfunc_file.update_sw_acc_data(sw, account, main_hwnd=hwnd)
-                    sw_display_name = SwInfoFunc.get_sw_origin_display_name(sw)
-                    display_name = cls.get_acc_origin_display_name(sw, account)
-                    hwnd_utils.set_window_title(hwnd, f"{sw_display_name} - {display_name}")
+                if hwnd_utils.get_hwnd_details_of_(hwnd)["pid"] == pid:
+                    cls._record_hwnd_and_set_title(sw, account, hwnd)
                     break

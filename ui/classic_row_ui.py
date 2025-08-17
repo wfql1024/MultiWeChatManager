@@ -140,7 +140,7 @@ class LoginCkRow(CkBoxRow, ABC):
         sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
         start_time = time.time()
 
-        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw, self.data_dir)
+        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw)
 
         # 未登录账号中，隐藏的账号不显示
         hidden, = subfunc_file.get_sw_acc_data(self.sw, account, hidden=None)

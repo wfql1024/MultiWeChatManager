@@ -7,7 +7,6 @@ from PIL import ImageTk, Image
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
-from functions.sw_func import SwInfoFunc
 from public_class.custom_classes import Condition
 from public_class.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
 from public_class.global_members import GlobalMembers
@@ -157,7 +156,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         accounts = self.data_src
         login_status = self.table_tag
 
-        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw, self.data_dir)
+        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw)
 
         for account in accounts:
             # 未登录账号中，隐藏的账号不显示

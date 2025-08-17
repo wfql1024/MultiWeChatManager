@@ -51,32 +51,40 @@ class LocalCfg(str, Enum):
 
     # 设置项中的全局设置
     SCREEN_SIZE = "screen_size"
-    HIDE_WND = "hide_wnd"
-    ENABLE_NEW_FUNC = "enable_new_func"
-    DISABLE_SORT = "disable_sort"
-    ENABLE_SORT = "enable_sort"
-    ROOT_TAB = "root_tab"
-    MNG_TAB = "mng_tab"
-    LOGIN_TAB = "login_tab"
-    SCALE = "scale"
-    SIGN_VISIBLE = "sign_visible"
-    HIDDEN_SORT = "hidden_sort"
-    AUTO_START_SORT = "auto_start_sort"
-    ALL_SORT = "all_sort"
-    AUTO_PRESS = "auto_press"
-    CALL_MODE = "call_mode"
-    ENCRYPTED_USERNAME = "encrypted_username"
-    ENCRYPTED_PASSWORD = "encrypted_password"
-    NEXT_CHECK_TIME = "next_check_time"
     USE_PROXY = "use_proxy"
     PROXY_IP = "proxy_ip"
     PROXY_PORT = "proxy_port"
     PROXY_USERNAME = "proxy_username"
     PROXY_PWD = "proxy_pwd"
-    USE_TXT_AVT = "txt_avt"
+    # -软件相关
+    ENABLE_NEW_FUNC = "enable_new_func"
+    NEXT_CHECK_TIME = "next_check_time"
     USED_TRAY = "used_tray"
     USED_REFRESH = "used_refresh"
     USED_SIDEBAR = "used_sidebar"
+    # -排序相关
+    DISABLE_SORT = "disable_sort"
+    ENABLE_SORT = "enable_sort"
+    HIDDEN_SORT = "hidden_sort"
+    AUTO_START_SORT = "auto_start_sort"
+    ALL_SORT = "all_sort"
+    # -标签页相关
+    ROOT_TAB = "root_tab"
+    MNG_TAB = "mng_tab"
+    LOGIN_TAB = "login_tab"
+    # -视图相关
+    SCALE = "scale"
+    SIGN_VISIBLE = "sign_visible"
+    USE_TXT_AVT = "txt_avt"
+    # -登录相关
+    HIDE_WND = "hide_wnd"
+    KILL_IDLE_LOGIN_WND = "kill_idle_login_wnd"
+    UNLOCK_CFG = "unlock_cfg"
+    ALL_HAS_MUTEX = "all_has_mutex_by_default"
+    CALL_MODE = "call_mode"
+    ENCRYPTED_USERNAME = "encrypted_username"
+    ENCRYPTED_PASSWORD = "encrypted_password"
+    AUTO_PRESS = "auto_press"
 
     # 设置项中的平台设置
     INST_PATH = "inst_path"
@@ -91,7 +99,6 @@ class LocalCfg(str, Enum):
     LOGOUT_SORT = "logout_sort"
     STATE = "state"
     NOTE = "note"
-    KILL_IDLE_LOGIN_WND = "kill_idle_login_wnd"
     COEXIST_MODE = "coexist_mode"
 
 
@@ -99,6 +106,7 @@ class WndType(str, Enum):
     """窗口类型"""
     MAIN = "main"
     LOGIN = "login"
+
 
 class SwStates(str, Enum):
     """平台状态"""

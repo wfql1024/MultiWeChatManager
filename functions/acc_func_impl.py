@@ -2,6 +2,7 @@ import os
 import re
 
 from functions import subfunc_file
+from functions.sw_func import SwInfoFunc
 from resources import Config
 from utils import image_utils
 from utils.logger_utils import mylogger as logger
@@ -20,7 +21,7 @@ class AccInfoFuncImpl:
         return False
 
     @staticmethod
-    def get_curr_wx_id_from_config_file(sw, data_dir):
+    def get_curr_wx_id_from_config_file(sw):
         return None
 
 
@@ -90,14 +91,13 @@ class WeChatAccInfoFuncImpl(AccInfoFuncImpl):
         return changed
 
     @staticmethod
-    def get_curr_wx_id_from_config_file(sw, data_dir):
+    def get_curr_wx_id_from_config_file(sw):
         # Printer().debug("进入微信的查找当前微信ID的方法")
-        config_path_suffix, config_files = subfunc_file.get_remote_cfg(
-            sw, config_path_suffix=None, config_file_list=None)
-        if config_files is None or len(config_files) == 0:
+        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        if not isinstance(config_addresses, list) or len(config_addresses) == 0:
             return None
-        file = config_files[0]
-        config_data_path = os.path.join(str(data_dir), str(config_path_suffix), str(file)).replace("\\", "/")
+        config_address = config_addresses[0]
+        config_data_path = SwInfoFunc.resolve_sw_path(sw, config_address)
         if os.path.isfile(config_data_path):
             with open(config_data_path, 'r', encoding="utf-8", errors="ignore") as f:
                 acc_info = f.read()

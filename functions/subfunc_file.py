@@ -77,7 +77,7 @@ def read_remote_cfg_in_rules():
     :return:
     """
     # 获取存储的日期
-    next_check_time_str = fetch_global_setting_or_set_default_or_none("next_check_time")
+    next_check_time_str = fetch_global_setting_or_set_default_or_none(LocalCfg.NEXT_CHECK_TIME)
     if not isinstance(next_check_time_str, str):
         next_check_time = dt.datetime.today().date()
         today = dt.datetime.today().date()
@@ -93,7 +93,7 @@ def read_remote_cfg_in_rules():
             # 更新 next_check_time 为明天
             next_check_time = today + dt.timedelta(days=1)
             next_check_time_str = next_check_time.strftime("%Y-%m-%d")
-            save_a_global_setting_and_callback("next_check_time", next_check_time_str)
+            save_a_global_setting_and_callback(LocalCfg.NEXT_CHECK_TIME, next_check_time_str)
             return config_data
         else:
             # 失败加载本地

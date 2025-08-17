@@ -14,10 +14,9 @@ from functions.sw_func import SwInfoFunc, SwOperator
 from public_class.enums import LocalCfg, MultirunMode, RemoteCfg, CallMode
 from public_class.global_members import GlobalMembers
 from resources import Strings, Config
-from ui import sidebar_ui
 from ui.wnd_ui import WndCreator
-from utils import widget_utils
-from utils.logger_utils import mylogger as logger, Printer
+from utils import widget_utils, sys_utils
+from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.sys_utils import Tk2Sys
 
@@ -201,9 +200,6 @@ class MenuUI:
                             LocalCfg.USE_TXT_AVT, not use_txt_avt,
                             self.root_class.login_ui.refresh)
         )
-        # sidebar_var = tk.BooleanVar(value=False)
-        # self.view_menu.add_checkbutton(label="侧栏", variable=sidebar_var,
-        #                                command=self._open_sidebar)
         scale_value = self.global_settings_value.scale = subfunc_file.fetch_global_setting_or_set_default_or_none(
             "scale")
         scale_var = self.global_settings_var.scale = tk.StringVar(value=scale_value)
@@ -302,53 +298,70 @@ class MenuUI:
             self.settings_menu.add_separator()  # ————————————————分割线————————————————
 
             # 开启更新多开,防撤回等子菜单的更新线程
-            # self._update_settings_sub_menus_in_thread()
             self.update_settings_menu_thread()
 
+            # >登录设置
+            self.login_settings_menu = tk.Menu(self.settings_menu, tearoff=False)
+            self.settings_menu.add_cascade(label="登录设置", menu=self.login_settings_menu)
+
+            self.login_settings_menu.add_command(label="登录说明", command=self._open_login_settings_instructions)
+            self.login_settings_menu.add_separator()  # ————————————————分割线————————————————
             hide_wnd_value = self.global_settings_value.hide_wnd = \
                 subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.HIDE_WND)
             hide_wnd_var = self.global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)
-            self.settings_menu.add_checkbutton(
-                label="自动登录前隐藏主窗口", variable=hide_wnd_var,
+            self.login_settings_menu.add_checkbutton(
+                label="一键登录前隐藏软件主窗口", variable=hide_wnd_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
                                 LocalCfg.HIDE_WND, not hide_wnd_value, self.create_root_menu_bar))
 
-            # >调用模式
-            self.call_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
-            self.settings_menu.add_cascade(label="调用模式", menu=self.call_mode_menu)
+            kill_idle_value = self.global_settings_value.kill_idle = \
+                subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.KILL_IDLE_LOGIN_WND)
+            kill_idle_var = self.global_settings_var.kill_idle = tk.BooleanVar(value=kill_idle_value)
+            self.login_settings_menu.add_checkbutton(
+                label="一键登录前关闭多余登录窗口", variable=kill_idle_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                LocalCfg.KILL_IDLE_LOGIN_WND, not kill_idle_value, self.create_root_menu_bar))
+
+            # >>互斥体
+            self.mutant_menu = tk.Menu(self.login_settings_menu, tearoff=False)
+            self.login_settings_menu.add_cascade(label="互斥体", menu=self.mutant_menu)
+            unlock_cfg_value = self.global_settings_value.unlock_cfg = subfunc_file.fetch_global_setting_or_set_default_or_none(
+                LocalCfg.UNLOCK_CFG)
+            unlock_cfg_var = self.global_settings_var.unlock_cfg = tk.BooleanVar(value=unlock_cfg_value)
+            self.mutant_menu.add_checkbutton(
+                label="登录时解锁配置文件", variable=unlock_cfg_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                LocalCfg.UNLOCK_CFG, not unlock_cfg_value, self.create_root_menu_bar))
+            all_set_has_mutex_value = self.global_settings_value.all_set_has_mutex = subfunc_file.fetch_global_setting_or_set_default_or_none(
+                LocalCfg.ALL_HAS_MUTEX)
+            all_set_has_mutex_var = self.global_settings_var.all_set_has_mutex = tk.BooleanVar(
+                value=all_set_has_mutex_value)
+            self.mutant_menu.add_checkbutton(
+                label="默认含有互斥体", variable=all_set_has_mutex_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                LocalCfg.ALL_HAS_MUTEX, not all_set_has_mutex_value, self.create_root_menu_bar))
+            self.mutant_menu.add_command(label="立即查杀所有互斥体", command=self._to_kill_mutexes)
+
+            # >>调用模式
+            self.call_mode_menu = tk.Menu(self.login_settings_menu, tearoff=False)
+            self.login_settings_menu.add_cascade(label="调用模式", menu=self.call_mode_menu)
             call_mode_value = self.global_settings_value.call_mode = subfunc_file.fetch_global_setting_or_set_default_or_none(
                 "call_mode")
-            call_mode_var = self.global_settings_var.call_mode = tk.StringVar(value=call_mode_value)  # 设置初始选中的子程序
-
-            # 添加 HANDLE 的单选按钮
-            self.call_mode_menu.add_radiobutton(
-                label='HANDLE',
-                value=CallMode.HANDLE.value,
-                variable=call_mode_var,
-                command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                LocalCfg.CALL_MODE, CallMode.HANDLE.value, self.create_root_menu_bar),
-            )
-            # 添加 DEFAULT 的单选按钮
-            self.call_mode_menu.add_radiobutton(
-                label='DEFAULT',
-                value=CallMode.DEFAULT.value,
-                variable=call_mode_var,
-                command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                LocalCfg.CALL_MODE, CallMode.DEFAULT.value, self.create_root_menu_bar),
-            )
-            # 添加 LOGON 的单选按钮
-            self.call_mode_menu.add_radiobutton(
-                label='LOGON',
-                value=CallMode.LOGON.value,
-                variable=call_mode_var,
-                command=partial(subfunc_file.save_a_global_setting_and_callback,
-                                LocalCfg.CALL_MODE, CallMode.LOGON.value, self.create_root_menu_bar),
-            )
+            call_mode_var = self.global_settings_var.call_mode = tk.StringVar(value=call_mode_value)
+            for call_mode in CallMode:
+                # >>-添加 {call_mode.value} 的单选按钮
+                self.call_mode_menu.add_radiobutton(
+                    label=call_mode.value,
+                    value=call_mode.value,
+                    variable=call_mode_var,
+                    command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                    LocalCfg.CALL_MODE, call_mode.value, self.create_root_menu_bar),
+                )
 
             auto_press_value = self.global_settings_value.auto_press = \
                 subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.AUTO_PRESS)
             auto_press_var = self.global_settings_var.auto_press = tk.BooleanVar(value=auto_press_value)
-            self.settings_menu.add_checkbutton(
+            self.login_settings_menu.add_checkbutton(
                 label="自动点击登录按钮", variable=auto_press_var,
                 command=partial(subfunc_file.save_a_global_setting_and_callback,
                                 "auto_press", not auto_press_value, self.create_root_menu_bar))
@@ -461,10 +474,26 @@ class MenuUI:
         success, res = AppFunc.check_auto_start_or_toggle_to_(value)
         self.create_root_menu_bar()
         if success is not True:
-            messagebox.showerror("错误", res)
+            messagebox.showerror("错误", f"{res}\n将弹出自启动文件夹!")
+            startup_folder = sys_utils.get_startup_folder()
+            os.startfile(startup_folder)
             print("操作失败！")
         else:
             print(f"已添加自启动！" if value is True else f"已关闭自启动！")
+
+    @staticmethod
+    def _open_login_settings_instructions():
+        """打开登录选项说明"""
+        messagebox.showinfo("登录选项说明", Strings.LOGIN_SETTINGS_INSTRUCTIONS)
+
+    def _to_kill_mutexes(self):
+        """查杀所有互斥体"""
+        success, msg = SwOperator.kill_all_mutexes_now(self.sw)
+        if success is True:
+            messagebox.showinfo("成功", msg)
+        else:
+            messagebox.showerror("错误", msg)
+        self.root_class.login_ui.refresh()
 
     def _to_enable_new_func(self):
         subfunc_file.save_a_global_setting_and_callback('enable_new_func', True)
@@ -565,11 +594,11 @@ class MenuUI:
                 self.sw, LocalCfg.COEXIST_MODE.value)
             # 如果这个模式在单选值列表中,则选择这个值,否则选择第一个值
             if current_coexist_mode in self.coexist_channel_radio_list:
-                Printer().debug("该模式在单选列表中...")
+                # Printer().debug("该模式在单选列表中...")
                 self.coexist_channel_var.set(current_coexist_mode)
             else:
                 if len(self.coexist_channel_radio_list) > 0:
-                    Printer().debug("该模式不在单选列表中...")
+                    # Printer().debug("该模式不在单选列表中...")
                     self.coexist_channel_var.set(self.coexist_channel_radio_list[0])
 
             # 频道简介菜单
@@ -585,7 +614,7 @@ class MenuUI:
 
     def _update_anti_revoke_menu(self, mode_channel_res_dict, msg):
         # 原来的防撤回菜单创建代码
-        Printer().debug(mode_channel_res_dict)
+        # Printer().debug(mode_channel_res_dict)
         if mode_channel_res_dict is None:
             self.settings_menu.entryconfig("防撤回", label="！防撤回", foreground="red")
             self.anti_revoke_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
@@ -719,6 +748,7 @@ class MenuUI:
 
     def _identify_dll_and_update_menu(self):
         """实现抽象方法（原_create_menus_thread逻辑）"""
+        print("更新设置菜单...")
         try:
             # 共存部分
             res_dict, msg = SwInfoFunc.identify_dll(

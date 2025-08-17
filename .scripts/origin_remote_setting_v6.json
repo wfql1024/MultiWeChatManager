@@ -1027,7 +1027,6 @@
                 }
             },
             "precise": {
-
             }
         },
         "anti-revoke": {
@@ -1056,27 +1055,42 @@
                 }
             },
             "precise": {
-
             }
         },
         "wnd_class": {
             "login": {
-                "3.0": [
-                    {
-                        "ClassNameWildcards": [
-                            "WeChatLoginWndForPC"
-                        ]
+                "matching": {
+                    "3.0": [
+                        {
+                            "ClassNameWildcards": [
+                                "?eChatLoginWndForPC",
+                                "WeCha?LoginWndForPC"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "3.0": {
+                        "class_name": "WeChatLoginWndForPC"
                     }
-                ]
+                }
             },
             "main": {
-                "3.0": [
-                    {
-                        "ClassNameWildcards": [
-                            "WeChatMainWndForPC"
-                        ]
+                "matching": {
+                    "3.0": [
+                        {
+                            "ClassNameWildcards": [
+                                "?eChatMainWndForPC",
+                                "WeCha?MainWndForPC"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "3.0": {
+                        "class_name": "WeChatMainWndForPC"
                     }
-                ]
+                }
             }
         },
         "label": "微信",
@@ -1102,30 +1116,15 @@
         "cfg_handle_regex_list": [
         ],
         "mutant_handle_wildcards": [
-            "_WeChat_App_Instance_Identity_Mutex_Name",
             "_W?Chat_App_Instance_Identity_Mutex_Name",
             "_WeCha?_App_Instance_Identity_Mutex_Name"
         ],
         "config_handle_wildcards": [
-            "config.data",
-            "conf?g.data"
-        ],
-        "login_wnd_class": "WeChatLoginWndForPC",
-        "login_wnd_class_wildcards": [
-            "?eChatLoginWndForPC",
-            "WeCha?LoginWndForPC"
-        ],
-        "main_wnd_class": "WeChatMainWndForPC",
-        "main_wnd_class_wildcards": [
-            "?eChatMainWndForPC",
-            "WeCha?MainWndForPC"
-        ],
-        "config_path_suffix": "All Users\\config",
-        "config_file_list": [
-            "config.data"
+            "conf?g.data",
+            "confi?.data"
         ],
         "config_addresses": [
-            "%data_dir%/All Users/config.data"
+            "%data_dir%/All Users/config/config.data"
         ],
         "excluded_dir_list": [
             "All Users",
@@ -1526,42 +1525,56 @@
         },
         "wnd_class": {
             "login": {
-                "4.0": [
-                    {
-                        "ClassNameWildcards": [
-                            "mmui::LoginWindow"
-                        ]
+                "matching": {
+                    "4.0": [
+                        {
+                            "ClassNameWildcards": [
+                                "mmui::LoginWindow"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "4.0": {
+                        "class_name": "mmui::LoginWindow"
                     }
-                ]
+                }
             },
             "main": {
-                "4.0.6.30": [
-                    {
-                        "ClassNameWildcards": [
-                            "mmui::MainWindow"
-                        ]
-                    },
-                    {
-                        "ClassNameWildcards": [
-                            "Qt51514QWindowIcon"
-                        ],
-                        "FinalSelect": [
-                            {
-                                "SizeEquals": 0
-                            },
-                            {
-                                "SizeExtreme": "max"
-                            }
-                        ]
+                "matching": {
+                    "4.0.6.30": [
+                        {
+                            "ClassNameWildcards": [
+                                "mmui::MainWindow"
+                            ]
+                        },
+                        {
+                            "ClassNameWildcards": [
+                                "Qt51514QWindowIcon"
+                            ],
+                            "FinalSelect": [
+                                {
+                                    "SizeEquals": 0
+                                },
+                                {
+                                    "SizeExtreme": "max"
+                                }
+                            ]
+                        }
+                    ],
+                    "4.0": [
+                        {
+                            "ClassNameWildcards": [
+                                "mmui::MainWindow"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "4.0": {
+                        "class_name": "mmui::MainWindow"
                     }
-                ],
-                "4.0": [
-                    {
-                        "ClassNameWildcards": [
-                            "mmui::MainWindow"
-                        ]
-                    }
-                ]
+                }
             }
         },
         "label": "微信4.0",
@@ -1603,21 +1616,8 @@
             "lock.ini"
         ],
         "config_handle_wildcards": [
-            "global_conf?g"
-        ],
-        "login_wnd_class": "mmui::LoginWindow",
-        "login_wnd_class_wildcards": [
-            "mmui::LoginWindow"
-        ],
-        "main_wnd_class": "mmui::MainWindow",
-        "main_wnd_class_wildcards": [
-            "mmui::MainWindow",
-            "Qt51514QWindowIcon"
-        ],
-        "config_path_suffix": "all_users\\config",
-        "config_file_list": [
-            "global_config",
-            "global_config.crc"
+            "global_conf?g",
+            "global_confi?"
         ],
         "config_addresses": [
             "%data_dir%/all_users/config/global_config",
@@ -1709,22 +1709,36 @@
         },
         "wnd_class": {
             "login": {
-                "4.1": [
-                    {
-                        "ClassNameWildcards": [
-                            "WeChatLogin"
-                        ]
+                "matching": {
+                    "4.1": [
+                        {
+                            "ClassNameWildcards": [
+                                "WeChatLogin"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "4.1": {
+                        "class_name": "WeChatLogin"
                     }
-                ]
+                }
             },
             "main": {
-                "4.1": [
-                    {
-                        "ClassNameWildcards": [
-                            "WeWorkWindow"
-                        ]
+                "matching": {
+                    "4.1": [
+                        {
+                            "ClassNameWildcards": [
+                                "WeWorkWindow"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "4.1": {
+                        "class_name": "WeWorkWindow"
                     }
-                ]
+                }
             }
         },
         "label": "企微",
@@ -1753,18 +1767,10 @@
         ],
         "cfg_handle_regex_list": [
         ],
-        "login_wnd_class": "WeChatLogin",
-        "login_wnd_class_wildcards": [
-            "WeChatLogin"
+        "mutant_handle_wildcards": [
+            "Tencent.WeWork.ExclusiveObject"
         ],
-        "main_wnd_class": "WeWorkWindow",
-        "main_wnd_class_wildcards": [
-            "WeWorkWindow"
-        ],
-        "config_path_suffix": "Global",
-        "config_file_list": [
-            "Config.cfg",
-            "Confi?.cfg"
+        "config_handle_wildcards": [
         ],
         "config_addresses": [
             "%data_dir%/Global/Config.cfg"
@@ -1797,22 +1803,36 @@
         },
         "wnd_class": {
             "login": {
-                "9.9": [
-                    {
-                        "ClassNameWildcards": [
-                            "Chrome_WidgetWin_1"
-                        ]
+                "matching": {
+                    "9.9": [
+                        {
+                            "ClassNameWildcards": [
+                                "Chrome_WidgetWin_1"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "9.9": {
+                        "class_name": "Chrome_WidgetWin_1"
                     }
-                ]
+                }
             },
             "main": {
-                "9.9": [
-                    {
-                        "ClassNameWildcards": [
-                            "Chrome_WidgetWin_1"
-                        ]
+                "matching": {
+                    "9.9": [
+                        {
+                            "ClassNameWildcards": [
+                                "Chrome_WidgetWin_1"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "9.9": {
+                        "class_name": "Chrome_WidgetWin_1"
                     }
-                ]
+                }
             }
         },
         "label": "QQNT",
@@ -1831,16 +1851,6 @@
         "mutant_handle_infos": [
         ],
         "cfg_handle_regex_list": [
-        ],
-        "login_wnd_class": "Chrome_WidgetWin_1",
-        "main_wnd_class": "Chrome_WidgetWin_1",
-        "main_wnd_class_wildcards": [
-            "Chrome_WidgetWin_1"
-        ],
-        "config_path_suffix": "nt_qq/global/nt_db",
-        "config_file_list": [
-            "login.db",
-            "sign.db"
         ],
         "config_addresses": [
             "%data_dir%/nt_qq/global/nt_db/login.db",
@@ -1923,22 +1933,36 @@
         },
         "wnd_class": {
             "login": {
-                "9.7": [
-                    {
-                        "ClassNameWildcards": [
-                            "TXGuiFoundation"
-                        ]
+                "matching": {
+                    "9.7": [
+                        {
+                            "ClassNameWildcards": [
+                                "TXGuiFoundation"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "9.7": {
+                        "class_name": "TXGuiFoundation"
                     }
-                ]
+                }
             },
             "main": {
-                "9.7": [
-                    {
-                        "ClassNameWildcards": [
-                            "TXGuiFoundation"
-                        ]
+                "matching": {
+                    "9.7": [
+                        {
+                            "ClassNameWildcards": [
+                                "TXGuiFoundation"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "9.7": {
+                        "class_name": "TXGuiFoundation"
                     }
-                ]
+                }
             }
         },
         "label": "QQ",
@@ -1957,15 +1981,6 @@
         "mutant_handle_infos": [
         ],
         "cfg_handle_regex_list": [
-        ],
-        "login_wnd_class": "TXGuiFoundation",
-        "main_wnd_class": "TXGuiFoundation",
-        "main_wnd_class_wildcards": [
-            "TXGuiFoundation"
-        ],
-        "config_path_suffix": "All Users\\QQ",
-        "config_file_list": [
-            "History.db"
         ],
         "config_addresses": [
             "%data_dir%/All Users/QQ/History.db"
@@ -2047,22 +2062,36 @@
         },
         "wnd_class": {
             "login": {
-                "3.4": [
-                    {
-                        "ClassNameWildcards": [
-                            "TXGuiFoundation"
-                        ]
+                "matching": {
+                    "3.4": [
+                        {
+                            "ClassNameWildcards": [
+                                "TXGuiFoundation"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "3.4": {
+                        "class_name": "TXGuiFoundation"
                     }
-                ]
+                }
             },
             "main": {
-                "3.4": [
-                    {
-                        "ClassNameWildcards": [
-                            "TXGuiFoundation"
-                        ]
+                "matching": {
+                    "3.4": [
+                        {
+                            "ClassNameWildcards": [
+                                "TXGuiFoundation"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "3.4": {
+                        "class_name": "TXGuiFoundation"
                     }
-                ]
+                }
             }
         },
         "label": "TIM",
@@ -2081,15 +2110,6 @@
         "mutant_handle_infos": [
         ],
         "cfg_handle_regex_list": [
-        ],
-        "login_wnd_class": "TXGuiFoundation",
-        "main_wnd_class": "TXGuiFoundation",
-        "main_wnd_class_wildcards": [
-            "TXGuiFoundation"
-        ],
-        "config_path_suffix": "All Users\\TIM",
-        "config_file_list": [
-            "History.db"
         ],
         "config_addresses": [
             "%data_dir%/All Users/TIM/History.db"

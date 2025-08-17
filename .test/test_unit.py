@@ -1,21 +1,25 @@
 import ctypes
+import glob
+import os
 import random
 import time
 from datetime import datetime
+from tkinter import messagebox
 from unittest import TestCase
 
 import psutil
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
-from public_class.enums import MultirunMode
+from public_class.enums import MultirunMode, LocalCfg
 from resources import Config
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
+from utils.hwnd_utils import Win32HwndGetter, HwndGetter
 
 
 class Test(TestCase):
     def SetUp(self):
-        self.hwnd = hwnd_utils.get_a_hwnd_by_title("微信（测试版）")
+        self.hwnd = Win32HwndGetter._get_a_hwnd_by_title("微信（测试版）")
         print(self.hwnd)
 
     def test_get_wnd_details_from_hwnd(self):
@@ -26,14 +30,71 @@ class Test(TestCase):
         print(SwInfoFunc.detect_sw_data_dir(sw="Weixin"))
 
     def test_wait_for_wnd_open(self):
-        hwnd_utils.win32_wait_hwnd_by_class("Qt51514QWindowIcon")
+        Win32HwndGetter.win32_wait_hwnd_by_class("Qt51514QWindowIcon")
 
     def test_close_sw_mutex_by_handle(self):
-        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = (
+        executable_name, cfg_handles = (
             subfunc_file.get_remote_cfg(
-                "Weixin", redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None))
+                "Weixin", executable=None, cfg_handle_regex_list=None))
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
+
+    def test_get_cfg_files(self):
+        sw = "WeChat"
+        acc = "wxid_t2dchu5zw9y022"
+        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
+        if not data_path:
+            return False, "无法获取WeChat数据路径"
+        # config_path_suffix, cfg_basename_list = subfunc_file.get_remote_cfg(
+        #     sw, config_path_suffix=None, config_file_list=None)
+
+        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        if not isinstance(config_addresses, list):
+            return False, "无法获取登录配置文件地址"
+        for config_address in config_addresses:
+            origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, config_address)
+            acc_cfg_path = os.path.join(os.path.dirname(origin_cfg_path), f"{acc}_{os.path.basename(origin_cfg_path)}")
+            acc_cfg_path = acc_cfg_path.replace("\\", "/")
+            print("新方法:")
+            print(origin_cfg_path)
+            print(acc_cfg_path)
+
+        # # 构建相关文件列表
+        # for cfg_basename in cfg_basename_list:
+        #     # 拼接出源配置路径
+        #     origin_cfg_path = os.path.join(
+        #         str(data_path), str(config_path_suffix), str(cfg_basename)).replace("\\", "/")
+        #     acc_cfg_item = f"{acc}_{cfg_basename}"
+        #     acc_cfg_path = (os.path.join(os.path.dirname(origin_cfg_path), acc_cfg_item)
+        #                     .replace("\\", "/"))
+        #     print("旧方法:")
+        #     print(origin_cfg_path)
+        #     print(acc_cfg_path)
+        return None
+
+    def test_new_get_cfg_files(self):
+        sw = "WeChat"
+        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        if not isinstance(config_addresses, list) or len(config_addresses) == 0:
+            messagebox.showinfo("提醒", f"{sw}平台还没有适配")
+            return
+        # if (config_path_suffix is None or config_file_list is None or
+        #         not isinstance(config_file_list, list) or len(config_file_list) == 0):
+        #     messagebox.showinfo("提醒", f"{sw}平台还没有适配")
+        #     return
+
+        files_to_delete = []
+
+        for addr in config_addresses:
+            origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, addr)
+            origin_cfg_dir = os.path.dirname(origin_cfg_path)
+            origin_cfg_basename = os.path.basename(origin_cfg_path)
+            acc_cfg_path_glob_wildcard = os.path.join(origin_cfg_dir, f"*_{origin_cfg_basename}")
+            acc_cfg_paths = glob.glob(acc_cfg_path_glob_wildcard)
+            acc_cfg_paths = [f.replace("\\", "/") for f in acc_cfg_paths]
+            files_to_delete.extend([f for f in acc_cfg_paths if f != origin_cfg_path])
+
+        print(files_to_delete)
 
     def test_get_all_open_files(self):
         pids = process_utils.get_process_ids_by_precise_name_impl_by_tasklist("Weixin")
@@ -59,13 +120,6 @@ class Test(TestCase):
     def test_move_to_recycle_bin(self):
         file_to_delete = r"E:\Now\Desktop\微信多开管理器_调试版.lnk"
         file_utils.move_files_to_recycle_bin([file_to_delete])
-
-    def test_hide_wnd(self):
-        pid = 20468  # 替换为目标进程的 PID
-        target_class = "WeChatMainWndForPC"  # 替换为目标窗口类名
-        test_hwnd = hwnd_utils.get_hwnds_by_pid_and_class(pid, target_class)
-        hwnd_utils.hide_all_by_wnd_classes([target_class])
-        print("Found HWNDs:", test_hwnd)
 
     def test_calculate_md5(self):
         file_path = r"E:\Now\QuickCenter\WorkBench\技术梦想\项目\MultiWeChatManager\Releases\JhiFengMultiChat_win7_x64_v3.3.0.3718-Beta.zip"
@@ -215,13 +269,30 @@ class Test(TestCase):
                 f"Handle: {w['hwnd']}, Name: {w['Name']}, ClassName: {w['ClassName']}, ControlType: {w['ControlType']}")
         print(f"用时: {time.time() - start_time}")
         start_time = time.time()
-        hwnds = hwnd_utils.win32_get_hwnds_by_pid_and_class_wildcards(target_pid)
+        hwnds = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(target_pid)
         print(hwnds)
         print(f"用时: {time.time() - start_time}")
 
     def test_resolve_addr(self):
         path = SwInfoFunc.resolve_sw_path("Weixin", "%dll_dir%/Weixin.dll")
         print(path)
+
+    def test_get_login_hwnds_of_sw(self):
+        hwnds = SwInfoFunc.get_login_hwnds_of_sw("Weixin")
+        print(hwnds)
+
+    def test_get_hwnds_sorted_by_zOrder(self):
+        hwnds = Win32HwndGetter.get_visible_windows_by_zOrder()
+        print(hwnds)
+
+    def test_wait_hwnd_exclusively_by_class(self):
+        sw_hwnd = Win32HwndGetter.win32_wait_hwnd_exclusively_by_class([], "mmui::MainWindow", 1)
+        print(sw_hwnd)
+        if sw_hwnd is None:
+            # 从精确类名未能获取,只能用类名通配模式来获取,并缓存起来
+            sw_hwnd, class_name = HwndGetter._uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
+                [], 34288, ["mmui::MainWindow"])
+            print(sw_hwnd, class_name)
 
     def test_custom_notebook_and_custom_btn(self):
         import tkinter as tk

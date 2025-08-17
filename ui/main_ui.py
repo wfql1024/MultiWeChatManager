@@ -522,6 +522,9 @@ class GlobalSettings:
         self.login_size = None
         self.rest_mode = None
         self.hide_wnd = None
+        self.kill_idle = None
+        self.unlock_cfg = None
+        self.all_set_has_mutex = None
         self.call_mode = None
         self.new_func = None
         self.auto_press = None

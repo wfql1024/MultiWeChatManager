@@ -1649,22 +1649,6 @@
                 }
             }
         },
-        "wnd_class": {
-            "login": {
-                "3.0": {
-                    "ClassNameWildcards": [
-                        "WeChatLoginWndForPC"
-                    ]
-                }
-            },
-            "main": {
-                "3.0": {
-                    "ClassNameWildcards": [
-                        "WeChatMainWndForPC"
-                    ]
-                }
-            }
-        },
         "label": "微信",
         "executable": "WeChat.exe",
         "executable_wildcards": [
@@ -2628,40 +2612,11 @@
                 }
             }
         },
-        "wnd_class": {
-            "login": {
-                "4.0": {
-                    "ClassNameWildcards": [
-                        "mmui::LoginWindow"
-                    ]
-                }
-            },
-            "main": {
-                "4.0.6.30": {
-                    "ClassNameWildcards": [
-                        "Qt51514QWindowIcon"
-                    ],
-                    "FirstChild": {
-                        "ClassNameWildcards": [
-                            "Qt51514QWindowIcon"
-                        ]
-                    },
-                    "FinalSelect": {
-                        "Size": "max"
-                    }
-                },
-                "4.0": {
-                    "ClassNameWildcards": [
-                        "mmui::MainWindow"
-                    ]
-                }
-            }
-        },
         "label": "微信4.0",
         "executable": "Weixin.exe",
         "executable_wildcards": [
             "Weixin?.exe",
-            "Weixin.exe"
+            "Weixi?.exe"
         ],
         "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
         "data_dir_guess_suffix": "Tencent\\Weixin",
@@ -2692,6 +2647,7 @@
         ],
         "mutant_handle_wildcards": [
             "?WeChat_App_Instance_Identity_Mutex_Name",
+            "XWeCha?_App_Instance_Identity_Mutex_Name",
             "lock.ini"
         ],
         "config_handle_wildcards": [

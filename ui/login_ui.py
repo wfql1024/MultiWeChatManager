@@ -11,7 +11,7 @@ from public_class import reusable_widgets
 from public_class.custom_widget import CustomCornerBtn
 from public_class.enums import OnlineStatus, LocalCfg
 from public_class.global_members import GlobalMembers
-from resources import Constants, Config
+from resources import Constants, Config, Strings
 from ui import treeview_row_ui, classic_row_ui
 from ui.wnd_ui import WndCreator
 from utils import handle_utils
@@ -167,6 +167,11 @@ class LoginUI:
         self.btn_extra.pack(side="left", expand=True, fill="x", padx=0, pady=5)
         self.btn_extra.set_bind_map(**{"1": self._to_extra_func}).apply_bind(self.root)
 
+        self.btn_mng = CustomCornerBtn(
+            bottom_frame, text=Strings.COEXIST_MNG_SIGN, width=btn_height, height=btn_height, corner_radius=4)
+        self.btn_mng.pack(side="left", expand=True, fill="x", padx=0, pady=5)
+        self.btn_mng.set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
+
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
         self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
@@ -249,14 +254,19 @@ class LoginUI:
                     messagebox.showinfo("提示", "已关闭互斥体, 即将刷新!")
             self.refresh_frame()
 
+    def _to_mng_func(self):
+        ...
+
     def _switch_mode(self):
         self.is_original = not self.is_original
         if self.is_original:
             self.btn_login.set_text("原生登录").redraw()
             self.btn_extra.set_text("⚡").redraw()
+            self.btn_mng.set_text(Strings.UNLOCK_CFG_SIGN).redraw()
         else:
             self.btn_login.set_text("共存登录").redraw()
             self.btn_extra.set_text("+").redraw()
+            self.btn_mng.set_text(Strings.COEXIST_MNG_SIGN).redraw()
 
     def show_setting_error(self):
         """出错的话，选择已经有的界面中创建错误信息显示"""
@@ -287,13 +297,12 @@ class LoginUI:
 
     def after_success_create_acc_ui(self):
         """成功创建账号列表才会执行"""
-        # 获取已登录的窗口hwnd
-        logins = self.acc_list_dict[OnlineStatus.LOGIN]
-        AccInfoFunc.bind_main_wnd_to_accounts_in_sw(self.sw, logins)
 
-        # 进行静默获取头像及配置
+        # 进行静默获取头像及配置, 获取已登录的窗口hwnd
         def func():
             AccOperator.silent_get_and_config(self.sw)
+            logins = self.acc_list_dict[OnlineStatus.LOGIN]
+            AccInfoFunc.bind_main_wnd_to_accounts_in_sw(self.sw, logins)
 
         threading.Thread(target=func).start()
 
@@ -303,9 +312,6 @@ class LoginUI:
         self.hotkey_manager.load_hotkeys_from_json(Config.TAB_ACC_JSON_PATH)
         # 开启监听线程
         self.hotkey_manager.start_hotkey_listener()
-
-        # 刷新设置菜单
-        # self.root_menu.create_setting_menu()
 
     """功能区"""
 
@@ -320,7 +326,10 @@ class LoginUI:
     def to_auto_login(self, items):
         """登录所选账号"""
         login_dict = LoginUI._items_to_dict(items)
-        if self.global_settings_value.hide_wnd is True:
+        Printer().vital("自动登录")
+        hide_wnd = self.global_settings_value.hide_wnd
+        Printer().print_vn(f"[INFO]登录前隐藏主窗口: {hide_wnd}")
+        if hide_wnd is True:
             self.root.iconify()  # 最小化主窗口
         try:
             AccOperator.start_auto_login_accounts_thread(login_dict)
@@ -331,7 +340,7 @@ class LoginUI:
         """按钮：创建或重新配置"""
         accounts = [items.split("/")[1] for items in items]
         threading.Thread(target=AccOperator.open_sw_and_ask,
-                         args=(self.sw, accounts[0], self.sw_classes[self.sw].multirun_mode)).start()
+                         args=(self.sw, accounts[0])).start()
 
     @staticmethod
     def to_create_starter(items):

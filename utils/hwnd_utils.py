@@ -13,14 +13,12 @@ import win32process
 from uiautomation import Control
 
 from public_class.enums import Position
-from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger, Printer
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)
 sys.coinit_flags = 2  # COINIT_APARTMENTTHREADED
 from pywinauto.controls.hwndwrapper import HwndWrapper
 from pywinauto import Application
-import re
 import time
 import ctypes
 from ctypes import wintypes
@@ -70,7 +68,7 @@ SW_SHOWMINIMIZED = 2  # 最小化
 SW_SHOWMAXIMIZED = 3  # 最大化
 
 
-class HwndUtils:
+class _HwndUtils:
     @staticmethod
     def bring_wnd_to_front(hwnd: int):
         """
@@ -111,176 +109,162 @@ class TkWndUtils:
 """hwnd获取"""
 
 
-def get_visible_windows_sorted_by_top():
-    hwnds = []
+class HwndGetter:
+    """结合win32api和uiautomation来获取hwnd, 兼具win32api的速度优势和uiautomation的准确优势"""
 
-    def callback(hwnd, extra):
-        if win32gui.IsWindowVisible(hwnd):
-            rect = win32gui.GetWindowRect(hwnd)
-            left, top, right, bottom = rect
-            if right > left and bottom > top:
-                hwnds.append((top, hwnd))
+    """用class_wildcards窗口类名来获取"""
 
-    win32gui.EnumWindows(callback, None)
-    hwnds.sort()  # 按 top 从小到大排序
-    return [hwnd for top, hwnd in hwnds]
+    @classmethod
+    def _uiautomation_wait_hwnd_by_pid_and_class_wildcards(cls, pid, class_wildcards, timeout=20, title=None):
+        """等待类名匹配通配符的窗口打开，并返回句柄（可选匹配标题）"""
+        return cls._uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(None, pid, class_wildcards, timeout,
+                                                                                  title)
 
+    @staticmethod
+    def _uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
+            exclude_hwnds, pid, class_wildcards, timeout=20, title=None) -> Tuple[Optional[int], Optional[str]]:
+        """
+        等待符合指定 pid 和通配类名的窗口出现，排除已知句柄，返回 hwnd 和类名（支持精确获取 Qt 类名）
+        """
+        exclude_hwnds = set(exclude_hwnds or [])
+        end_time = time.time() + timeout
 
-def get_a_hwnd_by_title(window_title):
-    """
-    根据窗口标题查找窗口句柄。
-    :param window_title: 窗口标题
-    :return: 窗口句柄 (HWND)
-    """
-    hwnd = FindWindow(None, window_title)
-    if hwnd == 0:
-        raise ValueError(f"窗口 '{window_title}' 未找到。")
-    return hwnd
+        while time.time() < end_time:
+            # 初步获取该 pid 下的 hwnds（不含 exclude_hwnds）
+            hwnds = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
+            hwnds = [h for h in hwnds if h not in exclude_hwnds]
+            # Printer().debug(hwnds)
 
+            for hwnd in hwnds:
+                if title:
+                    buffer = ctypes.create_unicode_buffer(256)
+                    GetWindowText(hwnd, buffer, 256)
+                    if buffer.value != title:
+                        continue  # 跳过标题不符
 
-def get_hwnd_list_by_class_and_title(class_name, window_title=None):
-    def enum_wnd_callback(hwnd, results):
-        # 获取窗口的类名和标题
-        if win32gui.IsWindowVisible(hwnd):
-            curr_class_name = win32gui.GetClassName(hwnd)
-            curr_window_title = win32gui.GetWindowText(hwnd)
-            # 仅匹配类名，若window_title不为空则继续匹配标题
-            if curr_class_name == class_name and (window_title is None or curr_window_title == window_title):
-                results.append(hwnd)
+                try:
+                    with auto.UIAutomationInitializerInThread():
+                        ctrl = uiautomation.ControlFromHandle(hwnd)
+                        for wildcard in class_wildcards:
+                            if fnmatch.fnmatch(ctrl.ClassName, wildcard):
+                                return hwnd, ctrl.ClassName
+                except Exception as e:
+                    # uiautomation 获取失败的窗口直接跳过
+                    print(f"uiautomation failed for hwnd {hwnd}: {e}")
+                    continue
 
-    hwnd_list = []
-    win32gui.EnumWindows(enum_wnd_callback, hwnd_list)
-    return hwnd_list
+            time.sleep(0.5)
 
+        return None, None
 
-def get_hwnds_by_pid_and_class(pid, target_class_name):
-    def enum_windows_callback(hwnd, _lParam):
-        # 获取窗口所属的进程 ID
-        process_id = wintypes.DWORD()
-        GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
-        # 检查是否是目标进程的窗口
-        if process_id.value == pid:
-            class_name = ctypes.create_unicode_buffer(256)
-            GetClassName(hwnd, class_name, 256)
-            # 检查窗口类名是否匹配
-            if class_name.value == target_class_name:
-                hwnd_list.append(hwnd)
-        return True
+    @classmethod
+    def _uiautomation_get_hwnds_by_pid_and_class_wildcards(cls, pid, class_wildcards=None) -> list:
+        """
+        winAPI和uiautomation实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件.
+        对于Qt类型窗口,仅使用winAPI获取将会无法获取更细的类名
+        """
+        hwnds = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
+        # debug_hwnds_to_md(hwnds)
+        if class_wildcards is None:
+            return hwnds
+        res = []
+        for hwnd in hwnds:
+            try:
+                with auto.UIAutomationInitializerInThread():
+                    ctrl = uiautomation.ControlFromHandle(hwnd)
+                    if any(fnmatch.fnmatch(ctrl.ClassName, wildcard) for wildcard in class_wildcards):
+                        res.append(hwnd)
+            except Exception as e:
+                print(f"Failed on hwnd {hwnd}: {e}")
+                continue
+        return res
 
-    hwnd_list = []
-    EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
-    return hwnd_list
+    """用条件字典来获取"""
 
+    @classmethod
+    def _final_select_hwnds(cls, hwnds, hwnd_to_ctrl, final_select_methods):
+        """
+        按照方法集合模式，从候选 hwnd 中逐步筛选，直到选出唯一一个。
+        final_select_methods: List[Dict] — 每个字典是一个“方法”，按顺序尝试
+        """
 
-def win32_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
-    """winAPI实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件"""
-    hwnds_set = set()
-
-    def enum_windows_callback(hwnd, _lParam):
-        process_id = wintypes.DWORD()
-        GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
-        if process_id.value == pid:
-            class_name = ctypes.create_unicode_buffer(256)
-            GetClassName(hwnd, class_name, 256)
-            if not class_wildcards:
-                # 不传入则直接收集所有
-                hwnds_set.add(hwnd)
+        def get_metric_value(hwnd, metric):
+            rect = hwnd_to_ctrl[hwnd].BoundingRectangle
+            if metric.startswith("Size"):
+                return (rect.right - rect.left) * (rect.bottom - rect.top)
+            elif metric.startswith("Width"):
+                return rect.right - rect.left
+            elif metric.startswith("Height"):
+                return rect.bottom - rect.top
             else:
-                for class_wildcard in class_wildcards:
-                    if class_wildcard is None:
-                        continue
-                    regex = StringUtils.wildcard_to_regex(class_wildcard)
-                    if re.match(regex, class_name.value):
-                        hwnds_set.add(hwnd)
-                        break  # 匹配到就跳出循环
-        return True
+                raise ValueError(f"Unknown metric: {metric}")
 
-    EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
-    return list(hwnds_set)
+        def filter_by_condition(candidates, key, value):
+            """单条件过滤"""
+            negate = False
+            if key.startswith("!"):
+                negate = True
+                key = key[1:]
 
+            if key.endswith(("Extreme", "End")):
+                metric = key.replace("Extreme", "").replace("End", "")
+                reverse = (value == "max")
+                vals = [(hwnd, get_metric_value(hwnd, metric)) for hwnd in candidates]
+                Printer().print_vn(f"[hwnd, {metric}]: {vals}")
+                extreme_val = max(v for _, v in vals) if reverse else min(v for _, v in vals)
+                filtered = [hwnd for hwnd, val in vals if val == extreme_val]
+            elif key.endswith("Equals"):
+                metric = key.replace("Equals", "")
+                filtered = [hwnd for hwnd in candidates if get_metric_value(hwnd, metric) == value]
+            elif key.endswith("Greater"):
+                metric = key.replace("Greater", "")
+                filtered = [hwnd for hwnd in candidates if get_metric_value(hwnd, metric) > value]
+            elif key.endswith("Less"):
+                metric = key.replace("Less", "")
+                filtered = [hwnd for hwnd in candidates if get_metric_value(hwnd, metric) < value]
+            else:
+                raise ValueError(f"Unknown condition key: {key}")
 
-def uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None) -> list:
-    """
-    winAPI和uiautomation实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件.
-    对于Qt类型窗口,仅使用winAPI获取将会无法获取更细的类名
-    """
-    hwnds = win32_get_hwnds_by_pid_and_class_wildcards(pid)
-    # debug_hwnds_to_md(hwnds)
-    if class_wildcards is None:
-        return hwnds
-    res = []
-    for hwnd in hwnds:
-        try:
-            with auto.UIAutomationInitializerInThread():
-                ctrl = uiautomation.ControlFromHandle(hwnd)
-                if any(fnmatch.fnmatch(ctrl.ClassName, wildcard) for wildcard in class_wildcards):
-                    res.append(hwnd)
-        except Exception as e:
-            print(f"Failed on hwnd {hwnd}: {e}")
-            continue
-    return res
+            if negate:
+                hwnd_set = set(candidates)
+                return list(hwnd_set - set(filtered))
+            return filtered
 
+        def apply_method(candidates, method_dict):
+            """应用一个方法（可能是 OR 块，也可能是多个条件）"""
+            if not candidates:
+                return []
+            if len(candidates) == 1:
+                return candidates
 
-def _final_select_hwnds(hwnds, hwnd_to_ctrl, final_select_dict):
-    """
-    在已经筛选过的 hwnd 列表中，按照 FinalSelect 字典逐层比较选出结果。
+            result = candidates[:]
+            # 普通条件（AND 关系）: 每次筛选的输入都是上一个条件的输出
+            for k, v in method_dict.items():
+                if k.startswith("OR"):
+                    or_conditions = method_dict[k]
+                    result_set = set()
+                    for cond in or_conditions:
+                        # OR块的处理: 对每个条件的输入都是相同的 result
+                        sub_candidates = result
+                        for sk, sv in cond.items():
+                            sub_candidates = filter_by_condition(sub_candidates, sk, sv)
+                        result_set.update(sub_candidates)
+                    result = list(result_set)
+                result = filter_by_condition(result, k, v)
+            return result
 
-    参数:
-        hwnds: List[int] — 候选 hwnd 列表
-        hwnd_to_ctrl: Dict[int, Control] — hwnd 对应的已缓存 uiautomation 控件
-        final_select_dict: Dict[str, str] — 形如 {"Size": "max", "Width": "max"}
+        # 对所有方法, 只要有一个方法筛选出唯一结果, 则直接返回. 每个方法的输入都是相同的, 即hwnds[:]
+        candidate_hwnds = hwnds[:]
+        for method in final_select_methods:
+            elected_hwnds = apply_method(candidate_hwnds, method)
+            Printer().print_vn(f"尾筛: [{method}]{elected_hwnds}")
+            if len(elected_hwnds) == 1:
+                return elected_hwnds
 
-    返回:
-        List[int] — 选出的 hwnd 列表（可能是多个）
-    """
-    def get_peak_of_metric(hwnd, m):
-        rect = hwnd_to_ctrl[hwnd].BoundingRectangle
-        if m == "Size":
-            return (rect.right - rect.left) * (rect.bottom - rect.top)
-        elif m == "Width":
-            return rect.right - rect.left
-        elif m == "Height":
-            return rect.bottom - rect.top
-        else:
-            raise ValueError(f"Unknown metric: {m}")
+        return candidate_hwnds
 
-    # Printer().debug(f"多选一: {hwnds}")
-    candidates = hwnds[:]
-    for metric, order in final_select_dict.items():
-        reverse = (order == "max")
-        # 找到当前 metric 的极值
-        values = [(hwnd, get_peak_of_metric(hwnd, metric)) for hwnd in candidates]
-        if not values:
-            break
-        extreme_val = max(v[1] for v in values) if reverse else min(v[1] for v in values)
-        # 保留符合极值的 hwnd
-        candidates = [hwnd for hwnd, val in values if val == extreme_val]
-        if len(candidates) == 1:
-            break  # 唯一结果，直接返回
-    return candidates
-
-
-def uiautomation_get_hwnds_by_pid_and_rules_dict(pid, rules_dict: dict) -> list:
-    hwnds_of_pid = win32_get_hwnds_by_pid_and_class_wildcards(pid)
-    debug_hwnds_to_md(hwnds_of_pid)
-    return uiautomation_filter_hwnds_by_rules_dict(hwnds_of_pid, rules_dict)
-
-def uiautomation_filter_hwnds_by_rules_dict(all_hwnds, rules_dict: dict) -> list:
-    """
-    对所有 hwnd，按照 rules_dict 条件筛选
-    :param rules_dict: 条件字典，例如:
-        {
-            "ClassNameWildcards": ["Qt51514QWindowIcon"],
-            "!Name": "My Window",  # 取反示例
-            "FinalSelect": {"Size": "max"}
-        }
-    :param all_hwnds: 待筛选 hwnd 列表
-    :return: 符合条件的 hwnd 列表
-    """
-    hwnd_to_ctrl = {}
-    Printer().debug(f"进入筛选: {all_hwnds}; 筛查依据: {rules_dict}")
-
-    def hwnd_matches_rules(hwnd, rules):
+    @classmethod
+    def _hwnd_matches_rules(cls, hwnd, hwnd_to_ctrl, rules):
         """递归判断某个 hwnd 是否符合规则"""
         # 取 ctrl（缓存复用）
         if hwnd not in hwnd_to_ctrl:
@@ -300,7 +284,7 @@ def uiautomation_filter_hwnds_by_rules_dict(all_hwnds, rules_dict: dict) -> list
                 negate = True
                 key = key[1:]  # 去掉 "!"
             if key.startswith("OR"):
-                matched = any(uiautomation_filter_hwnds_by_rules_dict([hwnd], sub_rule) for sub_rule in value)
+                matched = any(cls.uiautomation_filter_hwnds_by_rules_dict([hwnd], sub_rule) for sub_rule in value)
             elif key == "ClassNameWildcards":
                 matched = any(fnmatch.fnmatch(ctrl.ClassName, pattern) for pattern in value)
             elif key == "FinalSelect":
@@ -318,7 +302,7 @@ def uiautomation_filter_hwnds_by_rules_dict(all_hwnds, rules_dict: dict) -> list
                 if isinstance(sub_ctrl, Control):
                     sub_hwnd = getattr(sub_ctrl, "Handle", None)
                     if sub_hwnd:
-                        sub_matched = uiautomation_filter_hwnds_by_rules_dict([sub_hwnd], value)
+                        sub_matched = cls.uiautomation_filter_hwnds_by_rules_dict([sub_hwnd], value)
                         matched = len(sub_matched) == 1
             else:
                 if not hasattr(ctrl, key):
@@ -338,117 +322,217 @@ def uiautomation_filter_hwnds_by_rules_dict(all_hwnds, rules_dict: dict) -> list
 
         return True
 
-    # 第一轮筛选
-    with auto.UIAutomationInitializerInThread():
-        matched_hwnds = [hwnd for hwnd in all_hwnds if hwnd_matches_rules(hwnd, rules_dict)]
-
-    # 最后一关 FinalSelect
-    if "FinalSelect" in rules_dict and len(matched_hwnds) > 1:
-        final_select_dict = rules_dict.get("FinalSelect", {})
-        matched_hwnds = _final_select_hwnds(matched_hwnds, hwnd_to_ctrl, final_select_dict)
-
-    return matched_hwnds
-
-def debug_hwnds_to_md(hwnds):
-    headers = [
-        "HWND",
-        "ClassName",
-        "Name",
-        "AutomationId",
-        "ControlTypeName",
-        "LocalizedControlType",
-        "ProcessId",
-        "BoundingRectangle",
-        "RuntimeId",
-        "Children",
-        "Parent"
-    ]
-
-    # Markdown 表头
-    print("| " + " | ".join(headers) + " |")
-    print("|" + " --- |" * len(headers))
-
-    for hwnd in hwnds:
+    @classmethod
+    def uiautomation_filter_hwnds_by_rules_dict(cls, all_hwnds, rules_dict: dict) -> list:
+        """
+        对所有 hwnd，按照 rules_dict 条件筛选
+        :param rules_dict: 条件字典，例如:
+            {
+                "ClassNameWildcards": ["Qt51514QWindowIcon"],
+                "!Name": "My Window",  # 取反示例
+                "FinalSelect": {"Size": "max"}
+            }
+        :param all_hwnds: 待筛选 hwnd 列表
+        :return: 符合条件的 hwnd 列表
+        """
+        hwnd_to_ctrl = {}
+        Printer().print_vn(f"筛选条件: {rules_dict}")
         with auto.UIAutomationInitializerInThread():
-            ctrl = auto.ControlFromHandle(hwnd)
-        row = [
-            str(hwnd),
-            str(ctrl.ClassName),
-            str(ctrl.Name),
-            str(ctrl.AutomationId),
-            str(ctrl.ControlTypeName),
-            str(ctrl.LocalizedControlType),
-            str(ctrl.ProcessId),
-            str(ctrl.BoundingRectangle),
-            str(ctrl.GetRuntimeId()),
-            str([str(c) for c in ctrl.GetChildren()]),
-            str(ctrl.GetParentControl())
+            matched_hwnds = [hwnd for hwnd in all_hwnds if cls._hwnd_matches_rules(hwnd, hwnd_to_ctrl, rules_dict)]
+        Printer().print_vn(f"初筛: {matched_hwnds}")
+
+        # 初筛窗口不唯一, 则进入尾筛 FinalSelect
+        if "FinalSelect" in rules_dict and len(matched_hwnds) > 1:
+            final_select_methods = rules_dict["FinalSelect"]  # 这里直接取列表
+            matched_hwnds = cls._final_select_hwnds(matched_hwnds, hwnd_to_ctrl, final_select_methods)
+
+        return matched_hwnds
+
+    @staticmethod
+    def _print_hwnds_to_md(hwnds):
+        headers = [
+            "HWND",
+            "ClassName",
+            "Name",
+            "AutomationId",
+            "ControlTypeName",
+            "LocalizedControlType",
+            "ProcessId",
+            "BoundingRectangle",
+            "RuntimeId",
+            "Children",
+            "Parent"
         ]
-        print("| " + " | ".join(row) + " |")
 
-def win32_wait_hwnd_by_class(class_name, timeout=20, title=None):
-    """等待指定类名的窗口打开，并返回窗口句柄"""
-    return win32_wait_hwnd_exclusively_by_class(None, class_name, timeout, title)
-
-
-def win32_wait_hwnd_exclusively_by_class(exclude_hwnd_list, class_name, timeout=20, title=None):
-    """等待指定类名的窗口打开，并返回窗口句柄"""
-    exclude_hwnd_list = exclude_hwnd_list or []
-    end_time = time.time() + timeout
-    while time.time() < end_time:
-        hwnd = win32gui.FindWindow(class_name, title)
-        if hwnd and hwnd not in exclude_hwnd_list:
-            return hwnd  # 返回窗口句柄
-        time.sleep(0.5)
-    return None
-
-
-def uiautomation_wait_hwnd_by_pid_and_class_wildcards(pid, class_wildcards, timeout=20, title=None):
-    """等待类名匹配通配符的窗口打开，并返回句柄（可选匹配标题）"""
-    return uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(None, pid, class_wildcards, timeout, title)
-
-
-def uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
-        exclude_hwnds, pid, class_wildcards, timeout=20, title=None) -> Tuple[Optional[int], Optional[str]]:
-    """
-    等待符合指定 pid 和通配类名的窗口出现，排除已知句柄，返回 hwnd 和类名（支持精确获取 Qt 类名）
-    """
-    exclude_hwnds = set(exclude_hwnds or [])
-    end_time = time.time() + timeout
-
-    while time.time() < end_time:
-        # 初步获取该 pid 下的 hwnds（不含 exclude_hwnds）
-        hwnds = win32_get_hwnds_by_pid_and_class_wildcards(pid)
-        hwnds = [h for h in hwnds if h not in exclude_hwnds]
-        # Printer().debug(hwnds)
+        # Markdown 表头
+        print("| " + " | ".join(headers) + " |")
+        print("|" + " --- |" * len(headers))
 
         for hwnd in hwnds:
-            if title:
-                buffer = ctypes.create_unicode_buffer(256)
-                GetWindowText(hwnd, buffer, 256)
-                if buffer.value != title:
-                    continue  # 跳过标题不符
+            with auto.UIAutomationInitializerInThread():
+                ctrl = auto.ControlFromHandle(hwnd)
+            row = [
+                str(hwnd),
+                str(ctrl.ClassName),
+                str(ctrl.Name),
+                str(ctrl.AutomationId),
+                str(ctrl.ControlTypeName),
+                str(ctrl.LocalizedControlType),
+                str(ctrl.ProcessId),
+                str(ctrl.BoundingRectangle),
+                str(ctrl.GetRuntimeId()),
+                str([str(c) for c in ctrl.GetChildren()]),
+                str(ctrl.GetParentControl())
+            ]
+            print("| " + " | ".join(row) + " |")
 
-            try:
-                with auto.UIAutomationInitializerInThread():
-                    ctrl = uiautomation.ControlFromHandle(hwnd)
-                    for wildcard in class_wildcards:
-                        if fnmatch.fnmatch(ctrl.ClassName, wildcard):
-                            return hwnd, ctrl.ClassName
-            except Exception as e:
-                # uiautomation 获取失败的窗口直接跳过
-                print(f"uiautomation failed for hwnd {hwnd}: {e}")
-                continue
+    @classmethod
+    def uiautomation_wait_hwnd_exclusively_by_pid_and_rules_dicts(cls, exclude_hwnds, pid, rules_dicts, timeout=20):
+        """
+        等待指定 pid 的窗口句柄，根据 rules_dicts 条件筛选，超时返回 None
+        """
+        exclude_hwnds = set(exclude_hwnds or [])
+        end_time = time.time() + timeout
+        while time.time() < end_time:
+            # 初步获取该 pid 下的 hwnds（不含 exclude_hwnds）
+            hwnds = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
+            hwnds = [h for h in hwnds if h not in exclude_hwnds]
+            for rules_dict in rules_dicts:
+                hwnds = cls.uiautomation_filter_hwnds_by_rules_dict(hwnds, rules_dict)
+                if len(hwnds) == 1:
+                    hwnd = hwnds[0]
+                    class_name = uiautomation.ControlFromHandle(hwnd).ClassName
+                    return hwnd, class_name
+        return None, None
 
-        time.sleep(0.5)
 
-    return None, None
+class Win32HwndGetter:
+    """win32 API 在获取速度上有优势, 但对于部分窗口并不能精确获取类名"""
+
+    @staticmethod
+    def win32_get_hwnds_by_pid_and_class_wildcards(pid, class_wildcards=None):
+        """winAPI实现的 获取指定进程 pid 的类名符合通配模式的所有顶层窗口控件"""
+        hwnds_set = set()
+
+        def enum_windows_callback(hwnd, _lParam):
+            process_id = wintypes.DWORD()
+            GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
+            if process_id.value == pid:
+                class_name = ctypes.create_unicode_buffer(256)
+                GetClassName(hwnd, class_name, 256)
+                if not class_wildcards:
+                    # 不传入则直接收集所有
+                    hwnds_set.add(hwnd)
+                else:
+                    for class_wildcard in class_wildcards:
+                        if class_wildcard is None:
+                            continue
+                        if fnmatch.fnmatch(class_name.value, class_wildcard):
+                            hwnds_set.add(hwnd)
+                            break  # 匹配到就跳出循环
+            return True
+
+        EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
+        return list(hwnds_set)
+
+    @classmethod
+    def win32_wait_hwnd_by_class(cls, class_name, timeout=20, title=None):
+        """等待指定类名的窗口打开，并返回窗口句柄"""
+        return cls.win32_wait_hwnd_exclusively_by_class(None, class_name, timeout, title)
+
+    @staticmethod
+    def win32_wait_hwnd_exclusively_by_class(exclude_hwnd_list, class_name, timeout=20, title=None):
+        """等待指定类名的窗口打开，并返回窗口句柄"""
+        exclude_hwnd_list = exclude_hwnd_list or []
+        end_time = time.time() + timeout
+        while time.time() < end_time:
+            hwnd = win32gui.FindWindow(class_name, title)
+            if hwnd and hwnd not in exclude_hwnd_list:
+                return hwnd  # 返回窗口句柄
+            time.sleep(0.5)
+        return None
+
+    @staticmethod
+    def get_visible_windows_by_zOrder():
+        """获取所有可见窗口句柄，按 Z 序从前到后排序"""
+        hwnds = []
+
+        def callback(hwnd, extra):
+            if win32gui.IsWindowVisible(hwnd) and win32gui.GetWindowText(hwnd):
+                print(hwnd, win32gui.GetWindowText(hwnd))
+                hwnds.append(hwnd)
+
+        win32gui.EnumWindows(callback, None)
+        return hwnds  # 已经是从最前到最后的顺序
+
+    @staticmethod
+    def get_visible_windows_sorted_by_top():
+        """获取所有可见窗口句柄, 按 top 从小到大排序"""
+        hwnds = []
+
+        def callback(hwnd, extra):
+            if win32gui.IsWindowVisible(hwnd):
+                rect = win32gui.GetWindowRect(hwnd)
+                left, top, right, bottom = rect
+                if right > left and bottom > top:
+                    hwnds.append((top, hwnd))
+
+        win32gui.EnumWindows(callback, None)
+        hwnds.sort()  # 按 top 从小到大排序
+        print(hwnds)
+        return [hwnd for top, hwnd in hwnds]
+
+    @staticmethod
+    def _get_a_hwnd_by_title(window_title):
+        """
+        根据窗口标题查找窗口句柄。
+        :param window_title: 窗口标题
+        :return: 窗口句柄 (HWND)
+        """
+        hwnd = FindWindow(None, window_title)
+        if hwnd == 0:
+            raise ValueError(f"窗口 '{window_title}' 未找到。")
+        return hwnd
+
+    @staticmethod
+    def _get_hwnd_list_by_class_and_title(class_name, window_title=None):
+        def enum_wnd_callback(hwnd, results):
+            # 获取窗口的类名和标题
+            if win32gui.IsWindowVisible(hwnd):
+                curr_class_name = win32gui.GetClassName(hwnd)
+                curr_window_title = win32gui.GetWindowText(hwnd)
+                # 仅匹配类名，若window_title不为空则继续匹配标题
+                if curr_class_name == class_name and (window_title is None or curr_window_title == window_title):
+                    results.append(hwnd)
+
+        hwnd_list = []
+        win32gui.EnumWindows(enum_wnd_callback, hwnd_list)
+        return hwnd_list
+
+    @staticmethod
+    def _get_hwnds_by_pid_and_class(pid, target_class_name):
+        def enum_windows_callback(hwnd, _lParam):
+            # 获取窗口所属的进程 ID
+            process_id = wintypes.DWORD()
+            GetWindowThreadProcessId(hwnd, ctypes.byref(process_id))
+            # 检查是否是目标进程的窗口
+            if process_id.value == pid:
+                class_name = ctypes.create_unicode_buffer(256)
+                GetClassName(hwnd, class_name, 256)
+                # 检查窗口类名是否匹配
+                if class_name.value == target_class_name:
+                    hwnd_list.append(hwnd)
+            return True
+
+        hwnd_list = []
+        EnumWindows(EnumWindowsProc(enum_windows_callback), 0)
+        return hwnd_list
 
 
 """hwnd内部控件获取"""
 
 
-def get_widget_center_pos_by_hwnd_and_possible_titles(main_hwnd, possible_child_title, control_type="Button"):
+def _get_widget_center_pos_by_hwnd_and_possible_titles(main_hwnd, possible_child_title, control_type="Button"):
     """获取指定控件中点的相对位置"""
     try:
         start_time = time.time()
@@ -797,7 +881,7 @@ def try_close_hwnds_in_set_and_return_remained(hwnds_set: set, timeout=5):
 """通过class操作"""
 
 
-def close_a_wnd_by_win32_classname(wnd_class):
+def _close_a_wnd_by_win32_classname(wnd_class):
     """关闭符合类名的一个窗口"""
     login_window = win32gui.FindWindow(wnd_class, None)
     if login_window:
@@ -985,7 +1069,7 @@ def get_wnd_dict_by_pid(pid):
     :param pid: 进程 pid
     :return: List[Control]
     """
-    hwnds = win32_get_hwnds_by_pid_and_class_wildcards(pid)
+    hwnds = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
     windows = []
     for hwnd in hwnds:
         try:

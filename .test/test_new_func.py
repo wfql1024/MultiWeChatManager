@@ -4,6 +4,9 @@ import time
 from unittest import TestCase
 
 import psutil
+import uiautomation
+import win32con
+import win32gui
 
 from functions import subfunc_file
 from functions.acc_func import AccOperator
@@ -14,17 +17,18 @@ from ui.sidebar_ui import SidebarUI, WndProperties
 from utils import handle_utils, hwnd_utils
 from utils.encoding_utils import VersionUtils
 from utils.file_utils import IniUtils
+from utils.hwnd_utils import Win32HwndGetter
 from utils.logger_utils import Printer
 
 
 class Test(TestCase):
     def test_get_wnd_by_classname(self):
-        hwnds = hwnd_utils.win32_wait_hwnd_by_class("Qt51514QWindowIcon")
+        hwnds = Win32HwndGetter.win32_wait_hwnd_by_class("Qt51514QWindowIcon")
         print(hwnds)
 
     def test_multi_new_weixin(self):
-        redundant_wnd_list, login_wnd_class, executable_name, cfg_handles = subfunc_file.get_remote_cfg(
-            "Weixin", redundant_wnd_class=None, login_wnd_class=None, executable=None, cfg_handle_regex_list=None)
+        executable_name, cfg_handles = subfunc_file.get_remote_cfg(
+            "Weixin", executable=None, cfg_handle_regex_list=None)
         # 关闭配置文件锁
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
@@ -176,7 +180,7 @@ class Test(TestCase):
 
     def test_get_all_sw_mutant_handles(self):
         sw = "Weixin"
-        mutant_handles = SwOperator.get_sw_all_mutex_handles_and_try_kill_if_need(sw)
+        mutant_handles = SwOperator.try_kill_mutex_if_need_and_return_remained_pids(sw)
         Printer().debug(mutant_handles)
 
     def test_get_handles_by_pids_and_handle_name_wildcards(self):
@@ -260,5 +264,17 @@ class Test(TestCase):
                         subfunc_file.update_extra_cfg(
                             sw, mode, "precise", cur_sw_ver, **{channel: result_dict})
 
-    def test_create_new_coexist(self):
-        """测试"""
+    def test_uiautomation_control_wnd(self):
+        """测试通过uiautomation来控制窗口"""
+        hwnd = 463030
+        wnd_ctrl = uiautomation.ControlFromHandle(hwnd)
+        win32gui.ShowWindow(hwnd, win32con.SW_MAXIMIZE)
+
+        win32gui.SetWindowPos(
+            hwnd,
+            win32con.HWND_TOP,
+            100, 100, 800, 600,
+            win32con.SWP_SHOWWINDOW
+        )
+        hwnd_utils.do_click_in_wnd(hwnd, 8, 8)
+        hwnd_utils.do_click_in_wnd(hwnd, 8, 8)

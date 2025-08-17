@@ -12,31 +12,36 @@ class Config:
     VER_STATUS = 'Beta'
 
     INI_DEFAULT_VALUE = {
+        # 默认为空的可不写
         LocalCfg.GLOBAL_SECTION: {
             LocalCfg.SCREEN_SIZE: f"1920*1080",
-            LocalCfg.HIDE_WND: False,
+            LocalCfg.USE_PROXY: False,
+            # -软件相关
             LocalCfg.ENABLE_NEW_FUNC: True,
-            LocalCfg.ROOT_TAB: "login",
-            LocalCfg.MNG_TAB: "acc",
-            LocalCfg.LOGIN_TAB: SW.WECHAT,
-            LocalCfg.SCALE: "auto",
-            LocalCfg.SIGN_VISIBLE: True,
+            LocalCfg.USED_TRAY: False,
+            LocalCfg.USED_REFRESH: False,
+            LocalCfg.USED_SIDEBAR: False,
+            # -排序相关
             LocalCfg.HIDDEN_SORT: "#0,True",
             LocalCfg.AUTO_START_SORT: "#0,True",
             LocalCfg.ENABLE_SORT: "#0,True",
             LocalCfg.DISABLE_SORT: "#0,True",
             LocalCfg.ALL_SORT: "#0,True",
-            LocalCfg.AUTO_PRESS: True,
-            LocalCfg.CALL_MODE: "HANDLE",
-            LocalCfg.ENCRYPTED_USERNAME: None,
-            LocalCfg.ENCRYPTED_PASSWORD: None,
-            LocalCfg.NEXT_CHECK_TIME: None,
-            LocalCfg.USE_PROXY: False,
+            # -标签页相关
+            LocalCfg.ROOT_TAB: "login",
+            LocalCfg.MNG_TAB: "acc",
+            LocalCfg.LOGIN_TAB: SW.WECHAT,
+            # -视图相关
+            LocalCfg.SCALE: "auto",
+            LocalCfg.SIGN_VISIBLE: True,
             LocalCfg.USE_TXT_AVT: True,
-            LocalCfg.USED_TRAY: False,
-            LocalCfg.USED_REFRESH: False,
-            LocalCfg.USED_SIDEBAR: False,
+            # -登录相关
+            LocalCfg.HIDE_WND: False,
             LocalCfg.KILL_IDLE_LOGIN_WND: False,
+            LocalCfg.UNLOCK_CFG: False,
+            LocalCfg.ALL_HAS_MUTEX: True,
+            LocalCfg.CALL_MODE: "HANDLE",
+            LocalCfg.AUTO_PRESS: True,
         },
         SW.DEFAULT: {
             LocalCfg.VIEW: "tree",

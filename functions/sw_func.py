@@ -20,14 +20,15 @@ from win32com.client import Dispatch
 
 from functions import subfunc_file
 from public_class.custom_widget import CustomDialog
-from public_class.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg, CallMode
+from public_class.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg, CallMode, WndType
 from public_class.global_members import GlobalMembers
 from resources import Config, Strings, Constants
 from resources.strings import NEWER_SYS_VER
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
 from utils.better_wx.inner_utils import patt2hex, custom_wildcard_tokenize
-from utils.encoding_utils import VersionUtils, PathUtils, StringUtils, CryptoUtils
+from utils.encoding_utils import VersionUtils, PathUtils, CryptoUtils
 from utils.file_utils import DllUtils
+from utils.hwnd_utils import HwndGetter, Win32HwndGetter
 from utils.logger_utils import mylogger as logger, Printer, Logger
 from utils.logger_utils import myprinter as printer
 from utils.process_utils import Process
@@ -76,7 +77,7 @@ class SwInfoFunc:
             modified_list = channel_addresses_dict[addr]["modified"]
             has_original_list = DllUtils.find_hex_patterns_from_file(patch_file, *original_list)
             # 转换为集合检查一致性,集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
-            Printer().debug(f"特征码列表:\n{has_original_list}")
+            # Printer().debug(f"特征码列表:\n{has_original_list}")
             has_original_set = set(has_original_list)
             # 判断匹配状态
             if len(has_original_set) == 1 and True in has_original_set:
@@ -275,6 +276,43 @@ class SwInfoFunc:
         curr_ver = cls.calc_sw_ver(sw)
         subfunc_file.clear_some_extra_cfg(sw, mode, "precise", curr_ver)
 
+    @staticmethod
+    def get_sw_wnd_class_check_dict(sw, wnd_type) -> Optional[list]:
+        """从远程配置中获取适合当前版本的窗口类名检查字典"""
+        type_vers_dict: dict = subfunc_file.get_remote_cfg(sw, RemoteCfg.WND_CLASS, wnd_type, "matching")
+        if not isinstance(type_vers_dict, dict):
+            return None
+        curr_ver = SwInfoFunc.calc_sw_ver(sw)
+        compatible_version = VersionUtils.pkg_find_compatible_version(curr_ver, list(type_vers_dict.keys()))
+        if compatible_version is None:
+            return None
+        return type_vers_dict[compatible_version]
+
+    @staticmethod
+    def get_sw_original_wnd_class_name(sw, wnd_type) -> Optional[str]:
+        type_vers_dict: dict = subfunc_file.get_remote_cfg(sw, RemoteCfg.WND_CLASS, wnd_type, "original")
+        if not isinstance(type_vers_dict, dict):
+            return None
+        curr_ver = SwInfoFunc.calc_sw_ver(sw)
+        compatible_version = VersionUtils.pkg_find_compatible_version(curr_ver, list(type_vers_dict.keys()))
+        if compatible_version is None:
+            return None
+        return type_vers_dict[compatible_version]["class_name"]
+
+    @staticmethod
+    def get_login_hwnds_of_sw(sw):
+        """获取平台所有的登录窗口句柄"""
+        login_hwnds = []
+        login_class_check_dicts = SwInfoFunc.get_sw_wnd_class_check_dict(sw, WndType.LOGIN)
+        all_sw_pids = SwInfoFunc.get_sw_all_exe_pids(sw)
+        for pid in all_sw_pids:
+            hwnds_of_pid = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
+            for check_dict in login_class_check_dicts:
+                hwnd_list = HwndGetter.uiautomation_filter_hwnds_by_rules_dict(hwnds_of_pid, check_dict)
+                if len(hwnd_list) == 1:
+                    login_hwnds.append(hwnd_list[0])
+        return login_hwnds
+
     @classmethod
     def get_available_coexist_mode(cls, sw):
         """选择一个可用的共存构造模式, 优先返回用户选择的, 若其不可用则返回可用的第一个模式"""
@@ -390,7 +428,7 @@ class SwInfoFunc:
         for key in ("note", "label"):
             value, = subfunc_file.get_settings(sw, **{key: None})
             if value is not None:
-                print(key, value)
+                # print(key, value)
                 display_name = str(value)
                 break
         return display_name
@@ -447,14 +485,31 @@ class SwInfoFunc:
     #     return pids
 
     @staticmethod
-    def record_sw_pid_mutex_dict_when_start_login(sw) -> dict:
-        """在该平台登录之前,存储 pid 和 互斥体 的映射关系字典"""
+    def record_sw_pid_mutex_dict_when_start_login(sw, set_all_to_true=None):
+        """在该平台登录之前,存储 pid 和 互斥体 的映射关系字典, 默认全置为True"""
         pids = SwInfoFunc.get_sw_all_exe_pids(sw)
         pid_mutex_dict = {}
-        for pid in pids:
-            pid_mutex_dict[pid] = True
+        if isinstance(set_all_to_true, bool):
+            # 一刀切, 所有进程都设置为含有互斥体或没有互斥体
+            Printer().print_vn(f"[INFO]将所有进程设为含有互斥体: {set_all_to_true}")
+            for pid in pids:
+                pid_mutex_dict[pid] = set_all_to_true
+        else:
+            # 是否默认全为True
+            all_has_mutex_by_default = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ALL_HAS_MUTEX)
+            all_has_mutex_by_default: bool = True if all_has_mutex_by_default is True else False
+            if all_has_mutex_by_default is True:
+                Printer().print_vn("[INFO]将所有进程默认含有互斥体")
+                for pid in pids:
+                    pid_mutex_dict[pid] = True
+            else:
+                # 从当前所有进程中获取所有有互斥体的进程
+                Printer().print_vn("[INFO]不默认所有进程含有互斥体, 检查中...")
+                pids_has_mutex = SwOperator.try_kill_mutex_if_need_and_return_remained_pids(sw)
+                for p in pids:
+                    pid_mutex_dict[p] = True if p in pids_has_mutex else False
+        Printer().print_vn(f"[INFO]登录前所有互斥体:{pid_mutex_dict}")
         subfunc_file.update_sw_acc_data(AccKeys.RELAY, sw, **{AccKeys.PID_MUTEX: pid_mutex_dict})
-        return pid_mutex_dict
 
     @staticmethod
     def get_pids_has_mutex_from_record(sw) -> list:
@@ -508,9 +563,35 @@ class SwInfoFunc:
 
 class SwOperator:
     @staticmethod
-    def get_sw_all_mutex_handles_and_try_kill_if_need(sw, kill=None):
-        """获得平台所有剩余互斥锁的句柄"""
-        Printer().debug("查杀平台互斥体中...")
+    def kill_all_mutexes_now(sw):
+        """查杀所有互斥体: 进程互斥体, 配置文件锁"""
+        pids = SwInfoFunc.get_sw_all_exe_pids(sw)
+        mutant_handle_wildcards, config_handle_wildcards = subfunc_file.get_remote_cfg(
+            sw, mutant_handle_wildcards=None, config_handle_wildcards=None)
+        handle_wildcards = []
+        if isinstance(mutant_handle_wildcards, list):
+            handle_wildcards.extend(mutant_handle_wildcards)
+        if isinstance(config_handle_wildcards, list):
+            handle_wildcards.extend(config_handle_wildcards)
+        if isinstance(handle_wildcards, list) and len(handle_wildcards) > 0:
+            handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                pids, handle_wildcards)
+            Printer().debug(f"[INFO]查询到互斥体: {handle_infos}")
+            if len(handle_infos) == 0:
+                return True, f"{sw}已经不含互斥体和文件锁!"
+            success = handle_utils.pywinhandle_close_handles(
+                handle_infos
+            )
+            if success is True:
+                return True, f"{sw}已关闭互斥体和解锁文件!"
+            else:
+                return False, f"{sw}关闭互斥体和解锁文件失败!"
+        else:
+            return False, f"未查询到{sw}的互斥体列表和配置文件列表!"
+
+    @staticmethod
+    def try_kill_mutex_if_need_and_return_remained_pids(sw, kill=None):
+        """检查并可选择是否关闭互斥体, 返回剩余的含有互斥体的 pid 列表"""
         mutant_wildcards, = subfunc_file.get_remote_cfg(
             sw,
             mutant_handle_wildcards=None,
@@ -518,13 +599,9 @@ class SwOperator:
         if not isinstance(mutant_wildcards, list):
             print("未获取到互斥体通配词,将不进行查找...")
             return None
+        pids_with_mutex = []
         pids = SwInfoFunc.get_sw_all_exe_pids(sw)
         Printer().debug(f"当前所有进程: {pids}")
-        # 清空互斥体节点,维护本次登录的互斥体情况
-        subfunc_file.clear_some_acc_data(AccKeys.RELAY, sw, AccKeys.PID_MUTEX)
-        pid_mutex_dict = {}
-        for pid in pids:
-            pid_mutex_dict[pid] = []
         mutant_handle_dicts = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
             pids, mutant_wildcards)
         Printer().debug(f"查杀前所有互斥体: {mutant_handle_dicts}")
@@ -533,7 +610,9 @@ class SwOperator:
             mutant_handle_dicts = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
                 pids, mutant_wildcards)
             Printer().debug(f"查杀后所有互斥体: {mutant_handle_dicts}")
-        return mutant_handle_dicts
+        for mutant_handle in mutant_handle_dicts:
+            pids_with_mutex.append(mutant_handle['process_id'])
+        return pids_with_mutex
 
     @staticmethod
     def _ask_for_manual_terminate_or_force(sw_exe_path):
@@ -676,30 +755,29 @@ class SwOperator:
             root.after(0, callback)
 
     @classmethod
-    def _open_sw_origin_and_return_hwnd(cls, sw) -> Tuple[Optional[int], str]:
+    def open_sw_and_return_hwnd(cls, sw, exe=None) -> Tuple[Optional[int], str]:
         """打开平台原始程序并返回窗口hwnd"""
-        # 获取需要的数据
-        login_wnd_class, = subfunc_file.get_remote_cfg(
-            sw, login_wnd_class=None)
-        if login_wnd_class is None:
+        login_hwnd_rules_dicts = SwInfoFunc.get_sw_wnd_class_check_dict(sw, WndType.LOGIN)
+        if login_hwnd_rules_dicts is None:
             return None, "该平台尚未适配!"
         all_excluded_hwnds = []
         # 关闭多余的多开器,记录已经存在的窗口 -------------------------------------------------------------------
-        cls.kill_sw_multiple_processes(sw)
         remained_idle_wnd_list = cls.get_idle_login_wnd_and_close_if_necessary(sw)
         all_excluded_hwnds.extend(remained_idle_wnd_list)
         # 检查所有pid及互斥体情况 -------------------------------------------------------------------
         SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
-        sw_proc, sub_proc = cls.open_sw(sw)
+        sw_proc, sub_proc = cls.open_sw(sw, exe)
         sw_proc_pid = sw_proc.pid if sw_proc else None
         if sw_proc_pid is None:
             return None, "创建进程失败!"
         # 等待打开窗口并获取hwnd *******************************************************************
-        sw_hwnd, class_name = hwnd_utils.uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
-            all_excluded_hwnds, sw_proc_pid, [login_wnd_class])
+        sw_hwnd, class_name = HwndGetter.uiautomation_wait_hwnd_exclusively_by_pid_and_rules_dicts(
+            all_excluded_hwnds, sw_proc_pid, login_hwnd_rules_dicts)
         if sub_proc:
             sub_proc.terminate()
         Printer().debug(sw_hwnd)
+        if sw_hwnd is None:
+            return None, "超时未检测到窗口"
         return sw_hwnd, ""
 
     @classmethod
@@ -708,7 +786,7 @@ class SwOperator:
         root_class = GlobalMembers.root_class
         multirun_mode = GlobalMembers.root_class.sw_classes[sw].multirun_mode
         start_time = time.time()
-        sw_hwnd, msg = cls._open_sw_origin_and_return_hwnd(sw)
+        sw_hwnd, msg = cls.open_sw_and_return_hwnd(sw)
         if isinstance(sw_hwnd, int):
             SwInfoFunc.set_pid_mutex_all_values_to_false(sw)
             subfunc_file.update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
@@ -732,45 +810,38 @@ class SwOperator:
             exe_wildcard=None, sequence=None)
         if not isinstance(exe_wildcard, str) or not isinstance(sequence, str):
             return False, f"尚未适配[exe_wildcard, sequence]!"
-        login_wnd_wildcards, = subfunc_file.get_remote_cfg(
-            sw, login_wnd_class_wildcards=None)
-        if not isinstance(login_wnd_wildcards, list):
-            return False, "尚未适配[login_wnd_wildcards]!"
-        all_excluded_hwnds = []
-        # 关闭多余的多开器,记录已经存在的窗口 -------------------------------------------------------------------
-        cls.kill_sw_multiple_processes(sw)
-        remained_idle_wnd_list = cls.get_idle_login_wnd_and_close_if_necessary(sw)
-        all_excluded_hwnds.extend(remained_idle_wnd_list)
-        # 检查所有pid及互斥体情况 -------------------------------------------------------------------
-        SwInfoFunc.record_sw_pid_mutex_dict_when_start_login(sw)
-        sw_proc = None
+        login_hwnd_rules_dicts = SwInfoFunc.get_sw_wnd_class_check_dict(sw, WndType.LOGIN)
+        if login_hwnd_rules_dicts is None:
+            return False, "尚未适配[login_hwnd_rules_dicts]!"
+
+        # 找到第一个没使用或没创建的共存程序名, 若没创建则询问创建
+        exe_name = None
         for s in sequence:
             exe_name = exe_wildcard.replace("?", s)
-            # 查找是否有exe_name进程
-            exe_pids_dict = process_utils.psutil_get_pids_by_wildcards_and_grouping_to_dict([exe_name])
-            if isinstance(exe_pids_dict, dict) and len(exe_pids_dict.get(exe_name, [])) > 0:
-                continue
             inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             inst_dir = os.path.dirname(inst_path)
-            need_open_exe = os.path.join(inst_dir, exe_name)
-            if not os.path.exists(need_open_exe):
-                # 建立这个标号的共存程序
-                if messagebox.askokcancel("错误", f"不存在{need_open_exe}!是否创建?"):
+            coexist_exe_path = os.path.join(inst_dir, exe_name)
+            # 判定不存在的条件: 文件不存在或者文件没有被运行
+            if not os.path.isfile(coexist_exe_path):
+                if messagebox.askokcancel("提醒", f"不存在{coexist_exe_path}!是否创建?"):
                     cls._create_coexist_exe_core(sw, s)
-                    if os.path.isfile(need_open_exe):
-                        sw_proc = cls.create_process_without_admin(need_open_exe)
-                    break
                 else:
                     return False, "用户取消创建！"
-            if os.path.isfile(need_open_exe):
-                sw_proc = cls.create_process_without_admin(need_open_exe)
                 break
-        sw_proc_pid = sw_proc.pid if sw_proc else None
-        # 等待打开窗口并获取hwnd *******************************************************************
-        if sw_proc_pid is None:
-            return False, "创建进程失败！"
-        sw_hwnd, class_name = hwnd_utils.uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
-            all_excluded_hwnds, sw_proc_pid, login_wnd_wildcards)
+            # 检测是否登录
+            exe_pids_dict = process_utils.psutil_get_pids_by_wildcards_and_grouping_to_dict([exe_name])
+            if not isinstance(exe_pids_dict, dict):
+                break
+            exe_pids = exe_pids_dict.get(exe_name, [])
+            if len(exe_pids) == 0:
+                break
+            exe_pids = process_utils.remove_pids_not_in_path(exe_pids, coexist_exe_path)
+            if len(exe_pids) == 0:
+                break
+
+        # 直接执行
+        print(f"将打开{exe_name}")
+        sw_hwnd, msg = cls.open_sw_and_return_hwnd(sw, exe_name)
         if isinstance(sw_hwnd, int):
             SwInfoFunc.set_pid_mutex_all_values_to_false(sw)
             subfunc_file.update_statistic_data(
@@ -779,7 +850,7 @@ class SwOperator:
             cls._wait_hwnds_close_and_do_in_root([sw_hwnd], callback=callback)
             return True, ""
         else:
-            return False, "超时未检测到登录窗口!"
+            return False, msg
 
     @classmethod
     def _manual_login_coexist(cls, sw):
@@ -976,12 +1047,12 @@ class SwOperator:
             return process_utils.create_process_for_win7(executable, args, creation_flags)
 
     @classmethod
-    def open_sw(cls, sw, exe=None):
+    def open_sw(cls, sw, exe=None) -> Tuple[Optional[Process], Optional[Process]]:
         """
         根据状态以不同方式打开微信
         :param exe: 指定exe名
         :param sw: 选择软件标签
-        :return: 微信窗口句柄
+        :return: 返回主进程和子进程
         """
         root_class = GlobalMembers.root_class
         multirun_mode = root_class.sw_classes[sw].multirun_mode
@@ -992,7 +1063,7 @@ class SwOperator:
         if exe:
             sw_path = os.path.join(os.path.dirname(sw_path), exe)
         if not sw_path:
-            return None
+            return None, None
         if multirun_mode == MultirunMode.FREELY_MULTIRUN:
             # ————————————————————————————————全局多开————————————————————————————————
             proc = cls.create_process_without_admin(sw_path)
@@ -1015,61 +1086,44 @@ class SwOperator:
 
     @staticmethod
     def _is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-        # TODO: 窗口检测逻辑需要优化
-        """检测窗口是否是某个平台的主窗口"""
-        executable, = subfunc_file.get_remote_cfg(sw, executable=None)
-        # 判断hwnd是否属于指定的程序
-        pid = hwnd_utils.get_hwnd_details_of_(hwnd)["pid"]
-        if psutil.Process(pid).exe() != executable:
-            return False
-        expected_classes, = subfunc_file.get_remote_cfg(sw, main_wnd_class_wildcards=None)
-        class_name = win32gui.GetClassName(hwnd)
-        for expected_class in expected_classes:
-            regex = StringUtils.wildcard_to_regex(expected_class)
-            if sw == SW.WECHAT:
-                # 旧版微信可直接通过窗口类名确定主窗口
-                if re.fullmatch(regex, class_name):
-                    return True
-                continue
-            elif sw == SW.WEIXIN:
-                if not re.fullmatch(regex, class_name):
-                    continue
-                # 新版微信需要通过窗口控件判定
-                style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
-                # 检查是否有最大化按钮
-                has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
-                if has_maximize:
-                    return True
-                continue
-        return False
+        ...
+        # # TODO: 窗口检测逻辑需要优化
+        # """检测窗口是否是某个平台的主窗口"""
+        # executable, = subfunc_file.get_remote_cfg(sw, executable=None)
+        # # 判断hwnd是否属于指定的程序
+        # pid = hwnd_utils.get_hwnd_details_of_(hwnd)["pid"]
+        # if psutil.Process(pid).exe() != executable:
+        #     return False
+        # expected_classes, = subfunc_file.get_remote_cfg(sw, main_wnd_class_wildcards=None)
+        # class_name = win32gui.GetClassName(hwnd)
+        # for expected_class in expected_classes:
+        #     regex = StringUtils.wildcard_to_regex(expected_class)
+        #     if sw == SW.WECHAT:
+        #         # 旧版微信可直接通过窗口类名确定主窗口
+        #         if re.fullmatch(regex, class_name):
+        #             return True
+        #         continue
+        #     elif sw == SW.WEIXIN:
+        #         if not re.fullmatch(regex, class_name):
+        #             continue
+        #         # 新版微信需要通过窗口控件判定
+        #         style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
+        #         # 检查是否有最大化按钮
+        #         has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
+        #         if has_maximize:
+        #             return True
+        #         continue
+        # return False
 
     @classmethod
     def get_idle_login_wnd_and_close_if_necessary(cls, sw, close=False):
         """获取所有多余窗口,如果有需要,关闭这些窗口"""
-        login_wnd_class, login_wildcards = subfunc_file.get_remote_cfg(
-            sw, login_wnd_class=None, coexist_login_wnd_class_wildcards=None)
-        # 多余的窗口类名模式
-        all_idle_classes = []
-        if isinstance(login_wnd_class, str):
-            all_idle_classes.append(login_wnd_class)
-        if isinstance(login_wildcards, list):
-            for wildcard in login_wildcards:
-                if isinstance(wildcard, str) and wildcard not in all_idle_classes:
-                    all_idle_classes.append(wildcard)
-
-        # 平台所有进程和对应窗口句柄
-        all_sw_pids = SwInfoFunc.get_sw_all_exe_pids(sw)
-        all_idle_hwnds_set = set()
-        for pid in all_sw_pids:
-            all_idle_hwnds_set.update(
-                hwnd_utils.uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, all_idle_classes))
-        # 排除主窗口
-        for hwnd in all_idle_hwnds_set:
-            if cls._is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-                all_idle_hwnds_set.remove(hwnd)
-        all_idle_hwnds = list(all_idle_hwnds_set)
+        # 多余的窗口: 登录窗口 + 多开器进程
+        all_idle_hwnds = SwInfoFunc.get_login_hwnds_of_sw(sw)
+        all_idle_hwnds_set = set(all_idle_hwnds)
         Printer().print_vn(f"[INFO]{sw}登录任务前已存在的登录窗口：{all_idle_hwnds}")
         if close:
+            SwOperator.kill_sw_multiple_processes(sw)
             all_idle_hwnds = hwnd_utils.try_close_hwnds_in_set_and_return_remained(all_idle_hwnds_set)
             print(f"[OK]用户选择不保留!清理后剩余的登录窗口:{all_idle_hwnds}")
         return all_idle_hwnds
@@ -1077,21 +1131,15 @@ class SwOperator:
     @classmethod
     def get_login_size(cls, sw):
         """获取登录窗口尺寸"""
-        login_wnd_class_wildcards, = subfunc_file.get_remote_cfg(sw, login_wnd_class_wildcards=None)
-        if not isinstance(login_wnd_class_wildcards, list):
-            return None
-        # 首先检测当前是否有登录窗口, 若有则直接获取
-        sw_pids = SwInfoFunc.get_sw_all_exe_pids(sw)
-        for pid in sw_pids:
-            login_hwnds = hwnd_utils.uiautomation_get_hwnds_by_pid_and_class_wildcards(pid, login_wnd_class_wildcards)
-            if len(login_hwnds) > 0:
-                login_hwnd = login_hwnds[0]
-                login_wnd_details = hwnd_utils.get_hwnd_details_of_(login_hwnd)
-                login_width = login_wnd_details["width"]
-                login_height = login_wnd_details["height"]
-                return login_width, login_height
+        login_hwnds = SwInfoFunc.get_login_hwnds_of_sw(sw)
+        if len(login_hwnds) > 0:
+            login_hwnd = login_hwnds[0]
+            login_wnd_details = hwnd_utils.get_hwnd_details_of_(login_hwnd)
+            login_width = login_wnd_details["width"]
+            login_height = login_wnd_details["height"]
+            return login_width, login_height
         # 若没有登录窗口, 则打开一个登录窗口再获取
-        login_hwnd, msg = cls._open_sw_origin_and_return_hwnd(sw)
+        login_hwnd, msg = cls.open_sw_and_return_hwnd(sw)
         if not isinstance(login_hwnd, int):
             messagebox.showerror("错误", f"打开登录窗口失败:{msg}")
             return None
@@ -1107,37 +1155,36 @@ class SwOperator:
         """打开配置文件夹"""
         data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
         if os.path.exists(data_path):
-            config_path_suffix, = subfunc_file.get_remote_cfg(sw, config_path_suffix=None)
-            if config_path_suffix is None:
+            config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+            if not isinstance(config_addresses, list) or len(config_addresses) == 0:
                 messagebox.showinfo("提醒", f"{sw}平台还没有适配")
                 return
-            config_path = os.path.join(data_path, config_path_suffix)
-            if os.path.exists(config_path):
-                os.startfile(config_path)
+            config_dir = os.path.dirname(SwInfoFunc.resolve_sw_path(sw, config_addresses[0]))
+            if os.path.exists(config_dir):
+                os.startfile(config_dir)
 
     @staticmethod
     def clear_config_file(sw, after):
         """清除登录配置文件"""
         confirm = messagebox.askokcancel(
             "确认清除",
-            f"该操作将会清空{sw}登录配置文件，请确认是否需要清除？"
+            f"该操作将会移动{sw}登录配置文件到回收站，可右键撤销删除, 是否继续？"
         )
         if confirm:
-            data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
-            config_path_suffix, config_file_list = subfunc_file.get_remote_cfg(
-                sw, config_path_suffix=None, config_file_list=None)
-            if (config_path_suffix is None or config_file_list is None or
-                    not isinstance(config_file_list, list) or len(config_file_list) == 0):
+            config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+            if not isinstance(config_addresses, list) or len(config_addresses) == 0:
                 messagebox.showinfo("提醒", f"{sw}平台还没有适配")
                 return
 
             files_to_delete = []
-
-            for file in config_file_list:
-                config_path = os.path.join(data_path, str(config_path_suffix))
-                file_suffix = file.split(".")[-1]
-                data_files = glob.glob(os.path.join(config_path, f'*.{file_suffix}').replace("\\", "/"))
-                files_to_delete.extend([f for f in data_files if not os.path.split(config_path) == config_path_suffix])
+            for addr in config_addresses:
+                origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, addr)
+                origin_cfg_dir = os.path.dirname(origin_cfg_path)
+                origin_cfg_basename = os.path.basename(origin_cfg_path)
+                acc_cfg_path_glob_wildcard = os.path.join(origin_cfg_dir, f"*_{origin_cfg_basename}")
+                acc_cfg_paths = glob.glob(acc_cfg_path_glob_wildcard)
+                acc_cfg_paths = [f.replace("\\", "/") for f in acc_cfg_paths]
+                files_to_delete.extend([f for f in acc_cfg_paths if f != origin_cfg_path])
             if len(files_to_delete) > 0:
                 # 删除这些文件
                 file_utils.move_files_to_recycle_bin(files_to_delete)
