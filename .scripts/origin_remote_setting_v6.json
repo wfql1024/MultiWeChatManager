@@ -862,7 +862,10 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "WeCha?.exe",
-                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "patch_wildcard": {
+                        "%dll_dir%/WeChatWin.dll": "%dll_dir%/WeChatWi?.dll"
+                    }
                 },
                 "default2": {
                     "label": "默认2",
@@ -871,7 +874,10 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "WeChat?.exe",
-                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "patch_wildcard": {
+                        "%dll_dir%/WeChatWin.dll": "%dll_dir%/WeChatWin.dl?"
+                    }
                 }
             },
             "feature": {
@@ -1152,7 +1158,10 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "Weixi?.exe",
-                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "patch_wildcard": {
+                        "%dll_dir%/Weixin.dll": "%dll_dir%/Weixi?.dll"
+                    }
                 },
                 "default2": {
                     "label": "默认2",
@@ -1161,7 +1170,10 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "Weixin?.exe",
-                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
+                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "patch_wildcard": {
+                        "%dll_dir%/Weixin.dll": "%dll_dir%/Weixin.dl?"
+                    }
                 }
             },
             "feature": {

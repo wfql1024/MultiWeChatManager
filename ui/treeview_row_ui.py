@@ -1,5 +1,4 @@
 import tkinter as tk
-from abc import ABC
 from collections.abc import Sized
 from tkinter import ttk
 
@@ -10,7 +9,7 @@ from functions.acc_func import AccInfoFunc, AccOperator
 from public_class.custom_classes import Condition
 from public_class.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
 from public_class.global_members import GlobalMembers
-from public_class.widget_frameworks import ActionableTreeView
+from public_class.widget_frameworks import TreeviewATT
 from resources import Constants, Strings
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
@@ -33,7 +32,7 @@ class TreeviewLoginUI:
         self.main_frame = self.login_ui.main_frame
         self.btn_dict = {
             "auto_quit_btn": {
-                "text": "一键退出",
+                "text": "退 出",
                 "btn": None,
                 "func": self.login_ui.to_quit_accounts,
                 "enable_scopes":
@@ -41,10 +40,11 @@ class TreeviewLoginUI:
                 "tip_scopes_dict": {
                     "请选择要退出的账号":
                         Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
-                }
+                },
+                "negative": True
             },
             "auto_login_btn": {
-                "text": "一键登录",
+                "text": "登 录",
                 "btn": None,
                 "func": self.login_ui.to_auto_login,
                 "enable_scopes":
@@ -68,43 +68,47 @@ class TreeviewLoginUI:
                 }
             },
             "create_starter": {
-                "text": "创建启动器",
+                "text": "快 捷",
                 "btn": None,
                 "func": self.login_ui.to_create_starter,
                 "enable_scopes":
                     Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
                 "tip_scopes_dict": {
-                    "请选择要创建的账号":
+                    "请选择要创建的账号, 创建桌面快捷方式, 可以脱离本软件直接登录对应账号":
                         Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
                 }
             }
         }
         self.ui_frame = dict()
+        login_key = OnlineStatus.LOGIN.value
+        logout_key = OnlineStatus.LOGOUT.value
+
         # 添加占位控件
-        self.ui_frame[OnlineStatus.LOGIN] = ttk.Frame(self.main_frame)
-        self.ui_frame[OnlineStatus.LOGIN].pack(side=tk.TOP, fill=tk.X)
-        self.ui_frame[OnlineStatus.LOGOUT] = ttk.Frame(self.main_frame)
-        self.ui_frame[OnlineStatus.LOGOUT].pack(side=tk.TOP, fill=tk.X)
+        self.ui_frame[login_key] = ttk.Frame(self.main_frame)
+        self.ui_frame[login_key].pack(side=tk.TOP, fill=tk.X)
+        self.ui_frame[logout_key] = ttk.Frame(self.main_frame)
+        self.ui_frame[logout_key].pack(side=tk.TOP, fill=tk.X)
 
         # 加载登录列表
         if isinstance(logins, Sized):
-            self.tree_class["login"] = AccLoginTreeView(
-                self,
-                "login", "已登录：", self.btn_dict["auto_quit_btn"].copy(),
-                self.btn_dict["config_btn"].copy(),
+            self.tree_class[login_key] = AccLoginTATT(
+                self, self.ui_frame[login_key],
+                login_key, "已登录：", self.btn_dict["auto_quit_btn"].copy(),
                 self.btn_dict["create_starter"].copy(),
+                self.btn_dict["config_btn"].copy(),
             )
 
         # 加载未登录列表
         if isinstance(logouts, Sized):
-            self.tree_class["logout"] = AccLoginTreeView(
-                self, "logout", "未登录：", self.btn_dict["auto_login_btn"].copy(),
+            self.tree_class[logout_key] = AccLoginTATT(
+                self, self.ui_frame[logout_key],
+                logout_key, "未登录：", self.btn_dict["auto_login_btn"].copy(),
                 self.btn_dict["create_starter"].copy(),
             )
 
 
-class AccLoginTreeView(ActionableTreeView, ABC):
-    def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
+class AccLoginTATT(TreeviewATT):
+    def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.global_settings_value = None
         self.can_quick_refresh = None
@@ -112,9 +116,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         self.root = None
         self.photo_images = []
         self.sign_visible = None
-        self.data_dir = None
-        self.data_src = None
-        super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
+        super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
         self.root_class = GlobalMembers.root_class
@@ -124,8 +126,7 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         self.main_frame = self.parent_class.ui_frame[self.table_tag]
         self.global_settings_value = self.root_class.global_settings_value
 
-        self.data_src = self.parent_class.acc_list_dict[self.table_tag]
-        self.data_dir = self.root_class.sw_classes[self.sw].data_dir
+        # self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
         self.columns = (" ", "配置", "pid", "账号标识", "平台id", "昵称")
         sort_str = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, f"{self.table_tag}_sort")
@@ -133,8 +134,8 @@ class AccLoginTreeView(ActionableTreeView, ABC):
             if len(sort_str.split(",")) == 2:
                 self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
 
-    def set_table_style(self):
-        super().set_table_style()
+    def set_tree_style(self):
+        super().set_tree_style()
 
         tree = self.tree
         # 特定列的宽度和样式设置
@@ -150,10 +151,10 @@ class AccLoginTreeView(ActionableTreeView, ABC):
         tree.column("平台id", anchor='center')
         tree.column("昵称", anchor='center')
 
-    def display_table(self):
+    def display_tree(self):
         self.sign_visible: bool = self.root_class.global_settings_value.sign_vis
         tree = self.tree.nametowidget(self.tree)
-        accounts = self.data_src
+        accounts = self.parent_class.acc_list_dict[self.table_tag]
         login_status = self.table_tag
 
         curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw)
@@ -195,6 +196,8 @@ class AccLoginTreeView(ActionableTreeView, ABC):
 
         self.can_quick_refresh = True
         self.login_ui.quick_refresh_mode = True
+        if len(tree.get_children()) == 0:
+            self.null_data = True
 
     def click_on_id_column(self, click_time, item_id):
         """

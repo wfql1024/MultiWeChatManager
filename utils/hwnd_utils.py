@@ -257,7 +257,7 @@ class HwndGetter:
         candidate_hwnds = hwnds[:]
         for method in final_select_methods:
             elected_hwnds = apply_method(candidate_hwnds, method)
-            Printer().print_vn(f"尾筛: [{method}]{elected_hwnds}")
+            # Printer().debug(f"尾筛: [{method}]{elected_hwnds}")
             if len(elected_hwnds) == 1:
                 return elected_hwnds
 
@@ -284,7 +284,7 @@ class HwndGetter:
                 negate = True
                 key = key[1:]  # 去掉 "!"
             if key.startswith("OR"):
-                matched = any(cls.uiautomation_filter_hwnds_by_rules_dict([hwnd], sub_rule) for sub_rule in value)
+                matched = any(cls.uiautomation_filter_hwnds_by_matching_dict([hwnd], sub_rule) for sub_rule in value)
             elif key == "ClassNameWildcards":
                 matched = any(fnmatch.fnmatch(ctrl.ClassName, pattern) for pattern in value)
             elif key == "FinalSelect":
@@ -302,7 +302,7 @@ class HwndGetter:
                 if isinstance(sub_ctrl, Control):
                     sub_hwnd = getattr(sub_ctrl, "Handle", None)
                     if sub_hwnd:
-                        sub_matched = cls.uiautomation_filter_hwnds_by_rules_dict([sub_hwnd], value)
+                        sub_matched = cls.uiautomation_filter_hwnds_by_matching_dict([sub_hwnd], value)
                         matched = len(sub_matched) == 1
             else:
                 if not hasattr(ctrl, key):
@@ -323,7 +323,7 @@ class HwndGetter:
         return True
 
     @classmethod
-    def uiautomation_filter_hwnds_by_rules_dict(cls, all_hwnds, rules_dict: dict) -> list:
+    def uiautomation_filter_hwnds_by_matching_dict(cls, all_hwnds, rules_dict: dict) -> list:
         """
         对所有 hwnd，按照 rules_dict 条件筛选
         :param rules_dict: 条件字典，例如:
@@ -336,10 +336,9 @@ class HwndGetter:
         :return: 符合条件的 hwnd 列表
         """
         hwnd_to_ctrl = {}
-        Printer().print_vn(f"筛选条件: {rules_dict}")
         with auto.UIAutomationInitializerInThread():
             matched_hwnds = [hwnd for hwnd in all_hwnds if cls._hwnd_matches_rules(hwnd, hwnd_to_ctrl, rules_dict)]
-        Printer().print_vn(f"初筛: {matched_hwnds}")
+        # Printer().debug(f"初筛: {matched_hwnds}")
 
         # 初筛窗口不唯一, 则进入尾筛 FinalSelect
         if "FinalSelect" in rules_dict and len(matched_hwnds) > 1:
@@ -398,7 +397,7 @@ class HwndGetter:
             hwnds = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
             hwnds = [h for h in hwnds if h not in exclude_hwnds]
             for rules_dict in rules_dicts:
-                hwnds = cls.uiautomation_filter_hwnds_by_rules_dict(hwnds, rules_dict)
+                hwnds = cls.uiautomation_filter_hwnds_by_matching_dict(hwnds, rules_dict)
                 if len(hwnds) == 1:
                     hwnd = hwnds[0]
                     class_name = uiautomation.ControlFromHandle(hwnd).ClassName

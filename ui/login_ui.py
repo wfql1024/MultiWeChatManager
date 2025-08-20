@@ -12,9 +12,11 @@ from public_class.custom_widget import CustomCornerBtn
 from public_class.enums import OnlineStatus, LocalCfg
 from public_class.global_members import GlobalMembers
 from resources import Constants, Config, Strings
-from ui import treeview_row_ui, classic_row_ui
+from ui.cfg_manager_ui import CfgManagerWndCreator
+from ui.classic_row_ui import ClassicLoginUI
+from ui.exe_manager_ui import ExeManagerWndUI, ExeManagerWndCreator
+from ui.treeview_row_ui import TreeviewLoginUI
 from ui.wnd_ui import WndCreator
-from utils import handle_utils
 from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 
@@ -162,13 +164,13 @@ class LoginUI:
         self.btn_login.pack(side="left", expand=True, fill="x", padx=0, pady=5)
         self.btn_login.set_bind_map(**{"1": self._to_manual_login}).apply_bind(self.root)
 
-        self.btn_extra = CustomCornerBtn(
-            bottom_frame, text="+", width=btn_height, height=btn_height, corner_radius=4)
-        self.btn_extra.pack(side="left", expand=True, fill="x", padx=0, pady=5)
-        self.btn_extra.set_bind_map(**{"1": self._to_extra_func}).apply_bind(self.root)
+        # self.btn_extra = CustomCornerBtn(
+        #     bottom_frame, text="+", width=btn_height, height=btn_height, corner_radius=4)
+        # self.btn_extra.pack(side="left", expand=True, fill="x", padx=0, pady=5)
+        # self.btn_extra.set_bind_map(**{"1": self._to_extra_func}).apply_bind(self.root)
 
         self.btn_mng = CustomCornerBtn(
-            bottom_frame, text=Strings.COEXIST_MNG_SIGN, width=btn_height, height=btn_height, corner_radius=4)
+            bottom_frame, text=Strings.MNG_SIGN, width=btn_height, height=btn_height, corner_radius=4)
         self.btn_mng.pack(side="left", expand=True, fill="x", padx=0, pady=5)
         self.btn_mng.set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
 
@@ -189,7 +191,7 @@ class LoginUI:
         if self.sw_class.view == "classic":
             # 经典视图没有做快速刷新功能
             self._ui_pre_load()
-            self.sw_class.classic_ui = classic_row_ui.ClassicLoginUI(result)
+            self.sw_class.classic_ui = ClassicLoginUI(result)
 
         elif self.sw_class.view == "tree":
             if self.quick_refresh_mode is True:
@@ -199,15 +201,16 @@ class LoginUI:
                     if all(tree_class[t].can_quick_refresh for t in tree_class):
                         # 快速刷新
                         for t in tree_class:
-                            tree_class[t].quick_refresh_items(acc_list_dict[t])
+                            # tree_class[t].quick_refresh_items(acc_list_dict[t])
+                            tree_class[t].quick_refresh_items()
                 except Exception as e:
                     logger.warning(e)
                     self.quick_refresh_mode = False
                     self._ui_pre_load()
-                    self.sw_class.tree_ui = treeview_row_ui.TreeviewLoginUI(result)
+                    self.sw_class.tree_ui = TreeviewLoginUI(result)
             else:
                 self._ui_pre_load()
-                self.sw_class.tree_ui = treeview_row_ui.TreeviewLoginUI(result)
+                self.sw_class.tree_ui = TreeviewLoginUI(result)
         else:
             pass
 
@@ -229,44 +232,22 @@ class LoginUI:
             print("原生登录")
             SwOperator.start_thread_to_manual_login_origin(self.sw)
 
-    def _to_extra_func(self):
-        if self.is_original is not True:
-            print("+新建共存程序")
-            SwOperator.start_thread_to_create_coexist_exe(self.sw)
-        else:
-            print("⚡强制关闭互斥体")
-            pids = SwInfoFunc.get_sw_all_exe_pids(self.sw)
-            mutant_handle_wildcards, config_handle_wildcards = subfunc_file.get_remote_cfg(
-                self.sw, mutant_handle_wildcards=None, config_handle_wildcards=None)
-            handle_wildcards = []
-            if isinstance(mutant_handle_wildcards, list):
-                handle_wildcards.extend(mutant_handle_wildcards)
-            if isinstance(config_handle_wildcards, list):
-                handle_wildcards.extend(config_handle_wildcards)
-            if isinstance(handle_wildcards, list) and len(handle_wildcards) > 0:
-                handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
-                    pids, handle_wildcards)
-                Printer().debug(f"[INFO]查询到互斥体: {handle_infos}")
-                success = handle_utils.pywinhandle_close_handles(
-                    handle_infos
-                )
-                if success:
-                    messagebox.showinfo("提示", "已关闭互斥体, 即将刷新!")
-            self.refresh_frame()
-
     def _to_mng_func(self):
-        ...
+        if self.is_original is not True:
+            print("共存程序管理")
+            ExeManagerWndCreator.open_exe_manager_wnd()
+        else:
+            print("原生配置管理")
+            CfgManagerWndCreator.open_cfg_manager_wnd()
 
     def _switch_mode(self):
         self.is_original = not self.is_original
         if self.is_original:
             self.btn_login.set_text("原生登录").redraw()
-            self.btn_extra.set_text("⚡").redraw()
-            self.btn_mng.set_text(Strings.UNLOCK_CFG_SIGN).redraw()
+            self.btn_mng.set_text(Strings.MNG_SIGN).redraw()
         else:
             self.btn_login.set_text("共存登录").redraw()
-            self.btn_extra.set_text("+").redraw()
-            self.btn_mng.set_text(Strings.COEXIST_MNG_SIGN).redraw()
+            self.btn_mng.set_text(Strings.MNG_SIGN).redraw()
 
     def show_setting_error(self):
         """出错的话，选择已经有的界面中创建错误信息显示"""
@@ -354,7 +335,7 @@ class LoginUI:
 
     def to_quit_accounts(self, items):
         """退出所选账号"""
-        accounts = [items.split("/")[1] for items in items]
+        accounts = [item.split("/")[1] for item in items]
         answer = AccOperator.quit_selected_accounts(self.sw, accounts)
         if answer is True:
             self.refresh_frame(self.sw)

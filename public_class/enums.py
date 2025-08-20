@@ -159,6 +159,8 @@ class OnlineStatus(str, Enum):
 
 class CfgStatus(str, Enum):
     NO_CFG = " 无配置"
+    USING = " using"
+    HISTORY = " history"
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 import time
 import tkinter as tk
-from abc import ABC
 from functools import partial
 from tkinter import ttk
 
@@ -9,9 +8,10 @@ from PIL import ImageTk, Image
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
 from public_class.custom_classes import Condition
+from public_class.custom_widget import CustomCornerBtn, CustomBtn
 from public_class.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
 from public_class.global_members import GlobalMembers
-from public_class.widget_frameworks import ActionableClassicTable, CkBoxRow
+from public_class.widget_frameworks import ClassicATT, CkbRow
 from resources import Constants, Strings
 from ui.wnd_ui import WndCreator
 from utils import widget_utils
@@ -39,7 +39,7 @@ class ClassicLoginUI:
 
         self.btn_dict = {
             "auto_quit_btn": {
-                "text": "一键退出",
+                "text": "退 出",
                 "btn": None,
                 "func": self.login_ui.to_quit_accounts,
                 "enable_scopes":
@@ -47,10 +47,11 @@ class ClassicLoginUI:
                 "tip_scopes_dict": {
                     "请选择要退出的账号":
                         Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
-                }
+                },
+                "negative": True
             },
             "auto_login_btn": {
-                "text": "一键登录",
+                "text": "登 录",
                 "btn": None,
                 "tip": "请选择要登录的账号",
                 "func": self.login_ui.to_auto_login,
@@ -60,20 +61,35 @@ class ClassicLoginUI:
                     "请选择要登录的账号":
                         Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
                 }
+            },
+            "create_starter": {
+                "text": "快 捷",
+                "btn": None,
+                "func": self.login_ui.to_create_starter,
+                "enable_scopes":
+                    Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),
+                "tip_scopes_dict": {
+                    "请选择要创建的账号, 创建桌面快捷方式, 可以脱离本软件直接登录对应账号":
+                        Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])
+                }
             }
         }
 
         # 加载登录列表
-        self.classic_table_class["login"] = ClassicLoginTable(
+        self.classic_table_class["login"] = AccLoginCATT(
             self, self.table_frames[OnlineStatus.LOGIN], "login",
-            "已登录：", self.btn_dict["auto_quit_btn"])
+            "已登录：", self.btn_dict["auto_quit_btn"].copy(),
+            self.btn_dict["create_starter"].copy()
+        )
 
-        self.classic_table_class["logout"] = ClassicLoginTable(
+        self.classic_table_class["logout"] = AccLoginCATT(
             self, self.table_frames[OnlineStatus.LOGOUT], "logout",
-            "未登录：", self.btn_dict["auto_login_btn"])
+            "未登录：", self.btn_dict["auto_login_btn"].copy(),
+            self.btn_dict["create_starter"].copy()
+        )
 
 
-class ClassicLoginTable(ActionableClassicTable, ABC):
+class AccLoginCATT(ClassicATT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.sw = None
@@ -81,30 +97,31 @@ class ClassicLoginTable(ActionableClassicTable, ABC):
         super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
-        self.data_src = self.parent_class.acc_list_dict
+        self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.sw = self.parent_class.sw
         self.main_frame = ttk.Frame(self.parent_frame)
         self.main_frame.pack(fill="both", expand=True)
         pass
 
     def create_rows(self):
+        self.rows_frame = ttk.Frame(self.main_frame)
+        self.rows_frame.pack(side="top", fill="x")
         priority = {}
-        row_ids = self.data_src[self.table_tag]
+        row_ids = self.data_src
         for row_id in row_ids:
-            acc_dict: dict = subfunc_file.get_sw_acc_data(self.sw, row_id)
-            if "linked_acc" in acc_dict:
-                priority[row_id] = 1
-            else:
-                priority[row_id] = 0
+            priority[row_id] = 1 if AccInfoFunc.is_acc_coexist(self.sw, row_id) else 0
         # 补充代码，通过priority对row_ids进行排序
         sorted_row_ids = sorted(row_ids, key=lambda x: (priority[x], x), reverse=True)
         for row_id in sorted_row_ids:
             table_tag = self.table_tag
             # 创建列表实例
             # Printer().debug(self.rows_frame)
-            row = LoginCkRow(self, self.rows_frame, row_id, table_tag)
+            row = AccLoginCR(self, self.rows_frame, row_id, table_tag)
             if row.hidden is not True:
                 self.rows[row_id] = row
+
+        if len(self.rows) == 0:
+            self.null_data = True
 
     def transfer_selected_iid_to_list(self):
         """
@@ -114,7 +131,7 @@ class ClassicLoginTable(ActionableClassicTable, ABC):
         print(self.selected_items)
 
 
-class LoginCkRow(CkBoxRow, ABC):
+class AccLoginCR(CkbRow):
     def __init__(self, parent_class, parent_frame, item, table_tag):
         self.photo_images = []
         self.tooltips = None
@@ -122,7 +139,6 @@ class LoginCkRow(CkBoxRow, ABC):
         self.sw_class = None
         self.sw = None
         self.login_ui = None
-        self.coexist_flag = False
         self.hidden = None
         super().__init__(parent_class, parent_frame, item, table_tag)
 
@@ -163,14 +179,12 @@ class LoginCkRow(CkBoxRow, ABC):
 
         # 行框架=复选框+头像标签+账号标签+按钮区域+配置标签
         self.row_frame = ttk.Frame(rows_frame)
-        if config_status == CfgStatus.NO_CFG:
+        if config_status == CfgStatus.NO_CFG and login_status == "logout":
             self.disabled = True
-
         # 复选框
         self.checkbox_var = tk.BooleanVar(value=False)
         self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
         self.checkbox.pack(side="left")
-
         # 头像标签
         img = img.resize(Constants.AVT_SIZE)
         photo = ImageTk.PhotoImage(img)
@@ -180,8 +194,41 @@ class LoginCkRow(CkBoxRow, ABC):
         avatar_label.bind("<Enter>", lambda event: event.widget.config(cursor="hand2"))
         avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
         # print(f"加载头像区域用时{time.time() - start_time:.4f}秒")
+        # print(f"加载账号显示区域用时{time.time() - start_time:.4f}秒")
+        # 按钮区域=配置或登录按钮
+        btn_frame = ttk.Frame(self.row_frame)
+        btn_frame.pack(side="right")
+        # 配置标签
+        cfg_info_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
+        cfg_info_label.pack(side="right", padx=Constants.CLZ_CFG_LBL_PAD_X,
+                            fill="x", expand=True)
+        # 登录/配置按钮
+        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
+        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 2.0)
 
-        # 账号标签
+        def _create_btn_in_(frame_of_btn, text):
+            btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
+            return btn
+
+        def _pack_btn(btn):
+            btn.pack(side="right", padx=customized_btn_pad, pady=customized_btn_pad)
+
+        def _set_negative_style(btn):
+            btn.set_major_colors("#FF0000")
+
+        btn_text = "登 录" if login_status != "login" else "配 置"
+        btn_cmd = self.login_ui.to_auto_login if login_status != "login" else self.login_ui.to_create_config
+        acc_btn = _create_btn_in_(btn_frame, btn_text)
+        (acc_btn.set_bind_map(
+            **{"1": partial(btn_cmd, [iid])})
+         .apply_bind(self.root))
+        _pack_btn(acc_btn)
+        # btn = ttk.Button(
+        #     btn_frame, text=btn_text, style='Custom.TButton',
+        #     command=partial(btn_cmd, [iid])
+        # )
+        # btn.pack(side="right")
+        # 账号标签: 账号含有互斥体, 则使用红色字体
         sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
         if has_mutex and sign_visible:
             try:
@@ -199,54 +246,27 @@ class LoginCkRow(CkBoxRow, ABC):
                 Logger().warning(e)
                 self.item_label = ttk.Label(
                     self.row_frame, text=StringUtils.clean_texts(wrapped_display_name))
-
         self.item_label.pack(side="left", fill="x", padx=Constants.CLZ_ROW_LBL_PAD_X)
 
-        # print(f"加载账号显示区域用时{time.time() - start_time:.4f}秒")
-
-        # 按钮区域=配置或登录按钮
-        btn_frame = ttk.Frame(self.row_frame)
-        btn_frame.pack(side="right")
-
-        # 配置标签
-        cfg_info_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
-        cfg_info_label.pack(side="right", padx=Constants.CLZ_CFG_LBL_PAD_X,
-                            fill="x", expand=True)
-
-        # 登录/配置按钮
-        btn_text = "自动登录" if login_status != "login" else "配 置"
-        btn_cmd = self.login_ui.to_auto_login if login_status != "login" else self.login_ui.to_create_config
-        btn = ttk.Button(
-            btn_frame, text=btn_text, style='Custom.TButton',
-            command=partial(btn_cmd, [iid])
+        # 绑定事件到控件范围内所有位置
+        widget_utils.exclusively_bind_event_to_frame_when_(
+            [avatar_label, btn_frame], self.row_frame, "<Button-1>", self.toggle_checkbox,
+            Condition(self.disabled, Condition.ConditionType.NOT_EQUAL, True)
         )
-        btn.pack(side="right")
-
-        if login_status == "login":
-            # 绑定事件到控件范围内所有位置
-            widget_utils.exclusively_bind_event_to_frame_when_(
-                [avatar_label], self.row_frame, "<Button-1>", self.toggle_checkbox, True)
-        else:
-            # 设置控件状态
-            widget_utils.enable_widget_when_(
-                btn, Condition(self.disabled, Condition.ConditionType.NOT_EQUAL, True)
-            )
-            # 设置提示
-            widget_utils.set_widget_tip_when_(
-                self.tooltips,
-                btn,
-                {"请先手动登录后配置": Condition(
-                    self.disabled, Condition.ConditionType.EQUAL, True)}
-            )
-            # 绑定事件到控件范围内所有位置
-            widget_utils.exclusively_bind_event_to_frame_when_(
-                [avatar_label], self.row_frame, "<Button-1>", self.toggle_checkbox,
-                Condition(self.disabled, Condition.ConditionType.NOT_EQUAL, True)
-            )
-            # 复选框的状态
-            self.checkbox.config(state='disabled') if self.disabled is True else self.checkbox.config(
-                state='normal')
-
+        # 设置控件状态
+        CustomBtn.enable_custom_widget_when_(
+            acc_btn, Condition(self.disabled, Condition.ConditionType.NOT_EQUAL, True)
+        )
+        # 设置提示
+        widget_utils.set_widget_tip_when_(
+            self.tooltips,
+            acc_btn,
+            {"请先手动登录后配置": Condition(
+                self.disabled, Condition.ConditionType.EQUAL, True)}
+        )
+        # 复选框的状态
+        self.checkbox.config(state='disabled') if self.disabled is True else self.checkbox.config(
+            state='normal')
         # 头像绑定详情事件
         widget_utils.UnlimitedClickHandler(
             self.root,
@@ -255,46 +275,11 @@ class LoginCkRow(CkBoxRow, ABC):
                "2": partial(AccOperator.switch_to_sw_account_wnd, iid)}
         )
 
-        if self.coexist_flag is True:
-            # Printer().debug(self.item, "应该置顶")
-            self.row_frame.pack(side="top", fill="x", padx=Constants.LOG_IO_FRM_PAD_X,
-                                pady=Constants.CLZ_ROW_FRM_PAD_Y)
-        elif self.disabled is True:
+        # 将行框架布局到界面中
+        if self.disabled is True:
             self.row_frame.pack(side="bottom", fill="x", padx=Constants.LOG_IO_FRM_PAD_X,
                                 pady=Constants.CLZ_ROW_FRM_PAD_Y)
         else:
             self.row_frame.pack(fill="x", padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.CLZ_ROW_FRM_PAD_Y)
 
         print(f"加载 {account} 行用时{time.time() - start_time:.4f}秒")
-
-    # def create_avatar_label(self, account):
-    #     """
-    #     创建头像标签
-    #     :param account: 原始微信号
-    #     :return: 头像标签 -> Label
-    #     """
-    #     try:
-    #         acc_dict: dict = subfunc_file.get_sw_acc_data(self.sw, account)
-    #         if "linked_acc" in acc_dict:
-    #             if acc_dict["linked_acc"] is not None:
-    #                 # 共存程序曾经登录过--------------------------------------------------------------------------
-    #                 linked_acc = acc_dict["linked_acc"]
-    #                 img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
-    #             else:
-    #                 # 共存程序但没登录过--------------------------------------------------------------------------
-    #                 img = SwInfoFunc.get_sw_logo(self.sw)
-    #         else:
-    #             # 主程序
-    #             linked_acc = account
-    #             img = AccInfoFunc.get_acc_avatar_from_files(self.sw, linked_acc)
-    #         img = img.resize(Constants.AVT_SIZE)
-    #         photo = ImageTk.PhotoImage(img)
-    #         avatar_label = ttk.Label(self.row_frame, image=photo)
-    #
-    #     except Exception as e:
-    #         print(f"Error creating avatar label: {e}")
-    #         # 如果加载失败，使用一个空白标签
-    #         photo = ImageTk.PhotoImage(image=Image.new('RGB', Constants.AVT_SIZE, color='white'))
-    #         avatar_label = ttk.Label(self.row_frame, image=photo)
-    #     avatar_label.image = photo  # 保持对图像的引用
-    #     return avatar_label

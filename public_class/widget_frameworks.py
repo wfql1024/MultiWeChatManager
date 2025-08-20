@@ -6,6 +6,7 @@ from typing import Dict, Optional
 
 from functions import subfunc_file
 from public_class.custom_classes import Condition
+from public_class.custom_widget import CustomCornerBtn, CustomBtn
 from public_class.global_members import GlobalMembers
 from resources import Constants
 from utils import widget_utils
@@ -14,58 +15,59 @@ from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import TreeUtils
 
-
-class ActionableClassicTable(ABC):
+class ActionableTitledTable:
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """
-        创建一个普通控件组成的面板，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
+        创建一个带标题的面板，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
         :param parent_class: 实例该列表的类
         :param table_tag: 表标识
         :param title_text: 列表标题
         :param major_btn_dict: 主按钮信息
         :param rest_btn_dicts: 其他按钮信息
+        按钮信息格式为：
+            "visible(id)": {
+                "text": "显示",  # 按钮文本
+                "btn": None,  # 按钮实例,在按钮生成后再设置
+                "func": self.to_visible_,  # 按钮的功能,注意参数只能是一个列表,作用是对Tree中的选中的项目进行操作
+                "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),  # 启用条件
+                "tip_scopes_dict": {
+                    "请选择要显示的平台": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])  # 提示条件
+                }
+                # 条件范围请查看Condition类的说明,
+                "negative": 是否是消极性按钮,
+                "square": 是否是方形按钮.
+            }
         """
-        self.rows_frame = None
-        self.selected_iid_list = None
-        self.usable_rows_dict = None
-        self.tooltips = {}
+        self.null_data = None
         self.selected_items = []
-        self.rows = {}
-        self.data_src: dict = {}
-
-        self.table_frame = None
-        self.title_frame = None
-        self.title = None
-        self.checkbox = None
-        self.checkbox_var = None
-        self.label = None
         self.button_frame = None
+        self.label = None
+        self.title_ckb = None
+        self.title_ckb_var = None
+        self.title = None
+        self.title_frame = None
 
         # 将传入的参数赋值给成员变量
         self.parent_class = parent_class
-        self.parent_frame = parent_frame
-        self.main_frame = parent_frame  # 默认直接使用提供的父框架
+        self.parent_frame = parent_frame  # 父框架可能会被创建用来占位, 因此不建议将父框架直接作为Table的主框架
         self.table_tag = table_tag
         self.title_text = title_text
         self.major_btn_dict = major_btn_dict
         self.rest_btn_dicts = rest_btn_dicts
-
         # 其他的成员变量
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
-
+        # 初始化成员变量
         self.initialize_members_in_init()
+        # 创建好主框架和标题, 子类请勿重复创建
+        self.main_frame = ttk.Frame(self.parent_frame)
+        self.main_frame.pack(fill="both", expand=True)
         self.create_title()
-        self.rows_frame = ttk.Frame(self.main_frame)
-        self.rows_frame.pack(side="top", fill="x")
-        self.create_rows()
-        self.get_usable_rows()
-        self.update_top_title()
 
-    @abstractmethod
+        ...
+
     def initialize_members_in_init(self):
-        """子类中重写方法若需要设置或新增成员变量，重写这个方法并在其中定义和赋值成员"""
-        pass
+        ...
 
     def create_title(self):
         self.title_frame = ttk.Frame(self.main_frame)
@@ -76,13 +78,13 @@ class ActionableClassicTable(ABC):
         self.title.pack(side="top", fill="x")
 
         # 复选框
-        self.checkbox_var = tk.IntVar(value=0)
-        self.checkbox = tk.Checkbutton(
+        self.title_ckb_var = tk.IntVar(value=0)
+        self.title_ckb = tk.Checkbutton(
             self.title,
-            variable=self.checkbox_var,
+            variable=self.title_ckb_var,
             tristatevalue=-1
         )
-        self.checkbox.pack(side="left")
+        self.title_ckb.pack(side="left")
 
         # 标签
         self.label = ttk.Label(self.title, text=self.title_text,
@@ -93,31 +95,105 @@ class ActionableClassicTable(ABC):
         self.button_frame = ttk.Frame(self.title)
         self.button_frame.pack(side="right")
 
+        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
+        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 2.0)
+
+        def _create_btn_in_(frame_of_btn, text):
+            btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
+            return btn
+
+        def _create_square_btn_in(frame_of_btn, text):
+            btn = CustomCornerBtn(frame_of_btn, text=text, i_pady=customized_btn_ipad)
+            return btn
+
+        def _pack_btn(btn):
+            btn.pack(side="right", padx=customized_btn_pad, pady=customized_btn_pad)
+
+        def _set_negative_style(btn):
+            btn.set_major_colors("#FF0000")
+
         # 主按钮
         if self.major_btn_dict is not None:
-            major_btn = ttk.Button(
-                self.button_frame, text=self.major_btn_dict["text"], style='Custom.TButton',
-                command=lambda: self.major_btn_dict["func"](self.selected_items))
+            if self.major_btn_dict.get("square", None) is True:
+                major_btn = _create_square_btn_in(self.button_frame, self.major_btn_dict["text"])
+            else:
+                major_btn = _create_btn_in_(self.button_frame, self.major_btn_dict["text"])
+            (major_btn.set_bind_map(
+                **{"1": lambda: self.major_btn_dict["func"](self.selected_items)})
+             .apply_bind(self.root))
             self.major_btn_dict["btn"] = major_btn
-            major_btn.pack(side="right")
+            _pack_btn(major_btn)
+            if self.major_btn_dict.get("negative", None) is True:
+                _set_negative_style(major_btn)
 
         # 加载其他按钮
         if self.rest_btn_dicts is not None and len(self.rest_btn_dicts) != 0:
             for btn_dict in self.rest_btn_dicts:
-                btn = ttk.Button(
-                    self.button_frame, text=btn_dict["text"], style='Custom.TButton',
-                    command=lambda b=btn_dict: b["func"](self.selected_items))
-                btn_dict["btn"] = btn
-                btn.pack(side="right")
+                if btn_dict.get("square", None) is True:
+                    rest_btn = _create_square_btn_in(self.button_frame, btn_dict["text"])
+                else:
+                    rest_btn = _create_btn_in_(self.button_frame, btn_dict["text"])
+                (rest_btn.set_bind_map(
+                    **{"1": lambda: btn_dict["func"](self.selected_items)})
+                 .apply_bind(self.root))
+                btn_dict["btn"] = rest_btn
+                _pack_btn(rest_btn)
+                if btn_dict.get("negative", None) is True:
+                    _set_negative_style(rest_btn)
 
-    @abstractmethod
+    def _adjust_main_frame(self):
+        if self.null_data is True:
+            # 如果条目数量为 0，隐藏控件
+            print(f"应该隐藏{self.table_tag}列表")
+            self.main_frame.pack_forget()
+            self.main_frame.config(height=1)
+            # self.main_frame.pack_propagate(False)  # 不自动调整自身大小
+        else:
+            # 如果条目数量不为 0则显示控件
+            print(f"应该显示{self.table_tag}列表")
+            self.main_frame.pack_propagate(True)  # 自动调整自身大小
+            self.main_frame.pack(fill="both", expand=True)
+            self._adjust_content()
+
+    def _adjust_content(self):
+        """更新内容区域"""
+        ...
+
+
+class ClassicATT(ActionableTitledTable):
+    def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
+        """
+        创建一个普通控件组成的传统风格面板，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
+        :param parent_class: 实例该列表的类
+        :param table_tag: 表标识
+        :param title_text: 列表标题
+        :param major_btn_dict: 主按钮信息
+        :param rest_btn_dicts: 其他按钮信息
+        """
+        self.rows_frame = None
+        self.selected_iid_list = None
+        self.usable_rows_dict = None
+        self.tooltips = {}
+        self.rows = {}
+        self.data_src: list = []
+        super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
+        self.create_rows()
+        self._adjust_main_frame()
+
+
     def create_rows(self):
         """渲染账号所在行，请重写"""
-        for item in self.data_src[self.table_tag]:
+        self.rows_frame = ttk.Frame(self.main_frame)
+        self.rows_frame.pack(side="top", fill="x")
+        for item in self.data_src:
             table_tag = self.table_tag
             # 创建列表实例
-            row = CkBoxRow(self, item, self.rows_frame, table_tag)
+            row = CkbRow(self, item, self.rows_frame, table_tag)
             self.rows[item] = row
+
+    def _adjust_content(self):
+        self.get_usable_rows()
+        self.update_top_title()
 
     def toggle_top_checkbox(self, _event):
         """
@@ -125,7 +201,7 @@ class ActionableClassicTable(ABC):
         :param _event: 点击复选框
         :return: 阻断继续切换
         """
-        checkbox_var = self.checkbox_var
+        checkbox_var = self.title_ckb_var
         usable_rows_dict = self.usable_rows_dict
 
         for row in usable_rows_dict.values():
@@ -138,33 +214,38 @@ class ActionableClassicTable(ABC):
         """根据AccountRow实例的复选框状态更新顶行复选框状态"""
         self._get_selected_idd_list()
 
-        # toggle方法
-        toggle = partial(self.toggle_top_checkbox)
+        selected_rows = self.selected_items
         usable_rows_dict = self.usable_rows_dict
-        checkbox = self.checkbox
-        title = self.title
-        checkbox_var = self.checkbox_var
-        button = self.major_btn_dict["btn"]
-        tip_scopes_dict = self.major_btn_dict["tip_scopes_dict"]
-        checkbox_var.set(0)
+        title_ck_var = self.title_ckb_var
+        all_btn_dicts = (self.major_btn_dict, *self.rest_btn_dicts)
 
         # 调整复选框和frame的可用性
-        checkbox.config(state="normal") if len(usable_rows_dict.keys()) != 0 else checkbox.config(state="disabled")
         widget_utils.bind_event_to_frame_when_(
-            title, "<Button-1>", toggle,
-            Condition(len(usable_rows_dict.keys()), Condition.ConditionType.NOT_EQUAL, 0)
+            self.title, "<Button-1>", partial(self.toggle_top_checkbox),
+            Condition(len(usable_rows_dict.keys()), Condition.ConditionType.NOT_EQUAL, 0),
+            [self.button_frame]
         )
         # 更新复选框的值
         states = [row.checkbox_var.get() for row in usable_rows_dict.values() if len(usable_rows_dict.keys()) != 0]
-        checkbox_var.set(1) if all(states) else checkbox_var.set(-1) if any(states) else checkbox_var.set(0)
-        # 补充条件
-        for condition in tip_scopes_dict.values():
-            condition.value = checkbox_var.get()
-        # 调整按钮的可用性和提示信息
+        title_ck_var.set(1) if all(states) else title_ck_var.set(-1) if any(states) else title_ck_var.set(0)
+
+        # 完善按钮的状态设置和提示设置
+        for btn_dict in all_btn_dicts:
+            if btn_dict is None:
+                continue
+            btn_dict["enable_scopes"].value = len(selected_rows)
+            for tip, condition in btn_dict["tip_scopes_dict"].items():
+                condition.value = len(selected_rows)
+        # 控件的状态设置和提示设置
         widget_utils.enable_widget_when_(
-            button, Condition(checkbox_var.get(), Condition.ConditionType.NOT_EQUAL, 0))
-        widget_utils.set_widget_tip_when_(
-            self.tooltips, button, tip_scopes_dict)
+            self.title_ckb,
+            Condition(len(usable_rows_dict.keys()), Condition.ConditionType.OR_INT_SCOPE, [(1, None)])
+        )
+        for btn_dict in all_btn_dicts:
+            if btn_dict is None:  # 确保 btn_dict 不是 None
+                continue
+            CustomBtn.enable_custom_widget_when_(btn_dict["btn"], btn_dict["enable_scopes"])
+            widget_utils.set_widget_tip_when_(self.tooltips, btn_dict["btn"], btn_dict["tip_scopes_dict"])
 
     def _get_selected_idd_list(self):
         """获取已选的iid"""
@@ -187,7 +268,7 @@ class ActionableClassicTable(ABC):
         }
 
 
-class CkBoxRow(ABC):
+class CkbRow:
     """
     为每一个账号创建其行布局的类
     """
@@ -213,7 +294,6 @@ class CkBoxRow(ABC):
         self.initialize_members_in_init()
         self.create_row()
 
-    @abstractmethod
     def initialize_members_in_init(self):
         pass
 
@@ -251,43 +331,17 @@ class CkBoxRow(ABC):
         return "break"
 
 
-class ActionableTreeView(ABC):
-    def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
+class TreeviewATT(ActionableTitledTable):
+    def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """
         创建一个TreeView列表，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
-        按钮信息格式为：
-        "visible(id)": {
-                "text": "显示",  # 按钮文本
-                "btn": None,  # 按钮实例,在按钮生成后再设置
-                "func": self.to_visible_,  # 按钮的功能,注意参数只能是一个列表,作用是对Tree中的选中的项目进行操作
-                "enable_scopes": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(1, None)]),  # 启用条件
-                "tip_scopes_dict": {
-                    "请选择要显示的平台": Condition(None, Condition.ConditionType.OR_INT_SCOPE, [(0, 0)])  # 提示条件
-                }
-                # 条件范围请查看Condition类的说明
-            },
-        :param parent_class: 实例该列表的类
-        :param table_tag: 表标识
-        :param title_text: 列表标题
-        :param major_btn_dict: 主按钮信息
-        :param rest_btn_dicts: 其他按钮信息
         """
+        self.null_data = None
         self.tree_has_bind = False
         self.last_single_item = None
-        self.data_src = None
         self.hovered_item = None
         self.tooltips = {}
-        self.btn_dict = {}
-        self.selected_items = []
         self.sw = None
-
-        self.treeview_frame = None
-        self.title_frame = None
-        self.title = None
-        self.checkbox = None
-        self.checkbox_var = None
-        self.label = None
-        self.button_frame = None
 
         self.sort: Dict[str, bool] = {}
         self.default_sort = {
@@ -300,82 +354,15 @@ class ActionableTreeView(ABC):
             "relate_chain": {}
         }
 
-        # 将传入的参数赋值给成员变量
-        self.parent_class = parent_class
-        self.table_tag = table_tag
-        self.title_text = title_text
-        self.major_btn_dict = major_btn_dict
-        self.rest_btn_dicts = rest_btn_dicts
+        super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
-        # 其他的成员变量
-        self.root_class = self.parent_class.root_class
-        self.root = self.root_class.root
-        self.main_frame = self.parent_class.main_frame  # 默认使用父类的main_frame
+        self.tree = self.create_tree(self.columns)
+        self.display_tree()
+        self._adjust_main_frame()
 
-        self.initialize_members_in_init()
-
-        self.create_title()
-        self.tree = self.create_table(self.columns)
-        self.display_table()
-        self.set_table_style()
-        self._adjust_table()
-        self._update_top_title()
-
-    @abstractmethod
-    def initialize_members_in_init(self):
-        """子类中重写方法若需要设置或新增成员变量，重写这个方法并在其中定义和赋值成员"""
-        pass
-
-    def create_title(self):
-        # 框架=标题+列表
-        self.treeview_frame = ttk.Frame(self.main_frame)
-        self.treeview_frame.pack(side="top", fill="x")
-        self.title_frame = ttk.Frame(self.treeview_frame)
-        self.title_frame.pack(side="top", fill="x",
-                              padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
-
-        # 标题=复选框+标签+按钮区域
-        self.title = ttk.Frame(self.title_frame)
-        self.title.pack(side="top", fill="x")
-
-        # 复选框
-        self.checkbox_var = tk.IntVar(value=0)
-        self.checkbox = tk.Checkbutton(
-            self.title,
-            variable=self.checkbox_var,
-            tristatevalue=-1
-        )
-        self.checkbox.pack(side="left")
-
-        # 标签
-        self.label = ttk.Label(self.title, text=self.title_text,
-                               style='FirstTitle.TLabel')
-        self.label.pack(side="left", fill="x", anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
-
-        # 按钮区域
-        self.button_frame = ttk.Frame(self.title)
-        self.button_frame.pack(side="right")
-
-        # 主按钮
-        if self.major_btn_dict is not None:
-            major_btn = ttk.Button(
-                self.button_frame, text=self.major_btn_dict["text"], style='Custom.TButton',
-                command=lambda: self.major_btn_dict["func"](self.selected_items))
-            self.major_btn_dict["btn"] = major_btn
-            major_btn.pack(side="right")
-
-        # 加载其他按钮
-        if self.rest_btn_dicts is not None and len(self.rest_btn_dicts) != 0:
-            for btn_dict in self.rest_btn_dicts:
-                btn = ttk.Button(
-                    self.button_frame, text=btn_dict["text"], style='Custom.TButton',
-                    command=lambda b=btn_dict: b["func"](self.selected_items))
-                btn_dict["btn"] = btn
-                btn.pack(side="right")
-
-    def create_table(self, columns: tuple = ()):
+    def create_tree(self, columns: tuple = ()):
         """定义表格，根据表格类型选择手动或自动登录表格"""
-        tree = ttk.Treeview(self.treeview_frame, columns=columns, show='tree', height=1, style="RowTreeview")
+        tree = ttk.Treeview(self.main_frame, columns=columns, show='tree', height=1, style="RowTreeview")
 
         # 设置列标题和排序功能
         for col in columns:
@@ -385,14 +372,15 @@ class ActionableTreeView(ABC):
         tree.pack(fill="x", expand=True, padx=(10, 0))
         return tree
 
-    def display_table(self):
+    def display_tree(self):
         """请重写此方法，以下为示例"""
         tree = self.tree.nametowidget(self.tree)
         values = tuple("请重写展示数据方法" for _ in tree["columns"])
         tree.insert("", "end", iid="item1", text="示例项", values=values)
-        pass
+        if len(tree.get_children()) == 0:
+            self.null_data = True
 
-    def set_table_style(self):
+    def set_tree_style(self):
         """请重写此方法，以下为示例"""
         tree = self.tree.nametowidget(self.tree)
 
@@ -415,38 +403,32 @@ class ActionableTreeView(ABC):
         #     e, self.root, col_width_to_show, columns_to_hide), add='+')
         pass
 
-    def _adjust_table(self):
+    def _adjust_content(self):
+        self.set_tree_style()
+        self._adjust_tree()
+        self.selected_items.clear()
+        self._update_top_title()
+
+    def _adjust_tree(self):
         """
         绑定事件以实现自适应调整表格
         :return: 结束
         """
         tree = self.tree.nametowidget(self.tree)
-
-        if len(tree.get_children()) == 0:
-            # 如果条目数量为 0，隐藏控件
-            print(f"应该隐藏{self.table_tag}列表")
-            self.treeview_frame.pack_forget()
-            self.main_frame.config(height=1)
-            # self.main_frame.pack_propagate(False)  # 不自动调整自身大小
-        else:
-            # 如果条目数量不为 0则显示控件
-            print(f"应该显示{self.table_tag}列表")
-            self.main_frame.pack_propagate(True)  # 自动调整自身大小
-            self.treeview_frame.pack(side="top", fill="x")
-            self._adjust_treeview_height(None)
-            # 排序+调整列宽
-            self._apply_or_switch_col_order()
-            self.on_tree_configure(None)
-            if self.tree_has_bind is not True:
-                # 绑定事件
-                widget_utils.UnlimitedClickHandler(
-                    self.root,
-                    tree,
-                    self._on_click_in_tree
-                )
-                tree.bind("<Leave>", partial(self._on_leave_tree))
-                tree.bind("<Motion>", partial(self._moving_on_tree))
-                self.tree_has_bind = True
+        self._adjust_treeview_height(None)
+        # 排序+调整列宽
+        self._apply_or_switch_col_order()
+        self.on_tree_configure(None)
+        if self.tree_has_bind is not True:
+            # 绑定事件
+            widget_utils.UnlimitedClickHandler(
+                self.root,
+                tree,
+                self._on_click_in_tree
+            )
+            tree.bind("<Leave>", partial(self._on_leave_tree))
+            tree.bind("<Motion>", partial(self._moving_on_tree))
+            self.tree_has_bind = True
 
     def _get_selected_values(self):
         # 获取选中行的“账号”列数据
@@ -488,7 +470,7 @@ class ActionableTreeView(ABC):
         """
         # print(event.widget)
         # print(self.login_checkbox)
-        checkbox_var = self.checkbox_var
+        checkbox_var = self.title_ckb_var
         tree = self.tree.nametowidget(self.tree)
         selected_items = self.selected_items
 
@@ -525,8 +507,8 @@ class ActionableTreeView(ABC):
         all_usable_rows = [i for i in all_leaf_rows if "disabled" not in tree.item(i, "tags")]
         selected_rows = self.selected_items
         title = self.title
-        checkbox_var = self.checkbox_var
-        checkbox = self.checkbox
+        checkbox_var = self.title_ckb_var
+        checkbox = self.title_ckb
         tooltips = self.tooltips
         major_btn_dict = self.major_btn_dict
         rest_btn_dicts = self.rest_btn_dicts
@@ -565,7 +547,7 @@ class ActionableTreeView(ABC):
         for btn_dict in all_buttons:
             if btn_dict is None:  # 确保 btn_dict 不是 None
                 continue
-            widget_utils.enable_widget_when_(btn_dict["btn"], btn_dict["enable_scopes"])
+            CustomBtn.enable_custom_widget_when_(btn_dict["btn"], btn_dict["enable_scopes"])
             widget_utils.set_widget_tip_when_(tooltips, btn_dict["btn"], btn_dict["tip_scopes_dict"])
 
     def click_on_id_column(self, click_time, item_id):
@@ -843,27 +825,20 @@ class ActionableTreeView(ABC):
             subfunc_file.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
 
     # @PerformanceDebugger.measure_method("测试快速刷新", auto_break=True)
-    def quick_refresh_items(self, data_src):
+    def quick_refresh_items(self):
         """
-        快速刷新，需要传入display方法所需要的数据列表
-        :param data_src: 数据列表
-        :return:
+        快速刷新
         """
         printer.vital(f"快速刷新")
-        # print("快速刷新:", data_src)
-        self.data_src = data_src
 
         self.tree.configure(displaycolumns=())  # 临时隐藏列
 
         self.tree.delete(*self.tree.get_children())
-        self.display_table()
+        self.display_tree()
 
         self.tree.configure(displaycolumns=self.columns)
 
-        self._adjust_table()
-
-        self.selected_items.clear()
-        self._update_top_title()
+        self._adjust_main_frame()
 
 
 class RadioTreeView(ABC):
@@ -1282,6 +1257,7 @@ class RadioTreeView(ABC):
         self.adjust_treeview_height(None)
 
         # 保存排序状态
+        col = str(col)
         self.sort[col] = is_asc_after
         if self.sw is not None:
             subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")

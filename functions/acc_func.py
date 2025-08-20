@@ -86,7 +86,7 @@ class AccOperator:
     @classmethod
     def _open_acc_return_hwnd_and_pid(cls, sw, acc, all_excluded_hwnds):
         """对单个账号尝试打开并返回pid和窗口hwnd"""
-        login_rules_dicts = SwInfoFunc.get_sw_wnd_class_check_dict(sw, WndType.LOGIN)
+        login_rules_dicts = SwInfoFunc.get_sw_wnd_class_matching_dicts(sw, WndType.LOGIN)
         # 调取配置,打开登录窗口 *******************************************************************
         if AccInfoFunc.is_acc_coexist(sw, acc):
             # 共存程序账号: 尝试查找有无同名打开进程, 有则需要去除互斥体, 共存账号无需替换配置文件
@@ -312,6 +312,39 @@ class AccOperator:
         except Exception as e:
             logger.error(e)
 
+    @classmethod
+    def del_config_of_accounts(cls, sw, accounts: List[str]):
+        """批量删除账号的配置, 可从回收站恢复"""
+        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        if not isinstance(config_addresses, list) or len(config_addresses) == 0:
+            messagebox.showinfo("提醒", f"{sw}平台还没有适配")
+            return
+        confirm = messagebox.askokcancel(
+            "确认清除",
+            f"该操作将会移动选中账号的登录配置文件到回收站，可右键撤销删除, 是否继续？"
+        )
+        if confirm:
+            files_to_delete = []
+            for addr in config_addresses:
+                origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, addr)
+                origin_cfg_dir = os.path.dirname(origin_cfg_path)
+                origin_cfg_basename = os.path.basename(origin_cfg_path)
+                acc_cfg_paths = []
+                for acc in accounts:
+                    acc_cfg_path = os.path.join(origin_cfg_dir, f"{acc}_{origin_cfg_basename}")
+                    if os.path.exists(acc_cfg_path):
+                        acc_cfg_paths.append(acc_cfg_path)
+                acc_cfg_paths = [f.replace("\\", "/") for f in acc_cfg_paths]
+                files_to_delete.extend([f for f in acc_cfg_paths if f != origin_cfg_path])
+
+            if len(files_to_delete) > 0:
+                # 移动文件到回收站
+                try:
+                    file_utils.move_files_to_recycle_bin(files_to_delete)
+                    print(f"已删除: {files_to_delete}")
+                except Exception as e:
+                    logger.error(f"无法删除 {files_to_delete}: {e}")
+
     @staticmethod
     def operate_acc_config(method, sw, acc):
         """
@@ -321,14 +354,14 @@ class AccOperator:
         :param acc: 账号
         :return: 是否成功，携带的信息
         """
-        if method not in ["use", "add"]:
+        if method not in ["use", "add", "del"]:
             logger.error("未知字段：" + method)
             return False, "未知字段"
         config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
         if not isinstance(config_addresses, list):
             return False, "无法获取登录配置文件地址"
 
-        # 构建相关文件列表
+        # 构建账号的原始配置-账号配置字典
         origin_acc_dict = dict()
         for config_address in config_addresses:
             origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, config_address)
@@ -336,9 +369,8 @@ class AccOperator:
             acc_cfg_path = acc_cfg_path.replace("\\", "/")
             origin_acc_dict.update({origin_cfg_path: acc_cfg_path})
 
-        paths_to_del = list(origin_acc_dict.keys()) if method == "use" else list(origin_acc_dict.values())
-
         # 移除配置项
+        paths_to_del = list(origin_acc_dict.keys()) if method == "use" else list(origin_acc_dict.values())
         for p in paths_to_del:
             try:
                 if os.path.isfile(p):
@@ -349,8 +381,12 @@ class AccOperator:
                 logger.error(e)
                 return False, f"移除配置项目时发生错误：{str(e)}"
 
-        success_list = []
+        # 操作是删除配置的话, 到这里可以返回了.
+        if method == "del":
+            return True, "删除配置成功"
+
         # 拷贝配置项
+        success_list = []
         for origin, acc in origin_acc_dict.items():
             source_path = acc if method == "use" else origin
             dest_path = origin if method == "use" else acc
@@ -1169,24 +1205,24 @@ class AccInfoFunc:
                     pid_acc_dict[pid] = pid_exe
                     break
 
-    @staticmethod
-    def _get_all_coexist_acc_and_let_dist_exists(sw, inst_dir, executable_wildcards):
-        """获取所有的共存程序,并在字典中确保存在对应的账号节点和 linked_acc 属性"""
-        # 处理共存版账号,创建字典和节点
-        all_exes = file_utils.get_file_names_matching_wildcards(executable_wildcards, inst_dir)
-        origin_exe, = subfunc_file.get_remote_cfg(sw, executable=None)
-        all_coexist_exes = []
-        for coexist_exe in all_exes:
-            if coexist_exe == origin_exe:
-                continue
-            all_coexist_exes.append(coexist_exe)
-            coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
-            if not isinstance(coexist_exe_dict, dict):
-                subfunc_file.update_sw_acc_data(sw, **{coexist_exe: {}})
-            coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
-            if "linked_acc" not in coexist_exe_dict:
-                subfunc_file.update_sw_acc_data(sw, coexist_exe, linked_acc=None)
-        return all_coexist_exes
+    # @staticmethod
+    # def _get_all_coexist_acc_and_ensure_formatted(sw, inst_dir, executable_wildcards):
+    #     """获取所有的共存程序,并在字典中确保存在对应的账号节点和 linked_acc 属性"""
+    #     # 处理共存版账号,创建字典和节点
+    #     all_exes = file_utils.get_file_names_matching_wildcards(executable_wildcards, inst_dir)
+    #     origin_exe, = subfunc_file.get_remote_cfg(sw, executable=None)
+    #     all_coexist_exes = []
+    #     for coexist_exe in all_exes:
+    #         if coexist_exe == origin_exe:
+    #             continue
+    #         all_coexist_exes.append(coexist_exe)
+    #         coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
+    #         if not isinstance(coexist_exe_dict, dict):
+    #             subfunc_file.update_sw_acc_data(sw, **{coexist_exe: {}})
+    #         coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
+    #         if "linked_acc" not in coexist_exe_dict:
+    #             subfunc_file.update_sw_acc_data(sw, coexist_exe, linked_acc=None)
+    #     return all_coexist_exes
 
     @classmethod
     def get_sw_acc_list(cls, _root, root_class, sw):
@@ -1197,10 +1233,7 @@ class AccInfoFunc:
         :param sw: 平台
         :return: Union[Tuple[True, Tuple[账号字典，进程字典，有无互斥体]], Tuple[False, 错误信息]]
         """
-        sw_class = root_class.sw_classes[sw]
-        data_dir = sw_class.data_dir
-        inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
-        inst_dir = os.path.dirname(inst_path)
+        data_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
         if data_dir is None or os.path.isdir(data_dir) is False:
             return False, "数据路径不存在"
         excluded_dirs, executable_wildcards = subfunc_file.get_remote_cfg(
@@ -1208,9 +1241,9 @@ class AccInfoFunc:
             excluded_dir_list=None,
             executable_wildcards=None
         )
-        if not isinstance(executable_wildcards, list):
+        if not isinstance(excluded_dirs, list) or not isinstance(executable_wildcards, list):
             messagebox.showerror("错误", f"{sw}平台未适配")
-            return False, "该平台未适配"
+            return False, "该平台未适配[excluded_dir_list, executable_wildcards]"
 
         Printer().vital("进程检测")
         start_time = time.time()
@@ -1235,18 +1268,9 @@ class AccInfoFunc:
         cls._link_acc_to_coexist_exe(sw, pid_acc_dict, executable_wildcards)
         Printer().print_vn(f"进程与账号或共存程序关联, 用时：{time.time() - start_time:.4f} 秒")
         Printer().print_vn(pid_acc_dict)
-        # 得到所有账号列表,并存入结果集 --------------------------------------------
-        acc_dirs_set = set(
-            item for item in os.listdir(data_dir)
-            if os.path.isdir(os.path.join(data_dir, item))
-        ) - set(excluded_dirs)
-        if executable_wildcards is not None:
-            # 处理共存版账号,确保创建字典和节点
-            all_coexist_exes = cls._get_all_coexist_acc_and_let_dist_exists(sw, inst_dir, executable_wildcards)
-            Printer().print_vn(f"获取所有的共存账号, 用时：{time.time() - start_time:.4f} 秒")
-            Printer().print_vn(all_coexist_exes)
-            acc_dirs_set.update(all_coexist_exes)
-        all_acc_list = list(acc_dirs_set)
+        # 得到所有账号列表,并根据进程字典,将账号分为已登录和未登录 --------------------------------------------
+        all_acc_list = SwInfoFunc.get_sw_all_accounts_existed(sw)
+        acc_dirs_set = set(all_acc_list)
         logins_set = set(pid_acc_dict.values())
         logins = list(logins_set & acc_dirs_set)
         logouts = list(acc_dirs_set - logins_set)
@@ -1282,8 +1306,8 @@ class AccInfoFunc:
         返回结果字典, 信息
         """
         # Printer().debug(sw, acc_list)
-        wnd_class_check_dicts = SwInfoFunc.get_sw_wnd_class_check_dict(sw, WndType.MAIN)
-        if wnd_class_check_dicts is None:
+        wnd_class_matching_dicts = SwInfoFunc.get_sw_wnd_class_matching_dicts(sw, WndType.MAIN)
+        if wnd_class_matching_dicts is None:
             return None, f"{sw}平台未适配"
         acc_hwnd_dict = {}
         for acc in acc_list:
@@ -1291,8 +1315,9 @@ class AccInfoFunc:
             Printer().print_vn(f"账号{acc} pid:{pid} -----------------------------------------------")
             hwnds_of_pid = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
             Printer().print_vn(f"进程{pid}的窗口总数: {len(hwnds_of_pid)}")
-            for check_dict in wnd_class_check_dicts:
-                hwnd_list = HwndGetter.uiautomation_filter_hwnds_by_rules_dict(hwnds_of_pid, check_dict)
+            for matching_dict in wnd_class_matching_dicts:
+                Printer().print_vn(f"筛选条件: {matching_dict}")
+                hwnd_list = HwndGetter.uiautomation_filter_hwnds_by_matching_dict(hwnds_of_pid, matching_dict)
                 if len(hwnd_list) == 1:
                     acc_hwnd_dict[acc] = hwnd_list[0]
                     Printer().print_vn(f"账号{acc}绑定窗口{hwnd_list[0]}")
@@ -1357,21 +1382,19 @@ class AccInfoFunc:
                 _, img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
 
         # - 实际账号的展示名优先级更高
-        linked_display_name = AccInfoFunc.get_acc_origin_display_name(sw, linked_acc)
         acc_display_name = AccInfoFunc.get_acc_origin_display_name(sw, account)
+        linked_display_name = AccInfoFunc.get_acc_origin_display_name(sw, linked_acc)
         if acc_display_name == account:
             # 实际账号并没有备注
-            if linked_display_name == linked_acc:
-                # 链接账号也没有备注和昵称, 则以实际账号的展示名为准
-                display_name = acc_display_name
-            else:
-                display_name = linked_display_name
+            display_name = linked_display_name
+            # if linked_display_name == linked_acc:
+            #     # 链接账号也没有备注和昵称, 则以实际账号的展示名为准
+            #     display_name = linked_display_name
+            # else:
+            #     display_name = linked_display_name
         else:
             display_name = acc_display_name
-        wrapped_display_name = StringUtils.balanced_wrap_text(
-            cls.get_acc_origin_display_name(sw, account),
-            50
-        )
+        wrapped_display_name = StringUtils.balanced_wrap_text(display_name, 50)
 
         # - 别名,昵称由链接账号查询
         alias, nickname = subfunc_file.get_sw_acc_data(

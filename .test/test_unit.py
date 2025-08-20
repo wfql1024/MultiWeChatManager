@@ -10,7 +10,7 @@ from unittest import TestCase
 import psutil
 
 from functions import subfunc_file
-from functions.sw_func import SwInfoFunc
+from functions.sw_func import SwInfoFunc, SwOperator
 from public_class.enums import MultirunMode, LocalCfg
 from resources import Config
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
@@ -293,6 +293,13 @@ class Test(TestCase):
             sw_hwnd, class_name = HwndGetter._uiautomation_wait_hwnd_exclusively_by_pid_and_class_wildcards(
                 [], 34288, ["mmui::MainWindow"])
             print(sw_hwnd, class_name)
+
+    def test_identify_coexist_dll(self):
+        res = SwInfoFunc.identify_dll("WeChat", "anti-revoke", False, "default", "1")
+        print(res)
+
+    def test_create_coexist(self):
+        SwOperator._create_coexist_exe_core("WeChat", "1")
 
     def test_custom_notebook_and_custom_btn(self):
         import tkinter as tk

@@ -323,7 +323,7 @@ class ScrollableCanvas:
 class SubToolWndUI(ABC):
     def __init__(self, wnd, title):
         """
-        这是一个层级敏感的窗口类，当关闭时，会自动恢复父窗口的焦点
+        这是一个层级敏感的窗口类，当关闭时，会自动恢复父窗口的焦点. 所有内容请放在 wnd_frame 中
         :param wnd:
         :param title:
         """
@@ -377,10 +377,12 @@ class SubToolWndUI(ABC):
         pass
 
     def load_ui(self):
-        pass
+        """加载基本的 UI 和默认数据"""
+        ...
 
     def update_content(self):
-        pass
+        """更新窗口内容"""
+        ...
 
     def finally_do(self):
         pass

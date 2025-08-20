@@ -21,7 +21,7 @@ class Strings:
     SURPRISE_SIGN = "✨" if NEWER_VER else "✦"
     MUTEX_SIGN = "🔒" if NEWER_VER else "⚔"
     CFG_SIGN = "📝" if NEWER_VER else "❐"
-    COEXIST_MNG_SIGN = "📝" if NEWER_VER else "☰"
+    MNG_SIGN = "📝" if NEWER_VER else "☰"
     UNLOCK_CFG_SIGN = "🔓" if NEWER_VER else "⬎"
 
     REFRESH_HINT = "(标签页单击切换,双击可刷新)"

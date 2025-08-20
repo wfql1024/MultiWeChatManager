@@ -457,7 +457,7 @@ def bind_event_to_frame_when_(
         condition: Union[Condition, Conditions, bool], exclusive_widgets=None):
     """
     当条件满足时，绑定事件到控件范围内所有位置
-    :param exclusive_widgets: 不绑定的控件列表
+    :param exclusive_widgets: 不绑定的控件列表(list)
     :param widget: 控件
     :param event: 事件
     :param func: 函数

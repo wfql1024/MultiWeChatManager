@@ -20,6 +20,12 @@ rw_lock = rwlock.RWLockFairD()
 
 
 class DictUtils:
+    """
+    ⚠️ 注意:
+    - kwargs 的 key 必须是合法的 Python 标识符 (字母/数字/下划线组成, 且不能以数字开头)。
+    - 如果配置项 key 含有特殊字符(如 %, -, / 等)，请不要使用 kwargs。
+      解决方法：只传 pre_nodes 获取中间 dict，再手动 dict.get(key, default)。
+    """
     SEPARATOR = '/'
 
     @staticmethod

@@ -11,7 +11,7 @@ from public_class.custom_classes import Condition
 from public_class.enums import AccKeys
 from public_class.global_members import GlobalMembers
 from public_class.reusable_widgets import SubToolWndUI
-from public_class.widget_frameworks import ActionableTreeView
+from public_class.widget_frameworks import TreeviewATT
 from resources import Constants
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
@@ -152,17 +152,20 @@ class AccManagerUI:
 
         self.acc_data = subfunc_file.get_sw_acc_data()
         # 加载已自启列表
-        self.tree_class["auto_start"] = AccManagerTreeView(
-            self, "auto_start", "已自启：", self.btn_dict["cancel_auto_start_btn"])
+        self.tree_class["auto_start"] = AccManagerTATT(
+            self, self.frame_dict["auto_start"],
+            "auto_start", "已自启：", self.btn_dict["cancel_auto_start_btn"].copy())
         # 加载已隐藏列表
-        self.tree_class["hidden"] = AccManagerTreeView(
-            self, "hidden", "已隐藏：", self.btn_dict["cancel_hiding_btn"])
+        self.tree_class["hidden"] = AccManagerTATT(
+            self, self.frame_dict["hidden"],
+            "hidden", "已隐藏：", self.btn_dict["cancel_hiding_btn"].copy())
         # 加载所有
-        self.tree_class["all"] = AccManagerTreeView(
-            self, "all", "所有账号：", None,
-            self.btn_dict["add_auto_start_btn"],
-            self.btn_dict["add_hiding_btn"],
-            self.btn_dict["add_hotkey_btn"],
+        self.tree_class["all"] = AccManagerTATT(
+            self, self.frame_dict["all"],
+            "all", "所有账号：", None,
+            self.btn_dict["add_auto_start_btn"].copy(),
+            self.btn_dict["add_hiding_btn"].copy(),
+            self.btn_dict["add_hotkey_btn"].copy()
         )
 
         print("账号管理页面列表都加载完...")
@@ -202,7 +205,7 @@ class AccManagerUI:
                 tree_class = self.tree_class
                 if all(tree_class[t].can_quick_refresh for t in tree_class):
                     for t in tree_class:
-                        tree_class[t].quick_refresh_items(self.acc_data)
+                        tree_class[t].quick_refresh_items()
             except Exception as e:
                 logger.warning(e)
                 self.quick_refresh_mode = False
@@ -212,19 +215,17 @@ class AccManagerUI:
         printer.print_vn("加载完成!")
 
 
-class AccManagerTreeView(ActionableTreeView, ABC):
-    def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
+class AccManagerTATT(TreeviewATT):
+    def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.can_quick_refresh = None
-        self.data_src = None
         self.wnd = None
         self.photo_images = []
-        super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
+        super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
         self.wnd = self.parent_class.wnd
         # print(f"self.wnd={self.wnd}")
-        self.data_src = self.parent_class.acc_data
         self.columns = (" ", "快捷键", "隐藏", "自启动", "账号标识", "昵称")
         self.main_frame = self.parent_class.frame_dict[self.table_tag]
         sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
@@ -232,8 +233,8 @@ class AccManagerTreeView(ActionableTreeView, ABC):
             if len(sort_str.split(",")) == 2:
                 self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
 
-    def set_table_style(self):
-        super().set_table_style()
+    def set_tree_style(self):
+        super().set_tree_style()
 
         tree = self.tree
         # 特定列的宽度和样式设置
@@ -250,9 +251,9 @@ class AccManagerTreeView(ActionableTreeView, ABC):
         tree.column("账号标识", anchor='center')
         tree.column("昵称", anchor='center')
 
-    def display_table(self):
+    def display_tree(self):
         tree = self.tree.nametowidget(self.tree)
-        sw_acc_data = self.data_src
+        sw_acc_data = self.parent_class.acc_data
         table_tag = self.table_tag
 
         # 假设你已经有了一个用于存储 sw 节点的字典
@@ -306,6 +307,8 @@ class AccManagerTreeView(ActionableTreeView, ABC):
 
         self.can_quick_refresh = True
         self.parent_class.quick_refresh_mode = True
+        if len(tree.get_children()) == 0:
+            self.null_data = True
 
     def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
         # print("触发列宽调整")

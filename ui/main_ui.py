@@ -167,6 +167,7 @@ class RootClass:
         style.configure('SecondTitle.TLabel', font=("", Constants.SECOND_TITLE_FONTSIZE))
         style.configure("RedWarning.TLabel", foreground="red", font=("", Constants.LITTLE_FONTSIZE))
         style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
+        style.configure("LittleGreyText.TLabel", font=("", Constants.LITTLE_FONTSIZE), foreground="grey")
         style.configure("RowTreeview", background="#FFFFFF", foreground="black",
                         rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended")
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局

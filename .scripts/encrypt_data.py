@@ -33,6 +33,6 @@ encrypt_input_and_append_key_to_output('origin_remote_setting_v4.json', '../remo
 print(f"文件已加密并保存为 remote_setting_v4（无后缀名）")
 encrypt_input_and_append_key_to_output('origin_remote_setting_v5.json', '../remote_setting_v5', secure_key)
 print(f"文件已加密并保存为 remote_setting_v5（无后缀名）")
-encrypt_input_and_append_key_to_output('origin_remote_setting_v6.json', '../remote_configs/remote_setting_v6',
-                                       secure_key)
+encrypt_input_and_append_key_to_output(
+    'origin_remote_setting_v6.json', '../remote_configs/remote_setting_v6', secure_key)
 print(f"文件已加密并保存为 remote_setting_v6（无后缀名）")

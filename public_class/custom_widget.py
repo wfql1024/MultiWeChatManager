@@ -3,7 +3,9 @@ import tkinter as tk
 from enum import Enum
 from functools import partial
 from tkinter import ttk
+from typing import Union
 
+from public_class.custom_classes import Condition, Conditions
 from public_class.enums import NotebookDirection
 from utils.encoding_utils import ColorUtils
 from utils.widget_utils import UnlimitedClickHandler, CanvasUtils, WidgetUtils
@@ -57,6 +59,7 @@ class CustomBtn(tk.Widget):
     _default_styles = {}
     _styles = {}
     _down = False
+    _above = False
     _text = ""
     _click_map = {}
     _click_func = None
@@ -77,6 +80,7 @@ class CustomBtn(tk.Widget):
         self._default_styles = {}
         self._styles = {}
         self._down = False
+        self._above = False
         self._text = ""
         self._click_map = {}
         self._click_func = None
@@ -106,7 +110,7 @@ class CustomBtn(tk.Widget):
             self.State.HOVERED: default_major_bg_color,
             self.State.CLICKED: ColorUtils.brighten_color(default_major_bg_color),
             self.State.DISABLED: "#E9E9E9",
-            self.State.SELECTED: "grey"
+            self.State.SELECTED: ColorUtils.brighten_color(default_major_bg_color)
         }
         for key in [self.State.NORMAL, self.State.HOVERED, self.State.CLICKED, self.State.DISABLED,
                     self.State.SELECTED]:
@@ -157,8 +161,8 @@ class CustomBtn(tk.Widget):
 
     def set_state(self, state):
         """设置状态"""
-        if not isinstance(state, self.State):
-            raise ValueError("state必须是CustomLabelBtn.State的枚举值")
+        if state not in [self.State.DISABLED, self.State.SELECTED, self.State.NORMAL]:
+            raise ValueError("state必须是CustomLabelBtn.State的枚举值, 且推荐在DISABLED, SELECTED, NORMAL三种状态内使用")
         self._state = state
         self._draw()
 
@@ -203,7 +207,7 @@ class CustomBtn(tk.Widget):
 
         return self
 
-    def _draw(self):
+    def _draw(self, tmp_state=None):
         ...
 
     @staticmethod
@@ -221,6 +225,15 @@ class CustomBtn(tk.Widget):
             if isinstance(child, (tk.Frame, ttk.Frame)):
                 CustomBtn.set_all_custom_widgets_to_(child, state)
 
+    @classmethod
+    def enable_custom_widget_when_(cls, widget, condition: Union[Condition, Conditions, bool]):
+        """有条件地启用控件"""
+        # 设置控件状态
+        if condition is True or hasattr(condition, "check") and condition.check():
+            widget.set_state(cls.State.NORMAL)
+        else:
+            widget.set_state(cls.State.DISABLED)
+
     def _set_click_time(self, click_time):
         self._click_time = click_time
 
@@ -229,52 +242,34 @@ class CustomBtn(tk.Widget):
         self._text = new_text
         return self
 
-    def _on_enter(self, event=None):
-        if event:
-            pass
-        if self._state in [self.State.DISABLED, self.State.SELECTED]:
-            return
-        if self._down:
-            self.set_state(self.State.CLICKED)
-        else:
-            self.set_state(self.State.HOVERED)
-
-    def _on_leave(self, event=None):
-        if event:
-            pass
-        if self._state in [self.State.DISABLED, self.State.SELECTED]:
-            return
-        self.set_state(self.State.NORMAL)
-
-    def _on_button_down(self, event=None):
-        self._down = True
-        # print("定制按钮监听:按下")
-        if event:
-            pass
+    def _update_visual_state(self):
+        """根据鼠标状态更新绘制"""
         if self._state == self.State.DISABLED:
-            # self._shake()
             return
-        if self._state == self.State.SELECTED:
-            return
-        # 按下是短暂的选中状态
-        self.set_state(self.State.CLICKED)
 
-    def _on_button_up(self, event=None):
+        if self._above:  # 鼠标在按钮上
+            if self._down:
+                self._draw(self.State.CLICKED)
+            else:
+                self._draw(self.State.HOVERED)
+        else:
+            self._draw()  # 恢复常驻状态
+
+    def _on_enter(self, _event=None):
+        self._above = True
+        self._update_visual_state()
+
+    def _on_leave(self, _event=None):
+        self._above = False
+        self._update_visual_state()
+
+    def _on_button_down(self, _event=None):
+        self._down = True
+        self._update_visual_state()
+
+    def _on_button_up(self, _event=None):
         self._down = False
-        # print("定制按钮监听:抬起")
-        if event:
-            pass
-        if self._state == self.State.DISABLED or self._state == self.State.SELECTED:
-            return
-        # 按下鼠标后，当抬起时位置不在按钮处，应该取消点击的状态
-        x, y = self.winfo_pointerxy()
-        widget = self.winfo_containing(x, y)
-        # Printer().debug(f"触发的控件是: {self._core_widget}")
-        # Printer().debug(f"停留的控件是: {widget}")
-        if widget is not self._core_widget:
-            self.set_state(self.State.NORMAL)
-            return
-        self.set_state(self.State.HOVERED)
+        self._update_visual_state()
 
     def _shake(self):
         """禁用状态下点击，抖动一下提示，不破坏布局"""
@@ -331,14 +326,15 @@ class CustomCornerBtn(tk.Frame, CustomBtn):
         self.set_state(self.State.NORMAL)
         self._bind_event()
 
-    def _draw(self):
+    def _draw(self, tmp_state=None):
         """根据当前状态重绘按钮"""
+        state = tmp_state if isinstance(tmp_state, CustomBtn.State) else self._state
         self.canvas.delete("all")
         w, h, tx, ty = self._auto_resize_by_text()
         r = min(self.corner_radius, h // 2, w // 2)
-        bg = self._styles[self._state]['bg']
-        fg = self._styles[self._state]['fg']
-        bdc = self._styles[self._state]['bdc']
+        bg = self._styles[state]['bg']
+        fg = self._styles[state]['fg']
+        bdc = self._styles[state]['bdc']
 
         CanvasUtils.draw_rounded_rect(
             canvas=self.canvas,
@@ -449,9 +445,10 @@ class CustomLabelBtn(tk.Label, CustomBtn):
         self.set_styles(self._default_styles)
         self.set_state(self.State.NORMAL)
 
-    def _draw(self):
+    def _draw(self, tmp_state=None):
         """根据当前状态更新样式"""
-        self.configure(bg=self._styles[self._state]['bg'], fg=self._styles[self._state]['fg'])
+        state = tmp_state if isinstance(tmp_state, CustomBtn.State) else self._state
+        self.configure(bg=self._styles[state]['bg'], fg=self._styles[state]['fg'])
         self.config(text=self._text)
 
 

@@ -11,7 +11,7 @@ from public_class.custom_classes import Condition
 from public_class.enums import RemoteCfg, LocalCfg, SwStates
 from public_class.global_members import GlobalMembers
 from public_class.reusable_widgets import SubToolWndUI
-from public_class.widget_frameworks import ActionableTreeView
+from public_class.widget_frameworks import TreeviewATT
 from resources import Constants
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
@@ -126,8 +126,8 @@ class SwManagerUI:
         self.frame_dict["disable"].pack(side=tk.TOP, fill=tk.X)
 
         # 加载已启用列表
-        self.tree_class["enable"] = SwManagerTreeView(
-            self,
+        self.tree_class["enable"] = SwManagerTATT(
+            self, self.frame_dict["enable"],
             "enable", "已启用：", None,
             self.btn_dict["disable"].copy(),
             self.btn_dict["hidden"].copy(),
@@ -135,8 +135,9 @@ class SwManagerUI:
             self.btn_dict["setting"].copy()
         )
         # 加载已禁用列表
-        self.tree_class["disable"] = SwManagerTreeView(
-            self, "disable", "已禁用：", None,
+        self.tree_class["disable"] = SwManagerTATT(
+            self, self.frame_dict["disable"],
+            "disable", "已禁用：", None,
             self.btn_dict["enable"].copy(),
             self.btn_dict["setting"].copy()
         )
@@ -202,7 +203,7 @@ class SwManagerUI:
                 tree_class = self.tree_class
                 if all(tree_class[t].can_quick_refresh for t in tree_class):
                     for t in tree_class:
-                        tree_class[t].quick_refresh_items(self.sw_list)
+                        tree_class[t].quick_refresh_items()
             except Exception as e:
                 logger.warning(e)
                 self.quick_refresh_mode = False
@@ -212,14 +213,14 @@ class SwManagerUI:
         printer.print_vn("加载完成!")
 
 
-class SwManagerTreeView(ActionableTreeView, ABC):
-    def __init__(self, parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
+class SwManagerTATT(TreeviewATT):
+    def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.data_src = None
         self.wnd = None
         self.photo_images = []
         self.can_quick_refresh = None
-        super().__init__(parent_class, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
+        super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
         self.wnd = self.parent_class.wnd
@@ -231,8 +232,8 @@ class SwManagerTreeView(ActionableTreeView, ABC):
             if len(sort_str.split(",")) == 2:
                 self.sort["col"], self.sort["is_asc"] = sort_str.split(",")
 
-    def set_table_style(self):
-        super().set_table_style()
+    def set_tree_style(self):
+        super().set_tree_style()
 
         tree = self.tree
         # 特定列的宽度和样式设置
@@ -251,9 +252,9 @@ class SwManagerTreeView(ActionableTreeView, ABC):
         tree.column("DLL路径", minwidth=Constants.COLUMN_MIN_WIDTH["DLL路径"],
                     width=Constants.COLUMN_WIDTH["DLL路径"], anchor='w', stretch=tk.NO)
 
-    def display_table(self):
+    def display_tree(self):
         tree = self.tree.nametowidget(self.tree)
-        sw_list = self.data_src
+        sw_list = self.parent_class.sw_list
         table_tag = self.table_tag
 
         for sw in sw_list:
@@ -297,6 +298,8 @@ class SwManagerTreeView(ActionableTreeView, ABC):
 
         self.can_quick_refresh = True
         self.parent_class.quick_refresh_mode = True
+        if len(tree.get_children()) == 0:
+            self.null_data = True
 
     def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
         # print("触发列宽调整")
