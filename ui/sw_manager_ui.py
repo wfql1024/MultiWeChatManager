@@ -6,16 +6,15 @@ from PIL import Image, ImageTk
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
-from public_class import reusable_widgets
-from public_class.custom_classes import Condition
-from public_class.enums import RemoteCfg, LocalCfg, SwStates
-from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWndUI
-from public_class.widget_frameworks import TreeviewATT
-from resources import Constants
+from public.custom_classes import Condition
+from public.enums import RemoteCfg, LocalCfg, SwStates
+from public.global_members import GlobalMembers
+from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
+from components.composited_controls import TreeviewAHT
+from public import Config
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
 
@@ -28,7 +27,7 @@ class SwManagerWndUI(SubToolWndUI, ABC):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.ACC_MNG_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.ACC_MNG_WND_SIZE
         self.sw_manager_ui = SwManagerUI(self.wnd, self.wnd)
 
     def load_ui(self):
@@ -115,7 +114,7 @@ class SwManagerUI:
     def display_sw_mng_ui(self):
         print("创建平台管理界面...")
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
+        self.scrollable_canvas = ScrollableCanvasW(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
         self.sw_list, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
@@ -126,7 +125,7 @@ class SwManagerUI:
         self.frame_dict["disable"].pack(side=tk.TOP, fill=tk.X)
 
         # 加载已启用列表
-        self.tree_class["enable"] = SwManagerTATT(
+        self.tree_class["enable"] = SwManagerTAHT(
             self, self.frame_dict["enable"],
             "enable", "已启用：", None,
             self.btn_dict["disable"].copy(),
@@ -135,7 +134,7 @@ class SwManagerUI:
             self.btn_dict["setting"].copy()
         )
         # 加载已禁用列表
-        self.tree_class["disable"] = SwManagerTATT(
+        self.tree_class["disable"] = SwManagerTAHT(
             self, self.frame_dict["disable"],
             "disable", "已禁用：", None,
             self.btn_dict["enable"].copy(),
@@ -213,7 +212,7 @@ class SwManagerUI:
         printer.print_vn("加载完成!")
 
 
-class SwManagerTATT(TreeviewATT):
+class SwManagerTAHT(TreeviewAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.data_src = None
@@ -237,20 +236,20 @@ class SwManagerTATT(TreeviewATT):
 
         tree = self.tree
         # 特定列的宽度和样式设置
-        tree.column("#0", minwidth=Constants.COLUMN_MIN_WIDTH["SEC_ID"],
-                    width=Constants.COLUMN_WIDTH["SEC_ID"], stretch=tk.NO)
-        tree.column(" ", minwidth=Constants.COLUMN_MIN_WIDTH["展示"],
-                    width=Constants.COLUMN_WIDTH["展示"], anchor='w')
-        tree.column("状态", minwidth=Constants.COLUMN_MIN_WIDTH["状态"],
-                    width=Constants.COLUMN_WIDTH["状态"], anchor='center', stretch=tk.NO)
-        tree.column("版本", minwidth=Constants.COLUMN_MIN_WIDTH["版本"],
-                    width=Constants.COLUMN_WIDTH["版本"], anchor='center', stretch=tk.NO)
-        tree.column("安装路径", minwidth=Constants.COLUMN_MIN_WIDTH["安装路径"],
-                    width=Constants.COLUMN_WIDTH["安装路径"], anchor='w', stretch=tk.NO)
-        tree.column("存储路径", minwidth=Constants.COLUMN_MIN_WIDTH["存储路径"],
-                    width=Constants.COLUMN_WIDTH["存储路径"], anchor='w', stretch=tk.NO)
-        tree.column("DLL路径", minwidth=Constants.COLUMN_MIN_WIDTH["DLL路径"],
-                    width=Constants.COLUMN_WIDTH["DLL路径"], anchor='w', stretch=tk.NO)
+        tree.column("#0", minwidth=Config.COLUMN_MIN_WIDTH["SEC_ID"],
+                    width=Config.COLUMN_WIDTH["SEC_ID"], stretch=tk.NO)
+        tree.column(" ", minwidth=Config.COLUMN_MIN_WIDTH["展示"],
+                    width=Config.COLUMN_WIDTH["展示"], anchor='w')
+        tree.column("状态", minwidth=Config.COLUMN_MIN_WIDTH["状态"],
+                    width=Config.COLUMN_WIDTH["状态"], anchor='center', stretch=tk.NO)
+        tree.column("版本", minwidth=Config.COLUMN_MIN_WIDTH["版本"],
+                    width=Config.COLUMN_WIDTH["版本"], anchor='center', stretch=tk.NO)
+        tree.column("安装路径", minwidth=Config.COLUMN_MIN_WIDTH["安装路径"],
+                    width=Config.COLUMN_WIDTH["安装路径"], anchor='w', stretch=tk.NO)
+        tree.column("存储路径", minwidth=Config.COLUMN_MIN_WIDTH["存储路径"],
+                    width=Config.COLUMN_WIDTH["存储路径"], anchor='w', stretch=tk.NO)
+        tree.column("DLL路径", minwidth=Config.COLUMN_MIN_WIDTH["DLL路径"],
+                    width=Config.COLUMN_WIDTH["DLL路径"], anchor='w', stretch=tk.NO)
 
     def display_tree(self):
         tree = self.tree.nametowidget(self.tree)
@@ -277,7 +276,7 @@ class SwManagerTATT(TreeviewATT):
             version = SwInfoFunc.calc_sw_ver(sw)
             # 获取平台图像
             img = SwInfoFunc.get_sw_logo(sw)
-            img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+            img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.photo_images.append(photo)
 

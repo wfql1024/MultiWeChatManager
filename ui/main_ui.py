@@ -13,11 +13,11 @@ from functions import subfunc_file
 from functions.acc_func import AccOperator
 from functions.app_func import AppFunc
 from functions.sw_func import SwInfoFunc
-from public_class import reusable_widgets
-from public_class.custom_widget import CustomNotebook
-from public_class.enums import LocalCfg, SwStates, RemoteCfg
-from public_class.global_members import GlobalMembers
-from resources import Config, Constants, Strings
+from components.custom_widgets import CustomNotebook
+from public.enums import LocalCfg, SwStates, RemoteCfg
+from public.global_members import GlobalMembers
+from components.widget_wrappers import StatusBarW
+from public import Config, Config, Strings
 from ui import login_ui, acc_manager_ui, sw_manager_ui
 from ui.menu_ui import MenuUI
 from ui.wnd_ui import LoadingWndUI, WndCreator
@@ -28,7 +28,7 @@ from utils.widget_utils import WidgetUtils
 
 # ------------------------------------------------------------------
 # 本程序文件层次:
-# main_ui > 基本ui > 窗口ui > func > utils > public_class > resources
+# main_ui > 基本ui > 窗口ui > func > utils > public > resources
 # ------------------------------------------------------------------
 
 
@@ -40,7 +40,7 @@ class RootWnd:
         self.root_width = None
         self.root_frame = None
         self.root.withdraw()  # 初始化时隐藏主窗口
-        self.root_width, self.root_height = Constants.PROJ_WND_SIZE
+        self.root_width, self.root_height = Config.PROJ_WND_SIZE
 
     def set_wnd(self):
         # 设置主窗口
@@ -158,28 +158,28 @@ class RootClass:
 
         # 统一管理style
         style = ttk.Style()
-        style.configure('Custom.TButton', padding=Constants.CUS_BTN_PAD,
-                        width=Constants.TK_BTN_WIDTH, relief="sunken", borderwidth=3)
+        style.configure('Custom.TButton', padding=Config.CUS_BTN_PAD,
+                        width=Config.TK_BTN_WIDTH, relief="sunken", borderwidth=3)
         style.configure("Treeview")
         # style.configure('Tool.TButton', width=2)
-        style.configure('FirstTitle.TLabel', font=("", Constants.FIRST_TITLE_FONTSIZE, "bold"))
-        style.configure('Link.TLabel', font=("", Constants.LINK_FONTSIZE), foreground="grey")
-        style.configure('SecondTitle.TLabel', font=("", Constants.SECOND_TITLE_FONTSIZE))
-        style.configure("RedWarning.TLabel", foreground="red", font=("", Constants.LITTLE_FONTSIZE))
-        style.configure("LittleText.TLabel", font=("", Constants.LITTLE_FONTSIZE))
-        style.configure("LittleGreyText.TLabel", font=("", Constants.LITTLE_FONTSIZE), foreground="grey")
+        style.configure('FirstTitle.TLabel', font=("", Config.FIRST_TITLE_FONTSIZE, "bold"))
+        style.configure('Link.TLabel', font=("", Config.LINK_FONTSIZE), foreground="grey")
+        style.configure('SecondTitle.TLabel', font=("", Config.SECOND_TITLE_FONTSIZE))
+        style.configure("RedWarning.TLabel", foreground="red", font=("", Config.LITTLE_FONTSIZE))
+        style.configure("LittleText.TLabel", font=("", Config.LITTLE_FONTSIZE))
+        style.configure("LittleGreyText.TLabel", font=("", Config.LITTLE_FONTSIZE), foreground="grey")
         style.configure("RowTreeview", background="#FFFFFF", foreground="black",
-                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended")
+                        rowheight=Config.TREE_ROW_HEIGHT, selectmode="extended")
         style.layout("RowTreeview", style.layout("Treeview"))  # 继承默认布局
         style.configure("SidebarTreeview", background="#FFFFFF", foreground="black",
-                        rowheight=Constants.TREE_ROW_HEIGHT, selectmode="extended",
+                        rowheight=Config.TREE_ROW_HEIGHT, selectmode="extended",
                         borderwidth=0, highlightthickness=0)
         style.layout("SidebarTreeview", style.layout("Treeview"))  # 继承默认布局
         style.configure("Mutex.TLabel", foreground="red")
 
         # 创建状态栏
         if self.statusbar_ui is None or not self.statusbar_ui.status_bar.winfo_exists():
-            self.statusbar_ui = reusable_widgets.StatusBarUI(self.root, self, self.debug)
+            self.statusbar_ui = StatusBarW(self.root, self, self.debug)
             if self.debug:
                 self.statusbar_ui.status_bar.bind("<Button-1>", lambda event: WndCreator.open_debug_window())
 

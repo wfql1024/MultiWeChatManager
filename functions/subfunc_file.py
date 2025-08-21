@@ -9,8 +9,8 @@ from typing import *
 
 import requests
 
-from public_class.enums import LocalCfg, SW
-from resources import Config, Strings
+from public.enums import LocalCfg, SW
+from public import Config, Strings
 from utils import file_utils
 from utils.encoding_utils import CryptoUtils
 from utils.file_utils import JsonUtils, DictUtils

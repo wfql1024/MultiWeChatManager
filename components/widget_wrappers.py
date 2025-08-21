@@ -1,19 +1,60 @@
 import queue
 import sys
 import tkinter as tk
-from abc import ABC, abstractmethod
 from tkinter import ttk
 
 import keyboard
 
-from public_class.custom_classes import QueueWithUpdate
-from public_class.global_members import GlobalMembers
-from resources import Constants
+from public.custom_classes import QueueWithUpdate
+from public.global_members import GlobalMembers
+from public import Config
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger, RedirectText
 
+class CustomDialogW:
+    @classmethod
+    def ask_username_password(cls):
+        result = []  # 使用列表封装以在内部函数中修改
 
-class HotkeyEntry4Keyboard:
+        def on_ok():
+            result[0] = (entry_username.get(), entry_password.get())
+            window.destroy()
+
+        def on_close():
+            result[0] = None
+            window.destroy()
+
+        window = tk.Tk()
+        window.title("登录")
+        window.protocol("WM_DELETE_WINDOW", on_close)
+
+        # 居中窗口
+        window.update_idletasks()
+        w = window.winfo_width()
+        h = window.winfo_height()
+        screen_w = window.winfo_screenwidth()
+        screen_h = window.winfo_screenheight()
+        x = (screen_w - w) // 2
+        y = (screen_h - h) // 2
+        window.geometry(f"{w}x{h}+{x}+{y}")
+
+        # 用户名标签和输入框
+        tk.Label(window, text="微软注册邮箱:").pack(pady=(10, 0))
+        entry_username = tk.Entry(window)
+        entry_username.pack()
+
+        # 密码标签和输入框
+        tk.Label(window, text="密码:").pack(pady=(5, 0))
+        entry_password = tk.Entry(window, show="*")
+        entry_password.pack()
+
+        # 确认按钮
+        tk.Button(window, text="确定", command=on_ok).pack(pady=(8, 0))
+
+        window.mainloop()
+        return result[0]
+
+class HotkeyEntry4KeyboardW:
     """
     用于监听键盘输入的热键输入框，适配Keyboard模块
     """
@@ -105,7 +146,7 @@ class HotkeyEntry4Keyboard:
         return valid
 
 
-class HotkeyEntry4Tkinter:
+class HotkeyEntry4TkinterW:
     """
     用于监听键盘输入的热键输入框，适配Tkinter
     """
@@ -200,7 +241,7 @@ class HotkeyEntry4Tkinter:
         return "break"
 
 
-class StatusBarUI:
+class StatusBarW:
     """对print即时更新的状态栏"""
 
     def __init__(self, root, r_class, debug):
@@ -222,8 +263,8 @@ class StatusBarUI:
         """创建状态栏"""
         print(f"加载状态栏...")
         self.statusbar_output_var = tk.StringVar()
-        self.status_bar = tk.Label(self.root, textvariable=self.statusbar_output_var, bd=Constants.STATUS_BAR_BD,
-                                   relief="sunken", anchor="w", height=Constants.STATUS_BAR_HEIGHT)
+        self.status_bar = tk.Label(self.root, textvariable=self.statusbar_output_var, bd=Config.STATUS_BAR_BD,
+                                   relief="sunken", anchor="w", height=Config.STATUS_BAR_HEIGHT)
         self.status_bar.pack(side="bottom", fill="x")
 
     def update_status(self):
@@ -239,52 +280,52 @@ class StatusBarUI:
             pass
 
 
-class ScrollableCanvas:
+class ScrollableCanvasW:
     """
     可滚动的Canvas，用于动态调整Canvas中窗口的宽度，并根据父子间高度关系进行滚轮事件绑定与解绑
     """
 
     def __init__(self, master_frame):
-        self.master_frame = master_frame
+        self._master_frame = master_frame
 
         # 创建canvas和滚动条区域，注意要先pack滚动条区域，这样能保证滚动条区域优先级更高
-        scrollbar_frame = tk.Frame(self.master_frame)
+        scrollbar_frame = tk.Frame(self._master_frame)
         scrollbar_frame.pack(side="right", fill="y")
-        self.canvas = tk.Canvas(self.master_frame, highlightthickness=0)
+        self.canvas = tk.Canvas(self._master_frame, highlightthickness=0)
         self.canvas.pack(fill="both", side="left", expand=True)
 
         # 创建滚动条
         # print("创建滚动条...")
-        self.scrollbar = ttk.Scrollbar(scrollbar_frame, orient="vertical", command=self.canvas.yview)
-        self.scrollbar.pack(side="left", fill="y")
+        self._scrollbar = ttk.Scrollbar(scrollbar_frame, orient="vertical", command=self.canvas.yview)
+        self._scrollbar.pack(side="left", fill="y")
         # 创建一个Frame在Canvas中
         self.main_frame = ttk.Frame(self.canvas)
         # 将main_frame放置到Canvas的窗口中，并禁用Canvas的宽高跟随调整
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
+        self._canvas_window = self.canvas.create_window((0, 0), window=self.main_frame, anchor="nw")
         # 将滚动条连接到Canvas
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        self.canvas.configure(yscrollcommand=self._scrollbar.set)
         # 配置Canvas的滚动区域
-        self.canvas.bind('<Configure>', self.on_canvas_configure)
+        self.canvas.bind('<Configure>', self._on_canvas_configure)
 
-    def bind_mouse_wheel(self, widget):
+    def _bind_mouse_wheel(self, widget):
         """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
-        widget.bind("<MouseWheel>", self.on_mousewheel, add='+')
-        widget.bind("<Button-4>", self.on_mousewheel, add='+')
-        widget.bind("<Button-5>", self.on_mousewheel, add='+')
+        widget.bind("<MouseWheel>", self._on_mousewheel, add='+')
+        widget.bind("<Button-4>", self._on_mousewheel, add='+')
+        widget.bind("<Button-5>", self._on_mousewheel, add='+')
 
         for child in widget.winfo_children():
-            self.bind_mouse_wheel(child)
+            self._bind_mouse_wheel(child)
 
-    def unbind_mouse_wheel(self, widget):
+    def _unbind_mouse_wheel(self, widget):
         """递归地为widget及其所有子控件绑定鼠标滚轮事件"""
         widget.unbind("<MouseWheel>")
         widget.unbind("<Button-4>")
         widget.unbind("<Button-5>")
 
         for child in widget.winfo_children():
-            self.unbind_mouse_wheel(child)
+            self._unbind_mouse_wheel(child)
 
-    def on_mousewheel(self, event):
+    def _on_mousewheel(self, event):
         """鼠标滚轮触发动作"""
         # 对于Windows和MacOS
         if event.delta:
@@ -296,18 +337,18 @@ class ScrollableCanvas:
             elif event.num == 4:
                 self.canvas.yview_scroll(-1, "units")
 
-    def on_canvas_configure(self, event):
+    def _on_canvas_configure(self, event):
         """动态调整canvas中窗口的宽度，并根据父子间高度关系进行滚轮事件绑定与解绑"""
         try:
             self.canvas.configure(scrollregion=self.canvas.bbox("all"))
             width = event.width
-            self.canvas.itemconfig(tagOrId=self.canvas_window, width=width)
+            self.canvas.itemconfig(tagOrId=self._canvas_window, width=width)
             if self.main_frame.winfo_height() > self.canvas.winfo_height():
-                self.bind_mouse_wheel(self.canvas)
-                self.scrollbar.pack(side="left", fill="y")
+                self._bind_mouse_wheel(self.canvas)
+                self._scrollbar.pack(side="left", fill="y")
             else:
-                self.unbind_mouse_wheel(self.canvas)
-                self.scrollbar.pack_forget()
+                self._unbind_mouse_wheel(self.canvas)
+                self._scrollbar.pack_forget()
         except Exception as e:
             logger.error(e)
 
@@ -316,11 +357,11 @@ class ScrollableCanvas:
         self.canvas.update_idletasks()
         event = tk.Event()
         event.width = self.canvas.winfo_width()
-        self.on_canvas_configure(event)
+        self._on_canvas_configure(event)
         pass
 
 
-class SubToolWndUI(ABC):
+class SubToolWndUI:
     def __init__(self, wnd, title):
         """
         这是一个层级敏感的窗口类，当关闭时，会自动恢复父窗口的焦点. 所有内容请放在 wnd_frame 中
@@ -354,9 +395,8 @@ class SubToolWndUI(ABC):
 
         wnd.deiconify()  # 显示窗口
         wnd.grab_set()
-        wnd.protocol("WM_DELETE_WINDOW", self.on_close)
+        wnd.protocol("WM_DELETE_WINDOW", self._on_close)
 
-    @abstractmethod
     def initialize_members_in_init(self):
         """
         子类中重写方法若需要设置或新增成员变量，重写这个方法并在其中定义和赋值成员
@@ -364,7 +404,6 @@ class SubToolWndUI(ABC):
             self.position: 窗口位置
             self.wnd_height: 窗口高度
             self.wnd_width: 窗口宽度
-        :return:
         """
         pass
 
@@ -372,9 +411,8 @@ class SubToolWndUI(ABC):
         """
         除去本类基本的设置外，其余窗口设置可以在此方法中书写
         已经设置好的窗口属性：工具窗口属性、默认可以调节大小
-        :return:
         """
-        pass
+        ...
 
     def load_ui(self):
         """加载基本的 UI 和默认数据"""
@@ -385,9 +423,9 @@ class SubToolWndUI(ABC):
         ...
 
     def finally_do(self):
-        pass
+        ...
 
-    def on_close(self):
+    def _on_close(self):
         """窗口关闭时执行的操作"""
         # 关闭前
         self.finally_do()
@@ -397,52 +435,3 @@ class SubToolWndUI(ABC):
         if master_wnd != self.root:
             master_wnd.grab_set()  # 恢复父窗口的焦点
 
-
-class DefaultEntry(tk.Entry):
-    """会提前填入默认内容的文本框"""
-
-    def __init__(self, master=None, default_label="请输入内容", **kwargs):
-        self.var = tk.StringVar()
-        super().__init__(master, textvariable=self.var, **kwargs)
-        self.default_label = default_label
-        self._is_default = False
-        self._set_default()
-        self.bind("<FocusIn>", self._on_focus_in)
-        self.bind("<FocusOut>", self._on_focus_out)
-
-    def _set_default(self):
-        self.var.set(self.default_label)
-        self._is_default = True
-        self._set_style()
-
-    def _set_style(self):
-        self.config(fg=("grey" if self._is_default else "black"))
-
-    def _on_focus_in(self, event):
-        if event:
-            pass
-        if self._is_default:
-            self.var.set("")
-            self._is_default = False
-            self._set_style()
-
-    def _on_focus_out(self, event):
-        if event:
-            pass
-        var = self.var.get()
-        if not var or not self.var.get().strip():
-            # 空值情况下恢复默认值
-            self._set_default()
-        else:
-            # 否则就正常显示
-            self._is_default = False
-            self._set_style()
-
-    def get_value(self):
-        return None if self._is_default else self.var.get()
-
-    def set_value(self, value):
-        """外部设置值"""
-        if value is not None:
-            self.var.set(value)
-            self._on_focus_out(None)

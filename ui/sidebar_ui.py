@@ -12,10 +12,10 @@ from PIL import Image, ImageTk
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
-from public_class.custom_widget import CustomCornerBtn
-from public_class.enums import OnlineStatus
-from public_class.global_members import GlobalMembers
-from public_class.widget_frameworks import RadioTreeView
+from components.custom_widgets import CustomCornerBtn
+from public.enums import OnlineStatus
+from public.global_members import GlobalMembers
+from components.composited_controls import RadioTreeView
 from resources import Constants
 from ui.wnd_ui import WndCreator
 from utils import hwnd_utils

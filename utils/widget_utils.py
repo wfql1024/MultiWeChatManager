@@ -6,7 +6,7 @@ from functools import partial, wraps
 from tkinter import ttk
 from typing import Dict, Union
 
-from public_class.custom_classes import Condition, Conditions
+from public.custom_classes import Condition, Conditions
 
 
 class UnlimitedClickHandler:

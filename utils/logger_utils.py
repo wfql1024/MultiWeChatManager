@@ -14,7 +14,7 @@ from typing import Optional, Callable, Any, List, Tuple
 
 import colorlog
 
-from public_class.global_members import GlobalMembers
+from public.global_members import GlobalMembers
 
 
 @dataclass

@@ -4,8 +4,8 @@ from typing import Dict
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
-from public_class.enums import LocalCfg, SwStates, RemoteCfg
-from public_class.global_members import GlobalMembers
+from public.enums import LocalCfg, SwStates, RemoteCfg
+from public.global_members import GlobalMembers
 from utils.logger_utils import mylogger as logger
 
 

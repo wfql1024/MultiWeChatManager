@@ -5,54 +5,59 @@ from functools import partial
 from tkinter import ttk
 from typing import Union
 
-from public_class.custom_classes import Condition, Conditions
-from public_class.enums import NotebookDirection
+from public.custom_classes import Condition, Conditions
+from public.enums import NotebookDirection
 from utils.encoding_utils import ColorUtils
 from utils.widget_utils import UnlimitedClickHandler, CanvasUtils, WidgetUtils
 
+class DefaultEntry(tk.Entry):
+    """会提前填入默认内容的文本框"""
 
-class CustomDialog:
-    @classmethod
-    def ask_username_password(cls):
-        result = []  # 使用列表封装以在内部函数中修改
+    def __init__(self, master=None, default_label="请输入内容", **kwargs):
+        self.var = tk.StringVar()
+        super().__init__(master, textvariable=self.var, **kwargs)
+        self.default_label = default_label
+        self._is_default = False
+        self._set_default()
+        self.bind("<FocusIn>", self._on_focus_in)
+        self.bind("<FocusOut>", self._on_focus_out)
 
-        def on_ok():
-            result[0] = (entry_username.get(), entry_password.get())
-            window.destroy()
+    def _set_default(self):
+        self.var.set(self.default_label)
+        self._is_default = True
+        self._set_style()
 
-        def on_close():
-            result[0] = None
-            window.destroy()
+    def _set_style(self):
+        self.config(fg=("grey" if self._is_default else "black"))
 
-        window = tk.Tk()
-        window.title("登录")
-        window.protocol("WM_DELETE_WINDOW", on_close)
+    def _on_focus_in(self, event):
+        if event:
+            pass
+        if self._is_default:
+            self.var.set("")
+            self._is_default = False
+            self._set_style()
 
-        # 居中窗口
-        window.update_idletasks()
-        w = window.winfo_width()
-        h = window.winfo_height()
-        screen_w = window.winfo_screenwidth()
-        screen_h = window.winfo_screenheight()
-        x = (screen_w - w) // 2
-        y = (screen_h - h) // 2
-        window.geometry(f"{w}x{h}+{x}+{y}")
+    def _on_focus_out(self, event):
+        if event:
+            pass
+        var = self.var.get()
+        if not var or not self.var.get().strip():
+            # 空值情况下恢复默认值
+            self._set_default()
+        else:
+            # 否则就正常显示
+            self._is_default = False
+            self._set_style()
 
-        # 用户名标签和输入框
-        tk.Label(window, text="微软注册邮箱:").pack(pady=(10, 0))
-        entry_username = tk.Entry(window)
-        entry_username.pack()
+    def get_value(self):
+        return None if self._is_default else self.var.get()
 
-        # 密码标签和输入框
-        tk.Label(window, text="密码:").pack(pady=(5, 0))
-        entry_password = tk.Entry(window, show="*")
-        entry_password.pack()
-
-        # 确认按钮
-        tk.Button(window, text="确定", command=on_ok).pack(pady=(8, 0))
-
-        window.mainloop()
-        return result[0]
+    def set_value(self, value):
+        """外部设置值"""
+        if value is not None:
+            self.var.set(value)
+            self._on_focus_out(None)
 
 
 class CustomBtn(tk.Widget):

@@ -19,11 +19,11 @@ from PIL import Image
 from win32com.client import Dispatch
 
 from functions import subfunc_file
-from public_class.custom_widget import CustomDialog
-from public_class.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg, CallMode, WndType
-from public_class.global_members import GlobalMembers
-from resources import Config, Strings, Constants
-from resources.strings import NEWER_SYS_VER
+from components import CustomDialogW
+from public.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg, CallMode, WndType
+from public.global_members import GlobalMembers
+from public import Config, Strings, Config
+from public.strings import NEWER_SYS_VER
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
 from utils.better_wx.inner_utils import patt2hex, custom_wildcard_tokenize
 from utils.encoding_utils import VersionUtils, PathUtils, CryptoUtils
@@ -486,7 +486,7 @@ class SwInfoFunc:
             return None
         except Exception as e:
             print("所有方法都失败，创建空白头像:", e)
-            return Image.new('RGB', Constants.AVT_SIZE, color='white')
+            return Image.new('RGB', Config.AVT_SIZE, color='white')
 
     @staticmethod
     def get_sw_origin_display_name(sw) -> str:
@@ -1123,7 +1123,7 @@ class SwOperator:
                         f"\n若仍有顾虑请勿使用!)"):
                     return None  # 用户选择“否”或“取消”
 
-                res = CustomDialog.ask_username_password()
+                res = CustomDialogW.ask_username_password()
                 if res is None:
                     print("用户取消了输入")
                 else:

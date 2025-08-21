@@ -23,12 +23,12 @@ from functions.acc_func import AccInfoFunc, AccOperator
 from functions.app_func import AppFunc
 from functions.sw_func import SwOperator, SwInfoFunc, SwInfoUtils
 from functions.wnd_func import DetailWndFunc, UpdateLogWndFunc
-from public_class import reusable_widgets
-from public_class.custom_widget import CustomBtn, CustomCornerBtn
-from public_class.enums import LocalCfg, RemoteCfg, SwStates
-from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWndUI, DefaultEntry
-from resources import Constants, Config, Strings
+from components.custom_widgets import CustomBtn, CustomCornerBtn
+from public.enums import LocalCfg, RemoteCfg, SwStates
+from public.global_members import GlobalMembers
+from components.custom_widgets import DefaultEntry
+from components.widget_wrappers import SubToolWndUI, HotkeyEntry4KeyboardW, ScrollableCanvasW
+from public import Config, Strings
 from utils import file_utils, sys_utils, widget_utils
 from utils.encoding_utils import StringUtils
 from utils.file_utils import JsonUtils
@@ -142,8 +142,8 @@ class DetailUI(SubToolWndUI, ABC):
         sw = self.sw
         account = self.account
 
-        frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
-        frame.pack(**Constants.FRM_PACK)
+        frame = ttk.Frame(self.wnd_frame, padding=Config.FRM_PAD)
+        frame.pack(**Config.FRM_PACK)
 
         # 使用网格布局
         basic_info_grid = ttk.Frame(frame)
@@ -151,11 +151,11 @@ class DetailUI(SubToolWndUI, ABC):
 
         # 头像
         avatar_frame = ttk.Frame(basic_info_grid)
-        avatar_frame.grid(row=0, column=0, **Constants.W_GRID_PACK)
+        avatar_frame.grid(row=0, column=0, **Config.W_GRID_PACK)
         avatar_label = ttk.Label(avatar_frame)
-        avatar_label.pack(**Constants.T_WGT_PACK)
+        avatar_label.pack(**Config.T_WGT_PACK)
         avatar_operate_frame = ttk.Frame(avatar_frame)
-        avatar_operate_frame.pack(**Constants.B_WGT_PACK)
+        avatar_operate_frame.pack(**Config.B_WGT_PACK)
         # 左右的占位符
         ttk.Frame(avatar_operate_frame).pack(side="left", expand=True, fill="both")
         ttk.Frame(avatar_operate_frame).pack(side="right", expand=True, fill="both")
@@ -163,8 +163,8 @@ class DetailUI(SubToolWndUI, ABC):
         # avatar_status_label.pack(**Constants.B_WGT_PACK)
 
         # 登录状态=pid+hwnd
-        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
-        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 0.8)
+        customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
+        customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 0.8)
 
         def _create_btn_in_(frame_of_btn, text):
             btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
@@ -192,7 +192,7 @@ class DetailUI(SubToolWndUI, ABC):
          .apply_bind(self.root))
 
         login_status_frame = ttk.Frame(basic_info_grid)
-        login_status_frame.grid(row=0, column=1, **Constants.W_GRID_PACK)
+        login_status_frame.grid(row=0, column=1, **Config.W_GRID_PACK)
         # pid
         pid_frame = ttk.Frame(login_status_frame)
         pid_frame.pack(side="top", anchor="w")
@@ -264,12 +264,12 @@ class DetailUI(SubToolWndUI, ABC):
         hotkey, = subfunc_file.get_sw_acc_data(sw, account, hotkey=None)
         _, hotkey_entry, hotkey_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "热键", "" if hotkey is None else hotkey)
-        reusable_widgets.HotkeyEntry4Keyboard(hotkey_entry, hotkey_var)
+        HotkeyEntry4KeyboardW(hotkey_entry, hotkey_var)
         # 复选框区域
         current_row = max([widget.grid_info().get('row', -1) for widget in basic_info_grid.grid_slaves()],
                           default=-1) + 1
         ckb_frm = ttk.Frame(basic_info_grid)
-        ckb_frm.grid(row=current_row, column=0, columnspan=2, **Constants.W_GRID_PACK)
+        ckb_frm.grid(row=current_row, column=0, columnspan=2, **Config.W_GRID_PACK)
         # -隐藏账号
         hidden, = subfunc_file.get_sw_acc_data(sw, account, hidden=False)
         hidden_var = tk.BooleanVar(value=hidden)
@@ -288,14 +288,14 @@ class DetailUI(SubToolWndUI, ABC):
             ckb_frm, text="禁用头像", variable=disable_avatar_var)
         disable_avatar_checkbox.pack(side="left")
         # 按钮区域
-        button_frame = ttk.Frame(frame, padding=Constants.B_FRM_PAD)
+        button_frame = ttk.Frame(frame, padding=Config.B_FRM_PAD)
         save_button = ttk.Button(button_frame, text="保存", command=self._save_acc_settings)
-        save_button.pack(**Constants.R_WGT_PACK)
+        save_button.pack(**Config.R_WGT_PACK)
         self.fetch_button = ttk.Button(button_frame, text="获取", command=self._fetch_newest_data)
-        self.fetch_button.pack(**Constants.R_WGT_PACK)
+        self.fetch_button.pack(**Config.R_WGT_PACK)
 
         # 底部区域按从下至上的顺序pack
-        button_frame.pack(**Constants.B_FRM_PACK)
+        button_frame.pack(**Config.B_FRM_PACK)
 
         ttk.Frame(frame).pack(fill="both", expand=True)  # 占位
 
@@ -372,17 +372,17 @@ class DetailUI(SubToolWndUI, ABC):
                           default=-1) + 1
 
         label = ttk.Label(grid_frame, text=label_text)
-        label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
+        label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
 
         var = tk.StringVar(value=var_value)
         entry = ttk.Entry(grid_frame, width=30, textvariable=var, state="readonly" if readonly else "normal")
-        entry.grid(row=current_row, column=1, **Constants.W_GRID_PACK)
+        entry.grid(row=current_row, column=1, **Config.W_GRID_PACK)
 
         return label, entry, var
 
     def _update_avatar_and_bind(self, img, avatar_url):
         try:
-            new_size = tuple(int(dim * 2) for dim in Constants.AVT_SIZE)
+            new_size = tuple(int(dim * 2) for dim in Config.AVT_SIZE)
             img = img.resize(new_size, Image.Resampling.LANCZOS)  # type: ignore
             photo = ImageTk.PhotoImage(img)
             self.avatar_label.config(image=photo)
@@ -453,7 +453,7 @@ class DebugWndUI(SubToolWndUI, ABC):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.DEBUG_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.DEBUG_WND_SIZE
 
     def load_ui(self):
         # 创建工具栏
@@ -599,12 +599,12 @@ class LoadingWndUI(SubToolWndUI):
         self.wnd.overrideredirect(True)  # 去除窗口标题栏
 
     def load_ui(self):
-        frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
-        frame.pack(**Constants.FRM_PACK)
+        frame = ttk.Frame(self.wnd_frame, padding=Config.FRM_PAD)
+        frame.pack(**Config.FRM_PACK)
         self.label = ttk.Label(frame, text="正在载入，请稍等……")
-        self.label.pack(pady=Constants.T_PAD_Y)
-        self.progress = ttk.Progressbar(frame, mode="determinate", length=Constants.LOADING_PRG_LEN)
-        self.progress.pack(pady=Constants.T_PAD_Y)
+        self.label.pack(pady=Config.T_PAD_Y)
+        self.progress = ttk.Progressbar(frame, mode="determinate", length=Config.LOADING_PRG_LEN)
+        self.progress.pack(pady=Config.T_PAD_Y)
 
     def update_content(self):
         self.progress.start(15)
@@ -640,7 +640,7 @@ class AboutWndUI(SubToolWndUI, ABC):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.ABOUT_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.ABOUT_WND_SIZE
         self.scroll_tasks: Dict[str, Union[list, None]] = {
             "reference": None,
             "sponsor": None,
@@ -671,33 +671,33 @@ class AboutWndUI(SubToolWndUI, ABC):
         self.app_name = self.remote_cfg_data[LocalCfg.GLOBAL_SECTION]["app_name"]
         self.about_info = self.remote_cfg_data[LocalCfg.GLOBAL_SECTION]["about"]
 
-        self.main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
-        self.main_frame.pack(**Constants.FRM_PACK)
+        self.main_frame = ttk.Frame(self.wnd_frame, padding=Config.FRM_PAD)
+        self.main_frame.pack(**Config.FRM_PACK)
 
         # 图标框架（左框架）
-        logo_frame = ttk.Frame(self.main_frame, padding=Constants.L_FRM_PAD)
-        logo_frame.pack(**Constants.L_FRM_PACK)
+        logo_frame = ttk.Frame(self.main_frame, padding=Config.L_FRM_PAD)
+        logo_frame.pack(**Config.L_FRM_PACK)
 
         # 内容框架（右框架）
-        self.content_frame = ttk.Frame(self.main_frame, padding=Constants.R_FRM_PAD)
-        self.content_frame.pack(**Constants.R_FRM_PACK)
+        self.content_frame = ttk.Frame(self.main_frame, padding=Config.R_FRM_PAD)
+        self.content_frame.pack(**Config.R_FRM_PACK)
 
         # 加载并调整图标
         try:
             icon_image = Image.open(Config.PROJ_ICO_PATH)
-            icon_image = icon_image.resize(Constants.LOGO_SIZE, Image.Resampling.LANCZOS)
+            icon_image = icon_image.resize(Config.LOGO_SIZE, Image.Resampling.LANCZOS)
             self.logo_img = ImageTk.PhotoImage(icon_image)
         except Exception as e:
             logger.error(f"无法加载图标图片: {e}")
             # 如果图标加载失败，仍然继续布局
-            self.logo_img = ImageTk.PhotoImage(Image.new('RGB', Constants.LOGO_SIZE, color='white'))
+            self.logo_img = ImageTk.PhotoImage(Image.new('RGB', Config.LOGO_SIZE, color='white'))
         icon_label = ttk.Label(logo_frame, image=self.logo_img)
         icon_label.image = self.logo_img
-        icon_label.pack(**Constants.T_WGT_PACK)
+        icon_label.pack(**Config.T_WGT_PACK)
 
         # 顶部：标题和版本号框架
         title_version_frame = ttk.Frame(self.content_frame)
-        title_version_frame.pack(**Constants.T_FRM_PACK)
+        title_version_frame.pack(**Config.T_FRM_PACK)
 
         # 标题和版本号标签
         current_full_version = subfunc_file.get_app_current_version()
@@ -707,28 +707,28 @@ class AboutWndUI(SubToolWndUI, ABC):
             text=title_version_str,
             style='FirstTitle.TLabel',
         )
-        title_version_label.pack(anchor='sw', **Constants.T_WGT_PACK, ipady=Constants.IPAD_Y)
+        title_version_label.pack(anchor='sw', **Config.T_WGT_PACK, ipady=Config.IPAD_Y)
 
         # 开发者主页
         author_label = ttk.Label(self.content_frame, text="by 吾峰起浪", style='SecondTitle.TLabel')
-        author_label.pack(anchor='sw', **Constants.T_WGT_PACK)
+        author_label.pack(anchor='sw', **Config.T_WGT_PACK)
         self.pack_grids(self.content_frame, self.about_info["author"])
 
         # 项目信息
         proj_label = ttk.Label(self.content_frame, text="项目信息", style='SecondTitle.TLabel')
-        proj_label.pack(anchor='sw', **Constants.T_WGT_PACK)
+        proj_label.pack(anchor='sw', **Config.T_WGT_PACK)
         self.pack_grids(self.content_frame, self.about_info["project"])
 
         # 鸣谢
         thanks_label = ttk.Label(self.content_frame, text="鸣谢", style='SecondTitle.TLabel')
-        thanks_label.pack(anchor='sw', **Constants.T_WGT_PACK)
+        thanks_label.pack(anchor='sw', **Config.T_WGT_PACK)
         self.pack_grids(self.content_frame, self.about_info["thanks"])
 
         # 技术参考
         reference_label = ttk.Label(self.content_frame, text="技术参考", style='SecondTitle.TLabel')
-        reference_label.pack(anchor='w', **Constants.T_WGT_PACK)
+        reference_label.pack(anchor='w', **Config.T_WGT_PACK)
         reference_frame = ttk.Frame(self.content_frame)
-        reference_frame.pack(**Constants.T_FRM_PACK)
+        reference_frame.pack(**Config.T_FRM_PACK)
 
         reference_list = self.about_info.get('reference', [])
         lines = []
@@ -743,8 +743,8 @@ class AboutWndUI(SubToolWndUI, ABC):
         # 赞助
         sponsor_label = ttk.Label(self.content_frame, text="赞助", style='SecondTitle.TLabel')
         sponsor_frame = ttk.Frame(self.content_frame)
-        sponsor_label.pack(anchor='w', **Constants.T_WGT_PACK)
-        sponsor_frame.pack(**Constants.T_FRM_PACK)
+        sponsor_label.pack(anchor='w', **Config.T_WGT_PACK)
+        sponsor_frame.pack(**Config.T_FRM_PACK)
 
         sponsor_list = self.about_info.get('sponsor', [])
         sponsor_list_lines = []
@@ -760,14 +760,14 @@ class AboutWndUI(SubToolWndUI, ABC):
 
         # 底部区域=声明+检查更新按钮
         bottom_frame = ttk.Frame(self.content_frame)
-        bottom_frame.pack(**Constants.B_FRM_PACK)
+        bottom_frame.pack(**Config.B_FRM_PACK)
 
         surprise_sign = Strings.SURPRISE_SIGN
         prefix = surprise_sign if self.app_info.need_update is True else ""
 
         # 左边：声明框架
-        disclaimer_frame = ttk.Frame(bottom_frame, padding=Constants.L_FRM_PAD)
-        disclaimer_frame.pack(**Constants.L_FRM_PACK)
+        disclaimer_frame = ttk.Frame(bottom_frame, padding=Config.L_FRM_PAD)
+        disclaimer_frame.pack(**Config.L_FRM_PACK)
         # 右边：更新按钮
         update_button = ttk.Button(bottom_frame, text=f"{prefix}检查更新", style='Custom.TButton',
                                    command=partial(self.check_for_updates,
@@ -777,7 +777,7 @@ class AboutWndUI(SubToolWndUI, ABC):
         # 免责声明
         disclaimer_label = ttk.Label(disclaimer_frame, style="RedWarning.TLabel",
                                      text="仅供学习交流，严禁用于商业用途，请于24小时内删除")
-        disclaimer_label.pack(**Constants.B_WGT_PACK)
+        disclaimer_label.pack(**Config.B_WGT_PACK)
 
         # 版权信息标签
         copyright_label = ttk.Label(
@@ -785,12 +785,12 @@ class AboutWndUI(SubToolWndUI, ABC):
             text="Copyright © 2025 吾峰起浪. All rights reserved.",
             style="LittleText.TLabel",
         )
-        copyright_label.pack(**Constants.T_WGT_PACK)
+        copyright_label.pack(**Config.T_WGT_PACK)
 
     def pack_scrollable_text(self, frame, part, height):
         scrollbar = tk.Scrollbar(frame)
         scrollbar.pack(side="right", fill="y")
-        text = tk.Text(frame, wrap="word", font=("", Constants.LITTLE_FONTSIZE),
+        text = tk.Text(frame, wrap="word", font=("", Config.LITTLE_FONTSIZE),
                        height=height, bg=self.wnd.cget("bg"),
                        yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
 
@@ -800,7 +800,7 @@ class AboutWndUI(SubToolWndUI, ABC):
 
         widget_utils.add_hyperlink_events(text, self.scroll_text_str[part])
         text.config(state="disabled")
-        text.pack(side="left", fill="x", expand=False, padx=Constants.GRID_PAD)
+        text.pack(side="left", fill="x", expand=False, padx=Config.GRID_PAD)
         scrollbar.config(command=text.yview)
         # 创建方向对象
         self.scroll_direction[part] = Direction(1)  # 初始方向为向下
@@ -846,13 +846,13 @@ class AboutWndUI(SubToolWndUI, ABC):
     @staticmethod
     def pack_grids(frame, part_dict, max_columns=6):
         grids = ttk.Frame(frame)
-        grids.pack(**Constants.T_FRM_PACK)
+        grids.pack(**Config.T_FRM_PACK)
         for idx, info in enumerate(part_dict.values()):
             item = ttk.Label(grids, text=info.get('text', None),
                              style="Link.TLabel", cursor="hand2")
             row = idx // max_columns
             column = idx % max_columns
-            item.grid(row=row, column=column, **Constants.W_GRID_PACK)
+            item.grid(row=row, column=column, **Config.W_GRID_PACK)
 
             # 获取所有链接
             urls = []
@@ -928,7 +928,7 @@ class FeedBackWndUI(SubToolWndUI, ABC):
         # 调用方法在frame中显示图片
         self.show_image_in_frame(img_frame, self.img)
         btn_grid_frm = ttk.Frame(self.wnd_frame)
-        btn_grid_frm.pack(**Constants.B_FRM_PACK)
+        btn_grid_frm.pack(**Config.B_FRM_PACK)
         copy_qq_channel_num_btn = CustomCornerBtn(btn_grid_frm, "复制频道号")
         copy_qq_channel_num_btn.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
         btn_grid_frm.grid_columnconfigure(0, weight=1)
@@ -961,7 +961,7 @@ class UpdateLogWndUI(SubToolWndUI, ABC):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.UPDATE_LOG_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.UPDATE_LOG_WND_SIZE
 
     def set_wnd(self):
         self.wnd.resizable(False, False)
@@ -1149,7 +1149,7 @@ class StatisticWndUI(SubToolWndUI, ABC):
 
     def initialize_members_in_init(self):
         self.view = self.root_class.global_settings_value.view
-        self.wnd_width, self.wnd_height = Constants.STATISTIC_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.STATISTIC_WND_SIZE
         self.tree_dict = {
             "manual": {
                 "sort": False
@@ -1164,7 +1164,7 @@ class StatisticWndUI(SubToolWndUI, ABC):
 
     def load_ui(self):
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.wnd_frame)
+        self.scrollable_canvas = ScrollableCanvasW(self.wnd_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
         self.create_manual_table()
@@ -1366,7 +1366,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.SETTING_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.SETTING_WND_SIZE
         self.wnd_height = None
         self.changed: Dict[str, bool] = {
             "inst_path": False,
@@ -1394,90 +1394,90 @@ class SettingWndUI(SubToolWndUI, ABC):
         def _get_new_row_in_grid(grid_frm):
             return max([widget.grid_info().get('row', -1) for widget in grid_frm.grid_slaves()], default=-1) + 1
 
-        main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
-        main_frame.pack(**Constants.FRM_PACK)
-        settings_grid_frm = ttk.Frame(main_frame, padding=Constants.FRM_PAD)
-        settings_grid_frm.pack(**Constants.T_FRM_PACK)
+        main_frame = ttk.Frame(self.wnd_frame, padding=Config.FRM_PAD)
+        main_frame.pack(**Config.FRM_PACK)
+        settings_grid_frm = ttk.Frame(main_frame, padding=Config.FRM_PAD)
+        settings_grid_frm.pack(**Config.T_FRM_PACK)
         # 标题
         current_row = _get_new_row_in_grid(settings_grid_frm)
         default_value, = subfunc_file.get_settings(self.sw, label="")
         note_label = tk.Label(settings_grid_frm, text="平台备注：")
-        note_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
+        note_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
         self.title_entry = DefaultEntry(settings_grid_frm, default_label=default_value)
-        self.title_entry.grid(row=current_row, column=1, columnspan=3, **Constants.WE_GRID_PACK)
+        self.title_entry.grid(row=current_row, column=1, columnspan=3, **Config.WE_GRID_PACK)
         now_value, = subfunc_file.get_settings(self.sw, note="")
         self.title_entry.set_value(now_value)
         # 第一行 - 安装路径
         current_row = _get_new_row_in_grid(settings_grid_frm)
         install_label = tk.Label(settings_grid_frm, text="程序路径：")
-        install_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
+        install_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
         self.path_var_dict[LocalCfg.INST_PATH] = tk.StringVar()
         install_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.INST_PATH], width=70)
-        install_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
+        install_path_entry.grid(row=current_row, column=1, **Config.WE_GRID_PACK)
         install_get_button = ttk.Button(
             settings_grid_frm, text="获取", command=partial(self.load_or_detect_path_of, LocalCfg.INST_PATH, True))
-        install_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
+        install_get_button.grid(row=current_row, column=2, **Config.WE_GRID_PACK)
         install_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                            command=partial(self.choose_sw_inst_path, self.sw))
-        install_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
+        install_choose_button.grid(row=current_row, column=3, **Config.WE_GRID_PACK)
         # 第二行 - 数据存储路径
         current_row = _get_new_row_in_grid(settings_grid_frm)
         data_label = tk.Label(settings_grid_frm, text="存储路径：")
-        data_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
+        data_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
         self.path_var_dict[LocalCfg.DATA_DIR] = tk.StringVar()
         data_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.DATA_DIR], width=70)
-        data_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
+        data_path_entry.grid(row=current_row, column=1, **Config.WE_GRID_PACK)
         data_get_button = ttk.Button(settings_grid_frm, text="获取",
                                      command=partial(self.load_or_detect_path_of, LocalCfg.DATA_DIR, True))
-        data_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
+        data_get_button.grid(row=current_row, column=2, **Config.WE_GRID_PACK)
         data_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                         command=partial(self.choose_sw_data_dir, self.sw))
-        data_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
+        data_choose_button.grid(row=current_row, column=3, **Config.WE_GRID_PACK)
         # 新增第三行 - dll路径
         current_row = _get_new_row_in_grid(settings_grid_frm)
         dll_label = tk.Label(settings_grid_frm, text="DLL所在路径：")
-        dll_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
+        dll_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
         self.path_var_dict[LocalCfg.DLL_DIR] = tk.StringVar()
         dll_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.DLL_DIR], width=70)
-        dll_path_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
+        dll_path_entry.grid(row=current_row, column=1, **Config.WE_GRID_PACK)
         dll_get_button = ttk.Button(settings_grid_frm, text="获取",
                                     command=partial(self.load_or_detect_path_of, LocalCfg.DLL_DIR, True))
-        dll_get_button.grid(row=current_row, column=2, **Constants.WE_GRID_PACK)
+        dll_get_button.grid(row=current_row, column=2, **Config.WE_GRID_PACK)
         dll_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                        command=partial(self.choose_sw_dll_dir, self.sw))
-        dll_choose_button.grid(row=current_row, column=3, **Constants.WE_GRID_PACK)
+        dll_choose_button.grid(row=current_row, column=3, **Config.WE_GRID_PACK)
         # 新增第四行 - 登录窗口大小
         current_row = _get_new_row_in_grid(settings_grid_frm)
         login_size_label = tk.Label(settings_grid_frm, text="登录尺寸：")
-        login_size_label.grid(row=current_row, column=0, **Constants.W_GRID_PACK)
+        login_size_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
         self.login_size_var = tk.StringVar()
         login_size_entry = tk.Entry(settings_grid_frm, textvariable=self.login_size_var, width=70)
-        login_size_entry.grid(row=current_row, column=1, **Constants.WE_GRID_PACK)
+        login_size_entry.grid(row=current_row, column=1, **Config.WE_GRID_PACK)
         login_size_get_button = ttk.Button(settings_grid_frm, text="获取", command=self.thread_to_get_login_size)
-        login_size_get_button.grid(row=current_row, column=2, columnspan=2, **Constants.WE_GRID_PACK)
+        login_size_get_button.grid(row=current_row, column=2, columnspan=2, **Config.WE_GRID_PACK)
         # 新增第五行 - 平台禁用与显示
         current_row = _get_new_row_in_grid(settings_grid_frm)
-        stata_frame = ttk.Frame(settings_grid_frm, padding=Constants.FRM_PAD)
-        stata_frame.grid(row=current_row, column=0, columnspan=3, **Constants.WE_GRID_PACK)
+        stata_frame = ttk.Frame(settings_grid_frm, padding=Config.FRM_PAD)
+        stata_frame.grid(row=current_row, column=0, columnspan=3, **Config.WE_GRID_PACK)
         # 启用复选框
         self.enable_var = tk.BooleanVar()
         enable_ckb = ttk.Checkbutton(stata_frame, text="启用(所有功能,包括自启动账号功能)",
                                      variable=self.enable_var,
                                      command=self._update_visible_state)
-        enable_ckb.pack(**Constants.R_WGT_PACK)
+        enable_ckb.pack(**Config.R_WGT_PACK)
         # 显示复选框
         self.visible_var = tk.BooleanVar()
         self.visible_ckb = ttk.Checkbutton(stata_frame, text="在主界面显示", variable=self.visible_var)
-        self.visible_ckb.pack(**Constants.R_WGT_PACK)
+        self.visible_ckb.pack(**Config.R_WGT_PACK)
         # 清除账号数据复选框
         self.clear_acc_var = tk.BooleanVar()
         clear_acc_ckb = ttk.Checkbutton(stata_frame, text="清除账号数据(本次)", variable=self.clear_acc_var)
-        clear_acc_ckb.pack(**Constants.R_WGT_PACK)
+        clear_acc_ckb.pack(**Config.R_WGT_PACK)
 
         # 修改确定按钮，从第4行到第5行
         current_row = _get_new_row_in_grid(settings_grid_frm)
         ok_button = ttk.Button(settings_grid_frm, text="保存", command=self.on_ok)
-        ok_button.grid(row=current_row - 1, column=3, **Constants.NEWS_GRID_PACK)
+        ok_button.grid(row=current_row - 1, column=3, **Config.NEWS_GRID_PACK)
 
         # 配置列的权重，使得中间的 Entry 可以自动扩展
         settings_grid_frm.grid_columnconfigure(1, weight=1)
@@ -1765,8 +1765,8 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
     def load_ui(self):
         """加载主要控件"""
         # 总框架
-        main_frame = ttk.Frame(self.wnd_frame, padding=Constants.FRM_PAD)
-        main_frame.pack(**Constants.FRM_PACK)
+        main_frame = ttk.Frame(self.wnd_frame, padding=Config.FRM_PAD)
+        main_frame.pack(**Config.FRM_PACK)
 
         # 代理框架=使用代理复选框+代理设置框架
         proxy_frame = ttk.Frame(main_frame)
@@ -1786,7 +1786,7 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         # 添加预设按钮
         ip_presets, port_presets = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, "proxy",
                                                                ip_presets=None, port_presets=None)
-        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
+        customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
 
         def _create_btn_in_(frame_of_btn, text):
             btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=8, i_pady=2)
@@ -1864,7 +1864,7 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         # 获取当前frame中已布局的组件数量，作为新组件的行号
         current_row = max([widget.grid_info().get('row', -1) for widget in grid_frame.grid_slaves()],
                           default=-1) + 1
-        w_grid_pack = Constants.W_GRID_PACK
+        w_grid_pack = Config.W_GRID_PACK
         # (0,0)标签
         label = ttk.Label(grid_frame, text=label_text)
         label.grid(row=current_row, column=0, **w_grid_pack)

@@ -26,11 +26,11 @@ from functions import subfunc_file
 from functions.acc_func_impl import AccInfoFuncImpl
 from functions.func_tool import FuncTool
 from functions.sw_func import SwOperator, SwInfoFunc
-from public_class.enums import AccKeys, SW, LocalCfg, MultirunMode, CfgStatus, WndType
-from public_class.global_members import GlobalMembers
-from resources import Constants
-from resources.config import Config
-from resources.strings import Strings
+from public.enums import AccKeys, SW, LocalCfg, MultirunMode, CfgStatus, WndType
+from public.global_members import GlobalMembers
+from public import Config
+from public.config import Config
+from public.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
 from utils.encoding_utils import StringUtils
 from utils.hwnd_utils import HwndGetter, Win32HwndGetter
@@ -882,7 +882,7 @@ class AccInfoFunc:
             return None
         except Exception as e:
             print("所有方法都失败，创建空白头像:", e)
-            return Image.new('RGB', Constants.AVT_SIZE, color='white')
+            return Image.new('RGB', Config.AVT_SIZE, color='white')
 
     @staticmethod
     def _generate_text_avatar(display_name):
@@ -902,7 +902,7 @@ class AccInfoFunc:
             return tuple(random.randint(75, 125) for _ in range(3))
 
         dark_color = _random_dark_color()
-        img = Image.new("RGB", Constants.AVT_SIZE, color=dark_color)  # type: ignore
+        img = Image.new("RGB", Config.AVT_SIZE, color=dark_color)  # type: ignore
         draw = ImageDraw.Draw(img)
 
         # 加载字体（使用系统字体，必要时可指定路径）
@@ -915,7 +915,7 @@ class AccInfoFunc:
         text_size = draw.textbbox((0, 0), text, font=font)
         text_width = text_size[2] - text_size[0]
         text_height = text_size[3] - text_size[1]
-        position = ((Constants.AVT_SIZE[0] - text_width) // 2, (Constants.AVT_SIZE[1] - text_height) // 2.2)
+        position = ((Config.AVT_SIZE[0] - text_width) // 2, (Config.AVT_SIZE[1] - text_height) // 2.2)
 
         # 绘制文本
         draw.text(position, text, fill="white", font=font)

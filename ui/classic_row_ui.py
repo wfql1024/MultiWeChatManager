@@ -7,12 +7,12 @@ from PIL import ImageTk, Image
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
-from public_class.custom_classes import Condition
-from public_class.custom_widget import CustomCornerBtn, CustomBtn
-from public_class.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
-from public_class.global_members import GlobalMembers
-from public_class.widget_frameworks import ClassicATT, CkbRow
-from resources import Constants, Strings
+from public.custom_classes import Condition
+from components.custom_widgets import CustomCornerBtn, CustomBtn
+from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
+from public.global_members import GlobalMembers
+from components.composited_controls import ClassicAHT, CkbRow
+from public import Config, Strings
 from ui.wnd_ui import WndCreator
 from utils import widget_utils
 from utils.encoding_utils import StringUtils
@@ -76,20 +76,20 @@ class ClassicLoginUI:
         }
 
         # 加载登录列表
-        self.classic_table_class["login"] = AccLoginCATT(
+        self.classic_table_class["login"] = AccLoginCAHT(
             self, self.table_frames[OnlineStatus.LOGIN], "login",
             "已登录：", self.btn_dict["auto_quit_btn"].copy(),
             self.btn_dict["create_starter"].copy()
         )
 
-        self.classic_table_class["logout"] = AccLoginCATT(
+        self.classic_table_class["logout"] = AccLoginCAHT(
             self, self.table_frames[OnlineStatus.LOGOUT], "logout",
             "未登录：", self.btn_dict["auto_login_btn"].copy(),
             self.btn_dict["create_starter"].copy()
         )
 
 
-class AccLoginCATT(ClassicATT):
+class AccLoginCAHT(ClassicAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.sw = None
@@ -171,7 +171,7 @@ class AccLoginCR(CkbRow):
         config_status = details[AccKeys.CONFIG_STATUS]
         has_mutex = details[AccKeys.HAS_MUTEX]
         # 对详情中的数据进行处理
-        img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+        img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
         photo = ImageTk.PhotoImage(img)
         self.photo_images.append(photo)
         cs_suffix = Strings.CFG_SIGN if account == curr_config_acc and sign_visible else ""
@@ -186,7 +186,7 @@ class AccLoginCR(CkbRow):
         self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
         self.checkbox.pack(side="left")
         # 头像标签
-        img = img.resize(Constants.AVT_SIZE)
+        img = img.resize(Config.AVT_SIZE)
         photo = ImageTk.PhotoImage(img)
         avatar_label = ttk.Label(self.row_frame, image=photo)
         avatar_label.image = photo
@@ -200,11 +200,11 @@ class AccLoginCR(CkbRow):
         btn_frame.pack(side="right")
         # 配置标签
         cfg_info_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
-        cfg_info_label.pack(side="right", padx=Constants.CLZ_CFG_LBL_PAD_X,
+        cfg_info_label.pack(side="right", padx=Config.CLZ_CFG_LBL_PAD_X,
                             fill="x", expand=True)
         # 登录/配置按钮
-        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
-        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 2.0)
+        customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
+        customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 2.0)
 
         def _create_btn_in_(frame_of_btn, text):
             btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
@@ -246,7 +246,7 @@ class AccLoginCR(CkbRow):
                 Logger().warning(e)
                 self.item_label = ttk.Label(
                     self.row_frame, text=StringUtils.clean_texts(wrapped_display_name))
-        self.item_label.pack(side="left", fill="x", padx=Constants.CLZ_ROW_LBL_PAD_X)
+        self.item_label.pack(side="left", fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
 
         # 绑定事件到控件范围内所有位置
         widget_utils.exclusively_bind_event_to_frame_when_(
@@ -277,9 +277,9 @@ class AccLoginCR(CkbRow):
 
         # 将行框架布局到界面中
         if self.disabled is True:
-            self.row_frame.pack(side="bottom", fill="x", padx=Constants.LOG_IO_FRM_PAD_X,
-                                pady=Constants.CLZ_ROW_FRM_PAD_Y)
+            self.row_frame.pack(side="bottom", fill="x", padx=Config.LOG_IO_FRM_PAD_X,
+                                pady=Config.CLZ_ROW_FRM_PAD_Y)
         else:
-            self.row_frame.pack(fill="x", padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.CLZ_ROW_FRM_PAD_Y)
+            self.row_frame.pack(fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y)
 
         print(f"加载 {account} 行用时{time.time() - start_time:.4f}秒")

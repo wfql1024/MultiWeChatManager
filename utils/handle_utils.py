@@ -10,7 +10,7 @@ from ctypes.wintypes import *
 from win32api import *
 from win32process import *
 
-from resources import Config
+from public.config import Config
 from utils import process_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Printer, Logger

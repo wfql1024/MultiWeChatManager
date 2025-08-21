@@ -7,14 +7,13 @@ from PIL import ImageTk, Image
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
 from functions.sw_func import SwInfoFunc, SwOperator
-from public_class import reusable_widgets
-from public_class.custom_classes import Condition
-from public_class.custom_widget import CustomCornerBtn, CustomBtn
-from public_class.enums import CfgStatus, AccKeys, RemoteCfg
-from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWndUI
-from public_class.widget_frameworks import ClassicATT, CkbRow
-from resources import Constants
+from public.custom_classes import Condition
+from components.custom_widgets import CustomCornerBtn, CustomBtn
+from public.enums import CfgStatus, AccKeys, RemoteCfg
+from public.global_members import GlobalMembers
+from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
+from components.composited_controls import ClassicAHT, CkbRow
+from public import Config
 from utils import widget_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger, Printer
@@ -34,7 +33,7 @@ class ExeManagerWndUI(SubToolWndUI):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.ABOUT_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.ABOUT_WND_SIZE
 
     def load_ui(self):
         self.exe_manager_ui = ExeManagerUI(self.wnd, self.wnd_frame)
@@ -104,7 +103,7 @@ class ExeManagerUI:
 
     def display_ui(self):
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.ui_frame)
+        self.scrollable_canvas = ScrollableCanvasW(self.ui_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
         # 添加占位控件
@@ -114,11 +113,11 @@ class ExeManagerUI:
         self.table_frames[CfgStatus.HISTORY].pack(side="top", fill="x")
 
         # 加载登录列表
-        self.classic_table_class[CfgStatus.USING] = ExeManagerCATT(
+        self.classic_table_class[CfgStatus.USING] = ExeManagerCAHT(
             self, self.table_frames[CfgStatus.USING], CfgStatus.USING.value,
             "当前使用：", self.btn_dict["del_exe_btn"].copy(),
             self.btn_dict["rebuild_exe_btn"].copy())
-        self.classic_table_class[CfgStatus.HISTORY] = ExeManagerCATT(
+        self.classic_table_class[CfgStatus.HISTORY] = ExeManagerCAHT(
             self, self.table_frames[CfgStatus.HISTORY], CfgStatus.HISTORY.value,
             "历史记录：", self.btn_dict["del_history_btn"].copy(),
             self.btn_dict["rebuild_exe_btn"].copy())
@@ -164,7 +163,7 @@ class ExeManagerUI:
 
 
 
-class ExeManagerCATT(ClassicATT):
+class ExeManagerCAHT(ClassicAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.sw = None
@@ -236,8 +235,8 @@ class ExeManagerCkRow(CkbRow):
 
     def create_row(self):
 
-        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
-        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 2.0)
+        customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
+        customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 2.0)
 
         def _create_btn_in_(frame_of_btn, text):
             btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
@@ -267,7 +266,7 @@ class ExeManagerCkRow(CkbRow):
         # 对详情中的数据进行处理
         if config_status == CfgStatus.NO_CFG:
             self.disabled = True
-        img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+        img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
         photo = ImageTk.PhotoImage(img)
         self.photo_images.append(photo)
         if coexist_channel is not None:
@@ -285,7 +284,7 @@ class ExeManagerCkRow(CkbRow):
         self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
         self.checkbox.pack(side="left")
         # 头像标签
-        img = img.resize(Constants.AVT_SIZE)
+        img = img.resize(Config.AVT_SIZE)
         photo = ImageTk.PhotoImage(img)
         avatar_label = ttk.Label(self.row_frame, image=photo)
         avatar_label.image = photo
@@ -355,7 +354,7 @@ class ExeManagerCkRow(CkbRow):
         self.item_frame.pack(side="left", fill="x")
         # 账号标签
         self.item_label = ttk.Label(self.item_frame, text=config_status)
-        self.item_label.pack(fill="x", padx=Constants.CLZ_ROW_LBL_PAD_X)
+        self.item_label.pack(fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
         exe_remark_text = f"{channel_label}"
         if display_name != config_status:
             exe_remark_text += f"/{display_name}"
@@ -367,7 +366,7 @@ class ExeManagerCkRow(CkbRow):
             Logger().warning(e)
             exe_remark_label = ttk.Label(
                 self.item_frame, text=StringUtils.clean_texts(exe_remark_text), style="LittleGreyText.TLabel")
-        exe_remark_label.pack(side="bottom", fill="x", padx=Constants.CLZ_ROW_LBL_PAD_X)
+        exe_remark_label.pack(side="bottom", fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
 
         # 绑定事件到控件范围内所有位置
         widget_utils.exclusively_bind_event_to_frame_when_(
@@ -388,7 +387,7 @@ class ExeManagerCkRow(CkbRow):
 
         # 将行布局到界面上
         if self.disabled is True:
-            self.row_frame.pack(side="bottom", fill="x", padx=Constants.LOG_IO_FRM_PAD_X,
-                                pady=Constants.CLZ_ROW_FRM_PAD_Y)
+            self.row_frame.pack(side="bottom", fill="x", padx=Config.LOG_IO_FRM_PAD_X,
+                                pady=Config.CLZ_ROW_FRM_PAD_Y)
         else:
-            self.row_frame.pack(fill="x", padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.CLZ_ROW_FRM_PAD_Y)
+            self.row_frame.pack(fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y)

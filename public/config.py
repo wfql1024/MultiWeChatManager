@@ -1,3 +1,5 @@
+from public.enums import LocalCfg, SW, SwStates, MultirunMode
+
 import configparser
 import ctypes
 import os
@@ -58,11 +60,82 @@ def get_scale_factor():
 # 获取屏幕缩放因子
 SCALE_FACTOR = get_scale_factor()
 
+def scale_dict(d, sf):
+    return {k: int(v * sf) for k, v in d.items()}
 
-# 如需使用缩放因子，请直接拷贝以上部分*****************************************************************
+# 获取屏幕缩放因子
+current_file_dir = os.path.dirname(os.path.abspath(__file__))
 
-class Constants:
+
+class Config:
+    VER_STATUS = 'Beta'
+
+    INI_DEFAULT_VALUE = {
+        # 默认为空的可不写
+        LocalCfg.GLOBAL_SECTION: {
+            LocalCfg.SCREEN_SIZE: f"1920*1080",
+            LocalCfg.USE_PROXY: False,
+            # -软件相关
+            LocalCfg.ENABLE_NEW_FUNC: True,
+            LocalCfg.USED_TRAY: False,
+            LocalCfg.USED_REFRESH: False,
+            LocalCfg.USED_SIDEBAR: False,
+            # -排序相关
+            LocalCfg.HIDDEN_SORT: "#0,True",
+            LocalCfg.AUTO_START_SORT: "#0,True",
+            LocalCfg.ENABLE_SORT: "#0,True",
+            LocalCfg.DISABLE_SORT: "#0,True",
+            LocalCfg.ALL_SORT: "#0,True",
+            # -标签页相关
+            LocalCfg.ROOT_TAB: "login",
+            LocalCfg.MNG_TAB: "acc",
+            LocalCfg.LOGIN_TAB: SW.WECHAT,
+            # -视图相关
+            LocalCfg.SCALE: "auto",
+            LocalCfg.SIGN_VISIBLE: True,
+            LocalCfg.USE_TXT_AVT: True,
+            # -登录相关
+            LocalCfg.HIDE_WND: False,
+            LocalCfg.KILL_IDLE_LOGIN_WND: False,
+            LocalCfg.UNLOCK_CFG: False,
+            LocalCfg.ALL_HAS_MUTEX: True,
+            LocalCfg.CALL_MODE: "HANDLE",
+            LocalCfg.AUTO_PRESS: True,
+        },
+        SW.DEFAULT: {
+            LocalCfg.VIEW: "tree",
+            LocalCfg.LOGIN_SORT: "配置,False",
+            LocalCfg.LOGOUT_SORT: "配置,False",
+            LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
+            LocalCfg.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
+            LocalCfg.STATE: SwStates.VISIBLE,
+            LocalCfg.COEXIST_MODE: "default"
+        }
+    }
+
+    PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))
+    PROJ_EXTERNAL_RES_PATH = fr'{PROJ_PATH}/external_res'
+    PROJ_USER_PATH = fr'{PROJ_PATH}/user_files'
+    PROJ_META_PATH = fr'{PROJ_PATH}/.meta'
+
+    HANDLE_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/handle.exe'
+    WECHAT_DUMP_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/wechat-dump-rs.exe'
+    VERSION_FILE = fr'{PROJ_META_PATH}/version.txt'
+    PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/JFMC.ico'
+    REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/Rewards.png'
+    FEEDBACK_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/Feedback.png'
+    TASK_TP_XML_PATH = fr'{PROJ_USER_PATH}/task_template.xml'
+    STATISTIC_JSON_PATH = fr'{PROJ_USER_PATH}/statistics.json'
+    TAB_ACC_JSON_PATH = fr'{PROJ_USER_PATH}/tab_acc_data.json'
+    SETTING_INI_PATH = fr'{PROJ_USER_PATH}/setting.ini'
+    VER_ADAPTATION_JSON_PATH = fr'{PROJ_USER_PATH}/version_adaptation.json'
+    REMOTE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/remote_setting.json'
+    EXTRA_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/extra_setting.json'
+    LOCAL_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/local_setting.json'
+
+    # 尺寸定义
     SF = SCALE_FACTOR
+
     # 尺寸定义
     PROJ_WND_SIZE = (int(500 * SF), int(700 * SF))  # 程序窗口尺寸
     LOADING_WND_SIZE = (int(240 * SF), int(80 * SF))  # 登录窗口尺寸
@@ -99,36 +172,40 @@ class Constants:
 
     TREE_ROW_HEIGHT = int(40 * SF)  # 列表视图行高度
 
-    COLUMN_WIDTH = {
-        "ID": int(45 * SF),
-        "SEC_ID": int(60 * SF),
-        "配置": int(116 * SF),
-        "PID": int(64 * SF),
-        "展示": int(122 * SF),
-        "隐藏": int(64 * SF),
-        "自启动": int(64 * SF),
-        "快捷键": int(64 * SF),
-        "状态": int(64 * SF),
-        "版本": int(100 * SF),
-        "安装路径": int(160 * SF),
-        "存储路径": int(160 * SF),
-        "DLL路径": int(160 * SF),
+    # 原始值（未缩放）
+    _COLUMN_WIDTH = {
+        "ID": 45,
+        "SEC_ID": 60,
+        "配置": 116,
+        "PID": 64,
+        "展示": 122,
+        "隐藏": 64,
+        "自启动": 64,
+        "快捷键": 64,
+        "状态": 64,
+        "版本": 100,
+        "安装路径": 160,
+        "存储路径": 160,
+        "DLL路径": 160,
     }
-    COLUMN_MIN_WIDTH = {
-        "ID": int(45 * SF),
-        "SEC_ID": int(60 * SF),
-        "配置": int(116 * SF),
-        "PID": int(64 * SF),
-        "展示": int(112 * SF),
-        "隐藏": int(64 * SF),
-        "自启动": int(64 * SF),
-        "快捷键": int(64 * SF),
-        "状态": int(64 * SF),
-        "版本": int(100 * SF),
-        "安装路径": int(160 * SF),
-        "存储路径": int(160 * SF),
-        "DLL路径": int(160 * SF),
+    _COLUMN_MIN_WIDTH = {
+        "ID": 45,
+        "SEC_ID": 60,
+        "配置": 116,
+        "PID": 64,
+        "展示": 112,
+        "隐藏": 64,
+        "自启动": 64,
+        "快捷键": 64,
+        "状态": 64,
+        "版本": 100,
+        "安装路径": 160,
+        "存储路径": 160,
+        "DLL路径": 160,
     }
+    # 统一缩放
+    COLUMN_WIDTH = scale_dict(_COLUMN_WIDTH, SF)
+    COLUMN_MIN_WIDTH = scale_dict(_COLUMN_MIN_WIDTH, SF)
 
     TREE_ID_MIN_WIDTH = int(45 * SF)  # 列表视图ID列最小宽度
     TREE_ID_WIDTH = int(45 * SF)  # 列表视图ID列宽度

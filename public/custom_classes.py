@@ -3,7 +3,7 @@ import threading
 import time
 from enum import Enum
 
-from public_class.global_members import GlobalMembers
+from public.global_members import GlobalMembers
 
 
 class TkThreadWorker:

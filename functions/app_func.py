@@ -12,8 +12,8 @@ from win32com.client import Dispatch
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
-from public_class.enums import LocalCfg, RemoteCfg
-from resources import Config
+from public.enums import LocalCfg, RemoteCfg
+from public.config import Config
 from utils import file_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 
@@ -21,22 +21,22 @@ from utils.logger_utils import mylogger as logger
 class AppFunc:
     @staticmethod
     def create_tray(root):
-        from pystray import Icon, MenuItem as item, Menu
-        def on_restore(icon, item=None):
+        from pystray import Icon, MenuItem
+        def on_restore(_icon, _item=None):
             root.after(0, lambda: root.deiconify())
 
-        def on_exit(icon, item=None):
-            icon.visible = False
-            icon.stop()
+        def on_exit(_icon, _item=None):
+            _icon.visible = False
+            _icon.stop()
             root.after(0, root.destroy)
 
-        menu = Menu(
-            item("显示窗口", on_restore),
-            item("退出", on_exit),
+        menu = MenuItem(
+            Icon("显示窗口", on_restore),
+            Icon("退出", on_exit),
         )
 
         icon_img = Image.open(Config.PROJ_ICO_PATH)
-        icon = Icon("JFMC", icon_img, title="极峰多聊", menu=menu)
+        tray_icon = Icon("JFMC", icon_img, title="极峰多聊", menu=menu)
 
         # 给托盘图标绑定鼠标点击恢复窗口
         def setup(icon):
@@ -50,12 +50,12 @@ class AppFunc:
             icon.on_click = lambda: on_restore(icon)
 
         def run_icon():
-            icon.run(setup)
+            tray_icon.run(setup)
 
         # 在后台线程中运行托盘图标
         threading.Thread(target=run_icon, daemon=True).start()
 
-        return icon
+        return tray_icon
 
     @staticmethod
     def apply_proxy_setting():

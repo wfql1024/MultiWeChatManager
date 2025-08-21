@@ -11,9 +11,9 @@ from functions import subfunc_file
 from functions.app_func import AppFunc
 from functions.main_func import MultiSwFunc
 from functions.sw_func import SwInfoFunc, SwOperator
-from public_class.enums import LocalCfg, MultirunMode, RemoteCfg, CallMode
-from public_class.global_members import GlobalMembers
-from resources import Strings, Config
+from public.enums import LocalCfg, MultirunMode, RemoteCfg, CallMode
+from public.global_members import GlobalMembers
+from public import Strings, Config
 from ui.wnd_ui import WndCreator
 from utils import widget_utils, sys_utils
 from utils.logger_utils import mylogger as logger

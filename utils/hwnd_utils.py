@@ -12,7 +12,7 @@ import win32gui
 import win32process
 from uiautomation import Control
 
-from public_class.enums import Position
+from public.enums import Position
 from utils.logger_utils import mylogger as logger, Printer
 
 # set coinit_flags (there will be a warning message printed in console by pywinauto, you may ignore that)

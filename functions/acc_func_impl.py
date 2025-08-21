@@ -3,7 +3,7 @@ import re
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
-from resources import Config
+from public.config import Config
 from utils import image_utils
 from utils.logger_utils import mylogger as logger
 

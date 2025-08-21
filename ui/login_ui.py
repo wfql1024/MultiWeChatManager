@@ -7,14 +7,14 @@ from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
 from functions.main_func import MultiSwFunc
 from functions.sw_func import SwOperator, SwInfoFunc
-from public_class import reusable_widgets
-from public_class.custom_widget import CustomCornerBtn
-from public_class.enums import OnlineStatus, LocalCfg
-from public_class.global_members import GlobalMembers
-from resources import Constants, Config, Strings
+from components.custom_widgets import CustomCornerBtn
+from public.enums import OnlineStatus, LocalCfg
+from public.global_members import GlobalMembers
+from components.widget_wrappers import ScrollableCanvasW
+from public import Config, Config, Strings
 from ui.cfg_manager_ui import CfgManagerWndCreator
 from ui.classic_row_ui import ClassicLoginUI
-from ui.exe_manager_ui import ExeManagerWndUI, ExeManagerWndCreator
+from ui.exe_manager_ui import ExeManagerWndCreator
 from ui.treeview_row_ui import TreeviewLoginUI
 from ui.wnd_ui import WndCreator
 from utils.logger_utils import mylogger as logger, Printer
@@ -145,7 +145,7 @@ class LoginUI:
             for widget in self.tab_frame.winfo_children():
                 widget.destroy()
 
-        bottom_frame = ttk.Frame(self.tab_frame, padding=Constants.BTN_FRAME_PAD)
+        bottom_frame = ttk.Frame(self.tab_frame, padding=Config.BTN_FRAME_PAD)
         bottom_frame.pack(side='bottom')
         sw_ver = SwInfoFunc.calc_sw_ver(self.sw)
         if sw_ver is not None:
@@ -175,7 +175,7 @@ class LoginUI:
         self.btn_mng.set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
 
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
+        self.scrollable_canvas = ScrollableCanvasW(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
     def create_account_list_ui(self):
@@ -255,12 +255,12 @@ class LoginUI:
         if self.tab_frame is not None:
             for widget in self.tab_frame.winfo_children():
                 widget.destroy()
-            self.error_frame = ttk.Frame(self.tab_frame, padding=Constants.T_FRM_PAD)
+            self.error_frame = ttk.Frame(self.tab_frame, padding=Config.T_FRM_PAD)
 
-        self.error_frame.pack(**Constants.T_FRM_PACK)
+        self.error_frame.pack(**Config.T_FRM_PACK)
         error_label = ttk.Label(self.error_frame, text="路径设置错误，请点击按钮修改", foreground="red",
                                 anchor="center")
-        error_label.pack(**Constants.T_WGT_PACK)
+        error_label.pack(**Config.T_WGT_PACK)
         self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
                                           command=partial(WndCreator.open_sw_settings, self.sw))
         self.settings_button.pack()

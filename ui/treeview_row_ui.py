@@ -6,14 +6,14 @@ from PIL import ImageTk, Image
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
-from public_class.custom_classes import Condition
-from public_class.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
-from public_class.global_members import GlobalMembers
-from public_class.widget_frameworks import TreeviewATT
-from resources import Constants, Strings
+from public.custom_classes import Condition
+from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
+from public.global_members import GlobalMembers
+from components.composited_controls import TreeviewAHT
+from public import Config, Strings
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger
 from utils.widget_utils import TreeUtils
 
 
@@ -91,7 +91,7 @@ class TreeviewLoginUI:
 
         # 加载登录列表
         if isinstance(logins, Sized):
-            self.table_classes[login_key] = AccLoginTATT(
+            self.table_classes[login_key] = AccLoginTAHT(
                 self, self.ui_frame[login_key],
                 login_key, "已登录：", self.btn_dict["auto_quit_btn"].copy(),
                 self.btn_dict["create_starter"].copy(),
@@ -100,14 +100,14 @@ class TreeviewLoginUI:
 
         # 加载未登录列表
         if isinstance(logouts, Sized):
-            self.table_classes[logout_key] = AccLoginTATT(
+            self.table_classes[logout_key] = AccLoginTAHT(
                 self, self.ui_frame[logout_key],
                 logout_key, "未登录：", self.btn_dict["auto_login_btn"].copy(),
                 self.btn_dict["create_starter"].copy(),
             )
 
 
-class AccLoginTATT(TreeviewATT):
+class AccLoginTAHT(TreeviewAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.global_settings_value = None
@@ -139,14 +139,14 @@ class AccLoginTATT(TreeviewATT):
 
         tree = self.tree
         # 特定列的宽度和样式设置
-        tree.column("#0", minwidth=Constants.TREE_ID_MIN_WIDTH,
-                    width=Constants.TREE_ID_WIDTH, stretch=tk.NO)
-        tree.column("pid", minwidth=Constants.TREE_PID_MIN_WIDTH,
-                    width=Constants.TREE_PID_WIDTH, anchor='center', stretch=tk.NO)
-        tree.column("配置", minwidth=Constants.TREE_CFG_MIN_WIDTH,
-                    width=Constants.TREE_CFG_WIDTH, anchor='w', stretch=tk.NO)
-        tree.column(" ", minwidth=Constants.TREE_DSP_MIN_WIDTH,
-                    width=Constants.TREE_DSP_WIDTH, anchor='w')
+        tree.column("#0", minwidth=Config.TREE_ID_MIN_WIDTH,
+                    width=Config.TREE_ID_WIDTH, stretch=tk.NO)
+        tree.column("pid", minwidth=Config.TREE_PID_MIN_WIDTH,
+                    width=Config.TREE_PID_WIDTH, anchor='center', stretch=tk.NO)
+        tree.column("配置", minwidth=Config.TREE_CFG_MIN_WIDTH,
+                    width=Config.TREE_CFG_WIDTH, anchor='w', stretch=tk.NO)
+        tree.column(" ", minwidth=Config.TREE_DSP_MIN_WIDTH,
+                    width=Config.TREE_DSP_WIDTH, anchor='w')
         tree.column("账号标识", anchor='center')
         tree.column("平台id", anchor='center')
         tree.column("昵称", anchor='center')
@@ -176,7 +176,7 @@ class AccLoginTATT(TreeviewATT):
             nickname = details[AccKeys.NICKNAME]
             # 对详情中的数据进行处理
             display_name = "  " + display_name
-            img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+            img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.photo_images.append(photo)
             cs_suffix = Strings.CFG_SIGN if account == curr_config_acc and self.sign_visible else ""

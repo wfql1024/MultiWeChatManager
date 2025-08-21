@@ -52,9 +52,78 @@ from Crypto.Cipher import AES
 from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
 
-from decrypt.interface import DecryptInterface
+from utils.decrypt.interface import DecryptInterface
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
+
+KEY_SIZE = 32
+DEFAULT_PAGESIZE = 4096
+DEFAULT_ITER = 64000
+# 几种内存段可以写入的类型
+MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",
+                            0x08: "PAGE_WRITECOPY"}
+
+
+class MemoryBasicInformation(Structure):
+    _fields_ = [
+        ("BaseAddress", ctypes.c_void_p),
+        ("AllocationBase", ctypes.c_void_p),
+        ("AllocationProtect", ctypes.c_uint32),
+        ("RegionSize", ctypes.c_size_t),
+        ("State", ctypes.c_uint32),
+        ("Protect", ctypes.c_uint32),
+        ("Type", ctypes.c_uint32),
+    ]
+
+
+# 第一步：找key -> 1. 判断可写
+def is_writable_region(pid, address):  # 判断给定的内存地址是否是可写内存区域，因为可写内存区域，才能指针指到这里写数据
+    process_handle = ctypes.windll.kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
+    mbi = MemoryBasicInformation()
+    mbi_pointer = byref(mbi)
+    size = sizeof(mbi)
+    success = ctypes.windll.kernel32.VirtualQueryEx(
+        process_handle,
+        ctypes.c_void_p(address),  # 64位系统的话，会提示int超范围，这里把指针转换下
+        mbi_pointer,
+        size)
+    ctypes.windll.kernel32.CloseHandle(process_handle)
+    if not success:
+        return False
+    if not success == size:
+        return False
+    return mbi.Protect in MEMORY_WRITE_PROTECTIONS
+
+
+# 第一步：找key -> 2. 检验是否正确
+def check_sqlite_pass(db_file, str_key):
+    db_file = Path(db_file)
+    key = bytes.fromhex(str_key.replace(' ', ''))
+    with open(db_file, 'rb') as (f):
+        salt = f.read(16)  # 开头的16字节做salt
+        first_page_data = f.read(DEFAULT_PAGESIZE - 16)  # 从开头第16字节开始到DEFAULT_PAGESIZE整个第一页
+    if not len(salt) == 16:
+        logger.error(f"{db_file} read failed ")
+        return False
+    if not len(first_page_data) == DEFAULT_PAGESIZE - 16:
+        logger.error(f"{db_file} read failed ")
+        return False
+
+    decrypt_key = hashlib.pbkdf2_hmac('sha1', key, salt, DEFAULT_ITER, KEY_SIZE)
+    mac_salt = bytes([x ^ 0x3a for x in salt])
+    mac_key = hashlib.pbkdf2_hmac('sha1', decrypt_key, mac_salt, 2, KEY_SIZE)
+    hash_mac = hmac.new(mac_key, digestmod='sha1')
+    hash_mac.update(first_page_data[:-32])
+    for update_func in [
+        lambda: hash_mac.update(struct.pack('=I', 1)),
+        lambda: hash_mac.update(bytes(ctypes.c_int(1))),  # type: ignore
+    ]:
+        hash_mac_copy = hash_mac.copy()  # 复制 hash_mac，避免每次循环修改原 hash_mac
+        update_func()  # 执行 update 操作
+
+        if hash_mac_copy.digest() == first_page_data[-32:-12]:
+            return True  # 匹配成功，返回 True
+    return False  # 所有尝试失败，返回 False
 
 
 class WeChatDecryptImpl(DecryptInterface):
@@ -299,73 +368,3 @@ class WeChatDecryptImpl(DecryptInterface):
         except Exception as e:
             logger.error(e)
             return False, e
-
-
-KEY_SIZE = 32
-DEFAULT_PAGESIZE = 4096
-DEFAULT_ITER = 64000
-# 几种内存段可以写入的类型
-MEMORY_WRITE_PROTECTIONS = {0x40: "PAGEEXECUTE_READWRITE", 0x80: "PAGE_EXECUTE_WRITECOPY", 0x04: "PAGE_READWRITE",
-                            0x08: "PAGE_WRITECOPY"}
-
-
-class MemoryBasicInformation(Structure):
-    _fields_ = [
-        ("BaseAddress", ctypes.c_void_p),
-        ("AllocationBase", ctypes.c_void_p),
-        ("AllocationProtect", ctypes.c_uint32),
-        ("RegionSize", ctypes.c_size_t),
-        ("State", ctypes.c_uint32),
-        ("Protect", ctypes.c_uint32),
-        ("Type", ctypes.c_uint32),
-    ]
-
-
-# 第一步：找key -> 1. 判断可写
-def is_writable_region(pid, address):  # 判断给定的内存地址是否是可写内存区域，因为可写内存区域，才能指针指到这里写数据
-    process_handle = ctypes.windll.kernel32.OpenProcess(PROCESS_ALL_ACCESS, False, pid)
-    mbi = MemoryBasicInformation()
-    mbi_pointer = byref(mbi)
-    size = sizeof(mbi)
-    success = ctypes.windll.kernel32.VirtualQueryEx(
-        process_handle,
-        ctypes.c_void_p(address),  # 64位系统的话，会提示int超范围，这里把指针转换下
-        mbi_pointer,
-        size)
-    ctypes.windll.kernel32.CloseHandle(process_handle)
-    if not success:
-        return False
-    if not success == size:
-        return False
-    return mbi.Protect in MEMORY_WRITE_PROTECTIONS
-
-
-# 第一步：找key -> 2. 检验是否正确
-def check_sqlite_pass(db_file, str_key):
-    db_file = Path(db_file)
-    key = bytes.fromhex(str_key.replace(' ', ''))
-    with open(db_file, 'rb') as (f):
-        salt = f.read(16)  # 开头的16字节做salt
-        first_page_data = f.read(DEFAULT_PAGESIZE - 16)  # 从开头第16字节开始到DEFAULT_PAGESIZE整个第一页
-    if not len(salt) == 16:
-        logger.error(f"{db_file} read failed ")
-        return False
-    if not len(first_page_data) == DEFAULT_PAGESIZE - 16:
-        logger.error(f"{db_file} read failed ")
-        return False
-
-    decrypt_key = hashlib.pbkdf2_hmac('sha1', key, salt, DEFAULT_ITER, KEY_SIZE)
-    mac_salt = bytes([x ^ 0x3a for x in salt])
-    mac_key = hashlib.pbkdf2_hmac('sha1', decrypt_key, mac_salt, 2, KEY_SIZE)
-    hash_mac = hmac.new(mac_key, digestmod='sha1')
-    hash_mac.update(first_page_data[:-32])
-    for update_func in [
-        lambda: hash_mac.update(struct.pack('=I', 1)),
-        lambda: hash_mac.update(bytes(ctypes.c_int(1))),  # type: ignore
-    ]:
-        hash_mac_copy = hash_mac.copy()  # 复制 hash_mac，避免每次循环修改原 hash_mac
-        update_func()  # 执行 update 操作
-
-        if hash_mac_copy.digest() == first_page_data[-32:-12]:
-            return True  # 匹配成功，返回 True
-    return False  # 所有尝试失败，返回 False

@@ -6,13 +6,12 @@ from PIL import ImageTk, Image
 
 from functions.acc_func import AccInfoFunc, AccOperator
 from functions.sw_func import SwInfoFunc
-from public_class import reusable_widgets
-from public_class.custom_classes import Condition
-from public_class.enums import CfgStatus, AccKeys
-from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWndUI
-from public_class.widget_frameworks import ClassicATT, CkbRow
-from resources import Constants
+from public.custom_classes import Condition
+from public.enums import CfgStatus, AccKeys
+from public.global_members import GlobalMembers
+from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
+from components.composited_controls import ClassicAHT, CkbRow
+from public import Config
 from utils import widget_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger, Printer
@@ -32,7 +31,7 @@ class CfgManagerWndUI(SubToolWndUI):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.ABOUT_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.ABOUT_WND_SIZE
 
     def load_ui(self):
         self.cfg_manager_ui = CfgManagerUI(self.wnd, self.wnd_frame)
@@ -75,7 +74,7 @@ class CfgManagerUI:
 
     def display_ui(self):
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.ui_frame)
+        self.scrollable_canvas = ScrollableCanvasW(self.ui_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
         # 添加占位控件
@@ -85,7 +84,7 @@ class CfgManagerUI:
         self.table_frames[CfgStatus.HISTORY].pack(side="top", fill="x")
 
         # 加载登录列表
-        self.classic_table_class[CfgStatus.USING] = CfgManagerCATT(
+        self.classic_table_class[CfgStatus.USING] = CfgManagerCAHT(
             self, self.table_frames[CfgStatus.USING], CfgStatus.USING.value,
             "当前使用：", self.btn_dict["del_cfg_btn"].copy())
 
@@ -112,7 +111,7 @@ class CfgManagerUI:
         self.refresh_frame()
 
 
-class CfgManagerCATT(ClassicATT):
+class CfgManagerCAHT(ClassicAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.sw = None
@@ -176,7 +175,7 @@ class CfgManagerCR(CkbRow):
         # 对详情中的数据进行处理
         if config_status == CfgStatus.NO_CFG:
             self.disabled = True
-        img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+        img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
         photo = ImageTk.PhotoImage(img)
         self.photo_images.append(photo)
 
@@ -187,7 +186,7 @@ class CfgManagerCR(CkbRow):
         self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
         self.checkbox.pack(side="left")
         # 头像标签
-        img = img.resize(Constants.AVT_SIZE)
+        img = img.resize(Config.AVT_SIZE)
         photo = ImageTk.PhotoImage(img)
         avatar_label = ttk.Label(self.row_frame, image=photo)
         avatar_label.image = photo
@@ -197,7 +196,7 @@ class CfgManagerCR(CkbRow):
         btn_frame.pack(side="right")
         # 配置标签
         cfg_info_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
-        cfg_info_label.pack(side="right", padx=Constants.CLZ_CFG_LBL_PAD_X, fill="x", expand=True)
+        cfg_info_label.pack(side="right", padx=Config.CLZ_CFG_LBL_PAD_X, fill="x", expand=True)
         # 配置按钮
         btn_text = "删 除"
         btn_cmd = self.cfg_manager_ui.to_del_cfg_of_accounts
@@ -214,7 +213,7 @@ class CfgManagerCR(CkbRow):
             Logger().warning(e)
             self.item_label = ttk.Label(
                 self.row_frame, text=StringUtils.clean_texts(wrapped_display_name))
-        self.item_label.pack(side="left", fill="x", padx=Constants.CLZ_ROW_LBL_PAD_X)
+        self.item_label.pack(side="left", fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
 
         # 绑定事件到控件范围内所有位置
         widget_utils.exclusively_bind_event_to_frame_when_(
@@ -234,7 +233,7 @@ class CfgManagerCR(CkbRow):
 
         # 将行布局到界面上
         if self.disabled is True:
-            self.row_frame.pack(side="bottom", fill="x", padx=Constants.LOG_IO_FRM_PAD_X,
-                                pady=Constants.CLZ_ROW_FRM_PAD_Y)
+            self.row_frame.pack(side="bottom", fill="x", padx=Config.LOG_IO_FRM_PAD_X,
+                                pady=Config.CLZ_ROW_FRM_PAD_Y)
         else:
-            self.row_frame.pack(fill="x", padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.CLZ_ROW_FRM_PAD_Y)
+            self.row_frame.pack(fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y)

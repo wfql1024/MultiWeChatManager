@@ -6,16 +6,15 @@ from PIL import Image, ImageTk
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
-from public_class import reusable_widgets
-from public_class.custom_classes import Condition
-from public_class.enums import AccKeys
-from public_class.global_members import GlobalMembers
-from public_class.reusable_widgets import SubToolWndUI
-from public_class.widget_frameworks import TreeviewATT
-from resources import Constants
+from public.custom_classes import Condition
+from public.enums import AccKeys
+from public.global_members import GlobalMembers
+from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
+from components.composited_controls import TreeviewAHT
+from public import Config
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
 
@@ -28,7 +27,7 @@ class AccManagerWndUI(SubToolWndUI, ABC):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Constants.ACC_MNG_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.ACC_MNG_WND_SIZE
         self.acc_manager_ui = AccManagerUI(self.wnd, self.wnd)
 
     def load_ui(self):
@@ -139,7 +138,7 @@ class AccManagerUI:
 
     def display_ui(self):
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
-        self.scrollable_canvas = reusable_widgets.ScrollableCanvas(self.tab_frame)
+        self.scrollable_canvas = ScrollableCanvasW(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
         # 添加占位控件
@@ -152,15 +151,15 @@ class AccManagerUI:
 
         self.acc_data = subfunc_file.get_sw_acc_data()
         # 加载已自启列表
-        self.tree_class["auto_start"] = AccManagerTATT(
+        self.tree_class["auto_start"] = AccManagerTAHT(
             self, self.frame_dict["auto_start"],
             "auto_start", "已自启：", self.btn_dict["cancel_auto_start_btn"].copy())
         # 加载已隐藏列表
-        self.tree_class["hidden"] = AccManagerTATT(
+        self.tree_class["hidden"] = AccManagerTAHT(
             self, self.frame_dict["hidden"],
             "hidden", "已隐藏：", self.btn_dict["cancel_hiding_btn"].copy())
         # 加载所有
-        self.tree_class["all"] = AccManagerTATT(
+        self.tree_class["all"] = AccManagerTAHT(
             self, self.frame_dict["all"],
             "all", "所有账号：", None,
             self.btn_dict["add_auto_start_btn"].copy(),
@@ -215,7 +214,7 @@ class AccManagerUI:
         printer.print_vn("加载完成!")
 
 
-class AccManagerTATT(TreeviewATT):
+class AccManagerTAHT(TreeviewAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.can_quick_refresh = None
@@ -238,16 +237,16 @@ class AccManagerTATT(TreeviewATT):
 
         tree = self.tree
         # 特定列的宽度和样式设置
-        tree.column("#0", minwidth=Constants.COLUMN_MIN_WIDTH["SEC_ID"],
-                    width=Constants.COLUMN_WIDTH["SEC_ID"], stretch=tk.NO)
-        tree.column(" ", minwidth=Constants.COLUMN_MIN_WIDTH["展示"],
-                    width=Constants.COLUMN_WIDTH["展示"], anchor='w')
-        tree.column("快捷键", minwidth=Constants.COLUMN_MIN_WIDTH["快捷键"],
-                    width=Constants.COLUMN_WIDTH["快捷键"], anchor='center', stretch=tk.NO)
-        tree.column("自启动", minwidth=Constants.COLUMN_MIN_WIDTH["自启动"],
-                    width=Constants.COLUMN_WIDTH["自启动"], anchor='center', stretch=tk.NO)
-        tree.column("隐藏", minwidth=Constants.COLUMN_MIN_WIDTH["隐藏"],
-                    width=Constants.COLUMN_WIDTH["隐藏"], anchor='center', stretch=tk.NO)
+        tree.column("#0", minwidth=Config.COLUMN_MIN_WIDTH["SEC_ID"],
+                    width=Config.COLUMN_WIDTH["SEC_ID"], stretch=tk.NO)
+        tree.column(" ", minwidth=Config.COLUMN_MIN_WIDTH["展示"],
+                    width=Config.COLUMN_WIDTH["展示"], anchor='w')
+        tree.column("快捷键", minwidth=Config.COLUMN_MIN_WIDTH["快捷键"],
+                    width=Config.COLUMN_WIDTH["快捷键"], anchor='center', stretch=tk.NO)
+        tree.column("自启动", minwidth=Config.COLUMN_MIN_WIDTH["自启动"],
+                    width=Config.COLUMN_WIDTH["自启动"], anchor='center', stretch=tk.NO)
+        tree.column("隐藏", minwidth=Config.COLUMN_MIN_WIDTH["隐藏"],
+                    width=Config.COLUMN_WIDTH["隐藏"], anchor='center', stretch=tk.NO)
         tree.column("账号标识", anchor='center')
         tree.column("昵称", anchor='center')
 
@@ -281,7 +280,7 @@ class AccManagerTATT(TreeviewATT):
                 hidden = "√" if hidden is True else "-"
                 auto_start = "√" if auto_start is True else "-"
                 nickname = nickname if nickname else "请获取数据"
-                img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+                img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)
 

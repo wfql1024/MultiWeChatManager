@@ -1,21 +1,20 @@
 import tkinter as tk
-from abc import ABC, abstractmethod
 from functools import partial
 from tkinter import ttk
 from typing import Dict, Optional
 
 from functions import subfunc_file
-from public_class.custom_classes import Condition
-from public_class.custom_widget import CustomCornerBtn, CustomBtn
-from public_class.global_members import GlobalMembers
-from resources import Constants
+from public.custom_classes import Condition
+from components import CustomCornerBtn, CustomBtn
+from public.global_members import GlobalMembers
+from public import Config
 from utils import widget_utils
 from utils.encoding_utils import StringUtils, ColorUtils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import TreeUtils
 
-class ActionableTitledTable:
+class ActionableHeaderTable:
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """
         创建一个带标题的面板，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
@@ -72,7 +71,7 @@ class ActionableTitledTable:
     def create_title(self):
         self.title_frame = ttk.Frame(self.main_frame)
         self.title_frame.pack(side="top", fill="x",
-                              padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
+                              padx=Config.LOG_IO_FRM_PAD_X, pady=Config.LOG_IO_FRM_PAD_Y)
         # 标题=复选框+标签+按钮区域
         self.title = ttk.Frame(self.title_frame)
         self.title.pack(side="top", fill="x")
@@ -89,14 +88,14 @@ class ActionableTitledTable:
         # 标签
         self.label = ttk.Label(self.title, text=self.title_text,
                                style='FirstTitle.TLabel')
-        self.label.pack(side="left", fill="x", anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
+        self.label.pack(side="left", fill="x", anchor="w", pady=Config.LOG_IO_LBL_PAD_Y)
 
         # 按钮区域
         self.button_frame = ttk.Frame(self.title)
         self.button_frame.pack(side="right")
 
-        customized_btn_pad = int(Constants.CUS_BTN_PAD_X * 0.4)
-        customized_btn_ipad = int(Constants.CUS_BTN_PAD_Y * 2.0)
+        customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
+        customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 2.0)
 
         def _create_btn_in_(frame_of_btn, text):
             btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
@@ -160,7 +159,7 @@ class ActionableTitledTable:
         ...
 
 
-class ClassicATT(ActionableTitledTable):
+class ClassicAHT(ActionableHeaderTable):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """
         创建一个普通控件组成的传统风格面板，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
@@ -301,17 +300,17 @@ class CkbRow:
 
         # 行框架
         self.row_frame = ttk.Frame(main_frame)
-        self.row_frame.pack(fill="x", padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.CLZ_ROW_FRM_PAD_Y) if \
+        self.row_frame.pack(fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y) if \
             self.disabled is not True else \
-            self.row_frame.pack(side="bottom", fill="x", padx=Constants.LOG_IO_FRM_PAD_X,
-                                pady=Constants.CLZ_ROW_FRM_PAD_Y)
+            self.row_frame.pack(side="bottom", fill="x", padx=Config.LOG_IO_FRM_PAD_X,
+                                pady=Config.CLZ_ROW_FRM_PAD_Y)
         # 复选框
         self.checkbox_var = tk.BooleanVar(value=False)
         self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
         self.checkbox.pack(side="left")
         # 行内容
         self.item_label = ttk.Label(self.row_frame, style="Mutex.TLabel", text="请设计行元素")
-        self.item_label.pack(side="left", fill="x", padx=Constants.CLZ_ROW_LBL_PAD_X)
+        self.item_label.pack(side="left", fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
         widget_utils.bind_event_to_frame_when_(
             self.row_frame, "<Button-1>", self.toggle_checkbox,
             Condition(self.disabled, Condition.ConditionType.NOT_EQUAL, True)
@@ -330,7 +329,7 @@ class CkbRow:
         return "break"
 
 
-class TreeviewATT(ActionableTitledTable):
+class TreeviewAHT(ActionableHeaderTable):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """
         创建一个TreeView列表，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
@@ -813,7 +812,7 @@ class TreeviewATT(ActionableTitledTable):
         self._adjust_main_frame()
 
 
-class RadioTreeView(ABC):
+class RadioTreeView:
     def __init__(self, parent_class, parent_frame, table_tag, title_text=None):
         """
         创建一个只能单选的TreeView列表，可以对单个条目的id列添加功能交互
@@ -869,7 +868,6 @@ class RadioTreeView(ABC):
         self.set_table_style()
         self._adjust_table()
 
-    @abstractmethod
     def initialize_members_in_init(self):
         """子类中重写方法若需要设置或新增成员变量，重写这个方法并在其中定义和赋值成员"""
         pass
@@ -882,7 +880,7 @@ class RadioTreeView(ABC):
     def create_title(self):
         self.title_frame = ttk.Frame(self.tree_frame)
         self.title_frame.pack(side="top", fill="x",
-                              padx=Constants.LOG_IO_FRM_PAD_X, pady=Constants.LOG_IO_FRM_PAD_Y)
+                              padx=Config.LOG_IO_FRM_PAD_X, pady=Config.LOG_IO_FRM_PAD_Y)
 
         # 标题=标签
         self.title = ttk.Frame(self.title_frame)
@@ -891,7 +889,7 @@ class RadioTreeView(ABC):
         # 标签
         self.label = ttk.Label(self.title, text=self.title_text,
                                style='FirstTitle.TLabel')
-        self.label.pack(side="left", fill="x", anchor="w", pady=Constants.LOG_IO_LBL_PAD_Y)
+        self.label.pack(side="left", fill="x", anchor="w", pady=Config.LOG_IO_LBL_PAD_Y)
 
     def create_table(self, columns: tuple = ()):
         """定义表格，根据表格类型选择手动或自动登录表格"""

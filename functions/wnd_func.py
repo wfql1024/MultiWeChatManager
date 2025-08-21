@@ -9,12 +9,11 @@ from tkinter import messagebox
 import psutil
 import requests
 
-import decrypt
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
-from public_class.enums import LocalCfg
-from resources.config import Config
-from utils import image_utils
+from public.enums import LocalCfg
+from public.config import Config
+from utils import image_utils, decrypt
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
