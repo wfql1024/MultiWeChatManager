@@ -13,13 +13,13 @@ from public_class.widget_frameworks import TreeviewATT
 from resources import Constants, Strings
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 from utils.widget_utils import TreeUtils
 
 
 class TreeviewLoginUI:
     def __init__(self, result):
-        self.tree_class = {}
+        self.table_classes = {}
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
         self.login_ui = self.root_class.login_ui
@@ -91,7 +91,7 @@ class TreeviewLoginUI:
 
         # 加载登录列表
         if isinstance(logins, Sized):
-            self.tree_class[login_key] = AccLoginTATT(
+            self.table_classes[login_key] = AccLoginTATT(
                 self, self.ui_frame[login_key],
                 login_key, "已登录：", self.btn_dict["auto_quit_btn"].copy(),
                 self.btn_dict["create_starter"].copy(),
@@ -100,7 +100,7 @@ class TreeviewLoginUI:
 
         # 加载未登录列表
         if isinstance(logouts, Sized):
-            self.tree_class[logout_key] = AccLoginTATT(
+            self.table_classes[logout_key] = AccLoginTATT(
                 self, self.ui_frame[logout_key],
                 logout_key, "未登录：", self.btn_dict["auto_login_btn"].copy(),
                 self.btn_dict["create_starter"].copy(),
@@ -196,8 +196,7 @@ class AccLoginTATT(TreeviewATT):
 
         self.can_quick_refresh = True
         self.login_ui.quick_refresh_mode = True
-        if len(tree.get_children()) == 0:
-            self.null_data = True
+        self.null_data = True if len(tree.get_children()) == 0 else False
 
     def click_on_id_column(self, click_time, item_id):
         """
@@ -211,27 +210,20 @@ class AccLoginTATT(TreeviewATT):
         elif click_time == 2:
             AccOperator.switch_to_sw_account_wnd(item_id)
 
-    def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
-        # print("触发列宽调整")
-        tree = self.tree.nametowidget(event.widget)
-
+    def adjust_columns(self, wnd, columns_to_hide=None):
+        tree = self.tree.nametowidget(self.tree)
         if wnd.state() != "zoomed":
             # 非最大化时隐藏列和标题
             tree["show"] = "tree"  # 隐藏标题
-            for col in columns_to_hide:
-                if col in tree["columns"]:
-                    tree.column(col, width=0, stretch=False)
+            visible_columns = tuple(col for col in self.columns if col not in columns_to_hide)
+            tree.configure(displaycolumns=())
+            tree.configure(displaycolumns=visible_columns)
         else:
             # 最大化时显示列和标题
-            width = col_width_to_show
             tree["show"] = "tree headings"  # 显示标题
-            for col in columns_to_hide:
-                if col in tree["columns"]:
-                    tree.column(col, width=width)  # 设置合适的宽度
+            tree.configure(displaycolumns=self.columns)
 
     def on_tree_configure(self, event):
         # 在非全屏时，隐藏特定列
         columns_to_hide = ["账号标识", "平台id", "昵称"]
-        col_width_to_show = int(self.root.winfo_screenwidth() / 5)
-        self.tree.bind("<Configure>", lambda e: self.adjust_columns(
-            e, self.root, col_width_to_show, columns_to_hide), add='+')
+        self.adjust_columns(self.root, columns_to_hide)

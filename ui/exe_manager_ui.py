@@ -1,4 +1,5 @@
 import tkinter as tk
+from functools import partial
 from tkinter import ttk, messagebox
 
 from PIL import ImageTk, Image
@@ -204,6 +205,9 @@ class ExeManagerCATT(ClassicATT):
                 row = ExeManagerCkRow(self, self.rows_frame, row_id, table_tag)
                 self.rows[row_id] = row
 
+        if len(self.rows) == 0:
+            self.null_data = True
+
     def transfer_selected_iid_to_list(self):
         """
         将选中的iid进行格式处理
@@ -308,40 +312,41 @@ class ExeManagerCkRow(CkbRow):
             **{"1": lambda: ...})
          .apply_bind(self.root))
         _pack_btn(rebuild_coexist_btn)
-        # - 防撤回的按钮
-        if not isinstance(coexist_channel, str) or not isinstance(sequence, str):
-            no_anti_revoke_btn = _create_btn_in_(btn_frame, "防撤")
-            _pack_btn(no_anti_revoke_btn)
-            no_anti_revoke_btn.set_state(CustomBtn.State.DISABLED)
-            widget_utils.set_widget_tip_when_(self.tooltips, no_anti_revoke_btn, {"未知共存方案": True})
-        else:
-            res, msg = SwInfoFunc.identify_dll(self.sw, RemoteCfg.REVOKE.value, False, coexist_channel, sequence)
-            if not isinstance(res, dict):
+        if self.table_tag == CfgStatus.USING:
+            # - 防撤回的按钮
+            if not isinstance(coexist_channel, str) or not isinstance(sequence, str):
                 no_anti_revoke_btn = _create_btn_in_(btn_frame, "防撤")
                 _pack_btn(no_anti_revoke_btn)
                 no_anti_revoke_btn.set_state(CustomBtn.State.DISABLED)
-                widget_utils.set_widget_tip_when_(self.tooltips, no_anti_revoke_btn, {msg: True})
+                widget_utils.set_widget_tip_when_(self.tooltips, no_anti_revoke_btn, {"未知共存方案": True})
             else:
-                for c, channel_res_tuple in res.items():
-                    if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
-                        continue
-                    channel_des, = subfunc_file.get_remote_cfg(
-                        self.sw, RemoteCfg.REVOKE.value, "channel", **{c: None})
-                    # print(channel_des)
-                    c_label = c
-                    if isinstance(channel_des, dict):
-                        if "label" in channel_des:
-                            c_label = channel_des["label"]
-                    anti_revoke_status, channel_msg, _ = channel_res_tuple
-                    anti_revoke_btn = _create_btn_in_(btn_frame, f"{c_label}防撤")
-                    (anti_revoke_btn.set_bind_map(
-                        **{"1": lambda: SwOperator.switch_dll(self.sw, RemoteCfg.REVOKE.value, c, coexist_channel, sequence)})
-                     .apply_bind(self.root))
-                    _pack_btn(anti_revoke_btn)
-                    if anti_revoke_status is True:
-                        anti_revoke_btn.set_state(CustomBtn.State.SELECTED)
-                    if anti_revoke_status is None:
-                        anti_revoke_btn.set_state(CustomBtn.State.DISABLED)
+                res, msg = SwInfoFunc.identify_dll(self.sw, RemoteCfg.REVOKE.value, False, coexist_channel, sequence)
+                if not isinstance(res, dict):
+                    no_anti_revoke_btn = _create_btn_in_(btn_frame, "防撤")
+                    _pack_btn(no_anti_revoke_btn)
+                    no_anti_revoke_btn.set_state(CustomBtn.State.DISABLED)
+                    widget_utils.set_widget_tip_when_(self.tooltips, no_anti_revoke_btn, {msg: True})
+                else:
+                    for channel, channel_res_tuple in res.items():
+                        if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
+                            continue
+                        channel_des, = subfunc_file.get_remote_cfg(
+                            self.sw, RemoteCfg.REVOKE.value, "channel", **{channel: None})
+                        # print(channel_des)
+                        c_label = channel
+                        if isinstance(channel_des, dict):
+                            if "label" in channel_des:
+                                c_label = channel_des["label"]
+                        anti_revoke_status, channel_msg, _ = channel_res_tuple
+                        anti_revoke_btn = _create_btn_in_(btn_frame, f"{c_label}")
+                        (anti_revoke_btn.set_bind_map(
+                            **{"1": partial(SwOperator.switch_dll, self.sw, RemoteCfg.REVOKE.value, channel, coexist_channel, sequence)})
+                         .apply_bind(self.root))
+                        _pack_btn(anti_revoke_btn)
+                        if anti_revoke_status is True:
+                            anti_revoke_btn.set_state(CustomBtn.State.SELECTED)
+                        if anti_revoke_status is None:
+                            anti_revoke_btn.set_state(CustomBtn.State.DISABLED)
 
 
 
@@ -375,7 +380,7 @@ class ExeManagerCkRow(CkbRow):
         # 设置提示
         widget_utils.set_widget_tip_when_(
             self.tooltips, rebuild_coexist_btn,
-            {"方案未知": Condition(coexist_channel, Condition.ConditionType.EQUAL, None)}
+            {"未知共存方案": Condition(coexist_channel, Condition.ConditionType.EQUAL, None)}
         )
         # 复选框的状态
         self.checkbox.config(state='disabled') if self.disabled is True else self.checkbox.config(

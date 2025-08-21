@@ -15,7 +15,7 @@ from public_class.widget_frameworks import TreeviewATT
 from resources import Constants
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 
 
@@ -307,26 +307,7 @@ class AccManagerTATT(TreeviewATT):
 
         self.can_quick_refresh = True
         self.parent_class.quick_refresh_mode = True
-        if len(tree.get_children()) == 0:
-            self.null_data = True
-
-    def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
-        # print("触发列宽调整")
-        tree = self.tree.nametowidget(event.widget)
-
-        if wnd.state() != "zoomed":
-            # 非最大化时隐藏列和标题
-            tree["show"] = "tree headings"  # 隐藏标题
-            for col in columns_to_hide:
-                if col in tree["columns"]:
-                    tree.column(col, width=0, stretch=False)
-        else:
-            # 最大化时显示列和标题
-            width = col_width_to_show
-            tree["show"] = "tree headings"  # 显示标题
-            for col in columns_to_hide:
-                if col in tree["columns"]:
-                    tree.column(col, width=width)  # 设置合适的宽度
+        self.null_data = True if len(tree.get_children()) == 0 else False
 
     def click_on_id_column(self, click_time, item_id):
         """
@@ -346,6 +327,4 @@ class AccManagerTATT(TreeviewATT):
         """
         # 在非全屏时，隐藏特定列
         columns_to_hide = ["账号标识", "平台id", "昵称"]
-        col_width_to_show = int(self.root.winfo_screenwidth() / 5)
-        self.tree.bind("<Configure>", lambda e: self.adjust_columns(
-            e, self.wnd, col_width_to_show, columns_to_hide), add='+')
+        self.adjust_columns(self.wnd, columns_to_hide)

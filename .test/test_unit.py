@@ -17,6 +17,7 @@ from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_ut
 from utils.hwnd_utils import Win32HwndGetter, HwndGetter
 
 
+
 class Test(TestCase):
     def SetUp(self):
         self.hwnd = Win32HwndGetter._get_a_hwnd_by_title("微信（测试版）")
@@ -299,7 +300,7 @@ class Test(TestCase):
         print(res)
 
     def test_create_coexist(self):
-        SwOperator._create_coexist_exe_core("WeChat", "1")
+        SwOperator._create_coexist_exe_core("WXWork", "1")
 
     def test_custom_notebook_and_custom_btn(self):
         import tkinter as tk

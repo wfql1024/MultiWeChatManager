@@ -20,7 +20,7 @@
     <tree path="/functions/subfunc_file.py" title="subfunc为介于工具类和功能直接实现类的子功能类" extension=""
           presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
     <tree path="/.meta" title="程序打包的元数据"/>
-    <tree path="/.scripts" title="执行的脚本代码"/>
+    <tree path="/scripts" title="执行的脚本代码"/>
     <tree path="/decrypt" title="解密方法"/>
     <tree path="/public_class" title="公用的类"/>
     <tree path="/public_class/global_members.py" title="作用全局的成员"/>

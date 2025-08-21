@@ -346,7 +346,7 @@ class RootUI:
         if len(self.login_nb_cls.tabs) == 0:
             hint = RootUI._get_random_hint()
             tmp_label = ttk.Label(self.login_frm_pool, text=hint, style="FirstTitle.TLabel")
-            tmp_label.pack(pady=20)
+            tmp_label.pack(pady=200, fill="y", expand=True)
 
     @staticmethod
     def _get_path_thread():
@@ -498,7 +498,7 @@ class SoftwareInfo:
         self.multirun_mode = None
         self.anti_revoke = None
         self.classic_ui = None
-        self.tree_ui = None
+        self.treeview_ui = None
         self.inst_path = None
         self.data_dir = None
         self.dll_dir = None

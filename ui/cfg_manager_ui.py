@@ -137,6 +137,9 @@ class CfgManagerCATT(ClassicATT):
             row = CfgManagerCR(self, self.rows_frame, row_id, table_tag)
             self.rows[row_id] = row
 
+        if len(self.rows) == 0:
+            self.null_data = True
+
     def transfer_selected_iid_to_list(self):
         """
         将选中的iid进行格式处理

@@ -197,20 +197,21 @@ class LoginUI:
             if self.quick_refresh_mode is True:
                 try:
                     acc_list_dict, _ = result
-                    tree_class = self.sw_class.tree_ui.tree_class
-                    if all(tree_class[t].can_quick_refresh for t in tree_class):
+                    table = self.sw_class.treeview_ui.table_classes
+                    self.sw_class.treeview_ui.acc_list_dict = acc_list_dict
+                    if all(table[t].can_quick_refresh for t in table):
                         # 快速刷新
-                        for t in tree_class:
+                        for t in table:
                             # tree_class[t].quick_refresh_items(acc_list_dict[t])
-                            tree_class[t].quick_refresh_items()
+                            table[t].quick_refresh_items()
                 except Exception as e:
                     logger.warning(e)
                     self.quick_refresh_mode = False
                     self._ui_pre_load()
-                    self.sw_class.tree_ui = TreeviewLoginUI(result)
+                    self.sw_class.treeview_ui = TreeviewLoginUI(result)
             else:
                 self._ui_pre_load()
-                self.sw_class.tree_ui = TreeviewLoginUI(result)
+                self.sw_class.treeview_ui = TreeviewLoginUI(result)
         else:
             pass
 

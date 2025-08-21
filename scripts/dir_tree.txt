@@ -1,0 +1,102 @@
+├─📁 adaptation-------------------#对不同平台的功能实现
+│ ├─📁 impl
+│ ├─📄 interface.py
+│ └─📄 __init__.py
+├─📁 decrypt----------------------#解密方法
+│ ├─📁 impl
+│ │ ├─📄 WeChat_decrypt_impl.py
+│ │ └─📄 Weixin_decrypt_impl.py
+│ ├─📄 interface.py
+│ └─📄 __init__.py
+├─📁 Demo-------------------------#与项目相关的独立示例代码，可以探索下
+│ ├─📁 close_wechat_mutex
+│ ├─📁 debug
+│ ├─📁 decrypt
+│ ├─📁 dll_injection
+│ ├─📁 dll_modify
+│ ├─📁 github_download
+│ ├─📁 hwnd
+│ └─📁 mutex
+├─📁 external_res-----------------#引用到的外部资源
+│ ├─📄 Feedback.png
+│ ├─📄 handle.exe
+│ ├─📄 JFMC.ico
+│ ├─📄 JFMC.png
+│ ├─📄 path.ini
+│ ├─📄 rewards.png
+│ ├─📄 SunnyMultiWxMng.ico
+│ ├─📄 sy.ini
+│ ├─📄 Updater.exe
+│ ├─📄 wechat-dump-rs.exe
+│ ├─📄 WeChatMultiple_Anhkgg.exe
+│ └─📄 WeChatMultiple_lyie15.exe
+├─📁 functions--------------------#功能层代码，实现项目中的具体功能
+│ ├─📄 acc_func.py
+│ ├─📄 app_func.py
+│ ├─📄 main_func.py
+│ ├─📄 subfunc_file.py------------#subfunc为介于工具类和功能直接实现类的子功能类
+│ ├─📄 sw_func.py
+│ ├─📄 wnd_func.py
+│ └─📄 __init__.py
+├─📁 public_class-----------------#公用的类
+│ ├─📄 custom_classes.py
+│ ├─📄 custom_widget.py
+│ ├─📄 enums.py
+│ ├─📄 global_members.py----------#作用全局的成员
+│ ├─📄 reusable_widgets.py--------#可复用的控件
+│ ├─📄 widget_frameworks.py
+│ └─📄 __init__.py
+├─📁 resources--------------------#项目代码资源
+│ ├─📄 config.py
+│ ├─📄 constants.py
+│ ├─📄 strings.py
+│ └─📄 __init__.py
+├─📁 ui---------------------------#界面层代码，实现界面创建和更新
+│ ├─📄 acc_manager_ui.py
+│ ├─📄 classic_row_ui.py
+│ ├─📄 login_ui.py
+│ ├─📄 main_ui.py
+│ ├─📄 menu_ui.py
+│ ├─📄 sidebar_ui.py
+│ ├─📄 sw_manager_ui.py
+│ ├─📄 treeview_row_ui.py
+│ ├─📄 wnd_ui.py
+│ └─📄 __init__.py
+├─📁 utils------------------------#工具类代码，可移植到其他项目中使用
+│ ├─📁 better_wx
+│ │ ├─📁 legacy
+│ │ │ ├─📄 revoke.py
+│ │ │ └─📄 unmutex.py
+│ │ ├─📄 coexist.py
+│ │ ├─📄 inner_utils.py
+│ │ ├─📄 revoke.py
+│ │ ├─📄 sound_extract.py
+│ │ ├─📄 sound_replace.py
+│ │ └─📄 __init__.py
+│ ├─📄 encoding_utils.py
+│ ├─📄 file_utils.py
+│ ├─📄 handle_utils.py
+│ ├─📄 hwnd_utils.py
+│ ├─📄 image_utils.py
+│ ├─📄 logger_utils.py
+│ ├─📄 memory_utils.py
+│ ├─📄 patch_utils.py
+│ ├─📄 process_utils.py
+│ ├─📄 pywinhandle.py
+│ ├─📄 sys_utils.py
+│ ├─📄 widget_utils.py
+│ └─📄 __init__.py
+├─📄 @AutomationLog.txt
+├─📄 Build4Win10+.bat
+├─📄 Build4Win7.bat
+├─📄 click_me_to_create_lnk.bat---#已不再维护，留个念想
+├─📄 DirectoryV3.xml
+├─📄 LICENSE
+├─📄 main.py----------------------#入口，管理员身份及程序参数解析
+├─📄 README.md
+├─📄 remote_setting---------------#加密的云端配置源
+├─📄 remote_setting_v4
+├─📄 requirements.txt
+├─📄 update_program.py------------#升级器
+├─📄 version_adaptation.json------#版本适配表，在这里更新微信新版本的偏移地址，2.5及之前可用
+└─📄 version_config.json----------#旧的版本适配表，只在发布过的2.3.3.333可以使用，现在代码已经不使用

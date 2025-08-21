@@ -134,7 +134,7 @@ class ActionableTitledTable:
                 else:
                     rest_btn = _create_btn_in_(self.button_frame, btn_dict["text"])
                 (rest_btn.set_bind_map(
-                    **{"1": lambda: btn_dict["func"](self.selected_items)})
+                    **{"1": partial(btn_dict["func"], self.selected_items)})
                  .apply_bind(self.root))
                 btn_dict["btn"] = rest_btn
                 _pack_btn(rest_btn)
@@ -146,12 +146,12 @@ class ActionableTitledTable:
             # 如果条目数量为 0，隐藏控件
             print(f"应该隐藏{self.table_tag}列表")
             self.main_frame.pack_forget()
-            self.main_frame.config(height=1)
-            # self.main_frame.pack_propagate(False)  # 不自动调整自身大小
+            self.parent_frame.config(height=1)
+            self.parent_frame.pack_propagate(True)  # 不自动调整自身大小
         else:
             # 如果条目数量不为 0则显示控件
             print(f"应该显示{self.table_tag}列表")
-            self.main_frame.pack_propagate(True)  # 自动调整自身大小
+            self.parent_frame.pack_propagate(True)  # 自动调整自身大小
             self.main_frame.pack(fill="both", expand=True)
             self._adjust_content()
 
@@ -179,7 +179,6 @@ class ClassicATT(ActionableTitledTable):
         super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
         self.create_rows()
         self._adjust_main_frame()
-
 
     def create_rows(self):
         """渲染账号所在行，请重写"""
@@ -336,7 +335,6 @@ class TreeviewATT(ActionableTitledTable):
         """
         创建一个TreeView列表，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
         """
-        self.null_data = None
         self.tree_has_bind = False
         self.last_single_item = None
         self.hovered_item = None
@@ -357,7 +355,9 @@ class TreeviewATT(ActionableTitledTable):
         super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
         self.tree = self.create_tree(self.columns)
+        self.tree.bind("<Configure>", lambda e: self.on_tree_configure(e), add='+')
         self.display_tree()
+        self.set_tree_style()
         self._adjust_main_frame()
 
     def create_tree(self, columns: tuple = ()):
@@ -377,8 +377,7 @@ class TreeviewATT(ActionableTitledTable):
         tree = self.tree.nametowidget(self.tree)
         values = tuple("请重写展示数据方法" for _ in tree["columns"])
         tree.insert("", "end", iid="item1", text="示例项", values=values)
-        if len(tree.get_children()) == 0:
-            self.null_data = True
+        self.null_data = True if len(tree.get_children()) == 0 else False
 
     def set_tree_style(self):
         """请重写此方法，以下为示例"""
@@ -390,37 +389,26 @@ class TreeviewATT(ActionableTitledTable):
         tree.tag_configure("disabled", background="#F5F7FA", foreground="grey")
         tree.tag_configure("selected", background=selected_bg, foreground="black")
         tree.tag_configure("hover", background=hover_bg, foreground="black")
-        self.tree.bind("<Configure>", lambda e: self.on_tree_configure(e), add='+')
 
         # 以下为自定义样式示例
         # # 特定列的宽度和样式设置
         # tree.column("#0", minwidth=100, width=100, stretch=tk.YES)
-        #
-        # # 在非全屏时，隐藏特定列
-        # columns_to_hide = ["该列全屏不隐藏"]
-        # col_width_to_show = int(self.root.winfo_screenwidth() / 5)
-        # tree.bind("<Configure>", lambda e: self.adjust_columns_on_maximize_(
-        #     e, self.root, col_width_to_show, columns_to_hide), add='+')
-        pass
+        ...
 
     def _adjust_content(self):
-        self.set_tree_style()
         self._adjust_tree()
         self.selected_items.clear()
         self._update_top_title()
 
     def _adjust_tree(self):
-        """
-        绑定事件以实现自适应调整表格
-        :return: 结束
-        """
+        """自适应调整表格高度, 排序"""
         tree = self.tree.nametowidget(self.tree)
         self._adjust_treeview_height(None)
         # 排序+调整列宽
         self._apply_or_switch_col_order()
-        self.on_tree_configure(None)
+
+        # 确保绑定事件
         if self.tree_has_bind is not True:
-            # 绑定事件
             widget_utils.UnlimitedClickHandler(
                 self.root,
                 tree,
@@ -712,40 +700,30 @@ class TreeviewATT(ActionableTitledTable):
         :param event:
         :return:
         """
+        ...
 
-    def adjust_columns(self, event, wnd, col_width_to_show, columns_to_hide=None):
+    def adjust_columns(self, wnd, columns_to_hide=None):
         """
         自适应调整列宽的方法
-        :param event:
         :param wnd:
-        :param col_width_to_show:
         :param columns_to_hide:
         :return:
         """
-        pass
-        # # print("触发列宽调整")
-        # tree = self.tree.nametowidget(event.widget)
-        #
-        # if wnd.state() != "zoomed":
-        #     # 非最大化时隐藏列和标题
-        #     tree["show"] = "tree"  # 隐藏标题
-        #     for col in columns_to_hide:
-        #         if col in tree["columns"]:
-        #             tree.column(col, width=0, stretch=False)
-        # else:
-        #     # 最大化时显示列和标题
-        #     width = col_width_to_show
-        #     tree["show"] = "tree headings"  # 显示标题
-        #     for col in columns_to_hide:
-        #         if col in tree["columns"]:
-        #             tree.column(col, width=width)  # 设置合适的宽度
+        tree = self.tree.nametowidget(self.tree)
+        if wnd.state() != "zoomed":
+            # 非最大化时隐藏列和标题
+            tree["show"] = "tree headings"  # 隐藏标题
+            visible_columns = tuple(col for col in self.columns if col not in columns_to_hide)
+            tree.configure(displaycolumns=())
+            tree.configure(displaycolumns=visible_columns)
+        else:
+            # 最大化时显示列和标题
+            tree["show"] = "tree headings"  # 显示标题
+            tree.configure(displaycolumns=self.columns)
 
-    def _adjust_treeview_height(self, event):
-        # print("触发表高调整")
-        # print(event)
-        if event:
-            # print(event.y)
-            pass
+
+    def _adjust_treeview_height(self, _event):
+        print("触发表高调整")
 
         tree = self.tree.nametowidget(self.tree)
 
@@ -830,14 +808,8 @@ class TreeviewATT(ActionableTitledTable):
         快速刷新
         """
         printer.vital(f"快速刷新")
-
-        self.tree.configure(displaycolumns=())  # 临时隐藏列
-
         self.tree.delete(*self.tree.get_children())
         self.display_tree()
-
-        self.tree.configure(displaycolumns=self.columns)
-
         self._adjust_main_frame()
 
 

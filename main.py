@@ -54,6 +54,23 @@ def main():
     root.mainloop()
 
 
+def suppress_libpng_warnings():
+    """屏蔽 libpng 的 iCCP 警告"""
+    class _StderrFilter:
+        def __init__(self, stream):
+            self.stream = stream
+        def write(self, message):
+            # 过滤掉特定的 libpng 警告
+            if "libpng warning" in message:
+                return
+            self.stream.write(message)
+        def flush(self):
+            self.stream.flush()
+
+    sys.stderr = _StderrFilter(sys.stderr)
+
+
+
 if __name__ == "__main__":
     # if sys.platform == 'win32':
     #     kernel32 = ctypes.WinDLL('kernel32')
@@ -64,7 +81,7 @@ if __name__ == "__main__":
     #     kernel32.FreeConsole()
     #     # 重定向所有输出到黑洞
     #     sys.stdout = open(os.devnull, 'w')
-    #     sys.stderr = open(os.devnull, 'w')
+    suppress_libpng_warnings()
 
     if not is_admin():
         print("当前没有管理员权限，尝试获取...")

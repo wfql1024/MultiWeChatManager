@@ -584,7 +584,7 @@ class DebugWndUI(SubToolWndUI, ABC):
             print(f"保存日志时发生错误：{e}")
 
 
-class LoadingWndUI(SubToolWndUI, ABC):
+class LoadingWndUI(SubToolWndUI):
     def __init__(self, wnd, title):
         self.progress = None
         self.label = None
