@@ -1753,12 +1753,12 @@
                     "author": [
                         "afaa1991"
                     ],
-                    "exe_wildcard": "WXWork?.exe",
+                    "exe_wildcard": "WXWor?.exe",
                     "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ"
                 }
             },
             "feature": {
-                "4.1.38": {
+                "4.1.36": {
                     "default": {
                         "%inst_path%": {
                             "original": [
