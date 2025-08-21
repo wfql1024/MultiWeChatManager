@@ -18,11 +18,11 @@ import winshell
 from PIL import Image
 from win32com.client import Dispatch
 
-from functions import subfunc_file
 from components import CustomDialogW
+from functions import subfunc_file
+from public import Strings, Config
 from public.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg, CallMode, WndType
 from public.global_members import GlobalMembers
-from public import Config, Strings, Config
 from public.strings import NEWER_SYS_VER
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
 from utils.better_wx.inner_utils import patt2hex, custom_wildcard_tokenize
@@ -106,7 +106,8 @@ class SwInfoFunc:
         return addr_res_dict
 
     @classmethod
-    def _identify_binary_state_patching_of_files_in_channel(cls, sw, channel_addresses_dict, channel=None, s=None) -> dict:
+    def _identify_binary_state_patching_of_files_in_channel(cls, sw, channel_addresses_dict, channel=None,
+                                                            s=None) -> dict:
         """
         二元状态, 对渠道内的文件分别检测原始串和补丁串来识别状态
         参数: channel_addresses_dict: 渠道-文件适配字典 {addr: {"original": [...], "modified": [...]}}
@@ -153,7 +154,8 @@ class SwInfoFunc:
         return addr_res_dict
 
     @classmethod
-    def _identify_patching_of_channels_in_ver(cls, sw, ver_channels_dict, multi_state=False, coexist_channel=None, s=None) -> dict:
+    def _identify_patching_of_channels_in_ver(cls, sw, ver_channels_dict, multi_state=False, coexist_channel=None,
+                                              s=None) -> dict:
         """
         对版本适配字典中的所有通道进行状态识别
         参数:
@@ -263,7 +265,8 @@ class SwInfoFunc:
                             sw, mode, "precise", cur_sw_ver, **{channel: channel_res_dict})
 
     @classmethod
-    def _identify_dll_by_cache_cfg(cls, sw, mode, multi_state=False, channel=None, s=None) -> Tuple[Optional[dict], str]:
+    def _identify_dll_by_cache_cfg(cls, sw, mode, multi_state=False, channel=None, s=None) -> Tuple[
+        Optional[dict], str]:
         """从缓存表中获取"""
         try:
             mode_branches_dict, = subfunc_file.get_cache_cfg(sw, **{mode: None})
@@ -999,7 +1002,7 @@ class SwOperator:
         curr_ver = SwInfoFunc.calc_sw_ver(sw)
         for acc in accounts:
             coexist_channel, sequence = subfunc_file.get_sw_acc_data(sw, acc, channel=None, sequence=None)
-            channel_addresses_dict:dict = subfunc_file.get_cache_cfg(
+            channel_addresses_dict: dict = subfunc_file.get_cache_cfg(
                 sw, RemoteCfg.COEXIST, "precise", curr_ver, coexist_channel)
             if not isinstance(channel_addresses_dict, dict):
                 failed_acc_msg_dict[acc] = f"未适配该共存方案!"

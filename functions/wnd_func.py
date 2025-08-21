@@ -11,8 +11,8 @@ import requests
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
-from public.enums import LocalCfg
 from public.config import Config
+from public.enums import LocalCfg
 from utils import image_utils, decrypt
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer

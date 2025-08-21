@@ -4,16 +4,16 @@ from tkinter import ttk, messagebox
 
 from PIL import ImageTk, Image
 
+from components.composited_controls import ClassicAHT, CkbRow
+from components.custom_widgets import CustomCornerBtn, CustomBtn
+from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
 from functions.sw_func import SwInfoFunc, SwOperator
+from public import Config
 from public.custom_classes import Condition
-from components.custom_widgets import CustomCornerBtn, CustomBtn
 from public.enums import CfgStatus, AccKeys, RemoteCfg
 from public.global_members import GlobalMembers
-from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
-from components.composited_controls import ClassicAHT, CkbRow
-from public import Config
 from utils import widget_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger, Printer
@@ -160,7 +160,6 @@ class ExeManagerUI:
         accounts = [item.split("/")[1] for item in items]
         ...
         self.refresh_frame()
-
 
 
 class ExeManagerCAHT(ClassicAHT):
@@ -339,15 +338,14 @@ class ExeManagerCkRow(CkbRow):
                         anti_revoke_status, channel_msg, _ = channel_res_tuple
                         anti_revoke_btn = _create_btn_in_(btn_frame, f"{c_label}")
                         (anti_revoke_btn.set_bind_map(
-                            **{"1": partial(SwOperator.switch_dll, self.sw, RemoteCfg.REVOKE.value, channel, coexist_channel, sequence)})
+                            **{"1": partial(SwOperator.switch_dll, self.sw, RemoteCfg.REVOKE.value, channel,
+                                            coexist_channel, sequence)})
                          .apply_bind(self.root))
                         _pack_btn(anti_revoke_btn)
                         if anti_revoke_status is True:
                             anti_revoke_btn.set_state(CustomBtn.State.SELECTED)
                         if anti_revoke_status is None:
                             anti_revoke_btn.set_state(CustomBtn.State.DISABLED)
-
-
 
         # 账号区域分两行, 上行是程序名称, 下行是账号名称
         self.item_frame = ttk.Frame(self.row_frame)

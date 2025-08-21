@@ -4,14 +4,14 @@ from tkinter import messagebox, ttk
 
 from PIL import Image, ImageTk
 
+from components.composited_controls import TreeviewAHT
+from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
+from public import Config
 from public.custom_classes import Condition
 from public.enums import AccKeys
 from public.global_members import GlobalMembers
-from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
-from components.composited_controls import TreeviewAHT
-from public import Config
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger

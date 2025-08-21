@@ -1,11 +1,11 @@
-from public.enums import LocalCfg, SW, SwStates, MultirunMode
-
 import configparser
 import ctypes
 import os
 import platform
 import tkinter as tk
 import winreg
+
+from public.enums import LocalCfg, SW, SwStates, MultirunMode
 
 
 # 如需使用缩放因子，请直接拷贝以下部分*****************************************************************
@@ -60,8 +60,10 @@ def get_scale_factor():
 # 获取屏幕缩放因子
 SCALE_FACTOR = get_scale_factor()
 
+
 def scale_dict(d, sf):
     return {k: int(v * sf) for k, v in d.items()}
+
 
 # 获取屏幕缩放因子
 current_file_dir = os.path.dirname(os.path.abspath(__file__))

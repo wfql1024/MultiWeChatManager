@@ -3,15 +3,15 @@ import time
 from functools import partial
 from tkinter import ttk, messagebox
 
+from components.custom_widgets import CustomCornerBtn
+from components.widget_wrappers import ScrollableCanvasW
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
 from functions.main_func import MultiSwFunc
 from functions.sw_func import SwOperator, SwInfoFunc
-from components.custom_widgets import CustomCornerBtn
+from public import Config, Strings
 from public.enums import OnlineStatus, LocalCfg
 from public.global_members import GlobalMembers
-from components.widget_wrappers import ScrollableCanvasW
-from public import Config, Config, Strings
 from ui.cfg_manager_ui import CfgManagerWndCreator
 from ui.classic_row_ui import ClassicLoginUI
 from ui.exe_manager_ui import ExeManagerWndCreator

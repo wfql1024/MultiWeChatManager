@@ -2,6 +2,8 @@
 # SRGB_PROFILE = r"C:\Windows\System32\spool\drivers\color\sRGB Color Space Profile.icm"
 import sys
 import tkinter as tk
+
+
 # from PIL import Image, ImageTk
 
 # def fix_image_srgb_profile_in_project(root_dir="."):
@@ -23,18 +25,21 @@ import tkinter as tk
 #                     print(f"跳过 {file_path}, 错误: {e}")
 
 
-
 def suppress_libpng_warnings():
     """屏蔽 libpng 的 iCCP 警告"""
+
     class _StderrFilter:
         def __init__(self, stream):
             self.stream = stream
+
         def write(self, message):
             if "libpng warning: iCCP: known incorrect sRGB profile" in message:
                 return  # 屏蔽掉这个警告
             self.stream.write(message)
+
         def flush(self):
             self.stream.flush()
+
     sys.stderr = _StderrFilter(sys.stderr)
 
 

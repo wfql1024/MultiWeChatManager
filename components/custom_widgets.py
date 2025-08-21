@@ -10,6 +10,7 @@ from public.enums import NotebookDirection
 from utils.encoding_utils import ColorUtils
 from utils.widget_utils import UnlimitedClickHandler, CanvasUtils, WidgetUtils
 
+
 class DefaultEntry(tk.Entry):
     """会提前填入默认内容的文本框"""
 
@@ -167,7 +168,8 @@ class CustomBtn(tk.Widget):
     def set_state(self, state):
         """设置状态"""
         if state not in [self.State.DISABLED, self.State.SELECTED, self.State.NORMAL]:
-            raise ValueError("state必须是CustomLabelBtn.State的枚举值, 且推荐在DISABLED, SELECTED, NORMAL三种状态内使用")
+            raise ValueError(
+                "state必须是CustomLabelBtn.State的枚举值, 且推荐在DISABLED, SELECTED, NORMAL三种状态内使用")
         self._state = state
         self._draw()
 

@@ -46,8 +46,8 @@ from pathlib import Path
 from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
 
-from utils.decrypt.interface import DecryptInterface
 from public.config import Config
+from utils.decrypt.interface import DecryptInterface
 from utils.logger_utils import mylogger as logger
 
 KEY_SIZE = 32

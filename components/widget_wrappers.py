@@ -5,11 +5,12 @@ from tkinter import ttk
 
 import keyboard
 
+from public import Config
 from public.custom_classes import QueueWithUpdate
 from public.global_members import GlobalMembers
-from public import Config
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger, RedirectText
+
 
 class CustomDialogW:
     @classmethod
@@ -53,6 +54,7 @@ class CustomDialogW:
 
         window.mainloop()
         return result[0]
+
 
 class HotkeyEntry4KeyboardW:
     """
@@ -434,4 +436,3 @@ class SubToolWndUI:
         self.wnd.destroy()  # 关闭窗口
         if master_wnd != self.root:
             master_wnd.grab_set()  # 恢复父窗口的焦点
-

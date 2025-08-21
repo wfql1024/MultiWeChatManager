@@ -9,15 +9,15 @@ from tkinter import ttk, messagebox
 
 import keyboard
 
+from components.custom_widgets import CustomNotebook
+from components.widget_wrappers import StatusBarW
 from functions import subfunc_file
 from functions.acc_func import AccOperator
 from functions.app_func import AppFunc
 from functions.sw_func import SwInfoFunc
-from components.custom_widgets import CustomNotebook
+from public import Config, Strings
 from public.enums import LocalCfg, SwStates, RemoteCfg
 from public.global_members import GlobalMembers
-from components.widget_wrappers import StatusBarW
-from public import Config, Config, Strings
 from ui import login_ui, acc_manager_ui, sw_manager_ui
 from ui.menu_ui import MenuUI
 from ui.wnd_ui import LoadingWndUI, WndCreator

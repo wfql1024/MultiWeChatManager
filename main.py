@@ -56,19 +56,21 @@ def main():
 
 def suppress_libpng_warnings():
     """屏蔽 libpng 的 iCCP 警告"""
+
     class _StderrFilter:
         def __init__(self, stream):
             self.stream = stream
+
         def write(self, message):
             # 过滤掉特定的 libpng 警告
             if "libpng warning" in message:
                 return
             self.stream.write(message)
+
         def flush(self):
             self.stream.flush()
 
     sys.stderr = _StderrFilter(sys.stderr)
-
 
 
 if __name__ == "__main__":

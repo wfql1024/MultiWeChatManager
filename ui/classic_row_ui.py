@@ -5,14 +5,14 @@ from tkinter import ttk
 
 from PIL import ImageTk, Image
 
+from components.composited_controls import ClassicAHT, CkbRow
+from components.custom_widgets import CustomCornerBtn, CustomBtn
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
+from public import Config, Strings
 from public.custom_classes import Condition
-from components.custom_widgets import CustomCornerBtn, CustomBtn
 from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
 from public.global_members import GlobalMembers
-from components.composited_controls import ClassicAHT, CkbRow
-from public import Config, Strings
 from ui.wnd_ui import WndCreator
 from utils import widget_utils
 from utils.encoding_utils import StringUtils

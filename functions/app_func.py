@@ -12,8 +12,8 @@ from win32com.client import Dispatch
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
-from public.enums import LocalCfg, RemoteCfg
 from public.config import Config
+from public.enums import LocalCfg, RemoteCfg
 from utils import file_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 

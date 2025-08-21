@@ -18,17 +18,17 @@ import win32com.client
 import winshell
 from PIL import Image, ImageTk
 
+from components.custom_widgets import CustomBtn, CustomCornerBtn
+from components.custom_widgets import DefaultEntry
+from components.widget_wrappers import SubToolWndUI, HotkeyEntry4KeyboardW, ScrollableCanvasW
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
 from functions.app_func import AppFunc
 from functions.sw_func import SwOperator, SwInfoFunc, SwInfoUtils
 from functions.wnd_func import DetailWndFunc, UpdateLogWndFunc
-from components.custom_widgets import CustomBtn, CustomCornerBtn
+from public import Config, Strings
 from public.enums import LocalCfg, RemoteCfg, SwStates
 from public.global_members import GlobalMembers
-from components.custom_widgets import DefaultEntry
-from components.widget_wrappers import SubToolWndUI, HotkeyEntry4KeyboardW, ScrollableCanvasW
-from public import Config, Strings
 from utils import file_utils, sys_utils, widget_utils
 from utils.encoding_utils import StringUtils
 from utils.file_utils import JsonUtils

@@ -3,16 +3,17 @@ from functools import partial
 from tkinter import ttk
 from typing import Dict, Optional
 
-from functions import subfunc_file
-from public.custom_classes import Condition
 from components import CustomCornerBtn, CustomBtn
-from public.global_members import GlobalMembers
+from functions import subfunc_file
 from public import Config
+from public.custom_classes import Condition
+from public.global_members import GlobalMembers
 from utils import widget_utils
 from utils.encoding_utils import StringUtils, ColorUtils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import TreeUtils
+
 
 class ActionableHeaderTable:
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
@@ -719,7 +720,6 @@ class TreeviewAHT(ActionableHeaderTable):
             # 最大化时显示列和标题
             tree["show"] = "tree headings"  # 显示标题
             tree.configure(displaycolumns=self.columns)
-
 
     def _adjust_treeview_height(self, _event):
         print("触发表高调整")

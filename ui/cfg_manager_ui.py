@@ -4,14 +4,14 @@ from tkinter import ttk
 
 from PIL import ImageTk, Image
 
+from components.composited_controls import ClassicAHT, CkbRow
+from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
 from functions.acc_func import AccInfoFunc, AccOperator
 from functions.sw_func import SwInfoFunc
+from public import Config
 from public.custom_classes import Condition
 from public.enums import CfgStatus, AccKeys
 from public.global_members import GlobalMembers
-from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
-from components.composited_controls import ClassicAHT, CkbRow
-from public import Config
 from utils import widget_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger, Printer

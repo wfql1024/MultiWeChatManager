@@ -26,10 +26,9 @@ from functions import subfunc_file
 from functions.acc_func_impl import AccInfoFuncImpl
 from functions.func_tool import FuncTool
 from functions.sw_func import SwOperator, SwInfoFunc
+from public.config import Config
 from public.enums import AccKeys, SW, LocalCfg, MultirunMode, CfgStatus, WndType
 from public.global_members import GlobalMembers
-from public import Config
-from public.config import Config
 from public.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
 from utils.encoding_utils import StringUtils
