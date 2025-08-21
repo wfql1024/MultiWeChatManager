@@ -1818,6 +1818,18 @@
                 }
             },
             "feature": {
+                "4.1.0": {
+                    "default": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "75 1B E8 F6 B9 F9 FF 84 C0 75 12 E8 FD 36 05 00 48 89 C1 48 89 F2 E8 72 44 05 00 31 FF 89 F8 48 83 C4 28 5F 5E C3 CC CC CC CC"
+                            ],
+                            "modified": [
+                                "EB ..."
+                            ]
+                        }
+                    }
+                },
                 "4.0.6": {
                     "default": {
                         "%dll_dir%/Weixin.dll": {
@@ -2112,6 +2124,48 @@
                 }
             },
             "feature": {
+                "4.1.0": {
+                    "alert": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "00 ?? ?? ?? FF FF 48 89 F0 48 83 C4 30 5E C3 CC CC CC CC CC 55 41 57 41 56 56 57 53 48 81",
+                                "45 31 C0 ?? ?? ?? ?? FE 48 8B BD ?? 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89"
+                            ],
+                            "modified": [
+                                "01 ...",
+                                "48 83 85 D0 02 00 00 01 ..."
+                            ]
+                        }
+                    },
+                    "bubble": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "55 56 57 53 48 81 EC 68 02 00 00 48 8D AC 24 80 00 00 00 48 C7 85 E0 01 00 00 FE FF FF FF 48 89 D6 48 89 CF 48 8D 5D A0 41 B8",
+                                "C6 04 00 00 48 8D 8D 20 03 00 00 4C 89 FA 4D 89 F0 E8 84 FA 00 00 E9 AF 04 00 00 48 01 D2 49 8B 0C D4 4C 8B B5 48 02 00 00 90",
+                                "E8 ?? ?? ?? ?? 89 C6 48 8B BD B8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89",
+                                "E4 B8 8D E6 94 AF E6 8C 81 E7 B1 BB E5 9E 8B E6 B6 88 E6 81 AF 5D 00",
+                                "9A 82 E4 B8 8D E6 94 AF E6 8C 81 E8 AF A5 E5 86 85 E5 AE B9 EF BC 8C"
+                            ],
+                            "modified": [
+                                "C3 3D 12 27 00 00 0F 84 99 EB F6 00 E9 EF F2 F6 00 90 90 90 90 90 90 90 ...",
+                                "C7 11 09 FF ...",
+                                "B8 12 27 00 00 ...",
+                                "E6 92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 ...",
+                                "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ..."
+                            ]
+                        }
+                    },
+                    "silence": {
+                        "%dll_dir%/Weixin.dll": {
+                            "original": [
+                                "0F 84 CF 00 00 00 48 8D 8D ?? 03 00 00 E8 ?? ?? ?? FD 48 8B 8D ?? 03 00 00 48 8D 95 ?? 03 00 00 E8 ?? ?? ?? ?? 48 8B 8D ?? 03 00 00 48 8D"
+                            ],
+                            "modified": [
+                                "90 E9 ..."
+                            ]
+                        }
+                    }
+                },
                 "4.0.6.12": {
                     "alert": {
                         "%dll_dir%/Weixin.dll": {
