@@ -186,7 +186,7 @@
                     "user": "*着"
                 }
             ],
-            "author": {
+            "authors": {
                 "bilibili": {
                     "text": "哔哩哔哩主页",
                     "links": {
@@ -854,15 +854,16 @@
     },
     "WeChat": {
         "coexist": {
+            "label": "共存",
             "channels": {
                 "default": {
-                    "label": "默认",
+                    "label": "共存",
                     "introduce": "对host文件,窗口类名,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
-                    "author": [
+                    "authors": [
                         "afaa1991"
                     ],
                     "exe_wildcard": "WeCha?.exe",
-                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "ordinals": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
                     "patch_wildcard": {
                         "%dll_dir%/WeChatWin.dll": "%dll_dir%/WeChatWi?.dll"
                     },
@@ -917,13 +918,13 @@
                     }
                 },
                 "default2": {
-                    "label": "默认2",
+                    "label": "共存2",
                     "introduce": "对host文件,窗口类名,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
-                    "author": [
+                    "authors": [
                         "afaa1991"
                     ],
                     "exe_wildcard": "WeChat?.exe",
-                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "ordinals": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
                     "patch_wildcard": {
                         "%dll_dir%/WeChatWin.dll": "%dll_dir%/WeChatWin.dl?"
                     },
@@ -980,11 +981,12 @@
             }
         },
         "multirun": {
+            "label": "多开",
             "channels": {
                 "default": {
-                    "label": "默认",
+                    "label": "多开",
                     "introduce": "可以在全局进行多开",
-                    "author": [
+                    "authors": [
                         "huiyadanli"
                     ],
                     "feature_ver_adaptations": {
@@ -1011,9 +1013,9 @@
                     }
                 },
                 "default2": {
-                    "label": "默认2",
+                    "label": "多开2",
                     "introduce": "可以在全局进行多开",
-                    "author": [
+                    "authors": [
                         "afaa1991"
                     ],
                     "feature_ver_adaptations": {
@@ -1032,11 +1034,12 @@
             }
         },
         "anti-revoke": {
+            "label": "防撤",
             "channels": {
                 "alert": {
                     "label": "通知",
                     "introduce": "通过通知进行防撤回提示",
-                    "author": [
+                    "authors": [
                         "EEEEhex",
                         "afaa1991"
                     ],
@@ -1141,15 +1144,16 @@
     },
     "Weixin": {
         "coexist": {
+            "label": "共存",
             "channels": {
                 "default": {
-                    "label": "默认",
+                    "label": "共存",
                     "introduce": "对host文件,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.共存标号从1开始.",
-                    "author": [
+                    "authors": [
                         "afaa1991"
                     ],
                     "exe_wildcard": "Weixi?.exe",
-                    "sequence": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "ordinals": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
                     "patch_wildcard": {
                         "%dll_dir%/Weixin.dll": "%dll_dir%/Weixi?.dll"
                     },
@@ -1227,13 +1231,13 @@
                     }
                 },
                 "default2": {
-                    "label": "默认2",
+                    "label": "共存2",
                     "introduce": "对host文件,dll文件名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.共存标号从0开始.",
-                    "author": [
+                    "authors": [
                         "afaa1991"
                     ],
                     "exe_wildcard": "Weixin?.exe",
-                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "ordinals": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
                     "patch_wildcard": {
                         "%dll_dir%/Weixin.dll": "%dll_dir%/Weixin.dl?"
                     },
@@ -1279,10 +1283,12 @@
             }
         },
         "multirun": {
+            "label": "多开",
             "channels": {
                 "default": {
-                    "label": "默认",
+                    "label": "多开",
                     "introduce": "可以在全局进行多开",
+                    "authors": ["afaa1991"],
                     "feature_ver_adaptations": {
                         "4.1.0": {
                             "%dll_dir%/Weixin.dll": {
@@ -1349,11 +1355,12 @@
             }
         },
         "anti-revoke": {
+            "label": "防撤",
             "channels": {
                 "silence": {
                     "label": "静默",
                     "introduce": "不含防撤回提示",
-                    "author": [
+                    "authors": [
                         "zetaloop"
                     ],
                     "feature_ver_adaptations": {
@@ -1442,7 +1449,7 @@
                 "bubble": {
                     "label": "气泡",
                     "introduce": "通过气泡进行防撤回提示",
-                    "author": [
+                    "authors": [
                         "afaa1991"
                     ],
                     "feature_ver_adaptations": {
@@ -1533,7 +1540,7 @@
                 "alert": {
                     "label": "通知",
                     "introduce": "通过系统通知进行防撤回提示",
-                    "author": [
+                    "authors": [
                         "EEEEhex",
                         "afaa1991"
                     ],
@@ -1712,15 +1719,16 @@
     },
     "WXWork": {
         "coexist": {
+            "label": "共存",
             "channels": {
                 "default": {
-                    "label": "默认",
+                    "label": "共存",
                     "introduce": "对host文件,窗口类名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
-                    "author": [
+                    "authors": [
                         "afaa1991"
                     ],
                     "exe_wildcard": "WXWor?.exe",
-                    "sequence": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "ordinals": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
                     "feature_ver_adaptations": {
                         "4.1.36": {
                             "%inst_path%": {
@@ -1860,11 +1868,12 @@
             "natively": true
         },
         "anti-revoke": {
+            "label": "防撤",
             "channels": {
                 "silence": {
                     "label": "静默",
                     "introduce": "不含防撤回提示",
-                    "author": [
+                    "authors": [
                         "NapNeko"
                     ],
                     "feature_ver_adaptations": {
@@ -1966,11 +1975,12 @@
             "natively": true
         },
         "anti-revoke": {
+            "label": "防撤",
             "channels": {
                 "silence": {
                     "label": "静默",
                     "introduce": "不含防撤回提示",
-                    "author": [
+                    "authors": [
                         "huiyadanli"
                     ],
                     "feature_ver_adaptations": {
@@ -2089,11 +2099,12 @@
             "natively": true
         },
         "anti-revoke": {
+            "label": "防撤",
             "channels": {
                 "silence": {
                     "label": "静默",
                     "introduce": "不含防撤回提示",
-                    "author": [
+                    "authors": [
                         "huiyadanli"
                     ],
                     "feature_ver_adaptations": {
