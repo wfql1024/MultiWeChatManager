@@ -86,8 +86,10 @@ class UnlimitedClickHandler:
         """包装函数，保证接受 event 参数，即便原函数不需要"""
         if callable(func):
             sig = inspect.signature(func)
-            if len(sig.parameters) == 0:
-                # 原函数不接受参数，包装为带 event 参数的版本
+            params = list(sig.parameters.keys())
+
+            if "event" not in params:
+                # 原函数没有 event 参数，包装为带 event 参数的版本
                 @wraps(func)
                 def wrapper(event=None):
                     if event:
@@ -96,13 +98,12 @@ class UnlimitedClickHandler:
 
                 return wrapper
             else:
-                # 原函数接受 event 参数，原样返回
+                # 原函数本身已经支持 event 参数，原样返回
                 return func
         else:
             # 返回一个空的 event 接收函数，避免程序崩溃
-            def noop(event=None):
-                if event:
-                    pass
+            def noop(event=None, *args, **kwargs):
+                pass
 
             return noop
 

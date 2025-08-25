@@ -16,12 +16,12 @@ from public.enums import LocalCfg, MultirunMode, RemoteCfg, CallMode
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils import widget_utils, sys_utils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 from utils.sys_utils import Tk2Sys
 
 
-# TODO: 用户可以自定义多开的全流程
+# TODO: 用户可以自定义多开的全流程: 剩余: 指定点击按钮文字
 # TODO: 主题色选择
 
 class MenuUI:
@@ -448,15 +448,14 @@ class MenuUI:
         try:
             success, msg = SwOperator.switch_dll(self.sw, mode, channel)  # 执行切换操作
             if success:
-                channel_des, = subfunc_file.get_remote_cfg(
-                    self.sw, mode, "channel", **{channel: None})
-                channel_authors = []
-                channel_label = ""
-                if channel_des is not None and isinstance(channel_des, dict):
-                    if "author" in channel_des:
-                        channel_authors = channel_des["author"]
-                    if "label" in channel_des:
-                        channel_label = channel_des["label"]
+                try:
+                    channel_des, = subfunc_file.get_remote_cfg(
+                        self.sw, mode, RemoteCfg.CHANNELS, **{channel: None})
+                    channel_authors = channel_des["author"]
+                    channel_label = channel_des["label"]
+                except KeyError:
+                    channel_authors = []
+                    channel_label = ""
                 if len(channel_authors) > 0:
                     author_text = ", ".join(channel_authors)
                     msg = f"{msg}\n鸣谢:{channel_label}方案特征码来自{author_text}"
@@ -513,23 +512,19 @@ class MenuUI:
             AppFunc.create_tray(self.root)
             self.root_class.global_settings_value.in_tray = True
 
-    def _introduce_channel(self, mode, res_dict):
+    def _introduce_channel(self, mode, channels_res_dict):
         text = ""
-        for channel, res_tuple in res_dict.items():
-            if not isinstance(res_tuple, tuple) or len(res_tuple) != 3:
-                continue
+        for channel in channels_res_dict:
             channel_des, = subfunc_file.get_remote_cfg(
-                self.sw, mode, "channel", **{channel: None})
-            channel_label = channel
-            channel_introduce = "暂无介绍"
-            channel_author = "未知"
-            if channel_des is not None and isinstance(channel_des, dict):
-                if "label" in channel_des:
-                    channel_label = channel_des["label"]
-                if "introduce" in channel_des:
-                    channel_introduce = channel_des["introduce"]
-                if "author" in channel_des:
-                    channel_author = channel_des["author"]
+                self.sw, mode, RemoteCfg.CHANNELS, **{channel: None})
+            try:
+                channel_label = channel_des["label"]
+                channel_introduce = channel_des["introduce"]
+                channel_author = channel_des["author"]
+            except KeyError:
+                channel_label = channel
+                channel_introduce = "暂无介绍"
+                channel_author = "未知"
             text = f"[{channel_label}]\n{channel_introduce}\n作者：{channel_author}\n"
         messagebox.showinfo("简介", text)
 
@@ -547,10 +542,10 @@ class MenuUI:
 
     """更新多开,共存,防撤回子菜单的线程"""
 
-    def _update_coexist_menu(self, mode_channel_res_dict, msg):
-        # Printer().debug(mode_channel_res_dict)
+    def _update_coexist_menu(self, mode_channels_res_dict, msg):
+        # Printer().debug(mode_channels_res_dict)
         # 以有无适配为准; 若没有适配,检查是否是原生支持多开
-        if mode_channel_res_dict is None:
+        if mode_channels_res_dict is None:
             # 没有适配, 检查是否是原生支持多开
             native_coexist, = subfunc_file.get_remote_cfg(
                 self.sw, RemoteCfg.COEXIST, **{RemoteCfg.NATIVE.value: None})
@@ -563,18 +558,16 @@ class MenuUI:
         else:
             self.coexist_menu.add_command(label="请选择一个开启:", state="disabled")
             self.coexist_channel_var = tk.StringVar()
-            for channel, channel_res_tuple in mode_channel_res_dict.items():
-                if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
-                    continue
-                channel_des, = subfunc_file.get_remote_cfg(
-                    self.sw, RemoteCfg.COEXIST.value, "channel", **{channel: None})
-                # print(channel_des)
-                channel_label = channel
-                if isinstance(channel_des, dict):
-                    if "label" in channel_des:
-                        channel_label = channel_des["label"]
-                coexist_status, channel_msg, _ = channel_res_tuple
-                if coexist_status is None or coexist_status is False:
+            for channel, channel_res_dict in mode_channels_res_dict.items():
+                try:
+                    channel_des, = subfunc_file.get_remote_cfg(
+                        self.sw, RemoteCfg.COEXIST.value, RemoteCfg.CHANNELS, **{channel: None})
+                    channel_label = channel_des["label"]
+                except KeyError:
+                    channel_label = channel
+                coexist_status = channel_res_dict["status"]
+                channel_msg = channel_res_dict["msg"]
+                if coexist_status is not True:
                     menu = self.coexist_channel_menus_dict[channel] = tk.Menu(
                         self.coexist_menu, tearoff=False)
                     self.coexist_menu.add_cascade(label=channel_label, menu=menu)
@@ -605,33 +598,31 @@ class MenuUI:
             self.coexist_menu.add_separator()  # ————————————————分割线————————————————
             self.coexist_menu.add_command(
                 label="怎么选?", command=partial(
-                    self._introduce_channel, RemoteCfg.COEXIST.value, mode_channel_res_dict))
+                    self._introduce_channel, RemoteCfg.COEXIST.value, mode_channels_res_dict))
         self.coexist_menu.add_separator()  # ————————————————分割线————————————————
         self.coexist_menu.add_command(
             label="清除缓存",
             command=partial(self._clear_cache, RemoteCfg.COEXIST.value))
         printer.print_last()
 
-    def _update_anti_revoke_menu(self, mode_channel_res_dict, msg):
+    def _update_anti_revoke_menu(self, mode_channels_res_dict, msg):
         # 原来的防撤回菜单创建代码
-        # Printer().debug(mode_channel_res_dict)
-        if mode_channel_res_dict is None:
+        # Printer().debug(mode_channels_res_dict)
+        if mode_channels_res_dict is None:
             self.settings_menu.entryconfig("防撤回", label="！防撤回", foreground="red")
             self.anti_revoke_menu.add_command(label=f"[点击复制]{msg}", foreground="red",
                                               command=lambda i=msg: Tk2Sys.copy_to_clipboard(self.root, i))
         else:
             self.anti_revoke_menu.add_command(label="请选择一个开启:", state="disabled")
-            for channel, channel_res_tuple in mode_channel_res_dict.items():
-                if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
-                    continue
-                channel_des, = subfunc_file.get_remote_cfg(
-                    self.sw, RemoteCfg.REVOKE.value, "channel", **{channel: None})
-                # print(channel_des)
-                channel_label = channel
-                if isinstance(channel_des, dict):
-                    if "label" in channel_des:
-                        channel_label = channel_des["label"]
-                anti_revoke_status, channel_msg, _ = channel_res_tuple
+            for channel, channel_res_dict in mode_channels_res_dict.items():
+                try:
+                    channel_des, = subfunc_file.get_remote_cfg(
+                        self.sw, RemoteCfg.REVOKE.value, RemoteCfg.CHANNELS, **{channel: None})
+                    channel_label = channel_des["label"]
+                except KeyError:
+                    channel_label = channel
+                anti_revoke_status = channel_res_dict["status"]
+                channel_msg = channel_res_dict["msg"]
                 if anti_revoke_status is None:
                     menu = self.anti_revoke_channel_menus_dict[channel] = tk.Menu(
                         self.anti_revoke_menu, tearoff=False)
@@ -647,17 +638,17 @@ class MenuUI:
             # 频道简介菜单
             self.anti_revoke_menu.add_command(
                 label="怎么选?",
-                command=partial(self._introduce_channel, RemoteCfg.REVOKE.value, mode_channel_res_dict))
+                command=partial(self._introduce_channel, RemoteCfg.REVOKE.value, mode_channels_res_dict))
         self.anti_revoke_menu.add_separator()  # ————————————————分割线————————————————
         self.anti_revoke_menu.add_command(
             label="清除缓存",
             command=partial(self._clear_cache, RemoteCfg.REVOKE.value))
         printer.print_last()
 
-    def _update_multirun_menu(self, mode_channel_res_dict, msg):
+    def _update_multirun_menu(self, mode_channels_res_dict, msg):
         self.sw_class.can_freely_multirun = None
         # 以有无适配为准; 若没有适配,检查是否是原生支持多开
-        if mode_channel_res_dict is None:
+        if mode_channels_res_dict is None:
             # 没有适配, 检查是否是原生支持多开
             native_multirun, = subfunc_file.get_remote_cfg(
                 self.sw, RemoteCfg.MULTI, **{RemoteCfg.NATIVE.value: None})
@@ -671,17 +662,15 @@ class MenuUI:
         else:
             self.multirun_menu.add_command(label="请选择一个开启:", state="disabled")
             # 列出所有频道
-            for channel, channel_res_tuple in mode_channel_res_dict.items():
-                if not isinstance(channel_res_tuple, tuple) or len(channel_res_tuple) != 3:
-                    continue
-                channel_des, = subfunc_file.get_remote_cfg(
-                    self.sw, RemoteCfg.MULTI.value, "channel", **{channel: None})
-                # print(channel_des)
-                channel_label = channel
-                if channel_des is not None and isinstance(channel_des, dict):
-                    if "label" in channel_des:
-                        channel_label = channel_des["label"]
-                freely_multirun_status, channel_msg, _ = channel_res_tuple
+            for channel, channel_res_dict in mode_channels_res_dict.items():
+                try:
+                    channel_des, = subfunc_file.get_remote_cfg(
+                        self.sw, RemoteCfg.MULTI.value, RemoteCfg.CHANNELS, **{channel: None})
+                    channel_label = channel_des["label"]
+                except KeyError:
+                    channel_label = channel
+                freely_multirun_status = channel_res_dict["status"]
+                channel_msg = channel_res_dict["msg"]
                 if freely_multirun_status is None:
                     menu = self.multirun_channel_menus_dict[channel] = tk.Menu(
                         self.multirun_menu, tearoff=False)
@@ -700,7 +689,7 @@ class MenuUI:
             # 频道简介菜单
             self.multirun_menu.add_command(
                 label="怎么选?",
-                command=partial(self._introduce_channel, RemoteCfg.MULTI.value, mode_channel_res_dict))
+                command=partial(self._introduce_channel, RemoteCfg.MULTI.value, mode_channels_res_dict))
         self.multirun_menu.add_separator()  # ————————————————分割线————————————————
 
         # >多开子程序选择

@@ -32,4 +32,7 @@
     <tree path="/functions/subfunc_sw.py" title="平台相关的子功能类"/>
     <tree path="/adaptation" title="对不同平台的功能实现"/>
     <tree path="/functions/func_tool.py" title="中间层, 用来获取实现类"/>
+    <tree path="/public" title="公用资源, 可被其他包调用"/>
+    <tree path="/remote_configs" title="Out: 产生的远程配置文件"/>
+    <tree path="/components" title="在界面层可复用的基本组件"/>
 </trees>

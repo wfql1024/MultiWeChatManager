@@ -126,7 +126,7 @@ def get_remote_cfg(*pre_nodes: str, **kwargs) -> Union[Any, Tuple[Any, ...]]:
 """额外配置"""
 
 
-def load_extra_cfg() -> dict:
+def load_cache_cfg() -> dict:
     data = JsonUtils.load_json(Config.EXTRA_SETTING_JSON_PATH)
     return data
 
@@ -142,7 +142,7 @@ def clear_some_extra_cfg(*addr) -> bool:
     """
     try:
         print(f"清理{addr}处数据...")
-        data = load_extra_cfg()
+        data = load_cache_cfg()
         DictUtils.clear_nested_values(data, *addr)
         save_extra_cfg(data)
         return True
@@ -151,10 +151,10 @@ def clear_some_extra_cfg(*addr) -> bool:
         return False
 
 
-def update_extra_cfg(*front_addr, **kwargs) -> bool:
+def update_cache_cfg(*front_addr, **kwargs) -> bool:
     """更新账户信息到 JSON"""
     try:
-        data = load_extra_cfg()
+        data = load_cache_cfg()
         success = DictUtils.set_nested_values(data, None, *front_addr, **kwargs)
         save_extra_cfg(data)
         return success
@@ -170,7 +170,7 @@ def get_cache_cfg(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
     :param kwargs: 需要获取的键地址及其默认值（如 note="", nickname=None）
     :return: 包含所请求数据的元组
     """
-    data = load_extra_cfg()
+    data = load_cache_cfg()
     return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
 
 

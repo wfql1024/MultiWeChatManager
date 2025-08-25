@@ -21,6 +21,8 @@ from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 
 
+# TODO: 登录页面底部按钮状态要同步更改
+
 class LoginUI:
     """构建主窗口的类"""
 

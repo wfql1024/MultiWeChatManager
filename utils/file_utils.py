@@ -4,6 +4,8 @@ import datetime as dt
 import glob
 import hashlib
 import json
+import mmap
+import os
 import re
 from pathlib import Path
 from typing import Any, Optional, Union, Tuple, Dict, List
@@ -26,15 +28,14 @@ class DictUtils:
     - 如果配置项 key 含有特殊字符(如 %, -, / 等)，请不要使用 kwargs。
       解决方法：只传 pre_nodes 获取中间 dict，再手动 dict.get(key, default)。
     """
-    SEPARATOR = '/'
 
     @staticmethod
-    def _get_nested_value(data: Any, key_path: Optional[str],
+    def _get_nested_value(data: Any, keys_chain: Optional[list],
                           default_value: Any = None) -> Any:
         """
         按照地址格式获取字典中的子字典或值（若获取不到则使用默认值），该方法不会破坏原字典结构
         :param data: 嵌套字典
-        :param key_path: 多级键路径，例如 "a/b/c"
+        :param keys_chain: 多级键列表, 如["a", "b", "c", None, ""]
         :param default_value: 如果路径不存在，返回的默认值
         :return: 对应的子字典或值，如果路径不存在则返回默认值
         """
@@ -44,19 +45,15 @@ class DictUtils:
             # 不传入data，直接返回默认值
             if data is None:
                 return default_value
-
             # 地址为空直接返回本值
-            if key_path is None:
+            if keys_chain is None or len(keys_chain) == 0:
                 return data
-
             # 地址无法解析，返回默认值
-            if not isinstance(key_path, str):
+            if not isinstance(keys_chain, list):
                 return default_value
-
             # 根据地址，查找对应的子字典或值，路径不存在则返回默认值
-            keys = key_path.split(DictUtils.SEPARATOR)
             sub_data = data
-            for key in keys:
+            for key in keys_chain:
                 if isinstance(sub_data, dict) and key in sub_data:
                     sub_data = sub_data[key]
                 else:
@@ -67,12 +64,10 @@ class DictUtils:
             return default_value
 
     @staticmethod
-    def _set_nested_value(data: dict, key_path: str, value: Any) -> bool:
+    def _set_nested_value(data: dict, keys_chain: Optional[list], value: Any) -> bool:
         """
         按照地址格式更新字典中的子字典或值（可以设置默认值），该方法会对不存在的键路径进行创建
-        :param data: 嵌套字典
-        :param key_path: 多级键路径，例如 "a/b/c"
-        :param value: 要设置的值
+        参数格式同 _get...方法
         :return: 是否成功
         """
         # print("设置数据……………………………………………………")
@@ -82,54 +77,40 @@ class DictUtils:
             if not isinstance(data, dict):
                 return False
             # 地址为空、地址不可解析，无法对自身操作
-            if key_path is None or not isinstance(key_path, str):
+            if keys_chain is None or not isinstance(keys_chain, list):
                 return False
 
             # 根据地址，查找对应的子字典或值，路径不存在则创建
-            keys = key_path.split(DictUtils.SEPARATOR)
             current = data
-            for key in keys[:-1]:  # 遍历除最后一个键外的所有键
+            for key in keys_chain[:-1]:  # 遍历除最后一个键外的所有键
                 if key not in current or not isinstance(current[key], dict):
                     current[key] = {}  # 如果键不存在或不是字典，创建一个空字典
                 current = current[key]
-            current[keys[-1]] = value  # 设置最后一个键的值
+            current[keys_chain[-1]] = value  # 设置最后一个键的值
             return True
         except Exception as e:
             logger.error(e)
             return False
 
     @staticmethod
-    def _clear_nested_value(data: dict, key_path=Optional[str]) -> bool:
+    def _clear_nested_value(data: dict, keys_chain:Optional[list]) -> bool:
         """
         按照地址格式清空字典中的子字典或值（可以设置默认值），该方法不会对不存在的键路径进行创建
-        :param data: 嵌套字典
-        :param key_path: 多级键路径，例如 "a/b/c"
         :return: 是否成功
         """
-        # print("清除节点……………………………………………………")
-        # print(data, key_path, separator)
         try:
             # 非字典，不作任何操作
             if not isinstance(data, dict):
                 return False
-
-            # 获取值
-            value = DictUtils._get_nested_value(data, key_path, None)
-            print(value)
-
+            value = DictUtils._get_nested_value(data, keys_chain, None)
             # 如果值为空，说明路径错误或者值本身就是None，不作任何操作
             if value is None:
                 return True
-            # 如果值是字典，则清空字典
-            if isinstance(value, dict):
+            # 如果值是可变容器，则清空内部元素; 否则设置为None
+            if isinstance(value, dict) or isinstance(value, list) or isinstance(value, set):
                 value.clear()
-                return True
-            # 如果值是列表，则清空列表
-            if isinstance(value, list):
-                value.clear()
-                return True
-            # 否则，设置为空
-            DictUtils._set_nested_value(data, key_path, None)
+            else:
+                DictUtils._set_nested_value(data, keys_chain, None)
             return True
 
         except Exception as e:
@@ -148,7 +129,6 @@ class DictUtils:
         :return: 包含所请求数据的元组
         """
         # print("批量获取数据....................................")
-        # print(data, default_value, separator, front_addr, kwargs)
         try:
             # 1. 先处理前置地址，获取中间根节点
             # 不传入前置地址，跳过获取中间根节点，进入后续操作
@@ -156,17 +136,17 @@ class DictUtils:
                 sub_data = data
             else:
                 if not all(key is None or isinstance(key, str) for key in front_addr):
-                    # 存在非法拼接：若前置地址中并不都是空或者字符串，则拼接失败，直接返回默认值
+                    # 存在非法拼接：若前置地址中并不都是 空或者字符串，则拼接失败，直接返回默认值
                     return tuple(value for value in kwargs.values()) if len(kwargs) > 0 else default_value
                 else:
                     # 拼接前置地址，获取中间根节点
-                    sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr), default_value)
+                    sub_data = DictUtils._get_nested_value(data, list(front_addr), default_value)
             # 2. 已经获得中间根节点
             # 若后续地址为空，则直接返回中间根节点
             if len(kwargs) == 0:
                 return sub_data
             result = tuple(
-                DictUtils._get_nested_value(sub_data, key, default) for key, default in kwargs.items()
+                DictUtils._get_nested_value(sub_data, [key], default) for key, default in kwargs.items()
             )
             return result
         except Exception as e:
@@ -183,16 +163,13 @@ class DictUtils:
         :param kwargs: 需要更新的键地址及其值（如 note="", nickname=None）
         :return: 是否成功
         """
-        # print("批量设置数据....................................")
-        # print(data, value, separator, front_addr, kwargs)
         try:
             # 非字典，无法操作
             if not isinstance(data, dict):
                 return False
-
             # 1. 尝试拼接前置地址，得到中间根节点
             # 没有传入前置地址，或者传入的都是None，则中间根节点为data本身
-            if len(front_addr) == 0 or all(key is None for key in front_addr):
+            if len(front_addr) == 0:
                 if len(kwargs) == 0:
                     # 无法对自身操作
                     return False
@@ -207,20 +184,19 @@ class DictUtils:
                     # 合法拼接
                     if len(kwargs) == 0:
                         # 拼接前置地址，设置中间根节点的值
-                        return DictUtils._set_nested_value(data, DictUtils.SEPARATOR.join(front_addr), value)
+                        return DictUtils._set_nested_value(data, list(front_addr), value)
                     else:
-                        # 拼接前置地址，得到中间根节点进行后续处理
-                        sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr), value)
+                        # 拼接前置地址，得到中间根节点进行后续处理, 没有这个路径则默认是空字典.
+                        sub_data = DictUtils._get_nested_value(data, list(front_addr), None)
 
             # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给set_nested_value方法批量处理
-            # print(f"中间根节点：{sub_data}")
-            # 中间根节点不是字典，则转成空字典
+            # 中间根节点不是字典，可能不存在或者确实不是字典类型, 则转成空字典
             if not isinstance(sub_data, dict):
-                DictUtils._set_nested_value(data, DictUtils.SEPARATOR.join(front_addr), {})
-                sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr), value)
-            # 中间根节点是字典，交给set_nested_value方法批量处理
-            return all(DictUtils._set_nested_value(sub_data, key_path, value)
-                       for key_path, value in kwargs.items())
+                DictUtils._set_nested_value(data, list(front_addr), {})
+                sub_data = DictUtils._get_nested_value(data, list(front_addr), None)
+            # 中间根节点是字典，交给_set_nested_value方法批量处理
+            return all(DictUtils._set_nested_value(sub_data, [key], value)
+                       for key, value in kwargs.items())
 
         except Exception as e:
             logger.error(e)
@@ -242,14 +218,13 @@ class DictUtils:
             # 非字典，无法操作
             if not isinstance(data, dict):
                 return False
-
-            sub_data = None
             # 1. 尝试拼接前置地址，得到中间根节点
             # 没有传入前置地址，或者传入的都是None，则中间根节点为data本身
-            if len(front_addr) == 0 or all(key is None for key in front_addr):
+            if len(front_addr) == 0:
                 if len(kwargs) == 0:
                     # 对自身操作,清空字典
                     data.clear()
+                    return True
                 else:
                     # 中间根节点是data本身，进入后续处理
                     sub_data = data
@@ -261,19 +236,18 @@ class DictUtils:
                     # 合法拼接
                     if len(kwargs) == 0:
                         # 拼接前置地址，清除该节点
-                        return DictUtils._clear_nested_value(data, DictUtils.SEPARATOR.join(front_addr))
+                        return DictUtils._clear_nested_value(data, list(front_addr))
                     else:
                         # 拼接前置地址，得到中间根节点进行后续处理
-                        sub_data = DictUtils._get_nested_value(data, DictUtils.SEPARATOR.join(front_addr))
+                        sub_data = DictUtils._get_nested_value(data, list(front_addr))
 
             # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给set_nested_value方法批量处理
-            # print(f"中间根节点：{sub_data}")
-            # 中间根节点不是字典，则转成空字典
+            # 中间根节点不是字典，后续无法处理
             if not isinstance(sub_data, dict):
                 return False
             # 中间根节点是字典，交给set_nested_value方法批量处理
-            return all(DictUtils._clear_nested_value(sub_data, key_path)
-                       for key_path, value in kwargs.items())
+            return all(DictUtils._clear_nested_value(sub_data, [key_path])
+                       for key_path, _ in kwargs.items())
 
         except Exception as e:
             logger.error(e)
@@ -757,81 +731,3 @@ def create_shortcut_for_(target_path, shortcut_path, ico_path=None):
         # 修正icon_location的传递方式，传入一个包含路径和索引的元组
         if ico_path:
             shortcut.icon_location = (ico_path, 0)
-
-
-import os
-import mmap
-
-
-def compare_binary_files_optimized(file1: str, file2: str):
-    if os.path.getsize(file1) != os.path.getsize(file2):
-        return f"文件大小不同：{os.path.getsize(file1)} vs {os.path.getsize(file2)} 字节，无法对比。"
-
-    result = []
-    with open(file1, "rb") as f1, open(file2, "rb") as f2:
-        size = os.path.getsize(file1)
-        mm1 = mmap.mmap(f1.fileno(), 0, access=mmap.ACCESS_READ)
-        mm2 = mmap.mmap(f2.fileno(), 0, access=mmap.ACCESS_READ)
-
-        i = 0
-        shown_ranges = []
-        while i < size:
-            if mm1[i] != mm2[i]:
-                range_start = max(i - 32, 0)
-                diff_set = set()
-                j = i
-                while j < size and j < i + 64:
-                    if mm1[j] != mm2[j]:
-                        diff_set.add(j - range_start)
-                    j += 1
-                range_end = j
-
-                if shown_ranges and shown_ranges[-1][1] >= range_start:
-                    prev_start, prev_end, prev_diff1, prev_diff2 = shown_ranges.pop()
-                    merged_start = prev_start
-                    merged_end = max(prev_end, range_end)
-                    new_diff1 = prev_diff1.union({x + (range_start - merged_start) for x in diff_set})
-                    new_diff2 = prev_diff2.union({x + (range_start - merged_start) for x in diff_set})
-                    shown_ranges.append((merged_start, merged_end, new_diff1, new_diff2))
-                else:
-                    shown_ranges.append((range_start, range_end, set(diff_set), set(diff_set)))
-
-                i = range_end
-            else:
-                i += 1
-
-        for start, end, diff1, diff2 in shown_ranges:
-            result.append(f"{start:08X}~{end:08X}")
-            data1 = mm1[start:end]
-            data2 = mm2[start:end]
-            result.append(f"{file1}:\n{format_bytes_line(data1, diff1)}")
-            result.append(f"{file2}:\n{format_bytes_line(data2, diff2)}")
-
-        mm1.close()
-        mm2.close()
-
-    return '\n'.join(result) if result else "两个文件完全一致！"
-
-
-def format_bytes_line(data: bytes, diff_indices: set, group_size: int = 64) -> str:
-    hexes = []
-    for i, byte in enumerate(data):
-        hex_str = f"{byte:02X}"
-        if i in diff_indices:
-            hexes.append(f"({hex_str})")
-        else:
-            hexes.append(hex_str)
-
-    # 连续括号合并成一个
-    result = " ".join(hexes)
-    while ") (" in result:
-        result = result.replace(") (", " ")
-
-    return result
-
-
-if __name__ == "__main__":
-    file1 = r"E:\Now\Desktop\[4.0.6.3]Weixin.dll"
-    file2 = r"E:\Now\Desktop\[4.0.6.3]Weixin_BuR.dll"
-    result = compare_binary_files_optimized(file1, file2)
-    print(result)

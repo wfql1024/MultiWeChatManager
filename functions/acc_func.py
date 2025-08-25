@@ -72,9 +72,9 @@ class AccOperator:
     @staticmethod
     def _get_now_login_hwnd_from_cache(sw, acc, excluded_hwnd_list):
         """用缓存类名来获取当前登录窗口hwnd"""
-        Printer().debug(f"传入参数: {sw}, {acc}, {excluded_hwnd_list}")
+        # Printer().debug(f"传入参数: {sw}, {acc}, {excluded_hwnd_list}")
         cached_class, = subfunc_file.get_sw_acc_data(sw, acc, login_wnd_class=None)
-        Printer().debug(cached_class)
+        # Printer().debug(cached_class)
         if cached_class is None:
             return None
         sw_hwnd = Win32HwndGetter.win32_wait_hwnd_exclusively_by_class(excluded_hwnd_list, cached_class, 1)

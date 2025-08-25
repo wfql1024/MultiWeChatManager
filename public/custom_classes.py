@@ -5,6 +5,10 @@ from enum import Enum
 
 from public.global_members import GlobalMembers
 
+class FlowControlError(Exception):
+    """专门用于人为控制流程的异常, 强制跳转到except执行, 不是实际有异常."""
+    pass
+
 
 class TkThreadWorker:
     """

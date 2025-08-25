@@ -9,7 +9,7 @@ from tkinter import ttk, messagebox
 
 import keyboard
 
-from components.custom_widgets import CustomNotebook
+from components import CustomNotebook
 from components.widget_wrappers import StatusBarW
 from functions import subfunc_file
 from functions.acc_func import AccOperator
@@ -329,8 +329,11 @@ class RootUI:
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             try:
-                sw_cls = self.sw_classes[sw]
-                if not isinstance(sw_cls, SoftwareInfo):
+                if sw in self.sw_classes:
+                    sw_cls = self.sw_classes[sw]
+                    if not isinstance(sw_cls, SoftwareInfo):
+                        sw_cls = SoftwareInfo(sw)
+                else:
                     sw_cls = SoftwareInfo(sw)
             except Exception as e:
                 logger.warning(e)

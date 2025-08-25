@@ -34,9 +34,17 @@ class RemoteCfg(str, Enum):
     SP_SW = "support_sw"
     COEXIST_SEQUENCE = "coexist_sequence"
 
+    # 补丁适配
     REVOKE = "anti-revoke"
     MULTI = "multirun"
     COEXIST = "coexist"
+    CHANNELS = "channels"
+    INTRO = "introduce"
+    AUTHOR = "authors"
+    ORDINALS = "ordinals"
+    FEATURES = "feature_ver_adaptations"
+    PRECISES = "precise_ver_adaptations"
+
     WND_CLASS = "wnd_class"
     NATIVE_MULTI = "native-multirun"
     NATIVE = "natively"
@@ -136,6 +144,8 @@ class AccKeys(str, Enum):
     AUTO_START = "auto_start"
     HOTKEY = "hotkey"
     HIDDEN = "hidden"
+    ORDINAL = "ordinal"
+    COEXIST_CHANNEL = "channel"
 
 
 class SW(str, Enum):

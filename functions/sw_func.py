@@ -21,6 +21,7 @@ from win32com.client import Dispatch
 from components import CustomDialogW
 from functions import subfunc_file
 from public import Strings, Config
+from public.custom_classes import FlowControlError
 from public.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg, CallMode, WndType
 from public.global_members import GlobalMembers
 from public.strings import NEWER_SYS_VER
@@ -33,6 +34,7 @@ from utils.logger_utils import mylogger as logger, Printer, Logger
 from utils.logger_utils import myprinter as printer
 from utils.process_utils import Process
 
+# TODO: 多个防撤回方案的冲突问题.
 
 class SwInfoFunc:
     """
@@ -68,25 +70,26 @@ class SwInfoFunc:
 
     @classmethod
     def get_coexist_path_from_address(cls, sw, address, channel, s):
-        print(address)
+        # Printer().debug(address)
         coexist_patch_wildcard_addr_dict = subfunc_file.get_remote_cfg(
-            sw, RemoteCfg.COEXIST, "channel", channel, "patch_wildcard")
+            sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, channel, "patch_wildcard")
         coexist_patch_wildcard_addr = coexist_patch_wildcard_addr_dict.get(address, "")
-        print(f"{coexist_patch_wildcard_addr}")
+        # Printer().debug(f"{coexist_patch_wildcard_addr}")
         coexist_patch_wildcard = cls.resolve_sw_path(sw, coexist_patch_wildcard_addr)
         coexist_patch_file = coexist_patch_wildcard.replace("?", s).replace("\\", "/")
         return coexist_patch_file
 
     @classmethod
-    def _identify_multi_state_patching_of_files_in_channel(cls, sw, channel_addresses_dict, channel=None, s=None):
+    def _identify_multi_state_patching_of_files_in_channel(
+            cls, sw, channel_addresses_dict, coexist_channel=None, ordinal=None):
         """对于非二元状态切换的, 只需要检测原始串即可"""
         addr_res_dict = {}
         for addr in channel_addresses_dict.keys():
             # Printer().debug(f"检查文件地址 {addr} 的特征码适配")
-            if not isinstance(channel, str) or not isinstance(s, str):
+            if not isinstance(coexist_channel, str) or not isinstance(ordinal, str):
                 patch_file = cls.resolve_sw_path(sw, addr)
             else:
-                patch_file = cls.get_coexist_path_from_address(sw, addr, channel, s)
+                patch_file = cls.get_coexist_path_from_address(sw, addr, coexist_channel, ordinal)
             original_list = channel_addresses_dict[addr]["original"]
             modified_list = channel_addresses_dict[addr]["modified"]
             has_original_list = DllUtils.find_hex_patterns_from_file(patch_file, *original_list)
@@ -101,13 +104,18 @@ class SwInfoFunc:
                 available = False
                 message = "没有该模式"
             # 将结果存入字典
-            addr_res_dict[addr] = (available, message, patch_file, original_list, modified_list)
+            addr_res_dict[addr] = {}
+            addr_res_dict[addr]["status"] = available
+            addr_res_dict[addr]["msg"] = message
+            addr_res_dict[addr]["path"] = patch_file
+            addr_res_dict[addr]["original"] = original_list
+            addr_res_dict[addr]["modified"] = modified_list
 
         return addr_res_dict
 
     @classmethod
-    def _identify_binary_state_patching_of_files_in_channel(cls, sw, channel_addresses_dict, channel=None,
-                                                            s=None) -> dict:
+    def _identify_binary_state_patching_of_files_in_channel(
+            cls, sw, channel_addresses_dict, channel=None, ordinal=None) -> dict:
         """
         二元状态, 对渠道内的文件分别检测原始串和补丁串来识别状态
         参数: channel_addresses_dict: 渠道-文件适配字典 {addr: {"original": [...], "modified": [...]}}
@@ -117,13 +125,13 @@ class SwInfoFunc:
             其中, status: True/False/None; message: 状态描述字符串; patch_file: 补丁文件路径;
                 original_list: 原始串列表; modified_list: 补丁串列表
         """
-        addr_res_dict = {}
+        patching_dict = {}
         for addr in channel_addresses_dict.keys():
             # Printer().debug(f"检查文件地址 {addr} 的特征码适配")
-            if not isinstance(channel, str) or not isinstance(s, str):
+            if not isinstance(channel, str) or not isinstance(ordinal, str):
                 patch_file = cls.resolve_sw_path(sw, addr)
             else:
-                patch_file = cls.get_coexist_path_from_address(sw, addr, channel, s)
+                patch_file = cls.get_coexist_path_from_address(sw, addr, channel, ordinal)
             original_list = channel_addresses_dict[addr]["original"]
             modified_list = channel_addresses_dict[addr]["modified"]
             has_original_list = DllUtils.find_hex_patterns_from_file(patch_file, *original_list)
@@ -149,154 +157,181 @@ class SwInfoFunc:
             else:
                 message = "文件匹配结果不一致"
             # 将结果存入字典
-            addr_res_dict[addr] = (status, message, patch_file, original_list, modified_list)
+            patching_dict[addr] = {}
+            patching_dict[addr]["status"] = status
+            patching_dict[addr]["msg"] = message
+            patching_dict[addr]["path"] = patch_file
+            patching_dict[addr]["original"] = original_list
+            patching_dict[addr]["modified"] = modified_list
 
-        return addr_res_dict
+        return patching_dict
 
     @classmethod
-    def _identify_patching_of_channels_in_ver(cls, sw, ver_channels_dict, multi_state=False, coexist_channel=None,
-                                              s=None) -> dict:
+    def _identify_patching_by_ver_adaptations_dict(
+            cls, sw, ver_adaptations_dict, multi_state=False, coexist_channel=None, ordinal=None) -> dict:
         """
         对版本适配字典中的所有通道进行状态识别
         参数:
-            ver_adaptation: 版本适配字典 {channel: {addr: {"original": [...], "modified": [...]}}}
-            only_original: 是否为多元状态, 二元状态为False, 多元状态为True; 多元状态只需要检测原始串
+            ver_adaptations_dict: 版本适配字典 {channel: {addr: {"original": [...], "modified": [...]}}}
+            multi_state: 是否为多元状态, 二元状态为False, 多元状态为True; 多元状态只需要检测原始串
         返回:
-            { channel1: (status, message, addr_res_dict),
-                channel2: (status, message, addr_res_dict), ...}
-            status: True/False/None
-            message: 状态描述字符串
+            字典: {"status": channel_status, "addresses_msg_dict": addresses_msg_dict, "patching_dict": patching_dict}
+            其中:
+            channel_status: 渠道状态, True/False/None
+            addresses_msg_dict: 地址-消息字典, 存储问题路径及消息
+            patching_dict: 地址-结果字典, 存储每个地址的状态及消息
         """
-        results = {}
         status_set = set()
-        for channel in ver_channels_dict.keys():
-            addr_msg_dict = {}
-            channel_files_dict = ver_channels_dict[channel]
-            if multi_state:
-                addr_res_dict = cls._identify_multi_state_patching_of_files_in_channel(
-                    sw, channel_files_dict, coexist_channel, s)
-            else:
-                addr_res_dict = cls._identify_binary_state_patching_of_files_in_channel(
-                    sw, channel_files_dict, coexist_channel, s)
-            # 对频道的所有地址状态进行判定,全为True则为True,全为False则为False,其他情况为None
-            for addr in addr_res_dict.keys():
-                if isinstance(addr_res_dict[addr], tuple) and len(addr_res_dict[addr]) == 5:
-                    status, addr_msg, _, _, _ = addr_res_dict[addr]
-                    if (multi_state is False and status is None) or (multi_state is True and status is not True):
-                        addr_msg_dict[addr] = addr_msg
-                else:
-                    status = None
-                    addr_msg_dict[addr] = "返回格式错误"
-                status_set.add(status)
-            channel_status = status_set.pop() \
-                if len(status_set) == 1 and next(iter(status_set)) in (True, False) else None
-            results[channel] = channel_status, f"文件情况:{addr_msg_dict}", addr_res_dict
-        return results
+        addresses_msg_dict = {}  # 存储问题路径及消息
+        if multi_state:
+            patching_dict = cls._identify_multi_state_patching_of_files_in_channel(
+                sw, ver_adaptations_dict, coexist_channel, ordinal)
+        else:
+            patching_dict = cls._identify_binary_state_patching_of_files_in_channel(
+                sw, ver_adaptations_dict, coexist_channel, ordinal)
+        # 对频道的所有地址状态进行判定,全为True则为True,全为False则为False,其他情况为None
+        for addr in patching_dict.keys():
+            try:
+                add_res_dict = patching_dict[addr]
+                status = add_res_dict["status"]
+                if (multi_state is False and status is None) or (multi_state is True and status is not True):
+                    addresses_msg_dict[addr] = add_res_dict["msg"]
+            except KeyError:
+                status = None
+                addresses_msg_dict[addr] = "返回格式错误"
+            status_set.add(status)
+        channel_status = status_set.pop() \
+            if len(status_set) == 1 and next(iter(status_set)) in (True, False) else None
+        msg_str = f"问题文件: {addresses_msg_dict}"
+        return {"status": channel_status, "msg": msg_str, "patching": patching_dict}
 
     @classmethod
     def _identify_dll_by_precise_channel_in_mode_dict(
-            cls, sw, mode_branches_dict, multi_state=False, channel=None, s=None) -> Tuple[Optional[dict], str]:
+            cls, sw, mode_dict, multi_state=False, coexist_channel=None, ordinal=None) -> Tuple[Optional[dict], str]:
         """通过精确版本分支进行识别dll状态"""
         cur_sw_ver = cls.calc_sw_ver(sw)
         if cur_sw_ver is None:
             return None, f"错误：未知当前版本"
-        if "precise" not in mode_branches_dict:
-            return None, f"错误：该模式没有精确版本分支用以适配"
-        precise_vers_dict = mode_branches_dict["precise"]
-        if cur_sw_ver not in precise_vers_dict:
-            return None, f"错误：精确分支中未找到版本{cur_sw_ver}的适配"
-        ver_channels_dict = precise_vers_dict[cur_sw_ver]
-        channel_res_dict = cls._identify_patching_of_channels_in_ver(sw, ver_channels_dict, multi_state, channel, s)
-        if len(channel_res_dict) == 0:
+        if not isinstance(mode_dict, dict) or "channels" not in mode_dict or not isinstance(mode_dict["channels"], dict):
+            return None, f"错误：该模式没有适配频道列表或适配频道列表格式错误"
+        channels_dict = mode_dict["channels"]
+
+        channels_res_dict = {}  # 每个channel节点存放channel的结果
+        for channel in channels_dict.keys():
+            try:
+                ver_adaptations_dict = channels_dict[channel][RemoteCfg.PRECISES][cur_sw_ver]
+                if isinstance(ver_adaptations_dict, dict):
+                    channels_res_dict[channel] = cls._identify_patching_by_ver_adaptations_dict(
+                        sw, ver_adaptations_dict, multi_state, coexist_channel, ordinal)
+            except KeyError:
+                continue
+
+        if len(channels_res_dict) == 0:
             return None, f"错误：该版本{cur_sw_ver}的适配在本地平台中未找到"
-        return channel_res_dict, f"成功：找到版本{cur_sw_ver}的适配"
+        return channels_res_dict, f"成功：找到版本{cur_sw_ver}的适配"
 
     @classmethod
     def _update_adaptation_from_remote_to_cache(cls, sw, mode):
         """根据远程表内容更新额外表"""
-        config_data = subfunc_file.read_remote_cfg_in_rules()
-        if not config_data:
+        channels_dict, = subfunc_file.get_remote_cfg(sw, mode, channels=None)
+        if not isinstance(channels_dict, dict):
             return
-        remote_mode_branches_dict, = subfunc_file.get_remote_cfg(sw, **{mode: None})
-        if remote_mode_branches_dict is None:
-            return
-        # 尝试寻找兼容版本并添加到额外表中
         cur_sw_ver = cls.calc_sw_ver(sw)
-        if "precise" in remote_mode_branches_dict:
-            precise_vers_dict = remote_mode_branches_dict["precise"]
-            if cur_sw_ver in precise_vers_dict:
-                # 用精确版本特征码查找适配
-                precise_ver_adaptations = precise_vers_dict[cur_sw_ver]
-                for channel, adaptation in precise_ver_adaptations.items():
-                    subfunc_file.update_extra_cfg(
-                        sw, mode, "precise", cur_sw_ver, **{channel: adaptation})
-        if "feature" in remote_mode_branches_dict:
-            feature_vers = list(remote_mode_branches_dict["feature"].keys())
-            compatible_ver = VersionUtils.pkg_find_compatible_version(cur_sw_ver, feature_vers)
-            cache_ver_channels_dict = subfunc_file.get_cache_cfg(sw, mode, "precise", cur_sw_ver)
-            if compatible_ver:
+        for channel in channels_dict:
+            try:
+                precise_ver_adaptation = channels_dict[channel][RemoteCfg.PRECISES][cur_sw_ver]
+                subfunc_file.update_cache_cfg(
+                    sw, mode, RemoteCfg.CHANNELS, channel,
+                    RemoteCfg.PRECISES, **{cur_sw_ver: precise_ver_adaptation}
+                )
+            except KeyError:
+                pass
+
+            try:
+                feature_vers_dict = channels_dict[channel][RemoteCfg.FEATURES]
+                feature_vers = list(feature_vers_dict.keys())
+                compatible_ver = VersionUtils.pkg_find_compatible_version(cur_sw_ver, feature_vers)
                 # 用兼容版本特征码查找适配
-                feature_ver_channels_dict = remote_mode_branches_dict["feature"][compatible_ver]
-                for channel in feature_ver_channels_dict.keys():
-                    if cache_ver_channels_dict is not None and channel in cache_ver_channels_dict:
-                        print("已存在缓存的精确适配")
-                        continue
-                    channel_res_dict = {}
-                    channel_failed = False
-                    feature_channel_addr_dict = feature_ver_channels_dict[channel]
-                    for addr in feature_channel_addr_dict.keys():
-                        addr_feature_dict = feature_channel_addr_dict[addr]
-                        # 对原始串和补丁串需要扫描匹配, 其余节点拷贝
-                        patch_file = cls.resolve_sw_path(sw, addr)
-                        original_feature = addr_feature_dict["original"]
-                        modified_feature = addr_feature_dict["modified"]
-                        addr_res_dict = SwInfoUtils.search_patterns_and_replaces_by_features(
-                            patch_file, (original_feature, modified_feature))
-                        if not addr_res_dict:
-                            channel_failed = True
-                            break
-                        channel_res_dict[addr] = addr_res_dict
-                        for key in addr_feature_dict:
-                            if key not in ["original", "modified"]:
-                                channel_res_dict[addr][key] = addr_feature_dict[key]
-                    if not channel_failed:
-                        # 添加到缓存表中
-                        subfunc_file.update_extra_cfg(
-                            sw, mode, "precise", cur_sw_ver, **{channel: channel_res_dict})
+                feature_ver_addr_dict = feature_vers_dict[compatible_ver]
+                if feature_ver_addr_dict is None:
+                    print(f"[{channel}]该渠道在该版本已弃用!")
+                    # 强制删掉本地缓存
+                    cache_vers_dict = subfunc_file.get_cache_cfg(
+                        sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES)
+                    if isinstance(cache_vers_dict, dict):
+                        del cache_vers_dict[cur_sw_ver]
+                        subfunc_file.update_cache_cfg(
+                            sw, mode, RemoteCfg.CHANNELS, channel, **{RemoteCfg.PRECISES: cache_vers_dict})
+                    continue
+                cache_ver_addr_dict = subfunc_file.get_cache_cfg(
+                    sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES, cur_sw_ver)
+                if isinstance(cache_ver_addr_dict, dict):
+                    print(f"[{channel}]渠道在该版本已存在缓存的适配")
+                    continue
+                ver_addr_res_dict = {}
+                channel_failed = False
+                for addr in feature_ver_addr_dict.keys():
+                    addr_feature_dict = feature_ver_addr_dict[addr]
+                    # 对原始串和补丁串需要扫描匹配, 其余节点拷贝
+                    patch_file = cls.resolve_sw_path(sw, addr)
+                    original_feature = addr_feature_dict["original"]
+                    modified_feature = addr_feature_dict["modified"]
+                    addr_res_dict = SwInfoUtils.search_patterns_and_replaces_by_features(
+                        patch_file, (original_feature, modified_feature))
+                    if not addr_res_dict:
+                        channel_failed = True
+                        break
+                    ver_addr_res_dict[addr] = addr_res_dict
+                    for key in addr_feature_dict:
+                        if key not in ["original", "modified"]:
+                            ver_addr_res_dict[addr][key] = addr_feature_dict[key]
+                if not channel_failed:
+                    # 添加到缓存表中
+                    subfunc_file.update_cache_cfg(
+                        sw, mode, RemoteCfg.CHANNELS, channel,
+                        RemoteCfg.PRECISES, **{cur_sw_ver: ver_addr_res_dict})
+            except KeyError:
+                pass
 
     @classmethod
-    def _identify_dll_by_cache_cfg(cls, sw, mode, multi_state=False, channel=None, s=None) -> Tuple[
-        Optional[dict], str]:
+    def _identify_dll_by_cache_cfg(
+            cls, sw, mode, multi_state=False, coexist_channel=None, ordinal=None) -> Tuple[Optional[dict], str]:
         """从缓存表中获取"""
         try:
-            mode_branches_dict, = subfunc_file.get_cache_cfg(sw, **{mode: None})
-            if mode_branches_dict is None:
+            mode_dict, = subfunc_file.get_cache_cfg(sw, **{mode: None})
+            if mode_dict is None:
                 return None, f"错误：平台未适配{mode}"
-            return cls._identify_dll_by_precise_channel_in_mode_dict(sw, mode_branches_dict, multi_state, channel, s)
+            return cls._identify_dll_by_precise_channel_in_mode_dict(sw, mode_dict, multi_state, coexist_channel, ordinal)
         except Exception as e:
             Logger().error(e)
             return None, f"错误：{e}"
 
     @classmethod
-    def identify_dll(cls, sw, mode, multi_state=False, channel=None, s=None) -> Tuple[Optional[dict], str]:
+    def identify_dll(cls, sw, mode, multi_state=False, coexist_channel=None, ordinal=None) -> Tuple[Optional[dict], str]:
         """
         检查当前补丁状态，返回结果字典,若没有适配则返回None
-        结果字典格式: {channel1: (status, msg, addr_res_dict), channel2: (status, msg, addr_res_dict) ...}
-        地址字典addr_res_dict格式: {addr1: (status, msg, patch_path, original, modified),
-                                    addr2: (status, msg, patch_path, original, modified) ...}
+        结果字典格式: {channel1: {status:bool, msg:str, addr_res_dict:dict}, channel2: {...}, ...}
+        地址字典addr_res_dict格式: {addr1: {status:bool, msg:str, patch_path:str, original:list[str], modified:list[str]},
+                                    addr2: {...}, ...}
         """
         dll_dir = cls.try_get_path_of_(sw, LocalCfg.DLL_DIR)
         if dll_dir is None:
             return None, "错误：没有找到dll目录"
         cls._update_adaptation_from_remote_to_cache(sw, mode)
-        mode_channel_res_dict, msg = cls._identify_dll_by_cache_cfg(sw, mode, multi_state, channel, s)
+        mode_channel_res_dict, msg = cls._identify_dll_by_cache_cfg(sw, mode, multi_state, coexist_channel, ordinal)
         return mode_channel_res_dict, msg
 
     @classmethod
     def clear_adaptation_cache(cls, sw, mode):
         """清除当前版本模式的适配缓存"""
         curr_ver = cls.calc_sw_ver(sw)
-        subfunc_file.clear_some_extra_cfg(sw, mode, "precise", curr_ver)
+        channels_dict = subfunc_file.get_cache_cfg(sw, mode, RemoteCfg.CHANNELS)
+        for channel in channels_dict:
+            precise_vers_dict = subfunc_file.get_cache_cfg(
+                sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES)
+            del precise_vers_dict[curr_ver]
+            subfunc_file.update_cache_cfg(
+                sw, mode, RemoteCfg.CHANNELS, channel, **{RemoteCfg.PRECISES: precise_vers_dict})
 
     @staticmethod
     def get_sw_wnd_class_matching_dicts(sw, wnd_type) -> Optional[list]:
@@ -356,8 +391,8 @@ class SwInfoFunc:
                 subfunc_file.update_sw_acc_data(sw, coexist_exe, linked_acc=None)
             if "channel" not in coexist_exe_dict:
                 subfunc_file.update_sw_acc_data(sw, coexist_exe, channel=None)
-            if "sequence" not in coexist_exe_dict:
-                subfunc_file.update_sw_acc_data(sw, coexist_exe, sequence=None)
+            if RemoteCfg.ORDINALS not in coexist_exe_dict:
+                subfunc_file.update_sw_acc_data(sw, coexist_exe, **{RemoteCfg.ORDINALS: None})
         return all_coexist_exes
 
     @classmethod
@@ -724,12 +759,12 @@ class SwOperator:
         return True
 
     @staticmethod
-    def _backup_dll(addr_res_tuple_dict):
+    def _backup_dll(patching_dict):
         """备份当前的dll"""
         desktop_path = winshell.desktop()
         has_noticed = False
-        for addr in addr_res_tuple_dict:
-            _, _, patch_path, _, _ = addr_res_tuple_dict[addr]
+        for addr in patching_dict:
+            patch_path = patching_dict[addr]["path"]
             dll_dir = os.path.dirname(patch_path)
             patch_file_name = os.path.basename(patch_path)
             dll_bak_path = os.path.join(dll_dir, f"{patch_file_name}.bak")
@@ -750,9 +785,9 @@ class SwOperator:
                 shutil.copyfile(patch_path, bak_desktop_path)
 
     @classmethod
-    def switch_dll(cls, sw, mode, channel, coexist_channel=None, s=None) -> Tuple[Optional[bool], str]:
+    def switch_dll(cls, sw, mode, channel, coexist_channel=None, ordinal=None) -> Tuple[Optional[bool], str]:
         """对二元状态的渠道, 检测当前状态并切换"""
-        print(sw, mode, channel, coexist_channel, s)
+        Printer().debug(sw, mode, channel, coexist_channel, ordinal)
         try:
             if mode == RemoteCfg.MULTI:
                 mode_text = "全局多开"
@@ -760,54 +795,50 @@ class SwOperator:
                 mode_text = "防撤回"
             else:
                 return False, "未知模式"
-
             # 条件检查及询问用户
-            config_data = subfunc_file.read_remote_cfg_in_rules()
-            if not config_data:
-                return False, "没有数据"
-            sw_exe_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
-            if not sw_exe_path:
-                return False, "该平台暂未适配"
+            inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
+            inst_dir = os.path.dirname(inst_path)
+            if isinstance(coexist_channel, str) and isinstance(ordinal, str):
+                exe_wildcard = subfunc_file.get_remote_cfg(
+                    sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, "exe_wildcard")
+                coexist_exe = exe_wildcard.replace("?", ordinal)
+                sw_exe_path = os.path.join(inst_dir, coexist_exe).replace("\\", "/")
+            else:
+                sw_exe_path = inst_path
+            Printer().debug(sw_exe_path)
             # 提醒用户手动终止微信进程
             answer = cls._ask_for_manual_terminate_or_force(sw_exe_path)
             if not (answer is True):
                 return False, "用户取消操作"
 
             # 操作过程
-            channel_res_dict, msg = SwInfoFunc.identify_dll(sw, mode, False, coexist_channel, s)
-            if channel_res_dict is None:
-                return False, msg
-            if channel not in channel_res_dict:
-                return False, f"错误：未找到频道{channel}的适配"
-            tag, msg, addr_res_tuple_dict = channel_res_dict[channel]
-            for addr in addr_res_tuple_dict:
-                addr_res_tuple = addr_res_tuple_dict[addr]
-                if not isinstance(addr_res_tuple, tuple) or len(addr_res_tuple) != 5:
-                    return False, f"错误：频道{channel}的适配格式不正确"
-            # mode_branches_dict, = subfunc_file.get_remote_cfg(sw, **{mode: None})
-            # if mode_branches_dict is None:
-            #     return False, "该平台暂未适配"
-
+            channels_res_dict, msg = SwInfoFunc.identify_dll(sw, mode, False, coexist_channel, ordinal)
             file_replaces_dict = {}
             try:
+                patching_dict = channels_res_dict[channel]["patching"]
+                tag = channels_res_dict[channel]["status"]
                 if tag is True:
                     print(f"当前：{mode}已开启")
-                    for addr in addr_res_tuple_dict:
-                        _, _, patch_path, original_patterns, modified_patterns = addr_res_tuple_dict[addr]
-                        if isinstance(coexist_channel, str) and isinstance(s, str):
-                            patch_path = SwInfoFunc.get_coexist_path_from_address(sw, addr, coexist_channel, s)
+                    for addr in patching_dict:
+                        patch_path = patching_dict[addr]["path"]
+                        original_patterns = patching_dict[addr]["original"]
+                        modified_patterns = patching_dict[addr]["modified"]
+                        if isinstance(coexist_channel, str) and isinstance(ordinal, str):
+                            patch_path = SwInfoFunc.get_coexist_path_from_address(sw, addr, coexist_channel, ordinal)
                         file_replaces_dict[patch_path] = [(modified_patterns, original_patterns)]
                     success = DllUtils.batch_atomic_replace_multi_files(file_replaces_dict)
                     if success:
                         return True, f"成功关闭:{mode_text}"
                 elif tag is False:
                     print(f"当前：{mode}未开启")
-                    cls._backup_dll(addr_res_tuple_dict)
-                    for addr in addr_res_tuple_dict:
-                        Printer().debug(addr_res_tuple_dict)
-                        _, _, patch_path, original_patterns, modified_patterns = addr_res_tuple_dict[addr]
-                        if isinstance(coexist_channel, str) and isinstance(s, str):
-                            patch_path = SwInfoFunc.get_coexist_path_from_address(sw, addr, coexist_channel, s)
+                    cls._backup_dll(patching_dict)
+                    for addr in patching_dict:
+                        # Printer().debug(patching_dict)
+                        patch_path = patching_dict[addr]["path"]
+                        original_patterns = patching_dict[addr]["original"]
+                        modified_patterns = patching_dict[addr]["modified"]
+                        if isinstance(coexist_channel, str) and isinstance(ordinal, str):
+                            patch_path = SwInfoFunc.get_coexist_path_from_address(sw, addr, coexist_channel, ordinal)
                         file_replaces_dict[patch_path] = [(original_patterns, modified_patterns)]
                     success = DllUtils.batch_atomic_replace_multi_files(file_replaces_dict)
                     if success:
@@ -883,26 +914,26 @@ class SwOperator:
         coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
         if not isinstance(coexist_channel, str):
             return False, "没有可用的共存构造模式!"
-        exe_wildcard, sequence = subfunc_file.get_remote_cfg(
-            sw, "coexist", "channel", coexist_channel,
-            exe_wildcard=None, sequence=None)
-        if not isinstance(exe_wildcard, str) or not isinstance(sequence, str):
-            return False, f"尚未适配[exe_wildcard, sequence]!"
+        exe_wildcard, ordinals = subfunc_file.get_remote_cfg(
+            sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel,
+            exe_wildcard=None, **{RemoteCfg.ORDINALS: None})
+        if not isinstance(exe_wildcard, str) or not isinstance(ordinals, str):
+            return False, f"尚未适配[exe_wildcard, ordinals]!"
         login_hwnd_rules_dicts = SwInfoFunc.get_sw_wnd_class_matching_dicts(sw, WndType.LOGIN)
         if login_hwnd_rules_dicts is None:
             return False, "尚未适配[login_hwnd_rules_dicts]!"
 
         # 找到第一个没使用或没创建的共存程序名, 若没创建则询问创建
         exe_name = None
-        for s in sequence:
-            exe_name = exe_wildcard.replace("?", s)
+        for ordinal in ordinals:
+            exe_name = exe_wildcard.replace("?", ordinal)
             inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             inst_dir = os.path.dirname(inst_path)
             coexist_exe_path = os.path.join(inst_dir, exe_name)
             # 判定不存在的条件: 文件不存在或者文件没有被运行
             if not os.path.isfile(coexist_exe_path):
                 if messagebox.askokcancel("提醒", f"不存在{coexist_exe_path}!是否创建?"):
-                    cls._create_coexist_exe_core(sw, s)
+                    cls.create_coexist_exe_core(sw, coexist_channel, ordinal)
                 else:
                     return False, "用户取消创建！"
                 break
@@ -940,80 +971,90 @@ class SwOperator:
             return
 
     @staticmethod
-    def _create_coexist_exe_core(sw, s=None):
+    def create_coexist_exe_core(sw, coexist_channel=None, ordinal=None):
         """创建共存程序"""
-        coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
-        if not isinstance(coexist_channel, str):
-            messagebox.showinfo("错误", f"没有可用的共存构造模式!")
-            return
-        exe_wildcard, sequence = subfunc_file.get_remote_cfg(
-            sw, "coexist", "channel", coexist_channel,
-            exe_wildcard=None, sequence=None)
-        if not isinstance(exe_wildcard, str) or not isinstance(sequence, str):
-            messagebox.showinfo("错误", f"尚未适配[exe_wildcard, sequence]!")
-            return
-        if s is None:
-            for sq in sequence:
-                exe_name = exe_wildcard.replace("?", sq)
+        # 确认共存方案和序列号
+        if coexist_channel is None:
+            coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
+            if not isinstance(coexist_channel, str):
+                return False, "没有可用的共存构造模式!"
+        exe_wildcard, ordinals = subfunc_file.get_remote_cfg(
+            sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel,
+            exe_wildcard=None, **{RemoteCfg.ORDINALS: None})
+        if not isinstance(exe_wildcard, str) or not isinstance(ordinals, str):
+            return False, "尚未适配[exe_wildcard, ordinals]!"
+        if ordinal is None:
+            for o in ordinals:
+                exe_name = exe_wildcard.replace("?", o)
                 inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
                 inst_dir = os.path.dirname(inst_path)
                 need_open_exe = os.path.join(inst_dir, exe_name)
                 if not os.path.exists(need_open_exe):
-                    s = sq
+                    ordinal = o
                     break
 
         if not isinstance(coexist_channel, str):
-            messagebox.showerror("错误", f"没有可用的共存构造模式!")
-            return
+            return False, "没有可用的共存构造模式!"
         curr_ver = SwInfoFunc.calc_sw_ver(sw)
-        channel_addresses_dict = subfunc_file.get_cache_cfg(sw, RemoteCfg.COEXIST, "precise", curr_ver, coexist_channel)
+        channel_addresses_dict = subfunc_file.get_cache_cfg(
+            sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, RemoteCfg.PRECISES, curr_ver)
+        Printer().debug(channel_addresses_dict)
         if not isinstance(channel_addresses_dict, dict):
-            messagebox.showerror("错误", f"尚未适配[coexist_channel]!")
-            return
+            return False, "尚未适配[coexist_channel]!"
         for addr in channel_addresses_dict:
             if "wildcard" not in channel_addresses_dict[addr]:
-                messagebox.showerror("错误", f"适配格式错误!")
-                return
+                return False, "适配格式错误!"
         new_files = []
         for addr in channel_addresses_dict:
             origin_path = SwInfoFunc.resolve_sw_path(sw, addr)
             name_wildcard = channel_addresses_dict[addr]["wildcard"]
-            new_path = os.path.join(os.path.dirname(origin_path), name_wildcard.replace("?", s))
+            new_path = os.path.join(os.path.dirname(origin_path), name_wildcard.replace("?", ordinal))
             # 拷贝到新文件
             shutil.copyfile(origin_path, new_path)
             new_files.append(new_path)
             # 修改新文件
             original = channel_addresses_dict[addr]["original"]
             modified = channel_addresses_dict[addr]["modified"]
-            coexist_modified = [m.replace("!!", f"{ord(s):02X}") for m in modified]
+            coexist_modified = [m.replace("!!", f"{ord(ordinal):02X}") for m in modified]
             success = DllUtils.batch_atomic_replace_multi_files({new_path: [(original, coexist_modified)]})
             if not success:
-                messagebox.showerror("错误", f"创建共存程序[{s}]号失败!")
+                messagebox.showerror("错误", f"创建共存程序[{ordinal}]号失败!")
                 for new_file in new_files:
                     os.remove(new_file)
-                return
+                return False, "创建共存程序失败!"
         # 更新配置
-        new_coexist_exe_name = exe_wildcard.replace("?", s)
-        subfunc_file.update_sw_acc_data(sw, new_coexist_exe_name, channel=coexist_channel, sequence=s)
+        new_coexist_exe_name = exe_wildcard.replace("?", ordinal)
+        subfunc_file.update_sw_acc_data(
+            sw, new_coexist_exe_name, channel=coexist_channel, **{AccKeys.ORDINAL : ordinal})
+        return True, "None"
 
     @staticmethod
     def del_coexist_exe(sw, accounts):
         failed_acc_msg_dict = {}
         curr_ver = SwInfoFunc.calc_sw_ver(sw)
         for acc in accounts:
-            coexist_channel, sequence = subfunc_file.get_sw_acc_data(sw, acc, channel=None, sequence=None)
+            coexist_channel, ordinal = subfunc_file.get_sw_acc_data(
+                sw, acc, **{AccKeys.COEXIST_CHANNEL:None, AccKeys.ORDINAL : None})
             channel_addresses_dict: dict = subfunc_file.get_cache_cfg(
-                sw, RemoteCfg.COEXIST, "precise", curr_ver, coexist_channel)
-            if not isinstance(channel_addresses_dict, dict):
-                failed_acc_msg_dict[acc] = f"未适配该共存方案!"
-                continue
+                sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, RemoteCfg.PRECISES, curr_ver)
             try:
-                for addr in channel_addresses_dict:
-                    origin_path = SwInfoFunc.resolve_sw_path(sw, addr)
-                    name_wildcard = channel_addresses_dict[addr]["wildcard"]
+                try:
+                    if not isinstance(channel_addresses_dict, dict):
+                        raise FlowControlError
+                    for addr in channel_addresses_dict:
+                        origin_path = SwInfoFunc.resolve_sw_path(sw, addr)
+                        name_wildcard = channel_addresses_dict[addr]["wildcard"]
+                        del_path = os.path.join(
+                            os.path.dirname(origin_path), name_wildcard.replace("?", ordinal)).replace("\\", "/")
+                        os.remove(del_path)
+                except Exception as e:
+                    print(e)
+                    # 未适配的, 只删除入口程序
+                    sw_exe_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
                     del_path = os.path.join(
-                        os.path.dirname(origin_path), name_wildcard.replace("?", sequence)).replace("\\", "/")
+                        os.path.dirname(sw_exe_path), acc).replace("\\", "/")
                     os.remove(del_path)
+
             except PermissionError as pe:
                 failed_acc_msg_dict[acc] = f"请确保已经退出该程序!({pe})"
                 continue
@@ -1029,7 +1070,7 @@ class SwOperator:
     def create_coexist_exe_and_refresh(cls, sw):
         root_class = GlobalMembers.root_class
         root = root_class.root
-        cls._create_coexist_exe_core(sw)
+        cls.create_coexist_exe_core(sw)
         root.after(0, root_class.login_ui.refresh_frame, sw)
 
     @classmethod

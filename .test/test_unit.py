@@ -11,8 +11,8 @@ import psutil
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc, SwOperator
-from public_class.enums import MultirunMode, LocalCfg
-from resources import Config
+from public.enums import MultirunMode, LocalCfg
+from public import Config
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
 from utils.hwnd_utils import Win32HwndGetter, HwndGetter
 
@@ -299,8 +299,15 @@ class Test(TestCase):
         res = SwInfoFunc.identify_dll("WeChat", "anti-revoke", False, "default", "1")
         print(res)
 
+    def test_update_adaptation_from_remote_to_cache(self):
+        SwInfoFunc.update_adaptation_from_remote_to_cache("QQNT", "anti-revoke")
+
+    def test_get_data(self):
+        data = subfunc_file.get_remote_cfg("Weixin", "coexist", "channels", "default", "patch_wildcard")
+        print(data)
+
     def test_create_coexist(self):
-        SwOperator._create_coexist_exe_core("WXWork", "1")
+        SwOperator.create_coexist_exe_core("WXWork", "1")
 
     def test_custom_notebook_and_custom_btn(self):
         import tkinter as tk

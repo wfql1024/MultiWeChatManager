@@ -622,7 +622,7 @@ class Direction:
         self.value = initial
 
 
-class AboutWndUI(SubToolWndUI, ABC):
+class AboutWndUI(SubToolWndUI):
     # TODO: 提取滚动文本的公共方法
     def __init__(self, wnd, title, app_info):
         self.logo_img = None
@@ -712,7 +712,7 @@ class AboutWndUI(SubToolWndUI, ABC):
         # 开发者主页
         author_label = ttk.Label(self.content_frame, text="by 吾峰起浪", style='SecondTitle.TLabel')
         author_label.pack(anchor='sw', **Config.T_WGT_PACK)
-        self.pack_grids(self.content_frame, self.about_info["author"])
+        self.pack_grids(self.content_frame, self.about_info["home"])
 
         # 项目信息
         proj_label = ttk.Label(self.content_frame, text="项目信息", style='SecondTitle.TLabel')

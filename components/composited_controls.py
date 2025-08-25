@@ -1,3 +1,4 @@
+import random
 import tkinter as tk
 from functools import partial
 from tkinter import ttk
@@ -7,12 +8,191 @@ from components import CustomCornerBtn, CustomBtn
 from functions import subfunc_file
 from public import Config
 from public.custom_classes import Condition
+from public.enums import NotebookDirection
 from public.global_members import GlobalMembers
 from utils import widget_utils
 from utils.encoding_utils import StringUtils, ColorUtils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import TreeUtils
+
+class CustomNotebook:
+    def __init__(self, root, parent_frame, direction: NotebookDirection = NotebookDirection.TOP, *args, **kwargs):
+        self.click_time = 0
+        self.direction = direction
+        self.root = root
+        self.tabs = {}
+        self.curr_tab_id = None
+        self.selected_bg = '#00FF00'  # 默认选中颜色
+        self.select_callback = None  # 选中回调函数
+
+        self.notebook_frame = ttk.Frame(parent_frame, *args, **kwargs)
+        self._pack_frame()
+        self._create_containers()
+
+    def _pack_frame(self):
+        direction = self.direction
+        if direction == NotebookDirection.TOP:
+            self.notebook_frame.pack(fill='both', expand=True, side='top')
+        elif direction == NotebookDirection.BOTTOM:
+            self.notebook_frame.pack(fill='both', expand=True, side='bottom')
+        elif direction == NotebookDirection.LEFT:
+            self.notebook_frame.pack(fill='both', expand=True, side='left')
+        elif direction == NotebookDirection.RIGHT:
+            self.notebook_frame.pack(fill='both', expand=True, side='right')
+
+    def _create_containers(self):
+        """创建标签页和内容容器"""
+        # 根据方向创建容器
+        if self.direction in [NotebookDirection.TOP, NotebookDirection.BOTTOM]:
+            # 水平布局
+            self.tabs_frame = ttk.Frame(self.notebook_frame)
+            self.frames_pool = ttk.Frame(self.notebook_frame)
+
+            # 根据方向设置pack顺序
+            if self.direction == NotebookDirection.TOP:
+                self.tabs_frame.pack(side='top', fill='x')
+                self.frames_pool.pack(side='top', fill='both', expand=True)
+            else:
+                self.frames_pool.pack(side='top', fill='both', expand=True)
+                self.tabs_frame.pack(side='top', fill='x')
+
+        else:
+            # 垂直布局
+            self.tabs_frame = ttk.Frame(self.notebook_frame)
+            self.frames_pool = ttk.Frame(self.notebook_frame)
+
+            # 根据方向设置pack顺序
+            if self.direction == NotebookDirection.LEFT:
+                self.tabs_frame.pack(side='left', fill='y')
+                self.frames_pool.pack(side='left', fill='both', expand=True)
+            else:
+                self.frames_pool.pack(side='left', fill='both', expand=True)
+                self.tabs_frame.pack(side='left', fill='y')
+
+    def set_major_color(self, selected_bg='#00FF00'):
+        """
+        设置标签页的颜色
+        :param selected_bg: 选中状态的背景色
+        """
+        self.selected_bg = selected_bg
+        # 更新所有标签的颜色
+        for tab_info in self.tabs.values():
+            label = tab_info['label']
+            label.set_major_colors(selected_bg)
+
+    def add(self, tab_id, text, frame):
+        """
+        添加新的标签页
+        :param tab_id: 标签页标识
+        :param text: 标签页文本
+        :param frame: 标签页内容框架
+        """
+        # 创建标签页
+        print(f"添加标签页：{tab_id}")
+        widget_frame = ttk.Frame(self.tabs_frame, relief="solid")
+        now_index = len(self.tabs)  # 现有的标签数量刚好是新标签的索引
+        w = 1
+        h = 25
+        if self.direction not in [NotebookDirection.LEFT, NotebookDirection.RIGHT]:
+            widget_frame.grid(row=0, column=now_index, sticky="nsew", padx=2, pady=2)
+            self.tabs_frame.grid_columnconfigure(now_index, weight=1)
+            display_text = text
+            tab_widget = CustomCornerBtn(
+                widget_frame, text=display_text, width=w, height=h,
+                corner_radius=0, border_width=0)
+        else:
+            widget_frame.grid(row=now_index, column=0, sticky="nsew", padx=2, pady=2)
+            self.tabs_frame.grid_rowconfigure(now_index, weight=1)
+            display_text = '\n'.join(text)
+            tab_widget = CustomCornerBtn(
+                widget_frame, text=display_text, width=h, height=w,
+                corner_radius=0, border_width=0)
+
+        tab_widget.pack(fill="both", expand=True)
+
+        # 内部默认绑定事件: 记录点击次数, 点击大于一次时候切换标签页
+        (tab_widget
+         .set_bind_map(**{"1": partial(self.select, tab_id), })
+         .set_bind_func(self._set_click_time)
+         .apply_bind(self.root))
+
+        # 存储标签页信息
+        self.tabs[tab_id] = {
+            'text': text,
+            'tab_widget': tab_widget,
+            'frame': frame,
+            'widget_frame': widget_frame,
+            'index': now_index
+        }
+
+    def _set_click_time(self, click_time):
+        self.click_time = click_time
+
+    def all_set_bind_map(self, **kwargs):
+        """
+        传入格式: **{"数字": 回调函数,...},添加后需要apply_bind()才能生效
+        注意:为!!当前!!所有标签添加事件,后添加的标签页不会生效.
+        """
+        for tab_id, tab_info in self.tabs.items():
+            tab_label = tab_info["tab_widget"]
+            tab_label.set_bind_map(**kwargs)
+        return self
+
+    def all_set_bind_func(self, func):
+        """
+        传入带有click_time参数的方法,变量名必须是click_time
+        注意:为!!当前!!所有标签添加事件,后添加的标签页不会生效.
+        """
+        for tab_id, tab_info in self.tabs.items():
+            tab_label = tab_info["tab_widget"]
+            tab_label.set_bind_func(func)
+        return self
+
+    def all_apply_bind(self, event):
+        """
+        可以多次应用,每次应用不覆盖之前绑定的事件,注意不要重复,最好是在所有set_bind之后才apply_bind
+        注意:为!!当前!!所有标签添加事件,后添加的标签页不会生效.
+        """
+        for tab_id, tab_info in self.tabs.items():
+            tab_label = tab_info["tab_widget"]
+            tab_label.apply_bind(event)
+
+    def select(self, tab_id):
+        """
+        选择指定的标签页
+        :param tab_id: 标签页文本
+        """
+        print(f"选择标签页：{tab_id}")
+        # 取消当前标签页的选中状态
+        if self.curr_tab_id:
+            self.tabs[self.curr_tab_id]["tab_widget"].set_state(CustomBtn.State.NORMAL)
+            if self.direction in [NotebookDirection.TOP, NotebookDirection.BOTTOM]:
+                self.tabs_frame.grid_columnconfigure(self.tabs[self.curr_tab_id]['index'], weight=1)
+            elif self.direction in [NotebookDirection.LEFT, NotebookDirection.RIGHT]:
+                self.tabs_frame.grid_rowconfigure(self.tabs[self.curr_tab_id]['index'], weight=1)
+
+        # 设置新标签页的选中状态
+        self.tabs[tab_id]["tab_widget"].set_state(CustomBtn.State.SELECTED)
+        self.curr_tab_id = tab_id
+
+        # 生成一个3-4的随机数
+        random_num = random.randint(3, 5)
+
+        if self.direction in [NotebookDirection.TOP, NotebookDirection.BOTTOM]:
+            self.tabs_frame.grid_columnconfigure(self.tabs[self.curr_tab_id]['index'], weight=random_num)
+        elif self.direction in [NotebookDirection.LEFT, NotebookDirection.RIGHT]:
+            self.tabs_frame.grid_rowconfigure(self.tabs[self.curr_tab_id]['index'], weight=random_num)
+
+        # 显示对应的内容
+        for tab_text, tab_info in self.tabs.items():
+            if tab_text == tab_id:
+                tab_info['frame'].pack(fill='both', expand=True)
+            else:
+                tab_info['frame'].pack_forget()
+
+        if callable(self.select_callback):
+            self.select_callback(self.click_time)
 
 
 class ActionableHeaderTable:
@@ -134,7 +314,7 @@ class ActionableHeaderTable:
                 else:
                     rest_btn = _create_btn_in_(self.button_frame, btn_dict["text"])
                 (rest_btn.set_bind_map(
-                    **{"1": partial(btn_dict["func"], self.selected_items)})
+                    **{"1": lambda func=btn_dict["func"]: func(self.selected_items)})
                  .apply_bind(self.root))
                 btn_dict["btn"] = rest_btn
                 _pack_btn(rest_btn)
@@ -144,13 +324,13 @@ class ActionableHeaderTable:
     def _adjust_main_frame(self):
         if self.null_data is True:
             # 如果条目数量为 0，隐藏控件
-            print(f"应该隐藏{self.table_tag}列表")
+            # print(f"应该隐藏{self.table_tag}列表")
             self.main_frame.pack_forget()
             self.parent_frame.config(height=1)
-            self.parent_frame.pack_propagate(True)  # 不自动调整自身大小
+            # self.parent_frame.pack_propagate(True)  # 不自动调整自身大小
         else:
             # 如果条目数量不为 0则显示控件
-            print(f"应该显示{self.table_tag}列表")
+            # print(f"应该显示{self.table_tag}列表")
             self.parent_frame.pack_propagate(True)  # 自动调整自身大小
             self.main_frame.pack(fill="both", expand=True)
             self._adjust_content()
@@ -943,11 +1123,11 @@ class RadioTreeView:
 
         if len(tree.get_children()) == 0:
             # 如果条目数量为 0，隐藏控件
-            print(f"应该隐藏{self.table_tag}列表")
+            # print(f"应该隐藏{self.table_tag}列表")
             self.tree_frame.pack_forget()
         else:
             # 如果条目数量不为 0则显示控件
-            print(f"应该显示{self.table_tag}列表")
+            # print(f"应该显示{self.table_tag}列表")
             self.tree_frame.pack(side="top", fill="x")
             if self.tree_has_bind is not True:
                 widget_utils.UnlimitedClickHandler(
