@@ -31,7 +31,7 @@ class CfgManagerWndUI(SubToolWndUI):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Config.ABOUT_WND_SIZE
+        self.wnd_width, self.wnd_height = Config.CFG_MNG_WND_SIZE
 
     def load_ui(self):
         self.cfg_manager_ui = CfgManagerUI(self.wnd, self.wnd_frame)
@@ -123,9 +123,15 @@ class CfgManagerCAHT(ClassicAHT):
         self.cfg_manager_ui = self.parent_class
         pass
 
-    def create_rows(self):
-        self.rows_frame = ttk.Frame(self.main_frame)
-        self.rows_frame.pack(side="top", fill="x")
+    def load_form(self):
+        self._create_cfg_rows()
+
+    def update_form(self):
+        for widget in self.form_frame.winfo_children():
+            widget.destroy()
+        self._create_cfg_rows()
+
+    def _create_cfg_rows(self):
         # "当前使用"的数据来源: 获取所有的原生账号
         origin_accs = SwInfoFunc.get_sw_all_accounts_existed(self.sw, only="origin")
 
@@ -133,17 +139,17 @@ class CfgManagerCAHT(ClassicAHT):
             table_tag = self.table_tag
             # 创建列表实例
             # Printer().debug(self.rows_frame)
-            row = CfgManagerCR(self, self.rows_frame, row_id, table_tag)
+            row = CfgManagerCR(self, self.form_frame, row_id, table_tag)
             self.rows[row_id] = row
 
         if len(self.rows) == 0:
             self.null_data = True
 
-    def transfer_selected_iid_to_list(self):
+    def reformat_selected_items(self):
         """
         将选中的iid进行格式处理
         """
-        self.selected_items = [f"{self.sw}/{item}" for item in self.selected_iid_list]
+        self.selected_items = [f"{self.sw}/{item}" for item in self.selected_items_original]
         print(self.selected_items)
 
 
@@ -162,8 +168,15 @@ class CfgManagerCR(CkbRow):
         self.sw = self.login_ui.sw
         self.cfg_manager_ui = self.parent_class.cfg_manager_ui
 
-    def create_row(self):
-        rows_frame = self.main_frame
+    def load_row_content(self):
+        self._create_cfg_row()
+
+    def update_row_content(self):
+        for widget in self.row_frame.winfo_children():
+            widget.destroy()
+        self._create_cfg_row()
+
+    def _create_cfg_row(self):
         account = self.item
 
         # 账号详情
@@ -180,7 +193,6 @@ class CfgManagerCR(CkbRow):
         self.photo_images.append(photo)
 
         # 行框架=复选框+头像标签+账号标签+按钮区域+配置标签
-        self.row_frame = ttk.Frame(rows_frame)
         # 复选框
         self.checkbox_var = tk.BooleanVar(value=False)
         self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
@@ -227,13 +239,3 @@ class CfgManagerCR(CkbRow):
             self.tooltips, btn,
             {"配置不存在": Condition(self.disabled, Condition.ConditionType.EQUAL, True)}
         )
-        # 复选框的状态
-        self.checkbox.config(state='disabled') if self.disabled is True else self.checkbox.config(
-            state='normal')
-
-        # 将行布局到界面上
-        if self.disabled is True:
-            self.row_frame.pack(side="bottom", fill="x", padx=Config.LOG_IO_FRM_PAD_X,
-                                pady=Config.CLZ_ROW_FRM_PAD_Y)
-        else:
-            self.row_frame.pack(fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y)

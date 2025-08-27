@@ -198,6 +198,7 @@ class CustomNotebook:
 class ActionableHeaderTable:
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """
+        Table = Header + Form
         创建一个带标题的面板，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
         :param parent_class: 实例该列表的类
         :param table_tag: 表标识
@@ -240,9 +241,14 @@ class ActionableHeaderTable:
         # 初始化成员变量
         self.initialize_members_in_init()
         # 创建好主框架和标题, 子类请勿重复创建
+        # 主框架为main_frame, 其下有标题框架title_frame和行框架form_frame
         self.main_frame = ttk.Frame(self.parent_frame)
         self.main_frame.pack(fill="both", expand=True)
         self.create_title()
+        self.form_frame = ttk.Frame(self.main_frame)
+        self.form_frame.pack(side="top", fill="both", expand=True)
+        # 加载数据
+        self._load_table()
 
         ...
 
@@ -250,6 +256,7 @@ class ActionableHeaderTable:
         ...
 
     def create_title(self):
+        """创建title方法"""
         self.title_frame = ttk.Frame(self.main_frame)
         self.title_frame.pack(side="top", fill="x",
                               padx=Config.LOG_IO_FRM_PAD_X, pady=Config.LOG_IO_FRM_PAD_Y)
@@ -321,7 +328,29 @@ class ActionableHeaderTable:
                 if btn_dict.get("negative", None) is True:
                     _set_negative_style(rest_btn)
 
-    def _adjust_main_frame(self):
+    def _load_table(self):
+        """首次加载数据, 此方法不用重写, 可以重写以下方法"""
+        self.load_form()
+        self._adjust()
+
+    def update_table(self):
+        """更新数据, 此方法不用重写, 可以重写以下方法"""
+        self.update_form()
+        self._adjust()
+
+    def load_form(self):
+        """初次加载表单内容, 直接写创建代码即可, 内容放在form_frame中"""
+        ...
+
+    def update_form(self):
+        """更新表单内容, 最朴素的方式就是直接删除表单框架中所有控件, 然后重新创建即可."""
+        ...
+
+    def _adjust(self):
+        """
+        根据内容调节界面, 此方法不用重写, 可以重写adjust_content方法
+        会使用null_data进行是否隐藏判断, 需要在创建时候判定是否列表为空.
+        """
         if self.null_data is True:
             # 如果条目数量为 0，隐藏控件
             # print(f"应该隐藏{self.table_tag}列表")
@@ -333,9 +362,9 @@ class ActionableHeaderTable:
             # print(f"应该显示{self.table_tag}列表")
             self.parent_frame.pack_propagate(True)  # 自动调整自身大小
             self.main_frame.pack(fill="both", expand=True)
-            self._adjust_content()
+            self.adjust_content()
 
-    def _adjust_content(self):
+    def adjust_content(self):
         """更新内容区域"""
         ...
 
@@ -350,31 +379,34 @@ class ClassicAHT(ActionableHeaderTable):
         :param major_btn_dict: 主按钮信息
         :param rest_btn_dicts: 其他按钮信息
         """
-        self.rows_frame = None
-        self.selected_iid_list = None
+        self.selected_items_original = None
         self.usable_rows_dict = None
         self.tooltips = {}
         self.rows = {}
         self.data_src: list = []
         super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
-        self.create_rows()
-        self._adjust_main_frame()
 
-    def create_rows(self):
+    def load_form(self):
+        self._create_rows()
+
+    def update_form(self):
+        for widget in self.form_frame.winfo_children():
+            widget.destroy()
+        self._create_rows()
+
+    def _create_rows(self):
         """渲染账号所在行，请重写"""
-        self.rows_frame = ttk.Frame(self.main_frame)
-        self.rows_frame.pack(side="top", fill="x")
         for item in self.data_src:
             table_tag = self.table_tag
             # 创建列表实例
-            row = CkbRow(self, item, self.rows_frame, table_tag)
+            row = CkbRow(self, item, self.form_frame, table_tag)
             self.rows[item] = row
 
-    def _adjust_content(self):
-        self.get_usable_rows()
+    def adjust_content(self):
+        self._get_usable_rows()
         self.update_top_title()
 
-    def toggle_top_checkbox(self, _event):
+    def _toggle_top_checkbox(self, _event):
         """
         切换顶部复选框状态，更新子列表
         :param _event: 点击复选框
@@ -391,7 +423,7 @@ class ClassicAHT(ActionableHeaderTable):
 
     def update_top_title(self):
         """根据AccountRow实例的复选框状态更新顶行复选框状态"""
-        self._get_selected_idd_list()
+        self._get_selected_and_update_selected_items()
 
         selected_rows = self.selected_items
         usable_rows_dict = self.usable_rows_dict
@@ -400,7 +432,7 @@ class ClassicAHT(ActionableHeaderTable):
 
         # 调整复选框和frame的可用性
         widget_utils.bind_event_to_frame_when_(
-            self.title, "<Button-1>", partial(self.toggle_top_checkbox),
+            self.title, "<Button-1>", partial(self._toggle_top_checkbox),
             Condition(len(usable_rows_dict.keys()), Condition.ConditionType.NOT_EQUAL, 0),
             [self.button_frame]
         )
@@ -426,20 +458,16 @@ class ClassicAHT(ActionableHeaderTable):
             CustomBtn.enable_custom_widget_when_(btn_dict["btn"], btn_dict["enable_scopes"])
             widget_utils.set_widget_tip_when_(self.tooltips, btn_dict["btn"], btn_dict["tip_scopes_dict"])
 
-    def _get_selected_idd_list(self):
-        """获取已选的iid"""
-        self.selected_iid_list = [account for account, row in self.rows.items() if row.checkbox_var.get()]
-        # print(self.selected_iid_list)
-        self.transfer_selected_iid_to_list()
+    def _get_selected_and_update_selected_items(self):
+        """获取已选取内容并更新到selected_items, 可以重写transfer_selected_iid_to_list来规定列表元素格式"""
+        self.selected_items_original = [account for account, row in self.rows.items() if row.checkbox_var.get()]
+        self.reformat_selected_items()
 
-    def transfer_selected_iid_to_list(self):
-        """
-        将选中的iid进行格式处理，默认直接输出iid列表，可以重写修改
-        """
-        self.selected_items = self.selected_iid_list
-        # print(self.selected_items)
+    def reformat_selected_items(self):
+        """将选中的iid进行格式处理，默认直接输出iid列表，可以重写修改"""
+        self.selected_items = self.selected_items_original
 
-    def get_usable_rows(self):
+    def _get_usable_rows(self):
         """获取可用的行"""
         self.usable_rows_dict = {
             item: row for item, row in self.rows.items()
@@ -471,10 +499,44 @@ class CkbRow:
         self.update_top_title = self.parent_class.update_top_title
         self.iid = self.item
         self.initialize_members_in_init()
-        self.create_row()
+
+        # 行框架
+        self.row_frame = ttk.Frame(self.main_frame)
+        self.row_frame.pack(fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y)
+        self._load_row()
+
 
     def initialize_members_in_init(self):
         pass
+
+    def _load_row(self):
+        self.load_row_content()
+        self._adjust_row()
+
+    def update_row(self):
+        self.update_row_content()
+        self._adjust_row()
+
+    def _adjust_row(self):
+        # 复选框的状态
+        self.checkbox.config(state='disabled') if self.disabled is True else self.checkbox.config(
+            state='normal')
+        if self.disabled:
+            self.row_frame.pack_forget()
+            self.row_frame.pack(
+                side="bottom", fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y)
+        self.adjust_row()
+
+    def load_row_content(self):
+        self.create_row()
+
+    def update_row_content(self):
+        for widget in self.row_frame.winfo_children():
+            widget.destroy()
+        self.create_row()
+
+    def adjust_row(self):
+        ...
 
     def create_row(self):
         main_frame = self.main_frame
@@ -515,6 +577,7 @@ class TreeviewAHT(ActionableHeaderTable):
         """
         创建一个TreeView列表，可全选、多选，可以批量添加能对选中的条目进行操作的按钮，可以对单个条目的id列添加功能交互
         """
+        self.tree = None
         self.tree_has_bind = False
         self.last_single_item = None
         self.hovered_item = None
@@ -533,16 +596,29 @@ class TreeviewAHT(ActionableHeaderTable):
         }
 
         super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
+        # self.tree = self.create_tree(self.columns)
+        # self.tree.bind("<Configure>", lambda e: self.on_tree_configure(e), add='+')
+        # self.display_tree()
+        # self.set_tree_style()
+        # self._adjust()
 
+    def load_form(self):
         self.tree = self.create_tree(self.columns)
         self.tree.bind("<Configure>", lambda e: self.on_tree_configure(e), add='+')
         self.display_tree()
         self.set_tree_style()
-        self._adjust_main_frame()
+
+    def update_form(self):
+        for widget in self.form_frame.winfo_children():
+            widget.destroy()
+        self.tree = self.create_tree(self.columns)
+        self.tree.bind("<Configure>", lambda e: self.on_tree_configure(e), add='+')
+        self.display_tree()
+        self.set_tree_style()
 
     def create_tree(self, columns: tuple = ()):
         """定义表格，根据表格类型选择手动或自动登录表格"""
-        tree = ttk.Treeview(self.main_frame, columns=columns, show='tree', height=1, style="RowTreeview")
+        tree = ttk.Treeview(self.form_frame, columns=columns, show='tree', height=1, style="RowTreeview")
 
         # 设置列标题和排序功能
         for col in columns:
@@ -575,7 +651,7 @@ class TreeviewAHT(ActionableHeaderTable):
         # tree.column("#0", minwidth=100, width=100, stretch=tk.YES)
         ...
 
-    def _adjust_content(self):
+    def adjust_content(self):
         self._adjust_tree()
         self.selected_items.clear()
         self._update_top_title()
@@ -989,7 +1065,7 @@ class TreeviewAHT(ActionableHeaderTable):
         printer.vital(f"快速刷新")
         self.tree.delete(*self.tree.get_children())
         self.display_tree()
-        self._adjust_main_frame()
+        self._adjust()
 
 
 class RadioTreeView:

@@ -1,12 +1,9 @@
-import random
 import tkinter as tk
 from enum import Enum
-from functools import partial
 from tkinter import ttk
 from typing import Union
 
 from public.custom_classes import Condition, Conditions
-from public.enums import NotebookDirection
 from utils.encoding_utils import ColorUtils
 from utils.widget_utils import UnlimitedClickHandler, CanvasUtils, WidgetUtils
 

@@ -18,6 +18,22 @@ from utils import widget_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger
 
+# 登录/配置按钮
+customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
+customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 2.0)
+
+def _create_btn_in_(frame_of_btn, text):
+    btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
+    return btn
+
+
+def _pack_btn(btn):
+    btn.pack(side="right", padx=customized_btn_pad, pady=customized_btn_pad)
+
+
+def _set_negative_style(btn):
+    btn.set_major_colors("#FF0000")
+
 
 class ClassicLoginUI:
     def __init__(self, result):
@@ -99,13 +115,19 @@ class AccLoginCAHT(ClassicAHT):
     def initialize_members_in_init(self):
         self.data_src = self.parent_class.acc_list_dict[self.table_tag]
         self.sw = self.parent_class.sw
-        self.main_frame = ttk.Frame(self.parent_frame)
-        self.main_frame.pack(fill="both", expand=True)
+        # self.main_frame = ttk.Frame(self.parent_frame)
+        # self.main_frame.pack(fill="both", expand=True)
         pass
 
-    def create_rows(self):
-        self.rows_frame = ttk.Frame(self.main_frame)
-        self.rows_frame.pack(side="top", fill="x")
+    def load_form(self):
+        self._create_acc_rows()
+
+    def update_form(self):
+        for widget in self.form_frame.winfo_children():
+            widget.destroy()
+        self._create_acc_rows()
+
+    def _create_acc_rows(self):
         priority = {}
         row_ids = self.data_src
         for row_id in row_ids:
@@ -116,18 +138,17 @@ class AccLoginCAHT(ClassicAHT):
             table_tag = self.table_tag
             # 创建列表实例
             # Printer().debug(self.rows_frame)
-            row = AccLoginCR(self, self.rows_frame, row_id, table_tag)
+            row = AccLoginCR(self, self.form_frame, row_id, table_tag)
             if row.hidden is not True:
                 self.rows[row_id] = row
-
         if len(self.rows) == 0:
             self.null_data = True
 
-    def transfer_selected_iid_to_list(self):
+    def reformat_selected_items(self):
         """
         将选中的iid进行格式处理
         """
-        self.selected_items = [f"{self.sw}/{item}" for item in self.selected_iid_list]
+        self.selected_items = [f"{self.sw}/{item}" for item in self.selected_items_original]
         print(self.selected_items)
 
 
@@ -149,8 +170,15 @@ class AccLoginCR(CkbRow):
         self.sw_class = self.root_class.sw_classes[self.sw]
         self.data_dir = self.sw_class.data_dir
 
-    def create_row(self):
-        rows_frame = self.main_frame
+    def load_row_content(self):
+        self._create_acc_row()
+
+    def update_row_content(self):
+        for widget in self.row_frame.winfo_children():
+            widget.destroy()
+        self._create_acc_row()
+
+    def _create_acc_row(self):
         account = self.item
         login_status = self.table_tag
         sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
@@ -178,7 +206,6 @@ class AccLoginCR(CkbRow):
         config_status = "" + str(config_status) + cs_suffix
 
         # 行框架=复选框+头像标签+账号标签+按钮区域+配置标签
-        self.row_frame = ttk.Frame(rows_frame)
         if config_status == CfgStatus.NO_CFG and login_status == "logout":
             self.disabled = True
         # 复选框
@@ -193,8 +220,6 @@ class AccLoginCR(CkbRow):
         avatar_label.pack(side="left")
         avatar_label.bind("<Enter>", lambda event: event.widget.config(cursor="hand2"))
         avatar_label.bind("<Leave>", lambda event: event.widget.config(cursor=""))
-        # print(f"加载头像区域用时{time.time() - start_time:.4f}秒")
-        # print(f"加载账号显示区域用时{time.time() - start_time:.4f}秒")
         # 按钮区域=配置或登录按钮
         btn_frame = ttk.Frame(self.row_frame)
         btn_frame.pack(side="right")
@@ -202,19 +227,6 @@ class AccLoginCR(CkbRow):
         cfg_info_label = ttk.Label(self.row_frame, text=config_status, anchor='e')
         cfg_info_label.pack(side="right", padx=Config.CLZ_CFG_LBL_PAD_X,
                             fill="x", expand=True)
-        # 登录/配置按钮
-        customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
-        customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 2.0)
-
-        def _create_btn_in_(frame_of_btn, text):
-            btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
-            return btn
-
-        def _pack_btn(btn):
-            btn.pack(side="right", padx=customized_btn_pad, pady=customized_btn_pad)
-
-        def _set_negative_style(btn):
-            btn.set_major_colors("#FF0000")
 
         btn_text = "登 录" if login_status != "login" else "配 置"
         btn_cmd = self.login_ui.to_auto_login if login_status != "login" else self.login_ui.to_create_config
@@ -223,11 +235,6 @@ class AccLoginCR(CkbRow):
             **{"1": partial(btn_cmd, [iid])})
          .apply_bind(self.root))
         _pack_btn(acc_btn)
-        # btn = ttk.Button(
-        #     btn_frame, text=btn_text, style='Custom.TButton',
-        #     command=partial(btn_cmd, [iid])
-        # )
-        # btn.pack(side="right")
         # 账号标签: 账号含有互斥体, 则使用红色字体
         sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
         if has_mutex and sign_visible:
@@ -264,9 +271,6 @@ class AccLoginCR(CkbRow):
             {"请先手动登录后配置": Condition(
                 self.disabled, Condition.ConditionType.EQUAL, True)}
         )
-        # 复选框的状态
-        self.checkbox.config(state='disabled') if self.disabled is True else self.checkbox.config(
-            state='normal')
         # 头像绑定详情事件
         widget_utils.UnlimitedClickHandler(
             self.root,
@@ -274,12 +278,5 @@ class AccLoginCR(CkbRow):
             **{"1": partial(WndCreator.open_acc_detail, iid, self.login_ui),
                "2": partial(AccOperator.switch_to_sw_account_wnd, iid)}
         )
-
-        # 将行框架布局到界面中
-        if self.disabled is True:
-            self.row_frame.pack(side="bottom", fill="x", padx=Config.LOG_IO_FRM_PAD_X,
-                                pady=Config.CLZ_ROW_FRM_PAD_Y)
-        else:
-            self.row_frame.pack(fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y)
-
         print(f"加载 {account} 行用时{time.time() - start_time:.4f}秒")
+

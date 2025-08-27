@@ -144,6 +144,8 @@ class Config:
     SETTING_WND_SIZE = (int(750 * SF), int(210 * SF))  # 设置窗口尺寸
     UPDATE_LOG_WND_SIZE = (int(480 * SF), int(400 * SF))  # 更新日志窗口尺寸
     ABOUT_WND_SIZE = (int(500 * SF), int(540 * SF))  # 关于窗口尺寸
+    EXE_MNG_WND_SIZE = (int(600 * SF), int(540 * SF))  # 程序管理窗口尺寸
+    CFG_MNG_WND_SIZE = (int(600 * SF), int(540 * SF))  # 配置管理窗口尺寸
     DEBUG_WND_SIZE = (int(800 * SF), int(600 * SF))  # 调试窗口尺寸
     DETAIL_WND_SIZE = (int(240 * SF), int(360 * SF))  # 详情窗口尺寸
     STATISTIC_WND_SIZE = (int(360 * SF), int(432 * SF))  # 统计窗口尺寸

@@ -11,6 +11,33 @@ from public.global_members import GlobalMembers
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger, RedirectText
 
+class TopProgressBar:
+    def __init__(self, parent, height=2):
+        self.progress = ttk.Progressbar(parent, mode="determinate", maximum=100)
+        self.height = height
+        self._job = None
+
+    def _auto_step(self, interval, step=1):
+        """内部循环自增进度，但不超过95"""
+        value = self.progress["value"]
+        if value < 95:
+            self.progress["value"] = min(95, value + step)
+            self._job = self.progress.after(interval, self._auto_step, interval, step)
+
+    def loading(self, interval=100, step=5):
+        """自动加载进度条 (最多到95)"""
+        self.progress.pack(side="top", fill="x", ipady=self.height)
+        self.progress["value"] = 0
+        self._auto_step(interval, step)
+
+    def finished(self):
+        """进度条直接充满并停止"""
+        if self._job:
+            self.progress.after_cancel(self._job)
+            self._job = None
+        self.progress["value"] = 100
+        self.progress.pack_forget()
+
 
 class CustomDialogW:
     @classmethod

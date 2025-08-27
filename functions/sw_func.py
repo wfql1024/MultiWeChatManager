@@ -373,7 +373,20 @@ class SwInfoFunc:
         return login_hwnds
 
     @staticmethod
-    def _get_all_coexist_acc_and_ensure_formatted(sw, inst_dir, executable_wildcards):
+    def ensure_coexist_acc_formatted(sw, coexist_exe):
+        coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
+        if not isinstance(coexist_exe_dict, dict):
+            subfunc_file.update_sw_acc_data(sw, **{coexist_exe: {}})
+        coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
+        if "linked_acc" not in coexist_exe_dict:
+            subfunc_file.update_sw_acc_data(sw, coexist_exe, linked_acc=None)
+        if "channel" not in coexist_exe_dict:
+            subfunc_file.update_sw_acc_data(sw, coexist_exe, channel=None)
+        if RemoteCfg.ORDINALS not in coexist_exe_dict:
+            subfunc_file.update_sw_acc_data(sw, coexist_exe, **{RemoteCfg.ORDINALS: None})
+
+    @classmethod
+    def _get_all_coexist_acc_and_ensure_formatted(cls, sw, inst_dir, executable_wildcards):
         """获取所有的共存程序,并在字典中确保存在对应的账号节点和 linked_acc 属性"""
         # 处理共存版账号,创建字典和节点
         all_exes = file_utils.get_file_names_matching_wildcards(executable_wildcards, inst_dir)
@@ -383,16 +396,7 @@ class SwInfoFunc:
             if coexist_exe == origin_exe:
                 continue
             all_coexist_exes.append(coexist_exe)
-            coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
-            if not isinstance(coexist_exe_dict, dict):
-                subfunc_file.update_sw_acc_data(sw, **{coexist_exe: {}})
-            coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
-            if "linked_acc" not in coexist_exe_dict:
-                subfunc_file.update_sw_acc_data(sw, coexist_exe, linked_acc=None)
-            if "channel" not in coexist_exe_dict:
-                subfunc_file.update_sw_acc_data(sw, coexist_exe, channel=None)
-            if RemoteCfg.ORDINALS not in coexist_exe_dict:
-                subfunc_file.update_sw_acc_data(sw, coexist_exe, **{RemoteCfg.ORDINALS: None})
+            cls.ensure_coexist_acc_formatted(sw, coexist_exe)
         return all_coexist_exes
 
     @classmethod
@@ -422,15 +426,15 @@ class SwInfoFunc:
             return list(_get_origin_accounts() | _get_coexist_accounts())
 
     @classmethod
-    def get_available_coexist_mode(cls, sw):
+    def identity_and_get_available_coexist_mode(cls, sw):
         """选择一个可用的共存构造模式, 优先返回用户选择的, 若其不可用则返回可用的第一个模式"""
         user_coexist_channel = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.COEXIST_MODE)
         channel_res_dict, msg = cls.identify_dll(sw, RemoteCfg.COEXIST, True)
         if isinstance(channel_res_dict, dict):
             if user_coexist_channel in channel_res_dict:
-                return user_coexist_channel
-            return list(channel_res_dict.keys())[0]
-        return None
+                return user_coexist_channel, channel_res_dict, msg
+            return list(channel_res_dict.keys())[0], channel_res_dict, msg
+        return None, {}, msg
 
     @staticmethod
     def detect_path_of_(sw, path_type) -> Optional[str]:
@@ -911,7 +915,7 @@ class SwOperator:
         """手动登录共存平台,按顺序,登录第一个还未打开的共存程序,若都已经打开,则创造一个新的共存程序后打开"""
         start_time = time.time()
         root_class = GlobalMembers.root_class
-        coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
+        coexist_channel, _, _ = SwInfoFunc.identity_and_get_available_coexist_mode(sw)
         if not isinstance(coexist_channel, str):
             return False, "没有可用的共存构造模式!"
         exe_wildcard, ordinals = subfunc_file.get_remote_cfg(
@@ -929,7 +933,7 @@ class SwOperator:
             exe_name = exe_wildcard.replace("?", ordinal)
             inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             inst_dir = os.path.dirname(inst_path)
-            coexist_exe_path = os.path.join(inst_dir, exe_name)
+            coexist_exe_path = os.path.join(inst_dir, exe_name).replace("\\", "/")
             # 判定不存在的条件: 文件不存在或者文件没有被运行
             if not os.path.isfile(coexist_exe_path):
                 if messagebox.askokcancel("提醒", f"不存在{coexist_exe_path}!是否创建?"):
@@ -971,18 +975,18 @@ class SwOperator:
             return
 
     @staticmethod
-    def create_coexist_exe_core(sw, coexist_channel=None, ordinal=None):
+    def create_coexist_exe_core(sw, coexist_channel=None, ordinal=None)-> Tuple[Optional[str], str]:
         """创建共存程序"""
         # 确认共存方案和序列号
         if coexist_channel is None:
-            coexist_channel = SwInfoFunc.get_available_coexist_mode(sw)
+            coexist_channel, _, _ = SwInfoFunc.identity_and_get_available_coexist_mode(sw)
             if not isinstance(coexist_channel, str):
-                return False, "没有可用的共存构造模式!"
+                return None, "没有可用的共存构造模式!"
         exe_wildcard, ordinals = subfunc_file.get_remote_cfg(
             sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel,
             exe_wildcard=None, **{RemoteCfg.ORDINALS: None})
         if not isinstance(exe_wildcard, str) or not isinstance(ordinals, str):
-            return False, "尚未适配[exe_wildcard, ordinals]!"
+            return None, "尚未适配[exe_wildcard, ordinals]!"
         if ordinal is None:
             for o in ordinals:
                 exe_name = exe_wildcard.replace("?", o)
@@ -994,16 +998,16 @@ class SwOperator:
                     break
 
         if not isinstance(coexist_channel, str):
-            return False, "没有可用的共存构造模式!"
+            return None, "没有可用的共存构造模式!"
         curr_ver = SwInfoFunc.calc_sw_ver(sw)
         channel_addresses_dict = subfunc_file.get_cache_cfg(
             sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, RemoteCfg.PRECISES, curr_ver)
         Printer().debug(channel_addresses_dict)
         if not isinstance(channel_addresses_dict, dict):
-            return False, "尚未适配[coexist_channel]!"
+            return None, "尚未适配[coexist_channel]!"
         for addr in channel_addresses_dict:
             if "wildcard" not in channel_addresses_dict[addr]:
-                return False, "适配格式错误!"
+                return None, "适配格式错误!"
         new_files = []
         for addr in channel_addresses_dict:
             origin_path = SwInfoFunc.resolve_sw_path(sw, addr)
@@ -1021,16 +1025,18 @@ class SwOperator:
                 messagebox.showerror("错误", f"创建共存程序[{ordinal}]号失败!")
                 for new_file in new_files:
                     os.remove(new_file)
-                return False, "创建共存程序失败!"
+                return None, "创建共存程序失败!"
         # 更新配置
         new_coexist_exe_name = exe_wildcard.replace("?", ordinal)
+        SwInfoFunc.ensure_coexist_acc_formatted(sw, new_coexist_exe_name)
         subfunc_file.update_sw_acc_data(
             sw, new_coexist_exe_name, channel=coexist_channel, **{AccKeys.ORDINAL : ordinal})
-        return True, "None"
+        return new_coexist_exe_name, ""
 
     @staticmethod
-    def del_coexist_exe(sw, accounts):
+    def del_coexist_exe(sw, accounts)-> Tuple[list, dict]:
         failed_acc_msg_dict = {}
+        success_accs = []
         curr_ver = SwInfoFunc.calc_sw_ver(sw)
         for acc in accounts:
             coexist_channel, ordinal = subfunc_file.get_sw_acc_data(
@@ -1054,17 +1060,32 @@ class SwOperator:
                     del_path = os.path.join(
                         os.path.dirname(sw_exe_path), acc).replace("\\", "/")
                     os.remove(del_path)
-
+                success_accs.append(acc)
             except PermissionError as pe:
                 failed_acc_msg_dict[acc] = f"请确保已经退出该程序!({pe})"
                 continue
             except Exception as e:
                 failed_acc_msg_dict[acc] = f"发生错误!({e})"
                 continue
-        if len(failed_acc_msg_dict) == 0:
-            return True, None
-        else:
-            return False, failed_acc_msg_dict
+        return success_accs, failed_acc_msg_dict
+
+    @staticmethod
+    def rebuild_coexist_exes(sw, accounts: list):
+        failed_accounts_msg_dict = {}
+        success_exes = []
+        for acc in accounts:
+            coexist_channel, ordinal = subfunc_file.get_sw_acc_data(
+                sw, acc, **{AccKeys.COEXIST_CHANNEL: None, AccKeys.ORDINAL: None})
+            # Printer().debug(self.sw, coexist_channel, ordinal)
+            new_exe, msg = SwOperator.create_coexist_exe_core(sw, coexist_channel, ordinal)
+            if not isinstance(new_exe, str):
+                failed_accounts_msg_dict[acc] = msg
+            else:
+                success_exes.append(new_exe)
+        if len(failed_accounts_msg_dict) != 0:
+            msg_str = "\n".join(f"{acc}: {failed_accounts_msg_dict[acc]}" for acc in failed_accounts_msg_dict)
+            messagebox.showerror("失败", f"失败账号及原因:\n{msg_str}")
+        return success_exes
 
     @classmethod
     def create_coexist_exe_and_refresh(cls, sw):
