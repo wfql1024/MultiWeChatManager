@@ -1785,8 +1785,12 @@
                 }
             }
         },
-        "multirun": {},
-        "anti-revoke": {},
+        "multirun": {
+            "label": "多开"
+        },
+        "anti-revoke": {
+            "label": "防撤"
+        },
         "wnd_class": {
             "login": {
                 "matching": {
@@ -1872,6 +1876,7 @@
     },
     "QQNT": {
         "multirun": {
+            "label": "多开",
             "natively": true
         },
         "anti-revoke": {
@@ -1899,6 +1904,7 @@
             }
         },
         "coexist": {
+            "label": "共存",
             "natively": true
         },
         "wnd_class": {
@@ -1979,6 +1985,7 @@
     },
     "QQ": {
         "multirun": {
+            "label": "多开",
             "natively": true
         },
         "anti-revoke": {
@@ -2024,6 +2031,7 @@
             }
         },
         "coexist": {
+            "label": "共存",
             "natively": true
         },
         "wnd_class": {
@@ -2103,6 +2111,7 @@
     },
     "TIM": {
         "multirun": {
+            "label": "多开",
             "natively": true
         },
         "anti-revoke": {
@@ -2148,6 +2157,7 @@
             }
         },
         "coexist": {
+            "label": "共存",
             "natively": true
         },
         "wnd_class": {

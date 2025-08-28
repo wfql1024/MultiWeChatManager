@@ -1204,25 +1204,6 @@ class AccInfoFunc:
                     pid_acc_dict[pid] = pid_exe
                     break
 
-    # @staticmethod
-    # def _get_all_coexist_acc_and_ensure_formatted(sw, inst_dir, executable_wildcards):
-    #     """获取所有的共存程序,并在字典中确保存在对应的账号节点和 linked_acc 属性"""
-    #     # 处理共存版账号,创建字典和节点
-    #     all_exes = file_utils.get_file_names_matching_wildcards(executable_wildcards, inst_dir)
-    #     origin_exe, = subfunc_file.get_remote_cfg(sw, executable=None)
-    #     all_coexist_exes = []
-    #     for coexist_exe in all_exes:
-    #         if coexist_exe == origin_exe:
-    #             continue
-    #         all_coexist_exes.append(coexist_exe)
-    #         coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
-    #         if not isinstance(coexist_exe_dict, dict):
-    #             subfunc_file.update_sw_acc_data(sw, **{coexist_exe: {}})
-    #         coexist_exe_dict = subfunc_file.get_sw_acc_data(sw, coexist_exe)
-    #         if "linked_acc" not in coexist_exe_dict:
-    #             subfunc_file.update_sw_acc_data(sw, coexist_exe, linked_acc=None)
-    #     return all_coexist_exes
-
     @classmethod
     def get_sw_acc_list(cls, _root, root_class, sw):
         """

@@ -158,7 +158,7 @@ class RootClass:
 
         # 统一管理style
         style = ttk.Style()
-        style.configure('Custom.TButton', padding=Config.CUS_BTN_PAD,
+        style.configure('Custom.TButton', padding=Config.TK_BTN_PAD,
                         width=Config.TK_BTN_WIDTH, relief="sunken", borderwidth=3)
         style.configure("Treeview")
         # style.configure('Tool.TButton', width=2)
@@ -508,6 +508,8 @@ class SoftwareInfo:
         self.ver = None
         self.login_accounts = None
         self.logout_accounts = None
+        self.widget_dict = {}
+        self.is_original = None
 
 
 class AppInfo:
@@ -535,6 +537,7 @@ class GlobalSettings:
         self.disable_proxy = None
         self.use_txt_avt = None
         self.in_tray = False
+        self.prefer_coexist = None
 
 
 class HotkeyManager:

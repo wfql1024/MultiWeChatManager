@@ -19,11 +19,12 @@ from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger
 
 # 登录/配置按钮
-customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
-customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 2.0)
+customized_btn_pad = Config.CUS_BTN_PAD
+customized_btn_ipad_y = Config.CUS_BTN_IPAD_Y
+customized_btn_ipad_x = Config.CUS_BTN_IPAD_X
 
 def _create_btn_in_(frame_of_btn, text):
-    btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
+    btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad_x, i_pady=customized_btn_ipad_y)
     return btn
 
 

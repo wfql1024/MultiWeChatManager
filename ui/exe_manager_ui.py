@@ -19,7 +19,6 @@ from utils import widget_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger, Printer
 
-# TODO: 优化界面刷新, 不要啥都全页面刷新
 
 def with_progress_factory(self):
     """将self传入, 返回一个装饰器, 这个装饰器将对装饰的函数过程收尾添加进度条的展示和结束."""
@@ -43,19 +42,20 @@ def with_progress(func):
     return wrapper
 
 
-customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
-customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 2.0)
+customized_btn_pad = Config.CUS_BTN_PAD
+customized_btn_ipad_y = Config.CUS_BTN_IPAD_Y
+customized_btn_ipad_x = Config.CUS_BTN_IPAD_X
 
 
 def _create_btn_in_(frame_of_btn, text):
     """方法提取: 创建个普通按钮"""
-    btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
+    btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad_x, i_pady=customized_btn_ipad_y)
     return btn
 
 
 def _create_square_btn_in(frame_of_btn, text):
     """方法提取: 创建个方形按钮"""
-    btn = CustomCornerBtn(frame_of_btn, text=text, i_pady=customized_btn_ipad)
+    btn = CustomCornerBtn(frame_of_btn, text=text, i_pady=customized_btn_ipad_y)
     return btn
 
 
@@ -295,16 +295,21 @@ class ExeManagerUI:
                             padx=Config.LOG_IO_FRM_PAD_X, pady=Config.LOG_IO_LBL_PAD_Y)
         # - 选择按钮
         show_coexist_channel_btn = _create_square_btn_in(main_header_frame, "···")
+        self.show_coexist_channel_btn = show_coexist_channel_btn
         (show_coexist_channel_btn.set_bind_map(
             **{"1": self._toggle_coexist_selector_visibility})
          .apply_bind(self.root))
         _pack_btn_right(show_coexist_channel_btn)
+        widget_utils.set_widget_tip_when_(self.tooltips, show_coexist_channel_btn, {"切换共存方案": True})
         # - 新建按钮
         self.create_coexist_btn = _create_btn_in_(main_header_frame, "新建")
         (self.create_coexist_btn.set_bind_map(
             **{"1": self._thread_to_create_coexist_exe})
          .apply_bind(self.root))
         _pack_btn_right(self.create_coexist_btn)
+        widget_utils.set_widget_tip_when_(
+            self.tooltips, self.create_coexist_btn,
+            {"新建共存程序.新建和重建都会继承原生程序的补丁状况.": True})
         # - 防撤回区域及按钮
         anti_revoke_frame = ttk.Frame(main_header_frame)
         anti_revoke_frame.pack(side="right")
@@ -361,7 +366,10 @@ class ExeManagerUI:
                 coexist_status = coexist_channel_dict["status"]
                 if coexist_status is not True:
                     coexist_channel_btn.set_state(CustomBtn.State.DISABLED)
-            self.coexist_channel_btn_dict[now_coexist_channel].set_state(CustomBtn.State.SELECTED)
+            if now_coexist_channel in self.coexist_channel_btn_dict:
+                self.coexist_channel_btn_dict[now_coexist_channel].set_state(CustomBtn.State.SELECTED)
+            if len(self.coexist_channel_btn_dict) == 0:
+                self.show_coexist_channel_btn.set_state(CustomBtn.State.DISABLED)
         finally:
             self.progress_bar.finished()
 

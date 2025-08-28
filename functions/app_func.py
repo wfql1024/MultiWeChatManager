@@ -1,10 +1,13 @@
 import json
 import os
+import shutil
 import sys
 import threading
+import time
 from tkinter import messagebox
 from typing import Union, Tuple
 
+import psutil
 import win32com
 import winshell
 from PIL import Image
@@ -14,11 +17,67 @@ from functions import subfunc_file
 from functions.sw_func import SwInfoFunc
 from public.config import Config
 from public.enums import LocalCfg, RemoteCfg
+from public.global_members import GlobalMembers
 from utils import file_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 
 
 class AppFunc:
+    @staticmethod
+    def migrate_old_user_files():
+        current_pid = os.getpid()
+        target_names = ["微信多开管理器.exe", "极峰多聊.exe"]
+
+        # 1. 找出目标进程
+        candidates = []
+        for proc in psutil.process_iter(['pid', 'name', 'exe']):
+            try:
+                if proc.info['name'] in target_names and proc.info['pid'] != current_pid:
+                    candidates.append(proc)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+
+        # 2. 判断情况
+        if len(candidates) == 0:
+            messagebox.showwarning("提示", "请打开旧版程序")
+            return
+        elif len(candidates) > 1:
+            messagebox.showwarning("提示", "请只保留一个旧版程序进程")
+            return
+
+        proc = candidates[0]
+        old_exe_path = proc.info['exe']
+        old_dir = os.path.dirname(old_exe_path)
+
+        # 3. 搜索 user_files 文件夹
+        old_user_path = None
+        for root, dirs, files in os.walk(old_dir):
+            if "user_files" in dirs:
+                old_user_path = os.path.join(root, "user_files")
+                break
+
+        if not old_user_path or not os.path.isdir(old_user_path):
+            messagebox.showerror("错误", "未找到旧版 user_files 文件夹")
+            return
+
+        if not messagebox.askokcancel("提示", "已识别到旧版程序, 是否导入(拷贝)旧版数据？\n本程序数据将会备份至桌面!"):
+            return
+
+        # 4. 备份新程序的用户文件夹
+        if os.path.exists(Config.PROJ_USER_PATH):
+            desktop = winshell.desktop()
+            ts = time.strftime("%Y%m%d_%H%M%S")
+            backup_path = os.path.join(desktop, f"user_files_backup_{ts}")
+            shutil.move(Config.PROJ_USER_PATH, backup_path)
+
+        # 5. 拷贝旧版数据
+        shutil.copytree(old_user_path, Config.PROJ_USER_PATH)
+
+        # 6. 完成提示
+        messagebox.showinfo("完成", "导入完成！")
+
+        GlobalMembers.root_class.initialize_in_root()
+
     @staticmethod
     def create_tray(root):
         from pystray import Icon, MenuItem

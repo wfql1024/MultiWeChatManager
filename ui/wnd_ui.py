@@ -6,7 +6,6 @@ import threading
 import tkinter as tk
 import uuid
 import webbrowser
-from abc import ABC
 from datetime import datetime
 from functools import partial
 from tkinter import filedialog, scrolledtext, ttk, messagebox
@@ -36,6 +35,24 @@ from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUt
 from utils.sys_utils import Tk2Sys
 from utils.widget_utils import UnlimitedClickHandler
 
+
+customized_btn_pad = Config.CUS_BTN_PAD
+customized_btn_ipad_y = Config.CUS_BTN_IPAD_Y * 0.4
+customized_btn_ipad_x = Config.CUS_BTN_IPAD_X * 0.4
+
+def _create_btn_in_(frame_of_btn, text):
+    btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad_x, i_pady=customized_btn_ipad_y)
+    return btn
+
+def _create_square_btn_in(frame_of_btn, text):
+    btn = CustomCornerBtn(frame_of_btn, text=text, i_pady=customized_btn_ipad_y)
+    return btn
+
+def _pack_btn_left(btn):
+    btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
+
+def _set_negative_style(btn):
+    btn.set_major_colors("#FF0000")
 
 class WndCreator:
 
@@ -103,7 +120,7 @@ class WndCreator:
         AboutWndUI(about_wnd, "关于", app_info)
 
 
-class DetailUI(SubToolWndUI, ABC):
+class DetailUI(SubToolWndUI):
     def __init__(self, wnd, title, sw, account, tab_class):
         self.disable_avatar_var = None
         self.mutex_label = None
@@ -163,22 +180,7 @@ class DetailUI(SubToolWndUI, ABC):
         # avatar_status_label.pack(**Constants.B_WGT_PACK)
 
         # 登录状态=pid+hwnd
-        customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
-        customized_btn_ipad = int(Config.CUS_BTN_PAD_Y * 0.8)
 
-        def _create_btn_in_(frame_of_btn, text):
-            btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad * 2.5, i_pady=customized_btn_ipad)
-            return btn
-
-        def _create_square_btn_in(frame_of_btn, text):
-            btn = CustomCornerBtn(frame_of_btn, text=text, i_pady=customized_btn_ipad)
-            return btn
-
-        def _pack_btn(btn):
-            btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
-
-        def _set_negative_style(btn):
-            btn.set_major_colors("#FF0000")
 
         change_avatar_btn = _create_btn_in_(avatar_operate_frame, "修改")
         change_avatar_btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
@@ -203,13 +205,13 @@ class DetailUI(SubToolWndUI, ABC):
          .set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccOperator.quit_selected_accounts, sw, [account]))})
          .apply_bind(self.root))
-        _pack_btn(kill_pid_btn)
+        _pack_btn_left(kill_pid_btn)
         re_login_btn = _create_btn_in_(pid_frame, "重登")
         re_login_btn.set_bind_map(
             **{"1": partial(AccOperator.start_auto_login_accounts_thread, {sw: [account]})}).apply_bind(self.root)
         re_login_btn.set_bind_map(
             **{"1": self.wnd.destroy}).apply_bind(self.root)
-        _pack_btn(re_login_btn)
+        _pack_btn_left(re_login_btn)
         # mutex
         mutex_frame = ttk.Frame(login_status_frame)
         mutex_frame.pack(side="top", anchor="w")
@@ -219,7 +221,7 @@ class DetailUI(SubToolWndUI, ABC):
         (kill_mutex_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccOperator.kill_mutex_of_pid, sw, account))})
          .apply_bind(self.root))
-        _pack_btn(kill_mutex_btn)
+        _pack_btn_left(kill_mutex_btn)
         # hwnd
         hwnd_frame = ttk.Frame(login_status_frame)
         hwnd_frame.pack(side="top", anchor="w")
@@ -229,19 +231,19 @@ class DetailUI(SubToolWndUI, ABC):
         (unlink_hwnd_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.unlink_hwnd_of_account, sw, account))})
          .apply_bind(self.root))
-        _pack_btn(unlink_hwnd_btn)
+        _pack_btn_left(unlink_hwnd_btn)
         relink_hwnd_btn = _create_btn_in_(hwnd_frame, "获取")
         (relink_hwnd_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.relink_hwnd_of_account, sw, account))})
          .apply_bind(self.root))
-        _pack_btn(relink_hwnd_btn)
+        _pack_btn_left(relink_hwnd_btn)
         manual_link_hwnd_btn = _create_btn_in_(hwnd_frame, "手绑")
         (manual_link_hwnd_btn.set_bind_map(
             **{"1": lambda: self.do_and_update_ui(partial(AccInfoFunc.manual_link_hwnd_of_account, sw, account))})
          .apply_bind(self.root))
-        _pack_btn(manual_link_hwnd_btn)
+        _pack_btn_left(manual_link_hwnd_btn)
         hidden_hwnd_btn = _create_btn_in_(hwnd_frame, "隐藏")
-        _pack_btn(hidden_hwnd_btn)
+        _pack_btn_left(hidden_hwnd_btn)
         hidden_hwnd_btn.set_state(CustomBtn.State.DISABLED)
         # 将隐藏按钮设为负样式
         for negative_btn in [delete_avatar_btn, kill_pid_btn, kill_mutex_btn, unlink_hwnd_btn]:
@@ -441,7 +443,7 @@ class DetailUI(SubToolWndUI, ABC):
             self.hotkey_entry.focus_set()
 
 
-class DebugWndUI(SubToolWndUI, ABC):
+class DebugWndUI(SubToolWndUI):
     def __init__(self, wnd, title):
         self.text_area = None
         self.simplify_checkbox = None
@@ -881,7 +883,7 @@ class AboutWndUI(SubToolWndUI):
                     logger.error(f"Error cancelling task: {e}")
 
 
-class RewardsWndUI(SubToolWndUI, ABC):
+class RewardsWndUI(SubToolWndUI):
     def __init__(self, wnd, title):
         self.img = None
         self.image_path = Config.REWARDS_PNG_PATH
@@ -909,7 +911,7 @@ class RewardsWndUI(SubToolWndUI, ABC):
         label.pack()
 
 
-class FeedBackWndUI(SubToolWndUI, ABC):
+class FeedBackWndUI(SubToolWndUI):
     def __init__(self, wnd, title):
         self.img = None
         self.image_path = Config.FEEDBACK_PNG_PATH
@@ -952,7 +954,7 @@ class FeedBackWndUI(SubToolWndUI, ABC):
         label.pack()
 
 
-class UpdateLogWndUI(SubToolWndUI, ABC):
+class UpdateLogWndUI(SubToolWndUI):
     def __init__(self, wnd, title, old_versions, new_versions=None):
         self.log_text = None
         self.old_versions = old_versions
@@ -1132,7 +1134,7 @@ class UpdateLogWndUI(SubToolWndUI, ABC):
             t.start()
 
 
-class StatisticWndUI(SubToolWndUI, ABC):
+class StatisticWndUI(SubToolWndUI):
     def __init__(self, wnd, title, sw):
         self.refresh_mode_combobox = None
         self.refresh_tree = None
@@ -1335,7 +1337,7 @@ class StatisticWndUI(SubToolWndUI, ABC):
         self.tree_dict[tree_type]['sort'] = not is_ascending  # 切换排序顺序
 
 
-class SettingWndUI(SubToolWndUI, ABC):
+class SettingWndUI(SubToolWndUI):
     def __init__(self, wnd, sw, title):
         self.path_var_dict = {}
         self.clear_acc_var = None
@@ -1741,7 +1743,7 @@ class SettingWndUI(SubToolWndUI, ABC):
         threading.Thread(target=thread).start()
 
 
-class GlobalSettingWndUI(SubToolWndUI, ABC):
+class GlobalSettingWndUI(SubToolWndUI):
     def __init__(self, wnd, title):
         self.proxy_port = None
         self.proxy_ip = None
@@ -1786,25 +1788,19 @@ class GlobalSettingWndUI(SubToolWndUI, ABC):
         # 添加预设按钮
         ip_presets, port_presets = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, "proxy",
                                                                ip_presets=None, port_presets=None)
-        customized_btn_pad = int(Config.CUS_BTN_PAD_X * 0.4)
 
-        def _create_btn_in_(frame_of_btn, text):
-            btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=8, i_pady=2)
-            return btn
 
-        def _pack_btn(btn):
-            btn.pack(side="left", padx=customized_btn_pad * 2, pady=customized_btn_pad)
 
         for ip in ip_presets:
             b = _create_btn_in_(ip_btn_frame, ip["name"])
             b.set_bind_map(
                 **{"1": partial(ip_var.set, ip["value"])}).apply_bind(self.root)
-            _pack_btn(b)
+            _pack_btn_left(b)
         for port in port_presets:
             b = _create_btn_in_(port_btn_frame, port["name"])
             b.set_bind_map(
                 **{"1": partial(port_var.set, port["value"])}).apply_bind(self.root)
-            _pack_btn(b)
+            _pack_btn_left(b)
 
         # 底部放三个按钮：确定，取消，应用
         bottom_btn_frame = ttk.Frame(main_frame)

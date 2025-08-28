@@ -306,7 +306,7 @@ class CustomCornerBtn(tk.Frame, CustomBtn):
     当传入边距时, 会覆盖宽高的设置, 根据文本内容自动调整大小以适应边距. 边距只传入一个时, 会自适应调整宽高成方形按钮.
     """
 
-    def __init__(self, parent, text="Button", corner_radius=4, width=100, height=30,
+    def __init__(self, parent, text="Button", corner_radius=None, width=100, height=30,
                  border_color='#D0D0D0', border_width=1, i_padx=None, i_pady=None, *args, **kwargs):
         super().__init__(parent, width=width, height=height, *args, **kwargs)
         self._init_custom_btn_attrs()
@@ -335,7 +335,10 @@ class CustomCornerBtn(tk.Frame, CustomBtn):
         state = tmp_state if isinstance(tmp_state, CustomBtn.State) else self._state
         self.canvas.delete("all")
         w, h, tx, ty = self._auto_resize_by_text()
-        r = min(self.corner_radius, h // 2, w // 2)
+        if self.corner_radius is not None:
+            r = min(self.corner_radius, h // 2, w // 2)
+        else:
+            r = min(h, w) // 5
         bg = self._styles[state]['bg']
         fg = self._styles[state]['fg']
         bdc = self._styles[state]['bdc']

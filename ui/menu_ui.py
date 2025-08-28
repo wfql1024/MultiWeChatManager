@@ -16,7 +16,7 @@ from public.enums import LocalCfg, MultirunMode, RemoteCfg, CallMode
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils import widget_utils, sys_utils
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.sys_utils import Tk2Sys
 
@@ -123,6 +123,9 @@ class MenuUI:
                                            command=partial(AppFunc.mov_backup))
         # -创建软件快捷方式
         self.file_menu.add_command(label="创建程序快捷方式", command=AppFunc.create_app_lnk)
+
+        # -导入旧版数据
+        self.file_menu.add_command(label="导入旧版数据", command=AppFunc.migrate_old_user_files)
 
         if self.is_login_menu:
             self.file_menu.add_separator()  # ————————————————分割线————————————————
@@ -306,6 +309,14 @@ class MenuUI:
 
             self.login_settings_menu.add_command(label="登录说明", command=self._open_login_settings_instructions)
             self.login_settings_menu.add_separator()  # ————————————————分割线————————————————
+            prefer_coexist_value = self.global_settings_value.prefer_coexist = \
+                subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PREFER_COEXIST)
+            prefer_coexist_var = self.global_settings_var.prefer_coexist = tk.BooleanVar(value=prefer_coexist_value)
+            self.login_settings_menu.add_checkbutton(
+                label="手动登录优选共存", variable=prefer_coexist_var,
+                command=partial(subfunc_file.save_a_global_setting_and_callback,
+                                LocalCfg.PREFER_COEXIST, not prefer_coexist_value, self.create_root_menu_bar))
+
             hide_wnd_value = self.global_settings_value.hide_wnd = \
                 subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.HIDE_WND)
             hide_wnd_var = self.global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)

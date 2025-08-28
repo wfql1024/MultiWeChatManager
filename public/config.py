@@ -7,6 +7,9 @@ import winreg
 
 from public.enums import LocalCfg, SW, SwStates, MultirunMode
 
+# 获取屏幕缩放因子
+current_file_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 # 如需使用缩放因子，请直接拷贝以下部分*****************************************************************
 def get_scale_factor():
@@ -17,7 +20,6 @@ def get_scale_factor():
     - 其他情况：返回默认缩放因子 1。
     """
     # 获取用户设置的缩放因子
-    current_file_dir = os.path.dirname(os.path.abspath(__file__))
     proj_path = os.path.abspath(os.path.join(current_file_dir, '..'))
     setting_ini_path = fr'{proj_path}\user_files\setting.ini'
     scale = "auto"
@@ -65,10 +67,6 @@ def scale_dict(d, sf):
     return {k: int(v * sf) for k, v in d.items()}
 
 
-# 获取屏幕缩放因子
-current_file_dir = os.path.dirname(os.path.abspath(__file__))
-
-
 class Config:
     VER_STATUS = 'Beta'
 
@@ -97,6 +95,7 @@ class Config:
             LocalCfg.SIGN_VISIBLE: True,
             LocalCfg.USE_TXT_AVT: True,
             # -登录相关
+            LocalCfg.PREFER_COEXIST: True,
             LocalCfg.HIDE_WND: False,
             LocalCfg.KILL_IDLE_LOGIN_WND: False,
             LocalCfg.UNLOCK_CFG: False,
@@ -157,11 +156,13 @@ class Config:
     ERR_LBL_PAD_X = int(20 * SF)  # 错误标签内边距
     ERR_LBL_PAD_Y = int(20 * SF)  # 错误标签内边距
     BTN_FRAME_PAD = (int(4 * SF), int(4 * SF))  # 按钮框架内边距
-    CUS_BTN_PAD_X = int(4 * SF)  # 定制按钮内边距x
+    CUS_BTN_PAD_X = int(5 * SF)  # 定制按钮内边距x
     CUS_BTN_PAD_Y = int(4 * SF)  # 定制按钮内边距y
-    CUS_BTN_PAD = (CUS_BTN_PAD_X, CUS_BTN_PAD_Y)  # 普通按钮内边距
+    CUS_BTN_IPAD_X = int(16 * SF)  # 定制按钮外边距x
+    CUS_BTN_IPAD_Y = int(8 * SF)  # 定制按钮外边距y
+    CUS_BTN_PAD = int(2 * SF)  # 定制按钮外边距
+    TK_BTN_PAD = (CUS_BTN_PAD_X, CUS_BTN_PAD_Y)  # 普通按钮内边距
     TK_BTN_WIDTH = int(10 * (1 + (SF - 1) / 3))  # 普通按钮宽度
-    CUS_BTN_WIDTH = int(50 * SF)  # 定制按钮宽度
 
     LOG_IO_LBL_FONTSIZE = 10  # 登录登出表标签字体大小
     LOG_IO_FRM_PAD_X = (int(12 * SF), int(0 * SF))  # 登录登出表框架左右边距

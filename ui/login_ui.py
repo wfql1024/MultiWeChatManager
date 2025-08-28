@@ -20,14 +20,34 @@ from ui.wnd_ui import WndCreator
 from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 
+customized_btn_pad = Config.CUS_BTN_PAD
+customized_btn_ipad_y = Config.CUS_BTN_IPAD_Y
+customized_btn_ipad_x = Config.CUS_BTN_IPAD_X
+switch_btn_corner = Config.CUS_BTN_IPAD_Y
 
-# TODO: 登录页面底部按钮状态要同步更改
+def _create_btn_in_(frame_of_btn, text, **kwargs):
+    """方法提取: 创建个普通按钮"""
+    btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad_x, i_pady=customized_btn_ipad_y, **kwargs)
+    return btn
+
+
+def _create_square_btn_in_(frame_of_btn, text, **kwargs):
+    """方法提取: 创建个方形按钮"""
+    btn = CustomCornerBtn(frame_of_btn, text=text, i_pady=customized_btn_ipad_y, **kwargs)
+    return btn
+
+
+def _pack_btn_left(btn):
+    """方法提取: 将按钮布局到左边"""
+    btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
+
 
 class LoginUI:
     """构建主窗口的类"""
 
     def __init__(self):
-        self.btn_extra = None
+        self.widget_dict = None
+        self.btn_mng = None
         self.btn_login = None
         self.is_original = None
         self.quick_refresh_mode = None
@@ -42,7 +62,6 @@ class LoginUI:
         self.start_time = None
         self.tab_frame = None
         self.sw = None
-        self.get_data_thread = None
 
         self.root_class = GlobalMembers.root_class
         self.sw_classes = self.root_class.sw_classes
@@ -66,19 +85,17 @@ class LoginUI:
         self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
         self.sw_class = self.sw_classes[self.sw]
         self.tab_frame = self.sw_class.frame
-
+        self.widget_dict = self.sw_class.widget_dict
         # 刷新菜单
         config_data = subfunc_file.read_remote_cfg_in_rules()
         if config_data is None:
             messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
             self.root.destroy()
-
         # 路径检查
         self.sw_class.data_dir = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.DATA_DIR)
         self.sw_class.inst_path = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.INST_PATH)
         self.sw_class.dll_dir = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.DLL_DIR)
         self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw)
-
         # 创建菜单
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
@@ -86,7 +103,7 @@ class LoginUI:
             logger.error(re)
             messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
             self.root.destroy()
-
+        # 是否只刷新菜单
         if not (only_menu is True):
             # 刷新界面
             try:
@@ -100,44 +117,15 @@ class LoginUI:
         # 如果要刷新的页面不是当前选定选项卡，不用处理
         if sw is not None and sw != self.sw:
             return
-
-        def _get_data_thread(callback):
-            result = AccInfoFunc.get_sw_acc_list(self.root, self, self.sw)
-            callback(result)
-
         self.start_time = time.time()
         print(f"计时开始：{time.time() - self.start_time:.4f}秒")
-        _get_data_thread(self._update_result_from_result)
-
-        # print(f"锁定刷新按钮...")
-        # self.root_menu.edit_menu.entryconfig("刷新", state="disabled")
-        print(f"获取登录状态...")
-        self.root.after(0, self.create_main_ui)
-
-    def _update_result_from_result(self, result):
-        self.get_acc_list_answer = result
-
-    def create_main_ui(self):
-        """渲染主界面账号列表"""
-        # 检测是否路径错误
-        # if self.path_error is True:
-        #     self.show_setting_error()
-        success, result = self.get_acc_list_answer
-        print(success, result)
-        printer.print_vn(f"[{time.time() - self.start_time:.4f}s] 进程检测完成！")
-        if success is not True:
-            self.show_setting_error()
-        else:
-            self.create_account_list_ui()
-
-        # print("创建完成，无论是错误界面还是正常界面，下面代码都要进行")
-
-        # 恢复刷新可用性
-        # self.root_menu.edit_menu.entryconfig("刷新", state="normal")
-
-        # 加载完成后更新一下界面并且触发事件
-        if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
-            self.scrollable_canvas.refresh_canvas()
+        def _thread():
+            success, result = AccInfoFunc.get_sw_acc_list(self.root, self, self.sw)
+            if success is not True:
+                self.root.after(0, self.show_setting_error)
+            else:
+                self.root.after(0, self.create_account_list_ui, result)
+        threading.Thread(target=_thread).start()
 
     def _ui_pre_load(self):
         printer.vital("刷新")
@@ -154,35 +142,29 @@ class LoginUI:
             sw_ver_label = ttk.Label(bottom_frame, text=f"{sw_ver}", foreground="grey")
             sw_ver_label.pack(side='bottom')
 
-        self.is_original = False
-        btn_height = 35
-        self.btn_switch = CustomCornerBtn(
-            bottom_frame, text="⇄", width=btn_height, height=btn_height, corner_radius=12)
-        self.btn_switch.pack(side="left", padx=5, pady=5)
-        self.btn_switch.set_bind_map(**{"1": self._switch_mode}).apply_bind(self.root)
+        self.widget_dict["switch_btn"] = _create_square_btn_in_(bottom_frame, "⇄", corner_radius=12)
+        _pack_btn_left(self.widget_dict["switch_btn"])
+        self.widget_dict["switch_btn"].set_bind_map(**{"1": self._switch_mode}).apply_bind(self.root)
 
-        self.btn_login = CustomCornerBtn(
-            bottom_frame, text="共存登录", width=80, height=btn_height, corner_radius=4)
-        self.btn_login.pack(side="left", expand=True, fill="x", padx=0, pady=5)
-        self.btn_login.set_bind_map(**{"1": self._to_manual_login}).apply_bind(self.root)
+        self.widget_dict["login_btn"] = _create_btn_in_(bottom_frame, "手动登录")
+        _pack_btn_left(self.widget_dict["login_btn"])
+        self.widget_dict["login_btn"].set_bind_map(**{"1": self._to_manual_login}).apply_bind(self.root)
 
-        # self.btn_extra = CustomCornerBtn(
-        #     bottom_frame, text="+", width=btn_height, height=btn_height, corner_radius=4)
-        # self.btn_extra.pack(side="left", expand=True, fill="x", padx=0, pady=5)
-        # self.btn_extra.set_bind_map(**{"1": self._to_extra_func}).apply_bind(self.root)
+        self.widget_dict["mng_btn"] = _create_square_btn_in_(bottom_frame, Strings.MNG_SIGN)
+        _pack_btn_left(self.widget_dict["mng_btn"])
+        self.widget_dict["mng_btn"].set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
 
-        self.btn_mng = CustomCornerBtn(
-            bottom_frame, text=Strings.MNG_SIGN, width=btn_height, height=btn_height, corner_radius=4)
-        self.btn_mng.pack(side="left", expand=True, fill="x", padx=0, pady=5)
-        self.btn_mng.set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
+        prefer_coexist = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PREFER_COEXIST)
+        self.sw_class.is_original = not (prefer_coexist is False)  # 故意取反后切换
+        self._switch_mode()
 
         # 创建一个可以滚动的画布，并放置一个主框架在画布上
         self.scrollable_canvas = ScrollableCanvasW(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
-    def create_account_list_ui(self):
+    def create_account_list_ui(self, result=None):
         """账号列表获取成功，加载列表"""
-        success, result = self.get_acc_list_answer
+        # success, result = self.get_acc_list_answer
         print(f"渲染账号列表...")
         acc_list_dict, has_mutex = result
         self.acc_list_dict = acc_list_dict
@@ -204,7 +186,6 @@ class LoginUI:
                     if all(table[t].can_quick_refresh for t in table):
                         # 快速刷新
                         for t in table:
-                            # tree_class[t].quick_refresh_items(acc_list_dict[t])
                             table[t].quick_refresh_items()
                 except Exception as e:
                     logger.warning(e)
@@ -227,16 +208,15 @@ class LoginUI:
         self.after_success_create_acc_ui()
 
     def _to_manual_login(self):
-        if self.is_original is not True:
+        if self.sw_class.is_original is not True:
             print("共存登录")
             SwOperator.start_thread_to_manual_login_coexist(self.sw)
-
         else:
             print("原生登录")
             SwOperator.start_thread_to_manual_login_origin(self.sw)
 
     def _to_mng_func(self):
-        if self.is_original is not True:
+        if self.sw_class.is_original is not True:
             print("共存程序管理")
             ExeManagerWndCreator.open_exe_manager_wnd()
         else:
@@ -244,13 +224,13 @@ class LoginUI:
             CfgManagerWndCreator.open_cfg_manager_wnd()
 
     def _switch_mode(self):
-        self.is_original = not self.is_original
-        if self.is_original:
-            self.btn_login.set_text("原生登录").redraw()
-            self.btn_mng.set_text(Strings.MNG_SIGN).redraw()
+        self.sw_class.is_original = not self.sw_class.is_original
+        if self.sw_class.is_original:
+            self.widget_dict["login_btn"].set_text("原生登录").redraw()
+            self.widget_dict["mng_btn"].set_text(Strings.MNG_SIGN).redraw()
         else:
-            self.btn_login.set_text("共存登录").redraw()
-            self.btn_mng.set_text(Strings.MNG_SIGN).redraw()
+            self.widget_dict["login_btn"].set_text("共存登录").redraw()
+            self.widget_dict["mng_btn"].set_text(Strings.MNG_SIGN).redraw()
 
     def show_setting_error(self):
         """出错的话，选择已经有的界面中创建错误信息显示"""

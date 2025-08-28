@@ -85,6 +85,7 @@ class LocalCfg(str, Enum):
     SIGN_VISIBLE = "sign_visible"
     USE_TXT_AVT = "txt_avt"
     # -登录相关
+    PREFER_COEXIST = "prefer_coexist"
     HIDE_WND = "hide_wnd"
     KILL_IDLE_LOGIN_WND = "kill_idle_login_wnd"
     UNLOCK_CFG = "unlock_cfg"

@@ -1256,37 +1256,6 @@ class SwOperator:
             ...
         return proc, sub_proc
 
-    @staticmethod
-    def _is_hwnd_a_main_wnd_of_sw(hwnd, sw):
-        ...
-        # # TODO: 窗口检测逻辑需要优化
-        # """检测窗口是否是某个平台的主窗口"""
-        # executable, = subfunc_file.get_remote_cfg(sw, executable=None)
-        # # 判断hwnd是否属于指定的程序
-        # pid = hwnd_utils.get_hwnd_details_of_(hwnd)["pid"]
-        # if psutil.Process(pid).exe() != executable:
-        #     return False
-        # expected_classes, = subfunc_file.get_remote_cfg(sw, main_wnd_class_wildcards=None)
-        # class_name = win32gui.GetClassName(hwnd)
-        # for expected_class in expected_classes:
-        #     regex = StringUtils.wildcard_to_regex(expected_class)
-        #     if sw == SW.WECHAT:
-        #         # 旧版微信可直接通过窗口类名确定主窗口
-        #         if re.fullmatch(regex, class_name):
-        #             return True
-        #         continue
-        #     elif sw == SW.WEIXIN:
-        #         if not re.fullmatch(regex, class_name):
-        #             continue
-        #         # 新版微信需要通过窗口控件判定
-        #         style = win32gui.GetWindowLong(hwnd, win32con.GWL_STYLE)
-        #         # 检查是否有最大化按钮
-        #         has_maximize = bool(style & win32con.WS_MAXIMIZEBOX)
-        #         if has_maximize:
-        #             return True
-        #         continue
-        # return False
-
     @classmethod
     def get_idle_login_wnd_and_close_if_necessary(cls, sw, close=False):
         """获取所有多余窗口,如果有需要,关闭这些窗口"""
