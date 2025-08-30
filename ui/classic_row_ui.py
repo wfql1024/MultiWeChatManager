@@ -23,6 +23,7 @@ customized_btn_pad = Config.CUS_BTN_PAD
 customized_btn_ipad_y = Config.CUS_BTN_IPAD_Y
 customized_btn_ipad_x = Config.CUS_BTN_IPAD_X
 
+
 def _create_btn_in_(frame_of_btn, text):
     btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad_x, i_pady=customized_btn_ipad_y)
     return btn
@@ -280,4 +281,3 @@ class AccLoginCR(CkbRow):
                "2": partial(AccOperator.switch_to_sw_account_wnd, iid)}
         )
         print(f"加载 {account} 行用时{time.time() - start_time:.4f}秒")
-

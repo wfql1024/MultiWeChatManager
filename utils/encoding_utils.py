@@ -335,3 +335,78 @@ class PathUtils:
         except Exception as e:
             print(e)
             return False
+
+
+class ByteUtils:
+    """16进制字符串和字节串互转"""
+
+    @staticmethod
+    def bytes_to_hex_str(byte_data: bytes) -> str:
+        """将 bytes 转换为 'xx xx xx' 形式的十六进制字符串"""
+        return ' '.join([f"{byte:02x}" for byte in byte_data])
+
+    @staticmethod
+    def hex_str_to_bytes(hex_str: str) -> bytes:
+        """把 'eb 1b e8 26 ...' 转成 b'\xeb\x1b\xe8\x26...'"""
+        return bytes.fromhex(hex_str.replace(" ", ""))
+
+    @staticmethod
+    def int_to_little_endian_hex(value: int, length: int = 4) -> str:
+        """整数转小端序 16 进制字符串 (带空格分隔字节)"""
+        return " ".join(f"{b:02X}" for b in value.to_bytes(length, "little", signed=True))
+
+    @classmethod
+    def resolve_branch_target_and_range(cls, instr_addr: int, instr_bytes: str, range_size: int = 0x30):
+        """
+        根据指令原址和跳转指令字节，计算跳转目标地址。
+
+        instr_addr: 指令起始地址
+        instr_bytes: 指令字节串，如 "E9 C7 11 09 FF" 或 "0F 84 99 EB F6 00"
+
+        返回目标地址字符串（十六进制）
+        """
+        parts = instr_bytes.strip().split()
+        if not parts:
+            raise ValueError("instr_bytes 不能为空")
+
+        # 判断跳转类型
+        first = parts[0].upper()
+        if first in ("E8", "E9"):
+            # CALL/JMP rel32，偏移 4 字节，下一条指令地址 = instr_addr + 5
+            next_instr_addr = instr_addr + 5
+            offset_bytes = " ".join(parts[1:5])
+        elif first == "0F" and len(parts) >= 6 and parts[1].upper() in ("84", "85"):
+            # JE/JNE rel32，偏移 4 字节，下一条指令地址 = instr_addr + 6
+            next_instr_addr = instr_addr + 6
+            offset_bytes = " ".join(parts[2:6])
+        else:
+            # 非跳转指令
+            raise ValueError(f"未知或不支持的跳转指令开头: {first}")
+
+        target_addr = cls.calc_jump_target(next_instr_addr, offset_bytes)
+        target_int = int(target_addr, 16)
+        return (
+            target_addr,
+            hex(target_int - range_size).upper().replace("X", "x"),
+            hex(target_int + range_size).upper().replace("X", "x")
+        )
+
+    @staticmethod
+    def twos_complement_to_int(hex_str: str) -> int:
+        """
+        将形如 "C7 11 09 FF" 的十六进制小端补码数转换成有符号整数。
+        """
+        parts = hex_str.strip().split()
+        b = bytes(int(x, 16) for x in parts)
+        return int.from_bytes(b, "little", signed=True)
+
+    @classmethod
+    def calc_jump_target(cls, next_instr_addr: int, offset_bytes: str) -> str:
+        """
+        计算 jmp/call 跳转目标地址
+        next_instr_addr: 指令的下一条地址（E9/E8 后紧接的地址）
+        offset_bytes: E9/E8 后面的 4 字节，形如 "C7 11 09 FF"
+        返回目标地址
+        """
+        offset = cls.twos_complement_to_int(offset_bytes)
+        return hex(next_instr_addr + offset).upper().replace("X", "x")

@@ -11,6 +11,7 @@ from public.global_members import GlobalMembers
 from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger, RedirectText
 
+
 class TopProgressBar:
     def __init__(self, parent, height=2):
         self.progress = ttk.Progressbar(parent, mode="determinate", maximum=100)

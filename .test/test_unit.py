@@ -11,11 +11,10 @@ import psutil
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc, SwOperator
-from public.enums import MultirunMode, LocalCfg
 from public import Config
+from public.enums import MultirunMode, LocalCfg
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
 from utils.hwnd_utils import Win32HwndGetter, HwndGetter
-
 
 
 class Test(TestCase):
@@ -26,9 +25,6 @@ class Test(TestCase):
     def test_get_wnd_details_from_hwnd(self):
         details = hwnd_utils.get_hwnd_details_of_(10100452)
         print(details['class'])
-
-    def test_get_sw_data_dir(self):
-        print(SwInfoFunc.detect_sw_data_dir(sw="Weixin"))
 
     def test_wait_for_wnd_open(self):
         Win32HwndGetter.win32_wait_hwnd_by_class("Qt51514QWindowIcon")
@@ -159,101 +155,6 @@ class Test(TestCase):
                 # 输出参数和结果
                 print(f"data: {data}, key_path: {key_path}, result: {result}")
 
-    def test_get_nested_values(self):
-        print("测试批量获取嵌套值----------------------------------------------------------------------------")
-        default_value = "default"
-        separator = "/"
-        # 批量获取嵌套值
-        # 定义参数可用值列表
-        data_values = [
-            None,  # data 为 None
-            2,  # data 为非字典类型
-            {"a": {"b": {"c": 1}}}  # data 为嵌套字典
-        ]
-
-        front_addr_lists = [
-            None,
-            [""],
-            [1],
-            ["a", 1],
-            ["a/b", ""],
-            ["a/b", "c"],
-            ["a", "b", "c"]
-        ]
-
-        default_dicts = [
-            None,
-            {"": "default"},
-            {"a": "default"},
-            {"b/d": "default"},
-            {"c/a": "default"}
-        ]
-
-        # 遍历所有参数组合
-        for data in data_values:
-            for front_addr_list in front_addr_lists:
-                # 调用方法并获取结果
-                if front_addr_list is None:
-                    for default_dict in default_dicts:
-                        if default_dict is None:
-                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator)
-                        else:
-                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator,
-                                                                            **default_dict)
-                        # 输出参数和结果
-                        print(
-                            f"data: {data}, front_addr_list: {front_addr_list}, default_dict: {default_dict}, result: {result}")
-                else:
-                    for default_dict in default_dicts:
-                        if default_dict is None:
-                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator,
-                                                                            *front_addr_list)
-                        else:
-                            result = file_utils.DictUtils.get_nested_values(data, default_value, separator,
-                                                                            *front_addr_list, **default_dict)
-                        # 输出参数和结果
-                        print(
-                            f"data: {data}, front_addr_list: {front_addr_list}, default_dict: {default_dict}, result: {result}")
-
-        # 修改嵌套值
-        data = {"a": {"b": {"c": 1}}}
-        self.assertEqual(file_utils.DictUtils._set_nested_value(None, None, 1), False)  # 无法修改
-
-        data = {"a": {"b": {"c": 1}}}
-        self.assertEqual(file_utils.DictUtils._set_nested_value(1, None, 1), False)  # 无法修改
-
-        data = {"a": {"b": {"c": 1}}}
-        self.assertEqual(file_utils.DictUtils._set_nested_value(data, 1, None), False)  # 无法修改
-
-        data = {"a": {"b": {"c": 1}}}
-        self.assertEqual(file_utils.DictUtils._set_nested_value(data, "a/b", None), True)  # 成功修改
-        self.assertEqual(data, {"a": {"b": None}})  # b节点改为None
-
-        data = {"a": {"b": {"c": 1}}}
-        self.assertEqual(file_utils.DictUtils._set_nested_value(data, "a/b/c", 2), True)  # 成功修改
-        self.assertEqual(data, {"a": {"b": {"c": 2}}})  # c节点改为2
-
-        data = {"a": {"b": {"c": 1}}}
-        self.assertEqual(file_utils.DictUtils._set_nested_value(data, "a/b/d/c", 2), True)  # 成功修改
-        self.assertEqual(data, {"a": {"b": {"c": 1, "d": {"c": 2}}}})
-
-        data = {"a": {"b": {"c": 1}}}
-        self.assertEqual(file_utils.DictUtils._set_nested_value(data, "a/b/c/d", 2), True)  # 成功修改
-        self.assertEqual(data, {"a": {"b": {"c": {"d": 2}}}})
-
-        # 清空嵌套值
-        data = {"a": {"b": {"c": 1}}}
-        self.assertEqual(file_utils.DictUtils._clear_nested_value(None, None), False)  # 无法修改
-        # data["a"]["b"].clear()
-
-    def test_set_nested_values(self):
-        data = {"a": {"b": {"c": 1}}, "": 3}
-        # print(file_utils.DictUtils.get_nested_value(data, "", "/", "/"))
-        # file_utils.DictUtils.set_nested_values(data, None, "/", **{"/b/c": 2})
-        # file_utils.DictUtils.set_nested_value(data, "a/b/c/d", "/", "/")
-        file_utils.DictUtils.clear_nested_values(data, *(), "a", "b/c")
-        print(data)
-
     def test_six_randoms(self):
         for i in range(6):
             print(random.randint(0, 3))
@@ -295,12 +196,18 @@ class Test(TestCase):
                 [], 34288, ["mmui::MainWindow"])
             print(sw_hwnd, class_name)
 
+    def test_identify_dll(self):
+        SwInfoFunc.identify_dll_core("Weixin", "anti-revoke")
+
     def test_identify_coexist_dll(self):
-        res = SwInfoFunc.identify_dll("WeChat", "anti-revoke", False, "default", "1")
+        res = SwInfoFunc.identify_dll_core("WeChat", "anti-revoke", None, "default", "1")
         print(res)
 
+    def test_switch_dll(self):
+        SwOperator.switch_dll_core("Weixin", "anti-revoke", "alert")
+
     def test_update_adaptation_from_remote_to_cache(self):
-        SwInfoFunc.update_adaptation_from_remote_to_cache("QQNT", "anti-revoke")
+        SwInfoFunc._update_adaptation_from_remote_to_cache("QQNT", "anti-revoke")
 
     def test_get_data(self):
         data = subfunc_file.get_remote_cfg("Weixin", "coexist", "channels", "default", "patch_wildcard")
@@ -312,7 +219,7 @@ class Test(TestCase):
     def test_custom_notebook_and_custom_btn(self):
         import tkinter as tk
         from tkinter import ttk
-        from public_class.custom_widget import CustomNotebook, NotebookDirection, CustomCornerBtn, CustomLabelBtn
+        from components import CustomNotebook, NotebookDirection, CustomCornerBtn, CustomLabelBtn
 
         tk_root = tk.Tk()
         tk_root.geometry("400x300")

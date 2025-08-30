@@ -25,6 +25,7 @@ customized_btn_ipad_y = Config.CUS_BTN_IPAD_Y
 customized_btn_ipad_x = Config.CUS_BTN_IPAD_X
 switch_btn_corner = Config.CUS_BTN_IPAD_Y
 
+
 def _create_btn_in_(frame_of_btn, text, **kwargs):
     """方法提取: 创建个普通按钮"""
     btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad_x, i_pady=customized_btn_ipad_y, **kwargs)
@@ -119,12 +120,14 @@ class LoginUI:
             return
         self.start_time = time.time()
         print(f"计时开始：{time.time() - self.start_time:.4f}秒")
+
         def _thread():
             success, result = AccInfoFunc.get_sw_acc_list(self.root, self, self.sw)
             if success is not True:
                 self.root.after(0, self.show_setting_error)
             else:
                 self.root.after(0, self.create_account_list_ui, result)
+
         threading.Thread(target=_thread).start()
 
     def _ui_pre_load(self):
@@ -202,7 +205,6 @@ class LoginUI:
             self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(logins)), time.time() - self.start_time)
         last_msg = printer.print_vn(f"[{time.time() - self.start_time:.4f}s] 加载完成！")
         printer.last(last_msg)
-        Printer().print_last()
 
         self.after_success_create_acc_ui_when_start()
         self.after_success_create_acc_ui()
@@ -262,11 +264,13 @@ class LoginUI:
     def after_success_create_acc_ui(self):
         """成功创建账号列表才会执行"""
 
-        # 进行静默获取头像及配置, 获取已登录的窗口hwnd
+        # 进行静默获取头像及配置, 获取已登录的窗口hwnd, 获取多开模式
         def func():
             AccOperator.silent_get_and_config(self.sw)
             logins = self.acc_list_dict[OnlineStatus.LOGIN]
             AccInfoFunc.bind_main_wnd_to_accounts_in_sw(self.sw, logins)
+            SwInfoFunc.get_sw_multirun_mode(self.sw)
+            Printer().print_last()
 
         threading.Thread(target=func).start()
 

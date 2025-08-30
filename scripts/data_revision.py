@@ -70,6 +70,7 @@ def migrate_to_channels(data):
 
     return data
 
+
 def migrate_remote_data():
     # 原始数据 dict
     data = load_remote_cfg()
@@ -85,6 +86,7 @@ def migrate_remote_data():
             success = DictUtils.set_nested_values(data, None, sw, **{mode: new_data})
             JsonUtils.save_json(Config.REMOTE_SETTING_JSON_PATH, data)
             print(new_data)
+
 
 def migrate_cache_data():
     # 原始数据 dict
@@ -104,9 +106,8 @@ def migrate_cache_data():
             # JsonUtils.save_json(Config.REMOTE_SETTING_JSON_PATH, data)
             print(new_data)
 
+
 if __name__ == "__main__":
     pass
     # migrate_cache_data()
     # migrate_remote_data()
-
-

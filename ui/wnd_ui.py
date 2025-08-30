@@ -35,24 +35,28 @@ from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUt
 from utils.sys_utils import Tk2Sys
 from utils.widget_utils import UnlimitedClickHandler
 
-
 customized_btn_pad = Config.CUS_BTN_PAD
 customized_btn_ipad_y = Config.CUS_BTN_IPAD_Y * 0.4
 customized_btn_ipad_x = Config.CUS_BTN_IPAD_X * 0.4
+
 
 def _create_btn_in_(frame_of_btn, text):
     btn = CustomCornerBtn(frame_of_btn, text=text, i_padx=customized_btn_ipad_x, i_pady=customized_btn_ipad_y)
     return btn
 
+
 def _create_square_btn_in(frame_of_btn, text):
     btn = CustomCornerBtn(frame_of_btn, text=text, i_pady=customized_btn_ipad_y)
     return btn
 
+
 def _pack_btn_left(btn):
     btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
 
+
 def _set_negative_style(btn):
     btn.set_major_colors("#FF0000")
+
 
 class WndCreator:
 
@@ -180,7 +184,6 @@ class DetailUI(SubToolWndUI):
         # avatar_status_label.pack(**Constants.B_WGT_PACK)
 
         # 登录状态=pid+hwnd
-
 
         change_avatar_btn = _create_btn_in_(avatar_operate_frame, "修改")
         change_avatar_btn.pack(side="left", padx=customized_btn_pad, pady=customized_btn_pad)
@@ -1788,8 +1791,6 @@ class GlobalSettingWndUI(SubToolWndUI):
         # 添加预设按钮
         ip_presets, port_presets = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, "proxy",
                                                                ip_presets=None, port_presets=None)
-
-
 
         for ip in ip_presets:
             b = _create_btn_in_(ip_btn_frame, ip["name"])

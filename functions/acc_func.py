@@ -1313,7 +1313,6 @@ class AccInfoFunc:
         if isinstance(res, dict):
             for acc, hwnd in res.items():
                 cls._record_hwnd_and_set_title(sw, acc, hwnd)
-        Printer().print_last()
 
     @classmethod
     def _record_hwnd_and_set_title(cls, sw, acc, hwnd):

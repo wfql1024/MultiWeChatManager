@@ -16,6 +16,7 @@ from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 from utils.widget_utils import TreeUtils
 
+
 class CustomNotebook:
     def __init__(self, root, parent_frame, direction: NotebookDirection = NotebookDirection.TOP, *args, **kwargs):
         self.click_time = 0
@@ -505,7 +506,6 @@ class CkbRow:
         self.row_frame = ttk.Frame(self.main_frame)
         self.row_frame.pack(fill="x", padx=Config.LOG_IO_FRM_PAD_X, pady=Config.CLZ_ROW_FRM_PAD_Y)
         self._load_row()
-
 
     def initialize_members_in_init(self):
         pass

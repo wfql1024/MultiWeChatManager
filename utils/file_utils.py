@@ -93,7 +93,7 @@ class DictUtils:
             return False
 
     @staticmethod
-    def _clear_nested_value(data: dict, keys_chain:Optional[list]) -> bool:
+    def _clear_nested_value(data: dict, keys_chain: Optional[list]) -> bool:
         """
         按照地址格式清空字典中的子字典或值（可以设置默认值），该方法不会对不存在的键路径进行创建
         :return: 是否成功
@@ -367,6 +367,35 @@ class IniUtils:
 
 class DllUtils:
     @staticmethod
+    def ensure_mmap(source: Union[str, bytes, bytearray, mmap.mmap], write=False):
+        """
+        将输入统一转为 mmap 对象。
+        :param write: 是否写入
+        :param source: 文件路径(str)、bytes、bytearray 或 mmap.mmap
+        :return: mmap 对象, 以及是否为临时对象(需要释放)
+        """
+        if isinstance(source, mmap.mmap):
+            return source, False
+
+        if isinstance(source, (bytes, bytearray)):
+            # 用匿名 mmap 来包装 bytes 数据
+            mm = mmap.mmap(-1, len(source))  # -1 = 匿名映射
+            mm.write(source)
+            mm.seek(0)
+            return mm, True
+
+        if isinstance(source, str) and os.path.exists(source):
+            if write:
+                f = open(source, "r+b")  # 文件必须可写
+                mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
+            else:
+                f = open(source, "rb")
+                mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+            return mm, True
+
+        raise TypeError(f"Unsupported source type: {type(source)}")
+
+    @staticmethod
     def find_hex_patterns_from_file(file_path, *hex_patterns):
         """
         在文件中查找指定的十六进制模式，并返回一个布尔列表。
@@ -382,8 +411,8 @@ class DllUtils:
         # 返回布尔列表
         return [pattern in dll_content for pattern in patterns]
 
-    @staticmethod
-    def batch_atomic_replace_multi_files(file_patterns_map: Dict[str, List[Tuple[List[str], List[str]]]]) -> bool:
+    @classmethod
+    def batch_atomic_replace_multi_files(cls, file_patterns_map: Dict[str, List[Tuple[List[str], List[str]]]]) -> bool:
         """
         对多个文件执行原子替换操作，若任一文件替换失败，则回滚所有已处理文件的改动。
         :param file_patterns_map: {dll_path: [hex_patterns_tuples]}
@@ -402,7 +431,7 @@ class DllUtils:
                         backup_map[dll_path] = mmap_file[:]
 
                         for hex_patterns_tuple in hex_patterns_tuples:
-                            success, _ = DllUtils._atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple)
+                            success, _ = cls._atomic_replace_hex_patterns(mmap_file, hex_patterns_tuple)
                             if not success:
                                 print(f"替换失败: {dll_path}的{hex_patterns_tuple}")
                                 transaction_success = False

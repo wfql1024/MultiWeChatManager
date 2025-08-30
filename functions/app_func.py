@@ -36,6 +36,7 @@ class AppFunc:
                     candidates.append(proc)
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
+        print(f"找到旧版进程: {candidates}")
 
         # 2. 判断情况
         if len(candidates) == 0:
@@ -49,11 +50,18 @@ class AppFunc:
         old_exe_path = proc.info['exe']
         old_dir = os.path.dirname(old_exe_path)
 
+        print(f"旧版进程路径: {old_exe_path}")
+        print(f"旧版进程目录: {old_dir}")
+
         # 3. 搜索 user_files 文件夹
         old_user_path = None
         for root, dirs, files in os.walk(old_dir):
+            print(f"当前目录: {root}")
+            print(f"子目录: {dirs}")
+            print(f"文件: {files}")
             if "user_files" in dirs:
                 old_user_path = os.path.join(root, "user_files")
+                print(f"旧版 user_files 路径: {old_user_path}")
                 break
 
         if not old_user_path or not os.path.isdir(old_user_path):
@@ -68,10 +76,13 @@ class AppFunc:
             desktop = winshell.desktop()
             ts = time.strftime("%Y%m%d_%H%M%S")
             backup_path = os.path.join(desktop, f"user_files_backup_{ts}")
+            print(f"备份路径: {backup_path}")
             shutil.move(Config.PROJ_USER_PATH, backup_path)
+            print(f"旧版数据已备份至: {backup_path}")
 
         # 5. 拷贝旧版数据
         shutil.copytree(old_user_path, Config.PROJ_USER_PATH)
+        print(f"旧版数据已拷贝至: {Config.PROJ_USER_PATH}")
 
         # 6. 完成提示
         messagebox.showinfo("完成", "导入完成！")

@@ -33,7 +33,8 @@
           icon="" textColor="" backgroundColor=""/>
     <tree path="/scripts/original_remote_setting_v4.json" title="3.3前使用, 修改版本适配结构, 增加特征码适配"
           extension="" presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
-    <tree path="/.old/original_remote_configs/original_remote_setting_v5.json" title="测试版临时使用, 版本适配结构增加文件地址节点" extension=""
+    <tree path="/.old/original_remote_configs/original_remote_setting_v5.json"
+          title="测试版临时使用, 版本适配结构增加文件地址节点" extension=""
           presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
     <tree path="/scripts/original_remote_setting_v6.json" title="测试版临时使用, 修改渠道层级高于版本层级" extension=""
           presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
