@@ -1,3 +1,91 @@
+class SwInfoFunc:
+    @classmethod
+    def _identify_multi_state_patching_of_files_in_channel(
+            cls, sw, channel_addresses_dict, coexist_channel=None, ordinal=None):
+        """对于非二元状态切换的, 只需要检测原始串即可"""
+        addr_res_dict = {}
+        for addr in channel_addresses_dict.keys():
+            # Printer().debug(f"检查文件地址 {addr} 的特征码适配")
+            if not isinstance(coexist_channel, str) or not isinstance(ordinal, str):
+                patch_file = cls.resolve_sw_path(sw, addr)
+            else:
+                patch_file = cls.get_coexist_path_from_address(sw, addr, coexist_channel, ordinal)
+            original_list = channel_addresses_dict[addr]["original"]
+            modified_list = channel_addresses_dict[addr]["modified"]
+            has_original_list = DllUtils.find_hex_patterns_from_file(patch_file, *original_list)
+            # 转换为集合检查一致性,集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
+            # Printer().debug(f"特征码列表:\n{has_original_list}")
+            has_original_set = set(has_original_list)
+            # 判断匹配状态
+            if len(has_original_set) == 1 and True in has_original_set:
+                available = True
+                message = "包含该模式"
+            else:
+                available = False
+                message = "没有该模式"
+            # 将结果存入字典
+            addr_res_dict[addr] = {}
+            addr_res_dict[addr]["status"] = available
+            addr_res_dict[addr]["msg"] = message
+            addr_res_dict[addr]["path"] = patch_file
+            addr_res_dict[addr]["original"] = original_list
+            addr_res_dict[addr]["modified"] = modified_list
+
+        return addr_res_dict
+
+    @classmethod
+    def _identify_binary_state_patching_of_files_in_channel(
+            cls, sw, channel_addresses_dict, channel=None, ordinal=None) -> dict:
+        """
+        二元状态, 对渠道内的文件分别检测原始串和补丁串来识别状态
+        参数: channel_addresses_dict: 渠道-文件适配字典 {addr: {"original": [...], "modified": [...]}}
+        返回:
+            { addr1: (status, message, patch_file, original_list, modified_list),
+                addr2: (status, message, patch_file, original_list, modified_list), ...}
+            其中, status: True/False/None; message: 状态描述字符串; patch_file: 补丁文件路径;
+                original_list: 原始串列表; modified_list: 补丁串列表
+        """
+        patching_dict = {}
+        for addr in channel_addresses_dict.keys():
+            # Printer().debug(f"检查文件地址 {addr} 的特征码适配")
+            if not isinstance(channel, str) or not isinstance(ordinal, str):
+                patch_file = cls.resolve_sw_path(sw, addr)
+            else:
+                patch_file = cls.get_coexist_path_from_address(sw, addr, channel, ordinal)
+            original_list = channel_addresses_dict[addr]["original"]
+            modified_list = channel_addresses_dict[addr]["modified"]
+            has_original_list = DllUtils.find_hex_patterns_from_file(patch_file, *original_list)
+            has_modified_list = DllUtils.find_hex_patterns_from_file(patch_file, *modified_list)
+            # 转换为集合检查一致性,集合中只允许有一个元素，True表示list全都是True，False表示list全都是False，其他情况不合法
+            has_original_set = set(has_original_list)
+            has_modified_set = set(has_modified_list)
+            # 初始化默认值
+            status = None
+            message = "未知状态"
+            # 判断匹配状态
+            if len(has_original_set) == 1 and len(has_modified_set) == 1:
+                all_original = True if True in has_original_set else False if False in has_original_set else None
+                all_modified = True if True in has_modified_set else False if False in has_modified_set else None
+                if all_original is True and all_modified is False:
+                    status = False
+                    message = "未开启"
+                elif all_original is False and all_modified is True:
+                    status = True
+                    message = "已开启"
+                elif all_original is True or all_modified is True:
+                    message = "文件有多处匹配，建议优化补丁替换列表"
+            else:
+                message = "文件匹配结果不一致"
+            # 将结果存入字典
+            patching_dict[addr] = {}
+            patching_dict[addr]["status"] = status
+            patching_dict[addr]["msg"] = message
+            patching_dict[addr]["path"] = patch_file
+            patching_dict[addr]["original"] = original_list
+            patching_dict[addr]["modified"] = modified_list
+
+        return patching_dict
+
 
 class SwOperator:
     @staticmethod
