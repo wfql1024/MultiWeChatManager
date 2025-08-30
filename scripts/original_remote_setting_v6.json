@@ -1288,7 +1288,9 @@
                 "default": {
                     "label": "多开",
                     "introduce": "可以在全局进行多开",
-                    "authors": ["afaa1991"],
+                    "authors": [
+                        "afaa1991"
+                    ],
                     "feature_ver_adaptations": {
                         "4.1.0": {
                             "%dll_dir%/Weixin.dll": {
