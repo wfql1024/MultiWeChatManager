@@ -1,0 +1,999 @@
+{
+    "multiple": {
+        "3.9.12.51": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "-- -- -- -- -- -- -- -- ?? ?? ?? --,-- -- -- -- -- -- -- -- ?? ?? ?? --",
+                "pattern": "0F 84 BD 00 00 00 FF 15 44 D5 6D 01,0F 84 BD 00 00 00 FF 15 44 D5 6D 01"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9 BE 00 -- -- -- -- -- -- -- -- --,90 E9 -- -- -- -- -- -- -- -- -- --",
+                "pattern": "E9 BE 00 00 00 00 FF 15 44 D5 6D 01,90 E9 BD 00 00 00 FF 15 44 D5 6D 01"
+            }
+        },
+        "3.9.12.45": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "-- -- -- -- -- -- -- -- ?? ?? ?? --,-- -- -- -- -- -- -- -- ?? ?? ?? --",
+                "pattern": "0F 84 BD 00 00 00 FF 15 F4 C3 6D 01,0F 84 BD 00 00 00 FF 15 F4 C3 6D 01"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9 BE 00 -- -- -- -- -- -- -- -- --,90 E9 -- -- -- -- -- -- -- -- -- --",
+                "pattern": "E9 BE 00 00 00 00 FF 15 F4 C3 6D 01,90 E9 BD 00 00 00 FF 15 F4 C3 6D 01"
+            }
+        },
+        "3.9.12.37": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "-- -- -- -- -- -- -- -- ?? ?? ?? --,-- -- -- -- -- -- -- -- ?? ?? ?? --",
+                "pattern": "0F 84 BD 00 00 00 FF 15 A4 FD 6D 01,0F 84 BD 00 00 00 FF 15 A4 FD 6D 01"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9 BE 00 -- -- -- -- -- -- -- -- --,90 E9 -- -- -- -- -- -- -- -- -- --",
+                "pattern": "E9 BE 00 00 00 00 FF 15 A4 FD 6D 01,90 E9 BD 00 00 00 FF 15 A4 FD 6D 01"
+            }
+        },
+        "3.9.10.19": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "0F84BD000000FF15******01,0F84BD000000FF15******01",
+                "pattern": "00B9BD000000FF158F76D701,00B9BD000000FF158F76D701"
+            },
+            "PATCH": {
+                "alias": "补丁（猜测）",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF158F76D701,90E9BD000000FF158F76D701"
+            }
+        },
+        "3.9.10.27": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "----------------????----,----------------????----",
+                "pattern": "00B9BD000000FF158F6FD701,00B9BD000000FF158F6FD701"
+            },
+            "PATCH": {
+                "alias": "补丁（猜测）",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF158F6FD701,90E9BD000000FF158F6FD701"
+            }
+        },
+        "3.9.11.9": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "????------------??????--,????------------??????--",
+                "pattern": "0F84BD000000FF15D4586201,0F84BD000000FF15D4586201"
+            },
+            "PATCH": {
+                "alias": "补丁（猜测）",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF15D4586201,90E9BD000000FF15D4586201"
+            }
+        },
+        "3.9.11.17": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "----------------??????--,----------------??????--",
+                "pattern": "0F84BD000000FF1514996301,0F84BD000000FF1514996301"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF1514996301,90E9BD000000FF1514996301"
+            }
+        },
+        "3.9.11.19": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "----------------????----,----------------????----",
+                "pattern": "0F84BD000000FF1524996301,0F84BD000000FF1524996301"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF1524996301,90E9BD000000FF1524996301"
+            }
+        },
+        "3.9.11.23": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "----------------??????--,----------------??????--",
+                "pattern": "0F84BD000000FF15641F6501,0F84BD000000FF15641F6501"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF15641F6501,90E9BD000000FF15641F6501"
+            }
+        },
+        "3.9.11.25": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "----------------????----,----------------????----",
+                "pattern": "0F84BD000000FF15F4246501,0F84BD000000FF15F4246501"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF15F4246501,90E9BD000000FF15F4246501"
+            }
+        },
+        "3.9.12.9": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "----------------????----,----------------????----",
+                "pattern": "0F84BD000000FF1524656501,0F84BD000000FF1524656501"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF1524656501,90E9BD000000FF1524656501"
+            }
+        },
+        "3.9.12.11": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "----------------????----,----------------????----",
+                "pattern": "0F84BD000000FF15845F6501,0F84BD000000FF15845F6501"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF15845F6501,90E9BD000000FF15845F6501"
+            }
+        },
+        "3.9.12.15": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "----------------????----,----------------????----",
+                "pattern": "0F84BD000000FF15A4646501,0F84BD000000FF15A4646501"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF15A4646501,90E9BD000000FF15A4646501"
+            }
+        },
+        "3.9.12.17": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "----------------????----,----------------????----",
+                "pattern": "0F84BD000000FF15C4A86501,0F84BD000000FF15C4A86501"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF15C4A86501,90E9BD000000FF15C4A86501"
+            }
+        },
+        "3.9.12.19": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "----------------????----,----------------????----",
+                "pattern": "0F84BD000000FF1594AE6501,0F84BD000000FF1594AE6501"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF1594AE6501,90E9BD000000FF1594AE6501"
+            }
+        },
+        "3.9.12.31": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "----------------??????--,----------------??????--",
+                "pattern": "0F84BD000000FF1524006E01,0F84BD000000FF1524006E01"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "E9BE00------------------,90E9--------------------",
+                "pattern": "E9BE00000000FF1524006E01,90E9BD000000FF1524006E01"
+            }
+        }
+    },
+    "revoke": {
+        "3.9.12.51": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --",
+                "pattern": "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --",
+                "pattern": "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+            }
+        },
+        "3.9.12.45": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --",
+                "pattern": "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --",
+                "pattern": "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+            }
+        },
+        "3.9.12.37": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --",
+                "pattern": "C0 0F 84 3A FD FF FF EB BF 41 8B 00 24 0F 3C 02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "-- -- -- -- -- -- -- 90 90 -- -- -- -- -- -- --",
+                "pattern": "C0 0F 84 3A FD FF FF 90 90 41 8B 00 24 0F 3C 02"
+            }
+        },
+        "3.9.8.25": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "C00F843*FDFFFFEBBF418B00240F3C02",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.9.27": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.9.35": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.9.43": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.10.19": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.10.27": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.11.9": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "------??------------------------",
+                "pattern": "C00F843AFDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F843AFDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.11.17": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "--------------------------------",
+                "pattern": "C00F843AFDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F843AFDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.11.19": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "------??------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.11.23": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.11.25": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "------??------------------------",
+                "pattern": "C00F843AFDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F843AFDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.12.9": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "------??------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁（猜测）",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.12.11": {
+            "STABLE": {
+                "alias": "原版（猜测）",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁（猜测）",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.12.15": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.12.17": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.12.19": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        },
+        "3.9.12.31": {
+            "STABLE": {
+                "alias": "原版",
+                "changes": "--------------------------------",
+                "pattern": "C00F8438FDFFFFEBBF418B00240F3C02"
+            },
+            "PATCH": {
+                "alias": "补丁",
+                "changes": "--------------9090--------------",
+                "pattern": "C00F8438FDFFFF9090418B00240F3C02"
+            }
+        }
+    },
+    "update": {
+        "v3.3.0.3718-Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win7_x64_v3.3.0.3718-Beta.zip",
+                        "md5": "d2d7385ebcc80b5085d52b5fb4b380f6",
+                        "sha-256": "c1fa93bf00f9eeba5b0e485e457f399df38262cb74e48a7fb9942652f6db5b18"
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win10%20_x64_v3.3.0.3718-Beta.zip",
+                        "md5": "edf0fc07829584bfd8c7ceda321713fe",
+                        "sha-256": "b8bd9dd85489a3470f78a76c5ef38c99a8c2aa04dd6dcbdc5f8914c307b81640"
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win10%20_x64_v3.3.0.3718-Beta.zip",
+                        "md5": "edf0fc07829584bfd8c7ceda321713fe",
+                        "sha-256": "b8bd9dd85489a3470f78a76c5ef38c99a8c2aa04dd6dcbdc5f8914c307b81640"
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win7_x64_v3.3.0.3718-Beta.zip",
+                        "md5": "d2d7385ebcc80b5085d52b5fb4b380f6",
+                        "sha-256": "c1fa93bf00f9eeba5b0e485e457f399df38262cb74e48a7fb9942652f6db5b18"
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新标签页新UI, 新名字新图标",
+                    "☆新增平台管理,初步适配企业微信,QQ,QQNT,TIM等平台. 账号管理,不止微信~",
+                    "☆新增特征码适配, 多开与防撤回, 无需等待精确版本适配, 自动根据特征码查找, 快人一步~",
+                    "☆可以对已配置的账号创建启动器(原快捷启动), 无需管理软件, 双击即可选号启动~",
+                    "新增缩小到托盘, 静默运行, 保障体验不打扰~",
+                    "新增反馈渠道, `帮助-反馈渠道`欢迎进群畅聊~"
+                ],
+                "优化": [
+                    "优化侧栏, 窗口找不到时将弹出详情页获取窗口, 防止卡死;",
+                    "优化菜单刷新逻辑, 菜单对应界面, 不混乱; 优化刷新逻辑, 可快速刷新表格, 也可刷新整个页面;",
+                    "优化平台设置的路径获取与保存逻辑, 告别各种检测限制;",
+                    "优化结束进程区分, 避免误杀同名进程;",
+                    "优化头像显示, 对于暂时无法获取头像昵称的账号, 可以自行添加头像啦, 也可以使用文字头像;",
+                    "优化文件读写, 添加读写锁, 避免文件写入错误导致设置损失."
+                ],
+                "修复": [
+                    "修复已知问题."
+                ]
+            }
+        },
+        "v3.0.0.3087-Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win7_x64_v3.0.0.3087-Beta.zip",
+                        "md5": "8ad4ed3e275bd1319e1fe7bbfd11247f",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win10%20_x64_v3.0.0.3087-Beta.zip",
+                        "md5": "9f3bda50aba28a2c5c54106631cfea4a",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win10%20_x64_v3.0.0.3087-Beta.zip",
+                        "md5": "9f3bda50aba28a2c5c54106631cfea4a",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.0.0.3087-Beta/MultiWeChatManager_win7_x64_v3.0.0.3087-Beta.zip",
+                        "md5": "8ad4ed3e275bd1319e1fe7bbfd11247f",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "大版本更新！新增侧栏工具，欢迎尝鲜，开启方式为视图->侧栏",
+                    "新增代理设置",
+                    "新增4.0微信支持python模式多开",
+                    "新增4.0微信带提示的防撤回"
+                ],
+                "修复": [
+                    "修复部分已知问题"
+                ]
+            }
+        },
+        "v2.15.0.1458-Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win7_x64_v2.15.0.1458-Beta.zip",
+                        "md5": "7aa3246b9a64779ffca1cbeadff481bc",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win10%20_x64_v2.15.0.1458-Beta.zip",
+                        "md5": "7ca85d3179f13f33d23fdc04c7fc8e8f",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win10%20_x64_v2.15.0.1458-Beta.zip",
+                        "md5": "7ca85d3179f13f33d23fdc04c7fc8e8f",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.15.0.1458-Beta/MultiWeChatManager_win7_x64_v2.15.0.1458-Beta.zip",
+                        "md5": "7aa3246b9a64779ffca1cbeadff481bc",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增自启动功能：软件自启动，以及设置自动登录的账号",
+                    "新增隐藏账号功能：设置在未登录时隐藏的账号",
+                    "新增快捷键功能：可以对账号设置显示的快捷键，唤起窗口",
+                    "新增任务栏窗口标题显示账号名的功能"
+                ],
+                "修复": [
+                    "修复若干问题"
+                ]
+            }
+        },
+        "v2.11.1.911-Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win7_x64_v2.11.1.911-Beta.zip",
+                        "md5": "5fc3a5d0ae5aa72c31a291d9ddae3a22",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win10%20_x64_v2.11.1.911-Beta.zip",
+                        "md5": "3c63cd2d88d247f930bb3e970ec73043",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win10%20_x64_v2.11.1.911-Beta.zip",
+                        "md5": "3c63cd2d88d247f930bb3e970ec73043",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.11.1.911-Beta/MultiWeChatManager_win7_x64_v2.11.1.911-Beta.zip",
+                        "md5": "5fc3a5d0ae5aa72c31a291d9ddae3a22",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增对微信4.0的适配",
+                    "新增高分屏适配"
+                ],
+                "修复": [
+                    "修复若干问题"
+                ]
+            }
+        },
+        "v2.9.1.698-Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                        "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                        "md5": "19758698771099dfdf57d4230217d30b",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win10%20_x64_v2.9.1.698-Beta.zip",
+                        "md5": "19758698771099dfdf57d4230217d30b",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.9.1.698-Beta/MultiWeChatManager_win7_x64_v2.9.1.698-Beta.zip",
+                        "md5": "3241c993c5f36a1b461a1cf1a5645f7b",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增新增自动配置未配置的账号"
+                ],
+                "修复": [
+                    "修复列表视图下配置失败等的问题"
+                ]
+            }
+        },
+        "v2.8.7.668-Alpha": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+                        "md5": "ad73222d3069e2a60c9aad3318012110",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+                        "md5": "75e7cb3e7610df3c911a0bd520bb0397",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win10%20_x64_v2.8.7.668-Alpha.zip",
+                        "md5": "75e7cb3e7610df3c911a0bd520bb0397",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.8.7.668-Alpha/MultiWeChatManager_win7_x64_v2.8.7.668-Alpha.zip",
+                        "md5": "ad73222d3069e2a60c9aad3318012110",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增“列表”视图",
+                    "新增“在线升级”功能",
+                    "新增自动静默获取头像昵称的功能"
+                ],
+                "修复": [
+                    "修复Python模式下多开微信失败的问题",
+                    "修复某些表情符号溢出无法显示的问题",
+                    "修复win7下打开小程序页面图片显示异常以及打不开文章网页等问题"
+                ],
+                "优化": [
+                    "防撤回功能已默认显示",
+                    "优化按钮点击逻辑",
+                    "优化日志显示",
+                    "优化在线升级，避免重复下载"
+                ]
+            }
+        },
+        "v2.6.0.420-test": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "3ae9fbf31e9b534662aa66567aceb284",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "测试在线升级"
+                ]
+            }
+        },
+        "v2.5.0.411.Alpha": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "适配": [
+                    "适配win7系统"
+                ],
+                "优化": [
+                    "为了适配win7，降低python版本：3.12->3.7，由此安装包体积大幅缩减"
+                ]
+            }
+        },
+        "v2.4.0.365.Alpha": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增防撤回"
+                ]
+            }
+        },
+        "v2.3.3.333.Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增调试窗口",
+                    "新增原生多开（加入互斥体概念，可在主界面和账号详情中查看是否含有互斥体）",
+                    "新增统计面板，可以用来统计对比各个多开器的性能"
+                ],
+                "修复": [
+                    "修复设置界面仍会出现的打不开选择文件夹的问题",
+                    "修复获取dll文件夹和版本号的逻辑会因为用户文件结构不同而可能出现错误的问题",
+                    "修复多选登录可能出现窗口错位的问题（延长了等待新登录窗口的时间）"
+                ],
+                "优化": [
+                    "优化微信更新适配全局多开的方式，由源码修改改为从网站获取",
+                    "优化常规模式和调试模式的实现方式，由两个程序改为快捷方式是否携带“--debug”参数来区分模式"
+                ]
+            }
+        },
+        "v2.0.8.208.Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "修复": [
+                    "修复初次使用时未获取到路径无处设置的问题",
+                    "修复无法拖动文件发送到微信的问题"
+                ],
+                "优化": [
+                    "优化微信新版本的适配，目前支持微信 3.9.11.25、3.9.12.9、3.9.12.11 多开",
+                    "优化获取登录窗口尺寸的逻辑"
+                ],
+                "新增": [
+                    "新增打赏（你懂的~）"
+                ]
+            }
+        },
+        "v2.0.0.200.Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增全局多开模式和多种子多开器",
+                    "新增多选自动登录",
+                    "新增状态栏",
+                    "新增快捷启动",
+                    "新的UI界面，新增头像、昵称等详情显示"
+                ]
+            }
+        },
+        "v1.0.79.100.Beta": {
+            "pkgs": {
+                "win7": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win10": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "win11": [
+                    {
+                        "url": "",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ],
+                "default": [
+                    {
+                        "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v2.5.0.411.Alpha/MultiWeChatManager_x64_v2.5.0.411.Alpha.zip",
+                        "md5": "",
+                        "sha-256": ""
+                    }
+                ]
+            },
+            "logs": {
+                "新增": [
+                    "新增全局多开模式和多种子多开器",
+                    "新增多选自动登录",
+                    "新增状态栏",
+                    "新增快捷启动",
+                    "新的UI界面，新增头像、昵称等详情显示"
+                ]
+            }
+        }
+    }
+}
