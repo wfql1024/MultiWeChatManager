@@ -131,7 +131,7 @@ class Config:
     SETTING_INI_PATH = fr'{PROJ_USER_PATH}/setting.ini'
     VER_ADAPTATION_JSON_PATH = fr'{PROJ_USER_PATH}/version_adaptation.json'
     REMOTE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/remote_setting.json'
-    EXTRA_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/extra_setting.json'
+    CACHE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/cache_setting.json'
     LOCAL_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/local_setting.json'
 
     # 尺寸定义

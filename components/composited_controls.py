@@ -1,10 +1,8 @@
 import random
-import tkinter as tk
 from functools import partial
-from tkinter import ttk
 from typing import Dict, Optional
 
-from components import CustomCornerBtn, CustomBtn
+from components.custom_widgets import *
 from functions import subfunc_file
 from public import Config
 from public.custom_classes import Condition

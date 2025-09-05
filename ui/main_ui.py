@@ -14,7 +14,7 @@ from components.widget_wrappers import StatusBarW
 from functions import subfunc_file
 from functions.acc_func import AccOperator
 from functions.app_func import AppFunc
-from functions.sw_func import SwInfoFunc
+from functions.sw_func import SwInfoFunc, Software
 from public import Config, Strings
 from public.enums import LocalCfg, SwStates, RemoteCfg
 from public.global_members import GlobalMembers
@@ -331,13 +331,13 @@ class RootUI:
             try:
                 if sw in self.sw_classes:
                     sw_cls = self.sw_classes[sw]
-                    if not isinstance(sw_cls, SoftwareInfo):
-                        sw_cls = SoftwareInfo(sw)
+                    if not isinstance(sw_cls, Software):
+                        sw_cls = Software(sw)
                 else:
-                    sw_cls = SoftwareInfo(sw)
+                    sw_cls = Software(sw)
             except Exception as e:
                 logger.warning(e)
-                sw_cls = SoftwareInfo(sw)
+                sw_cls = Software(sw)
                 self.sw_classes[sw] = sw_cls
             print(f"更新{sw}的信息体...")
             if state == SwStates.VISIBLE:
@@ -362,7 +362,7 @@ class RootUI:
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             print(f"创建{sw}的信息体...")
-            sw_cls = SoftwareInfo(sw)
+            sw_cls = Software(sw)
             sw_cls.data_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
             sw_cls.inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             sw_cls.dll_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
@@ -486,27 +486,6 @@ class RootUI:
         elif root_tab == "login":
             self.root_class.login_ui.quick_refresh_mode = quick
             self.root_class.login_ui.refresh()
-
-
-class SoftwareInfo:
-    def __init__(self, sw):
-        self.sw = sw
-        self.name = None
-        self.frame = None
-        self.view = None
-        self.can_freely_multirun = None
-        self.multirun_mode = None
-        self.anti_revoke = None
-        self.classic_ui = None
-        self.treeview_ui = None
-        self.inst_path = None
-        self.data_dir = None
-        self.dll_dir = None
-        self.ver = None
-        self.login_accounts = None
-        self.logout_accounts = None
-        self.widget_dict = {}
-        self.is_original = None
 
 
 class AppInfo:

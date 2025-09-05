@@ -196,7 +196,6 @@ class AccOperator:
         传入{平台: 账号列表}字典，进行全自动登录
         该方法会逐平台逐账号登录, 窗口排布是所有平台的窗口一起排
         """
-        root_class = GlobalMembers.root_class
         # 统计一下数目,若为0则直接返回 ===================================================================
         acc_cnt = 0
         for sw, acc_list in login_dict.items():
@@ -220,7 +219,7 @@ class AccOperator:
             if not isinstance(accounts, list) or len(accounts) == 0:
                 continue
             # 初始化获取数据 -------------------------------------------------------------------
-            multirun_mode = root_class.sw_classes[sw].multirun_mode
+            multirun_mode = SwInfoFunc.get_sw_class(sw).multirun_mode
             config_wildcards, = subfunc_file.get_remote_cfg(
                 sw,
                 config_handle_wildcards=None
@@ -444,7 +443,7 @@ class AccOperator:
         root_class = GlobalMembers.root_class
         login_ui = root_class.login_ui
         root = root_class.root
-        data_dir = root_class.sw_classes[sw].data_dir
+        data_dir = SwInfoFunc.get_sw_class(sw).data_dir
         Printer().vital("静默获取")
 
         # 线程执行检测昵称和头像
@@ -990,7 +989,7 @@ class AccInfoFunc:
         """获取账号的展示名"""
         # 依次查找 note, nickname, alias，找到第一个不为 None 的值
         display_name = str(acc)  # 默认值为 account
-        for key in ("note", "nickname", "alias"):
+        for key in (AccKeys.REMARK, AccKeys.NICKNAME, AccKeys.ALIAS):
             value, = subfunc_file.get_sw_acc_data(sw, acc, **{key: None})
             if value is not None:
                 display_name = str(value)
@@ -1205,11 +1204,9 @@ class AccInfoFunc:
                     break
 
     @classmethod
-    def get_sw_acc_list(cls, _root, root_class, sw):
+    def get_sw_acc_list(cls, sw):
         """
         获取账号及其登录情况
-        :param _root: 主窗口
-        :param root_class: 主窗口类
         :param sw: 平台
         :return: Union[Tuple[True, Tuple[账号字典，进程字典，有无互斥体]], Tuple[False, 错误信息]]
         """

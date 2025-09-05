@@ -7,6 +7,7 @@ import json
 import mmap
 import os
 import re
+import shutil
 from pathlib import Path
 from typing import Any, Optional, Union, Tuple, Dict, List
 
@@ -16,7 +17,7 @@ import winshell
 import yaml
 from readerwriterlock import rwlock
 
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Printer
 
 rw_lock = rwlock.RWLockFairD()
 
@@ -552,6 +553,56 @@ class SHFileOpStruct(ctypes.Structure):
     ]
 
 
+def get_backup_paths(files: List[str]) -> List[str]:
+    """
+    根据文件路径列表生成对应的备份路径列表。
+    规则：在源文件名后追加 `.bak`
+    """
+    return [f"{f}.bak" for f in files]
+
+
+def backup_files(files: List[str], force: bool = False) -> bool:
+    """
+    对文件列表进行备份。
+    - 若备份文件不存在，则创建备份
+    - 已存在的备份不覆盖
+    """
+    backup_paths = get_backup_paths(files)
+    try:
+        for src, bak in zip(files, backup_paths):
+            if not os.path.exists(bak) or force:
+                shutil.copy2(src, bak)
+    except Exception as e:
+        print(e)
+        return False
+    return True
+
+
+def restore_files(files: List[str]) -> Tuple[bool, str]:
+    """
+    从备份文件恢复。
+    - 先获取对应的备份路径
+    - 若所有备份都存在，则恢复覆盖原文件
+    - 否则返回 (False, 错误信息)
+    """
+    backup_paths = get_backup_paths(files)
+
+    # 检查所有备份是否存在
+    missing = [bak for bak in backup_paths if not os.path.exists(bak)]
+    if missing:
+        return False, f"缺少备份文件: {', '.join(missing)}"
+
+    # 恢复覆盖
+    try:
+        for src, bak in zip(files, backup_paths):
+            Printer().debug(f"恢复文件 {src} 从备份 {bak}")
+            shutil.copy2(bak, src)
+    except Exception as e:
+        return False, str(e)
+
+    return True, "恢复成功"
+
+
 def move_files_to_recycle_bin(file_paths):
     file_paths = [os.path.abspath(path) for path in file_paths]
 
@@ -686,7 +737,7 @@ def get_newest_full_version_dir(versions):
 
 
 def get_newest_full_version(versions):
-    # 找到最大版本号的文件夹
+    # 找到最大版本号
     # print(versions)
     max_full_version = max(versions, key=extract_version)
     # print(max_full_version)

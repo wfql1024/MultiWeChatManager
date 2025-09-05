@@ -127,15 +127,15 @@ def get_remote_cfg(*pre_nodes: str, **kwargs) -> Union[Any, Tuple[Any, ...]]:
 
 
 def load_cache_cfg() -> dict:
-    data = JsonUtils.load_json(Config.EXTRA_SETTING_JSON_PATH)
+    data = JsonUtils.load_json(Config.CACHE_SETTING_JSON_PATH)
     return data
 
 
-def save_extra_cfg(data):
-    return JsonUtils.save_json(Config.EXTRA_SETTING_JSON_PATH, data)
+def save_cache_cfg(data):
+    return JsonUtils.save_json(Config.CACHE_SETTING_JSON_PATH, data)
 
 
-def clear_some_extra_cfg(*addr) -> bool:
+def clear_some_cache_cfg(*addr) -> bool:
     """
     清空某平台的账号记录，在对平台重新设置后触发
     :return: 是否成功
@@ -144,7 +144,7 @@ def clear_some_extra_cfg(*addr) -> bool:
         print(f"清理{addr}处数据...")
         data = load_cache_cfg()
         DictUtils.clear_nested_values(data, *addr)
-        save_extra_cfg(data)
+        save_cache_cfg(data)
         return True
     except Exception as e:
         logger.error(e)
@@ -156,7 +156,7 @@ def update_cache_cfg(*front_addr, **kwargs) -> bool:
     try:
         data = load_cache_cfg()
         success = DictUtils.set_nested_values(data, None, *front_addr, **kwargs)
-        save_extra_cfg(data)
+        save_cache_cfg(data)
         return success
     except Exception as e:
         logger.error(e)

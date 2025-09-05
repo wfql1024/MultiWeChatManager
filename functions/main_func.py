@@ -4,6 +4,7 @@ from typing import Dict
 
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
+from functions.sw_func import SwInfoFunc
 from public.enums import LocalCfg, SwStates, RemoteCfg
 from public.global_members import GlobalMembers
 from utils.logger_utils import mylogger as logger
@@ -37,7 +38,6 @@ class MultiSwFunc:
     @staticmethod
     def _login_auto_start_accounts():
         root_class = GlobalMembers.root_class
-        root = root_class.root
         login_ui = root_class.login_ui
         all_sw = MultiSwFunc.get_all_enable_sw()
 
@@ -62,9 +62,9 @@ class MultiSwFunc:
         # 获取已经登录的账号
         for sw in all_sw:
             if sw == login_ui.sw:
-                logins = root_class.sw_classes[sw].login_accounts
+                logins = SwInfoFunc.get_sw_class(sw).login_accounts
             else:
-                success, result = AccInfoFunc.get_sw_acc_list(root, root_class, sw)
+                success, result = AccInfoFunc.get_sw_acc_list(sw)
                 if success is not True:
                     continue
                 acc_list_dict, _ = result

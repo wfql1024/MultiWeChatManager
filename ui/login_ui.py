@@ -122,7 +122,7 @@ class LoginUI:
         print(f"计时开始：{time.time() - self.start_time:.4f}秒")
 
         def _thread():
-            success, result = AccInfoFunc.get_sw_acc_list(self.root, self, self.sw)
+            success, result = AccInfoFunc.get_sw_acc_list(self.sw)
             if success is not True:
                 self.root.after(0, self.show_setting_error)
             else:
@@ -270,6 +270,7 @@ class LoginUI:
             logins = self.acc_list_dict[OnlineStatus.LOGIN]
             AccInfoFunc.bind_main_wnd_to_accounts_in_sw(self.sw, logins)
             SwInfoFunc.get_sw_multirun_mode(self.sw)
+            SwOperator.backup_sw_all_patching_files(self.sw)
             Printer().print_last()
 
         threading.Thread(target=func).start()

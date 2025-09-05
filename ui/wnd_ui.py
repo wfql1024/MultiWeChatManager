@@ -262,9 +262,9 @@ class DetailUI(SubToolWndUI):
         _, _, nickname_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "昵称", "", readonly=True)
         # 备注
-        note, = subfunc_file.get_sw_acc_data(sw, account, note=None)
-        _, note_entry, note_var = DetailUI._create_label_entry_grid(
-            basic_info_grid, "备注", "" if note is None else note)
+        remark, = subfunc_file.get_sw_acc_data(sw, account, **{LocalCfg.REMARK: None})
+        _, remark_entry, remark_var = DetailUI._create_label_entry_grid(
+            basic_info_grid, "备注", "" if remark is None else remark)
         # 热键
         hotkey, = subfunc_file.get_sw_acc_data(sw, account, hotkey=None)
         _, hotkey_entry, hotkey_var = DetailUI._create_label_entry_grid(
@@ -313,8 +313,8 @@ class DetailUI(SubToolWndUI):
         self.origin_id_var = origin_id_var
         self.cur_id_var = cur_id_var
         self.nickname_var = nickname_var
-        self.note_entry = note_entry
-        self.note_var = note_var
+        self.note_entry = remark_entry
+        self.note_var = remark_var
         self.hotkey_entry = hotkey_entry
         self.hotkey_var = hotkey_var
         self.hidden_var = hidden_var
@@ -420,9 +420,9 @@ class DetailUI(SubToolWndUI):
         """
         new_note = self.note_var.get().strip()
         if new_note == "":
-            subfunc_file.update_sw_acc_data(self.sw, self.account, note=None)
+            subfunc_file.update_sw_acc_data(self.sw, self.account, **{LocalCfg.REMARK: None})
         else:
-            subfunc_file.update_sw_acc_data(self.sw, self.account, note=new_note)
+            subfunc_file.update_sw_acc_data(self.sw, self.account, **{LocalCfg.REMARK: new_note})
         hidden = self.hidden_var.get()
         auto_start = self.auto_start_var.get()
         hotkey = self.hotkey_var.get().strip()
@@ -1405,12 +1405,12 @@ class SettingWndUI(SubToolWndUI):
         settings_grid_frm.pack(**Config.T_FRM_PACK)
         # 标题
         current_row = _get_new_row_in_grid(settings_grid_frm)
-        default_value, = subfunc_file.get_settings(self.sw, label="")
-        note_label = tk.Label(settings_grid_frm, text="平台备注：")
-        note_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
+        default_value, = subfunc_file.get_remote_cfg(self.sw, **{RemoteCfg.ALIAS: None})
+        remark_label = tk.Label(settings_grid_frm, text="平台备注：")
+        remark_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
         self.title_entry = DefaultEntry(settings_grid_frm, default_label=default_value)
         self.title_entry.grid(row=current_row, column=1, columnspan=3, **Config.WE_GRID_PACK)
-        now_value, = subfunc_file.get_settings(self.sw, note="")
+        now_value, = subfunc_file.get_settings(self.sw, **{LocalCfg.REMARK: ""})
         self.title_entry.set_value(now_value)
         # 第一行 - 安装路径
         current_row = _get_new_row_in_grid(settings_grid_frm)
@@ -1564,7 +1564,7 @@ class SettingWndUI(SubToolWndUI):
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, dll_dir)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, login_size)
         subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.STATE, state)
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.NOTE, note)
+        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.REMARK, note)
         self.wnd.destroy()
 
         self.check_bools()
@@ -1737,7 +1737,7 @@ class SettingWndUI(SubToolWndUI):
     def thread_to_get_login_size(self):
         def thread():
             sw = self.sw
-            self.multirun_mode = self.root_class.sw_classes[sw].multirun_mode
+            self.multirun_mode = SwInfoFunc.get_sw_class(sw).multirun_mode
             result = SwOperator.get_login_size(sw)
             if isinstance(result, tuple):
                 login_width, login_height = result

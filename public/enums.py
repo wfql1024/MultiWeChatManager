@@ -34,6 +34,9 @@ class RemoteCfg(str, Enum):
     SP_SW = "support_sw"
     COEXIST_SEQUENCE = "coexist_sequence"
 
+    # 平台信息
+    ALIAS = "alias"
+
     # 补丁适配
     REVOKE = "anti-revoke"
     MULTI = "multirun"
@@ -107,7 +110,7 @@ class LocalCfg(str, Enum):
     LOGIN_SORT = "login_sort"
     LOGOUT_SORT = "logout_sort"
     STATE = "state"
-    NOTE = "note"
+    REMARK = "remark"
     COEXIST_MODE = "coexist_mode"
 
 
@@ -147,6 +150,7 @@ class AccKeys(str, Enum):
     HIDDEN = "hidden"
     ORDINAL = "ordinal"
     COEXIST_CHANNEL = "channel"
+    REMARK = "remark"
 
 
 class SW(str, Enum):

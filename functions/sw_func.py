@@ -29,24 +29,45 @@ from public.strings import NEWER_SYS_VER
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
 from utils.better_wx.inner_utils import patt2hex, custom_wildcard_tokenize
 from utils.encoding_utils import VersionUtils, PathUtils, CryptoUtils, ByteUtils
-from utils.file_utils import DllUtils, rw_lock
+from utils.file_utils import rw_lock
 from utils.hwnd_utils import HwndGetter, Win32HwndGetter
 from utils.logger_utils import mylogger as logger, Printer, Logger
 from utils.logger_utils import myprinter as printer
 from utils.process_utils import Process
 
 
-# TODO: 多个防撤回方案的冲突问题.
+class Software:
+    def __init__(self, sw):
+        self.sw = sw
+        self.label = None
+        self.frame = None
+        self.view = None
+        self.can_freely_multirun = None
+        self.multirun_mode = None
+        self.anti_revoke = None
+        self.classic_ui = None
+        self.treeview_ui = None
+        self.inst_path = None
+        self.data_dir = None
+        self.dll_dir = None
+        self.ver = None
+        self.login_accounts = None
+        self.logout_accounts = None
+        self.widget_dict = {}
+        self.is_original = None
+        self.force_rescan = None
+
 
 class SwInfoFunc:
     """
     当前版本，所使用的适配表结构如下：
-    平台sw -> 补丁模式mode -> 分支(精确precise,特征feature,说明channel) -> 版本号 -> 频道 -> 路径地址 -> 特征码
-    其中,
-        precise: 精确版本适配，只适配当前版本. 结构为 版本号 -> 频道 -> 特征码
-        feature: 特征码适配，适配当前版本及其兼容版本. 结构为 版本号 -> 频道 -> 特征码
-        channel: 频道，区分不同特征/作者的适配. 结构为 频道 -> (标题,说明,作者)
+    平台sw -> 补丁模式mode -> "channels" -> 方案频道channel -> "feature/precise_ver_adaptations"
+     -> 版本号 -> 路径补丁包 -> 补丁包列表
     """
+
+    @staticmethod
+    def get_sw_class(sw) -> Software:
+        return GlobalMembers.root_class.sw_classes[sw]
 
     @classmethod
     def resolve_sw_path(cls, sw, addr: str):
@@ -72,6 +93,7 @@ class SwInfoFunc:
 
     @classmethod
     def get_coexist_path_from_address(cls, sw, address, channel, s):
+        """解析地址并得到共存路径"""
         # Printer().debug(address)
         coexist_patch_wildcard_addr_dict = subfunc_file.get_remote_cfg(
             sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, channel, "patch_wildcard")
@@ -82,8 +104,38 @@ class SwInfoFunc:
         return coexist_patch_file
 
     @classmethod
-    def _update_adaptation_from_remote_to_cache(cls, sw, mode):
-        """根据远程表内容更新额外表"""
+    def extract_addresses_from_remote_cfg(cls, sw):
+        """
+        从给定数据结构中提取所有addr到集合
+        :param sw: 顶级软件键，比如"Weixin"
+        :return: addr集合
+        """
+        addr_set = set()
+        sw_dict = subfunc_file.get_remote_cfg(sw)
+        # 第二级：固定的几个功能类别
+        for feature in [RemoteCfg.REVOKE, RemoteCfg.MULTI, RemoteCfg.COEXIST]:
+            feature_dict = sw_dict.get(feature, {})
+            try:
+                channels = feature_dict.get(RemoteCfg.CHANNELS, {})
+                # 第四级：遍历所有channel
+                for channel, channel_dict in channels.items():
+                    # print(channel_dict)
+                    adaptations = channel_dict.get(RemoteCfg.FEATURES, {})
+                    print(adaptations)
+                    # 遍历所有版本
+                    for version, version_list in adaptations.items():
+                        for item in version_list:
+                            addr = item.get("addr")
+                            if addr:
+                                addr_set.add(addr)
+            except Exception as e:
+                print(e)
+                continue
+        return list(addr_set)
+
+    @classmethod
+    def _update_adaptation_from_remote_to_cache(cls, sw, mode, skip_cache=True):
+        """根据远程表内容更新缓存表, skip_cache 决定已有正确格式缓存时是否跳过扫描"""
         channels_dict, = subfunc_file.get_remote_cfg(sw, mode, channels=None)
         if not isinstance(channels_dict, dict):
             return
@@ -103,8 +155,9 @@ class SwInfoFunc:
                 feature_vers = list(feature_vers_dict.keys())
                 compatible_ver = VersionUtils.pkg_find_compatible_version(cur_sw_ver, feature_vers)
                 # 用兼容版本特征码查找适配
-                feature_ver_addr_dict = feature_vers_dict[compatible_ver]
-                if feature_ver_addr_dict is None:
+                feature_ver_addr_dicts = feature_vers_dict[compatible_ver]
+                # 检查是否弃用
+                if feature_ver_addr_dicts is None:
                     print(f"[{channel}]该渠道在该版本已弃用!")
                     # 强制删掉本地缓存
                     cache_vers_dict = subfunc_file.get_cache_cfg(
@@ -114,48 +167,62 @@ class SwInfoFunc:
                         subfunc_file.update_cache_cfg(
                             sw, mode, RemoteCfg.CHANNELS, channel, **{RemoteCfg.PRECISES: cache_vers_dict})
                     continue
-                cache_ver_addr_dict = subfunc_file.get_cache_cfg(
-                    sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES, cur_sw_ver)
-                if isinstance(cache_ver_addr_dict, dict) and len(cache_ver_addr_dict) != 0:
-                    if all(isinstance(add_dicts, list) for add_dicts in cache_ver_addr_dict.values()):
-                        print(f"[{channel}]渠道在该版本已存在缓存的适配")
-                        continue
-                ver_addr_res_dict = {}
+                if skip_cache is True:
+                    # 检查是否已有缓存
+                    cache_ver_addr_dicts = subfunc_file.get_cache_cfg(
+                        sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES, cur_sw_ver)
+                    if isinstance(cache_ver_addr_dicts, list) and len(cache_ver_addr_dicts) != 0:
+                        if all((isinstance(addr_dict["patches"], list) and isinstance(addr_dict["addr"], str))
+                               for addr_dict in cache_ver_addr_dicts):
+                            print(f"[{channel}]渠道在该版本已存在缓存的适配")
+                            continue
+                ver_addr_res_dicts = []
                 channel_failed = False
-                # 对每个地址的每个扫描字典, 都至少要扫描出一个, 否则判定失败
-                for addr in feature_ver_addr_dict.keys():
-                    addr_feature_list = feature_ver_addr_dict[addr]
+                # 对每个地址的每个扫描字典, 都至少要扫描出一个, 否则判定失败!!!
+                for addr_dict in feature_ver_addr_dicts:
+                    ver_addr_res_dict = {}
+                    addr = addr_dict.get("addr", None)
+                    addr_feature_list = addr_dict.get("patch_rules", None)
+                    if not isinstance(addr, str) or not isinstance(addr_feature_list, list):
+                        channel_failed = True
+                        break
                     patch_file = cls.resolve_sw_path(sw, addr)
                     if not os.path.exists(patch_file):
                         channel_failed = True
                         break
-                    with rw_lock.gen_rlock():
-                        with open(patch_file, "rb") as f:
-                            mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
-                            addr_res_dicts = []  # 存放本 addr 下所有 processed 结果
-                            try:
-                                addr_failed = False
-                                for feature_rule in addr_feature_list:
-                                    Printer().debug("检查:", mode, channel, addr, feature_rule)
-                                    res_dicts = SwInfoUtils.resolve_rule_dict_and_return_res_dicts(mm, feature_rule)
-                                    Printer().debug("结果:", res_dicts)
-                                    if len(res_dicts) == 0:
-                                        addr_failed = True
-                                        break
-                                    addr_res_dicts.extend(res_dicts)
 
-                                if len(addr_res_dicts) == 0 or addr_failed is True:
-                                    channel_failed = True
+                    with open(patch_file, "rb") as f:
+                        mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+                        addr_res_dicts = []  # 存放本 addr 下所有 processed 结果
+                        try:
+                            addr_failed = False
+                            for feature_rule in addr_feature_list:
+                                # Printer().debug("检查:", mode, channel, addr, feature_rule)
+                                res_dicts = SwInfoUtils.resolve_rule_dict_and_return_res_dicts(mm, feature_rule)
+                                # Printer().debug("结果:", res_dicts)
+                                if len(res_dicts) == 0:
+                                    addr_failed = True
                                     break
-                                ver_addr_res_dict[addr] = addr_res_dicts
-                            finally:
-                                mm.close()
-                print(ver_addr_res_dict)
+                                addr_res_dicts.extend(res_dicts)
+                            if len(addr_res_dicts) == 0 or addr_failed is True:
+                                channel_failed = True
+                                break
+                            # 能到达这里代表当前地址字典能够正常扫描
+                            # 将地址字典中除了 patch_rules 节点外所有节点都拷贝出来, 扫描结果放在 patches 节点中.
+                            for key in addr_dict:
+                                if key == "patch_rules":
+                                    continue
+                                ver_addr_res_dict[key] = addr_dict[key]
+                            ver_addr_res_dict["patches"] = addr_res_dicts
+                            ver_addr_res_dicts.append(ver_addr_res_dict)
+                        finally:
+                            mm.close()
+                print(ver_addr_res_dicts)
                 if channel_failed is not True:
                     # 添加到缓存表中
                     subfunc_file.update_cache_cfg(
                         sw, mode, RemoteCfg.CHANNELS, channel,
-                        RemoteCfg.PRECISES, **{cur_sw_ver: ver_addr_res_dict})
+                        RemoteCfg.PRECISES, **{cur_sw_ver: ver_addr_res_dicts})
             except KeyError:
                 pass
             except Exception as e:
@@ -163,10 +230,19 @@ class SwInfoFunc:
 
     @classmethod
     def _identify_multi_state_patching_of_files_in_channel(
-            cls, sw, channel_addresses_dict, coexist_channel=None, ordinal=None):
-        """对于非二元状态切换的, 只需要检测原始串即可"""
+            cls, sw, addr_patches_dicts, coexist_channel=None, ordinal=None):
+        """
+        对于非二元状态切换的, 只需要检测列表中的文件是否存在
+        返回:
+            { addr1: {"status": status, "msg": message}, addr2: {...}, ...}
+            其中, status: True/False/None; message: 携带信息
+        """
         addr_res_dict = {}
-        for addr in channel_addresses_dict.keys():
+        for addr_patches_dict in addr_patches_dicts:
+            addr = addr_patches_dict.get("addr", None)
+            if not isinstance(addr, str):
+                addr_res_dict["Error"] = {"status": None, "msg": "存在无地址的补丁模式"}
+                continue
             # Printer().debug(f"检查文件地址 {addr} 的特征码适配")
             if not isinstance(coexist_channel, str) or not isinstance(ordinal, str):
                 patch_file = cls.resolve_sw_path(sw, addr)
@@ -181,18 +257,22 @@ class SwInfoFunc:
 
     @classmethod
     def _identify_binary_state_patching_of_files_in_channel(
-            cls, sw, channel_addresses_dict, channel=None, ordinal=None) -> dict:
+            cls, sw, addr_patches_dicts, channel=None, ordinal=None) -> dict:
         """
-        二元状态, 对渠道内的文件分别检测原始串和补丁串来识别状态
-        参数: channel_addresses_dict: 渠道-文件适配字典 {addr: {"original": [...], "modified": [...]}}
+        二元状态, 对涉及文件的涉及补丁包进行判断打补丁状态, 若都打上则返回True, 否则返回False
+        参数: addr_patches_dicts: 结构参考上级方法
         返回:
-            { addr1: (status, message, patch_file, original_list, modified_list),
-                addr2: (status, message, patch_file, original_list, modified_list), ...}
-            其中, status: True/False/None; message: 状态描述字符串; patch_file: 补丁文件路径;
-                original_list: 原始串列表; modified_list: 补丁串列表
+            { addr1: {"status": status, "msg": message}, addr2: {...}, ...}
+            其中, status: True/False/None; message: 携带信息
         """
+        # Printer().debug("所有地址适配字典", addr_patches_dicts)
         addr_res_dict = {}
-        for addr in channel_addresses_dict.keys():
+        for addr_patches_dict in addr_patches_dicts:
+            # Printer().debug("单个地址适配字典", addr_patches_dict)
+            addr = addr_patches_dict.get("addr", None)
+            if not isinstance(addr, str):
+                addr_res_dict["Error"] = {"status": None, "msg": "存在无地址的补丁模式"}
+                continue
             # Printer().debug(f"检查文件地址 {addr} 的特征码适配")
             if not isinstance(channel, str) or not isinstance(ordinal, str):
                 patch_file = cls.resolve_sw_path(sw, addr)
@@ -201,52 +281,53 @@ class SwInfoFunc:
             if not os.path.exists(patch_file):
                 addr_res_dict[addr] = {"status": None, "msg": "文件不存在"}
                 continue
-            with rw_lock.gen_rlock():
-                with open(patch_file, "rb") as f:
-                    with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
-                        addr_patching_dicts = channel_addresses_dict[addr]
-                        result_set = set()
-                        for addr_patching_dict in addr_patching_dicts:
-                            if "custom_template" in addr_patching_dict:
-                                continue  # 自定义的直接跳过
-                            instr_addr = addr_patching_dict["addr"]
-                            modified_hex = addr_patching_dict["modified"]
-                            modified_bytes = ByteUtils.hex_str_to_bytes(modified_hex)
-                            # 检查文件中对应地址的字节是否与 modified_bytes 相等
+            with open(patch_file, "rb") as f:
+                with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+                    addr_patching_dicts = addr_patches_dict["patches"]
+                    result_set = set()
+                    for addr_patching_dict in addr_patching_dicts:
+                        if "custom_template" in addr_patching_dict:
+                            continue  # 自定义的直接跳过
+                        instr_addr = addr_patching_dict["offset"]
+                        modified_hex = addr_patching_dict["modified"]
+                        modified_bytes = ByteUtils.hex_str_to_bytes(modified_hex)
+                        # 检查文件中对应地址的字节是否与 modified_bytes 相等
+                        with rw_lock.gen_rlock():
                             file_slice = mm[instr_addr: instr_addr + len(modified_bytes)]
-                            is_patched = file_slice == modified_bytes
-                            # Printer().debug(patch_file, modified_bytes, is_patched)
-                            result_set.add(is_patched)
+                        is_patched = file_slice == modified_bytes
+                        # Printer().debug(patch_file, modified_bytes, is_patched)
+                        result_set.add(is_patched)
 
-                        # 判断最终状态
-                        status = result_set == {True}  # True = 补丁已全部打，False = 未打
-                        message = "已开启" if status else "未开启"
-                        addr_res_dict[addr] = {"status": status, "msg": message}
+                    # 判断最终状态
+                    status = result_set == {True}  # True = 补丁已全部打，False = 未打
+                    message = "已开启" if status else "未开启"
+                    addr_res_dict[addr] = {"status": status, "msg": message}
         return addr_res_dict
 
     @classmethod
-    def _identify_patching_by_ver_adaptations_dict(
-            cls, sw, ver_adaptations_dict, multi_state=False, coexist_channel=None, ordinal=None) -> dict:
+    def _identify_patching_by_addr_patches_dicts_in_ver(
+            cls, sw, addr_patch_rules_dicts, multi_state=False, coexist_channel=None, ordinal=None) -> dict:
         """
-        对版本适配字典中的所有通道进行状态识别
-        参数:
-            ver_adaptations_dict: 版本适配字典 {channel: {addr: [{单个的适配字典}, {}]}}
-            multi_state: 是否为多元状态, 二元状态为False, 多元状态为True; 多元状态只需要检测原始串
-        返回:
-            字典: {"status": channel_status, "msg": msg_str}
-            其中:
-            channel_status: 渠道状态, True/False/None
-            msg_str = f"问题文件: {addresses_msg_dict}"
+        对版本适配字典中的地址补丁包进行状态识别
+        参数: addr_patches_dicts: 地址-补丁适配字典列表 [{"addr": addr, "patches": [...]}, {...}, ...]
+            其中, "patches"的列表结构: [{"offset": offset, "modified": modified_hex, "original": original_hex}, {...}, ...]
+        返回: 字典: {"status": channel_status, "msg": msg_str}
+            其中, channel_status: 渠道状态, True/False/None
+                msg_str = f"问题文件: {addresses_msg_dict}"
         """
+        # Printer().debug(sw, addr_patch_rules_dicts, multi_state, coexist_channel, ordinal)
         status_set = set()
         addresses_msg_dict = {}  # 存储问题路径及消息
         if multi_state:
             addresses_res_dict = cls._identify_multi_state_patching_of_files_in_channel(
-                sw, ver_adaptations_dict, coexist_channel, ordinal)
+                sw, addr_patch_rules_dicts, coexist_channel, ordinal)
         else:
             addresses_res_dict = cls._identify_binary_state_patching_of_files_in_channel(
-                sw, ver_adaptations_dict, coexist_channel, ordinal)
+                sw, addr_patch_rules_dicts, coexist_channel, ordinal)
         # Printer().debug(f"所有地址识别结果: {addresses_res_dict}")
+
+        # 中间层: 识别后得到 addresses_res_dict = {addr1: {"status": status, "msg": message}, addr2: {...}, ...}
+        # 从中间层中提取状态和消息
         for addr in addresses_res_dict.keys():
             status = None
             try:
@@ -271,19 +352,23 @@ class SwInfoFunc:
             cls, sw, mode, channel=None, coexist_channel=None, ordinal=None
     ) -> Tuple[Optional[dict], str]:
         """
-        检查当前补丁状态，返回结果字典,若没有适配则返回None
-        结果字典格式: {channel1: {status:bool, msg:str, addr_res_dict:dict}, channel2: {...}, ...}
-        地址字典addr_res_dict格式: {addr1: {status:bool, msg:str, patch_path:str, original:list[str], modified:list[str]},
-                                    addr2: {...}, ...}
+        检查当前补丁状态，返回结果字典(若没有适配则返回None)和消息
+        结果字典格式: {channel1: {status:bool, msg:str}, channel2: {...}, ...}
         """
         dll_dir = cls.try_get_path_of_(sw, LocalCfg.DLL_DIR)
         if dll_dir is None:
             return None, "错误：没有找到dll目录"
         multi_state, = subfunc_file.get_remote_cfg(sw, mode, multi_state=None)
         multi_state: bool = True if multi_state is True else False
-        Printer().debug(sw, mode, multi_state)
-        # 更新远程适配到缓存
-        cls._update_adaptation_from_remote_to_cache(sw, mode)
+        # Printer().debug(sw, mode, multi_state)
+        # 不跳过已有只对主程序生效
+        sw_class = cls.get_sw_class(sw)
+        skip_cache = sw_class.force_rescan is not True
+        if coexist_channel is None or ordinal is None:
+            sw_class.force_rescan = False
+            cls._update_adaptation_from_remote_to_cache(sw, mode, skip_cache)
+        else:
+            cls._update_adaptation_from_remote_to_cache(sw, mode)
         # 通过缓存配置进行检测
         # - 获取缓存配置
         try:
@@ -307,16 +392,17 @@ class SwInfoFunc:
         channels_res_dict = {}
         for ch in channels_to_check:
             try:
-                ver_adaptations_dict = channels_dict[ch][RemoteCfg.PRECISES][cur_sw_ver]
-                if isinstance(ver_adaptations_dict, dict):
-                    channels_res_dict[ch] = cls._identify_patching_by_ver_adaptations_dict(
-                        sw, ver_adaptations_dict, multi_state=multi_state, coexist_channel=coexist_channel,
+                addr_patches_dicts = channels_dict[ch][RemoteCfg.PRECISES][cur_sw_ver]
+                # Printer().debug("准备遍历渠道检测: ",sw, ch, addr_patches_dicts)
+                if isinstance(addr_patches_dicts, list):
+                    channels_res_dict[ch] = cls._identify_patching_by_addr_patches_dicts_in_ver(
+                        sw, addr_patches_dicts, multi_state=multi_state, coexist_channel=coexist_channel,
                         ordinal=ordinal)
             except KeyError:
                 continue
         if not channels_res_dict:
             return None, f"错误：该版本 {cur_sw_ver} 的适配在本地平台中未找到"
-        Printer().debug(f"{sw} - {mode} 识别结果: {channels_res_dict}")
+        # Printer().debug(f"{sw} - {mode} 识别结果: {channels_res_dict}")
         return channels_res_dict, f"成功：找到版本 {cur_sw_ver} 的适配"
 
     @classmethod
@@ -434,10 +520,9 @@ class SwInfoFunc:
             return list(channel_res_dict.keys())[0], channel_res_dict, msg
         return None, {}, msg
 
-    @staticmethod
-    def _check_if_sw_can_freely_multirun(sw):
-        root_class = GlobalMembers.root_class
-        sw_class = root_class.sw_classes[sw]
+    @classmethod
+    def _check_if_sw_can_freely_multirun(cls, sw):
+        sw_class = cls.get_sw_class(sw)
         mode_channels_res_dict, msg = SwInfoFunc.identify_dll_core(sw, RemoteCfg.MULTI.value)
         sw_class.can_freely_multirun = None
         # 以有无适配为准; 若没有适配,检查是否是原生支持多开
@@ -460,8 +545,7 @@ class SwInfoFunc:
 
     @classmethod
     def get_sw_multirun_mode(cls, sw):
-        root_class = GlobalMembers.root_class
-        sw_class = root_class.sw_classes[sw]
+        sw_class = SwInfoFunc.get_sw_class(sw)
         can_freely_multirun = cls._check_if_sw_can_freely_multirun(sw)
         if can_freely_multirun:
             sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN
@@ -568,16 +652,15 @@ class SwInfoFunc:
     @staticmethod
     def get_sw_origin_display_name(sw) -> str:
         """获取账号的展示名"""
-        # 依次查找 note, nickname, alias，找到第一个不为 None 的值
         display_name = str(sw)  # 默认值为 sw
-        label, = subfunc_file.get_remote_cfg(sw, label=sw)
-        subfunc_file.update_settings(sw, label=label)
-        for key in ("note", "label"):
-            value, = subfunc_file.get_settings(sw, **{key: None})
-            if value is not None:
-                # print(key, value)
-                display_name = str(value)
-                break
+        # 1. 先查本地 remark
+        remark, = subfunc_file.get_settings(sw, **{LocalCfg.REMARK: None})
+        if remark is not None:
+            return str(remark)
+        # 2. 再查远程 alias（不再存本地）
+        alias, = subfunc_file.get_remote_cfg(sw, **{RemoteCfg.ALIAS: None})
+        if alias is not None:
+            return str(alias)
         return display_name
 
     @classmethod
@@ -791,6 +874,14 @@ class SwOperator:
         return True
 
     @staticmethod
+    def backup_sw_all_patching_files(sw):
+        """备份所有补丁文件, 若存在则跳过"""
+        all_patching_addresses = SwInfoFunc.extract_addresses_from_remote_cfg(sw)
+        all_patching_files = [SwInfoFunc.resolve_sw_path(sw, addr) for addr in all_patching_addresses]
+        Printer().debug(f"所有需要备份的文件: {all_patching_files}")
+        file_utils.backup_files(all_patching_files)
+
+    @staticmethod
     def _backup_dll(patching_dict):
         """备份当前的dll"""
         desktop_path = winshell.desktop()
@@ -854,44 +945,49 @@ class SwOperator:
 
             curr_ver = SwInfoFunc.calc_sw_ver(sw)
             # 获取补丁表 { "dll路径(占位)": [ {addr, original, modified}, ... ] }
-            dll_patch_map = subfunc_file.get_cache_cfg(
+            addr_patches_dicts = subfunc_file.get_cache_cfg(
                 sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES, curr_ver
             )
-            Printer().debug(curr_ver, dll_patch_map)
+            # Printer().debug(curr_ver, addr_patches_dicts)
+            for addr_patches_dict in addr_patches_dicts:
+                if "addr" not in addr_patches_dict or "patches" not in addr_patches_dict:
+                    return False, "缓存适配格式错误!"
             files = []  # 存储文件句柄
             mmaps = []  # 存储 mmap 对象
             try:
                 # 先打开并写入所有文件（不 flush）
-                for dll_virtual_path, patches in dll_patch_map.items():
+                for addr_patches_dict in addr_patches_dicts:
+                    addr = addr_patches_dict.get("addr", None)
+                    patches = addr_patches_dict.get("patches", None)
                     if isinstance(coexist_channel, str) and isinstance(ordinal, str):
                         real_dll_path = SwInfoFunc.get_coexist_path_from_address(
-                            sw, dll_virtual_path, coexist_channel, ordinal)
+                            sw, addr, coexist_channel, ordinal)
                     else:
-                        real_dll_path = SwInfoFunc.resolve_sw_path(sw, dll_virtual_path)
-                    Printer().debug(real_dll_path)
+                        real_dll_path = SwInfoFunc.resolve_sw_path(sw, addr)
+                    # Printer().debug(real_dll_path)
                     with rw_lock.gen_wlock():
                         f = open(real_dll_path, "r+b")
                         mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
                         files.append(f)
                         mmaps.append(mm)
                         for patch in patches:
-                            file_offset = patch["addr"]
+                            file_offset = patch["offset"]
                             hex_str = patch["modified"] if target else patch["original"]
                             patch_bytes = bytes.fromhex(hex_str.replace(" ", ""))
                             mm[file_offset:file_offset + len(patch_bytes)] = patch_bytes
                 # 如果所有写入都没报错，统一 flush
-                for mm in mmaps:
-                    mm.flush()
+                for _mm in mmaps:
+                    _mm.flush()
                 return True, f"成功{'开启' if target else '关闭'}: {mode_text}"
             except Exception as e:
                 print(f"[ERR] {e}")
                 # 出错时不 flush，直接 close，即放弃所有改动
                 return False, f"切换{mode_text}失败！请稍后重试！"
             finally:
-                for mm in mmaps:
-                    mm.close()
-                for f in files:
-                    f.close()
+                for _mm in mmaps:
+                    _mm.close()
+                for _f in files:
+                    _f.close()
         except (psutil.AccessDenied, PermissionError, Exception) as e:
             error_msg = {
                 PermissionError: "权限不足，无法修改 DLL 文件。",
@@ -981,7 +1077,7 @@ class SwOperator:
     def _manual_login_origin(cls, sw):
         """手动登录原生平台"""
         root_class = GlobalMembers.root_class
-        multirun_mode = GlobalMembers.root_class.sw_classes[sw].multirun_mode
+        multirun_mode = SwInfoFunc.get_sw_class(sw).multirun_mode
         start_time = time.time()
         sw_hwnd, msg = cls.open_sw_and_return_hwnd(sw)
         if isinstance(sw_hwnd, int):
@@ -1084,32 +1180,45 @@ class SwOperator:
         if not isinstance(coexist_channel, str):
             return None, "没有可用的共存构造模式!"
         curr_ver = SwInfoFunc.calc_sw_ver(sw)
-        channel_addresses_dict = subfunc_file.get_cache_cfg(
+        addr_patches_dicts = subfunc_file.get_cache_cfg(
             sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, RemoteCfg.PRECISES, curr_ver)
-        Printer().debug(channel_addresses_dict)
-        if not isinstance(channel_addresses_dict, dict):
+        Printer().debug(addr_patches_dicts)
+        if not isinstance(addr_patches_dicts, list):
             return None, "尚未适配[coexist_channel]!"
-        for addr in channel_addresses_dict:
-            if "wildcard" not in channel_addresses_dict[addr]:
+        for addr_patches_dict in addr_patches_dicts:
+            if ("wildcard" not in addr_patches_dict or "addr" not in addr_patches_dict
+                    or "patches" not in addr_patches_dict):
                 return None, "适配格式错误!"
         new_files = []
-        for addr in channel_addresses_dict:
+        for addr_patches_dict in addr_patches_dicts:
+            addr = addr_patches_dict["addr"]
             origin_path = SwInfoFunc.resolve_sw_path(sw, addr)
-            name_wildcard = channel_addresses_dict[addr]["wildcard"]
+            name_wildcard = addr_patches_dict["wildcard"]
             new_path = os.path.join(os.path.dirname(origin_path), name_wildcard.replace("?", ordinal))
             # 拷贝到新文件
             shutil.copyfile(origin_path, new_path)
             new_files.append(new_path)
             # 修改新文件
-            original = channel_addresses_dict[addr]["original"]
-            modified = channel_addresses_dict[addr]["modified"]
-            coexist_modified = [m.replace("!!", f"{ord(ordinal):02X}") for m in modified]
-            success = DllUtils.batch_atomic_replace_multi_files({new_path: [(original, coexist_modified)]})
-            if not success:
-                messagebox.showerror("错误", f"创建共存程序[{ordinal}]号失败!")
+            patches = addr_patches_dict["patches"]
+            try:
+                with rw_lock.gen_wlock():
+                    f = open(new_path, "r+b")
+                    mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
+                    for patch in patches:
+                        file_offset = patch["offset"]
+                        hex_str = patch["modified"]
+                        coexist_hex = hex_str.replace("!!", f"{ord(ordinal):02X}")
+                        patch_bytes = bytes.fromhex(coexist_hex.replace(" ", ""))
+                        mm[file_offset:file_offset + len(patch_bytes)] = patch_bytes
+                    mm.flush()
+            except Exception as e:
+                messagebox.showerror("错误", f"创建共存程序[{ordinal}]号失败!({e})")
                 for new_file in new_files:
                     os.remove(new_file)
                 return None, "创建共存程序失败!"
+            finally:
+                mm.close()
+                f.close()
         # 更新配置
         new_coexist_exe_name = exe_wildcard.replace("?", ordinal)
         SwInfoFunc.ensure_coexist_acc_formatted(sw, new_coexist_exe_name)
@@ -1172,13 +1281,6 @@ class SwOperator:
         return success_exes
 
     @classmethod
-    def create_coexist_exe_and_refresh(cls, sw):
-        root_class = GlobalMembers.root_class
-        root = root_class.root
-        cls.create_coexist_exe_core(sw)
-        root.after(0, root_class.login_ui.refresh_frame, sw)
-
-    @classmethod
     def start_thread_to_manual_login_origin(cls, sw):
         """建议使用此方式,以线程的方式手动登录,避免阻塞"""
         threading.Thread(
@@ -1191,13 +1293,6 @@ class SwOperator:
         """建议使用此方式,以线程的方式手动登录,避免阻塞"""
         threading.Thread(
             target=cls._manual_login_coexist,
-            args=(sw,)
-        ).start()
-
-    @classmethod
-    def start_thread_to_create_coexist_exe(cls, sw):
-        threading.Thread(
-            target=cls.create_coexist_exe_and_refresh,
             args=(sw,)
         ).start()
 
@@ -1310,8 +1405,7 @@ class SwOperator:
         :param sw: 选择软件标签
         :return: 返回主进程和子进程
         """
-        root_class = GlobalMembers.root_class
-        multirun_mode = root_class.sw_classes[sw].multirun_mode
+        multirun_mode = SwInfoFunc.get_sw_class(sw).multirun_mode
         Printer().print_vn(f"[INFO]使用{multirun_mode}模式打开{sw}...")
         proc = None
         sub_proc = None
@@ -1603,7 +1697,7 @@ class SwInfoUtils:
         for res_dict in res_dicts:
             original_str = res_dict["original"]
             expanded_modified = res_dict["modified"]
-            start_addr = res_dict["addr"]
+            start_addr = res_dict["offset"]
 
             tokens = expanded_modified.split()
             i = 0
@@ -1647,7 +1741,7 @@ class SwInfoUtils:
             filled_modified = " ".join(tokens)
             res_list.append(
                 {
-                    "addr": start_addr,
+                    "offset": start_addr,
                     "original": original_str,
                     "modified": filled_modified
                 }
@@ -1672,11 +1766,11 @@ class SwInfoUtils:
         return res_dicts
 
     @staticmethod
-    def _get_replacement_pairs(regex, repl_bytes, mm):
+    def _get_replacement_pairs(mm, regex, repl_bytes):
         """返回(匹配的串, 相应替换后的串, 匹配起始地址)元组列表"""
         replacement_pairs = []
-
-        matches = list(regex.finditer(mm))
+        with rw_lock.gen_rlock():
+            matches = list(regex.finditer(mm))
         for match in matches:
             start_addr = match.start()
             original = match.group()  # 原始匹配的字节串
@@ -1778,7 +1872,7 @@ class SwInfoUtils:
             # print(f"repl_hex: {bytes_to_hex_str(repl_bytes)}")
             original_regex = re.compile(original_regex_bytes, re.DOTALL)
 
-            pairs = SwInfoUtils._get_replacement_pairs(original_regex, repl_bytes, mm)
+            pairs = SwInfoUtils._get_replacement_pairs(mm, original_regex, repl_bytes)
             if len(pairs) == 0:
                 print("未识别到特征码")
                 return None
@@ -1802,7 +1896,7 @@ class SwInfoUtils:
 
                 # 每条记录封装成字典存入列表
                 res_dicts.append({
-                    "addr": start_addr,
+                    "offset": start_addr,
                     "original": original_hex,
                     "modified": modified_hex
                 })
@@ -1891,7 +1985,8 @@ class SwInfoUtils:
             clean_feature = " ".join(tok.lstrip("!") for tok in tokens)
             # 扫描
             regex = cls._calc_feature_to_regex(clean_feature)
-            match = regex.search(mm)
+            with rw_lock.gen_rlock():
+                match = regex.search(mm)
             if match:
                 original = match.group()
                 start_addr = match.start()
@@ -1909,24 +2004,18 @@ class SwInfoUtils:
         if path_tag == LocalCfg.INST_PATH:
             return [
                 SwInfoUtils.get_sw_install_path_from_process,
-                # ((lambda sw: []) if ignore_local_record
-                #  else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.INST_PATH)),
                 SwInfoUtils.get_sw_install_path_from_machine_register,
                 SwInfoUtils.get_sw_install_path_from_user_register,
                 SwInfoUtils.get_sw_install_path_by_guess,
             ]
         elif path_tag == LocalCfg.DATA_DIR:
             return [
-                # ((lambda sw: []) if ignore_local_record
-                #  else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.DATA_DIR)),
                 SwInfoUtils.get_sw_data_dir_from_user_register,
                 SwInfoUtils.get_sw_data_dir_by_guess,
                 SwInfoUtils._get_sw_data_dir_from_other_sw,
             ]
         elif path_tag == LocalCfg.DLL_DIR:
             return [
-                # ((lambda sw: []) if ignore_local_record
-                #  else SwInfoUtils._create_sw_method_to_get_path_from_local_record(LocalCfg.DLL_DIR)),
                 SwInfoUtils.get_sw_dll_dir_by_memo_maps,
                 SwInfoUtils._get_sw_dll_dir_by_files,
             ]

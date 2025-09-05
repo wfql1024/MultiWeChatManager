@@ -15,7 +15,7 @@ from public import Config
 from public.custom_classes import Condition, FlowControlError
 from public.enums import CfgStatus, AccKeys, RemoteCfg, LocalCfg
 from public.global_members import GlobalMembers
-from utils import widget_utils
+from utils import widget_utils, file_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger, Printer
 
@@ -95,7 +95,7 @@ def _thread_to_load_patching_button(
 
     def _update_ui(res, msg):
         if not isinstance(res, dict):
-            mode_text, = subfunc_file.get_remote_cfg(sw, mode, label="")
+            mode_text, = subfunc_file.get_remote_cfg(sw, mode, **{RemoteCfg.ALIAS: ""})
             no_patch_btn = _create_btn_in_(frame, mode_text)
             _pack_btn_right(no_patch_btn)
             no_patch_btn.set_state(CustomBtn.State.DISABLED)
@@ -106,7 +106,7 @@ def _thread_to_load_patching_button(
                 channel_des, = subfunc_file.get_remote_cfg(
                     sw, mode, RemoteCfg.CHANNELS, **{patch_channel: None})
                 try:
-                    channel_label = channel_des["label"]
+                    channel_label = channel_des[RemoteCfg.ALIAS]
                 except KeyError:
                     channel_label = patch_channel
                 try:
@@ -118,8 +118,8 @@ def _thread_to_load_patching_button(
                 patch_btn = _create_btn_in_(frame, f"{channel_label}")
                 channels.append(patch_channel)
                 (patch_btn.set_bind_map(
-                    **{"1": lambda pc=patch_channel: switch_and_fresh_func(mode, pc, channels, coexist_channel,
-                                                                           ordinal)})
+                    **{"1": lambda pc=patch_channel: switch_and_fresh_func(
+                        mode, pc, channels, coexist_channel, ordinal)})
                  .apply_bind(GlobalMembers.root_class.root))
                 _pack_btn_right(patch_btn)
                 if patch_status is True:
@@ -130,14 +130,22 @@ def _thread_to_load_patching_button(
                 else:
                     widget_utils.set_widget_tip_when_(tooltips, patch_btn, {channel_tip: True})
 
-    threading.Thread(target=_thread).start()
+    _thread()  # 3.5~4.5s
+
+    # 3.5~5.5s
+    # if coexist_channel is None and ordinal is None:
+    #     threading.Thread(target=_thread).start()
+    # else:
+    #     _thread()
+
+    # threading.Thread(target=_thread).start()  # 7.5~9s
 
 
 class ExeManagerWndCreator:
     @staticmethod
     def open_exe_manager_wnd():
         exe_manager_wnd = tk.Toplevel(GlobalMembers.root_class.root)
-        ExeManagerWndUI(exe_manager_wnd, "共存管理")
+        ExeManagerWndUI(exe_manager_wnd, "共存与补丁")
 
 
 class ExeManagerWndUI(SubToolWndUI):
@@ -181,6 +189,7 @@ class ExeManagerUI:
         self.sw = self.login_ui.sw
 
         self.wnd = wnd
+        self.wnd.title(f"{self.sw} - {self.wnd.title()}")
         self.ui_frame = frame
 
         self.table_frames = dict()
@@ -244,9 +253,19 @@ class ExeManagerUI:
         bottom_frame = ttk.Frame(self.ui_frame)
         bottom_frame.pack(**Config.B_FRM_PACK)
         refresh_btn = CustomCornerBtn(bottom_frame, "刷新")
-        refresh_btn.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
-        bottom_frame.grid_columnconfigure(0, weight=1)
+        refresh_btn.grid(row=0, column=0, sticky="we", padx=2, pady=2)
         refresh_btn.set_bind_map(**{"1": self.refresh_em_ui}).apply_bind(self.root)
+        rescan_btn = CustomCornerBtn(bottom_frame, "重新扫描")
+        rescan_btn.grid(row=0, column=1, sticky="we", padx=2, pady=2)
+        rescan_btn.set_bind_map(**{"1": self.force_rescan_and_refresh}).apply_bind(self.root)
+        rescan_tip = "若存在部分方案扫描适配失败可使用, 该操作会重新扫描所有适配(包括已缓存的方案), 成功则覆盖, 失败无影响."
+        widget_utils.set_widget_tip_when_(self.tooltips, rescan_btn, {rescan_tip: True})
+        reset_btn = CustomCornerBtn(bottom_frame, "重置")
+        reset_btn.grid(row=0, column=2, sticky="we", padx=2, pady=2)
+        reset_btn.set_bind_map(**{"1": self.reset_and_rescan}).apply_bind(self.root)
+        reset_tip = "该操作将尝试重置补丁. [重新扫描]操作无效可使用."
+        widget_utils.set_widget_tip_when_(self.tooltips, reset_btn, {reset_tip: True})
+        bottom_frame.grid_columnconfigure(0, weight=1)
 
         self.content_frame = ttk.Frame(self.ui_frame)
         self.content_frame.pack(fill="both", expand=True)
@@ -260,12 +279,11 @@ class ExeManagerUI:
         main_header_frame = ttk.Frame(self.main_frame)
         main_header_frame.pack(side="top", fill="x")
         self.main_header_frame = main_header_frame
-        self._refresh_header_frame()
+        self._build_header_frame()
         # - 共存选择器
         self.cs_occupy_frame = ttk.Frame(self.main_frame)
         self.cs_occupy_frame.pack(side="top", fill="x")
         self.coexist_selector_frame = ttk.Frame(self.cs_occupy_frame)  # 默认不pack
-        self.thread_to_refresh_coexist_selector_frame()
         # 添加占位控件
         self.table_frames[CfgStatus.USING] = ttk.Frame(self.main_frame)
         self.table_frames[CfgStatus.USING].pack(side="top", fill="x")
@@ -282,8 +300,33 @@ class ExeManagerUI:
             "历史记录：", None,
             self.btn_dict["del_history_btn"].copy(),
             self.btn_dict["rebuild_exe_btn"].copy())
+        # 线程更新界面
+        self.thread_to_refresh_coexist_selector_frame()
+        self._reload_patching_buttons(RemoteCfg.REVOKE.value)
+        self._reload_patching_buttons(RemoteCfg.MULTI.value)
+
+    def reset_and_rescan(self):
+        all_patching_addresses = SwInfoFunc.extract_addresses_from_remote_cfg(self.sw)
+        all_patching_files = [SwInfoFunc.resolve_sw_path(self.sw, addr) for addr in all_patching_addresses]
+        Printer().debug(f"所有补丁文件: {all_patching_files}")
+        success, msg = file_utils.restore_files(all_patching_files)
+        if success is not True:
+            messagebox.showerror("错误", msg)
+        else:
+            messagebox.showinfo(
+                "成功", f"重置成功!"
+                        f"若仍有未识别的补丁, 请尝试重装{SwInfoFunc.get_sw_class(self.sw).label}")
+            self.force_rescan_and_refresh()
+
+    def force_rescan_and_refresh(self):
+        """[重新扫描]按钮功能: 将不跳过已有的适配, 都进行扫描, 若扫描成功将覆盖原有适配"""
+        sw_cls = SwInfoFunc.get_sw_class(self.sw)
+        sw_cls.force_rescan = True
+        self.refresh_em_ui()
 
     def refresh_em_ui(self):
+        """刷新界面; [刷新]按钮功能"""
+
         def slowly_refresh():
             if isinstance(self.main_frame, (ttk.Frame, tk.Frame)) and self.main_frame.winfo_exists():
                 Printer().vital("刷新页面")
@@ -295,7 +338,7 @@ class ExeManagerUI:
         slowly_refresh()
         Printer().print_vn("加载完成!")
 
-    def _refresh_header_frame(self):
+    def _build_header_frame(self):
         """刷新头部主程序区域"""
         main_header_frame = self.main_header_frame
         # 清空头部界面
@@ -326,12 +369,10 @@ class ExeManagerUI:
         anti_revoke_frame = ttk.Frame(main_header_frame)
         anti_revoke_frame.pack(side="right")
         self.patching_frame[RemoteCfg.REVOKE.value] = anti_revoke_frame
-        self._reload_patching_buttons(RemoteCfg.REVOKE.value)
         # - 多开区域及按钮
         multi_frame = ttk.Frame(main_header_frame)
         multi_frame.pack(side="right")
         self.patching_frame[RemoteCfg.MULTI.value] = multi_frame
-        self._reload_patching_buttons(RemoteCfg.MULTI.value)
 
     def _reload_patching_buttons(self, mode):
         """重新加载补丁区按钮"""
@@ -342,48 +383,6 @@ class ExeManagerUI:
         _thread_to_load_patching_button(
             self, self.sw, mode, frame, self.tooltips,
             self._thread_to_switch_main_dll_and_refresh)
-
-    def _refresh_coexist_selector_frame(self):
-        """刷新共存方案切换器内容"""
-        # 获取当前的选择并决定新建按钮是否可用
-        now_coexist_channel, channels_res_dict, msg = SwInfoFunc.identity_and_get_available_coexist_mode(self.sw)
-        if len(channels_res_dict) == 0 or now_coexist_channel is None:
-            self.create_coexist_btn.set_state(CustomBtn.State.DISABLED)
-        try:
-            # 设置缓存按钮中的已选择按钮, 其余设为正常
-            if len(channels_res_dict) != len(self.coexist_channel_btn_dict):
-                raise FlowControlError
-            self.coexist_channel_btn_dict[now_coexist_channel].set_state(CustomBtn.State.SELECTED)
-            for channel in channels_res_dict:
-                if channel != now_coexist_channel:
-                    self.coexist_channel_btn_dict[channel].set_state(CustomBtn.State.NORMAL)
-        except (KeyError, TypeError, FlowControlError):
-            print("共存选择列表改变, 重建页面...")
-            # 清空界面
-            for widget in self.coexist_selector_frame.winfo_children():
-                widget.destroy()
-            self.coexist_channel_btn_dict = {}
-            for coexist_channel, coexist_channel_dict in channels_res_dict.items():
-                cc_label, = subfunc_file.get_remote_cfg(
-                    self.sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, label=None)
-
-                coexist_channel_btn = _create_btn_in_(self.coexist_selector_frame, f"{cc_label}")
-                self.coexist_channel_btn_dict[coexist_channel] = coexist_channel_btn
-                (coexist_channel_btn.set_bind_map(
-                    **{"1": partial(
-                        subfunc_file.save_a_setting_and_callback, self.sw,
-                        LocalCfg.COEXIST_MODE.value, coexist_channel, self.thread_to_refresh_coexist_selector_frame)})
-                 .apply_bind(self.root))
-                _pack_btn_right(coexist_channel_btn)
-                coexist_status = coexist_channel_dict["status"]
-                if coexist_status is not True:
-                    coexist_channel_btn.set_state(CustomBtn.State.DISABLED)
-            if now_coexist_channel in self.coexist_channel_btn_dict:
-                self.coexist_channel_btn_dict[now_coexist_channel].set_state(CustomBtn.State.SELECTED)
-            if len(self.coexist_channel_btn_dict) == 0:
-                self.show_coexist_channel_btn.set_state(CustomBtn.State.DISABLED)
-        finally:
-            self.progress_bar.finished()
 
     def _toggle_coexist_selector_visibility(self):
         """[...]按钮功能: 切换共存方案选择器的显示状态"""
@@ -398,9 +397,51 @@ class ExeManagerUI:
     def thread_to_refresh_coexist_selector_frame(self):
         """[(共存方案)]按钮功能: 刷新共存方案切换器内容"""
 
+        def main_frame_do(channels_res_dict, now_coexist_channel):
+            for coexist_channel, coexist_channel_dict in channels_res_dict.items():
+                cc_label, = subfunc_file.get_remote_cfg(
+                    self.sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, **{RemoteCfg.ALIAS: None})
+
+                coexist_channel_btn = _create_btn_in_(self.coexist_selector_frame, f"{cc_label}")
+                self.coexist_channel_btn_dict[coexist_channel] = coexist_channel_btn
+                (coexist_channel_btn.set_bind_map(
+                    **{"1": partial(
+                        subfunc_file.save_a_setting_and_callback, self.sw,
+                        LocalCfg.COEXIST_MODE.value, coexist_channel,
+                        self.thread_to_refresh_coexist_selector_frame)})
+                 .apply_bind(self.root))
+                _pack_btn_right(coexist_channel_btn)
+                coexist_status = coexist_channel_dict["status"]
+                if coexist_status is not True:
+                    coexist_channel_btn.set_state(CustomBtn.State.DISABLED)
+            if now_coexist_channel in self.coexist_channel_btn_dict:
+                self.coexist_channel_btn_dict[now_coexist_channel].set_state(CustomBtn.State.SELECTED)
+            if len(self.coexist_channel_btn_dict) == 0:
+                self.show_coexist_channel_btn.set_state(CustomBtn.State.DISABLED)
+
         @with_progress_factory(self)
         def _thread():
-            self._refresh_coexist_selector_frame()
+            # 获取当前的选择并决定新建按钮是否可用
+            now_coexist_channel, channels_res_dict, msg = SwInfoFunc.identity_and_get_available_coexist_mode(self.sw)
+            if len(channels_res_dict) == 0 or now_coexist_channel is None:
+                self.create_coexist_btn.set_state(CustomBtn.State.DISABLED)
+            try:
+                # 设置缓存按钮中的已选择按钮, 其余设为正常
+                if len(channels_res_dict) != len(self.coexist_channel_btn_dict):
+                    raise FlowControlError
+                self.coexist_channel_btn_dict[now_coexist_channel].set_state(CustomBtn.State.SELECTED)
+                for channel in channels_res_dict:
+                    if channel != now_coexist_channel:
+                        self.coexist_channel_btn_dict[channel].set_state(CustomBtn.State.NORMAL)
+            except (KeyError, TypeError, FlowControlError):
+                print("共存选择列表改变, 重建页面...")
+                # 清空界面和列表
+                for widget in self.coexist_selector_frame.winfo_children():
+                    widget.destroy()
+                self.coexist_channel_btn_dict = {}
+                self.root.after(0, main_frame_do, channels_res_dict, now_coexist_channel)
+            finally:
+                self.progress_bar.finished()
 
         threading.Thread(target=_thread).start()
 
@@ -420,8 +461,8 @@ class ExeManagerUI:
 
         @with_progress_factory(self)
         def _thread():
-            SwOperator.choose_channel_in_conflicts_and_switch_dll_to_(self.sw, mode, channel, conflicts,
-                                                                      coexist_channel, ordinal)
+            SwOperator.choose_channel_in_conflicts_and_switch_dll_to_(
+                self.sw, mode, channel, conflicts, coexist_channel, ordinal)
             self.root.after(0, self._reload_patching_buttons, mode)
 
         threading.Thread(target=_thread).start()
@@ -593,7 +634,7 @@ class ExeManagerCkRow(CkbRow):
         self.photo_images.append(photo)
         try:
             channel_label, = subfunc_file.get_remote_cfg(
-                self.sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, label=None)
+                self.sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, **{RemoteCfg.ALIAS: None})
             channel_checked = channel_label is not None
             channel_label = channel_label if channel_checked else "??"
         except (KeyError, TypeError):
