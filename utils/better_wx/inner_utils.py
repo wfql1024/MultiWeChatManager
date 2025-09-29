@@ -9,7 +9,7 @@ import pathlib
 import re
 import shutil
 import subprocess
-from typing import Union, List
+from typing import Union, List, Optional
 
 if os.name == "nt":
     # ANSI Support for OLD Windows
@@ -313,7 +313,12 @@ def wildcard_replace(data: bytes, pattern: Union[str, list], replace: Union[str,
 """以下方法为新增方法"""
 
 
-def custom_wildcard_tokenize(wildcard: str) -> list:
+def custom_wildcard_tokenize(wildcard: str) -> Optional[list]:
+    """
+    字符串若含有..., 则只能在开头或结尾
+    对非...部分, 每两位进行拆分, 只能是2位16进制数或??或!!, 将字符串转换为列表
+    相较于原方法, 字符串内容新增可以支持感叹号'!'
+    """
     wildcard = re.sub(r"\s+", "", wildcard).upper()
 
     tokens = []
@@ -327,21 +332,20 @@ def custom_wildcard_tokenize(wildcard: str) -> list:
         print(
             f"{RED}[ERR] Wildcard <{wildcard}> has invalid byte {wildcard[-1]}_{RESET}"
         )
-        pause()
-        exit()
+        return None
     for i in range(0, len(wildcard), 2):
         a = wildcard[i]
         b = wildcard[i + 1]
         if a not in "0123456789ABCDEF?!" or b not in "0123456789ABCDEF?!":
             print(f"{RED}[ERR] Wildcard <{wildcard}> has invalid byte {a}{b}{RESET}")
-            pause()
-            exit()
+            return None
         elif "?" == a == b:
             tokens.append("??")
-        elif a == "?" or b == "?":
+        elif "!" == a == b:
+            tokens.append("!!")
+        elif a == "?" or b == "?" or a == "!" or b == "!":
             print(f"{RED}[ERR] Wildcard <{wildcard}> has invalid byte {a}{b}{RESET}")
-            pause()
-            exit()
+            return None
         else:
             tokens.append(f"{a}{b}")
     return tokens

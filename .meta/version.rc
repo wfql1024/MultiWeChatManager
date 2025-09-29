@@ -1,0 +1,29 @@
+#include <windows.h>
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 3,9,9,3999
+ PRODUCTVERSION 3,9,9,3999
+ FILEFLAGSMASK 0x3f
+ FILEFLAGS 0x0
+ FILEOS 0x4
+ FILETYPE 0x1
+ FILESUBTYPE 0x0
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "极峰创科 JhiFeng Chan Tech Studio\0"
+            VALUE "FileDescription",  "极峰多聊，旨在提升聊天平台多开使用体验。\0"
+            VALUE "InternalName",     "极峰多聊\0"
+            VALUE "LegalCopyright",   "吾峰起浪 © 版权所有\0"
+            VALUE "OriginalFilename", "MultiWeChatManager.exe\0"
+            VALUE "ProductName",      "极峰多聊\0"
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0804, 1200
+    END
+END

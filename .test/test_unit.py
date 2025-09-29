@@ -1,5 +1,6 @@
 import ctypes
 import glob
+import json
 import os
 import random
 import time
@@ -10,7 +11,7 @@ from unittest import TestCase
 import psutil
 
 from functions import subfunc_file
-from functions.sw_func import SwInfoFunc, SwOperator
+from functions.sw_func import SwInfoFunc, SwOperator, SwInfoUtils
 from public import Config
 from public.enums import MultirunMode, LocalCfg
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
@@ -179,6 +180,44 @@ class Test(TestCase):
         path = SwInfoFunc.resolve_sw_path("Weixin", "%dll_dir%/Weixin.dll")
         print(path)
 
+    def test_convert_hex_to_list_and_align_modified_to_original(self):
+        # 假设 SwInfoUtils 已经导入
+        tests = [
+            # 正常前向补齐
+            {"original": "11 22 33 44 55 66 77 88", "modified": "... 55 66", "left_cut": 0, "right_cut": 0},
+            # 正常后向补齐
+            {"original": "11 22 33 44 55", "modified": "AA BB ...", "left_cut": 0, "right_cut": 0},
+            # 原始串含非法...
+            {"original": "11 22 ... 33", "modified": "AA", "left_cut": 0, "right_cut": 0},
+            # 修改串过长-前向
+            {"original": "11 22 33", "modified": "... 11 22 33 44", "left_cut": 0, "right_cut": 0},
+            # 修改串过长-后向
+            {"original": "11 22 33", "modified": "11 22 33 44 ...", "left_cut": 0, "right_cut": 0},
+            # 修改串中间出现...
+            {"original": "11 22 33 44", "modified": "11 ... 44", "left_cut": 0, "right_cut": 0},
+            # 左右 cut
+            {"original": "11 22 33 44 55 66", "modified": "AA BB CC DD EE", "left_cut": 1, "right_cut": 1},
+            # 修改串为空
+            {"original": "11 22 33", "modified": "", "left_cut": 0, "right_cut": 0},
+            # 原始串太短不够 cut
+            {"original": "11 22", "modified": "AA", "left_cut": 1, "right_cut": 2},
+        ]
+
+        for i, case in enumerate(tests, 1):
+            print(f"\n=== Test Case {i} ===")
+            result = SwInfoUtils.convert_hex_to_list_and_align_modified_to_original(
+                case["original"],
+                case["modified"],
+                left_cut=case.get("left_cut", 0),
+                right_cut=case.get("right_cut", 0)
+            )
+            if result is None:
+                print("Result: None (Error)")
+            else:
+                listed_orig, listed_mod = result
+                print(f"Original List: {listed_orig}")
+                print(f"Modified List: {listed_mod}")
+
     def test_get_login_hwnds_of_sw(self):
         hwnds = SwInfoFunc.get_login_hwnds_of_sw("Weixin")
         print(hwnds)
@@ -215,6 +254,73 @@ class Test(TestCase):
 
     def test_create_coexist(self):
         SwOperator.create_coexist_exe_core("WXWork", "1")
+
+    def test_expand_records(self):
+        def expand_records(data):
+            expanded = []
+            for item in data:
+                item_type = item.get("type", "")
+                originals = item.get("original", [])
+                modifieds = item.get("modified", [])
+                descripts = item.get("descript", [])
+
+                # 三个数组长度应该一致，否则用最短的
+                for o, m, d in zip(originals, modifieds, descripts):
+                    expanded.append({
+                        "type": item_type,
+                        "original": o,
+                        "modified": m,
+                        "descript": d
+                    })
+            return expanded
+
+        raw_data = [
+            {
+                "type": "simple",
+                "original": [
+                    "80 79 08 00 74 16 83 C1 0C 83 79 14 07 76 02 8B 09 51 8D 4A 18 51 FF 15 ?? ?? ?? 06 8D 8B DC 00 00 00 51 E8 ?? ?? ?? 01 8B 45 08 59",
+                    "74 5D 39 B3 C4 00 00 00 74 55 8B CB E8 ?? D5 FF FF 8B CB E8 49 D0 FF FF 84 C0 75 43 8B BB CC 00 00 00 8B 07 C7 45 CC ?? ?? ?? 06 C7",
+                    "73 76 69 64 3A 20 00 63 6F 6E 66 69 67 2E 64 62",
+                    "43 6F 6E 66 69 67 2E 63 66 67",
+                    "57 00 65 00 57 00 6F 00 72 00 6B 00 2E 00 41 00 63 00 74 00 69 00 76 00 61 00 74 00 65 00 41 00 70 00 70 00 6C 00 69 00 63 00 61 00 74 00 69 00 6F 00 6E 00",
+                    "43 00 6F 00 6E 00 66 00 69 00 67 00 2E 00 63 00 66 00 67 00",
+                    "63 00 6F 00 72 00 70 00 5F 00 6C 00 6F 00 67 00 6F 00",
+                    "54 00 65 00 6E 00 63 00 65 00 6E 00 74 00 2E 00 57 00 65 00 57 00 6F 00 72 00 6B 00 2E 00 45 00 78 00 63 00 6C 00 75 00 73 00 69 00 76 00 65 00",
+                    "63 6F 72 70 5F 6C 6F 67 6F",
+                    "71 72 63 6F 64 65 5F 6C 6F 67 69 6E 5F 75 73 65 72 5F 61 76 61 74 6F 72",
+                    "68 74 74 70 64 6E 73 2E 63 66 67 00 77 65 77 6F 72 6B"
+                ],
+                "modified": [
+                    "83 42 08 !! 83 42 08 10 83 6A 0C 20 90 EB 0D ...",
+                    "EB ...",
+                    "... !! 2E 64 62",
+                    "... !! 2E 63 66 67",
+                    "... !! 00",
+                    "... !! 00 2E 00 63 00 66 00 67 00",
+                    "... !! 00",
+                    "... !! 00 73 00 69 00 76 00 65 00",
+                    "... !!",
+                    "... !!",
+                    "68 74 74 70 64 6E !! ..."
+                ],
+                "descript": [
+                    " ̲.  ̲B  .  ̲0  ̲.  ̲B  ̲.  ̲.  ̲.  ̲j  ̲.  ̲   ̲.  ̲.  ̲.  .  .  Q  .  J  .  Q  .  .  .     \"  .  .  .  .  .  .  .  Q  .  .  .  .  .  .  E  .  Y",
+                    " ̲t  ]  9  .  .  .  .  .  t  U  .  .  .  .  .  .  .  .  .  .  I  .  .  .  .  .  u  C  .  .  .  .  .  .  .  .  .  E  .  .  .  .  .  .",
+                    " s  v  i  d  :     .  c  o  n  f  i  ̲g  .  d  b",
+                    " C  o  n  f  i  ̲g  .  c  f  g",
+                    " W  .  e  .  W  .  o  .  r  .  k  .  .  .  A  .  c  .  t  .  i  .  v  .  a  .  t  .  e  .  A  .  p  .  p  .  l  .  i  .  c  .  a  .  t  .  i  .  o  .  ̲n  .",
+                    " C  .  o  .  n  .  f  .  i  .  ̲g  .  .  .  c  .  f  .  g  .",
+                    " c  .  o  .  r  .  p  .  _  .  l  .  o  .  g  .  ̲o  .",
+                    " T  .  e  .  n  .  c  .  e  .  n  .  t  .  .  .  W  .  e  .  W  .  o  .  r  .  k  .  .  .  E  .  x  .  c  .  l  .  ̲u  .  s  .  i  .  v  .  e  .",
+                    " c  o  r  p  _  l  o  g  ̲o",
+                    " q  r  c  o  d  e  _  l  o  g  i  n  _  u  s  e  r  _  a  v  a  t  o  ̲r",
+                    " h  t  t  p  d  n  ̲s  .  c  f  g  .  w  e  w  o  r  k"
+                ]
+            }
+        ]
+
+        expanded_data = expand_records(raw_data)
+        print(json.dumps(expanded_data, ensure_ascii=False, indent=4))
 
     def test_custom_notebook_and_custom_btn(self):
         import tkinter as tk

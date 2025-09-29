@@ -1,3 +1,4 @@
+import mmap
 import os
 import re
 import sys
@@ -30,8 +31,8 @@ from public.enums import LocalCfg, RemoteCfg, SwStates
 from public.global_members import GlobalMembers
 from utils import file_utils, sys_utils, widget_utils
 from utils.encoding_utils import StringUtils
-from utils.file_utils import JsonUtils
-from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUtils
+from utils.file_utils import JsonUtils, PatchUtils
+from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUtils, Printer
 from utils.sys_utils import Tk2Sys
 from utils.widget_utils import UnlimitedClickHandler
 
@@ -61,67 +62,306 @@ def _set_negative_style(btn):
 class WndCreator:
 
     @staticmethod
-    def open_feedback():
-        feedback_wnd = tk.Toplevel(GlobalMembers.root_class.root)
+    def get_curr_wnd():
+        return GlobalMembers.root_class.root.focus_get().winfo_toplevel()
+
+    @classmethod
+    def create_new_wnd(cls):
+        """创建当前窗口的子窗口"""
+        return tk.Toplevel(cls.get_curr_wnd())
+
+    @classmethod
+    def open_customize_patches_wnd(cls, sw, mode, channel, coexist_channel, ordinal):
+        """打开自定义补丁窗口"""
+        customize_patches_wnd = cls.create_new_wnd()
+        CustomizePatchesWnd(customize_patches_wnd, sw, mode, channel, coexist_channel, ordinal)
+
+    @classmethod
+    def open_feedback(cls):
+        feedback_wnd = cls.create_new_wnd()
         FeedBackWndUI(feedback_wnd, "反馈渠道")
 
-    @staticmethod
-    def open_sw_settings(sw):
+    @classmethod
+    def open_sw_settings(cls, sw):
         """打开设置窗口"""
-        settings_window = tk.Toplevel(GlobalMembers.root_class.root)
+        settings_window = cls.create_new_wnd()
         SettingWndUI(settings_window, sw, f"{sw}设置")
 
-    @staticmethod
-    def open_update_log():
+    @classmethod
+    def open_update_log(cls):
         """打开版本日志窗口"""
         root_class = GlobalMembers.root_class
         success, result = AppFunc.split_vers_by_cur_from_local(root_class.app_info.curr_full_ver)
         if success is True:
             new_versions, old_versions = result
-            update_log_window = tk.Toplevel(root_class.root)
+            update_log_window = cls.create_new_wnd()
             UpdateLogWndUI(update_log_window, "", old_versions)
         else:
             messagebox.showerror("错误", result)
 
-    @staticmethod
-    def open_debug_window():
+    @classmethod
+    def open_debug_window(cls):
         """打开调试窗口，显示所有输出日志"""
-        debug_window = tk.Toplevel(GlobalMembers.root_class.root)
+        debug_window = cls.create_new_wnd()
         DebugWndUI(debug_window, "调试窗口")
 
-    @staticmethod
-    def open_acc_detail(item, tab_class, widget_to_focus=None, event=None):
+    @classmethod
+    def open_acc_detail(cls, item, tab_class, widget_to_focus=None, event=None):
         """打开详情窗口"""
         if event is None:
             pass
         sw, acc = item.split("/")
-        detail_window = tk.Toplevel(GlobalMembers.root_class.root)
+        detail_window = cls.create_new_wnd()
         detail_ui = DetailUI(detail_window, f"属性 - {acc}", sw, acc, tab_class)
         detail_ui.set_focus_to_(widget_to_focus)
 
-    @staticmethod
-    def open_statistic(sw):
+    @classmethod
+    def open_statistic(cls, sw):
         """打开统计窗口"""
-        statistic_window = tk.Toplevel(GlobalMembers.root_class.root)
+        statistic_window = cls.create_new_wnd()
         StatisticWndUI(statistic_window, f"{sw}统计数据", sw)
 
-    @staticmethod
-    def open_global_setting_wnd():
+    @classmethod
+    def open_global_setting_wnd(cls):
         """打开设置窗口"""
-        global_setting_wnd = tk.Toplevel(GlobalMembers.root_class.root)
+        global_setting_wnd = cls.create_new_wnd()
         GlobalSettingWndUI(global_setting_wnd, "全局设置")
 
-    @staticmethod
-    def open_rewards():
+    @classmethod
+    def open_rewards(cls):
         """打开赞赏窗口"""
-        rewards_window = tk.Toplevel(GlobalMembers.root_class.root)
+        rewards_window = cls.create_new_wnd()
         RewardsWndUI(rewards_window, "我来赏你！")
 
-    @staticmethod
-    def open_about(app_info):
+    @classmethod
+    def open_about(cls, app_info):
         """打开关于窗口"""
-        about_wnd = tk.Toplevel(GlobalMembers.root_class.root)
+        about_wnd = cls.create_new_wnd()
         AboutWndUI(about_wnd, "关于", app_info)
+
+
+class CustomizePatchesWnd(SubToolWndUI):
+    def __init__(self, wnd, sw, mode, channel, coexist_channel, ordinal):
+        self.length_checks = []
+        self.addr_patch_dicts = None
+
+        self.sw = sw
+        self.mode = mode
+        self.channel = channel
+        self.coexist_channel = coexist_channel
+        self.ordinal = ordinal
+        ...
+        title = f"{sw}-{mode}-{channel}补丁自定义"
+        super().__init__(wnd, title)
+
+    def load_ui(self):
+        self.addr_patch_dicts = SwInfoFunc.get_mode_channel_customizable_patches(self.sw, self.mode, self.channel)
+
+        self.render_custom_patches()
+
+    def render_custom_patches(self):
+        """
+        在 frame 中渲染自定义补丁界面
+        """
+
+        frame = self.wnd_frame
+        addr_patch_dicts = self.addr_patch_dicts
+        if len(self.addr_patch_dicts) == 0:
+            messagebox.showinfo("提示", "该补丁无法自定义!")
+            self.close_when_open = True
+            return
+
+        for addr_patch_dict in addr_patch_dicts:
+            patch_addr = addr_patch_dict["addr"]
+            if not isinstance(self.coexist_channel, str) or not isinstance(self.ordinal, str):
+                patch_path = SwInfoFunc.resolve_sw_path(self.sw, patch_addr)
+            else:
+                patch_path = SwInfoFunc.get_coexist_path_from_address(
+                    self.sw, patch_addr, self.coexist_channel, self.ordinal)
+
+            for custom_patch_dict in addr_patch_dict["patches"]:
+                if not custom_patch_dict.get("customizable"):
+                    continue
+                encoding = custom_patch_dict.get("encoding", "utf-8")
+                prefix_hex = custom_patch_dict.get("prefix_hex")
+                suffix_hex = custom_patch_dict.get("suffix_hex")
+                # --- 1. tip 标签 ---
+                tk.Label(frame, text=custom_patch_dict.get("tip", ""), anchor="w").pack(fill="x", pady=(6, 0))
+                # --- 2. 原内容标签 ---
+                try:
+                    original_core_bytes = self.strip_prefix_suffix(
+                        custom_patch_dict["original"],
+                        prefix_hex,
+                        suffix_hex
+                    )
+                    original_text = original_core_bytes.decode(encoding, errors="ignore")
+                except Exception as e:
+                    original_text = f"[解码失败: {e}]"
+
+                tk.Label(frame, text=f"原内容: {original_text}", anchor="w").pack(fill="x")
+                # --- 3. 输入框 + 长度标签 ---
+                try:
+                    modified_text = self.extract_core_text(
+                        bytes.fromhex(custom_patch_dict["modified"]),
+                        prefix_hex,
+                        suffix_hex,
+                        encoding
+                    )
+                except Exception as e:
+                    print(e)
+                    modified_text = ""
+
+                entry_frame = tk.Frame(frame)
+                entry_frame.pack(fill="x", pady=2)
+                entry = DefaultEntry(entry_frame, default_label=modified_text)
+                entry.pack(side="left", fill="x", expand=True)
+                try:
+                    offset = custom_patch_dict["offset"]
+                    length = len(custom_patch_dict["original"].split())
+
+                    curr_value_bytes, msg = PatchUtils.get_data_from_files_by_offset_and_length(
+                        patch_path, offset, length
+                    )
+
+                    if curr_value_bytes is not None:
+                        cur_value = self.extract_core_text(curr_value_bytes, prefix_hex, suffix_hex, encoding)
+                        entry.set_value(cur_value)
+
+
+                except Exception as e:
+                    # 这里的异常是防御性兜底，避免影响整体流程
+                    print(f"读取补丁数据异常: {e}")
+                    pass
+
+                # 保存 var 引用
+                custom_patch_dict["custom_var"] = entry.var
+
+                # 已输入/最大长度标签
+                max_len = len(self.strip_prefix_suffix(
+                    custom_patch_dict["original"],
+                    custom_patch_dict.get("prefix_hex"),
+                    custom_patch_dict.get("suffix_hex")
+                ))
+
+                len_label = tk.Label(entry_frame, text=f"0/{max_len}", width=8, anchor="e")
+                len_label.pack(side="right")
+                self.bind_length_check(entry, len_label, max_len, encoding)
+                self.length_checks.append((entry, 0, max_len))
+
+        # --- 底部按钮 ---
+        btn_frame = tk.Frame(frame)
+        btn_frame.pack(fill="x", pady=8)
+
+        ttk.Button(btn_frame, text="确认", command=self.save_patches).pack(side="right", padx=4)
+
+        Printer().debug(f"加载完成后字典内容: {self.addr_patch_dicts}")
+
+    @staticmethod
+    def strip_prefix_suffix(hex_str: str, prefix_hex: str = None, suffix_hex: str = None) -> bytes:
+        """
+        去掉前后缀对应的字节，返回主体部分的 bytes
+        """
+        all_bytes = bytes.fromhex(hex_str)
+
+        prefix_len = len(bytes.fromhex(prefix_hex)) if prefix_hex else 0
+        suffix_len = len(bytes.fromhex(suffix_hex)) if suffix_hex else 0
+
+        if suffix_len == 0:
+            core_bytes = all_bytes[prefix_len:]
+        else:
+            core_bytes = all_bytes[prefix_len:-suffix_len]
+
+        return core_bytes
+
+    @staticmethod
+    def extract_core_text(data: bytes, prefix=None, suffix=None, encoding="utf-8") -> str:
+        """
+        从 data（bytes）里提取被 prefix_hex 和 suffix_hex 包裹的内容，并 decode 成字符串
+        """
+        try:
+            hex_str = data.hex(" ")
+            raw_bytes = bytes.fromhex(hex_str)
+
+            # 前缀
+            if prefix:
+                prefix_bytes = bytes.fromhex(prefix)
+                raw_bytes = raw_bytes[len(prefix_bytes):]
+
+            # 后缀 -> 找到第一次出现的位置截断
+            if suffix:
+                suffix_bytes = bytes.fromhex(suffix)
+                idx = raw_bytes.find(suffix_bytes)
+                if idx != -1:
+                    raw_bytes = raw_bytes[:idx]
+
+            return raw_bytes.decode(encoding, errors="ignore")
+
+        except Exception as e:
+            return f"[解码失败: {e}]"
+
+    def bind_length_check(self, entry, label, max_len, encoding):
+        def on_change(*args):
+            if args:
+                pass
+            text = entry.var.get()
+            cur_len = len(text.encode(encoding, errors="ignore"))
+            label.config(text=f"{cur_len}/{max_len}")
+            # 更新 length_checks
+            for i, (e, _, m) in enumerate(self.length_checks):
+                if e == entry:
+                    self.length_checks[i] = (e, cur_len, m)
+                    break
+
+        entry.var.trace_add("write", on_change)
+        # 初始化一次
+        on_change()
+
+    def save_patches(self):
+        # 先全局检查
+        for entry, cur_len, max_len in self.length_checks:
+            if cur_len > max_len:
+                print(f"输入超长: {cur_len}/{max_len}")
+                messagebox.showwarning("警告", "长度不符合要求, 请重新输入!")
+                return  # 或者弹窗提示
+
+        # 检查通过，再写入
+        for addr_patch_dict in self.addr_patch_dicts:
+            patch_addr = addr_patch_dict["addr"]
+            if not isinstance(self.coexist_channel, str) or not isinstance(self.ordinal, str):
+                patch_path = SwInfoFunc.resolve_sw_path(self.sw, patch_addr)
+            else:
+                patch_path = SwInfoFunc.get_coexist_path_from_address(
+                    self.sw, patch_addr, self.coexist_channel, self.ordinal)
+            try:
+                with open(patch_path, "r+b") as f:
+                    mm = mmap.mmap(f.fileno(), 0)
+
+                    for patch in addr_patch_dict["patches"]:
+                        offset = patch["offset"]
+                        encoding = patch.get("encoding", "utf-8")
+                        prefix_hex = patch.get("prefix_hex")
+                        suffix_hex = patch.get("suffix_hex")
+
+                        # 编码 + 拼接
+                        text = patch["custom_var"].get()
+                        if text == "":
+                            data = bytes.fromhex(patch.get("original"))
+                        else:
+                            data = text.encode(encoding, errors="ignore")
+                        if prefix_hex:
+                            data = bytes.fromhex(prefix_hex) + data
+                        if suffix_hex:
+                            data = data + bytes.fromhex(suffix_hex)
+
+                        # 写入
+                        mm.seek(offset)
+                        mm.write(data)
+
+                    mm.close()
+            except Exception as e:
+                messagebox.showerror("错误", f"写入 {patch_path} 出错: {e}")
+
+        self.wnd.destroy()
 
 
 class DetailUI(SubToolWndUI):
@@ -211,7 +451,7 @@ class DetailUI(SubToolWndUI):
         _pack_btn_left(kill_pid_btn)
         re_login_btn = _create_btn_in_(pid_frame, "重登")
         re_login_btn.set_bind_map(
-            **{"1": partial(AccOperator.start_auto_login_accounts_thread, {sw: [account]})}).apply_bind(self.root)
+            **{"1": partial(AccOperator.start_login_accounts_thread, {sw: [account]})}).apply_bind(self.root)
         re_login_btn.set_bind_map(
             **{"1": self.wnd.destroy}).apply_bind(self.root)
         _pack_btn_left(re_login_btn)
@@ -1382,11 +1622,11 @@ class SettingWndUI(SubToolWndUI):
         }
         sw = self.sw
         self.origin_values = {
-            "inst_path": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.INST_PATH),
-            "data_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.DATA_DIR),
-            "dll_dir": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.DLL_DIR),
-            "login_size": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.LOGIN_SIZE),
-            "state": subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE),
+            "inst_path": SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.INST_PATH),
+            "data_dir": SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.DATA_DIR),
+            "dll_dir": SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.DLL_DIR),
+            "login_size": SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.LOGIN_SIZE),
+            "state": SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.STATE),
         }
         self.error_msg = {
             "inst_path": "请选择可执行文件!",
@@ -1559,12 +1799,12 @@ class SettingWndUI(SubToolWndUI):
         state = self.get_sw_state_from_ckb()
         note = self.title_entry.get_value()
         # print(f"结束时候状态:{state}")
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.INST_PATH, inst_path)
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DATA_DIR, data_dir)
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, dll_dir)
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, login_size)
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.STATE, state)
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.REMARK, note)
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.INST_PATH, inst_path)
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.DATA_DIR, data_dir)
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.DLL_DIR, dll_dir)
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.LOGIN_SIZE, login_size)
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.STATE, state)
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.REMARK, note)
         self.wnd.destroy()
 
         self.check_bools()
@@ -1575,19 +1815,23 @@ class SettingWndUI(SubToolWndUI):
                 print("清除平台账号数据")
                 subfunc_file.clear_some_acc_data(self.sw)
             if self.need_to_reinit:
-                self.root_class.initialize_in_root()
+                self.root_class.reinit_root_ui()
                 return
-            if self.root_class.root_ui:
-                self.root_class.root_ui.refresh_current_tab()
+            if self.root_class.main_ui:
+                self.root_class.main_ui.refresh_current_tab()
 
         _do()
 
     def finally_do(self):
         # 关闭窗口的话,不保存
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.INST_PATH, self.origin_values[LocalCfg.INST_PATH])
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DATA_DIR, self.origin_values[LocalCfg.DATA_DIR])
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.DLL_DIR, self.origin_values[LocalCfg.DLL_DIR])
-        subfunc_file.save_a_setting_and_callback(self.sw, LocalCfg.LOGIN_SIZE, self.origin_values[LocalCfg.LOGIN_SIZE])
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.INST_PATH,
+                                                                 self.origin_values[LocalCfg.INST_PATH])
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.DATA_DIR,
+                                                                 self.origin_values[LocalCfg.DATA_DIR])
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.DLL_DIR,
+                                                                 self.origin_values[LocalCfg.DLL_DIR])
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, LocalCfg.LOGIN_SIZE,
+                                                                 self.origin_values[LocalCfg.LOGIN_SIZE])
 
     def validate_paths_and_ask(self):
         invalid_vars = []
@@ -1780,7 +2024,7 @@ class GlobalSettingWndUI(SubToolWndUI):
         proxy_checkbox = ttk.Checkbutton(
             proxy_frame, text="使用代理", variable=self.use_proxy_var,
             command=lambda: self.do_and_update(
-                partial(subfunc_file.save_a_global_setting_and_callback, LocalCfg.USE_PROXY, self.use_proxy_var.get())))
+                partial(AppFunc.save_a_global_setting_and_callback, LocalCfg.USE_PROXY, self.use_proxy_var.get())))
         proxy_checkbox.pack(side="top", fill="x")
         # 代理设置框架，将会根据是否使用代理而显示或隐藏
         proxy_detail_frame = ttk.Frame(proxy_frame)
@@ -1818,10 +2062,10 @@ class GlobalSettingWndUI(SubToolWndUI):
         self.proxy_port = port_var
 
     def update_content(self):
-        use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_PROXY)
+        use_proxy = AppFunc.get_global_setting_value_by_local_record(LocalCfg.USE_PROXY)
         self.use_proxy_var.set(use_proxy)
-        ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
-        port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)
+        ip = AppFunc.get_global_setting_value_by_local_record(LocalCfg.PROXY_IP)
+        port = AppFunc.get_global_setting_value_by_local_record(LocalCfg.PROXY_PORT)
         self.proxy_ip.set(ip)
         self.proxy_port.set(port)
 
@@ -1838,15 +2082,15 @@ class GlobalSettingWndUI(SubToolWndUI):
         screen_width = self.wnd.winfo_screenwidth()
         screen_height = self.wnd.winfo_screenheight()
         self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        subfunc_file.save_a_global_setting_and_callback('screen_size', f"{screen_width}*{screen_height}")
+        AppFunc.save_a_global_setting_and_callback('screen_size', f"{screen_width}*{screen_height}")
 
     def save_settings(self):
         use_proxy = self.use_proxy_var.get()
         ip = self.proxy_ip.get()
         port = self.proxy_port.get()
-        subfunc_file.save_a_global_setting_and_callback(LocalCfg.USE_PROXY, use_proxy)
-        subfunc_file.save_a_global_setting_and_callback(LocalCfg.PROXY_IP, ip)
-        subfunc_file.save_a_global_setting_and_callback(LocalCfg.PROXY_PORT, port)
+        AppFunc.save_a_global_setting_and_callback(LocalCfg.USE_PROXY, use_proxy)
+        AppFunc.save_a_global_setting_and_callback(LocalCfg.PROXY_IP, ip)
+        AppFunc.save_a_global_setting_and_callback(LocalCfg.PROXY_PORT, port)
         printer.vital("设置成功")
         self.wnd.destroy()
         AppFunc.apply_proxy_setting()

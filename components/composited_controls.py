@@ -3,7 +3,6 @@ from functools import partial
 from typing import Dict, Optional
 
 from components.custom_widgets import *
-from functions import subfunc_file
 from public import Config
 from public.custom_classes import Condition
 from public.enums import NotebookDirection
@@ -581,7 +580,6 @@ class TreeviewAHT(ActionableHeaderTable):
         self.last_single_item = None
         self.hovered_item = None
         self.tooltips = {}
-        self.sw = None
 
         self.sort: Dict[str, bool] = {}
         self.default_sort = {
@@ -996,7 +994,6 @@ class TreeviewAHT(ActionableHeaderTable):
         :return: 无
         """
         print(f"当前排序:{self.default_sort}")
-        table_tag = self.table_tag
         tree = self.tree.nametowidget(self.tree)
 
         # 调用递归函数获取所有数据
@@ -1051,10 +1048,10 @@ class TreeviewAHT(ActionableHeaderTable):
         self.default_sort["col"] = col
         self.default_sort["is_asc"] = str(is_asc_after)
         print(f"保存时排序:{self.default_sort}")
-        if self.sw is not None:
-            subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
-        else:
-            subfunc_file.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
+        self.save_col_sort()
+
+    def save_col_sort(self):
+        ...
 
     # @PerformanceDebugger.measure_method("测试快速刷新", auto_break=True)
     def quick_refresh_items(self):
@@ -1433,7 +1430,6 @@ class RadioTreeView:
         :param col: 列
         :return: 无
         """
-        table_tag = self.table_tag
         tree = self.tree.nametowidget(self.tree)
 
         # 调用递归函数获取所有数据
@@ -1484,10 +1480,7 @@ class RadioTreeView:
         # 保存排序状态
         col = str(col)
         self.sort[col] = is_asc_after
-        if self.sw is not None:
-            subfunc_file.save_a_setting_and_callback(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
-        else:
-            subfunc_file.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
+        self.save_col_sort()
 
     def quick_refresh_items(self, data_src):
         """
@@ -1506,3 +1499,6 @@ class RadioTreeView:
         self.display_table()
         self._adjust_table()
         self.selected_item.clear()
+
+    def save_col_sort(self):
+        ...

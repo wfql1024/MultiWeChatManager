@@ -7,7 +7,7 @@ from PIL import ImageTk, Image
 
 from components.composited_controls import ClassicAHT, CkbRow
 from components.custom_widgets import CustomCornerBtn, CustomBtn
-from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW, TopProgressBar
+from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW, ProgressBarW
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
 from functions.sw_func import SwInfoFunc, SwOperator
@@ -15,37 +15,10 @@ from public import Config
 from public.custom_classes import Condition, FlowControlError
 from public.enums import CfgStatus, AccKeys, RemoteCfg, LocalCfg
 from public.global_members import GlobalMembers
+from ui.wnd_ui import WndCreator
 from utils import widget_utils, file_utils
 from utils.encoding_utils import StringUtils
 from utils.logger_utils import Logger, Printer
-
-
-def with_progress_factory(self):
-    """将self传入, 返回一个装饰器, 这个装饰器将对装饰的函数过程收尾添加进度条的展示和结束."""
-
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            self.root.after(0, self.progress_bar.loading)
-            try:
-                return func(*args, **kwargs)
-            finally:
-                self.root.after(0, self.progress_bar.finished)
-
-        return wrapper
-
-    return decorator
-
-
-def with_progress(func):
-    def wrapper(self, *args, **kwargs):  # 注意这里把 self 作为参数
-        self.root.after(0, self.progress_bar.loading)
-        try:
-            return func(self, *args, **kwargs)
-        finally:
-            self.root.after(0, self.progress_bar.finished)
-
-    return wrapper
-
 
 customized_btn_pad = Config.CUS_BTN_PAD
 customized_btn_ipad_y = Config.CUS_BTN_IPAD_Y
@@ -79,6 +52,12 @@ def _create_and_pack_vertical_line_btn_in_(frame_of_btn):
     btn = CustomCornerBtn(frame_of_btn, width=5, text="")
     btn.set_state(CustomBtn.State.DISABLED)
     _pack_btn_right(btn)
+
+
+def switch_and_customize(switch_func, sw, mode, pc, channels, coexist_channel, ordinal):
+    switch_func(mode, pc, channels, coexist_channel, ordinal, True)
+    WndCreator.open_customize_patches_wnd(
+        sw, mode, pc, coexist_channel, ordinal)
 
 
 def _thread_to_load_patching_button(
@@ -119,7 +98,9 @@ def _thread_to_load_patching_button(
                 channels.append(patch_channel)
                 (patch_btn.set_bind_map(
                     **{"1": lambda pc=patch_channel: switch_and_fresh_func(
-                        mode, pc, channels, coexist_channel, ordinal)})
+                        mode, pc, channels, coexist_channel, ordinal),
+                       "2": lambda pc=patch_channel: switch_and_customize(
+                           switch_and_fresh_func, sw, mode, pc, channels, coexist_channel, ordinal)})
                  .apply_bind(GlobalMembers.root_class.root))
                 _pack_btn_right(patch_btn)
                 if patch_status is True:
@@ -248,7 +229,7 @@ class ExeManagerUI:
         self.top_bar_frame.config(height=10)
         self.top_bar_frame.pack_propagate(False)
         self.top_bar_frame.pack(side="top", fill="x")
-        self.progress_bar = TopProgressBar(self.top_bar_frame)
+        self.progress_bar = ProgressBarW(self.top_bar_frame)
 
         bottom_frame = ttk.Frame(self.ui_frame)
         bottom_frame.pack(**Config.B_FRM_PACK)
@@ -280,6 +261,8 @@ class ExeManagerUI:
         main_header_frame.pack(side="top", fill="x")
         self.main_header_frame = main_header_frame
         self._build_header_frame()
+        self._reload_main_patching_buttons(RemoteCfg.REVOKE.value)
+        self._reload_main_patching_buttons(RemoteCfg.MULTI.value)
         # - 共存选择器
         self.cs_occupy_frame = ttk.Frame(self.main_frame)
         self.cs_occupy_frame.pack(side="top", fill="x")
@@ -302,8 +285,6 @@ class ExeManagerUI:
             self.btn_dict["rebuild_exe_btn"].copy())
         # 线程更新界面
         self.thread_to_refresh_coexist_selector_frame()
-        self._reload_patching_buttons(RemoteCfg.REVOKE.value)
-        self._reload_patching_buttons(RemoteCfg.MULTI.value)
 
     def reset_and_rescan(self):
         all_patching_addresses = SwInfoFunc.extract_addresses_from_remote_cfg(self.sw)
@@ -322,7 +303,10 @@ class ExeManagerUI:
         """[重新扫描]按钮功能: 将不跳过已有的适配, 都进行扫描, 若扫描成功将覆盖原有适配"""
         sw_cls = SwInfoFunc.get_sw_class(self.sw)
         sw_cls.force_rescan = True
-        self.refresh_em_ui()
+        try:
+            self.refresh_em_ui()
+        finally:
+            sw_cls.force_rescan = False
 
     def refresh_em_ui(self):
         """刷新界面; [刷新]按钮功能"""
@@ -374,7 +358,7 @@ class ExeManagerUI:
         multi_frame.pack(side="right")
         self.patching_frame[RemoteCfg.MULTI.value] = multi_frame
 
-    def _reload_patching_buttons(self, mode):
+    def _reload_main_patching_buttons(self, mode):
         """重新加载补丁区按钮"""
         frame = self.patching_frame[mode]
         for btn in self.patching_frame[mode].winfo_children():
@@ -406,7 +390,7 @@ class ExeManagerUI:
                 self.coexist_channel_btn_dict[coexist_channel] = coexist_channel_btn
                 (coexist_channel_btn.set_bind_map(
                     **{"1": partial(
-                        subfunc_file.save_a_setting_and_callback, self.sw,
+                        SwInfoFunc.save_sw_setting_to_local_record_and_call_back, self.sw,
                         LocalCfg.COEXIST_MODE.value, coexist_channel,
                         self.thread_to_refresh_coexist_selector_frame)})
                  .apply_bind(self.root))
@@ -419,7 +403,7 @@ class ExeManagerUI:
             if len(self.coexist_channel_btn_dict) == 0:
                 self.show_coexist_channel_btn.set_state(CustomBtn.State.DISABLED)
 
-        @with_progress_factory(self)
+        @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             # 获取当前的选择并决定新建按钮是否可用
             now_coexist_channel, channels_res_dict, msg = SwInfoFunc.identity_and_get_available_coexist_mode(self.sw)
@@ -440,15 +424,13 @@ class ExeManagerUI:
                     widget.destroy()
                 self.coexist_channel_btn_dict = {}
                 self.root.after(0, main_frame_do, channels_res_dict, now_coexist_channel)
-            finally:
-                self.progress_bar.finished()
 
         threading.Thread(target=_thread).start()
 
     def _thread_to_create_coexist_exe(self):
         """[新建]按钮功能: 新建共存程序"""
 
-        @with_progress_factory(self)
+        @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             new_exe, _ = SwOperator.create_coexist_exe_core(self.sw)
             self.root.after(0, self.classic_table_class[CfgStatus.USING].update_coexist_rows, [new_exe])
@@ -456,21 +438,23 @@ class ExeManagerUI:
 
         threading.Thread(target=_thread).start()
 
-    def _thread_to_switch_main_dll_and_refresh(self, mode, channel, conflicts, coexist_channel=None, ordinal=None):
+    def _thread_to_switch_main_dll_and_refresh(self, mode, channel, conflicts, coexist_channel=None, ordinal=None,
+                                               target=None):
         """[(补丁方案)]按钮功能: 切换选中的补丁方案的状态"""
 
-        @with_progress_factory(self)
+        @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             SwOperator.choose_channel_in_conflicts_and_switch_dll_to_(
-                self.sw, mode, channel, conflicts, coexist_channel, ordinal)
-            self.root.after(0, self._reload_patching_buttons, mode)
+                self.sw, mode, channel, conflicts, coexist_channel, ordinal, target)
+            self.root.after(0, self._reload_main_patching_buttons, mode)
 
-        threading.Thread(target=_thread).start()
+        # threading.Thread(target=_thread).start()
+        _thread()
 
     def thread_to_del_coexist_exe_of_accounts(self, items: list):
         """[×]按钮功能: 删除选中的共存程序"""
 
-        @with_progress_factory(self)
+        @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             accounts = [item.split("/")[1] for item in items]
             deleted_accs, failed_msg_dict = SwOperator.del_coexist_exe(self.sw, accounts)
@@ -485,7 +469,7 @@ class ExeManagerUI:
     def thread_to_rebuild_coexist_exes(self, items: list):
         """[重建]按钮功能: 重建选中的共存程序"""
 
-        @with_progress_factory(self)
+        @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             accounts = [item.split("/")[1] for item in items]
             exes = SwOperator.rebuild_coexist_exes(self.sw, accounts)
@@ -499,7 +483,7 @@ class ExeManagerUI:
     def thread_to_del_coexist_accounts_history(self, items: list):
         """[×]按钮功能: 删除选中的账号的记录"""
 
-        @with_progress_factory(self)
+        @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             accounts = [item.split("/")[1] for item in items]
             del_accs = []
@@ -567,6 +551,7 @@ class ExeManagerCAHT(ClassicAHT):
             else:
                 # 单行的刷新
                 self.rows[row_id].update_row()
+        self.null_data = True if len(self.rows) == 0 else False
         self._adjust()
 
     def del_coexist_rows(self, row_ids):
@@ -574,6 +559,7 @@ class ExeManagerCAHT(ClassicAHT):
             if row_id in self.rows:
                 self.rows[row_id].row_frame.destroy()
                 del self.rows[row_id]
+        self.null_data = True if len(self.rows) == 0 else False
         self._adjust()
 
     def reformat_selected_items(self):
@@ -586,6 +572,7 @@ class ExeManagerCAHT(ClassicAHT):
 
 class ExeManagerCkRow(CkbRow):
     def __init__(self, parent_class, parent_frame, item, table_tag):
+        self.wnd = None
         self.progress_bar = None
         self.patching_frame = {}
         self.btn_frame = None
@@ -602,6 +589,7 @@ class ExeManagerCkRow(CkbRow):
         self.login_ui = self.root_class.login_ui
         self.sw = self.login_ui.sw
         self.exe_manager_ui = self.parent_class.exe_manager_ui
+        self.wnd = self.exe_manager_ui.wnd
 
     def load_row_content(self):
         self._create_coexist_row()
@@ -685,7 +673,7 @@ class ExeManagerCkRow(CkbRow):
             anti_revoke_frame.pack(side="right")
             self.patching_frame[RemoteCfg.REVOKE.value] = anti_revoke_frame
             # - 防撤回的按钮
-            self._reload_patching_buttons(RemoteCfg.REVOKE.value, coexist_channel, ordinal)
+            self._reload_coexist_patching_buttons(RemoteCfg.REVOKE.value, coexist_channel, ordinal)
 
         # 账号区域分两行, 上行是程序名称, 下行是账号名称
         self.item_frame = ttk.Frame(self.row_frame)
@@ -713,7 +701,7 @@ class ExeManagerCkRow(CkbRow):
             {"未知共存索引": not has_precise_coexist_index}
         )
 
-    def _reload_patching_buttons(self, mode, coexist_channel, ordinal):
+    def _reload_coexist_patching_buttons(self, mode, coexist_channel, ordinal):
         """重新加载补丁区按钮"""
         frame = self.patching_frame[mode]
         for btn in self.patching_frame[mode].winfo_children():
@@ -729,17 +717,19 @@ class ExeManagerCkRow(CkbRow):
                 self, self.sw, RemoteCfg.REVOKE.value, frame, self.tooltips,
                 self.thread_to_switch_coexist_dll_and_refresh, coexist_channel, ordinal)
 
-    def thread_to_switch_coexist_dll_and_refresh(self, mode, channel, conflicts, coexist_channel, ordinal):
+    def thread_to_switch_coexist_dll_and_refresh(
+            self, mode, channel, conflicts, coexist_channel, ordinal, target=None):
         """[(补丁方案)]按钮功能: 切换选中的补丁方案的状态"""
         self.progress_bar = self.exe_manager_ui.progress_bar
 
-        @with_progress_factory(self)
+        @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             SwOperator.choose_channel_in_conflicts_and_switch_dll_to_(
-                self.sw, mode, channel, conflicts, coexist_channel, ordinal)
-            self.root.after(0, self._reload_patching_buttons, mode, coexist_channel, ordinal)
+                self.sw, mode, channel, conflicts, coexist_channel, ordinal, target)
+            self.root.after(0, self._reload_coexist_patching_buttons, mode, coexist_channel, ordinal)
 
-        threading.Thread(target=_thread).start()
+        # threading.Thread(target=_thread).start()
+        _thread()
 
     def _adjust_coexist_row(self):
         # 绑定事件到控件范围内所有位置

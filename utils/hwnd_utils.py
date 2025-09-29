@@ -917,18 +917,15 @@ def _close_all_wnd_by_win32_classnames(wnd_classes):
 def set_size_and_bring_tk_wnd_to_(wnd, width=None, height=None, position=Position.CENTER):
     if not isinstance(wnd, (tk.Tk, tk.Toplevel)):
         raise ValueError("wnd 必须是 Tk 或 Toplevel 窗口实例")
-
     if width is None:
         width = wnd.winfo_width()
     if height is None:
         height = wnd.winfo_height()
     if position is None:
         position = Position.CENTER
-
     # 获取屏幕的宽度和高度
     screen_width = wnd.winfo_screenwidth()
     screen_height = wnd.winfo_screenheight()
-
     if position == Position.CENTER:
         # 居中
         x = (screen_width // 2) - (width // 2)
@@ -951,10 +948,8 @@ def set_size_and_bring_tk_wnd_to_(wnd, width=None, height=None, position=Positio
         y = screen_height - height
     else:
         raise ValueError(f"Unsupported position: {position}")
-
     # 设置窗口大小和位置
     wnd.geometry('{}x{}+{}+{}'.format(width, height, x, y))
-
     wnd.focus_set()
 
 

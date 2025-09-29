@@ -7,6 +7,8 @@ from PIL import ImageTk, Image
 from components.composited_controls import TreeviewAHT
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
+from functions.app_func import AppFunc
+from functions.sw_func import SwInfoFunc
 from public import Config, Strings
 from public.custom_classes import Condition
 from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
@@ -110,6 +112,7 @@ class TreeviewLoginUI:
 class AccLoginTAHT(TreeviewAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
+        self.sw = None
         self.global_settings_value = None
         self.can_quick_refresh = None
         self.login_ui = None
@@ -127,9 +130,9 @@ class AccLoginTAHT(TreeviewAHT):
         self.global_settings_value = self.root_class.global_settings_value
 
         # self.data_src = self.parent_class.acc_list_dict[self.table_tag]
-        self.sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
+        self.sign_visible: bool = AppFunc.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
         self.columns = (" ", "配置", "pid", "账号标识", "平台id", "昵称")
-        sort_str = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, f"{self.table_tag}_sort")
+        sort_str = SwInfoFunc.get_sw_setting_by_local_record(self.sw, f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
@@ -227,3 +230,9 @@ class AccLoginTAHT(TreeviewAHT):
         # 在非全屏时，隐藏特定列
         columns_to_hide = ["账号标识", "平台id", "昵称"]
         self.adjust_columns(self.root, columns_to_hide)
+
+    def save_col_sort(self):
+        table_tag = self.table_tag
+        col = self.default_sort["col"]
+        is_asc_after = self.default_sort["is_asc"]
+        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")

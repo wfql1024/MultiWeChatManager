@@ -12,22 +12,55 @@ from utils import hwnd_utils
 from utils.logger_utils import mylogger as logger, RedirectText
 
 
-class TopProgressBar:
+class ProgressBarW:
+    """进度条包装类"""
+
     def __init__(self, parent, height=2):
         self.progress = ttk.Progressbar(parent, mode="determinate", maximum=100)
         self.height = height
         self._job = None
 
-    def _auto_step(self, interval, step=1):
+    @staticmethod
+    def with_progress_bar_wrapper_factory(progress_bar):
+        """将进度条传入, 返回一个装饰器, 这个装饰器将对装饰的函数过程收尾添加进度条的展示和结束."""
+        root = GlobalMembers.root_class.root
+
+        def decorator(func):
+            def wrapper(*args, **kwargs):
+                root.after(0, progress_bar.loading)
+                try:
+                    return func(*args, **kwargs)
+                finally:
+                    root.after(0, progress_bar.finished)
+
+            return wrapper
+
+        return decorator
+
+    @staticmethod
+    def with_progress_bar(func):
+        """这个装饰器将对装饰的函数过程收尾添加进度条的展示和结束, 这个函数需要有self参数, 并且self需要有progress_bar属性."""
+
+        def wrapper(self, *args, **kwargs):
+            self.root.after(0, self.progress_bar.loading)
+            try:
+                return func(self, *args, **kwargs)
+            finally:
+                self.root.after(0, self.progress_bar.finished)
+
+        return wrapper
+
+    def _auto_step(self, interval, step):
         """内部循环自增进度，但不超过95"""
         value = self.progress["value"]
         if value < 95:
             self.progress["value"] = min(95, value + step)
             self._job = self.progress.after(interval, self._auto_step, interval, step)
 
-    def loading(self, interval=100, step=5):
+    def loading(self, interval=100, step=30):
         """自动加载进度条 (最多到95)"""
-        self.progress.pack(side="top", fill="x", ipady=self.height)
+        print("TopProgressBar loading")
+        self.progress.pack(fill="x", ipady=0)
         self.progress["value"] = 0
         self._auto_step(interval, step)
 
@@ -274,26 +307,24 @@ class HotkeyEntry4TkinterW:
 class StatusBarW:
     """对print即时更新的状态栏"""
 
-    def __init__(self, root, r_class, debug):
-
+    def __init__(self, root, root_frame, debug):
         self.status_bar = None
         self.statusbar_output_var = None
 
         self.root = root
-        self.r_class = r_class
+        self.root_frame = root_frame
         self.debug = debug
 
         # 创建状态栏
         self.create_status_bar()
         self.message_queue = QueueWithUpdate(self.update_status)  # 创建消息队列
-        # self.original_stdout = sys.stdout
         sys.stdout = RedirectText(self.statusbar_output_var, self.message_queue, self.debug)  # 重定向 stdout
 
     def create_status_bar(self):
         """创建状态栏"""
         print(f"加载状态栏...")
         self.statusbar_output_var = tk.StringVar()
-        self.status_bar = tk.Label(self.root, textvariable=self.statusbar_output_var, bd=Config.STATUS_BAR_BD,
+        self.status_bar = tk.Label(self.root_frame, textvariable=self.statusbar_output_var, bd=Config.STATUS_BAR_BD,
                                    relief="sunken", anchor="w", height=Config.STATUS_BAR_HEIGHT)
         self.status_bar.pack(side="bottom", fill="x")
 
@@ -303,8 +334,6 @@ class StatusBarW:
             # 从队列中获取消息并更新状态栏
             message = self.message_queue.get_nowait()
             if message is not None and message.strip():  # 如果消息不为空，更新状态栏
-                # self.original_stdout.write(f"{message}\n")
-                # self.original_stdout.flush()
                 self.root.after(0, self.statusbar_output_var.set, message)
         except queue.Empty:
             pass
@@ -398,6 +427,7 @@ class SubToolWndUI:
         :param wnd:
         :param title:
         """
+        self.close_when_open = None  # 撤回一个窗口(哈哈
         self.position = None
         self.wnd_height = None
         self.wnd_width = None
@@ -423,9 +453,12 @@ class SubToolWndUI:
         wnd.update_idletasks()
         hwnd_utils.set_size_and_bring_tk_wnd_to_(wnd, self.wnd_width, self.wnd_height, self.position)
 
-        wnd.deiconify()  # 显示窗口
-        wnd.grab_set()
+        if self.close_when_open is not True:
+            wnd.deiconify()  # 显示窗口
+            wnd.grab_set()
         wnd.protocol("WM_DELETE_WINDOW", self._on_close)
+        if self.close_when_open is True:
+            self._on_close()
 
     def initialize_members_in_init(self):
         """

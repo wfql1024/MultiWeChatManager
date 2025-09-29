@@ -4,55 +4,36 @@ import os
 import random
 import sys
 import threading
-import tkinter as tk
 from tkinter import ttk, messagebox
 
 import keyboard
+from PIL import ImageTk
 
 from components import CustomNotebook
-from components.widget_wrappers import StatusBarW
+from components.widget_wrappers import StatusBarW, ProgressBarW
 from functions import subfunc_file
 from functions.acc_func import AccOperator
-from functions.app_func import AppFunc
-from functions.sw_func import SwInfoFunc, Software
+from functions.app_func import AppFunc, AppInfo, GlobalSettings
+from functions.sw_func import SwInfoFunc, Sw
 from public import Config, Strings
 from public.enums import LocalCfg, SwStates, RemoteCfg
 from public.global_members import GlobalMembers
 from ui import login_ui, acc_manager_ui, sw_manager_ui
 from ui.menu_ui import MenuUI
-from ui.wnd_ui import LoadingWndUI, WndCreator
-from utils import hwnd_utils
+from ui.wnd_ui import WndCreator
+from utils import hwnd_utils, image_utils
 from utils.logger_utils import mylogger as logger, Logger, Printer
 from utils.widget_utils import WidgetUtils
 
 
 # ------------------------------------------------------------------
 # 本程序文件层次:
-# main_ui > 基本ui > 窗口ui > func > utils > public > resources
+# main_ui > 基本ui > 窗口ui
+# > acc_func > sw_func > app_func
+# > utils
+# > component
+# > public
 # ------------------------------------------------------------------
-
-
-class RootWnd:
-    def __init__(self, root):
-        self.root = root
-        self.root_class = GlobalMembers.root_class
-        self.root_height = None
-        self.root_width = None
-        self.root_frame = None
-        self.root.withdraw()  # 初始化时隐藏主窗口
-        self.root_width, self.root_height = Config.PROJ_WND_SIZE
-
-    def set_wnd(self):
-        # 设置主窗口
-        try:
-            title = self.root_class.remote_cfg_data["global"]["app_name"]
-        except Exception as e:
-            logger.error(e)
-            title = os.path.basename(sys.argv[0])
-        self.root.title(title)
-        self.root.iconbitmap(Config.PROJ_ICO_PATH)
-        self.root.after(0, hwnd_utils.set_size_and_bring_tk_wnd_to_, self.root, self.root_width, self.root_height)
-        self.root.overrideredirect(False)
 
 
 class RootClass:
@@ -63,9 +44,12 @@ class RootClass:
     """
 
     def __init__(self, root, args=None):
-        # 未分类
+        # 代理接管属性
+        self._main_frame = None
+        self._root = root
+        self._root_frame = None
         self._menu_ui = None
-        self._root_ui = None
+        self._main_ui = None
         self._sw_manager_ui = None
         self._login_ui = None
         self._acc_manager_ui = None
@@ -76,12 +60,7 @@ class RootClass:
         # 程序参数
         self.debug = args.debug
         self.new = args.new
-        # ui
-        self.root_ui = None
-        self.menu_ui = None
-        self.login_ui = None
-        self.acc_manager_ui = None
-        self.sw_manager_ui = None
+
         self.hotkey_manager = None
         self.statusbar_ui = None
         # 加载标志
@@ -90,26 +69,105 @@ class RootClass:
         # 全局数据
         self.sw_classes: dict = {}
         self.remote_cfg_data = None
-        self.global_settings_value = GlobalSettings()
-        self.global_settings_var = GlobalSettings()
+        self.global_settings_value = None
+        self.global_settings_var = None
         self.app_info = AppInfo()
 
-        # 进入程序的操作
-        # -主窗口
+        # 创建基本的窗口元素: 状态栏, 进度条, 主框架
         self.root = root
-        self.root_wnd = RootWnd(self.root)
-        # -载入窗口
-        self.loading_wnd = tk.Toplevel(self.root)
-        self.loading_wnd_class = LoadingWndUI(self.loading_wnd, "加载中...")
+        self.root.withdraw()  # 初始化时隐藏主窗口
+        self.root_frame.pack(expand=True, fill='both')
+        if self.statusbar_ui is None or not self.statusbar_ui.status_bar.winfo_exists():
+            self.statusbar_ui = StatusBarW(self.root, self.root_frame, self.debug)
+        if self.debug:
+            self.statusbar_ui.status_bar.bind("<Button-1>", lambda event: WndCreator.open_debug_window())
+        print(f"状态栏加载完成!")
+        self.top_bar_frame = ttk.Frame(self.root_frame)
+        self.top_bar_frame.config(height=10)
+        self.top_bar_frame.pack_propagate(False)
+        self.top_bar_frame.pack(side="bottom", fill="x")
+        self.progress_bar = ProgressBarW(self.top_bar_frame)
+        self.main_frame.pack(expand=True, fill='both')
+
+        hwnd_utils.set_size_and_bring_tk_wnd_to_(self.root, *Config.ROOT_WND_SIZE)
+        self.root.deiconify()
+
+        # 设置主窗口
+        title = os.path.basename(sys.argv[0])
+        print(f"获取窗口名为: {title}")
+        try:
+            remote_title, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, app_name=None)
+            title = remote_title or title
+            self._safe_set_icon()
+        except Exception as e:
+            Logger().error(e)
+        finally:
+            print(f"设置窗口名为: {title}")
+            self.root.title(title)
+            self.after_refresh_when_start()
+
+        # -初始化构建窗口内容...
+        self.initialize_in_root()
+        # self.root.after(200, self.initialize_in_root)
         # -初次使用
         if self.new is True:
             self.root.after(3000, WndCreator.open_update_log)
             self.root.after(3000, lambda: AppFunc.mov_backup(new=self.new))
-        # -关闭加载窗口
-        print("2秒后关闭加载窗口...")
-        self.root.after(2000, self.wait_for_loading_close_and_bind)
-        # -初始化构建...
-        self.initialize_in_root()
+
+    def _safe_set_icon(self):
+        """
+        安全设置窗口图标
+        """
+        try:
+            # 1. 外部图标
+            self.root.iconbitmap(Config.PROJ_ICO_PATH)
+            return
+        except Exception as e:
+            Logger().error(e)
+        try:
+            # 2. exe 内置图标
+            exe_path = sys.executable
+            icon_image = image_utils.extract_icon_image(exe_path)
+            tk_icon = ImageTk.PhotoImage(icon_image)
+            self.root.iconphoto(True, tk_icon)
+            self.root._tk_icon_ref = tk_icon  # 防止被垃圾回收
+            return
+        except Exception as e:
+            Logger().error(e)
+
+    @property
+    def root_frame(self):
+        """代理：始终返回一个存活的 Frame"""
+        if not (self._root_frame and self._root_frame.winfo_exists()):
+            self._root_frame = ttk.Frame(self._root)
+        return self._root_frame
+
+    @root_frame.setter
+    def root_frame(self, _):
+        """禁止外部重设"""
+        raise AttributeError("root_frame 是只读属性，不允许重新赋值")
+
+    @property
+    def main_frame(self):
+        """代理：始终返回一个存活的 Frame"""
+        if not (self._main_frame and self._main_frame.winfo_exists()):
+            self._main_frame = ttk.Frame(self.root_frame)
+        return self._main_frame
+
+    @main_frame.setter
+    def main_frame(self, _):
+        """禁止外部重设"""
+        raise AttributeError("main_frame 是只读属性，不允许重新赋值")
+
+    @property
+    def main_ui(self):
+        if not isinstance(self._main_ui, MainUI):
+            self._main_ui = MainUI(self.root, self.main_frame)
+        return self._main_ui
+
+    @main_ui.setter
+    def main_ui(self, value):
+        self._main_ui = value
 
     @property
     def menu_ui(self):
@@ -117,23 +175,29 @@ class RootClass:
             self._menu_ui = MenuUI()
         return self._menu_ui
 
-    @property
-    def root_ui(self):
-        if self._root_ui is None:
-            self._root_ui = RootUI(self.root, self.root_wnd.root_frame)
-        return self._root_ui
+    @menu_ui.setter
+    def menu_ui(self, value):
+        self._menu_ui = value
 
     @property
     def acc_manager_ui(self):
         if self._acc_manager_ui is None:
-            self._acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, self.root_ui.acc_mng_frame)
+            self._acc_manager_ui = acc_manager_ui.AccManagerUI(self.root, self.main_ui.acc_mng_frame)
         return self._acc_manager_ui
+
+    @acc_manager_ui.setter
+    def acc_manager_ui(self, value):
+        self._acc_manager_ui = value
 
     @property
     def sw_manager_ui(self):
         if self._sw_manager_ui is None:
-            self._sw_manager_ui = sw_manager_ui.SwManagerUI(self.root, self.root_ui.sw_mng_frame)
+            self._sw_manager_ui = sw_manager_ui.SwManagerUI(self.root, self.main_ui.sw_mng_frame)
         return self._sw_manager_ui
+
+    @sw_manager_ui.setter
+    def sw_manager_ui(self, value):
+        self._sw_manager_ui = value
 
     @property
     def login_ui(self):
@@ -141,27 +205,24 @@ class RootClass:
             self._login_ui = login_ui.LoginUI()
         return self._login_ui
 
-    def initialize_in_root(self):
-        """初始化加载"""
+    @login_ui.setter
+    def login_ui(self, value):
+        self._login_ui = value
+
+    @staticmethod
+    def _ensure_file_resources_exists():
         # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
         if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
             os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
             print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
-        # 代理
-        AppFunc.apply_proxy_setting()
-        # 获取远程配置,没有配置文件则退出程序
-        self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
-        if self.remote_cfg_data is None:
-            messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
-            self.root.destroy()
-            return
 
+    @staticmethod
+    def _set_tk_style():
         # 统一管理style
         style = ttk.Style()
         style.configure('Custom.TButton', padding=Config.TK_BTN_PAD,
                         width=Config.TK_BTN_WIDTH, relief="sunken", borderwidth=3)
         style.configure("Treeview")
-        # style.configure('Tool.TButton', width=2)
         style.configure('FirstTitle.TLabel', font=("", Config.FIRST_TITLE_FONTSIZE, "bold"))
         style.configure('Link.TLabel', font=("", Config.LINK_FONTSIZE), foreground="grey")
         style.configure('SecondTitle.TLabel', font=("", Config.SECOND_TITLE_FONTSIZE))
@@ -177,48 +238,70 @@ class RootClass:
         style.layout("SidebarTreeview", style.layout("Treeview"))  # 继承默认布局
         style.configure("Mutex.TLabel", foreground="red")
 
-        # 创建状态栏
-        if self.statusbar_ui is None or not self.statusbar_ui.status_bar.winfo_exists():
-            self.statusbar_ui = StatusBarW(self.root, self, self.debug)
-            if self.debug:
-                self.statusbar_ui.status_bar.bind("<Button-1>", lambda event: WndCreator.open_debug_window())
+    def with_progress_factory(self):
+        """将self传入, 返回一个装饰器, 这个装饰器将对装饰的函数过程收尾添加进度条的展示和结束."""
 
-        # 重置变量
-        self.hotkey_manager = None
-        self.root_ui = None
-        self.menu_ui = None
-        self.login_ui = None
-        self.acc_manager_ui = None
-        self.sw_manager_ui = None
-        self.global_settings_value = GlobalSettings()
-        self.global_settings_var = GlobalSettings()
-        # 快捷键管理
-        self.hotkey_manager = HotkeyManager()
-        self.init_root_ui()
-        self.root_wnd.set_wnd()
+        def decorator(func):
+            def wrapper(*args, **kwargs):
+                self.root.after(0, self.progress_bar.loading)
+                try:
+                    return func(*args, **kwargs)
+                finally:
+                    self.root.after(0, self.progress_bar.finished)
 
-    def init_root_ui(self):
-        root_frame = self.root_wnd.root_frame
-        if isinstance(root_frame, ttk.Frame) and root_frame.winfo_exists():
-            root_frame.destroy()
-        root_frame = ttk.Frame(self.root)
-        root_frame.pack(expand=True, fill='both')
-        self.root_wnd.root_frame = root_frame
-        self.root_ui = RootUI(self.root, root_frame)
-        self.root_ui.initialize_in_root_ui()
+            return wrapper
 
-    def wait_for_loading_close_and_bind(self):
-        """启动时关闭等待窗口，绑定事件"""
-        try:
-            if hasattr(self, 'loading_wnd_class') and self.loading_wnd_class:
-                # print("主程序关闭等待窗口")
-                self.loading_wnd_class.auto_close()
-                self.loading_wnd_class = None
-            # 设置主窗口位置
-            self.root.deiconify()
-            self.after_refresh_when_start()
-        except Exception as e:
-            logger.error(e)
+        return decorator
+
+    def initialize_in_root(self):
+        """初始化加载"""
+
+        def _thread():
+            self._ensure_file_resources_exists()
+            AppFunc.apply_proxy_setting()
+            self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
+            if self.remote_cfg_data is None:
+                messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
+                self.root.destroy()
+                return
+            self._set_tk_style()
+
+            self.global_settings_value = GlobalSettings()
+            self.global_settings_var = GlobalSettings()
+            self.hotkey_manager = HotkeyManager()
+
+            self.root.after(0, self.main_ui.initialize_in_root_main_ui)
+
+        _thread()
+        # threading.Thread(target=_thread).start()
+
+    def reinit_root_ui(self):
+        """重新加载主窗口UI"""
+
+        def _thread():
+            AppFunc.apply_proxy_setting()
+            self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
+            if self.remote_cfg_data is None:
+                messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
+                self.root.destroy()
+                return
+            self._set_tk_style()
+
+            # 重置变量
+            self.main_ui = None
+            self.menu_ui = None
+            self.login_ui = None
+            self.acc_manager_ui = None
+            self.sw_manager_ui = None
+            self.global_settings_value = GlobalSettings()
+            self.global_settings_var = GlobalSettings()
+            self.hotkey_manager = HotkeyManager()
+
+            self.root.after(0, hwnd_utils.set_size_and_bring_tk_wnd_to_, self.root, *Config.ROOT_WND_SIZE)
+            self.root.after(0, self.main_ui.initialize_in_root_main_ui)
+
+        _thread()
+        # threading.Thread(target=_thread).start()
 
     def after_refresh_when_start(self):
         """首次启动后，无论是否成功创建账号列表，都执行"""
@@ -228,29 +311,12 @@ class RootClass:
         pass
         self.finish_started = True
 
-    @login_ui.setter
-    def login_ui(self, value):
-        self._login_ui = value
 
-    @acc_manager_ui.setter
-    def acc_manager_ui(self, value):
-        self._acc_manager_ui = value
+class MainUI:
+    """主界面包装类"""
 
-    @sw_manager_ui.setter
-    def sw_manager_ui(self, value):
-        self._sw_manager_ui = value
-
-    @root_ui.setter
-    def root_ui(self, value):
-        self._root_ui = value
-
-    @menu_ui.setter
-    def menu_ui(self, value):
-        self._menu_ui = value
-
-
-class RootUI:
     def __init__(self, wnd, frame):
+        self.top_bar_frame = None
         self._root_nb_cls = None
         self._sw_mng_frame = None
         self._acc_mng_frame = None
@@ -274,26 +340,31 @@ class RootUI:
         self.root_class = GlobalMembers.root_class
         self.root = self.root_class.root
         self.wnd = wnd
-        self.root_frame = frame
+        self.main_frame = frame
 
-    def initialize_in_root_ui(self):
+    def initialize_in_root_main_ui(self):
+        # self.top_bar_frame = ttk.Frame(self.main_frame)
+        # self.top_bar_frame.config(height=10)
+        # self.top_bar_frame.pack_propagate(False)
+        # self.top_bar_frame.pack(side="top", fill="x")
+        # self.progress_bar = TopProgressBar(self.top_bar_frame)
         self._load_root_nb_frame()
-        threading.Thread(target=RootUI._get_path_thread).start()
-        root_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ROOT_TAB)
+        threading.Thread(target=self._get_path_thread).start()
+        root_tab = AppFunc.get_global_setting_value_by_local_record(LocalCfg.ROOT_TAB)
         self.root_nb_cls.select(root_tab)
 
     def _load_root_nb_frame(self):
         # 清理界面
-        WidgetUtils.clear_all_children_of_frame(self.root_frame)
+        WidgetUtils.clear_all_children_of_frame(self.main_frame)
         # 主页面="管理"+"登录"
-        root_nb_cls = self.root_nb_cls = CustomNotebook(self.root, self.root_frame)
+        root_nb_cls = self.root_nb_cls = CustomNotebook(self.root, self.main_frame)
         self.root_nb_cls.select_callback = self._on_tab_in_root_selected
         root_nb_cls.set_major_color(selected_bg='#00FF00')
         root_nb_frm_pool = root_nb_cls.frames_pool
         self.login_nb_frame = ttk.Frame(root_nb_frm_pool)
         self.manage_nb_frame = ttk.Frame(root_nb_frm_pool)
 
-        self.used_refresh = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USED_REFRESH)
+        self.used_refresh = AppFunc.get_global_setting_value_by_local_record(LocalCfg.USED_REFRESH)
         suffix = "" if self.used_refresh is True else Strings.REFRESH_HINT
         root_nb_cls.add("manage", f"管理{suffix}", self.manage_nb_frame)
         root_nb_cls.add("login", "登录", self.login_nb_frame)
@@ -325,19 +396,19 @@ class RootUI:
             return
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
-            state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
+            state = SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.STATE, SwStates)
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             try:
                 if sw in self.sw_classes:
                     sw_cls = self.sw_classes[sw]
-                    if not isinstance(sw_cls, Software):
-                        sw_cls = Software(sw)
+                    if not isinstance(sw_cls, Sw):
+                        sw_cls = Sw(sw)
                 else:
-                    sw_cls = Software(sw)
+                    sw_cls = Sw(sw)
             except Exception as e:
                 logger.warning(e)
-                sw_cls = Software(sw)
+                sw_cls = Sw(sw)
                 self.sw_classes[sw] = sw_cls
             print(f"更新{sw}的信息体...")
             if state == SwStates.VISIBLE:
@@ -347,7 +418,7 @@ class RootUI:
             self.root_class.sw_classes[sw] = sw_cls
             self.sw_classes[sw] = sw_cls
         if len(self.login_nb_cls.tabs) == 0:
-            hint = RootUI._get_random_hint()
+            hint = self._get_random_hint()
             tmp_label = ttk.Label(self.login_frm_pool, text=hint, style="FirstTitle.TLabel")
             tmp_label.pack(pady=200, fill="y", expand=True)
 
@@ -358,11 +429,11 @@ class RootUI:
             return
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
-            state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
+            state = SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.STATE, SwStates)
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             print(f"创建{sw}的信息体...")
-            sw_cls = Software(sw)
+            sw_cls = Sw(sw)
             sw_cls.data_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
             sw_cls.inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
             sw_cls.dll_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
@@ -397,7 +468,7 @@ class RootUI:
             # 自动选择下一级标签
             manage_tab = self.manage_nb_cls.curr_tab_id
             if not manage_tab:
-                manage_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.MNG_TAB)
+                manage_tab = AppFunc.get_global_setting_value_by_local_record(LocalCfg.MNG_TAB)
             try:
                 self.manage_nb_cls.select(manage_tab)
             except Exception as e:
@@ -419,7 +490,7 @@ class RootUI:
             # 自动选择下一级标签
             login_tab = self.login_nb_cls.curr_tab_id
             if not login_tab:
-                login_tab = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.LOGIN_TAB)
+                login_tab = AppFunc.get_global_setting_value_by_local_record(LocalCfg.LOGIN_TAB)
             try:
                 self.login_nb_cls.select(login_tab)
             except Exception as e:
@@ -486,34 +557,6 @@ class RootUI:
         elif root_tab == "login":
             self.root_class.login_ui.quick_refresh_mode = quick
             self.root_class.login_ui.refresh()
-
-
-class AppInfo:
-    def __init__(self):
-        self.name = os.path.basename(sys.argv[0])
-        self.author = "吾峰起浪"
-        self.curr_full_ver = subfunc_file.get_app_current_version()
-        self.need_update = None
-        self.hint = "狂按"
-
-
-class GlobalSettings:
-    def __init__(self):
-        self.sign_vis = None
-        self.scale = None
-        self.login_size = None
-        self.rest_mode = None
-        self.hide_wnd = None
-        self.kill_idle = None
-        self.unlock_cfg = None
-        self.all_set_has_mutex = None
-        self.call_mode = None
-        self.new_func = None
-        self.auto_press = None
-        self.disable_proxy = None
-        self.use_txt_avt = None
-        self.in_tray = False
-        self.prefer_coexist = None
 
 
 class HotkeyManager:

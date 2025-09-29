@@ -24,10 +24,11 @@ from PIL import Image, ImageDraw, ImageFont
 
 from functions import subfunc_file
 from functions.acc_func_impl import AccInfoFuncImpl
+from functions.app_func import AppFunc
 from functions.func_tool import FuncTool
 from functions.sw_func import SwOperator, SwInfoFunc
 from public.config import Config
-from public.enums import AccKeys, SW, LocalCfg, MultirunMode, CfgStatus, WndType
+from public.enums import AccKeys, SwEnum, LocalCfg, MultirunMode, CfgStatus, WndType
 from public.global_members import GlobalMembers
 from public.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
@@ -43,7 +44,7 @@ class AccOperator:
         screen_width = int(tk.Tk().winfo_screenwidth())
         screen_height = int(tk.Tk().winfo_screenheight())
         if not screen_height or not screen_width:
-            size = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SCREEN_SIZE).split('*')
+            size = AppFunc.get_global_setting_value_by_local_record(LocalCfg.SCREEN_SIZE).split('*')
             screen_width, screen_height = int(size[0]), int(size[1])
         if not screen_height or not screen_width:
             screen_width, screen_height = 1920, 1080
@@ -54,9 +55,9 @@ class AccOperator:
         """获取多个平台中最大的登录窗口尺寸"""
         max_width = 0
         max_height = 0
-        for software in sw_list:
+        for sw in sw_list:
             # 获取尺寸配置
-            siz = subfunc_file.fetch_sw_setting_or_set_default_or_none(software, "login_size")
+            siz = SwInfoFunc.get_sw_setting_by_local_record(sw, "login_size")
             if siz and siz.strip():
                 try:
                     # 拆分宽度和高度，并确保为整数
@@ -160,10 +161,11 @@ class AccOperator:
             for h in hwnds:
                 if not isinstance(h, int):
                     continue
-                titles = ["进入微信", "进入WeChat", "Enter Weixin"]  # 添加所有需要查找的标题
+                click_btn_titles = SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.CLICK_BTNS)
+                titles = click_btn_titles.split("/")
                 try:
-                    # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
                     cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
+                    # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
                     # print(hwnd_utils.get_child_hwnd_list_of_(h))
                     # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
                     # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
@@ -182,16 +184,16 @@ class AccOperator:
 
         # 结束条件为限定时间内所有窗口消失（网络不好则会这样）
         ddl_time = time.time() + 30
-        while time.time() > ddl_time:
+        while time.time() < ddl_time:
             # 判断所有 hwnd 是否都不存在了
-            print("登录完成, 刷新...")
             all_closed = all(not win32gui.IsWindow(hwnd) for hwnd in hwnds)
             if all_closed:
+                print("登录完成, 刷新...")
                 root.after(0, login_ui.refresh_frame, sw)
                 break
 
     @classmethod
-    def _auto_login_accounts(cls, login_dict: Dict[str, List]):
+    def _login_accounts(cls, login_dict: Dict[str, List]):
         """
         传入{平台: 账号列表}字典，进行全自动登录
         该方法会逐平台逐账号登录, 窗口排布是所有平台的窗口一起排
@@ -226,12 +228,12 @@ class AccOperator:
             )
             # 清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况 -------------------------------------------------------------------
             SwOperator.kill_sw_multiple_processes(sw)
-            kill_idle: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.KILL_IDLE_LOGIN_WND)
-            kill_idle = True if kill_idle is True else False  # 是否需要关闭闲置的登录窗口
+            # 是否需要关闭闲置的登录窗口
+            kill_idle = AppFunc.get_global_setting_value_by_local_record(LocalCfg.KILL_IDLE_LOGIN_WND) is True
             Printer().print_vn(f"[INFO]需要关闭闲置窗口: {kill_idle}")
             remained_idle_wnd_list = SwOperator.get_idle_login_wnd_and_close_if_necessary(sw, kill_idle)
-            unlock_cfg: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.UNLOCK_CFG)
-            unlock_cfg = True if unlock_cfg is True else False  # 是否需要解锁配置文件
+            # 是否需要解锁配置文件
+            unlock_cfg = AppFunc.get_global_setting_value_by_local_record(LocalCfg.UNLOCK_CFG) is True
             Printer().print_vn(f"[INFO]需要解锁配置文件: {unlock_cfg}")
             all_excluded_hwnds.extend(remained_idle_wnd_list)
             # 根据是否全局多开, 检查记录所有pid及互斥体情况 -------------------------------------------------------------------
@@ -296,15 +298,14 @@ class AccOperator:
         return
 
     @classmethod
-    def start_auto_login_accounts_thread(cls, login_dict: Dict[str, List]):
+    def start_login_accounts_thread(cls, login_dict: Dict[str, List]):
         """
         开启一个线程来执行登录操作
         :param login_dict: 登录列表字典
-        :return: None
         """
         try:
             threading.Thread(
-                target=cls._auto_login_accounts,
+                target=cls._login_accounts,
                 args=(login_dict,)
             ).start()
         except Exception as e:
@@ -493,9 +494,9 @@ class AccOperator:
         sw, acc = item_id.split("/")
         main_hwnd, = subfunc_file.get_sw_acc_data(sw, acc, main_hwnd=None)
         # 恢复平台指定主窗口
-        if sw == SW.WECHAT:
+        if sw == SwEnum.WECHAT:
             hwnd_utils.restore_window(main_hwnd)
-        elif sw == SW.WEIXIN:
+        elif sw == SwEnum.WEIXIN:
             # 如果微信没有被隐藏到后台
             if hwnd_utils.is_window_visible(main_hwnd):
                 hwnd_utils.restore_window(main_hwnd)
@@ -978,7 +979,7 @@ class AccInfoFunc:
     @classmethod
     def _get_acc_avatar_without_files(cls, sw, acc):
         # 处理没有本地头像的情况
-        use_text_avatar = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.USE_TXT_AVT)
+        use_text_avatar = AppFunc.get_global_setting_value_by_local_record(LocalCfg.USE_TXT_AVT)
         if use_text_avatar:
             return cls._generate_text_avatar(cls.get_acc_origin_display_name(sw, acc))
         else:

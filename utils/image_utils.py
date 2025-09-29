@@ -98,7 +98,7 @@ def png_to_ico(png_path, ico_path):
     img.save(ico_path, format='ICO', sizes=[(132, 132)])
 
 
-def extract_icon_to_png(exe_path, output_png_path=None):
+def extract_icon_image(exe_path) -> Image.Image:
     """提取可执行文件的图标并保存为png格式"""
     ico_x = win32api.GetSystemMetrics(win32con.SM_CXICON)
     ico_y = win32api.GetSystemMetrics(win32con.SM_CYICON)
@@ -114,12 +114,7 @@ def extract_icon_to_png(exe_path, output_png_path=None):
 
     hdc.SelectObject(hbmp)
     if not large:
-        # 返回一个透明图像
-        transparent_img = Image.new('RGBA', (ico_x, ico_y), (0, 0, 0, 0))
-        if output_png_path is not None:
-            transparent_img.save(output_png_path, format='PNG')
-        return None
-        # return ImageTk.PhotoImage(transparent_img)
+        return Image.new('RGBA', (ico_x, ico_y), (0, 0, 0, 0))
     hdc.DrawIcon((0, 0), large[0])
 
     bmp_str = hbmp.GetBitmapBits(True)
@@ -130,12 +125,14 @@ def extract_icon_to_png(exe_path, output_png_path=None):
     )
 
     win32gui.DestroyIcon(large[0])
+    return icon
 
+
+def extract_icon_to_png(exe_path, output_png_path=None):
+    """提取可执行文件的图标并保存为png格式"""
+    icon_image = extract_icon_image(exe_path)
     if output_png_path is not None:
-        icon.save(output_png_path, format='PNG')
-    else:
-        pass
-    # return ImageTk.PhotoImage(icon)
+        icon_image.save(output_png_path, format='PNG')
 
 
 def add_diminished_se_corner_mark_to_image(image_path, mark_path, output_path, diminish_time=3):

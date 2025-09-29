@@ -10,7 +10,7 @@ from typing import *
 import requests
 
 from public import Config, Strings
-from public.enums import LocalCfg, SW
+from public.enums import LocalCfg, SwEnum
 from utils import file_utils
 from utils.encoding_utils import CryptoUtils
 from utils.file_utils import JsonUtils, DictUtils
@@ -77,7 +77,7 @@ def read_remote_cfg_in_rules():
     :return:
     """
     # 获取存储的日期
-    next_check_time_str = fetch_global_setting_or_set_default_or_none(LocalCfg.NEXT_CHECK_TIME)
+    next_check_time_str = fetch_a_setting_or_set_default_or_none(LocalCfg.GLOBAL_SECTION, LocalCfg.NEXT_CHECK_TIME)
     if not isinstance(next_check_time_str, str):
         next_check_time = dt.datetime.today().date()
         today = dt.datetime.today().date()
@@ -93,7 +93,7 @@ def read_remote_cfg_in_rules():
             # 更新 next_check_time 为明天
             next_check_time = today + dt.timedelta(days=1)
             next_check_time_str = next_check_time.strftime("%Y-%m-%d")
-            save_a_global_setting_and_callback(LocalCfg.NEXT_CHECK_TIME, next_check_time_str)
+            save_a_setting_and_callback(LocalCfg.GLOBAL_SECTION, LocalCfg.NEXT_CHECK_TIME, next_check_time_str)
             return config_data
         else:
             # 失败加载本地
@@ -267,38 +267,26 @@ def save_a_setting_and_callback(section, key, value, callback=None):
         return False
 
 
-def save_a_global_setting_and_callback(key, value, callback=None):
-    return save_a_setting_and_callback(LocalCfg.GLOBAL_SECTION, key, value, callback)
-
-
-def fetch_global_setting_or_set_default_or_none(setting_key):
-    """
-    获取配置项，若没有则添加默认，若没有默认则返回None
-    :return: 已选择的子程序
-    """
-    return fetch_sw_setting_or_set_default_or_none(LocalCfg.GLOBAL_SECTION, setting_key)
-
-
-def fetch_sw_setting_or_set_default_or_none(sw: str, setting_key: str, enum_cls: Optional[Type[Enum]] = None):
+def fetch_a_setting_or_set_default_or_none(section: str, setting_key: str, enum_cls: Optional[Type[Enum]] = None):
     """
     获取配置项，若没有则设置默认值，若没有默认值则返回None
     若传入枚举类，会严格验证值是否在枚举范围内，无效则使用枚举第一个值
 
-    :param sw: 平台标识
+    :param section: 配置文件中的section
     :param setting_key: 配置键名
     :param enum_cls: 可选枚举类（用于严格验证值）
     :return: 配置值（保证符合枚举约束）或None
     """
     # 原值
-    value, = get_settings(sw, **{setting_key: None})
+    value, = get_settings(section, **{setting_key: None})
     if value in (None, "", "None", "none", "null", "NULL"):
         try:
             # 默认值
             try:
-                sw_dict = Config.INI_DEFAULT_VALUE[sw]
+                sw_dict = Config.INI_DEFAULT_VALUE[section]
             except KeyError as ke:
                 print(ke)
-                sw_dict = Config.INI_DEFAULT_VALUE[SW.DEFAULT]
+                sw_dict = Config.INI_DEFAULT_VALUE[SwEnum.DEFAULT]
             value = sw_dict[setting_key]
             pass
         except (KeyError, AttributeError) as e:
@@ -313,7 +301,7 @@ def fetch_sw_setting_or_set_default_or_none(sw: str, setting_key: str, enum_cls:
         if value not in valid_values:
             value = next(iter(enum_cls)).value  # 使用第一个枚举值
 
-    update_settings(sw, **{setting_key: value})
+    update_settings(section, **{setting_key: value})
     return value
 
 
