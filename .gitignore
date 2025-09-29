@@ -1,0 +1,24 @@
+# 输出文件
+/user_files/
+/dist/
+/external_res/sy.ini
+
+# 日志文件
+*.log
+@AutomationLog.txt
+.test/@AutomationLog.txt
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 虚拟环境
+/.venv38
+/.venv37
+/.venv312
+
+# IDE 配置
+.idea/
+*.iml
+/external_res/Updater.exe
