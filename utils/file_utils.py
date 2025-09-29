@@ -366,6 +366,40 @@ class IniUtils:
                 return False
 
 
+class PatchUtils:
+    @staticmethod
+    def get_data_from_files_by_offset_and_length(file_path: str, offset: int, length: int):
+        """
+        从文件中指定 offset + length 位置读取数据（使用 mmap 提高效率）
+        :param file_path: 文件路径
+        :param offset: 起始偏移量
+        :param length: 读取字节长度
+        :return: (data, msg)，data为bytes或None，msg为错误信息或成功提示
+        """
+        data, msg = None, ""
+
+        try:
+            if not os.path.exists(file_path):
+                msg = f"文件不存在: {file_path}"
+                return None, msg
+
+            with open(file_path, "rb") as f:
+                with mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ) as mm:
+                    file_size = mm.size()
+                    if offset < 0 or offset + length > file_size:
+                        msg = f"偏移量超出范围 (offset={offset}, length={length}, file_size={file_size})"
+                        return None, msg
+
+                    mm.seek(offset)
+                    data = mm.read(length)
+                    msg = f"成功读取 {len(data)} 字节"
+
+        except Exception as e:
+            msg = f"读取失败: {e}"
+
+        return data, msg
+
+
 class DllUtils:
     @staticmethod
     def ensure_mmap(source: Union[str, bytes, bytearray, mmap.mmap], write=False):

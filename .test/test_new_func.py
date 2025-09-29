@@ -1,6 +1,7 @@
 import os
 import shutil
 import time
+import tkinter as tk
 from unittest import TestCase
 
 import psutil
@@ -8,7 +9,7 @@ import uiautomation
 import win32con
 import win32gui
 
-from functions import subfunc_file
+from functions import subfunc_file, sw_func
 from functions.acc_func import AccOperator
 from functions.sw_func import SwInfoUtils, SwOperator
 from public import Config
@@ -211,7 +212,7 @@ class Test(TestCase):
             "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 BC 8C"
         ]
         features_tuple = (original_features, modified_features)
-        res = SwInfoUtils.search_patterns_and_fill_replaces_by_features(dll_path, features_tuple)
+        res = SwInfoUtils.search_pattern_dicts_by_original_and_modified(dll_path, features_tuple)
         print(res)
 
     def test_create_lnk_for_account(self):
@@ -232,3 +233,60 @@ class Test(TestCase):
         )
         hwnd_utils.do_click_in_wnd(hwnd, 8, 8)
         hwnd_utils.do_click_in_wnd(hwnd, 8, 8)
+
+    def test_render_custom_patches_demo(self):
+        sample_data = [
+            {
+                "addr": "%dll_dir%/Weixin.dll",
+                "patches": [
+                    {
+                        "offset": 140533195,
+                        "original": "5b e4 b8 8d e6 94 af e6 8c 81 e7 b1 bb e5 9e 8b e6 b6 88 e6 81 af 5d 00",
+                        "modified": "5b e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 5d 00",
+                        "encoding": "utf-8",
+                        "tip": "列表撤回提示消息, 显示格式为xxx, xxx部分可修改",
+                        "note": "[不支持类型消息] -> [撤回了一条消息]",
+                        "customizable": True
+                    },
+                    {
+                        "offset": 140579905,
+                        "original": "e6 9a 82 e4 b8 8d e6 94 af e6 8c 81 e8 af a5 e5 86 85 e5 ae b9 ef bc 8c e8 af b7 e5 9c a8 e6 89 8b e6 9c ba e4 b8 8a e6 9f a5 e7 9c 8b 00",
+                        "modified": "e6 92 a4 e5 9b 9e e4 ba 86 e4 b8 80 e6 9d a1 e6 b6 88 e6 81 af 00 bc 8c e8 af b7 e5 9c a8 e6 89 8b e6 9c ba e4 b8 8a e6 9f a5 e7 9c 8b 00",
+                        "encoding": "utf-8",
+                        "tip": "窗口撤回提示消息, 显示格式为[xxx], xxx部分可修改",
+                        "note": "暂不支持该内容，请在手机上查看 -> 撤回了一条消息",
+                        "customizable": True
+                    }
+                ]
+            }
+        ]
+
+        root = tk.Tk()
+        root.title("补丁自定义界面 Demo")
+
+        frame = tk.Frame(root)
+        frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        sw_func.render_custom_patches(frame, sample_data)
+
+        root.mainloop()
+
+    def test_show_popup(self):
+        import tkinter as tk
+
+        root = tk.Tk()
+
+        frame = tk.Frame(root, width=200, height=100, bg="lightblue")
+        frame.pack(padx=20, pady=20)
+
+        # popup 的 parent 写 frame
+        popup = tk.Menu(frame, tearoff=0)
+        popup.add_command(label="Cut")
+        popup.add_command(label="Copy")
+
+        def show_popup(event):
+            popup.post(event.x_root, event.y_root)
+
+        root.bind("<Button-3>", show_popup)
+
+        root.mainloop()

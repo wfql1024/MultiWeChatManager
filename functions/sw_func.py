@@ -21,9 +21,10 @@ from win32com.client import Dispatch
 
 from components import CustomDialogW
 from functions import subfunc_file
+from functions.app_func import AppFunc
 from public import Strings, Config
 from public.custom_classes import FlowControlError
-from public.enums import LocalCfg, SW, AccKeys, MultirunMode, RemoteCfg, CallMode, WndType
+from public.enums import LocalCfg, SwEnum, AccKeys, MultirunMode, RemoteCfg, CallMode, WndType
 from public.global_members import GlobalMembers
 from public.strings import NEWER_SYS_VER
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
@@ -36,26 +37,70 @@ from utils.logger_utils import myprinter as printer
 from utils.process_utils import Process
 
 
-class Software:
-    def __init__(self, sw):
-        self.sw = sw
-        self.label = None
-        self.frame = None
+class SwSettings:
+    def __init__(self):
         self.view = None
-        self.can_freely_multirun = None
-        self.multirun_mode = None
-        self.anti_revoke = None
-        self.classic_ui = None
-        self.treeview_ui = None
         self.inst_path = None
         self.data_dir = None
         self.dll_dir = None
         self.ver = None
+
+
+class Sw:
+    def __init__(self, sw_id):
+        self.label = None
+
+        self.id = sw_id
+        self.remark = None
+        self.frame = None
+        self._multirun_mode = None
+        self.classic_ui = None
+        self.treeview_ui = None
         self.login_accounts = None
         self.logout_accounts = None
         self.widget_dict = {}
         self.is_original = None
         self.force_rescan = None
+        self.settings = SwSettings()
+
+        self.view = None
+        self.inst_path = None
+        self.data_dir = None
+        self.dll_dir = None
+        self.ver = None
+
+    def del_config_and_reset(self):
+        dll_dir_path = SwInfoFunc.try_get_path_of_(self.id, LocalCfg.DLL_DIR)
+        if dll_dir_path is None:
+            return None
+        patch_dll, = subfunc_file.get_remote_cfg(
+            self.id, patch_dll=None)
+        if patch_dll is None:
+            return None
+        dll_path = os.path.join(dll_dir_path, patch_dll)
+        bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
+        del_path = os.path.join(dll_dir_path, f"{patch_dll}.del")
+        try:
+            # 检查 .bak 文件是否存在
+            if os.path.exists(bak_path):
+                # 如果 ?.dll 存在，准备删除它
+                if os.path.exists(dll_path):
+                    os.rename(dll_path, del_path)
+                    print(f"加入待删列表：{del_path}")
+                # 将 ?.dll.bak 文件重命名为 ?.dll
+                os.rename(bak_path, dll_path)
+                print(f"已恢复: {dll_path} from {bak_path}")
+        except Exception as e:
+            logger.error(e)
+        return del_path
+
+    @property
+    def multirun_mode(self):
+        return SwInfoFunc.get_sw_multirun_mode(self.id)
+
+    @multirun_mode.setter
+    def multirun_mode(self, value):
+        self._multirun_mode = value
 
 
 class SwInfoFunc:
@@ -66,8 +111,16 @@ class SwInfoFunc:
     """
 
     @staticmethod
-    def get_sw_class(sw) -> Software:
+    def get_sw_class(sw) -> Sw:
         return GlobalMembers.root_class.sw_classes[sw]
+
+    @staticmethod
+    def get_sw_setting_by_local_record(sw, key, enum_cls=None):
+        return subfunc_file.fetch_a_setting_or_set_default_or_none(sw, key, enum_cls)
+
+    @staticmethod
+    def save_sw_setting_to_local_record_and_call_back(sw, key, value, callback=None):
+        return subfunc_file.save_a_setting_and_callback(sw, key, value, callback)
 
     @classmethod
     def resolve_sw_path(cls, sw, addr: str):
@@ -92,15 +145,15 @@ class SwInfoFunc:
         return "/".join(resolved_parts)
 
     @classmethod
-    def get_coexist_path_from_address(cls, sw, address, channel, s):
+    def get_coexist_path_from_address(cls, sw, address, coexist_channel, ordinal):
         """解析地址并得到共存路径"""
         # Printer().debug(address)
         coexist_patch_wildcard_addr_dict = subfunc_file.get_remote_cfg(
-            sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, channel, "patch_wildcard")
+            sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, "patch_wildcard")
         coexist_patch_wildcard_addr = coexist_patch_wildcard_addr_dict.get(address, "")
         # Printer().debug(f"{coexist_patch_wildcard_addr}")
         coexist_patch_wildcard = cls.resolve_sw_path(sw, coexist_patch_wildcard_addr)
-        coexist_patch_file = coexist_patch_wildcard.replace("?", s).replace("\\", "/")
+        coexist_patch_file = coexist_patch_wildcard.replace("?", ordinal).replace("\\", "/")
         return coexist_patch_file
 
     @classmethod
@@ -136,6 +189,7 @@ class SwInfoFunc:
     @classmethod
     def _update_adaptation_from_remote_to_cache(cls, sw, mode, skip_cache=True):
         """根据远程表内容更新缓存表, skip_cache 决定已有正确格式缓存时是否跳过扫描"""
+        Printer().vital(f"更新{sw} {mode} 适配表")
         channels_dict, = subfunc_file.get_remote_cfg(sw, mode, channels=None)
         if not isinstance(channels_dict, dict):
             return
@@ -158,7 +212,7 @@ class SwInfoFunc:
                 feature_ver_addr_dicts = feature_vers_dict[compatible_ver]
                 # 检查是否弃用
                 if feature_ver_addr_dicts is None:
-                    print(f"[{channel}]该渠道在该版本已弃用!")
+                    Printer().print_vn(f"[INFO]渠道{channel}在该版本已弃用! 删除相应的本地缓存节点...")
                     # 强制删掉本地缓存
                     cache_vers_dict = subfunc_file.get_cache_cfg(
                         sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES)
@@ -174,8 +228,10 @@ class SwInfoFunc:
                     if isinstance(cache_ver_addr_dicts, list) and len(cache_ver_addr_dicts) != 0:
                         if all((isinstance(addr_dict["patches"], list) and isinstance(addr_dict["addr"], str))
                                for addr_dict in cache_ver_addr_dicts):
-                            print(f"[{channel}]渠道在该版本已存在缓存的适配")
+                            Printer().print_vn(f"[INFO]渠道{channel}在该版本已存在缓存的适配! 跳过!")
                             continue
+                else:
+                    Printer().print_vn(f"[INFO]重新扫描! 将不跳过已适配的{channel}渠道!")
                 ver_addr_res_dicts = []
                 channel_failed = False
                 # 对每个地址的每个扫描字典, 都至少要扫描出一个, 否则判定失败!!!
@@ -220,13 +276,17 @@ class SwInfoFunc:
                 print(ver_addr_res_dicts)
                 if channel_failed is not True:
                     # 添加到缓存表中
+                    Printer().print_vn(f"[OK]更新渠道{channel}在该版本的适配成功!")
                     subfunc_file.update_cache_cfg(
                         sw, mode, RemoteCfg.CHANNELS, channel,
                         RemoteCfg.PRECISES, **{cur_sw_ver: ver_addr_res_dicts})
+                else:
+                    Printer().print_vn(f"[ERR]更新渠道{channel}在该版本的适配失败!")
             except KeyError:
-                pass
+                Printer().print_vn(f"[ERR]更新渠道{channel}在该版本的适配失败!")
             except Exception as e:
-                print(e)
+                Printer().print_vn(f"[ERR]更新渠道{channel}在该版本的适配失败! {e}")
+        Printer().clear_vital()
 
     @classmethod
     def _identify_multi_state_patching_of_files_in_channel(
@@ -365,7 +425,6 @@ class SwInfoFunc:
         sw_class = cls.get_sw_class(sw)
         skip_cache = sw_class.force_rescan is not True
         if coexist_channel is None or ordinal is None:
-            sw_class.force_rescan = False
             cls._update_adaptation_from_remote_to_cache(sw, mode, skip_cache)
         else:
             cls._update_adaptation_from_remote_to_cache(sw, mode)
@@ -429,6 +488,29 @@ class SwInfoFunc:
         if compatible_version is None:
             return None
         return type_vers_dict[compatible_version]
+
+    @classmethod
+    def get_mode_channel_customizable_patches(cls, sw, mode, channel):
+        """从版本文件适配字典列表中过滤出 customizable=true 的 patches"""
+        result = []
+        curr_ver = cls.calc_sw_ver(sw)
+        addr_patching_dicts = subfunc_file.get_cache_cfg(
+            sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES, curr_ver)
+        if not isinstance(addr_patching_dicts, list):
+            return []
+        for entry in addr_patching_dicts:
+            addr = entry.get("addr")
+            patches = entry.get("patches", [])
+            # 只保留有 customizable==True 的 patch
+            filtered_patches = [
+                patch for patch in patches if patch.get("customizable") is True
+            ]
+            if filtered_patches:  # 如果有保留下来的 patch，才加进结果
+                result.append({
+                    "addr": addr,
+                    "patches": filtered_patches
+                })
+        return result
 
     @staticmethod
     def get_sw_original_wnd_class_name(sw, wnd_type) -> Optional[str]:
@@ -512,7 +594,7 @@ class SwInfoFunc:
     @classmethod
     def identity_and_get_available_coexist_mode(cls, sw):
         """选择一个可用的共存构造模式, 优先返回用户选择的, 若其不可用则返回可用的第一个模式"""
-        user_coexist_channel = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.COEXIST_MODE)
+        user_coexist_channel = cls.get_sw_setting_by_local_record(sw, LocalCfg.COEXIST_MODE)
         channel_res_dict, msg = cls.identify_dll_core(sw, RemoteCfg.COEXIST)
         if isinstance(channel_res_dict, dict):
             if user_coexist_channel in channel_res_dict:
@@ -522,16 +604,14 @@ class SwInfoFunc:
 
     @classmethod
     def _check_if_sw_can_freely_multirun(cls, sw):
-        sw_class = cls.get_sw_class(sw)
         mode_channels_res_dict, msg = SwInfoFunc.identify_dll_core(sw, RemoteCfg.MULTI.value)
-        sw_class.can_freely_multirun = None
+        # sw_class.can_freely_multirun = None
         # 以有无适配为准; 若没有适配,检查是否是原生支持多开
         if mode_channels_res_dict is None:
             # 没有适配, 检查是否是原生支持多开
             native_multirun, = subfunc_file.get_remote_cfg(
                 sw, RemoteCfg.MULTI, **{RemoteCfg.NATIVE.value: None})
             if native_multirun is True:
-                sw_class.can_freely_multirun = True
                 return True
         else:
             # 列出所有频道
@@ -539,21 +619,16 @@ class SwInfoFunc:
                 freely_multirun_status = channel_res_dict["status"]
                 # 只要有freely_multirun为True，就将其设为True
                 if freely_multirun_status is True:
-                    sw_class.can_freely_multirun = True
                     return True
         return False
 
     @classmethod
     def get_sw_multirun_mode(cls, sw):
-        sw_class = SwInfoFunc.get_sw_class(sw)
         can_freely_multirun = cls._check_if_sw_can_freely_multirun(sw)
         if can_freely_multirun:
-            sw_class.multirun_mode = MultirunMode.FREELY_MULTIRUN
+            return MultirunMode.FREELY_MULTIRUN
         else:
-            rest_mode_value = subfunc_file.fetch_sw_setting_or_set_default_or_none(
-                sw, LocalCfg.REST_MULTIRUN_MODE)
-            sw_class.multirun_mode = rest_mode_value
-        return sw_class.multirun_mode
+            return cls.get_sw_setting_by_local_record(sw, LocalCfg.REST_MULTIRUN_MODE)
 
     @staticmethod
     def detect_path_of_(sw, path_type) -> Optional[str]:
@@ -719,7 +794,7 @@ class SwInfoFunc:
                 pid_mutex_dict[pid] = set_all_to_true
         else:
             # 是否默认全为True
-            all_has_mutex_by_default = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ALL_HAS_MUTEX)
+            all_has_mutex_by_default = AppFunc.get_global_setting_value_by_local_record(LocalCfg.ALL_HAS_MUTEX)
             all_has_mutex_by_default: bool = True if all_has_mutex_by_default is True else False
             if all_has_mutex_by_default is True:
                 Printer().print_vn("[INFO]将所有进程默认含有互斥体")
@@ -878,7 +953,7 @@ class SwOperator:
         """备份所有补丁文件, 若存在则跳过"""
         all_patching_addresses = SwInfoFunc.extract_addresses_from_remote_cfg(sw)
         all_patching_files = [SwInfoFunc.resolve_sw_path(sw, addr) for addr in all_patching_addresses]
-        Printer().debug(f"所有需要备份的文件: {all_patching_files}")
+        # Printer().debug(f"所有需要备份的文件: {all_patching_files}")
         file_utils.backup_files(all_patching_files)
 
     @staticmethod
@@ -911,7 +986,7 @@ class SwOperator:
     def switch_dll_core(cls, sw, mode, channel, coexist_channel=None, ordinal=None, target=None) -> Tuple[
         Optional[bool], str]:
         """对二元状态的渠道, 检测当前状态并切换"""
-        Printer().debug(sw, mode, channel, coexist_channel, ordinal)
+        # Printer().debug(sw, mode, channel, coexist_channel, ordinal)
         if mode == RemoteCfg.MULTI:
             mode_text = "全局多开"
         elif mode == RemoteCfg.REVOKE:
@@ -929,7 +1004,7 @@ class SwOperator:
                 sw_exe_path = os.path.join(inst_dir, coexist_exe).replace("\\", "/")
             else:
                 sw_exe_path = inst_path
-            Printer().debug(sw_exe_path)
+            # Printer().debug(sw_exe_path)
             # 提醒用户手动终止微信进程
             answer = cls._ask_for_manual_terminate_or_force(sw_exe_path)
             if not (answer is True):
@@ -1015,7 +1090,7 @@ class SwOperator:
         if target is None:
             channels_res_dict, _ = SwInfoFunc.identify_dll_core(sw, mode, channel, coexist_channel, ordinal)
             tag = channels_res_dict[channel]["status"]
-            Printer().debug(f"未指定, 检测到状态{tag}")
+            # Printer().debug(f"未指定, 检测到状态{tag}")
             if tag is None:
                 return False, f"无法识别当前 {mode} 状态，补丁未应用"
             target = not tag  # 取反作为目标状态
@@ -1182,7 +1257,7 @@ class SwOperator:
         curr_ver = SwInfoFunc.calc_sw_ver(sw)
         addr_patches_dicts = subfunc_file.get_cache_cfg(
             sw, RemoteCfg.COEXIST, RemoteCfg.CHANNELS, coexist_channel, RemoteCfg.PRECISES, curr_ver)
-        Printer().debug(addr_patches_dicts)
+        # Printer().debug(addr_patches_dicts)
         if not isinstance(addr_patches_dicts, list):
             return None, "尚未适配[coexist_channel]!"
         for addr_patches_dict in addr_patches_dicts:
@@ -1332,8 +1407,8 @@ class SwOperator:
     @classmethod
     def _check_and_create_process_with_logon(cls, executable, args, creation_flags):
         device_info = CryptoUtils.get_device_fingerprint()
-        encrypted_username_data = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ENCRYPTED_USERNAME)
-        encrypted_password_data = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.ENCRYPTED_PASSWORD)
+        encrypted_username_data = AppFunc.get_global_setting_value_by_local_record(LocalCfg.ENCRYPTED_USERNAME)
+        encrypted_password_data = AppFunc.get_global_setting_value_by_local_record(LocalCfg.ENCRYPTED_PASSWORD)
         try:
             username = CryptoUtils.decrypt_data(encrypted_username_data, device_info)
             password = CryptoUtils.decrypt_data(encrypted_password_data, device_info)
@@ -1353,10 +1428,10 @@ class SwOperator:
                     # 如果修改了密码且验证成功, 则保存新账户密码
                     encrypted_username_data = CryptoUtils.encrypt_data(username, device_info)
                     encrypted_password_data = CryptoUtils.encrypt_data(password, device_info)
-                    subfunc_file.save_a_global_setting_and_callback(LocalCfg.ENCRYPTED_USERNAME,
-                                                                    encrypted_username_data)
-                    subfunc_file.save_a_global_setting_and_callback(LocalCfg.ENCRYPTED_PASSWORD,
-                                                                    encrypted_password_data)
+                    AppFunc.save_a_global_setting_and_callback(LocalCfg.ENCRYPTED_USERNAME,
+                                                               encrypted_username_data)
+                    AppFunc.save_a_global_setting_and_callback(LocalCfg.ENCRYPTED_PASSWORD,
+                                                               encrypted_password_data)
                 return proc
             except Exception as e:
                 # 弹窗提示输入新账号信息
@@ -1384,7 +1459,7 @@ class SwOperator:
         Process]:
         """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
         if NEWER_SYS_VER:
-            call_mode = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.CALL_MODE)
+            call_mode = AppFunc.get_global_setting_value_by_local_record(LocalCfg.CALL_MODE)
             if call_mode == CallMode.LOGON.value:
                 return cls._check_and_create_process_with_logon(executable, args, creation_flags)  # 使用微软账号登录, 下策
             elif call_mode == CallMode.DEFAULT.value:
@@ -1667,79 +1742,124 @@ class SwInfoUtils:
         return results
 
     @classmethod
-    def _resolve_simple_rule(cls, mm, feature_rule_dict):
-        original_features = feature_rule_dict["original"]
-        modified_features = feature_rule_dict["modified"]
-        # 调用扫描函数
-        simple_res_dicts = cls.search_patterns_and_fill_replaces_by_features(
-            mm, (original_features, modified_features)
-        )
+    def _resolve_simple_rule(cls, mm, patching_rule_dict):
+        """
+        simple类型的特征字典节点: 基本节点, 其余节点
+        """
+        # 调用扫描函数, 扫描函数会返回字典列表, 字典含有offset, original, modified节点
+        original_feature = patching_rule_dict["original"]
+        modified_feature = patching_rule_dict["modified"]
+        left_cut = patching_rule_dict.get("left_cut", 0)
+        right_cut = patching_rule_dict.get("right_cut", 0)
+        simple_res_dicts = cls.search_pattern_dicts_by_original_and_modified(
+            mm, original_feature, modified_feature, left_cut, right_cut)
+        # 补充额外节点
+        for key in patching_rule_dict:
+            if key in ["type", "original", "modified", "left_cut", "right_cut"]:
+                continue
+            for simple_res_dict in simple_res_dicts:
+                simple_res_dict[key] = patching_rule_dict[key]
         return simple_res_dicts
 
     @classmethod
-    def _resolve_jmp_offset_rule(cls, mm, rule_dict: dict) -> List[dict]:
+    def _resolve_custom_rule(cls, mm, patching_rule_dict):
         """
-        处理 jmp_offset 类型补丁
-        file_path: 文件映射
-        rule_dict: 当前规则字典
-        返回 [(original_str, modified_str), ...]
+        custom类型的特征字典节点: 基本节点, 其余节点
         """
-        res_list = []
+        # 调用扫描函数, 扫描函数会返回字典列表, 字典含有offset, original, modified节点
+        original_feature = patching_rule_dict["original"]
+        modified_feature = patching_rule_dict["modified"]
+        left_cut = patching_rule_dict.get("left_cut", 0)
+        right_cut = patching_rule_dict.get("right_cut", 0)
+        simple_res_dicts = cls.search_pattern_dicts_by_original_and_modified(
+            mm, original_feature, modified_feature, left_cut, right_cut)
+        # 补充额外节点
+        for key in patching_rule_dict:
+            if key in ["type", "original", "modified", "left_cut", "right_cut"]:
+                continue
+            for simple_res_dict in simple_res_dicts:
+                simple_res_dict[key] = patching_rule_dict[key]
+        for simple_res_dict in simple_res_dicts:
+            simple_res_dict["customizable"] = True
+        return simple_res_dicts
 
-        original_feature = rule_dict.get("original")
-        modified_feature = rule_dict.get("modified")
-        target_features = rule_dict.get("targets", [])
+    @classmethod
+    def _resolve_jmp_offset_rule(cls, mm, patching_rule_dict: dict) -> List[dict]:
+        """
+        jmp_offset类型的特征字典节点:
+            基本节点, 待计算的地址!! !! !! !!所指向区域的特征, 其余节点
+        """
+        res_dicts = []
 
-        # 扫描 original_feature，得到精确匹配列表
-        res_dicts = SwInfoUtils.search_patterns_and_fill_replaces_by_features(
-            mm, ([original_feature], [modified_feature])
-        )
-        for res_dict in res_dicts:
-            original_str = res_dict["original"]
-            expanded_modified = res_dict["modified"]
-            start_addr = res_dict["offset"]
+        # 预处理 target_features -> target_addrs
+        target_features = patching_rule_dict.get("targets", [])
+        target_res_dicts = SwInfoUtils.search_first_pattern_and_get_address_of_marked(mm, target_features)
+        target_addrs = [d["marked_addr"] for d in target_res_dicts]
+        if len(target_addrs) != len(target_features):
+            Logger().warning("target_features 数量与 target_addrs 数量不一致")
+            return []
 
+        # 调用扫描函数, 返回待填充的字典列表, 字典含有offset, original, modified节点
+        original_feature = patching_rule_dict.get("original")
+        modified_feature = patching_rule_dict.get("modified")
+        left_cut = patching_rule_dict.get("left_cut", 0)
+        right_cut = patching_rule_dict.get("right_cut", 0)
+        unfilled_res_dicts = cls.search_pattern_dicts_by_original_and_modified(
+            mm, original_feature, modified_feature, left_cut, right_cut)
+
+        # 遍历所有扫描到的 res_dict 并填充修改串中的 !!, 若有无法填充的!!段则宣告失败
+        for unfilled_res_dict in unfilled_res_dicts:
+            target_addr_idx = 0  # 目标地址索引
+            start_addr = unfilled_res_dict["offset"]
+            original_str = unfilled_res_dict["original"]
+            expanded_modified = unfilled_res_dict["modified"]
+            # 滑动窗口扫描
             tokens = expanded_modified.split()
             i = 0
             while i < len(tokens):
-                if tokens[i] == "!!":
+                if tokens[i] != "!!":
+                    i += 1
+                else:
                     j = i
                     while j < len(tokens) and tokens[j] == "!!":
                         j += 1
                     # 此时 i~j-1 是连续 !!
                     relative_pos = i
                     length = j - i
-                    # 只接受长度 = 4，否则直接失败
                     if length != 4:
-                        return []  # 或者直接 break / raise，根据你整体逻辑来
+                        Logger().warning("!!连续长度必须为4")
+                        return []  # 长度小于4则失败
 
-                    target_feature = target_features.pop(0)
-                    print(f"目标特征码: {target_feature}")
-                    target_res_dicts = SwInfoUtils.search_first_pattern_and_get_address_of_marked(
-                        mm, [target_feature])
-                    print(f"目标地址结果: {target_res_dicts}")
-                    if len(target_res_dicts) != 0:
-                        target_addr = target_res_dicts.pop(0).get("marked_addr")
-                        print(f"目标地址: {target_addr}")
-                        next_instr_addr = start_addr + relative_pos + length
-                        print(f"下一条指令地址: {next_instr_addr}")
-                        offset = target_addr - next_instr_addr
-                        # 计算成小端序 4 字节 hex
-                        offset_bytes = ByteUtils.int_to_little_endian_hex(offset, 4)
-                        print(f"作差计算偏移并小端存储: {offset_bytes}")
+                    if target_addr_idx >= len(target_addrs):
+                        Logger().warning("所有可用的target_addr用完仍有!!待填充, 视为失败")
+                        return []  # target 不够
+                    target_addr = target_addrs[target_addr_idx]
+                    target_addr_idx += 1
 
-                        # 直接替换连续 !!
-                        replace_parts = offset_bytes.split()
-                        if len(replace_parts) != length:
-                            raise ValueError(f"替换字节长度 {len(replace_parts)} 与连续 !! 长度 {length} 不匹配")
-                        tokens[i:j] = replace_parts
-                        filled_modified = " ".join(tokens)
-                        print(f"偏移写入后的补丁串: {filled_modified}")
+                    if target_addr is None:
+                        Logger().warning(f"某个目标特征未扫描到匹配串, 无目标地址")
+                        return []  # 有某个目标地址未获得, 填充失败
+                    print(f"目标地址: {target_addr}")
+                    next_instr_addr = start_addr + relative_pos + length
+                    print(f"下一条指令地址: {next_instr_addr}")
+                    offset = target_addr - next_instr_addr
+                    # 计算成小端序 4 字节 hex
+                    offset_hex = ByteUtils.int_to_little_endian_hex(offset, 4)
+                    print(f"作差计算偏移并小端存储: {offset_hex}")
+
+                    # 直接替换连续 !!
+                    replace_parts = offset_hex.split()
+                    if len(replace_parts) != 4:
+                        Logger().warning(f"小端序地址字节 {replace_parts} 长度不为4!")
+                        return []  # 替换字节长度 {len(replace_parts)} 与连续 !! 长度 {length} 不匹配")
+                    tokens[i:j] = replace_parts
+                    filled_modified = " ".join(tokens)
+                    print(f"偏移写入后的补丁串: {filled_modified}")
+
                     i = j
-                else:
-                    i += 1
+
             filled_modified = " ".join(tokens)
-            res_list.append(
+            res_dicts.append(
                 {
                     "offset": start_addr,
                     "original": original_str,
@@ -1747,19 +1867,37 @@ class SwInfoUtils:
                 }
             )
 
-        return res_list
+        # 补充额外节点
+        for key in patching_rule_dict:
+            if key in ["type", "original", "modified", "left_cut", "right_cut", "targets"]:
+                continue
+            for res_dict in res_dicts:
+                res_dict[key] = patching_rule_dict[key]
+
+        return res_dicts
 
     @classmethod
     def resolve_rule_dict_and_return_res_dicts(cls, mm, feature_rule_dict: dict) -> List[dict]:
+        """
+        各类型基本节点: 原始特征码original, 修改特征码modified, 截断字节长度???_cut(可选, 没有则认为截断长度为0)
+        输出符合特征的字典列表, 字典节点: 截断后的地址偏移offset, 截断后的原始串original, 截断后的修改串modified, 特征字典中的其余节点
+        """
         res_dicts = []
         if feature_rule_dict.get("type") == "simple":
             simple_res_dicts = cls._resolve_simple_rule(mm, feature_rule_dict)
             if isinstance(simple_res_dicts, list):
                 res_dicts.extend(simple_res_dicts)
+
+        elif feature_rule_dict.get("type") == "custom":
+            custom_res_dicts = cls._resolve_custom_rule(mm, feature_rule_dict)
+            if isinstance(custom_res_dicts, list):
+                res_dicts.extend(custom_res_dicts)
+
         elif feature_rule_dict.get("type") == "jmp_offset":
             jmp_offset_res_dicts = cls._resolve_jmp_offset_rule(mm, feature_rule_dict)
             if isinstance(jmp_offset_res_dicts, list):
                 res_dicts.extend(jmp_offset_res_dicts)
+
         else:
             print("未知类型")
 
@@ -1788,118 +1926,167 @@ class SwInfoUtils:
         return ' '.join([f"{byte:02x}" for byte in byte_data])
 
     @staticmethod
-    def search_patterns_and_fill_replaces_by_features(mm, features_tuple: tuple) -> Optional[List[dict]]:
-        """
-        从特征列表中搜索特征码并替换
-        :param mm: 数据
-        :param features_tuple: 特征码列表二元组(原始特征码列表，补丁特征码列表)
-        :return: 替换后的二进制数据
-        """
-        # 检查特征码长度是否一致
-        original_features, modified_features = features_tuple
-        if len(original_features) != len(modified_features):
-            print(f"[ERR] Original and modified features length mismatch")
+    def convert_hex_to_list_and_align_modified_to_original(
+            original_hex, modified_hex, left_cut=0, right_cut=0) -> Optional[Tuple[list, list]]:
+        # === 分词原始串并检验 ===
+        listed_original_hex = custom_wildcard_tokenize(original_hex)
+        if (not isinstance(listed_original_hex, list) or len(listed_original_hex) == 0
+                or len(listed_original_hex) <= left_cut + right_cut or "..." in listed_original_hex):
+            print(f"[ERR] 原始特征码格式错误!")
             return None
 
-        res_dicts = []
-        # print(f"原始数据: {SwInfoUtils.bytes_to_hex_str(data)}")
-        for original_feature, modified_feature in zip(original_features, modified_features):
-            print("--------------------------------------------------------")
-            print(f"原始特征码: {original_feature}")
-            print(f"补丁特征码: {modified_feature}")
-            # print("分词器处理:去除末尾的省略号;若开头有省略号,则识别为{省略号}")
-            listed_original_hex = custom_wildcard_tokenize(original_feature)
-            listed_modified_hex = custom_wildcard_tokenize(modified_feature)
-            # print("判断类型:若...在开头,则以??补充至相同长度;...仅能出现在开头或不存在,否则报错")
-            if listed_modified_hex[0] is ...:
-                listed_modified_hex = ["??"] * (
-                        len(listed_original_hex) - len(listed_modified_hex) + 1) + listed_modified_hex[1:]
-            else:
-                if ... in listed_original_hex:
-                    print(f"[ERR] Wildcard <{patt2hex(listed_original_hex)}> has invalid token ...")
-                    continue
-                elif ... in listed_modified_hex:
-                    print(f"[ERR] Wildcard <{patt2hex(listed_modified_hex)}> has invalid token ...")
-                    continue
-            # print("对...不在开头的情况,在末尾补充??至相同长度")
-            if len(listed_modified_hex) < len(listed_original_hex):
-                listed_modified_hex += ["??"] * (len(listed_original_hex) - len(listed_modified_hex))
-            if len(listed_modified_hex) != len(listed_original_hex):
-                print(f"[ERR] Pattern and listed_modified_hex length mismatch")
-                continue
-            print(f"> 特征码翻译: {patt2hex(listed_original_hex, 0)} => {patt2hex(listed_modified_hex, 0)}")
-
-            # print(f"构建正则表达式和替换模式：对原始的:将??替换为(.);对补丁和替换:非??则保持,对??的话,若原始为??,则替换为(.)和补位符号,否则摘抄原始值")
-            original_regex_bytes = b""
-            modified_regex_bytes = b""
-            repl_bytes = b""
-            group_count = 1
-            repl_pos_list = []  # 索引列表
-            cur_pos = 0
-            for p, r in zip(listed_original_hex, listed_modified_hex):
-                if p == "??":
-                    original_regex_bytes += b"(.)"
-                    if r == "??":
-                        repl_bytes += b"\\" + str(group_count).encode()
-                        modified_regex_bytes += b"(.)"
-                    elif r == "!!":
-                        repl_bytes += b"!"
-                        modified_regex_bytes += re.escape(b"!")
-                        repl_pos_list.append(cur_pos)
-                    else:
-                        repl_bytes += bytes.fromhex(r)
-                        modified_regex_bytes += re.escape(bytes.fromhex(r))
-                    group_count += 1
-                else:
-                    original_regex_bytes += re.escape(bytes.fromhex(p))
-                    if r == "??":
-                        repl_bytes += bytes.fromhex(p)
-                        modified_regex_bytes += re.escape(bytes.fromhex(p))
-                    elif r == "!!":
-                        repl_bytes += b"!"
-                        modified_regex_bytes += re.escape(b"!")
-                        repl_pos_list.append(cur_pos)
-                    else:
-                        repl_bytes += bytes.fromhex(r)
-                        modified_regex_bytes += re.escape(bytes.fromhex(r))
-                cur_pos += 1
-            print("构建匹配模式：")
-            print(f"original_regex_bytes: {original_regex_bytes}")
-            print(f"modified_regex_bytes: {modified_regex_bytes}")
-            print(f"repl_bytes: {repl_bytes}")
-            # print(f"regex_hex: {bytes_to_hex_str(original_regex_bytes)}")
-            # print(f"patched_hex: {bytes_to_hex_str(modified_regex_bytes)}")
-            # print(f"repl_hex: {bytes_to_hex_str(repl_bytes)}")
-            original_regex = re.compile(original_regex_bytes, re.DOTALL)
-
-            pairs = SwInfoUtils._get_replacement_pairs(mm, original_regex, repl_bytes)
-            if len(pairs) == 0:
-                print("未识别到特征码")
+        # === 分词修改串并检验 ===
+        listed_modified_hex = custom_wildcard_tokenize(modified_hex)
+        if not isinstance(listed_modified_hex, list) or len(listed_modified_hex) == 0:
+            print(f"[ERR] 修改特征码格式错误!")
+            return None
+        # === 修改串处理 ===
+        truncated_len = len(listed_original_hex) - left_cut - right_cut
+        if listed_modified_hex[0] is ...:
+            # 向前补齐到截断后的长度
+            if len(listed_modified_hex) - 1 > truncated_len:
+                print(f"[ERR] Modified pattern too long: <{patt2hex(listed_modified_hex)}>")
                 return None
+            listed_modified_hex = (
+                    ["??"] * (truncated_len - (len(listed_modified_hex) - 1))
+                    + listed_modified_hex[1:]
+            )
+        elif ... not in listed_modified_hex:
+            # 向后补齐到截断后的长度
+            if len(listed_modified_hex) > truncated_len:
+                print(f"[ERR] Modified pattern too long: <{patt2hex(listed_modified_hex)}>")
+                return None
+            listed_modified_hex += ["??"] * (truncated_len - len(listed_modified_hex))
+        else:
+            # ... 出现在中间位置 → 错误
+            print(f"[ERR] Wildcard <{patt2hex(listed_modified_hex)}> has invalid token ...")
+            return None
+        # === 最后统一补齐左右 cut ===
+        listed_modified_hex = ["??"] * left_cut + listed_modified_hex + ["??"] * right_cut
+        # === 校验最终长度 ===
+        if len(listed_modified_hex) != len(listed_original_hex):
+            print(f"[ERR] Pattern and listed_modified_hex length mismatch")
+            return None
 
-            for pair_dict in pairs:
-                original_bytes = pair_dict["original"]
-                modified_bytes = pair_dict["modified"]
-                start_addr = pair_dict["addr"]
+        return listed_original_hex, listed_modified_hex
 
-                original_hex = SwInfoUtils.bytes_to_hex_str(original_bytes)
-                modified_hex = SwInfoUtils.bytes_to_hex_str(modified_bytes)
+    @classmethod
+    def search_pattern_dicts_by_original_and_modified(
+            cls, mm, original_hex: str, modified_hex: str,
+            left_cut: int = 0, right_cut: int = 0) -> Optional[List[dict]]:
+        """
+        根据特征码得到所有符合的补丁字典
+        :param mm: 数据
+        :param original_hex: 原始特征码字符串
+        :param modified_hex: 修改后的特征码字符串（可包含...）
+        :param left_cut: 左截断字节数
+        :param right_cut: 右截断字节数
+        :return: List[Dict{offset, original, modified}]
+        """
 
-                # repl_pos_list 中记录的是第几个字节需要替换
-                for pos in repl_pos_list:
-                    hex_pos = pos * 3  # 每个字节对应两个 hex 字符和一个空格
-                    modified_hex = modified_hex[:hex_pos] + "!!" + modified_hex[hex_pos + 2:]
+        res_dicts = []
 
-                print("识别到：")
-                print(f"Original: {original_hex}")
-                print(f"Modified: {modified_hex}")
+        print("--------------------------------------------------------")
+        print(f"原始特征码: {original_hex}")
+        print(f"补丁特征码: {modified_hex}")
 
-                # 每条记录封装成字典存入列表
-                res_dicts.append({
-                    "offset": start_addr,
-                    "original": original_hex,
-                    "modified": modified_hex
-                })
+        try:
+            listed_original_hex, listed_modified_hex = cls.convert_hex_to_list_and_align_modified_to_original(
+                original_hex, modified_hex, left_cut, right_cut
+            )
+            if (not isinstance(listed_original_hex, list) or not isinstance(listed_modified_hex, list)
+                    or len(listed_original_hex) != len(listed_modified_hex)):
+                print(f"[ERR] Pattern and listed_modified_hex length mismatch")
+                return None
+        except Exception as e:
+            print(f"[ERR] {e}")
+            return None
+
+        print(f"> 特征码翻译: {patt2hex(listed_original_hex, 0)} => {patt2hex(listed_modified_hex, 0)}")
+
+        # print(f"构建正则表达式和替换模式：对原始的:将??替换为(.);对补丁和替换:非??则保持,对??的话,若原始为??,则替换为(.)和补位符号,否则摘抄原始值")
+        original_regex_bytes = b""
+        modified_regex_bytes = b""
+        repl_bytes = b""
+        group_count = 1
+        repl_pos_list = []  # 索引列表
+        cur_pos = 0
+        for p, r in zip(listed_original_hex, listed_modified_hex):
+            if p == "??":
+                original_regex_bytes += b"(.)"
+                if r == "??":
+                    repl_bytes += b"\\" + str(group_count).encode()
+                    modified_regex_bytes += b"(.)"
+                elif r == "!!":
+                    repl_bytes += b"!"
+                    modified_regex_bytes += re.escape(b"!")
+                    repl_pos_list.append(cur_pos)
+                else:
+                    repl_bytes += bytes.fromhex(r)
+                    modified_regex_bytes += re.escape(bytes.fromhex(r))
+                group_count += 1
+            else:
+                original_regex_bytes += re.escape(bytes.fromhex(p))
+                if r == "??":
+                    repl_bytes += bytes.fromhex(p)
+                    modified_regex_bytes += re.escape(bytes.fromhex(p))
+                elif r == "!!":
+                    repl_bytes += b"!"
+                    modified_regex_bytes += re.escape(b"!")
+                    repl_pos_list.append(cur_pos)
+                else:
+                    repl_bytes += bytes.fromhex(r)
+                    modified_regex_bytes += re.escape(bytes.fromhex(r))
+            cur_pos += 1
+        print("构建匹配模式：")
+        print(f"original_regex_bytes: {original_regex_bytes}")
+        print(f"modified_regex_bytes: {modified_regex_bytes}")
+        print(f"repl_bytes: {repl_bytes}")
+        if len(original_regex_bytes) == 0:
+            return None
+        # print(f"regex_hex: {bytes_to_hex_str(original_regex_bytes)}")
+        # print(f"patched_hex: {bytes_to_hex_str(modified_regex_bytes)}")
+        # print(f"repl_hex: {bytes_to_hex_str(repl_bytes)}")
+        original_regex = re.compile(original_regex_bytes, re.DOTALL)
+
+        pairs = SwInfoUtils._get_replacement_pairs(mm, original_regex, repl_bytes)
+        if len(pairs) == 0:
+            print("未识别到特征码")
+            return None
+
+        for pair_dict in pairs:
+            original_bytes = pair_dict["original"]
+            modified_bytes = pair_dict["modified"]
+            start_addr = pair_dict["addr"]
+
+            original_hex_str = SwInfoUtils.bytes_to_hex_str(original_bytes)
+            modified_hex_str = SwInfoUtils.bytes_to_hex_str(modified_bytes)
+
+            # repl_pos_list 中记录的是第几个字节需要替换
+            for pos in repl_pos_list:
+                hex_pos = pos * 3  # 每个字节对应两个 hex 字符和一个空格
+                modified_hex_str = modified_hex_str[:hex_pos] + "!!" + modified_hex_str[hex_pos + 2:]
+
+            # === 在扫描后进行截断 ===
+            if left_cut or right_cut:
+                orig_list = original_hex_str.split()
+                mod_list = modified_hex_str.split()
+                orig_list = orig_list[left_cut: len(orig_list) - right_cut]
+                mod_list = mod_list[left_cut: len(mod_list) - right_cut]
+                original_hex_str = " ".join(orig_list)
+                modified_hex_str = " ".join(mod_list)
+                start_addr += left_cut  # 重新计算偏移
+
+            print("识别到：")
+            print(f"Original: {original_hex_str}")
+            print(f"Modified: {modified_hex_str}")
+
+            # 每条记录封装成字典存入列表
+            res_dicts.append({
+                "offset": start_addr,
+                "original": original_hex_str,
+                "modified": modified_hex_str
+            })
 
         return res_dicts
 
@@ -1964,23 +2151,25 @@ class SwInfoUtils:
     def search_first_pattern_and_get_address_of_marked(
             cls, mm, target_features: list) -> List[dict]:
         """
-        搜索第一个带!标记的特征串, 返回其地址 + 标记偏移
-        :param mm: DLL文件路径
-        :param target_features: 带!的特征码列表 (例如: ["48 8B !05 ?? ?? ?? ?? 48 8B"])
-        :return: {'original': 原始特征码匹配串, 'marked_addr': 地址(基地址 + !偏移)}
+        对目标特征码列表中的每个特征码: 扫描返回出第一个结果及其第一个!标记处所在偏移. 其余结果会忽略, 结果中的标记!会被清洗
+        若无!则默认取第一个字节位置. 保证返回结果长度与输入一致.
+        :param mm: 文件映射
+        :param target_features: 带!的特征码列表 (特征码如: "48 8B !05 ?? ?? ?? ?? 48 8B")
+        :return:
+            []List:
+                {}Optional[Dict]:
+                    'original': 原始特征码匹配串, 'marked_addr': 地址(基地址 + !偏移) ...
         """
         res_dicts = []
         for feature in target_features:
             # 找第一个 ! 出现的位置
             tokens = feature.split()
-            bang_index = None
+            bang_index = 0  # 默认 0 → 即使没有!也会取第一个
             for i, tok in enumerate(tokens):
                 if tok.startswith("!"):
                     bang_index = i
                     tokens[i] = tok[1:]  # 去掉 !
                     break
-            if bang_index is None:
-                continue  # 跳过没有 ! 的特征串
             # 清洗掉剩余的 ! 符号
             clean_feature = " ".join(tok.lstrip("!") for tok in tokens)
             # 扫描
@@ -1990,11 +2179,16 @@ class SwInfoUtils:
             if match:
                 original = match.group()
                 start_addr = match.start()
-                # 最终结果
                 original_hex = SwInfoUtils.bytes_to_hex_str(original)
                 res_dicts.append({
                     "original": original_hex,
                     "marked_addr": start_addr + bang_index
+                })
+            else:
+                # 保持长度一致 → 没匹配到时补个 None
+                res_dicts.append({
+                    "original": None,
+                    "marked_addr": None
                 })
         return res_dicts
 
@@ -2065,7 +2259,7 @@ class SwInfoUtils:
                 if check_sw_path_func(sw, path):
                     print(f"通过第 {index + 1} 个方法 {finder.__name__} 获得结果 {path}")
                     standardized_path = os.path.abspath(path).replace('\\', '/')
-                    changed = subfunc_file.save_a_setting_and_callback(sw, path_type, standardized_path)
+                    changed = SwInfoFunc.save_sw_setting_to_local_record_and_call_back(sw, path_type, standardized_path)
                     result = standardized_path
                     success = True
                     break
@@ -2083,7 +2277,7 @@ class SwInfoUtils:
         if data_dir_name is None or data_dir_name == "":
             paths = []
         # 微信和新版微信的数据文件夹通常会选择在同一级目录, 微信是WeChat Files, 新版是xwechat_files
-        other_sws = [SW.WECHAT, SW.WEIXIN]
+        other_sws = [SwEnum.WECHAT, SwEnum.WEIXIN]
         if sw in other_sws:
             for osw in other_sws:
                 if sw == osw:
@@ -2092,7 +2286,7 @@ class SwInfoUtils:
                 if other_path is not None:
                     return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
         # QQ, 新版QQ, TIM使用同一个文件夹作为数据文件夹
-        other_sws = [SW.QQNT, SW.TIM, SW.QQ]
+        other_sws = [SwEnum.QQNT, SwEnum.TIM, SwEnum.QQ]
         if sw in other_sws:
             for osw in other_sws:
                 if sw == osw:

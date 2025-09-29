@@ -7,6 +7,7 @@ from PIL import Image, ImageTk
 from components.composited_controls import TreeviewAHT
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
 from functions import subfunc_file
+from functions.app_func import AppFunc
 from functions.sw_func import SwInfoFunc
 from public import Config
 from public.custom_classes import Condition
@@ -226,7 +227,7 @@ class SwManagerTAHT(TreeviewAHT):
         # print(f"self.wnd={self.wnd}")
         self.data_src = self.parent_class.sw_list
         self.columns = (" ", "状态", "版本", "安装路径", "存储路径", "DLL路径")
-        sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
+        sort_str = AppFunc.get_global_setting_value_by_local_record(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.sort["col"], self.sort["is_asc"] = sort_str.split(",")
@@ -259,7 +260,7 @@ class SwManagerTAHT(TreeviewAHT):
         for sw in sw_list:
             if sw == "global":
                 continue
-            state = subfunc_file.fetch_sw_setting_or_set_default_or_none(sw, LocalCfg.STATE, SwStates)
+            state = SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.STATE, SwStates)
             if table_tag == "enable" and (state != SwStates.VISIBLE and state != SwStates.HIDDEN):
                 continue
             if table_tag == "disable" and state != SwStates.DISABLED:
@@ -318,3 +319,9 @@ class SwManagerTAHT(TreeviewAHT):
         # 在非全屏时，隐藏特定列
         columns_to_hide = ["安装路径", "存储路径", "DLL路径"]
         self.adjust_columns(self.wnd, columns_to_hide)
+
+    def save_col_sort(self):
+        table_tag = self.table_tag
+        col = self.default_sort["col"]
+        is_asc_after = self.default_sort["is_asc"]
+        AppFunc.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")

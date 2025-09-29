@@ -5,7 +5,7 @@ import platform
 import tkinter as tk
 import winreg
 
-from public.enums import LocalCfg, SW, SwStates, MultirunMode
+from public.enums import LocalCfg, SwEnum, SwStates, MultirunMode
 
 # 获取屏幕缩放因子
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -68,7 +68,7 @@ def scale_dict(d, sf):
 
 
 class Config:
-    VER_STATUS = 'Beta'
+    VER_STATUS = 'Alpha'
 
     INI_DEFAULT_VALUE = {
         # 默认为空的可不写
@@ -89,7 +89,7 @@ class Config:
             # -标签页相关
             LocalCfg.ROOT_TAB: "login",
             LocalCfg.MNG_TAB: "acc",
-            LocalCfg.LOGIN_TAB: SW.WECHAT,
+            LocalCfg.LOGIN_TAB: SwEnum.WECHAT,
             # -视图相关
             LocalCfg.SCALE: "auto",
             LocalCfg.SIGN_VISIBLE: True,
@@ -103,14 +103,15 @@ class Config:
             LocalCfg.CALL_MODE: "HANDLE",
             LocalCfg.AUTO_PRESS: True,
         },
-        SW.DEFAULT: {
+        SwEnum.DEFAULT: {
             LocalCfg.VIEW: "tree",
             LocalCfg.LOGIN_SORT: "配置,False",
             LocalCfg.LOGOUT_SORT: "配置,False",
             LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
             LocalCfg.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
             LocalCfg.STATE: SwStates.VISIBLE,
-            LocalCfg.COEXIST_MODE: "default"
+            LocalCfg.COEXIST_MODE: "default",
+            LocalCfg.CLICK_BTNS: ""
         }
     }
 
@@ -138,7 +139,7 @@ class Config:
     SF = SCALE_FACTOR
 
     # 尺寸定义
-    PROJ_WND_SIZE = (int(500 * SF), int(700 * SF))  # 程序窗口尺寸
+    ROOT_WND_SIZE = (int(500 * SF), int(680 * SF))  # 程序窗口尺寸
     LOADING_WND_SIZE = (int(240 * SF), int(80 * SF))  # 登录窗口尺寸
     SETTING_WND_SIZE = (int(750 * SF), int(210 * SF))  # 设置窗口尺寸
     UPDATE_LOG_WND_SIZE = (int(480 * SF), int(400 * SF))  # 更新日志窗口尺寸

@@ -112,6 +112,7 @@ class LocalCfg(str, Enum):
     STATE = "state"
     REMARK = "remark"
     COEXIST_MODE = "coexist_mode"
+    CLICK_BTNS = "click_buttons"
 
 
 class WndType(str, Enum):
@@ -153,7 +154,7 @@ class AccKeys(str, Enum):
     REMARK = "remark"
 
 
-class SW(str, Enum):
+class SwEnum(str, Enum):
     DEFAULT = "Default"
     WECHAT = "WeChat"
     WEIXIN = "Weixin"

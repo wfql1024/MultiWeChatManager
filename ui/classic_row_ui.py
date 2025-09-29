@@ -9,6 +9,7 @@ from components.composited_controls import ClassicAHT, CkbRow
 from components.custom_widgets import CustomCornerBtn, CustomBtn
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
+from functions.app_func import AppFunc
 from public import Config, Strings
 from public.custom_classes import Condition
 from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
@@ -183,7 +184,7 @@ class AccLoginCR(CkbRow):
     def _create_acc_row(self):
         account = self.item
         login_status = self.table_tag
-        sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
+        sign_visible: bool = AppFunc.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
         start_time = time.time()
 
         curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw)
@@ -238,7 +239,7 @@ class AccLoginCR(CkbRow):
          .apply_bind(self.root))
         _pack_btn(acc_btn)
         # 账号标签: 账号含有互斥体, 则使用红色字体
-        sign_visible: bool = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.SIGN_VISIBLE)
+        sign_visible: bool = AppFunc.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
         if has_mutex and sign_visible:
             try:
                 self.item_label = ttk.Label(

@@ -9,7 +9,7 @@ from tkinter import ttk
 import win32con
 import win32gui
 from PIL import Image, ImageTk
-from resources import Constants
+from public import Config
 
 from components.composited_controls import RadioTreeView
 from components.custom_widgets import CustomCornerBtn
@@ -81,7 +81,7 @@ class SidebarUI:
     def initialize_members_in_init(self):
         self.pause_event = threading.Event()
         self.root_hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
-        self.bar_width = Constants.SIDEBAR_WIDTH
+        self.bar_width = Config.SIDEBAR_WIDTH
 
     def set_wnd(self):
         self.wnd.overrideredirect(True)  # 去除窗口标题栏
@@ -589,10 +589,10 @@ class SidebarTree(RadioTreeView, ABC):
 
         tree = self.tree
         # 特定列的宽度和样式设置
-        tree.column("#0", minwidth=Constants.TREE_ID_MIN_WIDTH,
-                    width=Constants.TREE_ID_WIDTH, stretch=tk.NO)
-        tree.column(" ", minwidth=Constants.TREE_DSP_MIN_WIDTH,
-                    width=Constants.TREE_DSP_WIDTH, anchor='w')
+        tree.column("#0", minwidth=Config.TREE_ID_MIN_WIDTH,
+                    width=Config.TREE_ID_WIDTH, stretch=tk.NO)
+        tree.column(" ", minwidth=Config.TREE_DSP_MIN_WIDTH,
+                    width=Config.TREE_DSP_WIDTH, anchor='w')
 
     def display_table(self):
         tree = self.tree.nametowidget(self.tree)
@@ -614,7 +614,7 @@ class SidebarTree(RadioTreeView, ABC):
                 # 获取头像图像
                 linked_acc = AccInfoFunc.get_real_acc(sw, acc)
                 _, img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
-                img = img.resize(Constants.AVT_SIZE, Image.Resampling.LANCZOS)
+                img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)
 

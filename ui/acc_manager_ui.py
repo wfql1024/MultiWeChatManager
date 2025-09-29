@@ -8,6 +8,7 @@ from components.composited_controls import TreeviewAHT
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc
+from functions.app_func import AppFunc
 from public import Config
 from public.custom_classes import Condition
 from public.enums import AccKeys
@@ -227,7 +228,7 @@ class AccManagerTAHT(TreeviewAHT):
         # print(f"self.wnd={self.wnd}")
         self.columns = (" ", "快捷键", "隐藏", "自启动", "账号标识", "昵称")
         self.main_frame = self.parent_class.frame_dict[self.table_tag]
-        sort_str = subfunc_file.fetch_global_setting_or_set_default_or_none(f"{self.table_tag}_sort")
+        sort_str = AppFunc.get_global_setting_value_by_local_record(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
@@ -259,6 +260,8 @@ class AccManagerTAHT(TreeviewAHT):
         sw_nodes = {}
 
         for sw in sw_acc_data.keys():
+            if sw == AccKeys.RELAY:
+                continue
             sw_data = sw_acc_data[sw]
             for acc in sw_data.keys():
                 if table_tag == "hidden" and sw_data[acc].get("hidden", None) != True:
@@ -316,7 +319,8 @@ class AccManagerTAHT(TreeviewAHT):
         :return:
         """
         if click_time == 1:
-            WndCreator.open_acc_detail(item_id, self.parent_class)
+            if len(self.tree.get_children(item_id)) == 0:
+                WndCreator.open_acc_detail(item_id, self.parent_class)
 
     def on_tree_configure(self, event):
         """
@@ -327,3 +331,9 @@ class AccManagerTAHT(TreeviewAHT):
         # 在非全屏时，隐藏特定列
         columns_to_hide = ["账号标识", "平台id", "昵称"]
         self.adjust_columns(self.wnd, columns_to_hide)
+
+    def save_col_sort(self):
+        table_tag = self.table_tag
+        col = self.default_sort["col"]
+        is_asc_after = self.default_sort["is_asc"]
+        AppFunc.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")

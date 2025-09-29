@@ -4,9 +4,10 @@ from functools import partial
 from tkinter import ttk, messagebox
 
 from components.custom_widgets import CustomCornerBtn
-from components.widget_wrappers import ScrollableCanvasW
+from components.widget_wrappers import ScrollableCanvasW, ProgressBarW
 from functions import subfunc_file
 from functions.acc_func import AccInfoFunc, AccOperator
+from functions.app_func import AppFunc
 from functions.main_func import MultiSwFunc
 from functions.sw_func import SwOperator, SwInfoFunc
 from public import Config, Strings
@@ -47,6 +48,7 @@ class LoginUI:
     """构建主窗口的类"""
 
     def __init__(self):
+        self.refreshing = False
         self.widget_dict = None
         self.btn_mng = None
         self.btn_login = None
@@ -66,13 +68,14 @@ class LoginUI:
 
         self.root_class = GlobalMembers.root_class
         self.sw_classes = self.root_class.sw_classes
+        self.progress_bar = self.root_class.progress_bar
         self.root = self.root_class.root
         self.global_settings_value = self.root_class.global_settings_value
         self.hotkey_manager = self.root_class.hotkey_manager
 
     def init_login_ui(self):
         # 如果界面没有元素则自动刷新
-        self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
+        self.sw = AppFunc.get_global_setting_value_by_local_record("login_tab")
         self.sw_class = self.sw_classes[self.sw]
         self.tab_frame = self.sw_class.frame
         if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
@@ -83,7 +86,7 @@ class LoginUI:
     def refresh(self, only_menu=False):
         """刷新菜单和界面"""
         print(f"登录页:刷新菜单与界面...")
-        self.sw = subfunc_file.fetch_global_setting_or_set_default_or_none("login_tab")
+        self.sw = AppFunc.get_global_setting_value_by_local_record("login_tab")
         self.sw_class = self.sw_classes[self.sw]
         self.tab_frame = self.sw_class.frame
         self.widget_dict = self.sw_class.widget_dict
@@ -116,12 +119,14 @@ class LoginUI:
     def refresh_frame(self, sw=None):
         """加载或刷新主界面"""
         # 如果要刷新的页面不是当前选定选项卡，不用处理
-        if sw is not None and sw != self.sw:
+        if sw is not None and sw != self.sw or self.refreshing is True:
+            print("无需刷新...")
             return
         self.start_time = time.time()
-        print(f"计时开始：{time.time() - self.start_time:.4f}秒")
 
+        @ProgressBarW.with_progress_bar_wrapper_factory(self.root_class.progress_bar)
         def _thread():
+            self.refreshing = True
             success, result = AccInfoFunc.get_sw_acc_list(self.sw)
             if success is not True:
                 self.root.after(0, self.show_setting_error)
@@ -157,7 +162,7 @@ class LoginUI:
         _pack_btn_left(self.widget_dict["mng_btn"])
         self.widget_dict["mng_btn"].set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
 
-        prefer_coexist = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PREFER_COEXIST)
+        prefer_coexist = AppFunc.get_global_setting_value_by_local_record(LocalCfg.PREFER_COEXIST)
         self.sw_class.is_original = not (prefer_coexist is False)  # 故意取反后切换
         self._switch_mode()
 
@@ -165,15 +170,18 @@ class LoginUI:
         self.scrollable_canvas = ScrollableCanvasW(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
+    @ProgressBarW.with_progress_bar
     def create_account_list_ui(self, result=None):
         """账号列表获取成功，加载列表"""
+        print(self)
         # success, result = self.get_acc_list_answer
         print(f"渲染账号列表...")
+        print(f"self.refreshing: {self.refreshing}")
         acc_list_dict, has_mutex = result
         self.acc_list_dict = acc_list_dict
         logins = self.sw_class.login_accounts = acc_list_dict["login"]
 
-        self.sw_class.view = subfunc_file.fetch_sw_setting_or_set_default_or_none(self.sw, "view")
+        self.sw_class.view = SwInfoFunc.get_sw_setting_by_local_record(self.sw, "view")
 
         if self.sw_class.view == "classic":
             # 经典视图没有做快速刷新功能
@@ -208,6 +216,7 @@ class LoginUI:
 
         self.after_success_create_acc_ui_when_start()
         self.after_success_create_acc_ui()
+        self.refreshing = False
 
     def _to_manual_login(self):
         if self.sw_class.is_original is not True:
@@ -248,6 +257,7 @@ class LoginUI:
         self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
                                           command=partial(WndCreator.open_sw_settings, self.sw))
         self.settings_button.pack()
+        self.refreshing = False
 
     """后处理"""
 
@@ -301,7 +311,7 @@ class LoginUI:
         if hide_wnd is True:
             self.root.iconify()  # 最小化主窗口
         try:
-            AccOperator.start_auto_login_accounts_thread(login_dict)
+            AccOperator.start_login_accounts_thread(login_dict)
         except Exception as e:
             logger.error(e)
 

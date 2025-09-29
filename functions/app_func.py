@@ -14,7 +14,6 @@ from PIL import Image
 from win32com.client import Dispatch
 
 from functions import subfunc_file
-from functions.sw_func import SwInfoFunc
 from public.config import Config
 from public.enums import LocalCfg, RemoteCfg
 from public.global_members import GlobalMembers
@@ -22,7 +21,64 @@ from utils import file_utils, sys_utils
 from utils.logger_utils import mylogger as logger
 
 
+class AppInfo:
+    def __init__(self):
+        self.name = os.path.basename(sys.argv[0])
+        self.author = "吾峰起浪"
+        self.curr_full_ver = subfunc_file.get_app_current_version()
+        self.need_update = None
+        self.hint = "狂按"
+
+
+class GlobalSettings:
+    def __init__(self):
+        self.sign_vis = None
+        self.scale = None
+        self.login_size = None
+        self.rest_mode = None
+        self.hide_wnd = None
+        self.kill_idle = None
+        self.unlock_cfg = None
+        self.all_set_has_mutex = None
+        self.call_mode = None
+        self.new_func = None
+        self.auto_press = None
+        self.disable_proxy = None
+        self.use_txt_avt = None
+        self.in_tray = False
+        self.prefer_coexist = None
+
+
 class AppFunc:
+    @staticmethod
+    def get_root_class() -> property:
+        """获得软件根类"""
+        return GlobalMembers.root_class
+
+    @classmethod
+    def get_root_wnd(cls):
+        """获得软件主窗口"""
+        return cls.get_root_class().root
+
+    @classmethod
+    def get_global_settings_value_obj(cls) -> GlobalSettings:
+        """获取软件全局设置值"""
+        return cls.get_root_class().global_settings_value
+
+    @classmethod
+    def get_global_settings_var_obj(cls) -> GlobalSettings:
+        """获取软件全局设置变量"""
+        return cls.get_root_class().global_settings_var
+
+    @classmethod
+    def get_global_setting_value_by_local_record(cls, key):
+        """从本地记录获取软件全局设置值"""
+        return subfunc_file.fetch_a_setting_or_set_default_or_none(LocalCfg.GLOBAL_SECTION, key)
+
+    @classmethod
+    def save_a_global_setting_and_callback(cls, key, value, callback=None):
+        return subfunc_file.save_a_setting_and_callback(LocalCfg.GLOBAL_SECTION, key, value, callback)
+
     @staticmethod
     def migrate_old_user_files():
         current_pid = os.getpid()
@@ -127,14 +183,14 @@ class AppFunc:
 
         return tray_icon
 
-    @staticmethod
-    def apply_proxy_setting():
-        use_proxy = subfunc_file.fetch_global_setting_or_set_default_or_none(
+    @classmethod
+    def apply_proxy_setting(cls):
+        use_proxy = cls.get_global_setting_value_by_local_record(
             LocalCfg.USE_PROXY)
         print(use_proxy)
         if use_proxy is True:
-            proxy_ip = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_IP)
-            proxy_port = subfunc_file.fetch_global_setting_or_set_default_or_none(LocalCfg.PROXY_PORT)
+            proxy_ip = cls.get_global_setting_value_by_local_record(LocalCfg.PROXY_IP)
+            proxy_port = cls.get_global_setting_value_by_local_record(LocalCfg.PROXY_PORT)
             os.environ['http_proxy'] = f"{proxy_ip}:{proxy_port}"
             os.environ['https_proxy'] = f"{proxy_ip}:{proxy_port}"
             # 可选：清空 no_proxy
@@ -367,8 +423,8 @@ class AppFunc:
                 logger.error(e)
                 return False, str(e)
 
-    @staticmethod
-    def reset(after):
+    @classmethod
+    def reset(cls, after):
         """
         重置应用设置和删除部分用户文件
         :param after: 结束后执行的方法：初始化
@@ -389,34 +445,39 @@ class AppFunc:
                 all_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
                 # print(all_sw)
                 for sw in all_sw:
-                    dll_dir_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
-                    if dll_dir_path is None:
-                        continue
-                    patch_dll, = subfunc_file.get_remote_cfg(
-                        sw, patch_dll=None)
-                    if patch_dll is None:
-                        continue
-                    dll_path = os.path.join(dll_dir_path, patch_dll)
-                    bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
-                    del_path = os.path.join(dll_dir_path, f"{patch_dll}.del")
-                    try:
-                        # 检查 .bak 文件是否存在
-                        if os.path.exists(bak_path):
-                            # 如果 ?.dll 存在，准备删除它
-                            if os.path.exists(dll_path):
-                                os.rename(dll_path, del_path)
-                                items_to_del.append(del_path)
-                                print(f"加入待删列表：{del_path}")
-                            # 将 ?.dll.bak 文件重命名为 ?.dll
-                            os.rename(bak_path, dll_path)
-                            print(f"已恢复: {dll_path} from {bak_path}")
-                    except Exception as e:
-                        logger.error(e)
+                    sw_obj = cls.get_root_class().sw_classes[sw]
+                    del_path = sw_obj.del_config_and_reset()
+                    if del_path is not None:
+                        items_to_del.append(del_path)
+                    # dll_dir_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
+                    # if dll_dir_path is None:
+                    #     continue
+                    # patch_dll, = subfunc_file.get_remote_cfg(
+                    #     sw, patch_dll=None)
+                    # if patch_dll is None:
+                    #     continue
+                    # dll_path = os.path.join(dll_dir_path, patch_dll)
+                    # bak_path = os.path.join(dll_dir_path, f"{patch_dll}.bak")
+                    # del_path = os.path.join(dll_dir_path, f"{patch_dll}.del")
+                    # try:
+                    #     # 检查 .bak 文件是否存在
+                    #     if os.path.exists(bak_path):
+                    #         # 如果 ?.dll 存在，准备删除它
+                    #         if os.path.exists(dll_path):
+                    #             os.rename(dll_path, del_path)
+                    #             items_to_del.append(del_path)
+                    #             print(f"加入待删列表：{del_path}")
+                    #         # 将 ?.dll.bak 文件重命名为 ?.dll
+                    #         os.rename(bak_path, dll_path)
+                    #         print(f"已恢复: {dll_path} from {bak_path}")
+                    # except Exception as e:
+                    #     logger.error(e)
 
                 # 删除用户文件
                 user_dir = Config.PROJ_USER_PATH
                 items = [os.path.join(user_dir, item) for item in os.listdir(user_dir)]
                 items_to_del.extend(items)
+
                 try:
                     file_utils.move_files_to_recycle_bin(items_to_del)
                 except Exception as e:
