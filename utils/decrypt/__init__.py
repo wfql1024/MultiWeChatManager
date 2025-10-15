@@ -1,2 +1,0 @@
-from utils.decrypt.WeChat_decrypt_impl import WeChatDecryptImpl
-from utils.decrypt.Weixin_decrypt_impl import WeixinDecryptImpl

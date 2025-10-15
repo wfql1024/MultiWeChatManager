@@ -1,0 +1,2 @@
+from legacy_python.utils.decrypt.WeChat_decrypt_impl import WeChatDecryptImpl
+from legacy_python.utils.decrypt.Weixin_decrypt_impl import WeixinDecryptImpl
