@@ -45,7 +45,8 @@ class RemoteCfg(str, Enum):
     INTRO = "introduce"
     AUTHOR = "authors"
     ORDINALS = "ordinals"
-    FEATURES = "feature_ver_adaptations"
+    FEATURES = "features"
+    FEATURES_ADAPT = "feature_ver_adaptations"
     PRECISES = "precise_ver_adaptations"
 
     WND_CLASS = "wnd_class"

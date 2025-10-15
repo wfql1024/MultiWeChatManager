@@ -60,7 +60,7 @@ def v1_migrate_to_channels(data):
             if channel_name in versions_info:
                 channel_feature[version] = versions_info[channel_name]
         if channel_feature:
-            channel_info[RemoteCfg.FEATURES] = channel_feature
+            channel_info[RemoteCfg.FEATURES_ADAPT] = channel_feature
 
         # precise
         channel_precise = {}
@@ -131,7 +131,7 @@ def v2_migrate_remote_data():
                 continue
             channels_dict = mode_dict[RemoteCfg.CHANNELS]
             for channel in channels_dict:
-                feature_ver_dict = channels_dict[channel][RemoteCfg.FEATURES]
+                feature_ver_dict = channels_dict[channel][RemoteCfg.FEATURES_ADAPT]
                 for ver in feature_ver_dict:
                     ver_dict = feature_ver_dict[ver]
                     if not isinstance(ver_dict, dict):
@@ -141,7 +141,7 @@ def v2_migrate_remote_data():
                     data = load_remote_cfg()
                     DictUtils.set_nested_values(
                         data, None, sw, mode, RemoteCfg.CHANNELS,
-                        channel, RemoteCfg.FEATURES, **{ver: new_ver_dict})
+                        channel, RemoteCfg.FEATURES_ADAPT, **{ver: new_ver_dict})
                     JsonUtils.save_json(Config.REMOTE_SETTING_JSON_PATH, data)
 
 

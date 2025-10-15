@@ -52,3 +52,8 @@ encrypt_input_and_append_key_to_output(
     'original_remote_setting_v7.json',
     '../remote_configs/remote_setting_v7', secure_key)
 print(f"文件已加密并保存为 remote_setting_v7")
+
+encrypt_input_and_append_key_to_output(
+    'original_remote_setting_v8.json',
+    '../remote_configs/remote_setting_v8', secure_key)
+print(f"文件已加密并保存为 remote_setting_v8")

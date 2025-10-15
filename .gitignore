@@ -21,3 +21,4 @@ __pycache__/
 # IDE 配置
 .idea/
 *.iml
+/external_res/Updater.exe

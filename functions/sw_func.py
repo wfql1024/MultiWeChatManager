@@ -173,7 +173,7 @@ class SwInfoFunc:
                 # 第四级：遍历所有channel
                 for channel, channel_dict in channels.items():
                     # print(channel_dict)
-                    adaptations = channel_dict.get(RemoteCfg.FEATURES, {})
+                    adaptations = channel_dict.get(RemoteCfg.FEATURES_ADAPT, {})
                     print(adaptations)
                     # 遍历所有版本
                     for version, version_list in adaptations.items():
@@ -205,22 +205,22 @@ class SwInfoFunc:
                 pass
 
             try:
-                feature_vers_dict = channels_dict[channel][RemoteCfg.FEATURES]
-                feature_vers = list(feature_vers_dict.keys())
-                compatible_ver = VersionUtils.pkg_find_compatible_version(cur_sw_ver, feature_vers)
-                # 用兼容版本特征码查找适配
-                feature_ver_addr_dicts = feature_vers_dict[compatible_ver]
-                # 检查是否弃用
-                if feature_ver_addr_dicts is None:
-                    Printer().print_vn(f"[INFO]渠道{channel}在该版本已弃用! 删除相应的本地缓存节点...")
-                    # 强制删掉本地缓存
-                    cache_vers_dict = subfunc_file.get_cache_cfg(
-                        sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES)
-                    if isinstance(cache_vers_dict, dict):
-                        del cache_vers_dict[cur_sw_ver]
-                        subfunc_file.update_cache_cfg(
-                            sw, mode, RemoteCfg.CHANNELS, channel, **{RemoteCfg.PRECISES: cache_vers_dict})
-                    continue
+                # feature_vers_dict = channels_dict[channel][RemoteCfg.FEATURES]
+                # feature_vers = list(feature_vers_dict.keys())
+                # compatible_ver = VersionUtils.pkg_find_compatible_version(cur_sw_ver, feature_vers)
+                # # 用兼容版本特征码查找适配
+                # feature_ver_addr_dicts = feature_vers_dict[compatible_ver]
+                # # 检查是否弃用
+                # if feature_ver_addr_dicts is None:
+                #     Printer().print_vn(f"[INFO]渠道{channel}在该版本已弃用! 删除相应的本地缓存节点...")
+                #     # 强制删掉本地缓存
+                #     cache_vers_dict = subfunc_file.get_cache_cfg(
+                #         sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES)
+                #     if isinstance(cache_vers_dict, dict):
+                #         del cache_vers_dict[cur_sw_ver]
+                #         subfunc_file.update_cache_cfg(
+                #             sw, mode, RemoteCfg.CHANNELS, channel, **{RemoteCfg.PRECISES: cache_vers_dict})
+                #     continue
                 if skip_cache is True:
                     # 检查是否已有缓存
                     cache_ver_addr_dicts = subfunc_file.get_cache_cfg(
@@ -232,10 +232,13 @@ class SwInfoFunc:
                             continue
                 else:
                     Printer().print_vn(f"[INFO]重新扫描! 将不跳过已适配的{channel}渠道!")
+
+                feature_addr_dicts = channels_dict[channel][RemoteCfg.FEATURES]
                 ver_addr_res_dicts = []
                 channel_failed = False
+                channel_disabled = True
                 # 对每个地址的每个扫描字典, 都至少要扫描出一个, 否则判定失败!!!
-                for addr_dict in feature_ver_addr_dicts:
+                for addr_dict in feature_addr_dicts:
                     ver_addr_res_dict = {}
                     addr = addr_dict.get("addr", None)
                     addr_feature_list = addr_dict.get("patch_rules", None)
@@ -254,8 +257,16 @@ class SwInfoFunc:
                             addr_failed = False
                             for feature_rule in addr_feature_list:
                                 # Printer().debug("检查:", mode, channel, addr, feature_rule)
-                                res_dicts = SwInfoUtils.resolve_rule_dict_and_return_res_dicts(mm, feature_rule)
+                                res_dicts = SwInfoUtils.resolve_rule_dict_and_return_res_dicts(cur_sw_ver, mm, feature_rule)
                                 # Printer().debug("结果:", res_dicts)
+                                # 返回 None 代表这个规则已经弃用, 如果所有都弃用, 则该渠道的当前版本记录会被清除
+                                if res_dicts is None:
+                                    continue
+                                elif isinstance(res_dicts, list):
+                                    channel_disabled = False
+                                else:
+                                    break
+                                # 若未被禁用但没有扫描到, 则判定为失败
                                 if len(res_dicts) == 0:
                                     addr_failed = True
                                     break
@@ -274,6 +285,15 @@ class SwInfoFunc:
                         finally:
                             mm.close()
                 print(ver_addr_res_dicts)
+                if channel_disabled is True:
+                    # 强制删掉本地缓存
+                    cache_vers_dict = subfunc_file.get_cache_cfg(
+                        sw, mode, RemoteCfg.CHANNELS, channel, RemoteCfg.PRECISES)
+                    if isinstance(cache_vers_dict, dict):
+                        del cache_vers_dict[cur_sw_ver]
+                        subfunc_file.update_cache_cfg(
+                            sw, mode, RemoteCfg.CHANNELS, channel, **{RemoteCfg.PRECISES: cache_vers_dict})
+                    continue
                 if channel_failed is not True:
                     # 添加到缓存表中
                     Printer().print_vn(f"[OK]更新渠道{channel}在该版本的适配成功!")
@@ -1755,7 +1775,7 @@ class SwInfoUtils:
             mm, original_feature, modified_feature, left_cut, right_cut)
         # 补充额外节点
         for key in patching_rule_dict:
-            if key in ["type", "original", "modified", "left_cut", "right_cut"]:
+            if key in ["original", "modified", "left_cut", "right_cut"]:
                 continue
             for simple_res_dict in simple_res_dicts:
                 simple_res_dict[key] = patching_rule_dict[key]
@@ -1775,7 +1795,7 @@ class SwInfoUtils:
             mm, original_feature, modified_feature, left_cut, right_cut)
         # 补充额外节点
         for key in patching_rule_dict:
-            if key in ["type", "original", "modified", "left_cut", "right_cut"]:
+            if key in ["original", "modified", "left_cut", "right_cut"]:
                 continue
             for simple_res_dict in simple_res_dicts:
                 simple_res_dict[key] = patching_rule_dict[key]
@@ -1869,7 +1889,7 @@ class SwInfoUtils:
 
         # 补充额外节点
         for key in patching_rule_dict:
-            if key in ["type", "original", "modified", "left_cut", "right_cut", "targets"]:
+            if key in ["original", "modified", "left_cut", "right_cut", "targets"]:
                 continue
             for res_dict in res_dicts:
                 res_dict[key] = patching_rule_dict[key]
@@ -1877,30 +1897,42 @@ class SwInfoUtils:
         return res_dicts
 
     @classmethod
-    def resolve_rule_dict_and_return_res_dicts(cls, mm, feature_rule_dict: dict) -> List[dict]:
+    def resolve_rule_dict_and_return_res_dicts(cls, cur_sw_ver, mm, feature_rule_dict: dict) -> Optional[List[dict]]:
         """
         各类型基本节点: 原始特征码original, 修改特征码modified, 截断字节长度???_cut(可选, 没有则认为截断长度为0)
         输出符合特征的字典列表, 字典节点: 截断后的地址偏移offset, 截断后的原始串original, 截断后的修改串modified, 特征字典中的其余节点
         """
+        patching_vers_dict = feature_rule_dict.get("ver_adaptations", {})
+        feature_vers = list(patching_vers_dict.keys())
+        compatible_ver = VersionUtils.pkg_find_compatible_version(cur_sw_ver, feature_vers)
+        if compatible_ver is None:
+            Logger().warning(f"当前版本 {cur_sw_ver} 无本条规则的适配版本!")
+            return None
+        ver_rule_dict = patching_vers_dict[compatible_ver]
+        if ver_rule_dict is None:
+            Logger().warning(f"当前版本 {cur_sw_ver} 对应的适配版本 {compatible_ver} 已弃用本条规则!")
+            return None
+
         res_dicts = []
+        inner_res_dicts = None
         if feature_rule_dict.get("type") == "simple":
-            simple_res_dicts = cls._resolve_simple_rule(mm, feature_rule_dict)
-            if isinstance(simple_res_dicts, list):
-                res_dicts.extend(simple_res_dicts)
-
+            inner_res_dicts = cls._resolve_simple_rule(mm, ver_rule_dict)
         elif feature_rule_dict.get("type") == "custom":
-            custom_res_dicts = cls._resolve_custom_rule(mm, feature_rule_dict)
-            if isinstance(custom_res_dicts, list):
-                res_dicts.extend(custom_res_dicts)
-
+            inner_res_dicts = cls._resolve_custom_rule(mm, ver_rule_dict)
         elif feature_rule_dict.get("type") == "jmp_offset":
-            jmp_offset_res_dicts = cls._resolve_jmp_offset_rule(mm, feature_rule_dict)
-            if isinstance(jmp_offset_res_dicts, list):
-                res_dicts.extend(jmp_offset_res_dicts)
-
+            inner_res_dicts = cls._resolve_jmp_offset_rule(mm, ver_rule_dict)
         else:
-            print("未知类型")
+            raise ValueError("未知类型")
 
+        if not isinstance(inner_res_dicts, list):
+            raise ValueError(f"解析规则 {feature_rule_dict} 时, 类型为 {feature_rule_dict.get('type')} 的规则返回的结果不是列表!")
+
+        for key in feature_rule_dict:
+            if key in ["type", "ver_adaptations"]:
+                continue
+            for inner_res_dict in inner_res_dicts:
+                inner_res_dict[key] = feature_rule_dict[key]
+        res_dicts.extend(inner_res_dicts)
         return res_dicts
 
     @staticmethod
