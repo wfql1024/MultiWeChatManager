@@ -1,4 +1,4 @@
-<h3 align="center"><img src="https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/refs/heads/main/external_res/JFMC.png" width="250px"></h3>
+<h3 align="center"><img src="https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/refs/heads/main/logo.png" width="250px"></h3>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Windows 7~11-blue">
