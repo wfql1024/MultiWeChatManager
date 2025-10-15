@@ -1,5 +1,6 @@
 import base64
 import glob
+import io
 import mmap
 import os
 import re
@@ -173,14 +174,13 @@ class SwInfoFunc:
                 # 第四级：遍历所有channel
                 for channel, channel_dict in channels.items():
                     # print(channel_dict)
-                    adaptations = channel_dict.get(RemoteCfg.FEATURES_ADAPT, {})
+                    adaptations = channel_dict.get(RemoteCfg.FEATURES, {})
                     print(adaptations)
                     # 遍历所有版本
-                    for version, version_list in adaptations.items():
-                        for item in version_list:
-                            addr = item.get("addr")
-                            if addr:
-                                addr_set.add(addr)
+                    for item in adaptations:
+                        addr = item.get("addr")
+                        if addr:
+                            addr_set.add(addr)
             except Exception as e:
                 print(e)
                 continue
@@ -1290,12 +1290,14 @@ class SwOperator:
             origin_path = SwInfoFunc.resolve_sw_path(sw, addr)
             name_wildcard = addr_patches_dict["wildcard"]
             new_path = os.path.join(os.path.dirname(origin_path), name_wildcard.replace("?", ordinal))
-            # 拷贝到新文件
-            shutil.copyfile(origin_path, new_path)
-            new_files.append(new_path)
-            # 修改新文件
-            patches = addr_patches_dict["patches"]
+            mm = None
+            f = None
             try:
+                # 拷贝到新文件
+                shutil.copyfile(origin_path, new_path)
+                new_files.append(new_path)
+                # 修改新文件
+                patches = addr_patches_dict["patches"]
                 with rw_lock.gen_wlock():
                     f = open(new_path, "r+b")
                     mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_WRITE)
@@ -1312,8 +1314,10 @@ class SwOperator:
                     os.remove(new_file)
                 return None, "创建共存程序失败!"
             finally:
-                mm.close()
-                f.close()
+                if isinstance(mm, mmap.mmap):
+                    mm.close()
+                if isinstance(f, io.IOBase):
+                    f.close()
         # 更新配置
         new_coexist_exe_name = exe_wildcard.replace("?", ordinal)
         SwInfoFunc.ensure_coexist_acc_formatted(sw, new_coexist_exe_name)
@@ -1914,7 +1918,6 @@ class SwInfoUtils:
             return None
 
         res_dicts = []
-        inner_res_dicts = None
         if feature_rule_dict.get("type") == "simple":
             inner_res_dicts = cls._resolve_simple_rule(mm, ver_rule_dict)
         elif feature_rule_dict.get("type") == "custom":
@@ -2047,7 +2050,8 @@ class SwInfoUtils:
             if p == "??":
                 original_regex_bytes += b"(.)"
                 if r == "??":
-                    repl_bytes += b"\\" + str(group_count).encode()
+                    # repl_bytes += b"\\" + str(group_count).encode()
+                    repl_bytes += f"\\g<{group_count}>".encode()
                     modified_regex_bytes += b"(.)"
                 elif r == "!!":
                     repl_bytes += b"!"
