@@ -1,0 +1,19 @@
+# 输出文件
+/dist/
+
+# 日志文件
+*.log
+
+# IDE 配置
+/.idea/
+*.iml
+
+/node_modules/
+/target/
+/package-lock.json
+
+
+# Rust build output
+/src-tauri/target
+/src-tauri/gen
+/src-tauri/tauri-build
