@@ -3,12 +3,17 @@ import glob
 import json
 import os
 import random
+import threading
 import time
 from datetime import datetime
 from tkinter import messagebox
 from unittest import TestCase
 
 import psutil
+import win32api
+import win32con
+import win32gui
+import win32process
 
 from functions import subfunc_file
 from functions.sw_func import SwInfoFunc, SwOperator, SwInfoUtils
@@ -392,3 +397,82 @@ class Test(TestCase):
         print(btn.__dict__)
 
         tk_root.mainloop()
+
+    @staticmethod
+    def test_postmessage_restore():
+        """方案1：用 PostMessage 异步恢复窗口"""
+        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        print("==> 测试 PostMessage 异步恢复窗口")
+
+        win32gui.PostMessage(hwnd, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)
+        win32gui.PostMessage(hwnd, win32con.WM_SETFOCUS, 0, 0)
+        win32gui.SetForegroundWindow(hwnd)
+        print("窗口已发送恢复与前台请求")
+
+    @staticmethod
+    def test_invoke_threadsafe():
+        """方案2：模拟 Qt 主线程调用（仅演示结构）"""
+        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        print("==> 测试 Qt 主线程安全调用（示意）")
+
+        # 在真实 PyQt 程序中应使用 QMetaObject.invokeMethod()
+        # 这里只模拟主线程执行的逻辑
+        def show_window():
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            win32gui.SetForegroundWindow(hwnd)
+            print("窗口在主线程中被恢复并激活")
+
+        threading.Timer(0, show_window).start()
+
+    @staticmethod
+    def test_foreground_external():
+        """方案3：唤起外部 Qt 程序窗口"""
+        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        print("==> 测试外部程序窗口唤起")
+
+        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        try:
+            win32gui.SetForegroundWindow(hwnd)
+        except Exception as e:
+            print("前台置顶失败:", e)
+            win32gui.FlashWindow(hwnd, True)
+        else:
+            print("窗口已置顶")
+
+    @staticmethod
+    def test_async_thread_postmessage():
+        """方案4：子线程中执行异步 PostMessage"""
+        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        print("==> 测试子线程中执行 PostMessage")
+
+        def worker():
+            print("[子线程] 开始发送窗口恢复消息")
+            win32gui.PostMessage(hwnd, win32con.WM_SHOWWINDOW, 1, 0)
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            win32gui.SetForegroundWindow(hwnd)
+            print("[子线程] 窗口唤起完成")
+
+        threading.Thread(target=worker, daemon=True).start()
+        time.sleep(0.5)  # 给线程时间完成
+
+    @staticmethod
+    def test_attach_thread_input():
+        """方案5：使用 AttachThreadInput 提升前台权限"""
+        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        print("==> 测试 AttachThreadInput 方式")
+
+        try:
+            fg_thread = win32process.GetWindowThreadProcessId(win32gui.GetForegroundWindow())[0]
+            this_thread = win32api.GetCurrentThreadId()
+            win32process.AttachThreadInput(fg_thread, this_thread, True)
+
+            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+            win32gui.SetForegroundWindow(hwnd)
+            print("窗口已通过 AttachThreadInput 唤起")
+
+        except Exception as e:
+            print("AttachThreadInput 失败:", e)
+
+        finally:
+            win32process.AttachThreadInput(fg_thread, this_thread, False)
+            print("已解除线程输入附加")

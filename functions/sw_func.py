@@ -30,6 +30,7 @@ from public.global_members import GlobalMembers
 from public.strings import NEWER_SYS_VER
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
 from utils.better_wx.inner_utils import patt2hex, custom_wildcard_tokenize
+from utils.file_utils import MMap2PeFile
 from utils.encoding_utils import VersionUtils, PathUtils, CryptoUtils, ByteUtils
 from utils.file_utils import rw_lock
 from utils.hwnd_utils import HwndGetter, Win32HwndGetter
@@ -1863,13 +1864,21 @@ class SwInfoUtils:
                     if target_addr is None:
                         Logger().warning(f"某个目标特征未扫描到匹配串, 无目标地址")
                         return []  # 有某个目标地址未获得, 填充失败
-                    print(f"目标地址: {target_addr}")
-                    next_instr_addr = start_addr + relative_pos + length
-                    print(f"下一条指令地址: {next_instr_addr}")
-                    offset = target_addr - next_instr_addr
+
+                    # # 原始计算方法, 没有进行foa转voa, 目标距离长会出现错误...
+                    # print(f"目标地址: {target_addr}")
+                    # next_instr_addr = start_addr + relative_pos + length
+                    # print(f"下一条指令地址: {next_instr_addr}")
+                    # offset = target_addr - next_instr_addr
+
+                    # 新方法使用pefile进行转换后再计算
+                    patcher = MMap2PeFile(mm)
+                    offset = patcher.calculate_jump_offset(target_addr, start_addr, relative_pos + length)
+                    print(f"offset: {offset}")
+
                     # 计算成小端序 4 字节 hex
                     offset_hex = ByteUtils.int_to_little_endian_hex(offset, 4)
-                    print(f"作差计算偏移并小端存储: {offset_hex}")
+                    print(f"偏移小端存储: {offset_hex}")
 
                     # 直接替换连续 !!
                     replace_parts = offset_hex.split()

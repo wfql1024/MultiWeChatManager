@@ -14,12 +14,12 @@ from public import Strings, Config
 from public.enums import LocalCfg, MultirunMode, CallMode
 from public.global_members import GlobalMembers
 from ui.exe_manager_ui import ExeManagerWndCreator
+from ui.sidebar_ui import SidebarUI
 from ui.wnd_ui import WndCreator
 from utils import widget_utils, sys_utils
 from utils.logger_utils import myprinter as printer
 
 
-# TODO: 用户可以自定义多开的全流程: 剩余: 登录结束后的流程
 # TODO: 主题色选择
 
 class MenuUI:
@@ -438,7 +438,7 @@ class MenuUI:
             if self.sidebar_ui is not None:
                 self.sidebar_ui.listener_running = False
                 self.sidebar_ui = None
-            # self.sidebar_wnd.destroy()
+            self.sidebar_wnd.destroy()
         else:
             print("创建", self.sidebar_wnd)
             new_label = "❯"
@@ -446,8 +446,8 @@ class MenuUI:
             if len(self.sidebar_menu_label) > 1:
                 subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_SIDEBAR: True})
             self.sidebar_menu_label = new_label
-            # self.sidebar_wnd = tk.Toplevel(self.root)
-            # self.sidebar_ui = sidebar_ui.SidebarUI(self.sidebar_wnd, "导航条")
+            self.sidebar_wnd = tk.Toplevel(self.root)
+            self.sidebar_ui = SidebarUI(self.sidebar_wnd, "导航条")
 
     def _set_wnd_scale(self, scale=None):
         if scale is None:
