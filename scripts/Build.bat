@@ -10,11 +10,12 @@ if "%~1"=="" (
 )
 
 set VERSION=%~1
+set APP_NAME=JhiFengMultiChat
 :: 设置变量简化路径
 :: 项目根目录
 set PROJ_ROOT=..
 :: 打包路径
-set DIST_PATH=%PROJ_ROOT%\dist\极峰多聊By%VERSION%
+set DIST_PATH=%PROJ_ROOT%\dist\%APP_NAME%By%VERSION%
 :: 额外资源路径
 set EXTERNAL_RES=%PROJ_ROOT%\external_res
 :: 元数据路径
@@ -55,7 +56,7 @@ move /Y "%DIST_PATH%\Updater.exe" "%EXTERNAL_RES%\"
 
 :: 使用 PyInstaller 创建正常版本（无窗口）
 "%VENV%\Scripts\pyinstaller" ^
-  --name="极峰多聊" ^
+  --name="%APP_NAME%" ^
   --windowed ^
   --icon="%EXTERNAL_RES%\JFMC.ico" ^
   --add-data="%EXTERNAL_RES%;external_res" ^
@@ -70,7 +71,7 @@ move /Y "%DIST_PATH%\Updater.exe" "%EXTERNAL_RES%\"
 
 
 :: 检查打包是否成功
-if exist "%DIST_PATH%\极峰多聊\极峰多聊.exe" (
+if exist "%DIST_PATH%\%APP_NAME%\%APP_NAME%.exe" (
     echo 正式版打包成功
 ) else (
     echo 正式版打包失败
@@ -78,7 +79,7 @@ if exist "%DIST_PATH%\极峰多聊\极峰多聊.exe" (
 )
 
 :: 复制快捷方式创建脚本到打包文件夹
-xcopy "click_me_to_create_lnk.bat" "%DIST_PATH%\极峰多聊\管理员身份创建快捷方式.bat*" /Y
+xcopy "click_me_to_create_lnk.bat" "%DIST_PATH%\%APP_NAME%\管理员身份创建快捷方式.bat*" /Y
 
 echo 打包完成！
 

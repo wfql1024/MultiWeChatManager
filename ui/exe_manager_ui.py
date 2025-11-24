@@ -8,10 +8,11 @@ from PIL import ImageTk, Image
 from components.composited_controls import ClassicAHT, CkbRow
 from components.custom_widgets import CustomCornerBtn, CustomBtn
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW, ProgressBarW
+from func_core.sw_func_core import SwInfoFuncCore, SwOperatorCore
 from functions import subfunc_file
-from functions.acc_func import AccInfoFunc
-from functions.sw_func import SwInfoFunc, SwOperator
-from public import Config
+from functions.acc_func import AccInfoFuncCore, Acc
+from functions.sw_func import Sw
+from public import Config, config
 from public.custom_classes import Condition, FlowControlError
 from public.enums import CfgStatus, AccKeys, RemoteCfg, LocalCfg
 from public.global_members import GlobalMembers
@@ -61,17 +62,29 @@ def switch_and_customize(switch_func, sw, mode, pc, channels, coexist_channel, o
 
 
 def _thread_to_load_patching_button(
-        instance, sw, mode, frame, tooltips,
+        instance, sw, mode, channels, frame, tooltips,
         switch_and_fresh_func, coexist_channel=None, ordinal=None):
     """
     提取的公共方法, 用以批量创建补丁按钮
     switch_and_fresh_func方法参数要求: 必须为mode, patch_channel, conflicts, coexist_channel, ordinal
     """
 
+    # # -------------------------
+    # # 顶层函数：纯耗时计算
+    # # -------------------------
     def _thread():
-        res, msg = SwInfoFunc.identify_dll_core(sw, mode, None, coexist_channel, ordinal)
-        instance.root.after(0, _update_ui, res, msg)
+        # time.sleep(0.1)
+        if channels is None and mode == RemoteCfg.REVOKE:
+            Sw(sw).load_main_patching_finished = False
+        # else:
+        #     while Sw(sw).load_main_patching_finished is not True:
+        #         time.sleep(0.5)
+        return Sw(sw).identify_patch(mode, channels, coexist_channel, ordinal)
 
+
+    # -------------------------
+    # UI更新方法，必须主线程执行
+    # -------------------------
     def _update_ui(res, msg):
         if not isinstance(res, dict):
             mode_text, = subfunc_file.get_remote_cfg(sw, mode, **{RemoteCfg.ALIAS: ""})
@@ -80,7 +93,9 @@ def _thread_to_load_patching_button(
             no_patch_btn.set_state(CustomBtn.State.DISABLED)
             widget_utils.set_widget_tip_when_(tooltips, no_patch_btn, {msg: True})
         else:
-            channels = []
+            all_channels = []
+            if channels is None and mode == RemoteCfg.REVOKE:
+                Sw(sw).available_revoke_channels = []
             for patch_channel, patch_channel_res_dict in res.items():
                 channel_des, = subfunc_file.get_remote_cfg(
                     sw, mode, RemoteCfg.CHANNELS, **{patch_channel: None})
@@ -95,13 +110,15 @@ def _thread_to_load_patching_button(
                 patch_status = patch_channel_res_dict["status"]
                 channel_msg = patch_channel_res_dict["msg"]
                 patch_btn = _create_btn_in_(frame, f"{channel_label}")
-                channels.append(patch_channel)
+                all_channels.append(patch_channel)
+                if channels is None and mode == RemoteCfg.REVOKE:
+                    Sw(sw).available_revoke_channels.append(patch_channel)
                 (patch_btn.set_bind_map(
                     **{"1": lambda pc=patch_channel: switch_and_fresh_func(
-                        mode, pc, channels, coexist_channel, ordinal),
+                        mode, pc, all_channels, coexist_channel, ordinal),
                        "2": lambda pc=patch_channel: switch_and_customize(
-                           switch_and_fresh_func, sw, mode, pc, channels, coexist_channel, ordinal)})
-                 .apply_bind(GlobalMembers.root_class.root))
+                           switch_and_fresh_func, sw, mode, pc, all_channels, coexist_channel, ordinal)})
+                 .apply_bind(GlobalMembers().root_class.root))
                 _pack_btn_right(patch_btn)
                 if patch_status is True:
                     patch_btn.set_state(CustomBtn.State.SELECTED)
@@ -110,8 +127,11 @@ def _thread_to_load_patching_button(
                     widget_utils.set_widget_tip_when_(tooltips, patch_btn, {channel_msg: True})
                 else:
                     widget_utils.set_widget_tip_when_(tooltips, patch_btn, {channel_tip: True})
+            if channels is None and mode == RemoteCfg.REVOKE:
+                Sw(sw).load_main_patching_finished = True
 
-    _thread()  # 3.5~4.5s
+    GlobalMembers().wait_res_to_run(
+        _update_ui, _thread)
 
     # 3.5~5.5s
     # if coexist_channel is None and ordinal is None:
@@ -125,7 +145,7 @@ def _thread_to_load_patching_button(
 class ExeManagerWndCreator:
     @staticmethod
     def open_exe_manager_wnd():
-        exe_manager_wnd = tk.Toplevel(GlobalMembers.root_class.root)
+        exe_manager_wnd = tk.Toplevel(GlobalMembers().root_class.root)
         ExeManagerWndUI(exe_manager_wnd, "共存与补丁")
 
 
@@ -134,6 +154,7 @@ class ExeManagerWndUI(SubToolWndUI):
         self.exe_manager_ui = None
         self.sw = None
         super().__init__(wnd, title)
+        print(config.get_scale_factor())
 
     def initialize_members_in_init(self):
         self.wnd_width, self.wnd_height = Config.EXE_MNG_WND_SIZE
@@ -164,10 +185,11 @@ class ExeManagerUI:
         self.scrollable_canvas = None
         self.classic_table_class = {}
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().root_class
         self.root = self.root_class.root
         self.login_ui = self.root_class.login_ui
         self.sw = self.login_ui.sw
+        self.available_revoke_channels = []
 
         self.wnd = wnd
         self.wnd.title(f"{self.sw} - {self.wnd.title()}")
@@ -261,8 +283,6 @@ class ExeManagerUI:
         main_header_frame.pack(side="top", fill="x")
         self.main_header_frame = main_header_frame
         self._build_header_frame()
-        self._reload_main_patching_buttons(RemoteCfg.REVOKE.value)
-        self._reload_main_patching_buttons(RemoteCfg.MULTI.value)
         # - 共存选择器
         self.cs_occupy_frame = ttk.Frame(self.main_frame)
         self.cs_occupy_frame.pack(side="top", fill="x")
@@ -285,10 +305,12 @@ class ExeManagerUI:
             self.btn_dict["rebuild_exe_btn"].copy())
         # 线程更新界面
         self.thread_to_refresh_coexist_selector_frame()
+        self._reload_main_patching_buttons(RemoteCfg.REVOKE.value)
+        self._reload_main_patching_buttons(RemoteCfg.MULTI.value)
 
     def reset_and_rescan(self):
-        all_patching_addresses = SwInfoFunc.extract_addresses_from_remote_cfg(self.sw)
-        all_patching_files = [SwInfoFunc.resolve_sw_path(self.sw, addr) for addr in all_patching_addresses]
+        all_patching_addresses = SwInfoFuncCore.extract_addresses_from_remote_cfg(self.sw)
+        all_patching_files = [SwInfoFuncCore.resolve_sw_path(self.sw, addr) for addr in all_patching_addresses]
         Printer().debug(f"所有补丁文件: {all_patching_files}")
         success, msg = file_utils.restore_files(all_patching_files)
         if success is not True:
@@ -296,12 +318,12 @@ class ExeManagerUI:
         else:
             messagebox.showinfo(
                 "成功", f"重置成功!"
-                        f"若仍有未识别的补丁, 请尝试重装{SwInfoFunc.get_sw_class(self.sw).label}")
+                        f"若仍有未识别的补丁, 请尝试重装{Sw(self.sw).label}")
             self.force_rescan_and_refresh()
 
     def force_rescan_and_refresh(self):
         """[重新扫描]按钮功能: 将不跳过已有的适配, 都进行扫描, 若扫描成功将覆盖原有适配"""
-        sw_cls = SwInfoFunc.get_sw_class(self.sw)
+        sw_cls = Sw(self.sw)
         sw_cls.force_rescan = True
         try:
             self.refresh_em_ui()
@@ -365,7 +387,7 @@ class ExeManagerUI:
             btn.destroy()
         _create_and_pack_vertical_line_btn_in_(frame)  # 分割线
         _thread_to_load_patching_button(
-            self, self.sw, mode, frame, self.tooltips,
+            self, self.sw, mode, None, frame, self.tooltips,
             self._thread_to_switch_main_dll_and_refresh)
 
     def _toggle_coexist_selector_visibility(self):
@@ -390,7 +412,7 @@ class ExeManagerUI:
                 self.coexist_channel_btn_dict[coexist_channel] = coexist_channel_btn
                 (coexist_channel_btn.set_bind_map(
                     **{"1": partial(
-                        SwInfoFunc.save_sw_setting_to_local_record_and_call_back, self.sw,
+                        Sw(self.sw).save_setting_and_do,
                         LocalCfg.COEXIST_MODE.value, coexist_channel,
                         self.thread_to_refresh_coexist_selector_frame)})
                  .apply_bind(self.root))
@@ -406,7 +428,7 @@ class ExeManagerUI:
         @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             # 获取当前的选择并决定新建按钮是否可用
-            now_coexist_channel, channels_res_dict, msg = SwInfoFunc.identity_and_get_available_coexist_mode(self.sw)
+            now_coexist_channel, channels_res_dict, _ = SwInfoFuncCore.identity_and_get_available_coexist_mode(self.sw)
             if len(channels_res_dict) == 0 or now_coexist_channel is None:
                 self.create_coexist_btn.set_state(CustomBtn.State.DISABLED)
             try:
@@ -425,14 +447,15 @@ class ExeManagerUI:
                 self.coexist_channel_btn_dict = {}
                 self.root.after(0, main_frame_do, channels_res_dict, now_coexist_channel)
 
-        threading.Thread(target=_thread).start()
+        # threading.Thread(target=_thread).start()
+        _thread()
 
     def _thread_to_create_coexist_exe(self):
         """[新建]按钮功能: 新建共存程序"""
 
         @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
-            new_exe, _ = SwOperator.create_coexist_exe_core(self.sw)
+            new_exe, _ = SwOperatorCore.create_coexist_exe_core(self.sw)
             self.root.after(0, self.classic_table_class[CfgStatus.USING].update_coexist_rows, [new_exe])
             self.root.after(0, self.classic_table_class[CfgStatus.HISTORY].del_coexist_rows, [new_exe])
 
@@ -444,8 +467,8 @@ class ExeManagerUI:
 
         @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
-            SwOperator.choose_channel_in_conflicts_and_switch_dll_to_(
-                self.sw, mode, channel, conflicts, coexist_channel, ordinal, target)
+            Sw(self.sw).choose_channel_in_conflicts_and_switch_dll_to_(
+                mode, channel, conflicts, coexist_channel, ordinal, target)
             self.root.after(0, self._reload_main_patching_buttons, mode)
 
         # threading.Thread(target=_thread).start()
@@ -457,7 +480,7 @@ class ExeManagerUI:
         @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             accounts = [item.split("/")[1] for item in items]
-            deleted_accs, failed_msg_dict = SwOperator.del_coexist_exe(self.sw, accounts)
+            deleted_accs, failed_msg_dict = SwOperatorCore.del_coexist_exe(self.sw, accounts)
             if len(failed_msg_dict) > 0:
                 msg_str = "\n".join(f"{acc}: {failed_msg_dict[acc]}" for acc in failed_msg_dict)
                 self.root.after(0, messagebox.showerror, "失败", f"失败账号及原因:\n{msg_str}")
@@ -472,7 +495,7 @@ class ExeManagerUI:
         @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
             accounts = [item.split("/")[1] for item in items]
-            exes = SwOperator.rebuild_coexist_exes(self.sw, accounts)
+            exes = SwOperatorCore.rebuild_coexist_exes(self.sw, accounts)
             # 刷新使用中的共存程序列表
             self.root.after(
                 0, self.classic_table_class[CfgStatus.USING.value].update_coexist_rows, exes)
@@ -521,7 +544,7 @@ class ExeManagerCAHT(ClassicAHT):
 
     def _create_coexist_exe_rows(self):
         self.rows.clear()
-        existed_coexist_accs = SwInfoFunc.get_sw_all_accounts_existed(self.sw, only="coexist")
+        existed_coexist_accs = Sw(self.sw).get_existed_accounts(only="coexist")
         if self.table_tag == CfgStatus.USING.value:
             # "当前使用"的数据来源: 获取所有的原生账号
             existed_coexist_accs.sort()
@@ -530,7 +553,7 @@ class ExeManagerCAHT(ClassicAHT):
             # "历史记录"的数据来源: 记录中的所有共存账号 - 当前使用的账号
             all_coexist_accs = [
                 acc for acc in subfunc_file.get_sw_acc_data(self.sw)
-                if AccInfoFunc.is_acc_coexist(self.sw, acc)
+                if Acc(self.sw, acc).is_coexist()
             ]
             history_accs = list(set(all_coexist_accs) - set(existed_coexist_accs))
             history_accs.sort()
@@ -606,7 +629,7 @@ class ExeManagerCkRow(CkbRow):
         account = self.item
 
         # 账号详情
-        details = AccInfoFunc.get_acc_details(self.sw, account)
+        details = AccInfoFuncCore.get_acc_details(self.sw, account)
         iid = details[AccKeys.IID]
         img = details[AccKeys.AVATAR]
         display_name = details[AccKeys.DISPLAY]
@@ -703,6 +726,33 @@ class ExeManagerCkRow(CkbRow):
 
     def _reload_coexist_patching_buttons(self, mode, coexist_channel, ordinal):
         """重新加载补丁区按钮"""
+
+        def _thread():
+
+            import time
+
+            MAX_WAIT = 30
+            start = time.time()
+            # 等待可用（list 且非空）
+            while time.time() - start < MAX_WAIT:
+                if Sw(self.sw).load_main_patching_finished is True:
+                    break
+                time.sleep(0.1)  # 避免死循环占满CPU
+
+            channels = Sw(self.sw).available_revoke_channels
+            Printer().debug(f"主程序已识别: {channels}")
+            # 超时或无效
+            if not isinstance(channels, list) or not channels:
+                Printer().warning("等待 available_revoke_channels 超时或无效")
+                return
+
+
+            # 把 UI 更新操作放入主线程
+            self.root.after(0, _thread_to_load_patching_button,
+                self, self.sw, RemoteCfg.REVOKE.value, channels, frame, self.tooltips,
+                self.thread_to_switch_coexist_dll_and_refresh, coexist_channel, ordinal
+            )
+
         frame = self.patching_frame[mode]
         for btn in self.patching_frame[mode].winfo_children():
             btn.destroy()
@@ -713,9 +763,8 @@ class ExeManagerCkRow(CkbRow):
             no_anti_revoke_btn.set_state(CustomBtn.State.DISABLED)
             widget_utils.set_widget_tip_when_(self.tooltips, no_anti_revoke_btn, {"未知共存索引": True})
         else:
-            _thread_to_load_patching_button(
-                self, self.sw, RemoteCfg.REVOKE.value, frame, self.tooltips,
-                self.thread_to_switch_coexist_dll_and_refresh, coexist_channel, ordinal)
+            threading.Thread(target=_thread).start()
+
 
     def thread_to_switch_coexist_dll_and_refresh(
             self, mode, channel, conflicts, coexist_channel, ordinal, target=None):
@@ -724,8 +773,8 @@ class ExeManagerCkRow(CkbRow):
 
         @ProgressBarW.with_progress_bar_wrapper_factory(self.progress_bar)
         def _thread():
-            SwOperator.choose_channel_in_conflicts_and_switch_dll_to_(
-                self.sw, mode, channel, conflicts, coexist_channel, ordinal, target)
+            Sw(self.sw).choose_channel_in_conflicts_and_switch_dll_to_(
+                mode, channel, conflicts, coexist_channel, ordinal, target)
             self.root.after(0, self._reload_coexist_patching_buttons, mode, coexist_channel, ordinal)
 
         # threading.Thread(target=_thread).start()

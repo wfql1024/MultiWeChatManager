@@ -284,6 +284,8 @@ class JsonUtils:
 
     @staticmethod
     def save_json(json_file, data):
+        if not os.path.exists(json_file):
+            os.makedirs(os.path.dirname(json_file), exist_ok=True)
         try:
             with rw_lock.gen_wlock():
                 with open(json_file, 'w', encoding='utf-8', errors="ignore") as f:

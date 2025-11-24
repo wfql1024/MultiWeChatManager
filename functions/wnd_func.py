@@ -10,7 +10,7 @@ import psutil
 import requests
 
 from functions import subfunc_file
-from functions.sw_func import SwInfoFunc
+from functions.sw_func import Sw
 from public.config import Config
 from public.enums import LocalCfg
 from utils import image_utils, decrypt
@@ -97,7 +97,7 @@ class DetailWndFunc:
         decrypted_mm_db_path = result
         print(f"解密成功，数据库临时存在：{decrypted_mm_db_path}")
 
-        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
+        data_path = Sw(sw).try_get_path(LocalCfg.DATA_DIR)
         excluded_folders, = subfunc_file.get_remote_cfg(
             sw, excluded_dir_list=None)
         excluded_folders = set(excluded_folders)
@@ -180,8 +180,10 @@ class DetailWndFunc:
             after()
             return
         # 线程启动获取详情
-        threading.Thread(target=DetailWndFunc._fetch_acc_detail_by_pid,
-                         args=(sw, pid, account, after)).start()
+        threading.Thread(
+            target=DetailWndFunc._fetch_acc_detail_by_pid,
+            args=(sw, pid, account, after)
+        ).start()
 
 
 class UpdateLogWndFunc:

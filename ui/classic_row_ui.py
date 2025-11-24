@@ -8,8 +8,10 @@ from PIL import ImageTk, Image
 from components.composited_controls import ClassicAHT, CkbRow
 from components.custom_widgets import CustomCornerBtn, CustomBtn
 from functions import subfunc_file
-from functions.acc_func import AccInfoFunc, AccOperator
-from functions.app_func import AppFunc
+from func_core.acc_func_core import AccInfoFuncCore
+from func_core.app_func_core import AppFuncCore
+from functions.acc_func import Acc
+from functions.sw_func import Sw
 from public import Config, Strings
 from public.custom_classes import Condition
 from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
@@ -42,7 +44,7 @@ class ClassicLoginUI:
     def __init__(self, result):
         self.classic_table_class = {}
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
         self.login_ui = self.root_class.login_ui
         self.sw = self.login_ui.sw
@@ -112,7 +114,7 @@ class AccLoginCAHT(ClassicAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.sw = None
-        self.data_src = None
+        self.data_src = []
         super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
@@ -134,7 +136,7 @@ class AccLoginCAHT(ClassicAHT):
         priority = {}
         row_ids = self.data_src
         for row_id in row_ids:
-            priority[row_id] = 1 if AccInfoFunc.is_acc_coexist(self.sw, row_id) else 0
+            priority[row_id] = 1 if Acc(self.sw, row_id).is_coexist() else 0
         # 补充代码，通过priority对row_ids进行排序
         sorted_row_ids = sorted(row_ids, key=lambda x: (priority[x], x), reverse=True)
         for row_id in sorted_row_ids:
@@ -184,10 +186,10 @@ class AccLoginCR(CkbRow):
     def _create_acc_row(self):
         account = self.item
         login_status = self.table_tag
-        sign_visible: bool = AppFunc.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
+        sign_visible: bool = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
         start_time = time.time()
 
-        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw)
+        curr_config_acc = Sw(self.sw).get_last_login_acc()
 
         # 未登录账号中，隐藏的账号不显示
         hidden, = subfunc_file.get_sw_acc_data(self.sw, account, hidden=None)
@@ -195,7 +197,7 @@ class AccLoginCR(CkbRow):
             self.hidden = True
             return
         # 账号详情
-        details = AccInfoFunc.get_acc_details(self.sw, account)
+        details = AccInfoFuncCore.get_acc_details(self.sw, account)
         iid = details[AccKeys.IID]
         img = details[AccKeys.AVATAR]
         wrapped_display_name = details[AccKeys.WRAP_DISPLAY]
@@ -239,7 +241,7 @@ class AccLoginCR(CkbRow):
          .apply_bind(self.root))
         _pack_btn(acc_btn)
         # 账号标签: 账号含有互斥体, 则使用红色字体
-        sign_visible: bool = AppFunc.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
+        sign_visible: bool = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
         if has_mutex and sign_visible:
             try:
                 self.item_label = ttk.Label(
@@ -279,6 +281,6 @@ class AccLoginCR(CkbRow):
             self.root,
             avatar_label,
             **{"1": partial(WndCreator.open_acc_detail, iid, self.login_ui),
-               "2": partial(AccOperator.switch_to_sw_account_wnd, iid)}
+               "2": partial(self.login_ui.to_switch_account_wnd, iid)}
         )
         print(f"加载 {account} 行用时{time.time() - start_time:.4f}秒")

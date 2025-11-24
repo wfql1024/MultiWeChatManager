@@ -14,7 +14,7 @@ from public import Config
 from components.composited_controls import RadioTreeView
 from components.custom_widgets import CustomCornerBtn
 from functions import subfunc_file
-from functions.acc_func import AccInfoFunc
+from functions.acc_func import AccInfoFuncCore, Acc
 from public.enums import OnlineStatus
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
@@ -53,7 +53,7 @@ class SidebarUI:
         self.wnd = wnd
         self.title = title
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
 
         self.bar_hwnd = None
@@ -612,8 +612,8 @@ class SidebarTree(RadioTreeView, ABC):
 
                 # display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)
                 # 获取头像图像
-                linked_acc = AccInfoFunc.get_real_acc(sw, acc)
-                _, img = AccInfoFunc.get_acc_avatar_from_files(sw, linked_acc)
+                linked_acc = Acc(sw, acc).get_linked_real_acc()
+                _, img = AccInfoFuncCore.get_acc_avatar_from_files(sw, linked_acc)
                 img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(img)
                 self.photo_images.append(photo)

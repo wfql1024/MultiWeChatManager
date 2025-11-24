@@ -5,11 +5,14 @@ from tkinter import ttk, messagebox
 
 from components.custom_widgets import CustomCornerBtn
 from components.widget_wrappers import ScrollableCanvasW, ProgressBarW
+from func_core.sw_func_core import SwOperatorCore
 from functions import subfunc_file
-from functions.acc_func import AccInfoFunc, AccOperator
-from functions.app_func import AppFunc
+from func_core.acc_func_core import AccInfoFuncCore, AccOperatorCore
+from func_core.app_func_core import AppFuncCore
+from functions.acc_func import Acc
+from functions.app_func import App
 from functions.main_func import MultiSwFunc
-from functions.sw_func import SwOperator, SwInfoFunc
+from functions.sw_func import Sw
 from public import Config, Strings
 from public.enums import OnlineStatus, LocalCfg
 from public.global_members import GlobalMembers
@@ -18,6 +21,7 @@ from ui.classic_row_ui import ClassicLoginUI
 from ui.exe_manager_ui import ExeManagerWndCreator
 from ui.treeview_row_ui import TreeviewLoginUI
 from ui.wnd_ui import WndCreator
+from utils.encoding_utils import StringUtils
 from utils.logger_utils import mylogger as logger, Printer
 from utils.logger_utils import myprinter as printer
 
@@ -66,16 +70,15 @@ class LoginUI:
         self.tab_frame = None
         self.sw = None
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.sw_classes = self.root_class.sw_classes
         self.progress_bar = self.root_class.progress_bar
         self.root = self.root_class.root
-        self.global_settings_value = self.root_class.global_settings_value
         self.hotkey_manager = self.root_class.hotkey_manager
 
     def init_login_ui(self):
         # 如果界面没有元素则自动刷新
-        self.sw = AppFunc.get_global_setting_value_by_local_record("login_tab")
+        self.sw = AppFuncCore.get_global_setting_value_by_local_record("login_tab")
         self.sw_class = self.sw_classes[self.sw]
         self.tab_frame = self.sw_class.frame
         if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
@@ -86,7 +89,7 @@ class LoginUI:
     def refresh(self, only_menu=False):
         """刷新菜单和界面"""
         print(f"登录页:刷新菜单与界面...")
-        self.sw = AppFunc.get_global_setting_value_by_local_record("login_tab")
+        self.sw = AppFuncCore.get_global_setting_value_by_local_record("login_tab")
         self.sw_class = self.sw_classes[self.sw]
         self.tab_frame = self.sw_class.frame
         self.widget_dict = self.sw_class.widget_dict
@@ -96,10 +99,10 @@ class LoginUI:
             messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
             self.root.destroy()
         # 路径检查
-        self.sw_class.data_dir = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.DATA_DIR)
-        self.sw_class.inst_path = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.INST_PATH)
-        self.sw_class.dll_dir = SwInfoFunc.try_get_path_of_(self.sw, LocalCfg.DLL_DIR)
-        self.sw_class.ver = SwInfoFunc.calc_sw_ver(self.sw)
+        self.sw_class.data_dir = Sw(self.sw).try_get_path(LocalCfg.DATA_DIR)
+        self.sw_class.inst_path = Sw(self.sw).try_get_path(LocalCfg.INST_PATH)
+        self.sw_class.dll_dir = Sw(self.sw).try_get_path(LocalCfg.DLL_DIR)
+        _ = Sw(self.sw).ver
         # 创建菜单
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
@@ -127,7 +130,7 @@ class LoginUI:
         @ProgressBarW.with_progress_bar_wrapper_factory(self.root_class.progress_bar)
         def _thread():
             self.refreshing = True
-            success, result = AccInfoFunc.get_sw_acc_list(self.sw)
+            success, result = AccInfoFuncCore.get_sw_acc_list(self.sw)
             if success is not True:
                 self.root.after(0, self.show_setting_error)
             else:
@@ -145,7 +148,7 @@ class LoginUI:
 
         bottom_frame = ttk.Frame(self.tab_frame, padding=Config.BTN_FRAME_PAD)
         bottom_frame.pack(side='bottom')
-        sw_ver = SwInfoFunc.calc_sw_ver(self.sw)
+        sw_ver = Sw(self.sw).ver
         if sw_ver is not None:
             sw_ver_label = ttk.Label(bottom_frame, text=f"{sw_ver}", foreground="grey")
             sw_ver_label.pack(side='bottom')
@@ -162,7 +165,7 @@ class LoginUI:
         _pack_btn_left(self.widget_dict["mng_btn"])
         self.widget_dict["mng_btn"].set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
 
-        prefer_coexist = AppFunc.get_global_setting_value_by_local_record(LocalCfg.PREFER_COEXIST)
+        prefer_coexist = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.PREFER_COEXIST)
         self.sw_class.is_original = not (prefer_coexist is False)  # 故意取反后切换
         self._switch_mode()
 
@@ -181,7 +184,7 @@ class LoginUI:
         self.acc_list_dict = acc_list_dict
         logins = self.sw_class.login_accounts = acc_list_dict["login"]
 
-        self.sw_class.view = SwInfoFunc.get_sw_setting_by_local_record(self.sw, "view")
+        self.sw_class.view = Sw(self.sw).get_saved_setting("view")
 
         if self.sw_class.view == "classic":
             # 经典视图没有做快速刷新功能
@@ -221,10 +224,10 @@ class LoginUI:
     def _to_manual_login(self):
         if self.sw_class.is_original is not True:
             print("共存登录")
-            SwOperator.start_thread_to_manual_login_coexist(self.sw)
+            SwOperatorCore.start_thread_to_manual_login_coexist(self.sw)
         else:
             print("原生登录")
-            SwOperator.start_thread_to_manual_login_origin(self.sw)
+            SwOperatorCore.start_thread_to_manual_login_origin(self.sw)
 
     def _to_mng_func(self):
         if self.sw_class.is_original is not True:
@@ -276,11 +279,11 @@ class LoginUI:
 
         # 进行静默获取头像及配置, 获取已登录的窗口hwnd, 获取多开模式
         def func():
-            AccOperator.silent_get_and_config(self.sw)
+            AccOperatorCore.silent_get_and_config(self.sw)
             logins = self.acc_list_dict[OnlineStatus.LOGIN]
-            AccInfoFunc.bind_main_wnd_to_accounts_in_sw(self.sw, logins)
-            SwInfoFunc.get_sw_multirun_mode(self.sw)
-            SwOperator.backup_sw_all_patching_files(self.sw)
+            AccInfoFuncCore.auto_bind_main_wnd_to_accounts_in_sw(self.sw, logins)
+            _ = Sw(self.sw).multirun_mode
+            SwOperatorCore.backup_sw_all_patching_files(self.sw)
             Printer().print_last()
 
         threading.Thread(target=func).start()
@@ -294,37 +297,36 @@ class LoginUI:
 
     """功能区"""
 
-    def to_manual_login(self):
-        """按钮：手动登录"""
-        print("手动登录")
-        try:
-            SwOperator.start_thread_to_manual_login_origin(self.sw)
-        except Exception as e:
-            logger.error(e)
+    # def to_manual_login(self):
+    #     """按钮：手动登录"""
+    #     print("手动登录")
+    #     try:
+    #         SwOperator.start_thread_to_manual_login_origin(self.sw)
+    #     except Exception as e:
+    #         logger.error(e)
 
     def to_auto_login(self, items):
         """登录所选账号"""
         login_dict = LoginUI._items_to_dict(items)
         Printer().vital("自动登录")
-        hide_wnd = self.global_settings_value.hide_wnd
+        hide_wnd = App().global_settings_value.hide_wnd
         Printer().print_vn(f"[INFO]登录前隐藏主窗口: {hide_wnd}")
         if hide_wnd is True:
             self.root.iconify()  # 最小化主窗口
         try:
-            AccOperator.start_login_accounts_thread(login_dict)
+            AccOperatorCore.start_login_accounts_thread(login_dict)
         except Exception as e:
             logger.error(e)
 
     def to_create_config(self, items):
         """按钮：创建或重新配置"""
         accounts = [items.split("/")[1] for items in items]
-        threading.Thread(target=AccOperator.open_sw_and_ask,
-                         args=(self.sw, accounts[0])).start()
+        threading.Thread(target=Acc(self.sw, accounts[0]).create_config).start()
 
     @staticmethod
     def to_create_starter(items):
         sw_accounts_dict = LoginUI._items_to_dict(items)
-        success, err = AccOperator.create_starter_lnk_for_accounts(sw_accounts_dict)
+        success, err = AccOperatorCore.create_starter_lnk_for_accounts(sw_accounts_dict)
         if success is True:
             messagebox.showinfo("提示", "创建成功")
         else:
@@ -333,10 +335,34 @@ class LoginUI:
 
     def to_quit_accounts(self, items):
         """退出所选账号"""
-        accounts = [item.split("/")[1] for item in items]
-        answer = AccOperator.quit_selected_accounts(self.sw, accounts)
-        if answer is True:
+        accounts_selected = [item.split("/")[1] for item in items]
+        sw = self.sw
+        accounts_to_quit = []
+        accounts_dict = {}
+        for acc in accounts_selected:
+            display_name = AccInfoFuncCore.get_acc_origin_display_name(sw, acc)
+            cleaned_display_name = StringUtils.clean_texts(display_name)
+            accounts_dict[acc] = cleaned_display_name
+            accounts_to_quit.append(f"[{acc}: {cleaned_display_name}]")
+        accounts_to_quit_str = "\n".join(accounts_to_quit)
+        if messagebox.askokcancel(
+                "提示", f"确认退登：\n{accounts_to_quit_str}？"):
+            try:
+                quited_accounts = AccOperatorCore.quit_accounts(sw, accounts_selected)
+                quited_accounts_str_list = []
+                for quited_account in quited_accounts:
+                    display_name = accounts_dict[quited_account]
+                    quited_accounts_str_list.append(f"{quited_account}: {display_name}")
+                quited_accounts_text = "\n".join(quited_accounts_str_list)
+                messagebox.showinfo("提示", f"已退登：\n{quited_accounts_text}")
+            except Exception as e:
+                logger.error(e)
             self.refresh_frame(self.sw)
+
+    def to_switch_account_wnd(self, item):
+        """切换所选账号的窗口"""
+        account = item.split("/")[1]
+        Acc(self.sw, account).show_wnd()
 
     @staticmethod
     def _items_to_dict(items):

@@ -92,7 +92,7 @@ class QueueWithUpdate(queue.Queue):
     def put(self, item, block=True, timeout=None):
         """重写入队方法，入队时立即更新状态栏"""
         super().put(item, block, timeout)
-        root = GlobalMembers.root_class.root
+        root = GlobalMembers().get_root_class().root
         root.after(0, self.update_callback)  # 入队后，立即触发更新状态栏
 
     def get(self, block=True, timeout=None):

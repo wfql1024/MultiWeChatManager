@@ -7,8 +7,8 @@ from PIL import Image, ImageTk
 from components.composited_controls import TreeviewAHT
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
 from functions import subfunc_file
-from functions.acc_func import AccInfoFunc
-from functions.app_func import AppFunc
+from functions.acc_func import AccInfoFuncCore, Acc
+from func_core.app_func_core import AppFuncCore
 from public import Config
 from public.custom_classes import Condition
 from public.enums import AccKeys
@@ -53,7 +53,7 @@ class AccManagerUI:
         self.tree_class = {}
         self.frame_dict = {}
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
         self.wnd = wnd
         self.tab_frame = frame
@@ -228,7 +228,7 @@ class AccManagerTAHT(TreeviewAHT):
         # print(f"self.wnd={self.wnd}")
         self.columns = (" ", "快捷键", "隐藏", "自启动", "账号标识", "昵称")
         self.main_frame = self.parent_class.frame_dict[self.table_tag]
-        sort_str = AppFunc.get_global_setting_value_by_local_record(f"{self.table_tag}_sort")
+        sort_str = AppFuncCore.get_global_setting_value_by_local_record(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
@@ -270,16 +270,17 @@ class AccManagerTAHT(TreeviewAHT):
                     continue
 
                 # 账号详情
-                details = AccInfoFunc.get_acc_details(sw, acc)
-                img = details[AccKeys.AVATAR]
-                display_name = details[AccKeys.DISPLAY]
-                hotkey = details[AccKeys.HOTKEY]
-                hidden = details[AccKeys.HIDDEN]
-                auto_start = details[AccKeys.AUTO_START]
-                nickname = details[AccKeys.NICKNAME]
+                details = Acc(sw, acc).get_details()
+                img:Image = details.get(AccKeys.AVATAR)
+                display_name = details.get(AccKeys.DISPLAY, None)
+                hotkey = details.get(AccKeys.HOTKEY, None)
+                hidden = details.get(AccKeys.HIDDEN, None)
+                auto_start = details.get(AccKeys.AUTO_START, None)
+                nickname = details.get(AccKeys.NICKNAME, None)
+
                 # 对详情数据进行处理
                 display_name = "  " + display_name
-                hotkey = hotkey if hotkey != "" else "-"
+                hotkey = hotkey if hotkey else "-"
                 hidden = "√" if hidden is True else "-"
                 auto_start = "√" if auto_start is True else "-"
                 nickname = nickname if nickname else "请获取数据"
@@ -336,4 +337,4 @@ class AccManagerTAHT(TreeviewAHT):
         table_tag = self.table_tag
         col = self.default_sort["col"]
         is_asc_after = self.default_sort["is_asc"]
-        AppFunc.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
+        AppFuncCore.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")

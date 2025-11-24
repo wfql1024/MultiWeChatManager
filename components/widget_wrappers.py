@@ -23,7 +23,7 @@ class ProgressBarW:
     @staticmethod
     def with_progress_bar_wrapper_factory(progress_bar):
         """将进度条传入, 返回一个装饰器, 这个装饰器将对装饰的函数过程收尾添加进度条的展示和结束."""
-        root = GlobalMembers.root_class.root
+        root = GlobalMembers().get_root_class().root
 
         def decorator(func):
             def wrapper(*args, **kwargs):
@@ -435,7 +435,7 @@ class SubToolWndUI:
         self.wnd = wnd
         self.title = title
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
 
         self.initialize_members_in_init()

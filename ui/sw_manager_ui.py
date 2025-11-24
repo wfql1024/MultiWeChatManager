@@ -7,8 +7,8 @@ from PIL import Image, ImageTk
 from components.composited_controls import TreeviewAHT
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
 from functions import subfunc_file
-from functions.app_func import AppFunc
-from functions.sw_func import SwInfoFunc
+from func_core.app_func_core import AppFuncCore
+from functions.sw_func import Sw
 from public import Config
 from public.custom_classes import Condition
 from public.enums import RemoteCfg, LocalCfg, SwStates
@@ -51,7 +51,7 @@ class SwManagerUI:
         self.tree_class = {}
         self.frame_dict = {}
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
         self.wnd = wnd
         self.tab_frame = frame
@@ -227,7 +227,7 @@ class SwManagerTAHT(TreeviewAHT):
         # print(f"self.wnd={self.wnd}")
         self.data_src = self.parent_class.sw_list
         self.columns = (" ", "状态", "版本", "安装路径", "存储路径", "DLL路径")
-        sort_str = AppFunc.get_global_setting_value_by_local_record(f"{self.table_tag}_sort")
+        sort_str = AppFuncCore.get_global_setting_value_by_local_record(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.sort["col"], self.sort["is_asc"] = sort_str.split(",")
@@ -260,13 +260,13 @@ class SwManagerTAHT(TreeviewAHT):
         for sw in sw_list:
             if sw == "global":
                 continue
-            state = SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.STATE, SwStates)
+            state = Sw(sw).get_saved_setting(LocalCfg.STATE, SwStates)
             if table_tag == "enable" and (state != SwStates.VISIBLE and state != SwStates.HIDDEN):
                 continue
             if table_tag == "disable" and state != SwStates.DISABLED:
                 continue
 
-            display_name = SwInfoFunc.get_sw_origin_display_name(sw)
+            display_name = Sw(sw).label
             f_display_name = " " + display_name
             inst_path, data_dir, dll_dir = subfunc_file.get_settings(
                 sw,
@@ -274,9 +274,9 @@ class SwManagerTAHT(TreeviewAHT):
                 data_dir=None,
                 dll_dir=None
             )
-            version = SwInfoFunc.calc_sw_ver(sw)
+            version = Sw(sw).ver
             # 获取平台图像
-            img = SwInfoFunc.get_sw_logo(sw)
+            img = Sw(sw).logo
             img = img.resize(Config.AVT_SIZE, Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(img)
             self.photo_images.append(photo)
@@ -324,4 +324,4 @@ class SwManagerTAHT(TreeviewAHT):
         table_tag = self.table_tag
         col = self.default_sort["col"]
         is_asc_after = self.default_sort["is_asc"]
-        AppFunc.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
+        AppFuncCore.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")

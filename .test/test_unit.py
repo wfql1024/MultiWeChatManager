@@ -15,10 +15,11 @@ import win32con
 import win32gui
 import win32process
 
+from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
 from functions import subfunc_file
-from functions.sw_func import SwInfoFunc, SwOperator, SwInfoUtils
+from functions.sw_func import Sw
 from public import Config
-from public.enums import MultirunMode, LocalCfg
+from public.enums import MultirunMode, LocalCfg, RemoteCfg
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
 from utils.hwnd_utils import Win32HwndGetter, HwndGetter
 
@@ -45,7 +46,7 @@ class Test(TestCase):
     def test_get_cfg_files(self):
         sw = "WeChat"
         acc = "wxid_t2dchu5zw9y022"
-        data_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
+        data_path = Sw(sw).try_get_path(LocalCfg.DATA_DIR)
         if not data_path:
             return False, "无法获取WeChat数据路径"
         # config_path_suffix, cfg_basename_list = subfunc_file.get_remote_cfg(
@@ -55,7 +56,7 @@ class Test(TestCase):
         if not isinstance(config_addresses, list):
             return False, "无法获取登录配置文件地址"
         for config_address in config_addresses:
-            origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, config_address)
+            origin_cfg_path = SwInfoFuncCore.resolve_sw_path(sw, config_address)
             acc_cfg_path = os.path.join(os.path.dirname(origin_cfg_path), f"{acc}_{os.path.basename(origin_cfg_path)}")
             acc_cfg_path = acc_cfg_path.replace("\\", "/")
             print("新方法:")
@@ -89,7 +90,7 @@ class Test(TestCase):
         files_to_delete = []
 
         for addr in config_addresses:
-            origin_cfg_path = SwInfoFunc.resolve_sw_path(sw, addr)
+            origin_cfg_path = SwInfoFuncCore.resolve_sw_path(sw, addr)
             origin_cfg_dir = os.path.dirname(origin_cfg_path)
             origin_cfg_basename = os.path.basename(origin_cfg_path)
             acc_cfg_path_glob_wildcard = os.path.join(origin_cfg_dir, f"*_{origin_cfg_basename}")
@@ -182,7 +183,7 @@ class Test(TestCase):
         print(f"用时: {time.time() - start_time}")
 
     def test_resolve_addr(self):
-        path = SwInfoFunc.resolve_sw_path("Weixin", "%dll_dir%/Weixin.dll")
+        path = SwInfoFuncCore.resolve_sw_path("Weixin", "%dll_dir%/Weixin.dll")
         print(path)
 
     def test_convert_hex_to_list_and_align_modified_to_original(self):
@@ -210,7 +211,7 @@ class Test(TestCase):
 
         for i, case in enumerate(tests, 1):
             print(f"\n=== Test Case {i} ===")
-            result = SwInfoUtils.convert_hex_to_list_and_align_modified_to_original(
+            result = SwInfoFuncCore.convert_hex_to_list_and_align_modified_to_original(
                 case["original"],
                 case["modified"],
                 left_cut=case.get("left_cut", 0),
@@ -223,8 +224,13 @@ class Test(TestCase):
                 print(f"Original List: {listed_orig}")
                 print(f"Modified List: {listed_mod}")
 
+    def test_get_relations_of_channel(self):
+
+        res = SwOperatorCore.get_relations_of_channel("Weixin", RemoteCfg.REVOKE, "custom_alert")
+        print(res)
+
     def test_get_login_hwnds_of_sw(self):
-        hwnds = SwInfoFunc.get_login_hwnds_of_sw("Weixin")
+        hwnds = SwInfoFuncCore.get_login_hwnds_of_sw("Weixin")
         print(hwnds)
 
     def test_get_hwnds_sorted_by_zOrder(self):
@@ -241,24 +247,24 @@ class Test(TestCase):
             print(sw_hwnd, class_name)
 
     def test_identify_dll(self):
-        SwInfoFunc.identify_dll_core("Weixin", "anti-revoke")
+        Sw("Weixin").identify_patch("anti-revoke")
 
     def test_identify_coexist_dll(self):
-        res = SwInfoFunc.identify_dll_core("WeChat", "anti-revoke", None, "default", "1")
+        res = Sw("WeChat").identify_patch("anti-revoke", None, "default", "1")
         print(res)
 
     def test_switch_dll(self):
-        SwOperator.switch_dll_core("Weixin", "anti-revoke", "alert")
+        SwOperatorCore.switch_dll_core("Weixin", "anti-revoke", "alert")
 
     def test_update_adaptation_from_remote_to_cache(self):
-        SwInfoFunc._update_adaptation_from_remote_to_cache("QQNT", "anti-revoke")
+        SwInfoFuncCore._update_adaptation_from_remote_to_cache("QQNT", "anti-revoke")
 
     def test_get_data(self):
         data = subfunc_file.get_remote_cfg("Weixin", "coexist", "channels", "default", "patch_wildcard")
         print(data)
 
     def test_create_coexist(self):
-        SwOperator.create_coexist_exe_core("WXWork", "1")
+        SwOperatorCore.create_coexist_exe_core("WXWork", "1")
 
     def test_expand_records(self):
         def expand_records(data):
@@ -476,3 +482,8 @@ class Test(TestCase):
         finally:
             win32process.AttachThreadInput(fg_thread, this_thread, False)
             print("已解除线程输入附加")
+
+    def test_use_root_config(self):
+        data = subfunc_file.get_root_cfg()
+        subfunc_file.update_root_cfg("user_path", r".\user_files")
+        print(data)

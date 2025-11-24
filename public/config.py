@@ -1,9 +1,10 @@
-import configparser
 import ctypes
+import json
 import os
 import platform
 import tkinter as tk
 import winreg
+from pathlib import Path
 
 from public.enums import LocalCfg, SwEnum, SwStates, MultirunMode
 
@@ -19,15 +20,15 @@ def get_scale_factor():
     - Windows 10 及以上：使用 ctypes 调用 shcore 获取缩放因子，更准确。
     - 其他情况：返回默认缩放因子 1。
     """
+    scale = "auto"
     # 获取用户设置的缩放因子
     proj_path = os.path.abspath(os.path.join(current_file_dir, '..'))
-    setting_ini_path = fr'{proj_path}\user_files\setting.ini'
-    scale = "auto"
-    if os.path.exists(setting_ini_path):
+    setting_json_path = fr'{proj_path}\user_files\local_setting.json'
+    if os.path.exists(setting_json_path):
         try:
-            config = configparser.ConfigParser()
-            config.read(setting_ini_path)
-            scale = int(config['global']['scale'])
+            with open(setting_json_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            scale = int(data.get("global", {}).get("scale"))
         except Exception as e:
             print(e)
             scale = "auto"
@@ -134,6 +135,7 @@ class Config:
     REMOTE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/remote_setting.json'
     CACHE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/cache_setting.json'
     LOCAL_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/local_setting.json'
+    ROOT_CONFIG_PATH = Path.home() / fr".JhiFengMultiChat/root_config.json"
 
     # 尺寸定义
     SF = SCALE_FACTOR

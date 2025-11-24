@@ -12,9 +12,10 @@ from PIL import ImageTk
 from components import CustomNotebook
 from components.widget_wrappers import StatusBarW, ProgressBarW
 from functions import subfunc_file
-from functions.acc_func import AccOperator
-from functions.app_func import AppFunc, AppInfo, GlobalSettings
-from functions.sw_func import SwInfoFunc, Sw
+from func_core.app_func_core import AppFuncCore
+from functions.acc_func import Acc
+from functions.app_func import App
+from functions.sw_func import Sw
 from public import Config, Strings
 from public.enums import LocalCfg, SwStates, RemoteCfg
 from public.global_members import GlobalMembers
@@ -55,8 +56,12 @@ class RootClass:
         self._acc_manager_ui = None
 
         # 全局化
-        GlobalMembers.root_class = self
-        self.root_class = self
+        GlobalMembers().root_class = self  # root_class可以通过GlobalMembers类获取
+        # 全局数据
+        self.sw_classes: dict = {}
+        self.remote_cfg_data = None
+        self.app = App()
+        self.app.root_class = self  # root_class可以通过App类获取
         # 程序参数
         self.debug = args.debug
         self.new = args.new
@@ -66,15 +71,10 @@ class RootClass:
         # 加载标志
         self.first_created_acc_ui = None
         self.finish_started = None
-        # 全局数据
-        self.sw_classes: dict = {}
-        self.remote_cfg_data = None
-        self.global_settings_value = None
-        self.global_settings_var = None
-        self.app_info = AppInfo()
 
         # 创建基本的窗口元素: 状态栏, 进度条, 主框架
         self.root = root
+        GlobalMembers().root = root
         self.root.withdraw()  # 初始化时隐藏主窗口
         self.root_frame.pack(expand=True, fill='both')
         if self.statusbar_ui is None or not self.statusbar_ui.status_bar.winfo_exists():
@@ -112,7 +112,7 @@ class RootClass:
         # -初次使用
         if self.new is True:
             self.root.after(3000, WndCreator.open_update_log)
-            self.root.after(3000, lambda: AppFunc.mov_backup(new=self.new))
+            self.root.after(3000, lambda: AppFuncCore.mov_backup(new=self.new))
 
     def _safe_set_icon(self):
         """
@@ -258,18 +258,14 @@ class RootClass:
 
         def _thread():
             self._ensure_file_resources_exists()
-            AppFunc.apply_proxy_setting()
+            AppFuncCore.apply_proxy_setting()
             self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
             if self.remote_cfg_data is None:
                 messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
                 self.root.destroy()
                 return
             self._set_tk_style()
-
-            self.global_settings_value = GlobalSettings()
-            self.global_settings_var = GlobalSettings()
             self.hotkey_manager = HotkeyManager()
-
             self.root.after(0, self.main_ui.initialize_in_root_main_ui)
 
         _thread()
@@ -279,7 +275,7 @@ class RootClass:
         """重新加载主窗口UI"""
 
         def _thread():
-            AppFunc.apply_proxy_setting()
+            AppFuncCore.apply_proxy_setting()
             self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
             if self.remote_cfg_data is None:
                 messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
@@ -293,8 +289,7 @@ class RootClass:
             self.login_ui = None
             self.acc_manager_ui = None
             self.sw_manager_ui = None
-            self.global_settings_value = GlobalSettings()
-            self.global_settings_var = GlobalSettings()
+            self.app = App.reinit()
             self.hotkey_manager = HotkeyManager()
 
             self.root.after(0, hwnd_utils.set_size_and_bring_tk_wnd_to_, self.root, *Config.ROOT_WND_SIZE)
@@ -337,7 +332,7 @@ class MainUI:
         self.sw_mng_frame = None
         self.scrollable_canvas = None
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
         self.wnd = wnd
         self.main_frame = frame
@@ -350,7 +345,7 @@ class MainUI:
         # self.progress_bar = TopProgressBar(self.top_bar_frame)
         self._load_root_nb_frame()
         threading.Thread(target=self._get_path_thread).start()
-        root_tab = AppFunc.get_global_setting_value_by_local_record(LocalCfg.ROOT_TAB)
+        root_tab = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.ROOT_TAB)
         self.root_nb_cls.select(root_tab)
 
     def _load_root_nb_frame(self):
@@ -364,7 +359,7 @@ class MainUI:
         self.login_nb_frame = ttk.Frame(root_nb_frm_pool)
         self.manage_nb_frame = ttk.Frame(root_nb_frm_pool)
 
-        self.used_refresh = AppFunc.get_global_setting_value_by_local_record(LocalCfg.USED_REFRESH)
+        self.used_refresh = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.USED_REFRESH)
         suffix = "" if self.used_refresh is True else Strings.REFRESH_HINT
         root_nb_cls.add("manage", f"管理{suffix}", self.manage_nb_frame)
         root_nb_cls.add("login", "登录", self.login_nb_frame)
@@ -396,7 +391,7 @@ class MainUI:
             return
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
-            state = SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.STATE, SwStates)
+            state = Sw(sw).get_saved_setting(LocalCfg.STATE, SwStates)
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             try:
@@ -413,7 +408,6 @@ class MainUI:
             print(f"更新{sw}的信息体...")
             if state == SwStates.VISIBLE:
                 sw_cls.frame = ttk.Frame(self.login_frm_pool)
-                sw_cls.label = SwInfoFunc.get_sw_origin_display_name(sw)
                 self.login_nb_cls.add(sw, sw_cls.label, sw_cls.frame)
             self.root_class.sw_classes[sw] = sw_cls
             self.sw_classes[sw] = sw_cls
@@ -429,15 +423,15 @@ class MainUI:
             return
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
-            state = SwInfoFunc.get_sw_setting_by_local_record(sw, LocalCfg.STATE, SwStates)
+            state = Sw(sw).get_saved_setting(LocalCfg.STATE, SwStates)
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             print(f"创建{sw}的信息体...")
             sw_cls = Sw(sw)
-            sw_cls.data_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DATA_DIR)
-            sw_cls.inst_path = SwInfoFunc.try_get_path_of_(sw, LocalCfg.INST_PATH)
-            sw_cls.dll_dir = SwInfoFunc.try_get_path_of_(sw, LocalCfg.DLL_DIR)
-            sw_cls.ver = SwInfoFunc.calc_sw_ver(sw)
+            sw_cls.data_dir = Sw(sw).try_get_path(LocalCfg.DATA_DIR)
+            sw_cls.inst_path = Sw(sw).try_get_path(LocalCfg.INST_PATH)
+            sw_cls.dll_dir = Sw(sw).try_get_path(LocalCfg.DLL_DIR)
+            _ = Sw(sw).ver
         Printer().print_last()
 
     def _on_tab_in_root_selected(self, click_time):
@@ -468,7 +462,7 @@ class MainUI:
             # 自动选择下一级标签
             manage_tab = self.manage_nb_cls.curr_tab_id
             if not manage_tab:
-                manage_tab = AppFunc.get_global_setting_value_by_local_record(LocalCfg.MNG_TAB)
+                manage_tab = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.MNG_TAB)
             try:
                 self.manage_nb_cls.select(manage_tab)
             except Exception as e:
@@ -490,7 +484,7 @@ class MainUI:
             # 自动选择下一级标签
             login_tab = self.login_nb_cls.curr_tab_id
             if not login_tab:
-                login_tab = AppFunc.get_global_setting_value_by_local_record(LocalCfg.LOGIN_TAB)
+                login_tab = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.LOGIN_TAB)
             try:
                 self.login_nb_cls.select(login_tab)
             except Exception as e:
@@ -566,7 +560,7 @@ class HotkeyManager:
 
         self.hotkey_map = {
         }
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
 
         self.listener_thread = None  # 监听线程
         self.stop_event = threading.Event()  # 用于控制线程退出
@@ -587,8 +581,7 @@ class HotkeyManager:
                     hotkey = details["hotkey"]
                     if hotkey is not None and hotkey != "":  # 确保 hotkey 不是 None 或 空字符串
                         hotkey_map[hotkey] = \
-                            lambda software=sw, account=acc: AccOperator.switch_to_sw_account_wnd(
-                                f"{software}/{account}")
+                            lambda software=sw, account=acc: Acc(software, account).show_wnd()
 
         # 更新映射
         self.hotkey_map = hotkey_map

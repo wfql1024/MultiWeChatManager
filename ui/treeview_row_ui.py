@@ -5,10 +5,12 @@ from tkinter import ttk
 from PIL import ImageTk, Image
 
 from components.composited_controls import TreeviewAHT
+from func_core.sw_func_core import SwInfoFuncCore
 from functions import subfunc_file
-from functions.acc_func import AccInfoFunc, AccOperator
-from functions.app_func import AppFunc
-from functions.sw_func import SwInfoFunc
+from func_core.acc_func_core import AccInfoFuncCore
+from func_core.app_func_core import AppFuncCore
+from functions.app_func import App
+from functions.sw_func import Sw
 from public import Config, Strings
 from public.custom_classes import Condition
 from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
@@ -22,7 +24,7 @@ from utils.widget_utils import TreeUtils
 class TreeviewLoginUI:
     def __init__(self, result):
         self.table_classes = {}
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
         self.login_ui = self.root_class.login_ui
 
@@ -113,7 +115,6 @@ class AccLoginTAHT(TreeviewAHT):
     def __init__(self, parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts):
         """用于展示不同登录状态列表的表格"""
         self.sw = None
-        self.global_settings_value = None
         self.can_quick_refresh = None
         self.login_ui = None
         self.root = None
@@ -122,17 +123,16 @@ class AccLoginTAHT(TreeviewAHT):
         super().__init__(parent_class, parent_frame, table_tag, title_text, major_btn_dict, *rest_btn_dicts)
 
     def initialize_members_in_init(self):
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
         self.login_ui = self.root_class.login_ui
         self.sw = self.login_ui.sw
         self.main_frame = self.parent_class.ui_frame[self.table_tag]
-        self.global_settings_value = self.root_class.global_settings_value
 
         # self.data_src = self.parent_class.acc_list_dict[self.table_tag]
-        self.sign_visible: bool = AppFunc.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
+        self.sign_visible: bool = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
         self.columns = (" ", "配置", "pid", "账号标识", "平台id", "昵称")
-        sort_str = SwInfoFunc.get_sw_setting_by_local_record(self.sw, f"{self.table_tag}_sort")
+        sort_str = Sw(self.sw).get_saved_setting(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
@@ -155,12 +155,12 @@ class AccLoginTAHT(TreeviewAHT):
         tree.column("昵称", anchor='center')
 
     def display_tree(self):
-        self.sign_visible: bool = self.root_class.global_settings_value.sign_vis
+        self.sign_visible: bool = App().global_settings_value.sign_vis
         tree = self.tree.nametowidget(self.tree)
         accounts = self.parent_class.acc_list_dict[self.table_tag]
         login_status = self.table_tag
 
-        curr_config_acc = AccInfoFunc.get_curr_wx_id_from_config_file(self.sw)
+        curr_config_acc = Sw(self.sw).get_last_login_acc()
 
         for account in accounts:
             # 未登录账号中，隐藏的账号不显示
@@ -168,7 +168,7 @@ class AccLoginTAHT(TreeviewAHT):
             if hidden is True and login_status == "logout":
                 continue
             # 账号详情
-            details = AccInfoFunc.get_acc_details(self.sw, account)
+            details = AccInfoFuncCore.get_acc_details(self.sw, account)
             iid = details[AccKeys.IID]
             img = details[AccKeys.AVATAR]
             display_name = details[AccKeys.DISPLAY]
@@ -211,7 +211,7 @@ class AccLoginTAHT(TreeviewAHT):
         if click_time == 1:
             WndCreator.open_acc_detail(item_id, self.login_ui)
         elif click_time == 2:
-            AccOperator.switch_to_sw_account_wnd(item_id)
+            self.login_ui.to_switch_account_wnd(item_id)
 
     def adjust_columns(self, wnd, columns_to_hide=None):
         tree = self.tree.nametowidget(self.tree)
@@ -235,4 +235,4 @@ class AccLoginTAHT(TreeviewAHT):
         table_tag = self.table_tag
         col = self.default_sort["col"]
         is_asc_after = self.default_sort["is_asc"]
-        SwInfoFunc.save_sw_setting_to_local_record_and_call_back(self.sw, f'{table_tag}_sort', f"{col},{is_asc_after}")
+        Sw(self.sw).save_setting_and_do(f'{table_tag}_sort', f"{col},{is_asc_after}")

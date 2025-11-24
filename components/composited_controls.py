@@ -234,7 +234,7 @@ class ActionableHeaderTable:
         self.major_btn_dict = major_btn_dict
         self.rest_btn_dicts = rest_btn_dicts
         # 其他的成员变量
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
         # 初始化成员变量
         self.initialize_members_in_init()
@@ -486,7 +486,7 @@ class CkbRow:
         self.checkbox_var = None
         self.row_frame = None
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
 
         # 变量

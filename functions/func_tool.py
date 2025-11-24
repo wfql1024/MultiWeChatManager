@@ -1,4 +1,4 @@
-from functions import sw_func_impl, acc_func_impl
+from func_core import acc_func_impl, sw_func_impl
 
 
 class FuncTool:

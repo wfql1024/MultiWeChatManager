@@ -3,7 +3,7 @@ import time
 from typing import Dict
 
 from functions import subfunc_file
-from functions.acc_func import AccInfoFunc, AccOperator
+from func_core.acc_func_core import AccInfoFuncCore, AccOperatorCore
 from public.enums import LocalCfg, SwStates, RemoteCfg
 from utils.logger_utils import Logger
 
@@ -52,7 +52,7 @@ class MultiSwFunc:
         print(f"设置了自启动：{accounts_to_auto_start}")
         # 获取已经登录的账号
         for sw in accounts_to_auto_start:
-            success, result = AccInfoFunc.get_sw_acc_list(sw)
+            success, result = AccInfoFuncCore.get_sw_acc_list(sw)
             if success is not True:
                 continue
             acc_list_dict, _ = result
@@ -77,7 +77,7 @@ class MultiSwFunc:
         print(login_dict)
         # 遍历登录需要自启但未登录的账号
         try:
-            AccOperator.start_login_accounts_thread(login_dict)
+            AccOperatorCore.start_login_accounts_thread(login_dict)
         except Exception as e:
             Logger().error(e)
             return

@@ -18,3 +18,5 @@ python -m pip install --upgrade comtypes --index-url http://mirrors.aliyun.com/p
 python -m pip install --upgrade uiautomation --index-url http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 python -m pip install --upgrade pywinauto --index-url http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
 python -m pip install --upgrade pymem --index-url http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+python -m pip install --upgrade readerwriterlock --index-url http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+python -m pip install --upgrade pystray --index-url http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com

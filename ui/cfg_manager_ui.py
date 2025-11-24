@@ -6,8 +6,8 @@ from PIL import ImageTk, Image
 
 from components.composited_controls import ClassicAHT, CkbRow
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
-from functions.acc_func import AccInfoFunc, AccOperator
-from functions.sw_func import SwInfoFunc
+from func_core.acc_func_core import AccInfoFuncCore, AccOperatorCore
+from functions.sw_func import Sw
 from public import Config
 from public.custom_classes import Condition
 from public.enums import CfgStatus, AccKeys
@@ -20,7 +20,7 @@ from utils.logger_utils import Logger, Printer
 class CfgManagerWndCreator:
     @staticmethod
     def open_cfg_manager_wnd():
-        cfg_manager_wnd = tk.Toplevel(GlobalMembers.root_class.root)
+        cfg_manager_wnd = tk.Toplevel(GlobalMembers().get_root_class().root)
         CfgManagerWndUI(cfg_manager_wnd, "配置管理")
 
 
@@ -48,7 +48,7 @@ class CfgManagerUI:
         self.scrollable_canvas = None
         self.classic_table_class = {}
 
-        self.root_class = GlobalMembers.root_class
+        self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
         self.login_ui = self.root_class.login_ui
         self.sw = self.login_ui.sw
@@ -107,7 +107,7 @@ class CfgManagerUI:
         """删除选中的账号的配置"""
         accounts = [item.split("/")[1] for item in items]
         Printer().debug(f"删除选中的账号的配置：{accounts}")
-        AccOperator.del_config_of_accounts(self.sw, accounts)
+        AccOperatorCore.del_config_of_accounts(self.sw, accounts)
         self.refresh_frame()
 
 
@@ -133,7 +133,7 @@ class CfgManagerCAHT(ClassicAHT):
 
     def _create_cfg_rows(self):
         # "当前使用"的数据来源: 获取所有的原生账号
-        origin_accs = SwInfoFunc.get_sw_all_accounts_existed(self.sw, only="origin")
+        origin_accs = Sw(self.sw).get_existed_accounts(only="origin")
 
         for row_id in origin_accs:
             table_tag = self.table_tag
@@ -180,7 +180,7 @@ class CfgManagerCR(CkbRow):
         account = self.item
 
         # 账号详情
-        details = AccInfoFunc.get_acc_details(self.sw, account)
+        details = AccInfoFuncCore.get_acc_details(self.sw, account)
         iid = details[AccKeys.IID]
         img = details[AccKeys.AVATAR]
         wrapped_display_name = details[AccKeys.WRAP_DISPLAY]

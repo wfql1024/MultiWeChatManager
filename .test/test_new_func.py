@@ -9,8 +9,9 @@ import uiautomation
 import win32con
 import win32gui
 
+from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
 from functions import subfunc_file, sw_func
-from functions.acc_func import AccOperator
+from func_core.acc_func_core import AccOperatorCore
 from functions.sw_func import SwInfoUtils, SwOperator
 from public import Config
 from ui.sidebar_ui import SidebarUI, WndProperties
@@ -179,7 +180,7 @@ class Test(TestCase):
 
     def test_get_all_sw_mutant_handles(self):
         sw = "Weixin"
-        mutant_handles = SwOperator.try_kill_mutex_if_need_and_return_remained_pids(sw)
+        mutant_handles = SwOperatorCore.try_kill_mutex_if_need_and_return_remained_pids(sw)
         Printer().debug(mutant_handles)
 
     def test_get_handles_by_pids_and_handle_name_wildcards(self):
@@ -212,12 +213,12 @@ class Test(TestCase):
             "92 A4 E5 9B 9E E4 BA 86 E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 BC 8C"
         ]
         features_tuple = (original_features, modified_features)
-        res = SwInfoUtils.search_pattern_dicts_by_original_and_modified(dll_path, features_tuple)
+        res = SwInfoFuncCore.search_pattern_dicts_by_original_and_modified(dll_path, features_tuple)
         print(res)
 
     def test_create_lnk_for_account(self):
-        AccOperator._create_starter_lnk_for_acc("WeChat", "wxid_5daddxikoccs22")
-        AccOperator._create_starter_lnk_for_acc("WeChat", "wxid_h5m0aq1uvr2f22")
+        AccOperatorCore._create_starter_lnk_for_acc("WeChat", "wxid_5daddxikoccs22")
+        AccOperatorCore._create_starter_lnk_for_acc("WeChat", "wxid_h5m0aq1uvr2f22")
 
     def test_uiautomation_control_wnd(self):
         """测试通过uiautomation来控制窗口"""

@@ -262,7 +262,7 @@ class RedirectText(io.TextIOBase):
         self.buffer = ""
         self.original_stdout = sys.stdout  # 保存原始标准输出
         self.logs = []  # 用于保存结构化的输出
-        self.root = GlobalMembers.root_class.root
+        self.root = GlobalMembers().get_root_class().root
 
     def print_direct(self, text: str):
         if self.original_stdout:

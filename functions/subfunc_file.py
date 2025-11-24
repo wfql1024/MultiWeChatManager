@@ -16,6 +16,58 @@ from utils.encoding_utils import CryptoUtils
 from utils.file_utils import JsonUtils, DictUtils
 from utils.logger_utils import mylogger as logger
 
+"""根配置"""
+
+
+def load_root_cfg() -> dict:
+    data = JsonUtils.load_json(Config.ROOT_CONFIG_PATH)
+    return data
+
+
+def save_root_cfg(data):
+    return JsonUtils.save_json(Config.ROOT_CONFIG_PATH, data)
+
+
+def clear_some_root_cfg(*addr) -> bool:
+    """
+    清空某平台的账号记录，在对平台重新设置后触发
+    :return: 是否成功
+    """
+    try:
+        print(f"清理{addr}处数据...")
+        data = load_root_cfg()
+        DictUtils.clear_nested_values(data, *addr)
+        save_root_cfg(data)
+        return True
+    except Exception as e:
+        logger.error(e)
+        return False
+
+
+def update_root_cfg(*front_addr, **kwargs) -> bool:
+    """更新账户信息到 JSON"""
+    try:
+        data = load_root_cfg()
+        success = DictUtils.set_nested_values(data, None, *front_addr, **kwargs)
+        save_root_cfg(data)
+        return success
+    except Exception as e:
+        logger.error(e)
+        return False
+
+
+def get_root_cfg(*front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
+    """
+    根据用户输入的变量名，获取对应的账户信息
+    :param front_addr: 前置地址，如：("wechat", "account1")
+    :param kwargs: 需要获取的键地址及其默认值（如 note="", nickname=None）
+    :return: 包含所请求数据的元组
+    """
+    data = load_root_cfg()
+    return DictUtils.get_nested_values(data, None, *front_addr, **kwargs)
+
+
+
 """获取远程配置，此配置只读，不提供修改方法"""
 
 
@@ -123,7 +175,7 @@ def get_remote_cfg(*pre_nodes: str, **kwargs) -> Union[Any, Tuple[Any, ...]]:
         return None
 
 
-"""额外配置"""
+"""缓存配置"""
 
 
 def load_cache_cfg() -> dict:
