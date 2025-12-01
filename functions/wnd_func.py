@@ -9,11 +9,13 @@ from tkinter import messagebox
 import psutil
 import requests
 
-from functions import subfunc_file
+from func_core.acc_func_core import AccInfoFuncCore
+from func_core.app_func_core import AppFuncCore
+from func_core.sw_func_core import SwInfoFuncCore
 from functions.sw_func import Sw
 from public.config import Config
-from public.enums import LocalCfg
-from utils import image_utils, decrypt
+from public.enums import LocalCfgKey, RemoteSwKey
+from utils import image_utils, decrypt, file_utils
 from utils.logger_utils import mylogger as logger
 from utils.logger_utils import myprinter as printer
 
@@ -97,9 +99,8 @@ class DetailWndFunc:
         decrypted_mm_db_path = result
         print(f"解密成功，数据库临时存在：{decrypted_mm_db_path}")
 
-        data_path = Sw(sw).try_get_path(LocalCfg.DATA_DIR)
-        excluded_folders, = subfunc_file.get_remote_cfg(
-            sw, excluded_dir_list=None)
+        data_path = Sw(sw).try_get_path(LocalCfgKey.DATA_DIR)
+        excluded_folders, = SwInfoFuncCore.get_remote_sw(sw, **{RemoteSwKey.EXCLUDED_DIRS: None})
         excluded_folders = set(excluded_folders)
         acc_folders = set(
             folder for folder in os.listdir(data_path)
@@ -123,7 +124,7 @@ class DetailWndFunc:
                     continue
                 if isinstance(result, list) and len(result) > 0:
                     user_name, alias = result[0]
-                    subfunc_file.update_sw_acc_data(sw, acc, alias=alias or user_name)
+                    AccInfoFuncCore.update_sw_acc_data(sw, acc, alias=alias or user_name)
                 else:
                     logger.warning(f"账号{acc}未能获取到微信号")
 
@@ -133,7 +134,7 @@ class DetailWndFunc:
                     continue
                 if isinstance(result, list) and len(result) > 0:
                     user_name, nickname = result[0]
-                    subfunc_file.update_sw_acc_data(sw, acc, nickname=nickname)
+                    AccInfoFuncCore.update_sw_acc_data(sw, acc, nickname=nickname)
                 else:
                     logger.warning(f"账号{acc}未能获取到昵称")
 
@@ -143,8 +144,9 @@ class DetailWndFunc:
                     continue
                 if isinstance(result, list) and len(result) > 0:
                     usr_name, url = result[0]
-                    origin_url, = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None)
-                    save_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg").replace('\\', '/')
+                    user_dir = AppFuncCore.get_user_dir()
+                    origin_url, = AccInfoFuncCore.get_sw_acc_data(sw, acc, avatar_url=None)
+                    save_path = os.path.join(user_dir, sw, f"{acc}", f"{acc}.jpg").replace('\\', '/')
                     if not os.path.exists(os.path.dirname(save_path)):
                         os.makedirs(os.path.dirname(save_path))
 
@@ -158,7 +160,7 @@ class DetailWndFunc:
                     else:
                         success = image_utils.download_image(url, save_path)
                     if success is True:
-                        subfunc_file.update_sw_acc_data(sw, acc, avatar_url=url)
+                        AccInfoFuncCore.update_sw_acc_data(sw, acc, avatar_url=url)
                 else:
                     logger.warning(f"账号{acc}未能获取头像url")
                     continue
@@ -175,7 +177,7 @@ class DetailWndFunc:
         except psutil.NoSuchProcess:
             # 用户在此过程偷偷把账号退了...
             logger.warning(f"该进程已不存在: {pid}")
-            subfunc_file.update_sw_acc_data(sw, account, pid=None)
+            AccInfoFuncCore.update_sw_acc_data(sw, account, pid=None)
             messagebox.showinfo("提示", "未检测到该账号登录")
             after()
             return
@@ -234,7 +236,7 @@ class UpdateLogWndFunc:
             answer = messagebox.askokcancel("提醒", "将关闭主程序进行更新操作，请确认")
             if answer:
                 exe_path = sys.executable
-                current_version = subfunc_file.get_app_current_version()
+                current_version = AppFuncCore.get_app_current_version()
                 install_dir = os.path.dirname(exe_path)
 
                 update_exe_path = os.path.join(Config.PROJ_EXTERNAL_RES_PATH, 'Updater.exe')
@@ -248,3 +250,25 @@ class UpdateLogWndFunc:
                                  creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
         else:
             messagebox.showinfo("提醒", "请在打包环境中执行")
+
+    @staticmethod
+    def find_file_in_folders_by_md5(folders: list, md5s: list):
+        """
+        从文件夹中找到md5匹配的文件
+        :param folders: 文件夹列表
+        :param md5s: md5列表
+        :return: Union[匹配的文件路径, None]
+        """
+        lower_md5s = [md5.lower() for md5 in md5s]
+        for folder in folders:
+            for root, _, files in os.walk(folder):
+                for file_name in files:
+                    file_path = os.path.join(root, file_name)
+                    try:
+                        file_md5 = file_utils.calculate_md5(file_path)
+                        # 检查 MD5 是否匹配正确的 MD5 列表
+                        if file_md5.lower() in lower_md5s:
+                            return file_path  # 返回匹配的文件路径
+                    except Exception as e:
+                        logger.error(e)
+        return None  # 如果没有找到匹配项则返回 None

@@ -15,11 +15,11 @@ import win32con
 import win32gui
 import win32process
 
+from data_access.setting import RootSetting, RemoteSw, LocalSetting
 from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
-from functions import subfunc_file
 from functions.sw_func import Sw
 from public import Config
-from public.enums import MultirunMode, LocalCfg, RemoteCfg
+from public.enums import MultirunMode, LocalCfgKey, RemoteSwKey
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
 from utils.hwnd_utils import Win32HwndGetter, HwndGetter
 
@@ -38,21 +38,20 @@ class Test(TestCase):
 
     def test_close_sw_mutex_by_handle(self):
         executable_name, cfg_handles = (
-            subfunc_file.get_remote_cfg(
-                "Weixin", executable=None, cfg_handle_regex_list=None))
+            Sw("Weixin").get_remote(executable=None, cfg_handle_regex_list=None))
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
     def test_get_cfg_files(self):
         sw = "WeChat"
         acc = "wxid_t2dchu5zw9y022"
-        data_path = Sw(sw).try_get_path(LocalCfg.DATA_DIR)
+        data_path = Sw(sw).try_get_path(LocalCfgKey.DATA_DIR)
         if not data_path:
             return False, "无法获取WeChat数据路径"
-        # config_path_suffix, cfg_basename_list = subfunc_file.get_remote_cfg(
+        # config_path_suffix, cfg_basename_list = RemoteSetting().get_(
         #     sw, config_path_suffix=None, config_file_list=None)
 
-        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        config_addresses, = Sw(sw).get_remote(config_addresses=None)
         if not isinstance(config_addresses, list):
             return False, "无法获取登录配置文件地址"
         for config_address in config_addresses:
@@ -78,7 +77,7 @@ class Test(TestCase):
 
     def test_new_get_cfg_files(self):
         sw = "WeChat"
-        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        config_addresses, = Sw(sw).get_remote(config_addresses=None)
         if not isinstance(config_addresses, list) or len(config_addresses) == 0:
             messagebox.showinfo("提醒", f"{sw}平台还没有适配")
             return
@@ -226,7 +225,7 @@ class Test(TestCase):
 
     def test_get_relations_of_channel(self):
 
-        res = SwOperatorCore.get_relations_of_channel("Weixin", RemoteCfg.REVOKE, "custom_alert")
+        res = SwOperatorCore.get_relations_of_channel("Weixin", RemoteSwKey.REVOKE, "custom_alert")
         print(res)
 
     def test_get_login_hwnds_of_sw(self):
@@ -260,7 +259,7 @@ class Test(TestCase):
         SwInfoFuncCore._update_adaptation_from_remote_to_cache("QQNT", "anti-revoke")
 
     def test_get_data(self):
-        data = subfunc_file.get_remote_cfg("Weixin", "coexist", "channels", "default", "patch_wildcard")
+        data = Sw("Weixin").get_remote("coexist", "channels", "default", "patch_wildcard")
         print(data)
 
     def test_create_coexist(self):
@@ -484,6 +483,38 @@ class Test(TestCase):
             print("已解除线程输入附加")
 
     def test_use_root_config(self):
-        data = subfunc_file.get_root_cfg()
-        subfunc_file.update_root_cfg("user_path", r".\user_files")
-        print(data)
+        RootSetting().update_("user_path", r".\user_files")
+
+    def test_setting_obj(self):
+        """测试设置对象"""
+        setting = RootSetting()
+        print(setting)
+        print(setting.load())
+        setting = RootSetting()
+        print(setting)
+        print(setting.load())
+        setting = RootSetting(Config.ROOT_CONFIG_PATH)
+        print(setting)
+        print(setting.load())
+        setting = RootSetting(RemoteSw().get_file_path_from_root_cfg())
+        print(setting)
+        print(setting.load())
+        setting = RootSetting()
+        print(setting)
+        print(setting.load())
+
+    def test_local_setting_obj(self):
+        """测试本地设置对象"""
+        setting = LocalSetting()
+        print(setting)
+        print(setting.load())
+        setting = LocalSetting()
+        print(setting)
+        print(setting.load())
+        setting = LocalSetting(LocalSetting().get_file_path_from_root_cfg())
+        print(setting)
+        print(setting.load())
+        setting = LocalSetting(RemoteSw().get_file_path_from_root_cfg())
+        print(setting)
+        print(setting.load())
+        setting = LocalSetting()

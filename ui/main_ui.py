@@ -1,23 +1,21 @@
 # main_ui.py
-import json
 import os
 import random
 import sys
 import threading
-from tkinter import ttk, messagebox
+from tkinter import ttk
 
 import keyboard
 from PIL import ImageTk
 
 from components import CustomNotebook
 from components.widget_wrappers import StatusBarW, ProgressBarW
-from functions import subfunc_file
 from func_core.app_func_core import AppFuncCore
 from functions.acc_func import Acc
 from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config, Strings
-from public.enums import LocalCfg, SwStates, RemoteCfg
+from public.enums import LocalCfgKey, SwStates, RemoteSwKey, RemoteGlobalKey, RootCfgKey
 from public.global_members import GlobalMembers
 from ui import login_ui, acc_manager_ui, sw_manager_ui
 from ui.menu_ui import MenuUI
@@ -59,7 +57,6 @@ class RootClass:
         GlobalMembers().root_class = self  # root_class可以通过GlobalMembers类获取
         # 全局数据
         self.sw_classes: dict = {}
-        self.remote_cfg_data = None
         self.app = App()
         self.app.root_class = self  # root_class可以通过App类获取
         # 程序参数
@@ -96,7 +93,7 @@ class RootClass:
         title = os.path.basename(sys.argv[0])
         print(f"获取窗口名为: {title}")
         try:
-            remote_title, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, app_name=None)
+            remote_title, = App().get_remote_global(**{RemoteGlobalKey.APP_NAME: None})
             title = remote_title or title
             self._safe_set_icon()
         except Exception as e:
@@ -211,10 +208,11 @@ class RootClass:
 
     @staticmethod
     def _ensure_file_resources_exists():
+        user_dir = App().user_dir
         # 检查项目根目录中是否有 user_files 这个文件夹，没有则创建
-        if not os.path.exists(Config.PROJ_USER_PATH):  # 如果路径不存在
-            os.makedirs(Config.PROJ_USER_PATH)  # 创建 user_files 文件夹
-            print(f"已创建文件夹: {Config.PROJ_USER_PATH}")
+        if not os.path.exists(user_dir):  # 如果路径不存在
+            os.makedirs(user_dir)  # 创建 user_files 文件夹
+            print(f"已创建文件夹: {user_dir}")
 
     @staticmethod
     def _set_tk_style():
@@ -259,11 +257,8 @@ class RootClass:
         def _thread():
             self._ensure_file_resources_exists()
             AppFuncCore.apply_proxy_setting()
-            self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
-            if self.remote_cfg_data is None:
-                messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
-                self.root.destroy()
-                return
+            App().regularly_get_remote_cfg(RootCfgKey.REMOTE_SW_NS)  # 每天定时获取配置文件
+            App().regularly_get_remote_cfg(RootCfgKey.REMOTE_GLOBAL_NS)  # 每天定时获取配置文件
             self._set_tk_style()
             self.hotkey_manager = HotkeyManager()
             self.root.after(0, self.main_ui.initialize_in_root_main_ui)
@@ -276,11 +271,6 @@ class RootClass:
 
         def _thread():
             AppFuncCore.apply_proxy_setting()
-            self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
-            if self.remote_cfg_data is None:
-                messagebox.showerror("错误", "未找到配置文件，将退出程序，请检查网络设置，稍后重试")
-                self.root.destroy()
-                return
             self._set_tk_style()
 
             # 重置变量
@@ -345,7 +335,7 @@ class MainUI:
         # self.progress_bar = TopProgressBar(self.top_bar_frame)
         self._load_root_nb_frame()
         threading.Thread(target=self._get_path_thread).start()
-        root_tab = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.ROOT_TAB)
+        root_tab = App().fetch_setting_or_set_default(LocalCfgKey.ROOT_TAB)
         self.root_nb_cls.select(root_tab)
 
     def _load_root_nb_frame(self):
@@ -359,7 +349,7 @@ class MainUI:
         self.login_nb_frame = ttk.Frame(root_nb_frm_pool)
         self.manage_nb_frame = ttk.Frame(root_nb_frm_pool)
 
-        self.used_refresh = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.USED_REFRESH)
+        self.used_refresh = App().fetch_setting_or_set_default(LocalCfgKey.USED_REFRESH)
         suffix = "" if self.used_refresh is True else Strings.REFRESH_HINT
         root_nb_cls.add("manage", f"管理{suffix}", self.manage_nb_frame)
         root_nb_cls.add("login", "登录", self.login_nb_frame)
@@ -386,12 +376,12 @@ class MainUI:
         self.login_nb_cls.select_callback = self._on_tab_in_login_selected
         self.login_frm_pool = login_nb_cls.frames_pool
         # 加载各平台
-        sp_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
+        sp_sw, = App().get_remote_global(**{RemoteSwKey.SP_SW: Config.SP_SW})
         if not isinstance(sp_sw, list):
             return
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
-            state = Sw(sw).get_saved_setting(LocalCfg.STATE, SwStates)
+            state = Sw(sw).fetch_setting_or_set_default(LocalCfgKey.STATE, SwStates)
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             try:
@@ -418,26 +408,26 @@ class MainUI:
 
     @staticmethod
     def _get_path_thread():
-        sp_sw, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
+        sp_sw, = App().get_remote_global(**{RemoteSwKey.SP_SW: Config.SP_SW})
         if not isinstance(sp_sw, list):
             return
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
-            state = Sw(sw).get_saved_setting(LocalCfg.STATE, SwStates)
+            state = Sw(sw).fetch_setting_or_set_default(LocalCfgKey.STATE, SwStates)
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             print(f"创建{sw}的信息体...")
             sw_cls = Sw(sw)
-            sw_cls.data_dir = Sw(sw).try_get_path(LocalCfg.DATA_DIR)
-            sw_cls.inst_path = Sw(sw).try_get_path(LocalCfg.INST_PATH)
-            sw_cls.dll_dir = Sw(sw).try_get_path(LocalCfg.DLL_DIR)
+            sw_cls.data_dir = Sw(sw).try_get_path(LocalCfgKey.DATA_DIR)
+            sw_cls.inst_path = Sw(sw).try_get_path(LocalCfgKey.INST_PATH)
+            sw_cls.dll_dir = Sw(sw).try_get_path(LocalCfgKey.DLL_DIR)
             _ = Sw(sw).ver
         Printer().print_last()
 
     def _on_tab_in_root_selected(self, click_time):
         """根标签切换时,将自动选择下一级的标签"""
         root_tab = self.root_nb_cls.curr_tab_id
-        subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.ROOT_TAB: root_tab})
+        App().update_settings(**{LocalCfgKey.ROOT_TAB: root_tab})
         tab_dict = self.root_nb_cls.tabs[root_tab]
         tab_text = tab_dict["text"]
         if root_tab == "manage":
@@ -451,7 +441,7 @@ class MainUI:
                 # 首次使用,消除提示
                 if self.used_refresh is not True:
                     tab_text = tab_text.replace(Strings.REFRESH_HINT, "")
-                    subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_REFRESH: True})
+                    App().update_settings(**{LocalCfgKey.USED_REFRESH: True})
                     self.used_refresh = True
                 tab_dict["tab_widget"].set_text(f"⟳{tab_text}").redraw()
                 self.root.update_idletasks()
@@ -462,7 +452,7 @@ class MainUI:
             # 自动选择下一级标签
             manage_tab = self.manage_nb_cls.curr_tab_id
             if not manage_tab:
-                manage_tab = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.MNG_TAB)
+                manage_tab = App().fetch_setting_or_set_default(LocalCfgKey.MNG_TAB)
             try:
                 self.manage_nb_cls.select(manage_tab)
             except Exception as e:
@@ -484,7 +474,7 @@ class MainUI:
             # 自动选择下一级标签
             login_tab = self.login_nb_cls.curr_tab_id
             if not login_tab:
-                login_tab = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.LOGIN_TAB)
+                login_tab = App().fetch_setting_or_set_default(LocalCfgKey.LOGIN_TAB)
             try:
                 self.login_nb_cls.select(login_tab)
             except Exception as e:
@@ -497,8 +487,7 @@ class MainUI:
         tab_dict = self.login_nb_cls.tabs[self.root_class.login_ui.sw]
         tab_text = tab_dict["text"]
         print(f"当前是{self.root_class.login_ui.sw}的标签页")
-        subfunc_file.update_settings(
-            LocalCfg.GLOBAL_SECTION, **{LocalCfg.LOGIN_TAB: self.root_class.login_ui.sw})
+        App().update_settings(**{LocalCfgKey.LOGIN_TAB: self.root_class.login_ui.sw})
         if click_time <= 1:
             self.root_class.login_ui.init_login_ui()
         elif click_time >= 2:
@@ -509,8 +498,7 @@ class MainUI:
 
     def _on_tab_in_manage_selected(self, click_time):
         self.manage_tab = self.manage_nb_cls.curr_tab_id
-        subfunc_file.update_settings(
-            LocalCfg.GLOBAL_SECTION, **{LocalCfg.MNG_TAB: self.manage_tab})
+        App().update_settings(**{LocalCfgKey.MNG_TAB: self.manage_tab})
         tab_dict = self.manage_nb_cls.tabs[self.manage_tab]
         tab_text = tab_dict["text"]
         if self.manage_tab == "acc":
@@ -569,13 +557,11 @@ class HotkeyManager:
         listener_thread = threading.Thread(target=self.start_hotkey_listener, daemon=True)
         listener_thread.start()
 
-    def load_hotkeys_from_json(self, json_path):
+    def load_hotkeys_from_json(self):
         """ 从 JSON 文件加载快捷键映射 """
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-
+        sw_acc_data = App().get_sw_acc_data()
         hotkey_map = {}
-        for sw, accounts in data.items():
+        for sw, accounts in sw_acc_data.items():
             for acc, details in accounts.items():
                 if isinstance(details, dict) and "hotkey" in details:
                     hotkey = details["hotkey"]

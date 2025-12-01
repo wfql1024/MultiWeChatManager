@@ -9,7 +9,7 @@
     <tree path="/main.py" title="入口，管理员身份及程序参数解析" extension=""
           presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
     <tree path="/scripts/Build.bat" title="打包命令，控制台直接使用可以打包项目"/>
-    <tree path="/user_files" title="项目生成的文件夹，无代码"/>
+    <tree path="/dev_user_files" title="项目生成的文件夹，无代码"/>
     <tree path="/functions/subfunc_file.py" title="subfunc为介于工具类和功能直接实现类的子功能类" extension=""
           presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
     <tree path="/.meta" title="程序打包的元数据"/>

@@ -9,14 +9,13 @@ import uiautomation
 import win32con
 import win32gui
 
-from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
-from functions import subfunc_file, sw_func
 from func_core.acc_func_core import AccOperatorCore
-from functions.sw_func import SwInfoUtils, SwOperator
+from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
+from functions import sw_func
+from functions.sw_func import Sw
 from public import Config
 from ui.sidebar_ui import SidebarUI, WndProperties
 from utils import handle_utils, hwnd_utils
-from utils.file_utils import IniUtils
 from utils.hwnd_utils import Win32HwndGetter
 from utils.logger_utils import Printer
 
@@ -27,8 +26,7 @@ class Test(TestCase):
         print(hwnds)
 
     def test_multi_new_weixin(self):
-        executable_name, cfg_handles = subfunc_file.get_remote_cfg(
-            "Weixin", executable=None, cfg_handle_regex_list=None)
+        executable_name, cfg_handles = Sw("Weixin").get_remote(executable=None, cfg_handle_regex_list=None)
         # 关闭配置文件锁
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
@@ -152,9 +150,10 @@ class Test(TestCase):
             # 设置检查间隔（100ms）
             time.sleep(0.02)
 
-    def test_get_ini_config(self):
-        config = IniUtils.load_ini_as_dict(Config.SETTING_INI_PATH)
-        print(config.__dict__)
+    # def test_get_ini_config(self):
+    #     ini_path = fr'{Config.PROJ_USER_PATH}/setting.ini'
+    #     config = IniUtils.load_ini_as_dict(ini_path)
+    #     print(config.__dict__)
 
     def test_get_wnd_state(self):
         hwnd = 334080

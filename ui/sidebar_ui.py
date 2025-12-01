@@ -9,12 +9,12 @@ from tkinter import ttk
 import win32con
 import win32gui
 from PIL import Image, ImageTk
-from public import Config
 
 from components.composited_controls import RadioTreeView
 from components.custom_widgets import CustomCornerBtn
-from functions import subfunc_file
 from functions.acc_func import AccInfoFuncCore, Acc
+from functions.app_func import App
+from public import Config
 from public.enums import OnlineStatus
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
@@ -336,7 +336,7 @@ class SidebarUI:
 
         # 切换前后窗口的hwnd
         sw, acc = item_id.split("/")
-        new_linked_hwnd, = subfunc_file.get_sw_acc_data(sw, acc, main_hwnd=None)
+        new_linked_hwnd, = Acc(sw, acc).get_data(main_hwnd=None)
         old_linked_hwnd = self.linked_hwnd
         print("切换前后窗口的hwnd:", old_linked_hwnd, new_linked_hwnd)
 
@@ -514,7 +514,7 @@ class SidebarUI:
         for item in items:
             # 获取每个账号的hwnd
             sw, acc = item.split("/")
-            hwnd, = subfunc_file.get_sw_acc_data(sw, acc, main_hwnd=None)
+            hwnd, = Acc(sw, acc).get_data(main_hwnd=None)
             hwnd_list.append(hwnd)
 
         hwnd_list.append(self.root_hwnd)
@@ -540,7 +540,7 @@ class SidebarUI:
         WndCreator.open_acc_detail(f"{sw}/{acc}", self)
 
         # 重新获取hwnd
-        hwnd, = subfunc_file.get_sw_acc_data(sw, acc, main_hwnd=None)
+        hwnd, = Acc(sw, acc).get_data(main_hwnd=None)
         self.thread_result = hwnd
         self.turn_on_listener()
 
@@ -581,7 +581,7 @@ class SidebarTree(RadioTreeView, ABC):
 
     def initialize_members_in_init(self):
         self.columns = (" ",)
-        self.data_src = subfunc_file.get_sw_acc_data()
+        self.data_src = App().get_sw_acc_data()
         pass
 
     def set_table_style(self):

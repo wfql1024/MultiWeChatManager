@@ -18,7 +18,7 @@ import winshell
 import yaml
 from readerwriterlock import rwlock
 
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger, Printer, Logger
 
 rw_lock = rwlock.RWLockFairD()
 
@@ -284,6 +284,10 @@ class JsonUtils:
 
     @staticmethod
     def save_json(json_file, data):
+        if json_file is None:
+            Logger().error("json_file is None")
+            print("json_file is None")
+            return False
         if not os.path.exists(json_file):
             os.makedirs(os.path.dirname(json_file), exist_ok=True)
         try:
@@ -402,6 +406,7 @@ class PatchUtils:
 
         return data, msg
 
+
 class MMap2PeFile:
     def __init__(self, mm, auto_close=False):
         self.pe = None
@@ -488,6 +493,7 @@ class MMap2PeFile:
         # # 转换为4字节小端序有符号整数
         # offset_bytes = offset_value.to_bytes(4, 'little', signed=True)
         # return offset_bytes
+
 
 class DllUtils:
     @staticmethod

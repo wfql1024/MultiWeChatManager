@@ -36,7 +36,7 @@ class GlobalMembers:
 
     @root.setter
     def root(self, value):
-         self._root = value
+        self._root = value
 
     def get_root(self):
         return self._root
@@ -79,9 +79,11 @@ class GlobalMembers:
         装饰器：将纯函数提交到全局进程池执行。
         返回值会直接解包 Future.result()。
         """
+
         def wrapper(*args, **kwargs):
             future = cls().get_thread_pool().submit(func, *args, **kwargs)
             return future.result()
+
         return wrapper
 
     # ---------------- 回调方法 ----------------

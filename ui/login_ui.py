@@ -5,16 +5,14 @@ from tkinter import ttk, messagebox
 
 from components.custom_widgets import CustomCornerBtn
 from components.widget_wrappers import ScrollableCanvasW, ProgressBarW
-from func_core.sw_func_core import SwOperatorCore
-from functions import subfunc_file
+from data_access.setting import StatisticData
 from func_core.acc_func_core import AccInfoFuncCore, AccOperatorCore
-from func_core.app_func_core import AppFuncCore
+from func_core.sw_func_core import SwOperatorCore
 from functions.acc_func import Acc
-from functions.app_func import App
-from functions.main_func import MultiSwFunc
+from functions.app_func import App, AppFunc
 from functions.sw_func import Sw
 from public import Config, Strings
-from public.enums import OnlineStatus, LocalCfg
+from public.enums import OnlineStatus, LocalCfgKey
 from public.global_members import GlobalMembers
 from ui.cfg_manager_ui import CfgManagerWndCreator
 from ui.classic_row_ui import ClassicLoginUI
@@ -22,7 +20,7 @@ from ui.exe_manager_ui import ExeManagerWndCreator
 from ui.treeview_row_ui import TreeviewLoginUI
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger, Printer, Logger
 from utils.logger_utils import myprinter as printer
 
 customized_btn_pad = Config.CUS_BTN_PAD
@@ -78,7 +76,7 @@ class LoginUI:
 
     def init_login_ui(self):
         # 如果界面没有元素则自动刷新
-        self.sw = AppFuncCore.get_global_setting_value_by_local_record("login_tab")
+        self.sw = App().fetch_setting_or_set_default("login_tab")
         self.sw_class = self.sw_classes[self.sw]
         self.tab_frame = self.sw_class.frame
         if self.tab_frame is None or len(self.tab_frame.winfo_children()) == 0:
@@ -89,27 +87,25 @@ class LoginUI:
     def refresh(self, only_menu=False):
         """刷新菜单和界面"""
         print(f"登录页:刷新菜单与界面...")
-        self.sw = AppFuncCore.get_global_setting_value_by_local_record("login_tab")
+        self.sw = App().fetch_setting_or_set_default("login_tab")
         self.sw_class = self.sw_classes[self.sw]
         self.tab_frame = self.sw_class.frame
         self.widget_dict = self.sw_class.widget_dict
-        # 刷新菜单
-        config_data = subfunc_file.read_remote_cfg_in_rules()
-        if config_data is None:
-            messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
-            self.root.destroy()
         # 路径检查
-        self.sw_class.data_dir = Sw(self.sw).try_get_path(LocalCfg.DATA_DIR)
-        self.sw_class.inst_path = Sw(self.sw).try_get_path(LocalCfg.INST_PATH)
-        self.sw_class.dll_dir = Sw(self.sw).try_get_path(LocalCfg.DLL_DIR)
-        _ = Sw(self.sw).ver
+        try:
+            self.sw_class.data_dir = Sw(self.sw).try_get_path(LocalCfgKey.DATA_DIR)
+            self.sw_class.inst_path = Sw(self.sw).try_get_path(LocalCfgKey.INST_PATH)
+            self.sw_class.dll_dir = Sw(self.sw).try_get_path(LocalCfgKey.DLL_DIR)
+            _ = Sw(self.sw).ver
+        except Exception as e:
+            Logger().error(e)
         # 创建菜单
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
         except Exception as re:
-            logger.error(re)
-            messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
-            self.root.destroy()
+            Logger().error(re)
+            # messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
+            # self.root.destroy()
         # 是否只刷新菜单
         if not (only_menu is True):
             # 刷新界面
@@ -165,7 +161,7 @@ class LoginUI:
         _pack_btn_left(self.widget_dict["mng_btn"])
         self.widget_dict["mng_btn"].set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
 
-        prefer_coexist = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.PREFER_COEXIST)
+        prefer_coexist = App().fetch_setting_or_set_default(LocalCfgKey.PREFER_COEXIST)
         self.sw_class.is_original = not (prefer_coexist is False)  # 故意取反后切换
         self._switch_mode()
 
@@ -184,7 +180,7 @@ class LoginUI:
         self.acc_list_dict = acc_list_dict
         logins = self.sw_class.login_accounts = acc_list_dict["login"]
 
-        self.sw_class.view = Sw(self.sw).get_saved_setting("view")
+        self.sw_class.view = Sw(self.sw).fetch_setting_or_set_default("view")
 
         if self.sw_class.view == "classic":
             # 经典视图没有做快速刷新功能
@@ -212,7 +208,7 @@ class LoginUI:
         else:
             pass
 
-        subfunc_file.update_statistic_data(
+        StatisticData().update_statistic_data(
             self.sw, 'refresh', self.sw_classes[self.sw].view, str(len(logins)), time.time() - self.start_time)
         last_msg = printer.print_vn(f"[{time.time() - self.start_time:.4f}s] 加载完成！")
         printer.last(last_msg)
@@ -270,7 +266,7 @@ class LoginUI:
             return
 
         # 需要进行的操作
-        MultiSwFunc.thread_to_login_auto_start_accounts()
+        AppFunc.thread_to_login_auto_start_accounts()
 
         self.root_class.first_created_acc_ui = True
 
@@ -291,7 +287,7 @@ class LoginUI:
         # 先停止旧的监听线程
         self.hotkey_manager.stop_hotkey_listener()
         # 更新快捷键
-        self.hotkey_manager.load_hotkeys_from_json(Config.TAB_ACC_JSON_PATH)
+        self.hotkey_manager.load_hotkeys_from_json()
         # 开启监听线程
         self.hotkey_manager.start_hotkey_listener()
 

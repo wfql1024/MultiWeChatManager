@@ -1,6 +1,7 @@
 import mmap
 import os
 import re
+import shutil
 import sys
 import tempfile
 import threading
@@ -21,20 +22,20 @@ from PIL import Image, ImageTk
 from components.custom_widgets import CustomBtn, CustomCornerBtn
 from components.custom_widgets import DefaultEntry
 from components.widget_wrappers import SubToolWndUI, HotkeyEntry4KeyboardW, ScrollableCanvasW
-from func_core.sw_func_core import SwInfoFuncCore, SwOperatorCore
-from functions import subfunc_file
+from data_access.setting import StatisticData
 from func_core.acc_func_core import AccInfoFuncCore, AccOperatorCore
 from func_core.app_func_core import AppFuncCore
+from func_core.sw_func_core import SwInfoFuncCore, SwOperatorCore
 from functions.acc_func import Acc
 from functions.app_func import App
 from functions.sw_func import Sw
 from functions.wnd_func import DetailWndFunc, UpdateLogWndFunc
 from public import Config, Strings
-from public.enums import LocalCfg, RemoteCfg, SwStates
+from public.enums import LocalCfgKey, RemoteSwKey, SwStates, RemoteGlobalKey, RootCfgKey
 from public.global_members import GlobalMembers
 from utils import file_utils, sys_utils, widget_utils
-from utils.encoding_utils import StringUtils
-from utils.file_utils import JsonUtils, PatchUtils
+from utils.encoding_utils import StringUtils, PathUtils
+from utils.file_utils import PatchUtils
 from utils.logger_utils import mylogger as logger, myprinter as printer, DebugUtils, Printer
 from utils.sys_utils import Tk2Sys
 from utils.widget_utils import UnlimitedClickHandler
@@ -93,7 +94,6 @@ class WndCreator:
     @classmethod
     def open_update_log(cls):
         """打开版本日志窗口"""
-        root_class = GlobalMembers().get_root_class()
         success, result = AppFuncCore.split_vers_by_cur_from_local(App().curr_full_ver)
         if success is True:
             new_versions, old_versions = result
@@ -466,7 +466,7 @@ class DetailUI(SubToolWndUI):
         mutex_label.pack(side="left")
         kill_mutex_btn = _create_square_btn_in(mutex_frame, "×")
         (kill_mutex_btn.set_bind_map(
-            **{"1": lambda: self.do_and_update_ui(partial(AccOperatorCore.kill_mutex_of_acc, sw, account))})
+            **{"1": lambda: self.do_and_update_ui(Acc(sw, account).kill_mutex)})
          .apply_bind(self.root))
         _pack_btn_left(kill_mutex_btn)
         # hwnd
@@ -506,11 +506,11 @@ class DetailUI(SubToolWndUI):
         _, _, nickname_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "昵称", "", readonly=True)
         # 备注
-        remark, = subfunc_file.get_sw_acc_data(sw, account, **{LocalCfg.REMARK: None})
+        remark, = Acc(sw, account).get_data(**{LocalCfgKey.REMARK: None})
         _, remark_entry, remark_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "备注", "" if remark is None else remark)
         # 热键
-        hotkey, = subfunc_file.get_sw_acc_data(sw, account, hotkey=None)
+        hotkey, = Acc(sw, account).get_data(hotkey=None)
         _, hotkey_entry, hotkey_var = DetailUI._create_label_entry_grid(
             basic_info_grid, "热键", "" if hotkey is None else hotkey)
         HotkeyEntry4KeyboardW(hotkey_entry, hotkey_var)
@@ -520,18 +520,18 @@ class DetailUI(SubToolWndUI):
         ckb_frm = ttk.Frame(basic_info_grid)
         ckb_frm.grid(row=current_row, column=0, columnspan=2, **Config.W_GRID_PACK)
         # -隐藏账号
-        hidden, = subfunc_file.get_sw_acc_data(sw, account, hidden=False)
+        hidden, = Acc(sw, account).get_data(hidden=False)
         hidden_var = tk.BooleanVar(value=hidden)
         hidden_checkbox = tk.Checkbutton(ckb_frm, text="未登录时隐藏", variable=hidden_var)
         hidden_checkbox.pack(side="left")
         # -账号自启动
-        auto_start, = subfunc_file.get_sw_acc_data(sw, account, auto_start=False)
+        auto_start, = Acc(sw, account).get_data(auto_start=False)
         auto_start_var = tk.BooleanVar(value=auto_start)
         auto_start_checkbox = tk.Checkbutton(
             ckb_frm, text="进入软件时自启动", variable=auto_start_var)
         auto_start_checkbox.pack(side="left")
         # -头像禁用
-        disable_avatar, = subfunc_file.get_sw_acc_data(sw, account, disable_avatar=False)
+        disable_avatar, = Acc(sw, account).get_data(disable_avatar=False)
         disable_avatar_var = tk.BooleanVar(value=disable_avatar)
         disable_avatar_checkbox = tk.Checkbutton(
             ckb_frm, text="禁用头像", variable=disable_avatar_var)
@@ -586,10 +586,9 @@ class DetailUI(SubToolWndUI):
         # 获取信息
         printer.print_vn(f"加载对应头像...")
         # 获取其余信息
-        has_mutex, main_hwnd = subfunc_file.get_sw_acc_data(
-            sw, account, has_mutex=True, main_hwnd=None)
-        avatar_url, alias, nickname, pid = subfunc_file.get_sw_acc_data(
-            sw, account, avatar_url=None, alias="请获取数据", nickname="请获取数据", pid=None)
+        has_mutex, main_hwnd = Acc(sw, account).get_data(has_mutex=True, main_hwnd=None)
+        avatar_url, alias, nickname, pid = Acc(sw, account).get_data(
+            avatar_url=None, alias="请获取数据", nickname="请获取数据", pid=None)
         _, img = AccInfoFuncCore.get_acc_avatar_from_files(sw, account)
         self._update_avatar_and_bind(img, avatar_url)
         # 刷新其他信息
@@ -605,7 +604,7 @@ class DetailUI(SubToolWndUI):
             logger.warning(e)
             self.nickname_var.set(StringUtils.clean_texts(nickname))
         if not pid:
-            subfunc_file.update_sw_acc_data(sw, account, has_mutex=True)
+            Acc(sw, account).update_data(has_mutex=True)
         printer.print_vn(f"载入数据完成")
 
         # 将局部变量赋值回实例变量
@@ -664,15 +663,15 @@ class DetailUI(SubToolWndUI):
         """
         new_note = self.note_var.get().strip()
         if new_note == "":
-            subfunc_file.update_sw_acc_data(self.sw, self.account, **{LocalCfg.REMARK: None})
+            Acc(self.sw, self.account).update_data(**{LocalCfgKey.REMARK: None})
         else:
-            subfunc_file.update_sw_acc_data(self.sw, self.account, **{LocalCfg.REMARK: new_note})
+            Acc(self.sw, self.account).update_data(**{LocalCfgKey.REMARK: new_note})
         hidden = self.hidden_var.get()
         auto_start = self.auto_start_var.get()
         hotkey = self.hotkey_var.get().strip()
         disable_avatar = self.disable_avatar_var.get()
-        subfunc_file.update_sw_acc_data(
-            self.sw, self.account, hidden=hidden, auto_start=auto_start, hotkey=hotkey, disable_avatar=disable_avatar)
+        Acc(self.sw, self.account).update_data(hidden=hidden, auto_start=auto_start, hotkey=hotkey,
+                                               disable_avatar=disable_avatar)
         printer.vital("账号设置成功")
         self.wnd.destroy()
         self.tab_class.refresh_frame(self.sw)
@@ -928,17 +927,11 @@ class AboutWndUI(SubToolWndUI):
         self.wnd.resizable(False, False)
 
     def load_ui(self):
-        self.remote_cfg_data = subfunc_file.read_remote_cfg_in_rules()
-        if self.remote_cfg_data is None:
-            messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
-            # 关闭wnd窗口
-            self.wnd.destroy()
-        else:
-            self._display_main_content()
+        self._display_main_content()
 
     def _display_main_content(self):
-        self.app_name = self.remote_cfg_data[LocalCfg.GLOBAL_SECTION]["app_name"]
-        self.about_info = self.remote_cfg_data[LocalCfg.GLOBAL_SECTION]["about"]
+        self.app_name = App().get_remote_global(RemoteGlobalKey.APP_NAME)
+        self.about_info = App().get_remote_global(RemoteGlobalKey.ABOUT)
 
         self.main_frame = ttk.Frame(self.wnd_frame, padding=Config.FRM_PAD)
         self.main_frame.pack(**Config.FRM_PACK)
@@ -969,7 +962,7 @@ class AboutWndUI(SubToolWndUI):
         title_version_frame.pack(**Config.T_FRM_PACK)
 
         # 标题和版本号标签
-        current_full_version = subfunc_file.get_app_current_version()
+        current_full_version = App().curr_full_ver
         title_version_str = f"{self.app_name} {current_full_version}"
         title_version_label = ttk.Label(
             title_version_frame,
@@ -1094,9 +1087,9 @@ class AboutWndUI(SubToolWndUI):
         )
 
     def check_for_updates(self, current_full_version):
-        config_data = subfunc_file.force_fetch_remote_encrypted_cfg()
+        config_data = App().force_get_remote_cfg(RootCfgKey.REMOTE_GLOBAL_NS)
         if config_data is None:
-            messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
+            messagebox.showinfo("提示", "无法获取远程全局配置文件，请检查网络连接后重试")
             return False
         success, result = AppFuncCore.split_vers_by_cur_from_local(current_full_version)
         if success is True:
@@ -1248,13 +1241,7 @@ class UpdateLogWndUI(SubToolWndUI):
 
         print("显示更新日志")
 
-        config_data = subfunc_file.read_remote_cfg_in_rules()
-        if config_data is None:
-            messagebox.showerror("错误", "无法获取远程配置文件")
-            self.wnd.destroy()
-            return
-
-        global_info = config_data["global"]
+        remote_global = App().get_remote_global()
         # 创建一个用于放置滚动文本框的框架
         log_frame = ttk.Frame(main_frame)
         log_frame.pack(pady=(5, 0), fill="both", expand=True)
@@ -1273,7 +1260,7 @@ class UpdateLogWndUI(SubToolWndUI):
                 newest_version = file_utils.get_newest_full_version(new_versions)
                 print(newest_version)
                 curr_sys_ver_name = sys_utils.get_sys_major_version_name()
-                curr_sys_newest_ver_dicts = global_info["update"][newest_version]["pkgs"][curr_sys_ver_name]
+                curr_sys_newest_ver_dicts = remote_global["update"][newest_version]["pkgs"][curr_sys_ver_name]
                 bottom_frame = ttk.Frame(main_frame)
                 bottom_frame.pack(side="bottom", fill="x", padx=20, pady=20)
                 cancel_button = ttk.Button(bottom_frame, text="以后再说",
@@ -1295,7 +1282,7 @@ class UpdateLogWndUI(SubToolWndUI):
                     self.log_text.insert(tk.END, v + "：\n")
 
                     # 遍历每个分类（如"新增"、"修复"、"优化"等）
-                    for category, logs in global_info["update"][v]["logs"].items():
+                    for category, logs in remote_global["update"][v]["logs"].items():
                         self.log_text.insert(tk.END, f"#{category}：\n")
                         for log in logs:
                             self.log_text.insert(tk.END, f"-{log}\n")  # 在日志前添加适当的缩进
@@ -1311,7 +1298,7 @@ class UpdateLogWndUI(SubToolWndUI):
                 self.log_text.insert(tk.END, v + "：\n")
 
                 # 遍历每个分类（如"新增"、"修复"、"优化"等）
-                for category, logs in global_info["update"][v]["logs"].items():
+                for category, logs in remote_global["update"][v]["logs"].items():
                     self.log_text.insert(tk.END, f"#{category}：\n")
                     for log in logs:
                         self.log_text.insert(tk.END, f"-{log}\n")  # 在日志前添加适当的缩进
@@ -1351,7 +1338,7 @@ class UpdateLogWndUI(SubToolWndUI):
         # 在下载文件夹中查找近期的文件夹
         recent_folders = file_utils.get_recent_folders_from_dir(download_dir)
         md5_list = [d.get("md5") for d in ver_dicts if "md5" in d]
-        matched_file = subfunc_file.get_file_with_correct_md5(recent_folders, md5_list)
+        matched_file = UpdateLogWndFunc.find_file_in_folders_by_md5(recent_folders, md5_list)
 
         if matched_file:
             download_path = matched_file
@@ -1510,7 +1497,7 @@ class StatisticWndUI(SubToolWndUI):
         self.tree_dict["refresh"]["tree"] = self.refresh_tree
 
     def display_table(self):
-        data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
+        data = StatisticData().get_()
         if self.sw not in data:
             data[self.sw] = {}
         tab_info = data.get(self.sw, {})
@@ -1562,7 +1549,7 @@ class StatisticWndUI(SubToolWndUI):
 
     def update_table_from_selection(self, mode, selected):
         """根据下拉框的选择，更新对应的表数据"""
-        data = JsonUtils.load_json(Config.STATISTIC_JSON_PATH)
+        data = StatisticData().get_()
         tree = self.tree_dict[mode]['tree']
         # 清空之前的数据
         for item in tree.get_children():
@@ -1646,11 +1633,11 @@ class SettingWndUI(SubToolWndUI):
         }
         sw = self.sw
         self.origin_values = {
-            "inst_path": Sw(sw).get_saved_setting(LocalCfg.INST_PATH),
-            "data_dir": Sw(sw).get_saved_setting(LocalCfg.DATA_DIR),
-            "dll_dir": Sw(sw).get_saved_setting(LocalCfg.DLL_DIR),
-            "login_size": Sw(sw).get_saved_setting(LocalCfg.LOGIN_SIZE),
-            "state": Sw(sw).get_saved_setting(LocalCfg.STATE),
+            "inst_path": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.INST_PATH),
+            "data_dir": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.DATA_DIR),
+            "dll_dir": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.DLL_DIR),
+            "login_size": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.LOGIN_SIZE),
+            "state": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.STATE),
         }
         self.error_msg = {
             "inst_path": "请选择可执行文件!",
@@ -1669,22 +1656,23 @@ class SettingWndUI(SubToolWndUI):
         settings_grid_frm.pack(**Config.T_FRM_PACK)
         # 标题
         current_row = _get_new_row_in_grid(settings_grid_frm)
-        default_value, = subfunc_file.get_remote_cfg(self.sw, **{RemoteCfg.ALIAS: None})
+        default_value, = Sw(self.sw).get_remote(**{RemoteSwKey.ALIAS: None})
         remark_label = tk.Label(settings_grid_frm, text="平台备注：")
         remark_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
         self.title_entry = DefaultEntry(settings_grid_frm, default_label=default_value)
         self.title_entry.grid(row=current_row, column=1, columnspan=3, **Config.WE_GRID_PACK)
-        now_value, = subfunc_file.get_settings(self.sw, **{LocalCfg.REMARK: ""})
-        self.title_entry.set_value(now_value)
+        sw_remark, = Sw(self.sw).get_settings(**{LocalCfgKey.REMARK: ""})
+        self.title_entry.set_value(sw_remark)
         # 第一行 - 安装路径
         current_row = _get_new_row_in_grid(settings_grid_frm)
         install_label = tk.Label(settings_grid_frm, text="程序路径：")
         install_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
-        self.path_var_dict[LocalCfg.INST_PATH] = tk.StringVar()
-        install_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.INST_PATH], width=70)
+        self.path_var_dict[LocalCfgKey.INST_PATH] = tk.StringVar()
+        install_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfgKey.INST_PATH],
+                                      width=70)
         install_path_entry.grid(row=current_row, column=1, **Config.WE_GRID_PACK)
         install_get_button = ttk.Button(
-            settings_grid_frm, text="获取", command=partial(self.load_or_detect_path_of, LocalCfg.INST_PATH, True))
+            settings_grid_frm, text="获取", command=partial(self.load_or_detect_path_of, LocalCfgKey.INST_PATH, True))
         install_get_button.grid(row=current_row, column=2, **Config.WE_GRID_PACK)
         install_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                            command=partial(self.choose_sw_inst_path, self.sw))
@@ -1693,11 +1681,11 @@ class SettingWndUI(SubToolWndUI):
         current_row = _get_new_row_in_grid(settings_grid_frm)
         data_label = tk.Label(settings_grid_frm, text="存储路径：")
         data_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
-        self.path_var_dict[LocalCfg.DATA_DIR] = tk.StringVar()
-        data_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.DATA_DIR], width=70)
+        self.path_var_dict[LocalCfgKey.DATA_DIR] = tk.StringVar()
+        data_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfgKey.DATA_DIR], width=70)
         data_path_entry.grid(row=current_row, column=1, **Config.WE_GRID_PACK)
         data_get_button = ttk.Button(settings_grid_frm, text="获取",
-                                     command=partial(self.load_or_detect_path_of, LocalCfg.DATA_DIR, True))
+                                     command=partial(self.load_or_detect_path_of, LocalCfgKey.DATA_DIR, True))
         data_get_button.grid(row=current_row, column=2, **Config.WE_GRID_PACK)
         data_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                         command=partial(self.choose_sw_data_dir, self.sw))
@@ -1706,11 +1694,11 @@ class SettingWndUI(SubToolWndUI):
         current_row = _get_new_row_in_grid(settings_grid_frm)
         dll_label = tk.Label(settings_grid_frm, text="DLL所在路径：")
         dll_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
-        self.path_var_dict[LocalCfg.DLL_DIR] = tk.StringVar()
-        dll_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfg.DLL_DIR], width=70)
+        self.path_var_dict[LocalCfgKey.DLL_DIR] = tk.StringVar()
+        dll_path_entry = tk.Entry(settings_grid_frm, textvariable=self.path_var_dict[LocalCfgKey.DLL_DIR], width=70)
         dll_path_entry.grid(row=current_row, column=1, **Config.WE_GRID_PACK)
         dll_get_button = ttk.Button(settings_grid_frm, text="获取",
-                                    command=partial(self.load_or_detect_path_of, LocalCfg.DLL_DIR, True))
+                                    command=partial(self.load_or_detect_path_of, LocalCfgKey.DLL_DIR, True))
         dll_get_button.grid(row=current_row, column=2, **Config.WE_GRID_PACK)
         dll_choose_button = ttk.Button(settings_grid_frm, text="选择路径",
                                        command=partial(self.choose_sw_dll_dir, self.sw))
@@ -1754,11 +1742,11 @@ class SettingWndUI(SubToolWndUI):
 
     def update_content(self):
         # 初始加载已经配置的，或是没有配置的话自动获取
-        self.path_var_dict[LocalCfg.INST_PATH].set(self.origin_values[LocalCfg.INST_PATH])
-        self.path_var_dict[LocalCfg.DATA_DIR].set(self.origin_values[LocalCfg.DATA_DIR])
-        self.path_var_dict[LocalCfg.DLL_DIR].set(self.origin_values[LocalCfg.DLL_DIR])
-        self.login_size_var.set(self.origin_values[LocalCfg.LOGIN_SIZE])
-        self.set_sw_state_cb_from_(self.origin_values[LocalCfg.STATE])
+        self.path_var_dict[LocalCfgKey.INST_PATH].set(self.origin_values[LocalCfgKey.INST_PATH])
+        self.path_var_dict[LocalCfgKey.DATA_DIR].set(self.origin_values[LocalCfgKey.DATA_DIR])
+        self.path_var_dict[LocalCfgKey.DLL_DIR].set(self.origin_values[LocalCfgKey.DLL_DIR])
+        self.login_size_var.set(self.origin_values[LocalCfgKey.LOGIN_SIZE])
+        self.set_sw_state_cb_from_(self.origin_values[LocalCfgKey.STATE])
 
     def _update_visible_state(self):
         """内部使用的联动逻辑"""
@@ -1795,27 +1783,27 @@ class SettingWndUI(SubToolWndUI):
 
     def check_bools(self):
         # 需要检验是否更改的属性
-        for path_type in [LocalCfg.INST_PATH, LocalCfg.DATA_DIR, LocalCfg.DLL_DIR]:
+        for path_type in [LocalCfgKey.INST_PATH, LocalCfgKey.DATA_DIR, LocalCfgKey.DLL_DIR]:
             self.changed[path_type] = self.path_var_dict[path_type].get() != self.origin_values[path_type]
         # self.changed[LocalCfg.INST_PATH] = self.path_var_dict[LocalCfg.INST_PATH].get() != self.origin_values[LocalCfg.INST_PATH]
         # self.changed[LocalCfg.DATA_DIR] = self.data_dir_var.get() != self.origin_values[LocalCfg.DATA_DIR]
         # self.changed[LocalCfg.DLL_DIR] = self.dll_dir_var.get() != self.origin_values[LocalCfg.DLL_DIR]
-        self.changed[LocalCfg.LOGIN_SIZE] = self.login_size_var.get() != self.origin_values[LocalCfg.LOGIN_SIZE]
-        self.changed[LocalCfg.STATE] = self.get_sw_state_from_ckb() != self.origin_values[LocalCfg.STATE]
+        self.changed[LocalCfgKey.LOGIN_SIZE] = self.login_size_var.get() != self.origin_values[LocalCfgKey.LOGIN_SIZE]
+        self.changed[LocalCfgKey.STATE] = self.get_sw_state_from_ckb() != self.origin_values[LocalCfgKey.STATE]
 
         # # 需要清除平台账号数据的情况
         # keys_to_check = ["data_dir"]
         # self.need_to_clear_acc = any(self.changed[key] for key in keys_to_check)
         # 需要重新初始化的情况
-        if self.changed[LocalCfg.STATE]:
+        if self.changed[LocalCfgKey.STATE]:
             self.need_to_reinit = True
 
     def on_ok(self):
         if not self.validate_paths_and_ask():
             return
-        inst_path = self.path_var_dict[LocalCfg.INST_PATH].get()
-        data_dir = self.path_var_dict[LocalCfg.DATA_DIR].get()
-        dll_dir = self.path_var_dict[LocalCfg.DLL_DIR].get()
+        inst_path = self.path_var_dict[LocalCfgKey.INST_PATH].get()
+        data_dir = self.path_var_dict[LocalCfgKey.DATA_DIR].get()
+        dll_dir = self.path_var_dict[LocalCfgKey.DLL_DIR].get()
         login_size = self.login_size_var.get()
         inst_path = None if inst_path.startswith("获取失败") else inst_path
         data_dir = None if data_dir.startswith("获取失败") else data_dir
@@ -1823,12 +1811,12 @@ class SettingWndUI(SubToolWndUI):
         state = self.get_sw_state_from_ckb()
         note = self.title_entry.get_value()
         # print(f"结束时候状态:{state}")
-        Sw(self.sw).save_setting_and_do(LocalCfg.INST_PATH, inst_path)
-        Sw(self.sw).save_setting_and_do(LocalCfg.DATA_DIR, data_dir)
-        Sw(self.sw).save_setting_and_do(LocalCfg.DLL_DIR, dll_dir)
-        Sw(self.sw).save_setting_and_do(LocalCfg.LOGIN_SIZE, login_size)
-        Sw(self.sw).save_setting_and_do(LocalCfg.STATE, state)
-        Sw(self.sw).save_setting_and_do(LocalCfg.REMARK, note)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.INST_PATH, inst_path)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.DATA_DIR, data_dir)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.DLL_DIR, dll_dir)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.LOGIN_SIZE, login_size)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.STATE, state)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.REMARK, note)
         self.wnd.destroy()
 
         self.check_bools()
@@ -1837,7 +1825,7 @@ class SettingWndUI(SubToolWndUI):
             # 检查是否需要清空账号信息
             if self.clear_acc_var.get() is True:
                 print("清除平台账号数据")
-                subfunc_file.clear_some_acc_data(self.sw)
+                Sw(self.sw).clear_data()
             if self.need_to_reinit:
                 self.root_class.reinit_root_ui()
                 return
@@ -1848,30 +1836,30 @@ class SettingWndUI(SubToolWndUI):
 
     def finally_do(self):
         # 关闭窗口的话,不保存
-        Sw(self.sw).save_setting_and_do(LocalCfg.INST_PATH,
-                                                                 self.origin_values[LocalCfg.INST_PATH])
-        Sw(self.sw).save_setting_and_do(LocalCfg.DATA_DIR,
-                                                                 self.origin_values[LocalCfg.DATA_DIR])
-        Sw(self.sw).save_setting_and_do(LocalCfg.DLL_DIR,
-                                                                 self.origin_values[LocalCfg.DLL_DIR])
-        Sw(self.sw).save_setting_and_do(LocalCfg.LOGIN_SIZE,
-                                                                 self.origin_values[LocalCfg.LOGIN_SIZE])
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.INST_PATH,
+                                        self.origin_values[LocalCfgKey.INST_PATH])
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.DATA_DIR,
+                                        self.origin_values[LocalCfgKey.DATA_DIR])
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.DLL_DIR,
+                                        self.origin_values[LocalCfgKey.DLL_DIR])
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.LOGIN_SIZE,
+                                        self.origin_values[LocalCfgKey.LOGIN_SIZE])
 
     def validate_paths_and_ask(self):
         invalid_vars = []
-        inst_path = self.path_var_dict[LocalCfg.INST_PATH].get()
-        data_dir = self.path_var_dict[LocalCfg.DATA_DIR].get()
-        dll_dir = self.path_var_dict[LocalCfg.DLL_DIR].get()
+        inst_path = self.path_var_dict[LocalCfgKey.INST_PATH].get()
+        data_dir = self.path_var_dict[LocalCfgKey.DATA_DIR].get()
+        dll_dir = self.path_var_dict[LocalCfgKey.DLL_DIR].get()
         login_size = self.login_size_var.get()
 
-        if not SwInfoFuncCore.is_valid_sw_path(LocalCfg.INST_PATH, self.sw, inst_path):
-            invalid_vars.append(LocalCfg.INST_PATH.value)
-        if not SwInfoFuncCore.is_valid_sw_path(LocalCfg.DATA_DIR, self.sw, data_dir):
-            invalid_vars.append(LocalCfg.DATA_DIR.value)
-        if not SwInfoFuncCore.is_valid_sw_path(LocalCfg.DLL_DIR, self.sw, dll_dir):
-            invalid_vars.append(LocalCfg.DLL_DIR.value)
+        if not SwInfoFuncCore.is_valid_sw_path(LocalCfgKey.INST_PATH, self.sw, inst_path):
+            invalid_vars.append(LocalCfgKey.INST_PATH.value)
+        if not SwInfoFuncCore.is_valid_sw_path(LocalCfgKey.DATA_DIR, self.sw, data_dir):
+            invalid_vars.append(LocalCfgKey.DATA_DIR.value)
+        if not SwInfoFuncCore.is_valid_sw_path(LocalCfgKey.DLL_DIR, self.sw, dll_dir):
+            invalid_vars.append(LocalCfgKey.DLL_DIR.value)
         if not bool(re.match(r'^\d+\*\d+$', login_size)):
-            invalid_vars.append(LocalCfg.LOGIN_SIZE.value)
+            invalid_vars.append(LocalCfgKey.LOGIN_SIZE.value)
 
         if not invalid_vars:
             return True
@@ -1910,20 +1898,20 @@ class SettingWndUI(SubToolWndUI):
             path = filedialog.askopenfilename(filetypes=[("Executable files", "*.exe"), ("All files", "*.*")])
             if not path:  # 用户取消选择
                 return
-            if SwInfoFuncCore.is_valid_sw_path(LocalCfg.INST_PATH, sw, path):
+            if SwInfoFuncCore.is_valid_sw_path(LocalCfgKey.INST_PATH, sw, path):
                 selected_path = path
                 break
             else:
                 if not messagebox.askyesno(
                         "提醒",
-                        f"该路径可能不是有效的程序路径，{self.error_msg[LocalCfg.INST_PATH]}\n是否坚持选择该路径？",
+                        f"该路径可能不是有效的程序路径，{self.error_msg[LocalCfgKey.INST_PATH]}\n是否坚持选择该路径？",
                         icon="warning"):
                     continue  # 用户选择"否"，继续循环
                 selected_path = path
                 break
 
         if selected_path:
-            self.path_var_dict[LocalCfg.INST_PATH].set(selected_path)
+            self.path_var_dict[LocalCfgKey.INST_PATH].set(selected_path)
 
     # def load_or_get_sw_data_dir(self, sw, ignore_local_rec=False):
     #     """获取路径，若成功会进行保存"""
@@ -1959,20 +1947,20 @@ class SettingWndUI(SubToolWndUI):
             path = SettingWndUI._ask_for_directory()
             if not path:  # 用户取消选择
                 return
-            if SwInfoFuncCore.is_valid_sw_path(LocalCfg.DATA_DIR, sw, path):
+            if SwInfoFuncCore.is_valid_sw_path(LocalCfgKey.DATA_DIR, sw, path):
                 selected_path = path
                 break
             else:
                 if not messagebox.askyesno(
                         "提醒",
-                        f"该路径可能不是有效的存储路径，{self.error_msg[LocalCfg.DATA_DIR]}\n是否坚持选择该路径？",
+                        f"该路径可能不是有效的存储路径，{self.error_msg[LocalCfgKey.DATA_DIR]}\n是否坚持选择该路径？",
                         icon="warning"):
                     continue  # 用户选择"否"，继续循环
                 selected_path = path
                 break
 
         if selected_path:
-            self.path_var_dict[LocalCfg.DATA_DIR].set(selected_path)
+            self.path_var_dict[LocalCfgKey.DATA_DIR].set(selected_path)
 
     # def load_or_get_sw_dll_dir(self, sw, ignore_local_rec=False):
     #     """获取路径，若成功会进行保存"""
@@ -1987,20 +1975,20 @@ class SettingWndUI(SubToolWndUI):
             path = SettingWndUI._ask_for_directory()
             if not path:  # 用户取消选择
                 return
-            if SwInfoFuncCore.is_valid_sw_path(LocalCfg.DLL_DIR, sw, path):
+            if SwInfoFuncCore.is_valid_sw_path(LocalCfgKey.DLL_DIR, sw, path):
                 selected_path = path
                 break
             else:
                 if not messagebox.askyesno(
                         "提醒",
-                        f"该路径可能不是有效的存储路径，{self.error_msg[LocalCfg.DLL_DIR]}\n是否坚持选择该路径？",
+                        f"该路径可能不是有效的存储路径，{self.error_msg[LocalCfgKey.DLL_DIR]}\n是否坚持选择该路径？",
                         icon="warning"):
                     continue  # 用户选择"否"，继续循环
                 selected_path = path
                 break
 
         if selected_path:
-            self.path_var_dict[LocalCfg.DLL_DIR].set(selected_path)
+            self.path_var_dict[LocalCfgKey.DLL_DIR].set(selected_path)
 
     def thread_to_get_login_size(self):
         def thread():
@@ -2016,6 +2004,7 @@ class SettingWndUI(SubToolWndUI):
 
 class GlobalSettingWndUI(SubToolWndUI):
     def __init__(self, wnd, title):
+        self.origin_user_dir = None
         self.proxy_port = None
         self.proxy_ip = None
         self.proxy_detail_occ = None
@@ -2024,12 +2013,15 @@ class GlobalSettingWndUI(SubToolWndUI):
         self.addr_var = None
         self.use_proxy_var = None
         self.main_frame = wnd
-        self.remote_config_var = None
+        self.remote_sw_var = None
+        self.remote_global_var = None
+        self.user_dir_var = None
         self.screen_size_var = None
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.remote_config_var = tk.StringVar()
+        self.remote_sw_var = tk.StringVar()
+        self.remote_global_var = tk.StringVar()
         self.screen_size_var = tk.StringVar()
         self.use_proxy_var = tk.BooleanVar()
         self.addr_var = tk.StringVar()
@@ -2041,14 +2033,16 @@ class GlobalSettingWndUI(SubToolWndUI):
         main_frame = ttk.Frame(self.wnd_frame, padding=Config.FRM_PAD)
         main_frame.pack(**Config.FRM_PACK)
 
-        # 代理框架=使用代理复选框+代理设置框架
+        # 代理框架=使用代理复选框+代理设置框架---------------------------
         proxy_frame = ttk.Frame(main_frame)
         proxy_frame.pack(side="top", fill="x")
         # 使用代理复选框
+        use_proxy_var, = App().get_settings(**{LocalCfgKey.USE_PROXY: False})
+        self.use_proxy_var.set(use_proxy_var)
         proxy_checkbox = ttk.Checkbutton(
             proxy_frame, text="使用代理", variable=self.use_proxy_var,
-            command=lambda: self.do_and_update(
-                partial(AppFuncCore.save_a_global_setting_and_callback, LocalCfg.USE_PROXY, self.use_proxy_var.get())))
+            command=lambda: self.update_content()
+        )
         proxy_checkbox.pack(side="top", fill="x")
         # 代理设置框架，将会根据是否使用代理而显示或隐藏
         proxy_detail_frame = ttk.Frame(proxy_frame)
@@ -2057,27 +2051,37 @@ class GlobalSettingWndUI(SubToolWndUI):
         _, ip_btn_frame, _, ip_var = self._create_label_btn_entry_grid(proxy_detail_frame, "代理地址:", "")
         _, port_btn_frame, _, port_var = self._create_label_btn_entry_grid(proxy_detail_frame, "代理端口:", "")
         # 添加预设按钮
-        ip_presets, port_presets = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, "proxy",
-                                                               ip_presets=None, port_presets=None)
+        ip_presets, port_presets = App().get_remote_global("proxy", ip_presets=None, port_presets=None)
 
-        for ip in ip_presets:
-            b = _create_btn_in_(ip_btn_frame, ip["name"])
-            b.set_bind_map(
-                **{"1": partial(ip_var.set, ip["value"])}).apply_bind(self.root)
-            _pack_btn_left(b)
-        for port in port_presets:
-            b = _create_btn_in_(port_btn_frame, port["name"])
-            b.set_bind_map(
-                **{"1": partial(port_var.set, port["value"])}).apply_bind(self.root)
-            _pack_btn_left(b)
+        if ip_presets is not None:
+            for ip in ip_presets:
+                b = _create_btn_in_(ip_btn_frame, ip["name"])
+                b.set_bind_map(
+                    **{"1": partial(ip_var.set, ip["value"])}).apply_bind(self.root)
+                _pack_btn_left(b)
+        if port_presets is not None:
+            for port in port_presets:
+                b = _create_btn_in_(port_btn_frame, port["name"])
+                b.set_bind_map(
+                    **{"1": partial(port_var.set, port["value"])}).apply_bind(self.root)
+                _pack_btn_left(b)
 
-        data_path_frame = ttk.Frame(main_frame)
-        data_path_frame.pack(side="top", fill="x")
-        _, _, data_path_var = self._create_label_entry_grid(data_path_frame, "本地目录:", "")
+        # 用户目录设置框架---------------------------
+        user_dir_frame = ttk.Frame(main_frame)
+        user_dir_frame.pack(side="top", fill="x")
+        _, user_dir_btn_frame, _, user_dir_var = self._create_label_btn_entry_grid(user_dir_frame, "本地目录:", "")
+        self.origin_user_dir = App().user_dir
+        default_dir = Config.DEFAULT_USER_DIR
+        b = _create_btn_in_(user_dir_btn_frame, "默认")
+        b.set_bind_map(
+            **{"1": partial(user_dir_var.set, default_dir)}).apply_bind(self.root)
+        _pack_btn_left(b)
 
+        # 远程配置源设置框架---------------------------
         remote_cfg_frame = ttk.Frame(main_frame)
         remote_cfg_frame.pack(side="top", fill="x")
-        _, _, remote_cfg_var = self._create_label_entry_grid(remote_cfg_frame, "远程配置:", "")
+        _, _, remote_sw_var = self._create_label_entry_grid(remote_cfg_frame, "远程平台:", "")
+        _, _, remote_global_var = self._create_label_entry_grid(remote_cfg_frame, "远程全局:", "")
 
         # 底部放三个按钮：确定，取消，应用
         bottom_btn_frame = ttk.Frame(main_frame)
@@ -2092,15 +2096,21 @@ class GlobalSettingWndUI(SubToolWndUI):
         self.proxy_detail_frame = proxy_detail_frame
         self.proxy_ip = ip_var
         self.proxy_port = port_var
+        self.remote_sw_var = remote_sw_var
+        self.remote_global_var = remote_global_var
+        self.user_dir_var = user_dir_var
 
     def update_content(self):
-        use_proxy = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.USE_PROXY)
-        self.use_proxy_var.set(use_proxy)
-        ip = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.PROXY_IP)
-        port = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.PROXY_PORT)
-        self.proxy_ip.set(ip)
-        self.proxy_port.set(port)
+        self._update_proxy_visible()
+        self._update_proxy_settings()
+        self._update_user_dir()
 
+        remote_sw, = App().get_root_settings(remote_sw=None)
+        self.remote_sw_var.set(remote_sw)
+        remote_global, = App().get_root_settings(remote_global=None)
+        self.remote_global_var.set(remote_global)
+
+    def _update_proxy_visible(self):
         # 若为True，则显示代理设置框架
         if self.use_proxy_var.get():
             # 将内部的控件设为可用
@@ -2110,26 +2120,119 @@ class GlobalSettingWndUI(SubToolWndUI):
             CustomBtn.set_all_custom_widgets_to_(self.proxy_detail_frame, CustomBtn.State.DISABLED)
             widget_utils.set_all_children_in_frame_to_state(self.proxy_detail_frame, CustomBtn.State.DISABLED)
 
-    def get_screen_size(self):
-        screen_width = self.wnd.winfo_screenwidth()
-        screen_height = self.wnd.winfo_screenheight()
-        self.screen_size_var.set(f"{screen_width}*{screen_height}")
-        AppFuncCore.save_a_global_setting_and_callback('screen_size', f"{screen_width}*{screen_height}")
+    def _update_proxy_settings(self):
+        ip = App().fetch_setting_or_set_default(LocalCfgKey.PROXY_IP)
+        port = App().fetch_setting_or_set_default(LocalCfgKey.PROXY_PORT)
+        self.proxy_ip.set(ip)
+        self.proxy_port.set(port)
+
+    def _update_user_dir(self):
+        data_dir = App().user_dir
+        self.user_dir_var.set(data_dir)
 
     def save_settings(self):
         use_proxy = self.use_proxy_var.get()
         ip = self.proxy_ip.get()
         port = self.proxy_port.get()
-        AppFuncCore.save_a_global_setting_and_callback(LocalCfg.USE_PROXY, use_proxy)
-        AppFuncCore.save_a_global_setting_and_callback(LocalCfg.PROXY_IP, ip)
-        AppFuncCore.save_a_global_setting_and_callback(LocalCfg.PROXY_PORT, port)
+        App().save_setting_and_do(LocalCfgKey.USE_PROXY, self.use_proxy_var.get())
+        App().save_setting_and_do(LocalCfgKey.USE_PROXY, use_proxy)
+        App().save_setting_and_do(LocalCfgKey.PROXY_IP, ip)
+        App().save_setting_and_do(LocalCfgKey.PROXY_PORT, port)
+        App().update_root_settings(remote_global=self.remote_global_var.get())
+        App().update_root_settings(remote_sw=self.remote_sw_var.get())
+        user_dir = self.user_dir_var.get()
+        legal, user_dir = self.check_and_format_user_dir_path(user_dir)
+        if not legal:
+            messagebox.showerror("错误", "路径非法！请检查！")
+            return
+        changed = user_dir != self.origin_user_dir
+        Printer().debug(f"{changed} {user_dir} {self.origin_user_dir}")
+        App().update_root_settings(user_dir=user_dir)
+
         printer.vital("设置成功")
+        items = self.get_items_in_folder(user_dir)
+        if items is None:
+            info = "(未创建)"
+        elif len(items) == 0:
+            info = "(空)"
+        else:
+            info = ":\n" + "\n".join(items)
+        if changed:
+            if messagebox.askyesno("提示", f"数据目录已改变, 是否迁移?\n"
+                                           f"迁移将覆盖目标目录, 目标目录原内容会转移到桌面!\n"
+                                           f"当前目录: {user_dir}{info}"):
+                success = self.backup_and_copy_origin_to_target(self.origin_user_dir, user_dir)
+                if success:
+                    messagebox.showinfo("提示", "迁移成功！")
+                else:
+                    messagebox.showerror("错误", "迁移失败！")
+
         self.wnd.destroy()
         AppFuncCore.apply_proxy_setting()
 
     def do_and_update(self, func):
         func()
         self.update_content()
+
+    @staticmethod
+    def backup_and_copy_origin_to_target(origin_dir: str, target_dir: str):
+        desktop = winshell.desktop()
+        # --- 如果目标目录已有内容，先搬走 ---
+        if os.path.exists(target_dir) and os.listdir(target_dir):
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            name = os.path.basename(target_dir)
+            new_name = f"{name}_origin_{timestamp}"
+            new_path = os.path.join(desktop, new_name)
+            # 避免路径冲突
+            counter = 2
+            base_new_path = new_path
+            while os.path.exists(new_path):
+                new_path = f"{base_new_path}_{counter}"
+                counter += 1
+            # 移动到桌面
+            shutil.move(target_dir, new_path)
+        # --- 复制 origin_dir 到 target_dir ---
+        # 若 target_dir 不存在，需要先创建
+        if not os.path.exists(target_dir):
+            os.makedirs(target_dir)
+        # 将 origin_dir 中的内容复制到 target_dir（非 copytree，保持目录结构）
+        for item in os.listdir(origin_dir):
+            src = os.path.join(origin_dir, item)
+            dst = os.path.join(target_dir, item)
+            if os.path.isdir(src):
+                shutil.copytree(src, dst)
+            else:
+                shutil.copy2(src, dst)
+        return True
+
+    @staticmethod
+    def get_items_in_folder(folder):
+        """
+        获取文件夹下的所有文件和子文件夹名称。
+        如果路径不存在或不是文件夹，返回 None。
+        """
+        if not os.path.isdir(folder):
+            return None
+        try:
+            return os.listdir(folder)
+        except OSError:
+            return None
+
+    @staticmethod
+    def check_and_format_user_dir_path(path):
+        """将用户存储路径检测是否正常并格式化成'/', 如果不以user_files结尾则再拼接上user_files"""
+        if PathUtils.is_legal_path(path) is not True:
+            return False, None
+        normalized = path.replace("\\", "/")
+        normalized = normalized.rstrip("/")
+        # 检查末尾是否为 user_files
+        if getattr(sys, "frozen", False):
+            suffix = "user_files"
+        else:
+            suffix = "dev_user_files"
+        if not normalized.endswith(suffix):
+            normalized = f"{normalized}/{suffix}"
+        return True, normalized
 
     @staticmethod
     def _create_label_btn_entry_grid(grid_frame, label_text, var_value, readonly=False):

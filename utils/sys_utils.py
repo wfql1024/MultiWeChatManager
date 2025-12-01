@@ -1,12 +1,12 @@
 import ctypes
 import os
 import platform
+import tkinter as tk
 import winreg
 from contextlib import contextmanager
 from ctypes import wintypes
 from pathlib import Path
 from typing import Tuple
-import tkinter as tk
 
 
 class Tk2Sys:
@@ -143,6 +143,7 @@ def get_sys_major_version_name():
     else:
         print("当前不是 Windows 7、10 或 11")
         return "default"
+
 
 class UIUtils:
     @staticmethod

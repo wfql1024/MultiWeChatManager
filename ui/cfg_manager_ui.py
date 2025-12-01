@@ -6,7 +6,8 @@ from PIL import ImageTk, Image
 
 from components.composited_controls import ClassicAHT, CkbRow
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
-from func_core.acc_func_core import AccInfoFuncCore, AccOperatorCore
+from func_core.acc_func_core import AccOperatorCore
+from functions.acc_func import Acc
 from functions.sw_func import Sw
 from public import Config
 from public.custom_classes import Condition
@@ -180,7 +181,7 @@ class CfgManagerCR(CkbRow):
         account = self.item
 
         # 账号详情
-        details = AccInfoFuncCore.get_acc_details(self.sw, account)
+        details = Acc(self.sw, account).get_details()
         iid = details[AccKeys.IID]
         img = details[AccKeys.AVATAR]
         wrapped_display_name = details[AccKeys.WRAP_DISPLAY]

@@ -21,13 +21,13 @@ import win32process
 import winshell
 from PIL import Image, ImageDraw, ImageFont
 
-from func_core.sw_func_core import SwInfoFuncCore, SwOperatorCore
-from functions import subfunc_file
+from data_access.setting import LocalSetting, SwAccData, RemoteSw, RootSetting, StatisticData
 from func_core.acc_func_impl import AccInfoFuncImpl
+from func_core.sw_func_core import SwInfoFuncCore, SwOperatorCore
 from functions.func_tool import FuncTool
 from functions.sw_func import Sw
 from public.config import Config
-from public.enums import AccKeys, SwEnum, LocalCfg, MultirunMode, CfgStatus, WndType
+from public.enums import AccKeys, SwEnum, LocalCfgKey, MultirunMode, CfgStatus, WndType, RemoteSwKey
 from public.global_members import GlobalMembers
 from public.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
@@ -43,8 +43,8 @@ class AccOperatorCore:
         """获取屏幕尺寸"""
         screen_width, screen_height = UIUtils.get_screen_size()
         if not screen_height or not screen_width:
-            size = subfunc_file.fetch_a_setting_or_set_default_or_none(
-                LocalCfg.GLOBAL_SECTION, LocalCfg.SCREEN_SIZE).split('*')
+            size = LocalSetting().fetch_or_set_default_or_none(
+                LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.SCREEN_SIZE).split('*')
             screen_width, screen_height = int(size[0]), int(size[1])
         if not screen_height or not screen_width:
             screen_width, screen_height = 1920, 1080
@@ -57,7 +57,7 @@ class AccOperatorCore:
         max_height = 0
         for sw in sw_list:
             # 获取尺寸配置
-            siz = SwInfoFuncCore.get_sw_setting_by_local_record(sw, "login_size")
+            siz = LocalSetting().fetch_or_set_default_or_none(sw, "login_size")
             if siz and siz.strip():
                 try:
                     # 拆分宽度和高度，并确保为整数
@@ -74,7 +74,7 @@ class AccOperatorCore:
     def _get_now_login_hwnd_from_cache(sw, acc, excluded_hwnd_list):
         """用缓存类名来获取当前登录窗口hwnd"""
         # Printer().debug(f"传入参数: {sw}, {acc}, {excluded_hwnd_list}")
-        cached_class, = subfunc_file.get_sw_acc_data(sw, acc, login_wnd_class=None)
+        cached_class, = AccInfoFuncCore.get_sw_acc_data(sw, acc, login_wnd_class=None)
         # Printer().debug(cached_class)
         if cached_class is None:
             return None
@@ -111,7 +111,7 @@ class AccOperatorCore:
             sw_hwnd, class_name = HwndGetter.uiautomation_wait_hwnd_exclusively_by_pid_and_rules_dicts(
                 all_excluded_hwnds, sw_proc_pid, login_rules_dicts)
             if class_name is not None:
-                subfunc_file.update_sw_acc_data(sw, acc, login_wnd_class=class_name)
+                SwAccData().update_(sw, acc, login_wnd_class=class_name)
         if sub_proc:
             sub_proc.terminate()
         Printer().debug(sw_hwnd)
@@ -161,7 +161,7 @@ class AccOperatorCore:
             for h in hwnds:
                 if not isinstance(h, int):
                     continue
-                click_btn_titles = SwInfoFuncCore.get_sw_setting_by_local_record(sw, LocalCfg.CLICK_BTNS)
+                click_btn_titles = LocalSetting().fetch_or_set_default_or_none(sw, LocalCfgKey.CLICK_BTNS)
                 titles = click_btn_titles.split("/")
                 try:
                     cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
@@ -222,20 +222,20 @@ class AccOperatorCore:
                 continue
             # 初始化获取数据 -------------------------------------------------------------------
             multirun_mode = Sw(sw).multirun_mode
-            config_wildcards, = subfunc_file.get_remote_cfg(
+            config_wildcards, = RemoteSw().get_(
                 sw,
                 config_handle_wildcards=None
             )
             # 清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况 -------------------------------------------------------------------
             SwOperatorCore.kill_sw_multiple_processes(sw)
             # 是否需要关闭闲置的登录窗口
-            kill_idle = subfunc_file.fetch_a_setting_or_set_default_or_none(
-                LocalCfg.GLOBAL_SECTION, LocalCfg.KILL_IDLE_LOGIN_WND) is True
+            kill_idle = LocalSetting().fetch_or_set_default_or_none(
+                LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.KILL_IDLE_LOGIN_WND) is True
             Printer().print_vn(f"[INFO]需要关闭闲置窗口: {kill_idle}")
             remained_idle_wnd_list = SwOperatorCore.get_idle_login_wnd_and_close_if_necessary(sw, kill_idle)
             # 是否需要解锁配置文件
-            unlock_cfg = subfunc_file.fetch_a_setting_or_set_default_or_none(
-                LocalCfg.GLOBAL_SECTION, LocalCfg.UNLOCK_CFG) is True
+            unlock_cfg = LocalSetting().fetch_or_set_default_or_none(
+                LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.UNLOCK_CFG) is True
             Printer().print_vn(f"[INFO]需要解锁配置文件: {unlock_cfg}")
             all_excluded_hwnds.extend(remained_idle_wnd_list)
             # 根据是否全局多开, 检查记录所有pid及互斥体情况 -------------------------------------------------------------------
@@ -267,7 +267,7 @@ class AccOperatorCore:
                     SwInfoFuncCore.set_pid_mutex_all_values_to_false(sw)
                     if sw_proc_pid is None:
                         _, sw_proc_pid = win32process.GetWindowThreadProcessId(sw_hwnd)
-                    subfunc_file.update_sw_acc_data(AccKeys.RELAY, sw, AccKeys.PID_MUTEX, **{f"{sw_proc_pid}": True})
+                    SwAccData().update_(AccKeys.RELAY, sw, AccKeys.PID_MUTEX, **{f"{sw_proc_pid}": True})
                 else:
                     all_opened_hwnds.append(None)
                     sw_opened_hwnds.append(None)
@@ -277,13 +277,13 @@ class AccOperatorCore:
                     pre_wnd_pos = all_acc_positions[all_acc_turn - 1]
                     cls._set_wnd_pos(pre_hwnd, pre_wnd_pos)
                 # 逐次统计时间 *******************************************************************
-                subfunc_file.update_statistic_data(
+                StatisticData().update_statistic_data(
                     sw, 'auto', str(j + 1), multirun_mode, time.time() - start_time)
                 all_acc_turn += 1
 
             # 统计平台平均时间 -------------------------------------------------------------------
-            subfunc_file.update_statistic_data(sw, 'auto', 'avg', multirun_mode,
-                                               (time.time() - start_time) / acc_cnt)
+            StatisticData().update_statistic_data(sw, 'auto', 'avg', multirun_mode,
+                                                  (time.time() - start_time) / acc_cnt)
             # 间隔一段时间后对平台的最后一个窗口移动 -------------------------------------------------------------------
             SwOperatorCore.kill_sw_multiple_processes(sw)
             time.sleep(3)
@@ -316,7 +316,7 @@ class AccOperatorCore:
     @classmethod
     def del_config_of_accounts(cls, sw, accounts: List[str]):
         """批量删除账号的配置, 可从回收站恢复"""
-        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        config_addresses, = RemoteSw().get_(sw, config_addresses=None)
         if not isinstance(config_addresses, list) or len(config_addresses) == 0:
             messagebox.showinfo("提醒", f"{sw}平台还没有适配")
             return
@@ -358,7 +358,7 @@ class AccOperatorCore:
         if method not in ["use", "add", "del"]:
             logger.error("未知字段：" + method)
             return False, "未知字段"
-        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        config_addresses, = RemoteSw().get_(sw, config_addresses=None)
         if not isinstance(config_addresses, list):
             return False, "无法获取登录配置文件地址"
 
@@ -455,10 +455,10 @@ class AccOperatorCore:
         # 1. 获取所有账号节点的url和昵称，将空的账号返回
         accounts_need_to_get_avatar = []
         accounts_need_to_get_nickname = []
-        sw_data = subfunc_file.get_sw_acc_data(sw)
+        sw_data = SwAccData().get_(sw)
         # print(login, logout)
         for acc in sw_data:
-            avatar_url, nickname = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None, nickname=None)
+            avatar_url, nickname = AccInfoFuncCore.get_sw_acc_data(sw, acc, avatar_url=None, nickname=None)
             if avatar_url is None:
                 accounts_need_to_get_avatar.append(acc)
             if nickname is None:
@@ -493,7 +493,7 @@ class AccOperatorCore:
     @staticmethod
     def switch_to_sw_account_wnd(sw, acc):
         """切换到指定的账号窗口"""
-        main_hwnd, = subfunc_file.get_sw_acc_data(sw, acc, main_hwnd=None)
+        main_hwnd, = AccInfoFuncCore.get_sw_acc_data(sw, acc, main_hwnd=None)
         # 恢复平台指定主窗口
         if sw == SwEnum.WEIXIN:
             # 如果微信没有被隐藏到后台
@@ -512,14 +512,14 @@ class AccOperatorCore:
     def quit_accounts(sw, accounts):
         quited_accounts = []
         for account in accounts:
-            pid, = subfunc_file.get_sw_acc_data(sw, account, pid=None)
-            executable_wildcards, = subfunc_file.get_remote_cfg(
-                sw, executable_wildcards=None)
+            pid, = AccInfoFuncCore.get_sw_acc_data(sw, account, pid=None)
+            executable_wildcards, = RemoteSw().get_(
+                sw, **{RemoteSwKey.EXE_WCS: None})
             if isinstance(executable_wildcards, list):
                 success = process_utils.psutil_kill_process_tree_if_matched_in_wildcards(pid, executable_wildcards)
                 if success:
                     quited_accounts.append(account)
-                    subfunc_file.update_sw_acc_data(sw, account, pid=None)
+                    SwAccData().update_(sw, account, pid=None)
         return quited_accounts
 
     @staticmethod
@@ -570,9 +570,19 @@ echo 所有互斥体处理完成
 
     @staticmethod
     def _generate_replace_cfg_cmds(sw, acc):
-        """生成用于替换配置文件的bat指令"""
-        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        """
+        生成用于替换配置文件的bat指令
+        如果账号是共存账号, 则无需替换配置文件
+        """
+        if AccInfoFuncCore.is_acc_coexist(sw, acc):
+            replace_cfg_cmd = f"""
+REM 替换配置文件
+echo 共存账号无需替换配置文件
+"""
+            return replace_cfg_cmd
 
+        # 普通账号 --------------------------
+        config_addresses, = RemoteSw().get_(sw, config_addresses=None)
         # 构建相关文件列表
         replace_cmd_list = []
         for addr in config_addresses:
@@ -587,8 +597,6 @@ echo 所有互斥体处理完成
             # # 构建配置字典
         replace_cmds_str = "\n".join(replace_cmd_list)
         replace_cfg_cmd = f"""
-@echo off
-chcp 65001
 REM 替换配置文件
 {replace_cmds_str}
 if errorlevel 1 (
@@ -673,21 +681,22 @@ shell.ShellExecute "{exe_file}", "", "", "", 1
 
     @staticmethod
     def _create_bat_icon_lnk(sw, acc, icon_exe, acc_avatar, prefix, admin_bat_str, normal_vbs_str):
+        user_dir = RootSetting().user_dir
         # 确保路径存在
-        account_file_path = os.path.join(Config.PROJ_USER_PATH, sw, f'{acc}')
+        account_file_path = os.path.join(user_dir, sw, f'{acc}')
         if not os.path.exists(account_file_path):
             os.makedirs(account_file_path)
         # 保存为批处理文件
         sw_display_name = StringUtils.clean_texts(Sw(sw).label)
         acc_display_name = StringUtils.clean_texts(AccInfoFuncCore.get_acc_origin_display_name(sw, acc))
         admin_bat_file_path = os.path.join(
-            Config.PROJ_USER_PATH, sw, f'{acc}',
+            user_dir, sw, f'{acc}',
             f'{prefix}{sw_display_name}{acc_display_name}[admin].bat').replace("/", "\\")
         # bat_file_path = os.path.join(
-        #     Config.PROJ_USER_PATH, sw, f'{acc}', f'{prefix}{sw_display_name}{acc_display_name}.bat').replace("/", "\\")
+        #     user_dir, sw, f'{acc}', f'{prefix}{sw_display_name}{acc_display_name}.bat').replace("/", "\\")
         vbs_file_path = os.path.join(
-            Config.PROJ_USER_PATH, sw, f'{acc}',
-            f'{prefix}{sw_display_name}{acc_display_name}.vbs').replace("/", "\\")
+            user_dir, sw, f'{acc}',
+            f'{prefix}{sw_display_name}_{acc_display_name}.vbs').replace("/", "\\")
         # -以带有BOM的UTF-8格式写入管理员bat文件
         with open(admin_bat_file_path, 'w', encoding='utf-8-sig') as bat_file:
             bat_file.write(admin_bat_str)
@@ -721,7 +730,7 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
         shortcut_path = os.path.join(desktop, f"{bat_file_name}.lnk")
 
         # 图标文件路径
-        acc_dir = os.path.join(Config.PROJ_USER_PATH, str(sw), f"{acc}")
+        acc_dir = os.path.join(user_dir, str(sw), f"{acc}")
         exe_name = os.path.splitext(os.path.basename(icon_exe))[0]
 
         # 步骤1：提取图标为图片
@@ -757,39 +766,40 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
         :return: 是否成功
         """
         # 确保可以创建快捷启动
-        sw_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfg.INST_PATH)
+        sw_path = AccInfoFuncCore.get_acc_exe_path(sw, acc)
         if not sw_path:
             messagebox.showerror("错误", "无法获取数据路径")
             return False
         sw_path = sw_path.replace("/", "\\")
         handle_exe_path = Config.HANDLE_EXE_PATH.replace("/", "\\")
         # 头像
-        avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
+        user_dir = RootSetting().user_dir
+        avatar_path = os.path.join(user_dir, sw, f"{acc}", f"{acc}.jpg")
         if not os.path.exists(avatar_path):
-            avatar_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
-
+            avatar_path = os.path.join(user_dir, "default.jpg")
         # 互斥体名称列表
-        mutex_names = []
-        mutant_handle_infos, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=[])
-        for handle_regex_dict in mutant_handle_infos:
-            print(handle_regex_dict)
-            mutex_name = handle_regex_dict.get("handle_name")
-            mutex_names.append(mutex_name)
+        mutex_names = AccInfoFuncCore.get_coexist_acc_mutex_list(sw, acc)
         print(f"互斥体名称列表：{mutex_names}")
 
         replace_cfg_cmd = cls._generate_replace_cfg_cmds(sw, acc)
-        operate_list = []
-        operate_list.extend(cls._generate_start_cmds_if_freely_multirun(sw_path))
-        operate_list.extend(cls._generate_start_cmds_for_handle(
+        operate_res_list = []
+        if not AccInfoFuncCore.is_acc_coexist(sw, acc):
+            # 共存账号不支持用无补丁多开
+            operate_res_list.extend(cls._generate_start_cmds_if_freely_multirun(sw_path))
+        operate_res_list.extend(cls._generate_start_cmds_for_handle(
             handle_exe_path, sw_path, mutex_names))
-        operate_list.extend(cls._generate_start_cmds_for_other(sw))
+        operate_res_list.extend(cls._generate_start_cmds_for_other(sw))
 
-        for exe_path, prefix, close_handle_cmds_str, start_vbs_str in operate_list:
+        for res in operate_res_list:
+            icon_exe, prefix, close_handle_cmds_str, start_vbs_str = res
             # 管理员运行部分:替换+关闭句柄
-            admin_bat_str = f"{replace_cfg_cmd}\n{close_handle_cmds_str}"
+            admin_bat_str = (f"@echo off\n"
+                             f"chcp 65001\n"
+                             f"{replace_cfg_cmd}\n"
+                             f"{close_handle_cmds_str}")
             # 普通运行部分：启动
             normal_vbs_str = f"{start_vbs_str}"
-            cls._create_bat_icon_lnk(sw, acc, exe_path, avatar_path, prefix, admin_bat_str, normal_vbs_str)
+            cls._create_bat_icon_lnk(sw, acc, icon_exe, avatar_path, prefix, admin_bat_str, normal_vbs_str)
         return None
 
     @classmethod
@@ -807,10 +817,11 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
     @staticmethod
     def kill_mutex_of_acc(sw, acc):
         """关闭指定进程的所有互斥体"""
-        pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
+        # TODO: 需要适配共存账号
+        pid, = AccInfoFuncCore.get_sw_acc_data(sw, acc, pid=None)
         if pid is None:
             return False
-        handle_regex_list, = subfunc_file.get_remote_cfg(sw, mutant_handle_infos=None)
+        handle_regex_list, = RemoteSw().get_(sw, mutant_handle_infos=None)
         if handle_regex_list is None:
             return True
         handle_names = [handle["handle_name"] for handle in handle_regex_list]
@@ -824,7 +835,7 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
         )
         print(f"kill mutex: {success}")
         if success:
-            subfunc_file.update_sw_acc_data(sw, acc, has_mutex=False)
+            SwAccData().update_(sw, acc, has_mutex=False)
         return success
 
 
@@ -836,10 +847,33 @@ class AccInfoFuncCore:
         acc: 账号标识
     """
 
+    """数据存储"""
+
+    @staticmethod
+    def get_sw_acc_data(sw, acc, *addr, **kwargs):
+        return SwAccData().get_(sw, acc, *addr, **kwargs)
+
+    @staticmethod
+    def update_sw_acc_data(sw, acc, *addr, **kwargs):
+        return SwAccData().update_(sw, acc, *addr, **kwargs)
+
+    """主程序"""
+
+    @classmethod
+    def get_acc_exe_path(cls, sw, acc):
+        """自适应获取账号对应的主程序路径"""
+        if cls.is_acc_coexist(sw, acc):
+            return cls.get_coexist_acc_exe_path(sw, acc)
+        else:
+            return SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+
+    """头像, 展示名, 登录配置"""
+
     @staticmethod
     def _use_default_avatar_or_white_bg():
+        user_dir = RootSetting().user_dir
         # 如果没有，检查default.jpg
-        default_path = os.path.join(Config.PROJ_USER_PATH, "default.jpg")
+        default_path = os.path.join(user_dir, "default.jpg")
         if os.path.exists(default_path):
             return Image.open(default_path)
 
@@ -899,6 +933,7 @@ class AccInfoFuncCore:
 
     @staticmethod
     def manual_choose_avatar_for_acc(sw, acc):
+        user_dir = RootSetting().user_dir
         file_path = filedialog.askopenfilename(
             title="选择头像图片",
             filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")]
@@ -912,18 +947,19 @@ class AccInfoFuncCore:
             left = (width - side) // 2
             top = (height - side) // 2
             cropped = img.crop((left, top, left + side, top + side))
-            dir_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}")
-            file_path = os.path.join(dir_path, f"{acc}.jpg")
+            dir_path = os.path.join(user_dir, sw, f"{acc}")
+            file_path = os.path.join(str(dir_path), f"{acc}.jpg")
             # 确保目录存在
             os.makedirs(dir_path, exist_ok=True)
             cropped.save(file_path, format=img.format)
 
     @staticmethod
     def delete_avatar_for_acc(sw, acc):
-        path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
+        user_dir = RootSetting().user_dir
+        path = os.path.join(user_dir, sw, f"{acc}", f"{acc}.jpg")
         if os.path.exists(path):
             os.remove(path)
-        subfunc_file.update_sw_acc_data(sw, acc, avatar_url=None)
+        SwAccData().update_(sw, acc, avatar_url=None)
 
     @classmethod
     def get_acc_avatar_from_files(cls, sw, acc):
@@ -932,18 +968,19 @@ class AccInfoFuncCore:
         成功返回(True, 头像头像)
         失败返回(False, 默认头像)
         """
-        disable_avatar, = subfunc_file.get_sw_acc_data(sw, acc, disable_avatar=None)
+        user_dir = RootSetting().user_dir
+        disable_avatar, = cls.get_sw_acc_data(sw, acc, disable_avatar=None)
         if disable_avatar is True:
             return True, cls._get_acc_avatar_without_files(sw, acc)
 
         # 构建头像文件路径
-        avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
+        avatar_path = os.path.join(user_dir, sw, f"{acc}", f"{acc}.jpg")
 
         # 检查是否存在对应account的头像
         if os.path.exists(avatar_path):
             return True, Image.open(avatar_path)
         # 如果没有，从网络下载
-        url, = subfunc_file.get_sw_acc_data(sw, acc, avatar_url=None)
+        url, = cls.get_sw_acc_data(sw, acc, avatar_url=None)
         if url is not None and url.endswith("/0"):
             image_utils.download_image(url, avatar_path)
 
@@ -956,20 +993,20 @@ class AccInfoFuncCore:
     @classmethod
     def _get_acc_avatar_without_files(cls, sw, acc):
         # 处理没有本地头像的情况
-        use_text_avatar = subfunc_file.fetch_a_setting_or_set_default_or_none(
-            LocalCfg.GLOBAL_SECTION, LocalCfg.USE_TXT_AVT)
+        use_text_avatar = LocalSetting().fetch_or_set_default_or_none(
+            LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.USE_TXT_AVT)
         if use_text_avatar:
             return cls._generate_text_avatar(cls.get_acc_origin_display_name(sw, acc))
         else:
             return cls._use_default_avatar_or_white_bg()
 
-    @staticmethod
-    def get_acc_origin_display_name(sw, acc) -> str:
+    @classmethod
+    def get_acc_origin_display_name(cls, sw, acc) -> str:
         """获取账号的展示名"""
         # 依次查找 note, nickname, alias，找到第一个不为 None 的值
         display_name = str(acc)  # 默认值为 account
         for key in (AccKeys.REMARK, AccKeys.NICKNAME, AccKeys.ALIAS):
-            value, = subfunc_file.get_sw_acc_data(sw, acc, **{key: None})
+            value, = cls.get_sw_acc_data(sw, acc, **{key: None})
             if value is not None:
                 display_name = str(value)
                 break
@@ -983,7 +1020,7 @@ class AccInfoFuncCore:
         :param account: 账号
         :return: 配置状态
         """
-        config_addresses, = subfunc_file.get_remote_cfg(sw, config_addresses=None)
+        config_addresses, = RemoteSw().get_(sw, config_addresses=None)
         if not isinstance(config_addresses, list) or len(config_addresses) == 0:
             return "无法获取登录配置文件地址"
         for addr in config_addresses:
@@ -1013,6 +1050,8 @@ class AccInfoFuncCore:
         else:
             return CfgStatus.NO_CFG.value
 
+    """自适应"""
+
     @staticmethod
     def trims_other_sw(trim_values, other_sw):
         if not isinstance(trim_values, list) or len(trim_values) != 4:
@@ -1023,7 +1062,7 @@ class AccInfoFuncCore:
         now_r = None if now_r == 0 else -now_r
 
         # 加载其他平台的账号列表
-        other_acc_dict: dict = subfunc_file.get_sw_acc_data(other_sw)
+        other_acc_dict: dict = SwAccData().get_(other_sw)
         if other_acc_dict is None or len(other_acc_dict.keys()) == 0:
             return None
         # 预处理：构建一个 dict，key 是裁切后的 other_acc，value 是原账号
@@ -1035,9 +1074,10 @@ class AccInfoFuncCore:
 
     @classmethod
     def get_avatar_from_other_sw(cls, now_sw, now_acc_list):
+        user_dir = RootSetting().user_dir
         # 获取从其他平台到当前平台的裁剪映射
         changed = False
-        sw_id_trims, = subfunc_file.get_remote_cfg(now_sw, sw_id_trims=None)
+        sw_id_trims, = RemoteSw().get_(now_sw, **{RemoteSwKey.TRIMS: None})
         for other_sw, trim_values in (sw_id_trims or {}).items():
             other_cut_map, now_l, now_r = cls.trims_other_sw(trim_values, other_sw)
             if not isinstance(other_cut_map, dict):
@@ -1050,21 +1090,21 @@ class AccInfoFuncCore:
                 other_acc = other_cut_map.get(now_cut_acc)
                 if other_acc:
                     # 检查头像url是否存在,若不在,则偷取
-                    now_avatar_url, = subfunc_file.get_sw_acc_data(now_sw, now_acc, avatar_url=None)
-                    other_avatar_url, = subfunc_file.get_sw_acc_data(other_sw, other_acc, avatar_url=None)
+                    now_avatar_url, = cls.get_sw_acc_data(now_sw, now_acc, avatar_url=None)
+                    other_avatar_url, = cls.get_sw_acc_data(other_sw, other_acc, avatar_url=None)
                     if other_avatar_url and not now_avatar_url:
                         logger.info(f"{now_acc}: {other_avatar_url}")
-                        subfunc_file.update_sw_acc_data(now_sw, now_acc, avatar_url=other_avatar_url)
+                        SwAccData().update_(now_sw, now_acc, avatar_url=other_avatar_url)
                         changed = True
                     # 检查头像文件是否存在,若不在,先从url下载,若下载失败,则从其他平台偷取本地图片
-                    now_avatar_path = os.path.join(Config.PROJ_USER_PATH, now_sw, f"{now_acc}", f"{now_acc}.jpg")
-                    now_avatar_url, = subfunc_file.get_sw_acc_data(now_sw, now_acc, avatar_url=None)
+                    now_avatar_path = os.path.join(user_dir, now_sw, f"{now_acc}", f"{now_acc}.jpg")
+                    now_avatar_url, = cls.get_sw_acc_data(now_sw, now_acc, avatar_url=None)
                     if not os.path.isfile(now_avatar_path):
                         if now_avatar_url is not None:
                             success = image_utils.download_image(now_avatar_url, now_avatar_path)
                             if success is True:
                                 return True
-                        other_avatar_path = os.path.join(Config.PROJ_USER_PATH, other_sw, f"{other_acc}",
+                        other_avatar_path = os.path.join(user_dir, other_sw, f"{other_acc}",
                                                          f"{other_acc}.jpg")
                         if os.path.isfile(other_avatar_path) and not os.path.isfile(now_avatar_path):
                             os.makedirs(os.path.dirname(now_avatar_path), exist_ok=True)
@@ -1076,7 +1116,7 @@ class AccInfoFuncCore:
     def get_nickname_from_other_sw(cls, now_sw, now_acc_list):
         # 获取从其他平台到当前平台的裁剪映射
         changed = False
-        sw_id_trims, = subfunc_file.get_remote_cfg(now_sw, sw_id_trims=None)
+        sw_id_trims, = RemoteSw().get_(now_sw, **{RemoteSwKey.TRIMS: None})
         for other_sw, trim_values in (sw_id_trims or {}).items():
             other_cut_map, now_l, now_r = cls.trims_other_sw(trim_values, other_sw)
             if not isinstance(other_cut_map, dict):
@@ -1088,30 +1128,113 @@ class AccInfoFuncCore:
                 other_acc = other_cut_map.get(now_cut_acc)
                 if other_acc:
                     # 检查头像url是否存在,若不在,则偷取
-                    now_nickname, = subfunc_file.get_sw_acc_data(now_sw, now_acc, nickname=None)
-                    other_nickname, = subfunc_file.get_sw_acc_data(other_sw, other_acc, nickname=None)
+                    now_nickname, = cls.get_sw_acc_data(now_sw, now_acc, nickname=None)
+                    other_nickname, = cls.get_sw_acc_data(other_sw, other_acc, nickname=None)
                     if other_nickname and not now_nickname:
                         logger.info(f"{now_acc}: {other_nickname}")
-                        subfunc_file.update_sw_acc_data(now_sw, now_acc, nickname=other_nickname)
+                        SwAccData().update_(now_sw, now_acc, nickname=other_nickname)
                         changed = True
         return changed
 
-    @staticmethod
-    def is_acc_coexist(sw, acc):
-        acc_dict = subfunc_file.get_sw_acc_data(sw, acc)
+    """共存"""
+
+    @classmethod
+    def is_acc_coexist(cls, sw, acc):
+        acc_dict = cls.get_sw_acc_data(sw, acc)
         if not isinstance(acc_dict, dict) or "linked_acc" not in acc_dict:
             return False
         return True
 
-    @staticmethod
-    def get_real_acc(sw, acc):
+    @classmethod
+    def get_real_acc(cls, sw, acc):
         """共存账号会有linked_acc属性, 会指向其链接的真实账号"""
-        acc_dict = subfunc_file.get_sw_acc_data(sw, acc)
+        acc_dict = cls.get_sw_acc_data(sw, acc)
         if not isinstance(acc_dict, dict):
             return acc
         if "linked_acc" in acc_dict:
             return acc_dict["linked_acc"] if acc_dict["linked_acc"] is not None else acc
         return acc
+
+    @classmethod
+    def get_coexist_acc_exe(cls, sw, acc):
+        """目前是直接以exe作为账号名的, 所以无需转换"""
+        if cls.is_acc_coexist(sw, acc):
+            return acc
+        return None
+
+    @classmethod
+    def get_coexist_acc_exe_path(cls, sw, acc):
+        """获取共存账号所对应的共存程序路径"""
+        exe_basename = cls.get_coexist_acc_exe(sw, acc)
+        if exe_basename is None:
+            return None
+        sw_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+        sw_path = os.path.join(os.path.dirname(sw_path), cls.get_coexist_acc_exe(sw, acc))
+        return sw_path
+
+    @classmethod
+    def get_coexist_acc_channel_and_ordinal(cls, sw, acc):
+        """获取共存账号的序号"""
+        # 获取所使用的方案
+        exe_name = cls.get_coexist_acc_exe(sw, acc)
+        channel = cls.get_coexist_acc_channel(sw, acc)
+        exe_wildcard, = RemoteSw().get_(
+            sw, RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, channel, exe_wildcard=None)
+        if not isinstance(exe_wildcard, str):
+            return channel, None
+        ordinal = StringUtils.extract_wildcard_char(exe_name, exe_wildcard)
+        if not isinstance(ordinal, str) or ordinal == "":
+            return channel, None
+        return channel, ordinal
+
+    @classmethod
+    def get_coexist_acc_channel(cls, sw, acc):
+        """获取共存账号所使用的共存方案"""
+        exe_name = cls.get_coexist_acc_exe(sw, acc)
+        cache_channel, = cls.get_sw_acc_data(sw, acc, channel=None)
+        if isinstance(cache_channel, str):
+            check_channel = cache_channel
+        else:
+            # 如果为空, 尝试将当前的方案匹配, 若符合, 则将当前方案存入channel键
+            now_channel, _, _ = SwInfoFuncCore.identity_and_get_available_coexist_mode(sw)
+            check_channel = now_channel
+        exe_wildcard, = RemoteSw().get_(
+            sw, RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, check_channel, exe_wildcard=None)
+        if isinstance(exe_wildcard, str) and fnmatch(exe_name, exe_wildcard):
+            cls.update_sw_acc_data(sw, acc, channel=check_channel)
+            return check_channel
+
+        # 从远程配置中遍历寻找合适的
+        channels_dict = RemoteSw().get_(sw, RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS)
+        for channel in channels_dict:
+            if channel == check_channel:
+                continue
+            exe_wildcard, = RemoteSw().get_(
+                sw, RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, channel, exe_wildcard=None)
+            if fnmatch(exe_name, exe_wildcard):
+                cls.update_sw_acc_data(sw, acc, channel=channel)
+                return channel
+        return None
+
+    @classmethod
+    def get_coexist_acc_mutex_list(cls, sw, acc):
+        """获取共存账号所使用的互斥锁列表"""
+        mutex_list = []
+        mutant_handle_infos, = RemoteSw().get_(sw, mutant_handle_infos=[])
+        for handle_regex_dict in mutant_handle_infos:
+            # print(handle_regex_dict)
+            mutex_name = handle_regex_dict.get("handle_name")
+            if AccInfoFuncCore.is_acc_coexist(sw, acc):
+                channel, ordinal = AccInfoFuncCore.get_coexist_acc_channel_and_ordinal(sw, acc)
+                mutex_name_wildcard, = RemoteSw().get_(
+                    sw, RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, channel,
+                    RemoteSwKey.MUTEX_WC, **{mutex_name: None})
+                if isinstance(mutex_name_wildcard, str):
+                    mutex_name = mutex_name_wildcard.replace("?", ordinal)
+            mutex_list.append(mutex_name)
+        return mutex_list
+
+    """账号列表"""
 
     @staticmethod
     def _update_acc_list_by_pid(pid: int, data_dir, pid_acc_dict, exclude_folders):
@@ -1154,24 +1277,24 @@ class AccInfoFuncCore:
                     return
 
         except psutil.AccessDenied:
-            logger.error(f"无法访问进程ID为 {pid} 的内存映射文件，权限不足。")
+            logger.warning(f"无法访问进程ID为 {pid} 的内存映射文件，权限不足。")
         except psutil.NoSuchProcess:
-            logger.error(f"进程ID为 {pid} 的进程不存在或已退出。")
+            logger.warning(f"进程ID为 {pid} 的进程不存在或已退出。")
         except Exception as e:
             logger.error(f"发生意外错误: {e}")
 
     @staticmethod
     def _link_acc_to_coexist_exe(sw, pid_acc_dict, executable_wildcards):
         # 共存程序,将账号id赋给共存字典,将共存id赋给账号id
-        origin_exe, = subfunc_file.get_remote_cfg(sw, executable=None)
-        if origin_exe is None:
-            raise Exception("无法区分共存程序")
+        origin_exe, = RemoteSw().get_(sw, **{RemoteSwKey.EXE: None})
+        # if origin_exe is None:
+        #     raise Exception("无法区分共存程序")
         for pid, acc in pid_acc_dict.items():
             pid_exe = process_utils.get_exe_name_by_pid(pid)
             for wildcard in executable_wildcards:
                 if fnmatch(pid_exe, wildcard) and pid_exe != origin_exe:
                     # 只筛选出共存但不是原生程序的
-                    subfunc_file.update_sw_acc_data(sw, pid_exe, linked_acc=acc)
+                    SwAccData().update_(sw, pid_exe, linked_acc=acc)
                     pid_acc_dict[pid] = pid_exe
                     break
 
@@ -1182,17 +1305,14 @@ class AccInfoFuncCore:
         :param sw: 平台
         :return: Union[Tuple[True, Tuple[账号字典，进程字典，有无互斥体]], Tuple[False, 错误信息]]
         """
-        data_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalCfg.DATA_DIR)
+        data_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.DATA_DIR)
         if data_dir is None or os.path.isdir(data_dir) is False:
             return False, "数据路径不存在"
-        excluded_dirs, executable_wildcards = subfunc_file.get_remote_cfg(
-            sw,
-            excluded_dir_list=None,
-            executable_wildcards=None
-        )
-        if not isinstance(excluded_dirs, list) or not isinstance(executable_wildcards, list):
-            messagebox.showerror("错误", f"{sw}平台未适配")
-            return False, "该平台未适配[excluded_dir_list, executable_wildcards]"
+        excluded_dirs, executable_wildcards = RemoteSw().get_(
+            sw, **{RemoteSwKey.EXCLUDED_DIRS: [], RemoteSwKey.EXE_WCS: []})
+        # if not isinstance(excluded_dirs, list) or not isinstance(executable_wildcards, list):
+        #     messagebox.showerror("错误", f"{sw}平台未适配")
+        #     return False, "该平台未适配[excluded_dir_list, executable_wildcards]"
 
         Printer().vital("进程检测")
         start_time = time.time()
@@ -1236,17 +1356,78 @@ class AccInfoFuncCore:
         for acc in all_acc_list:
             pid = acc_pid_dict.get(acc, None)
             if pid is None:
-                subfunc_file.update_sw_acc_data(sw, acc, pid=None, has_mutex=False)
+                SwAccData().update_(sw, acc, pid=None, has_mutex=False)
             else:
-                subfunc_file.update_sw_acc_data(sw, acc, pid=pid)
+                SwAccData().update_(sw, acc, pid=pid)
         _, has_mutex = SwInfoFuncCore.update_has_mutex_from_pid_mutex(sw)
         # 对账号添加窗口类名属性
         origin_login_wnd_class = SwInfoFuncCore.get_sw_original_wnd_class_name(sw, WndType.LOGIN)
         for acc in all_acc_list:
-            login_wnd_class, = subfunc_file.get_sw_acc_data(sw, acc, login_wnd_class=None)
+            login_wnd_class, = cls.get_sw_acc_data(sw, acc, login_wnd_class=None)
             if login_wnd_class is None:
-                subfunc_file.update_sw_acc_data(sw, acc, login_wnd_class=origin_login_wnd_class)
+                SwAccData().update_(sw, acc, login_wnd_class=origin_login_wnd_class)
         return True, (acc_list_dict, has_mutex)
+
+    """详情"""
+
+    @classmethod
+    def get_acc_details(cls, sw, account):
+        """获取账号详情, 返回字典"""
+        details = {}
+
+        # 头像,配置文件状态比较特殊,需要看账号类型以及是否链接来分别判定
+        linked_acc = cls.get_real_acc(sw, account)
+        coexist = cls.is_acc_coexist(sw, account)
+        config_status = account if coexist else cls.get_sw_acc_login_cfg_status(sw, account)
+        if coexist and linked_acc == account:
+            # 共存程序但是没有登录链接过账号
+            img = Sw(sw).logo
+        else:
+            # 主程序 或 共存程序并且已经登录链接过账号
+            success, img = cls.get_acc_avatar_from_files(sw, account)
+            if not success:
+                _, img = cls.get_acc_avatar_from_files(sw, linked_acc)
+
+        # - 实际账号的展示名优先级更高
+        acc_display_name = cls.get_acc_origin_display_name(sw, account)
+        linked_display_name = cls.get_acc_origin_display_name(sw, linked_acc)
+        if acc_display_name == account:
+            # 实际账号并没有备注
+            display_name = linked_display_name
+            # if linked_display_name == linked_acc:
+            #     # 链接账号也没有备注和昵称, 则以实际账号的展示名为准
+            #     display_name = linked_display_name
+            # else:
+            #     display_name = linked_display_name
+        else:
+            display_name = acc_display_name
+        wrapped_display_name = StringUtils.balanced_wrap_text(display_name, 50)
+
+        # - 别名,昵称由链接账号查询
+        alias, nickname = cls.get_sw_acc_data(
+            sw, linked_acc, alias="请获取数据", nickname="请获取数据")
+        # - pid, 互斥体由实际账号/程序查询
+        pid, has_mutex, hotkey, hidden, auto_start = cls.get_sw_acc_data(
+            sw, account, pid=None, has_mutex=None, hotkey=None, hidden=None, auto_start=None)
+        iid = f"{sw}/{account}"
+
+        details[AccKeys.IID] = iid
+        details[AccKeys.AVATAR] = img
+        details[AccKeys.DISPLAY] = display_name
+        details[AccKeys.WRAP_DISPLAY] = wrapped_display_name
+        details[AccKeys.CONFIG_STATUS] = config_status
+        details[AccKeys.PID] = pid
+        details[AccKeys.HAS_MUTEX] = has_mutex
+        details[AccKeys.HOTKEY] = hotkey
+        details[AccKeys.HIDDEN] = hidden
+        details[AccKeys.AUTO_START] = auto_start
+        details[AccKeys.LINKED_ACC] = linked_acc
+        details[AccKeys.ALIAS] = alias
+        details[AccKeys.NICKNAME] = nickname
+
+        return details
+
+    """窗口"""
 
     @classmethod
     def get_main_hwnd_of_accounts(cls, sw, acc_list) -> Tuple[Optional[dict], str]:
@@ -1260,7 +1441,7 @@ class AccInfoFuncCore:
             return None, f"{sw}平台未适配"
         acc_hwnd_dict = {}
         for acc in acc_list:
-            pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
+            pid, = cls.get_sw_acc_data(sw, acc, pid=None)
             Printer().print_vn(f"账号{acc} pid:{pid} -----------------------------------------------")
             hwnds_of_pid = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
             Printer().print_vn(f"进程{pid}的窗口总数: {len(hwnds_of_pid)}")
@@ -1286,87 +1467,30 @@ class AccInfoFuncCore:
     @classmethod
     def _record_hwnd_and_set_title(cls, sw, acc, hwnd):
         """记录窗口句柄并设置标题"""
-        subfunc_file.update_sw_acc_data(sw, acc, main_hwnd=hwnd)
+        SwAccData().update_(sw, acc, main_hwnd=hwnd)
         acc_display_name = cls.get_acc_origin_display_name(sw, acc)
         sw_display_name = Sw(sw).label
         hwnd_utils.set_window_title(hwnd, f"{sw_display_name} - {acc_display_name}")
 
-    @staticmethod
-    def is_hwnd_a_main_wnd_of_acc_on_sw(hwnd, sw, acc):
+    @classmethod
+    def is_hwnd_a_main_wnd_of_acc_on_sw(cls, hwnd, sw, acc):
         ...
         # """检测窗口是否是某个账号的主窗口"""
         # # hwnd_utils.restore_window(hwnd)
         # Printer().debug(hwnd, sw, acc)
-        # pid, = subfunc_file.get_sw_acc_data(sw, acc, pid=None)
+        # pid, = cls.get_sw_acc_data(sw, acc, pid=None)
         # if pid is None:
         #     return False
         # # 判断hwnd是否属于指定的pid
         # if hwnd_utils.get_hwnd_details_of_(hwnd)["pid"] != pid:
         #     return False
-        # expected_classes, = subfunc_file.get_remote_cfg(sw, main_wnd_class_wildcards=None)
+        # expected_classes, = RemoteSetting().get_(sw, main_wnd_class_wildcards=None)
         # class_name = win32gui.GetClassName(hwnd)
         # for expected_class in expected_classes:
         #     if fnmatch(class_name, expected_class):
         #         return True
         #     continue
         # return False
-
-    @classmethod
-    def get_acc_details(cls, sw, account):
-        """获取账号详情, 返回字典"""
-        details = {}
-
-        # 头像,配置文件状态比较特殊,需要看账号类型以及是否链接来分别判定
-        linked_acc = cls.get_real_acc(sw, account)
-        coexist = cls.is_acc_coexist(sw, account)
-        config_status = account if coexist else AccInfoFuncCore.get_sw_acc_login_cfg_status(sw, account)
-        if coexist and linked_acc == account:
-            # 共存程序但是没有登录链接过账号
-            img = Sw(sw).logo
-        else:
-            # 主程序 或 共存程序并且已经登录链接过账号
-            success, img = AccInfoFuncCore.get_acc_avatar_from_files(sw, account)
-            if not success:
-                _, img = AccInfoFuncCore.get_acc_avatar_from_files(sw, linked_acc)
-
-        # - 实际账号的展示名优先级更高
-        acc_display_name = AccInfoFuncCore.get_acc_origin_display_name(sw, account)
-        linked_display_name = AccInfoFuncCore.get_acc_origin_display_name(sw, linked_acc)
-        if acc_display_name == account:
-            # 实际账号并没有备注
-            display_name = linked_display_name
-            # if linked_display_name == linked_acc:
-            #     # 链接账号也没有备注和昵称, 则以实际账号的展示名为准
-            #     display_name = linked_display_name
-            # else:
-            #     display_name = linked_display_name
-        else:
-            display_name = acc_display_name
-        wrapped_display_name = StringUtils.balanced_wrap_text(display_name, 50)
-
-        # - 别名,昵称由链接账号查询
-        alias, nickname = subfunc_file.get_sw_acc_data(
-            sw, linked_acc, alias="请获取数据", nickname="请获取数据")
-        # - pid, 互斥体由实际账号/程序查询
-        pid, has_mutex, hotkey, hidden, auto_start = subfunc_file.get_sw_acc_data(
-            sw, account, pid=None, has_mutex=None, hotkey=None, hidden=None, auto_start=None)
-        iid = f"{sw}/{account}"
-
-        details[AccKeys.IID] = iid
-        details[AccKeys.AVATAR] = img
-        details[AccKeys.DISPLAY] = display_name
-        details[AccKeys.WRAP_DISPLAY] = wrapped_display_name
-        details[AccKeys.CONFIG_STATUS] = config_status
-        details[AccKeys.PID] = pid
-        details[AccKeys.HAS_MUTEX] = has_mutex
-        details[AccKeys.HOTKEY] = hotkey
-        details[AccKeys.HIDDEN] = hidden
-        details[AccKeys.AUTO_START] = auto_start
-        details[AccKeys.LINKED_ACC] = linked_acc
-        details[AccKeys.ALIAS] = alias
-        details[AccKeys.NICKNAME] = nickname
-
-        return details
 
     @staticmethod
     def unlink_hwnd_of_account(sw, account):
@@ -1376,7 +1500,7 @@ class AccInfoFuncCore:
         :param account: 账号列表
         :return:
         """
-        subfunc_file.update_sw_acc_data(sw, account, main_hwnd=None)
+        SwAccData().update_(sw, account, main_hwnd=None)
         messagebox.showinfo("成功", "已解绑，账号列表刷新将尝试重新绑定！")
 
     @classmethod
@@ -1390,7 +1514,7 @@ class AccInfoFuncCore:
         if messagebox.askyesno("提示", "请先手动将平台对应窗口置于前台，是否完成？"):
             # 将桌面中可见的窗口从顶部到底部遍历
             hwnds = Win32HwndGetter.get_visible_windows_by_zOrder()
-            pid, = subfunc_file.get_sw_acc_data(sw, account, pid=None)
+            pid, = cls.get_sw_acc_data(sw, account, pid=None)
             for hwnd in hwnds:
                 print(hwnd_utils.get_hwnd_details_of_(hwnd)["class"])
                 if hwnd_utils.get_hwnd_details_of_(hwnd)["pid"] == pid:

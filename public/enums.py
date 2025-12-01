@@ -28,36 +28,65 @@ class Position(Enum):
     BOTTOM = "bottom"
 
 
-class RemoteCfg(str, Enum):
-    """远程配置中的字段"""
-    GLOBAL = "global"
+class RootCfgKey(str, Enum):
+    """根配置中的字段"""
+    USER_DIR = "user_dir"
+    REMOTE_SW = "remote_sw"
+    REMOTE_GLOBAL = "remote_global"
+    REMOTE_SW_NS = "RemoteSw"
+    REMOTE_GLOBAL_NS = "RemoteGlobal"
+
+
+class SwCacheKey(str, Enum):
+    """缓存中的字段"""
+    PRECISES = "precise_ver_adaptations"
+
+
+class RemoteGlobalKey(str, Enum):
+    """远程全局配置中的字段"""
+    SP_SW = "support_sw"
+    APP_NAME = "app_name"
+    ABOUT = "about"
+    UPDATE = "update"
+
+
+class RemoteSwKey(str, Enum):
+    """远程平台配置中的字段"""
     SP_SW = "support_sw"
     COEXIST_SEQUENCE = "coexist_sequence"
 
     # 平台信息
     ALIAS = "alias"
+    EXE = "executable"
+    TRIMS = "sw_id_trims"
+    EXCLUDED_DIRS = "excluded_dir_list"
+    EXE_WCS = "executable_wildcards"
 
     # 补丁适配
     REVOKE = "anti-revoke"
     MULTI = "multirun"
     COEXIST = "coexist"
+    # - 频道通用
     CHANNELS = "channels"
     INTRO = "introduce"
     AUTHOR = "authors"
-    ORDINALS = "ordinals"
     FEATURES = "features"
     FEATURES_ADAPT = "feature_ver_adaptations"
     PRECISES = "precise_ver_adaptations"
+    # - 共存频道特有
+    ORDINALS = "ordinals"
+    MUTEX_WC = "mutex_wildcard"  # 字典: 此频道互斥体的通配模式
+    PATCH_WC = "patch_wildcard"  # 字典: 此频道补丁文件名的通配模式
+    EXE_WC = "exe_wildcard"  # str: 此频道主程序名的通配模式
 
     WND_CLASS = "wnd_class"
-    NATIVE_MULTI = "native-multirun"
     NATIVE = "natively"
     # dll模式字段
     ORIGINAL = "original"
     MODIFIED = "modified"
 
 
-class LocalCfg(str, Enum):
+class LocalCfgKey(str, Enum):
     """本地设置中的字段"""
     GLOBAL_SECTION = "global"
 

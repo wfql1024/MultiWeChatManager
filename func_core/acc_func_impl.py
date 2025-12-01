@@ -1,10 +1,9 @@
 import os
 import re
 
-from functions import subfunc_file
-from public.config import Config
+from data_access.setting import SwAccData, RootSetting
 from utils import image_utils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import Logger
 
 
 class AccInfoFuncImpl:
@@ -28,6 +27,7 @@ class WeChatAccInfoFuncImpl(AccInfoFuncImpl):
     def get_avatar_url_from_file(sw, acc_list, data_dir):
         changed = False
 
+        user_dir = RootSetting().user_dir
         for acc in acc_list:
             acc_info_dat_path = os.path.join(data_dir, acc, 'config', 'AccInfo.dat')
             # print(acc_info_dat_path)
@@ -53,11 +53,11 @@ class WeChatAccInfoFuncImpl(AccInfoFuncImpl):
             if matched_url and matched_url.endswith('/132'):
                 matched_url = matched_url.rstrip('/132') + '/0'
             if matched_url:
-                avatar_path = os.path.join(Config.PROJ_USER_PATH, sw, f"{acc}", f"{acc}.jpg")
-                logger.info(f"{acc}: {matched_url}")
+                avatar_path = os.path.join(user_dir, sw, f"{acc}", f"{acc}.jpg")
+                Logger().info(f"{acc}: {matched_url}")
                 success = image_utils.download_image(matched_url, avatar_path)
                 if success is True:
-                    subfunc_file.update_sw_acc_data(sw, acc, avatar_url=matched_url)
+                    SwAccData().update_(sw, acc, avatar_url=matched_url)
                     changed = True
         return changed
 
@@ -80,7 +80,7 @@ class WeChatAccInfoFuncImpl(AccInfoFuncImpl):
                 cleaned_str = re.sub(r'[0-9a-fA-F]{32}.*', '', matched_str)
                 cleaned_str = re.sub(r'\x1A.*?\x12', '', cleaned_str)
                 cleaned_str = re.sub(r'[^\x20-\x7E\xC0-\xFF\u4e00-\u9fa5]+', '', cleaned_str)
-                success = subfunc_file.update_sw_acc_data(sw, acc, nickname=cleaned_str)
+                success = SwAccData().update_(sw, acc, nickname=cleaned_str)
                 if success is True:
                     changed = True
         return changed

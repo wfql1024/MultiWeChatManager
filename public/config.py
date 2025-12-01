@@ -2,11 +2,12 @@ import ctypes
 import json
 import os
 import platform
+import sys
 import tkinter as tk
 import winreg
 from pathlib import Path
 
-from public.enums import LocalCfg, SwEnum, SwStates, MultirunMode
+from public.enums import LocalCfgKey, SwEnum, SwStates, MultirunMode
 
 # 获取屏幕缩放因子
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -70,72 +71,84 @@ def scale_dict(d, sf):
 
 class Config:
     VER_STATUS = 'Alpha'
+    SP_SW = ["WeChat", "Weixin"]
 
     INI_DEFAULT_VALUE = {
         # 默认为空的可不写
-        LocalCfg.GLOBAL_SECTION: {
-            LocalCfg.SCREEN_SIZE: f"1920*1080",
-            LocalCfg.USE_PROXY: False,
+        LocalCfgKey.GLOBAL_SECTION: {
+            LocalCfgKey.SCREEN_SIZE: f"1920*1080",
+            LocalCfgKey.USE_PROXY: False,
             # -软件相关
-            LocalCfg.ENABLE_NEW_FUNC: True,
-            LocalCfg.USED_TRAY: False,
-            LocalCfg.USED_REFRESH: False,
-            LocalCfg.USED_SIDEBAR: False,
+            LocalCfgKey.ENABLE_NEW_FUNC: True,
+            LocalCfgKey.USED_TRAY: False,
+            LocalCfgKey.USED_REFRESH: False,
+            LocalCfgKey.USED_SIDEBAR: False,
             # -排序相关
-            LocalCfg.HIDDEN_SORT: "#0,True",
-            LocalCfg.AUTO_START_SORT: "#0,True",
-            LocalCfg.ENABLE_SORT: "#0,True",
-            LocalCfg.DISABLE_SORT: "#0,True",
-            LocalCfg.ALL_SORT: "#0,True",
+            LocalCfgKey.HIDDEN_SORT: "#0,True",
+            LocalCfgKey.AUTO_START_SORT: "#0,True",
+            LocalCfgKey.ENABLE_SORT: "#0,True",
+            LocalCfgKey.DISABLE_SORT: "#0,True",
+            LocalCfgKey.ALL_SORT: "#0,True",
             # -标签页相关
-            LocalCfg.ROOT_TAB: "login",
-            LocalCfg.MNG_TAB: "acc",
-            LocalCfg.LOGIN_TAB: SwEnum.WECHAT,
+            LocalCfgKey.ROOT_TAB: "login",
+            LocalCfgKey.MNG_TAB: "acc",
+            LocalCfgKey.LOGIN_TAB: SwEnum.WECHAT,
             # -视图相关
-            LocalCfg.SCALE: "auto",
-            LocalCfg.SIGN_VISIBLE: True,
-            LocalCfg.USE_TXT_AVT: True,
+            LocalCfgKey.SCALE: "auto",
+            LocalCfgKey.SIGN_VISIBLE: True,
+            LocalCfgKey.USE_TXT_AVT: True,
             # -登录相关
-            LocalCfg.PREFER_COEXIST: True,
-            LocalCfg.HIDE_WND: False,
-            LocalCfg.KILL_IDLE_LOGIN_WND: False,
-            LocalCfg.UNLOCK_CFG: False,
-            LocalCfg.ALL_HAS_MUTEX: True,
-            LocalCfg.CALL_MODE: "HANDLE",
-            LocalCfg.AUTO_PRESS: True,
+            LocalCfgKey.PREFER_COEXIST: True,
+            LocalCfgKey.HIDE_WND: False,
+            LocalCfgKey.KILL_IDLE_LOGIN_WND: False,
+            LocalCfgKey.UNLOCK_CFG: False,
+            LocalCfgKey.ALL_HAS_MUTEX: True,
+            LocalCfgKey.CALL_MODE: "HANDLE",
+            LocalCfgKey.AUTO_PRESS: True,
         },
         SwEnum.DEFAULT: {
-            LocalCfg.VIEW: "tree",
-            LocalCfg.LOGIN_SORT: "配置,False",
-            LocalCfg.LOGOUT_SORT: "配置,False",
-            LocalCfg.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            LocalCfg.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
-            LocalCfg.STATE: SwStates.VISIBLE,
-            LocalCfg.COEXIST_MODE: "default",
-            LocalCfg.CLICK_BTNS: ""
+            LocalCfgKey.VIEW: "tree",
+            LocalCfgKey.LOGIN_SORT: "配置,False",
+            LocalCfgKey.LOGOUT_SORT: "配置,False",
+            LocalCfgKey.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
+            LocalCfgKey.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
+            LocalCfgKey.STATE: SwStates.VISIBLE,
+            LocalCfgKey.COEXIST_MODE: "default",
+            LocalCfgKey.CLICK_BTNS: ""
         }
     }
 
+    # 路径定义
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))
+    ROOT_DATA_DIR = str(Path.home() / fr".JhiFengMultiChat").replace('\\', '/')
     PROJ_EXTERNAL_RES_PATH = fr'{PROJ_PATH}/external_res'
-    PROJ_USER_PATH = fr'{PROJ_PATH}/user_files'
+    # PROJ_USER_PATH = fr'{PROJ_PATH}/user_files'
     PROJ_META_PATH = fr'{PROJ_PATH}/.meta'
+
+    ROOT_CONFIG_PATH = fr"{ROOT_DATA_DIR}/root_config.json"
+    DEFAULT_USER_DIR = fr"{ROOT_DATA_DIR}/user_files" if getattr(sys, "frozen",
+                                                                 False) else fr"{ROOT_DATA_DIR}/dev_user_files"
 
     HANDLE_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/handle.exe'
     WECHAT_DUMP_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/wechat-dump-rs.exe'
-    VERSION_FILE = fr'{PROJ_META_PATH}/version.txt'
     PROJ_ICO_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/JFMC.ico'
     REWARDS_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/Rewards.png'
     FEEDBACK_PNG_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/Feedback.png'
-    TASK_TP_XML_PATH = fr'{PROJ_USER_PATH}/task_template.xml'
-    STATISTIC_JSON_PATH = fr'{PROJ_USER_PATH}/statistics.json'
-    TAB_ACC_JSON_PATH = fr'{PROJ_USER_PATH}/tab_acc_data.json'
-    SETTING_INI_PATH = fr'{PROJ_USER_PATH}/setting.ini'
-    VER_ADAPTATION_JSON_PATH = fr'{PROJ_USER_PATH}/version_adaptation.json'
-    REMOTE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/remote_setting.json'
-    CACHE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/cache_setting.json'
-    LOCAL_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/local_setting.json'
-    ROOT_CONFIG_PATH = Path.home() / fr".JhiFengMultiChat/root_config.json"
+
+    VERSION_FILE = fr'{PROJ_META_PATH}/version.txt'
+
+    # STATISTIC_JSON_PATH = fr'{PROJ_USER_PATH}/statistics.json'
+    # SW_ACC_JSON_PATH = fr'{PROJ_USER_PATH}/tab_acc_data.json'
+    # REMOTE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/remote_setting.json'
+    # CACHE_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/cache_setting.json'
+    # LOCAL_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/local_setting.json'
+
+    STATISTIC_PATH_SUFFIX = fr"statistics.json"
+    SW_ACC_PATH_SUFFIX = fr"tab_acc_data.json"
+    REMOTE_SW_PATH_SUFFIX = fr"remote_sw.json"
+    REMOTE_GLOBAL_PATH_SUFFIX = fr"remote_global.json"
+    SW_CACHE_PATH_SUFFIX = fr"sw_cache.json"
+    LOCAL_SETTING_PATH_SUFFIX = fr"local_setting.json"
 
     # 尺寸定义
     SF = SCALE_FACTOR

@@ -1,14 +1,13 @@
 import tkinter as tk
 from abc import ABC
-from tkinter import messagebox, ttk
+from tkinter import ttk
 
 from PIL import Image, ImageTk
 
 from components.composited_controls import TreeviewAHT
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
-from functions import subfunc_file
-from functions.acc_func import AccInfoFuncCore, Acc
-from func_core.app_func_core import AppFuncCore
+from functions.acc_func import Acc
+from functions.app_func import App
 from public import Config
 from public.custom_classes import Condition
 from public.enums import AccKeys
@@ -49,7 +48,7 @@ class AccManagerUI:
         self.root_menu = None
         self.main_frame = None
         self.scrollable_canvas = None
-        self.acc_data = None
+        self.sw_acc_data = None
         self.tree_class = {}
         self.frame_dict = {}
 
@@ -117,16 +116,16 @@ class AccManagerUI:
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
         # 刷新菜单
-        config_data = subfunc_file.read_remote_cfg_in_rules()
-        if config_data is None:
-            messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
-            self.root.destroy()
+        # config_data = App().regularly_get_remote_cfg()
+        # # if config_data is None:
+        # #     messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
+        # #     self.root.destroy()
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
         except Exception as re:
             logger.error(re)
-            messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
-            self.root.destroy()
+            # messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
+            # self.root.destroy()
 
         if only_menu is True:
             return
@@ -150,7 +149,7 @@ class AccManagerUI:
         self.frame_dict["all"] = ttk.Frame(self.main_frame)
         self.frame_dict["all"].pack(side=tk.TOP, fill=tk.X)
 
-        self.acc_data = subfunc_file.get_sw_acc_data()
+        self.sw_acc_data = App().get_sw_acc_data()
         # 加载已自启列表
         self.tree_class["auto_start"] = AccManagerTAHT(
             self, self.frame_dict["auto_start"],
@@ -178,7 +177,7 @@ class AccManagerUI:
         def set_acc_method(items):
             for item in items:
                 sw, acc = item.split("/")
-                subfunc_file.update_sw_acc_data(sw, acc, **{key: value})
+                Acc(sw, acc).update_data(**{key: value})
             self.refresh_frame()
 
         return set_acc_method
@@ -201,7 +200,7 @@ class AccManagerUI:
         if self.quick_refresh_mode is True:
             try:
                 # 不要忘记更新数据
-                self.acc_data = subfunc_file.get_sw_acc_data()
+                self.sw_acc_data = App().get_sw_acc_data()
                 tree_class = self.tree_class
                 if all(tree_class[t].can_quick_refresh for t in tree_class):
                     for t in tree_class:
@@ -228,7 +227,7 @@ class AccManagerTAHT(TreeviewAHT):
         # print(f"self.wnd={self.wnd}")
         self.columns = (" ", "快捷键", "隐藏", "自启动", "账号标识", "昵称")
         self.main_frame = self.parent_class.frame_dict[self.table_tag]
-        sort_str = AppFuncCore.get_global_setting_value_by_local_record(f"{self.table_tag}_sort")
+        sort_str = App().fetch_setting_or_set_default(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
@@ -253,7 +252,7 @@ class AccManagerTAHT(TreeviewAHT):
 
     def display_tree(self):
         tree = self.tree.nametowidget(self.tree)
-        sw_acc_data = self.parent_class.acc_data
+        sw_acc_data = self.parent_class.sw_acc_data
         table_tag = self.table_tag
 
         # 假设你已经有了一个用于存储 sw 节点的字典
@@ -271,7 +270,7 @@ class AccManagerTAHT(TreeviewAHT):
 
                 # 账号详情
                 details = Acc(sw, acc).get_details()
-                img:Image = details.get(AccKeys.AVATAR)
+                img = details.get(AccKeys.AVATAR)
                 display_name = details.get(AccKeys.DISPLAY, None)
                 hotkey = details.get(AccKeys.HOTKEY, None)
                 hidden = details.get(AccKeys.HIDDEN, None)
@@ -337,4 +336,4 @@ class AccManagerTAHT(TreeviewAHT):
         table_tag = self.table_tag
         col = self.default_sort["col"]
         is_asc_after = self.default_sort["is_asc"]
-        AppFuncCore.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
+        App().save_setting_and_do(f'{table_tag}_sort', f"{col},{is_asc_after}")

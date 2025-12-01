@@ -170,6 +170,18 @@ class StringUtils:
         except ValueError:
             return value
 
+    @staticmethod
+    def extract_wildcard_char(text: str, pattern: str):
+        """逐位比较, 返回通配符位置的字符"""
+        result = []
+        for c_exe, c_pat in zip(text, pattern):
+            if c_pat == '?':
+                result.append(c_exe)
+            elif c_pat == '*':
+                # '*' 后续不再按位置比对，可以自行扩展
+                break
+        return ''.join(result)
+
 
 class ColorUtils:
     @staticmethod
@@ -334,6 +346,15 @@ class PathUtils:
             return formatted_path.exists()
         except Exception as e:
             print(e)
+            return False
+
+    @staticmethod
+    def is_legal_path(path) -> bool:
+        """判断路径是否合法"""
+        try:
+            Path(path)  # 尝试解析路径
+            return True
+        except (OSError, ValueError):
             return False
 
 

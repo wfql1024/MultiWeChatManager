@@ -55,6 +55,12 @@ class Acc:
         hwnd, _ = AccInfoFuncCore.get_main_hwnd_of_accounts(self.sw_id, [self.acc_id])
         return hwnd
 
+    def get_data(self, *addr, **kwargs):
+        return AccInfoFuncCore.get_sw_acc_data(self.sw_id, self.acc_id, *addr, **kwargs)
+
+    def update_data(self, *addr, **kwargs):
+        return AccInfoFuncCore.update_sw_acc_data(self.sw_id, self.acc_id, *addr, **kwargs)
+
     @property
     def main_hwnd(self):
         main_hwnd = self._main_hwnd
@@ -78,6 +84,7 @@ class Acc:
         return AccInfoFuncCore.get_real_acc(self.sw_id, self.acc_id)
 
     """登录配置"""
+
     def operate_config(self, method):
         return AccOperatorCore.operate_acc_config(self.sw_id, self.acc_id, method)
 
@@ -88,6 +95,7 @@ class Acc:
         return AccInfoFuncCore.get_sw_acc_login_cfg_status(self.sw_id, self.acc_id)
 
     """操作"""
+
     def show_wnd(self):
         return AccOperatorCore.switch_to_sw_account_wnd(self.sw_id, self.acc_id)
 

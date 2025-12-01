@@ -11,6 +11,9 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "WeCha?.exe",
+                    "mutex_wildcard": {
+                        "_WeChat_App_Instance_Identity_Mutex_Name": "_WeCha?_App_Instance_Identity_Mutex_Name"
+                    },
                     "ordinals": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
                     "patch_wildcard": {
                         "%dll_dir%/WeChatWin.dll": "%dll_dir%/WeChatWi?.dll"
@@ -244,18 +247,6 @@
         },
         "alias": "微信3.9",
         "executable": "WeChat.exe",
-        "executable_wildcards": [
-            "WeChat?.exe",
-            "WeCha?.exe"
-        ],
-        "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
-        "data_dir_guess_suffix": "Tencent\\WeChat",
-        "data_dir_check_suffix": "All Users",
-        "dll_dir_check_suffix": "WeChatWin.dll",
-        "patch_dll": "WeChatWin.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",
-        "user_reg_sub_key": "Software\\Tencent\\WeChat",
-        "data_dir_name": "WeChat Files",
         "mutant_handle_infos": [
             {
                 "handle_name": "_WeChat_App_Instance_Identity_Mutex_Name",
@@ -263,6 +254,13 @@
             }
         ],
         "cfg_handle_regex_list": [],
+        "config_addresses": [
+            "%data_dir%/All Users/config/config.data"
+        ],
+        "executable_wildcards": [
+            "WeChat?.exe",
+            "WeCha?.exe"
+        ],
         "mutant_handle_wildcards": [
             "_W?Chat_App_Instance_Identity_Mutex_Name",
             "_WeCha?_App_Instance_Identity_Mutex_Name"
@@ -271,16 +269,21 @@
             "conf?g.data",
             "confi?.data"
         ],
-        "config_addresses": [
-            "%data_dir%/All Users/config/config.data"
-        ],
         "excluded_dir_list": [
             "All Users",
             "Applet",
             "Plugins",
             "WMPF",
-            "all_users"
+            "all_users",
+            "Msg"
         ],
+        "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
+        "data_dir_guess_suffix": "Tencent\\WeChat",
+        "data_dir_check_suffix": "All Users",
+        "dll_dir_check_suffix": "WeChatWin.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",
+        "user_reg_sub_key": "Software\\Tencent\\WeChat",
+        "data_dir_name": "WeChat Files",
         "sw_id_trims": {
             "Weixin": [
                 0,
@@ -302,6 +305,10 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "Weixi?.exe",
+                    "mutex_wildcard": {
+                        "XWeChat_App_Instance_Identity_Mutex_Name": "XWeCha?_App_Instance_Identity_Mutex_Name",
+                        "lock.ini": "lock.ini"
+                    },
                     "ordinals": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
                     "patch_wildcard": {
                         "%dll_dir%/Weixin.dll": "%dll_dir%/Weixi?.dll"
@@ -458,7 +465,7 @@
                 },
                 "bubble": {
                     "alias": "气泡*",
-                    "introduce": "通过气泡进行防撤回提示, 双击可修改",
+                    "introduce": "通过气泡进行防撤回提示, 双击可以改字",
                     "authors": [
                         "afaa1991"
                     ],
@@ -469,6 +476,7 @@
                                 {
                                     "type": "jmp_offset",
                                     "ver_adaptations": {
+                                        "4.1.5": null,
                                         "4.1.0": {
                                             "original": "55 56 57 53 48 81 EC 68 02 00 00 48 8D AC 24 80 00 00 00 48 C7 85 E0 01 00 00 FE FF FF FF 48 89 D6 48 89 CF 48 8D 5D A0 41 B8 40 02 00 00 48 89 D9 B2 AA E8 ?? ?? ?? ?? 48 89 D9 48 89 F2 E8 ?? ?? ?? ?? 48 89 F9 48 89 DA E8 52 00 00 00 48 8D 4D A0 E8 ?? ?? ?? ?? B0 01 48 81 C4 68 02 00 00",
                                             "modified": "C3 3D 12 27 00 00 0F 84 !! !! !! !! E9 !! !! !! !! 90 90 90 90 90 90 90 ...",
@@ -482,6 +490,7 @@
                                 {
                                     "type": "jmp_offset",
                                     "ver_adaptations": {
+                                        "4.1.5": null,
                                         "4.1.0": {
                                             "original": "44 0F B6 85 ?? 03 00 00 E8 ?? ?? ?? ?? 4C 89 ?? E8 ?? ?? ?? ?? E9 ?? ?? ?? ??",
                                             "modified": "... E9 !! !! !! !!",
@@ -494,6 +503,7 @@
                                 {
                                     "type": "simple",
                                     "ver_adaptations": {
+                                        "4.1.5": null,
                                         "4.1.0": {
                                             "original": "CF 00 00 00 48 8D 8D D0 03 00 00 E8 ?? ?? ?? ?? 48 8B 8D D0 03 00 00 48 8D 95 50 03 00 00 E8 ?? ?? ?? ?? 48 8B 8D 50 03 00 00 48 8D 95 B0 00 00 00 E8 ?? ?? ?? ?? 48 8B 8D B0 00 00 00 48 89 F2 E8 ?? ?? ?? ??",
                                             "modified": "... B8 12 27 00 00"
@@ -503,6 +513,7 @@
                                 {
                                     "type": "custom",
                                     "ver_adaptations": {
+                                        "4.1.5": null,
                                         "4.1.2": {
                                             "original": "E4 B8 8D E6 94 AF E6 8C 81 E7 9A 84 E6 B6 88 E6 81 AF EF BC 8C E5 8F AF E5 9C A8 E6 89 8B E6 9C BA E4 B8 8A E6 9F A5 E7 9C 8B 00",
                                             "modified": "E6 92 A4 E5 9B 9E E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00 ...",
@@ -524,6 +535,7 @@
                                 {
                                     "type": "custom",
                                     "ver_adaptations": {
+                                        "4.1.5": null,
                                         "4.1.2": {
                                             "original": "E4 B8 8D E6 94 AF E6 8C 81 E7 9A 84 E6 B6 88 E6 81 AF 00",
                                             "modified": "E6 92 A4 E5 9B 9E E4 B8 80 E6 9D A1 E6 B6 88 E6 81 AF 00",
@@ -572,7 +584,7 @@
                 },
                 "alert": {
                     "alias": "通知",
-                    "introduce": "通过系统通知进行防撤回提示",
+                    "introduce": "通过系统通知进行防撤回提示,精确到撤回消息下方,但不实时,需要切换窗口后才能显示",
                     "authors": [
                         "EEEEhex",
                         "afaa1991"
@@ -584,8 +596,21 @@
                                 {
                                     "type": "simple",
                                     "ver_adaptations": {
+                                        "0.0.0": {
+                                            "-----xno": "48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 1D 48 8B 07 48 89 F9 FF 50 08 EB 12 48 89 85 A0 00 00 00 48 C7 85 A8 00 00 00 00 00 00 00 48 8B BD A0 00 00 00 48 89 F1 E8 A4 AA 7F FE 48 89 F9 48 89 C2 ̲4̲5 ̲3̲1 ̲C̲0 ̲E̲8 ̲D̲6 ̲E̲B ̲D̲5 ̲F̲E 48 8B BD A8 00 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B 7D 58 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 30 01 00 00 48 85",
+                                            "---match": "04 1F 00 48 8D 8D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 8D 95 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 8D 95 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 8D 55 ?? 45 31 C0 E8 ?? ?? ?? ?? 48 8B BD ?? ?? ?? ?? 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD ?? ?? ?? ?? 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD ?? ?? ??",
+                                            "-----415": "04 1F 00 48 8D 8D F8 07 00 00 E8 6E 65 17 FD 48 8B 8D F8 07 00 00 48 8D 95 70 07 00 00 E8 AB 1F 42 FD 48 8B 8D 70 07 00 00 48 8D 95 60 04 00 00 E8 88 FB 70 FD 48 8B 8D 60 04 00 00 48 8D 55 C0 ̲4̲5 ̲3̲1 ̲C̲0 ̲E̲8 ̲F̲5 ̲C̲7 ̲5̲0 ̲F̲E 48 8B BD 68 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 78 07 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 00 08 00",
+                                            "-----414": "04 1F 00 48 8D 8D D8 07 00 00 E8 EE E7 1A FD 48 8B 8D D8 07 00 00 48 8D 95 50 07 00 00 E8 DB 39 45 FD 48 8B 8D 50 07 00 00 48 8D 95 50 04 00 00 E8 B8 C8 73 FD 48 8B 8D 50 04 00 00 48 8D 55 C8 ̲4̲5 ̲3̲1 ̲C̲0 ̲E̲8 ̲A̲5 ̲E̲2 ̲5̲2 ̲F̲E 48 8B BD 58 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 58 07 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD E0 07 00",
+                                            "-----412": "04 1F 00 48 8D 8D D8 07 00 00 E8 1E 0D 24 FD 48 8B 8D D8 07 00 00 48 8D 95 50 07 00 00 E8 FB B8 4D FD 48 8B 8D 50 07 00 00 48 8D 95 50 04 00 00 E8 68 42 7B FD 48 8B 8D 50 04 00 00 48 8D 55 C8 ̲4̲5 ̲3̲1 ̲C̲0 ̲E̲8 ̲5̲5 ̲5̲4 ̲5̲8 ̲F̲E 48 8B BD 58 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 58 07 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD E0 07 00",
+                                            "-----411": "04 1F 00 48 8D 8D D8 07 00 00 E8 5E 1D 3E FD 48 8B 8D D8 07 00 00 48 8D 95 50 07 00 00 E8 FB FD 65 FD 48 8B 8D 50 07 00 00 48 8D 95 50 04 00 00 E8 28 65 92 FD 48 8B 8D 50 04 00 00 48 8D 55 C8 ̲4̲5 ̲3̲1 ̲C̲0 ̲E̲8 ̲5̲5 ̲5̲5 ̲6̲4 ̲F̲E 48 8B BD 58 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 58 07 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD E0 07 00",
+                                            "-----410": "04 1F 00 48 8D 8D D8 07 00 00 E8 9E 12 4B FD 48 8B 8D D8 07 00 00 48 8D 95 50 07 00 00 E8 4B DA 7B FD 48 8B 8D 50 07 00 00 48 8D 95 50 04 00 00 E8 98 6E A7 FD 48 8B 8D 50 04 00 00 48 8D 55 C8 ̲4̲5 ̲3̲1 ̲C̲0 ̲E̲8 ̲2̲5 ̲3̲B ̲7̲1 ̲F̲E 48 8B BD 58 04 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD 58 07 00 00 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89 F9 FF 10 F0 FF 4F 0C 75 09 48 8B 07 48 89 F9 FF 50 08 48 8B BD E0 07 00"
+                                        },
+                                        "4.1.5": {
+                                            "original": "04 1F 00 48 8D 8D ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 8D 95 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 8D 95 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 8D ?? ?? ?? ?? 48 8D 55 ?? 45 31 C0 E8 ?? ?? ?? ??",
+                                            "modified": "... 48 83 85 D0 02 00 00 01"
+                                        },
                                         "4.1.0": {
-                                            "original": "45 31 C0 ?? ?? ?? ?? FE 48 8B BD 58 04 ?? ?? 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
+                                            "original": "45 31 C0 ?? ?? ?? ?? FE 48 8B BD ?? ?? ?? ?? 48 85 FF 74 1D F0 FF 4F 08 75 17 48 8B 07 48 89",
                                             "modified": "48 83 85 D0 02 00 00 01 ..."
                                         },
                                         "4.0.6": {
@@ -631,7 +656,7 @@
                 },
                 "custom_alert": {
                     "alias": "通知*",
-                    "introduce": "通过系统通知进行防撤回提示, 双击可改字",
+                    "introduce": "可自定义的[通知]防撤回, 双击可以改字",
                     "authors": [
                         "afaa1991"
                     ],
@@ -685,6 +710,29 @@
                                             "tip": "别人或其他设备撤回时系统的提示",
                                             "note": "- 如果異常仍然出現，可執行系統磁碟工具或第三方工具對磁碟進行檢查。 -> 以上消息被撤回",
                                             "suffix_hex": "00"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "alert2": {
+                    "alias": "通知2",
+                    "introduce": "通过系统通知进行防撤回提示,实时显示,但不精确到撤回消息下方",
+                    "authors": [
+                        "afaa1991"
+                    ],
+                    "features": [
+                        {
+                            "addr": "%dll_dir%/Weixin.dll",
+                            "patch_rules": [
+                                {
+                                    "type": "simple",
+                                    "ver_adaptations": {
+                                        "4.1.5": {
+                                            "original": "48 89 86 ?? ?? ?? ?? 4C 89 AD ?? ?? ?? ?? 4C 8D 05 DB 26 A1 05 48 8D 8D ?? ?? ?? ?? 48 8D 95 ?? ?? ?? ?? E8 ?? ?? ?? ??",
+                                            "modified": "48 29 ..."
                                         }
                                     }
                                 }
@@ -754,14 +802,6 @@
             "Weixin?.exe",
             "Weixi?.exe"
         ],
-        "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
-        "data_dir_guess_suffix": "Tencent\\Weixin",
-        "data_dir_check_suffix": "all_users",
-        "dll_dir_check_suffix": "Weixin.dll",
-        "patch_dll": "Weixin.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Weixin",
-        "user_reg_sub_key": "Software\\Tencent\\Weixin",
-        "data_dir_name": "xwechat_files",
         "mutant_handle_infos": [
             {
                 "handle_name": "lock.ini",
@@ -803,6 +843,13 @@
             "Backup",
             "old_backup"
         ],
+        "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
+        "data_dir_guess_suffix": "Tencent\\Weixin",
+        "data_dir_check_suffix": "all_users",
+        "dll_dir_check_suffix": "Weixin.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Weixin",
+        "user_reg_sub_key": "Software\\Tencent\\Weixin",
+        "data_dir_name": "xwechat_files",
         "sw_id_trims": {
             "WeChat": [
                 0,
@@ -824,7 +871,12 @@
                         "afaa1991"
                     ],
                     "exe_wildcard": "WXWor?.exe",
-                    "ordinals": "0123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "mutex_wildcard": {
+                        "Tencent.WeWork.ExclusiveObjectInstance1": "Tencent.WeWork.Excl?siveObjectInstance1",
+                        "Tencent.WeWork.ExclusiveObject": "Tencent.WeWork.Excl?siveObject"
+                    },
+                    "ordinals": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "patch_wildcard": {},
                     "features": [
                         {
                             "addr": "%inst_path%",
@@ -833,6 +885,7 @@
                                     "type": "simple",
                                     "ver_adaptations": {
                                         "4.1": {
+                                            "--------": "̲8̲0 ̲7̲9 08 ̲0̲0 ̲7̲4 ̲1̲6 ̲8̲3 ̲C̲1 ̲0̲C ̲8̲3 ̲7̲9 ̲1̲4 ̲0̲7 ̲7̲6 ̲0̲2 8B 09 51 8D 4A 18 51 FF 15 3C 00 74 06 8D 8B DC 00 00 00 51 E8 4D 20 EE 01 8B 45 08 59",
                                             "original": "80 79 08 00 74 16 83 C1 0C 83 79 14 07 76 02 8B 09 51 8D 4A 18 51 FF 15 ?? ?? ?? 06 8D 8B DC 00 00 00 51 E8 ?? ?? ?? 01 8B 45 08 59",
                                             "modified": "83 42 08 !! 83 42 08 10 83 6A 0C 20 90 EB 0D ..."
                                         }
@@ -843,7 +896,8 @@
                                     "type": "simple",
                                     "ver_adaptations": {
                                         "4.1": {
-                                            "original": "74 5D 39 B3 C4 00 00 00 74 55 8B CB E8 ?? D5 FF FF 8B CB E8 49 D0 FF FF 84 C0 75 43 8B BB CC 00 00 00 8B 07 C7 45 CC ?? ?? ?? 06 C7",
+                                            "--------": "̲7̲4 5D 39 B3 C4 00 00 00 74 55 8B CB E8 52 D4 FF FF 8B CB E8 B9 CE FF FF 84 C0 75 43 8B BB CC 00 00 00 8B 07 C7 45 CC B0 D7 F9 06 C7",
+                                            "original": "74 5D 39 B3 C4 00 00 00 74 55 8B CB E8 ?? ?? ?? ?? 8B CB E8 ?? ?? ?? ?? 84 C0 75 43 8B BB CC 00 00 00 8B 07 C7 45 CC ?? ?? ?? 06 C7",
                                             "modified": "EB ..."
                                         }
                                     },
@@ -992,14 +1046,6 @@
             "WXWork?.exe",
             "WXWork.exe"
         ],
-        "inst_path_guess_suffix": "Tencent\\WXWork\\WXWork.exe",
-        "data_dir_guess_suffix": "Tencent\\WXWork",
-        "data_dir_check_suffix": "Profiles",
-        "dll_dir_check_suffix": "WXWorkResources.dll",
-        "patch_dll": "WXWorkResources.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WXWork",
-        "user_reg_sub_key": "Software\\Tencent\\WXWork",
-        "data_dir_name": "WXWork",
         "mutant_handle_infos": [
             {
                 "handle_name": "Tencent.WeWork.ExclusiveObjectInstance1",
@@ -1033,6 +1079,13 @@
             "ShaderCache",
             "WeDrive"
         ],
+        "inst_path_guess_suffix": "Tencent\\WXWork\\WXWork.exe",
+        "data_dir_guess_suffix": "Tencent\\WXWork",
+        "data_dir_check_suffix": "Profiles",
+        "dll_dir_check_suffix": "WXWorkResources.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WXWork",
+        "user_reg_sub_key": "Software\\Tencent\\WXWork",
+        "data_dir_name": "WXWork",
         "sw_id_trims": {}
     },
     "QQNT": {
@@ -1111,14 +1164,6 @@
         "executable_wildcards": [
             "QQ.exe"
         ],
-        "inst_path_guess_suffix": "Tencent\\QQNT\\QQ.exe",
-        "data_dir_guess_suffix": "Tencent\\QQNT",
-        "data_dir_check_suffix": "nt_qq",
-        "dll_dir_check_suffix": "QQNT.dll",
-        "patch_dll": "QQNT.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQNT",
-        "user_reg_sub_key": "Software\\Tencent\\QQNT",
-        "data_dir_name": "QQNT",
         "mutant_handle_infos": [],
         "cfg_handle_regex_list": [],
         "config_addresses": [
@@ -1133,6 +1178,13 @@
             "nt_temp",
             "Tencent Files"
         ],
+        "inst_path_guess_suffix": "Tencent\\QQNT\\QQ.exe",
+        "data_dir_guess_suffix": "Tencent\\QQNT",
+        "data_dir_check_suffix": "nt_qq",
+        "dll_dir_check_suffix": "QQNT.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQNT",
+        "user_reg_sub_key": "Software\\Tencent\\QQNT",
+        "data_dir_name": "QQNT",
         "sw_id_trims": {
             "QQ": [
                 0,
@@ -1233,14 +1285,6 @@
         "executable_wildcards": [
             "QQ.exe"
         ],
-        "inst_path_guess_suffix": "Tencent\\QQ\\Bin\\QQ.exe",
-        "data_dir_guess_suffix": "Tencent\\QQ",
-        "data_dir_check_suffix": "All Users",
-        "dll_dir_check_suffix": "IM.dll",
-        "patch_dll": "IM.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQ",
-        "user_reg_sub_key": "Software\\Tencent\\QQ",
-        "data_dir_name": "Tencent Files",
         "mutant_handle_infos": [],
         "cfg_handle_regex_list": [],
         "config_addresses": [
@@ -1254,6 +1298,13 @@
             "nt_temp",
             "Tencent Files"
         ],
+        "inst_path_guess_suffix": "Tencent\\QQ\\Bin\\QQ.exe",
+        "data_dir_guess_suffix": "Tencent\\QQ",
+        "data_dir_check_suffix": "All Users",
+        "dll_dir_check_suffix": "IM.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQ",
+        "user_reg_sub_key": "Software\\Tencent\\QQ",
+        "data_dir_name": "Tencent Files",
         "sw_id_trims": {
             "QQNT": [
                 0,
@@ -1354,14 +1405,6 @@
         "executable_wildcards": [
             "TIM.exe"
         ],
-        "inst_path_guess_suffix": "Tencent\\TIM\\Bin\\TIM.exe",
-        "data_dir_guess_suffix": "Tencent\\TIM",
-        "data_dir_check_suffix": "All Users",
-        "dll_dir_check_suffix": "IM.dll",
-        "patch_dll": "IM.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TIM",
-        "user_reg_sub_key": "Software\\Tencent\\TIM",
-        "data_dir_name": "Tencent Files",
         "mutant_handle_infos": [],
         "cfg_handle_regex_list": [],
         "config_addresses": [
@@ -1375,6 +1418,13 @@
             "nt_temp",
             "Tencent Files"
         ],
+        "inst_path_guess_suffix": "Tencent\\TIM\\Bin\\TIM.exe",
+        "data_dir_guess_suffix": "Tencent\\TIM",
+        "data_dir_check_suffix": "All Users",
+        "dll_dir_check_suffix": "IM.dll",
+        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TIM",
+        "user_reg_sub_key": "Software\\Tencent\\TIM",
+        "data_dir_name": "Tencent Files",
         "sw_id_trims": {
             "QQ": [
                 0,

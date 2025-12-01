@@ -7,7 +7,7 @@ import win32gui
 import win32ui
 from PIL import Image, ImageDraw
 
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Logger
 
 
 def create_round_corner_image(img, radius):
@@ -63,6 +63,7 @@ def download_image(img_url, path):
         logger.info(f"图像已成功保存到 {path}")
         return True
     except requests.RequestException as re:
+        Logger().warning(f"下载图像时出错: {re}")
         return download_origin_image(img_url, path)
 
 
@@ -93,9 +94,12 @@ def download_origin_image(img_url, path):
 
 
 def png_to_ico(png_path, ico_path):
-    """将png文件转格式为ico文件"""
     img = Image.open(png_path)
-    img.save(ico_path, format='ICO', sizes=[(132, 132)])
+    if img.width < 132 or img.height < 132:
+        # 不放大，直接用原图尺寸
+        img.save(ico_path, format='ICO', sizes=[img.size])
+    else:
+        img.save(ico_path, format='ICO', sizes=[(132, 132)])
 
 
 def extract_icon_image(exe_path) -> Image.Image:

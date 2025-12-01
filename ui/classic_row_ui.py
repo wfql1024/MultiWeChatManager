@@ -7,14 +7,13 @@ from PIL import ImageTk, Image
 
 from components.composited_controls import ClassicAHT, CkbRow
 from components.custom_widgets import CustomCornerBtn, CustomBtn
-from functions import subfunc_file
 from func_core.acc_func_core import AccInfoFuncCore
-from func_core.app_func_core import AppFuncCore
 from functions.acc_func import Acc
+from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config, Strings
 from public.custom_classes import Condition
-from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
+from public.enums import OnlineStatus, LocalCfgKey, CfgStatus, AccKeys
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils import widget_utils
@@ -186,13 +185,13 @@ class AccLoginCR(CkbRow):
     def _create_acc_row(self):
         account = self.item
         login_status = self.table_tag
-        sign_visible: bool = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
+        sign_visible: bool = App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
         start_time = time.time()
 
         curr_config_acc = Sw(self.sw).get_last_login_acc()
 
         # 未登录账号中，隐藏的账号不显示
-        hidden, = subfunc_file.get_sw_acc_data(self.sw, account, hidden=None)
+        hidden, = Acc(self.sw, account).get_data(hidden=None)
         if hidden is True and login_status == "logout":
             self.hidden = True
             return
@@ -241,7 +240,7 @@ class AccLoginCR(CkbRow):
          .apply_bind(self.root))
         _pack_btn(acc_btn)
         # 账号标签: 账号含有互斥体, 则使用红色字体
-        sign_visible: bool = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
+        sign_visible: bool = App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
         if has_mutex and sign_visible:
             try:
                 self.item_label = ttk.Label(

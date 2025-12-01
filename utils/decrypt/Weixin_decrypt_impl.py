@@ -46,6 +46,7 @@ from pathlib import Path
 from _ctypes import byref, sizeof, Structure
 from win32con import PROCESS_ALL_ACCESS
 
+from data_access.setting import RootSetting
 from public.config import Config
 from utils.decrypt.interface import DecryptInterface
 from utils.logger_utils import mylogger as logger
@@ -149,7 +150,7 @@ class WeixinDecryptImpl(DecryptInterface):
         # if len(target_dbs) < 1:
         #     return False, "没有找到db文件！"
         # 将数据库文件拷贝到项目
-        usr_dir = Config.PROJ_USER_PATH
+        usr_dir = RootSetting().user_dir
         origin_db_path = usr_dir + rf"\Weixin\{account}\contact.db"
         # if not os.path.exists(os.path.dirname(origin_db_path)):
         #     os.makedirs(os.path.dirname(origin_db_path))

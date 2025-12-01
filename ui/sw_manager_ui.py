@@ -1,17 +1,16 @@
 import tkinter as tk
 from abc import ABC
-from tkinter import messagebox, ttk
+from tkinter import ttk
 
 from PIL import Image, ImageTk
 
 from components.composited_controls import TreeviewAHT
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
-from functions import subfunc_file
-from func_core.app_func_core import AppFuncCore
+from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config
 from public.custom_classes import Condition
-from public.enums import RemoteCfg, LocalCfg, SwStates
+from public.enums import RemoteSwKey, LocalCfgKey, SwStates
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
@@ -118,7 +117,7 @@ class SwManagerUI:
         self.scrollable_canvas = ScrollableCanvasW(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
-        self.sw_list, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
+        self.sw_list, = App().get_remote_global(**{RemoteSwKey.SP_SW: Config.SP_SW})
         # 添加占位控件
         self.frame_dict["enable"] = ttk.Frame(self.main_frame)
         self.frame_dict["enable"].pack(side=tk.TOP, fill=tk.X)
@@ -151,17 +150,12 @@ class SwManagerUI:
     def refresh(self, only_menu=False):
         """刷新菜单和界面"""
         print(f"刷新菜单与界面...")
-        # 刷新菜单
-        config_data = subfunc_file.read_remote_cfg_in_rules()
-        if config_data is None:
-            messagebox.showerror("错误", "配置文件获取失败，将关闭软件，请检查网络后重启")
-            self.root.destroy()
         try:
             self.root.after(0, self.root_class.menu_ui.create_root_menu_bar)
         except Exception as re:
             logger.error(re)
-            messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
-            self.root.destroy()
+            # messagebox.showerror("错误", "配置文件损坏，将关闭软件，请检查网络后重启")
+            # self.root.destroy()
         if only_menu is True:
             return
         # 刷新界面
@@ -174,7 +168,7 @@ class SwManagerUI:
     def _create_set_state_method(self, state):
         def set_state(items):
             for sw in items:
-                subfunc_file.update_settings(sw, **{LocalCfg.STATE: state})
+                Sw(sw).update_settings(**{LocalCfgKey.STATE: state})
             self.refresh_frame()
 
         return set_state
@@ -199,7 +193,7 @@ class SwManagerUI:
         if self.quick_refresh_mode is True:
             try:
                 # 不要忘记更新数据
-                self.sw_list, = subfunc_file.get_remote_cfg(RemoteCfg.GLOBAL, **{RemoteCfg.SP_SW: []})
+                self.sw_list, = App().get_remote_global(**{RemoteSwKey.SP_SW: []})
                 tree_class = self.tree_class
                 if all(tree_class[t].can_quick_refresh for t in tree_class):
                     for t in tree_class:
@@ -227,7 +221,7 @@ class SwManagerTAHT(TreeviewAHT):
         # print(f"self.wnd={self.wnd}")
         self.data_src = self.parent_class.sw_list
         self.columns = (" ", "状态", "版本", "安装路径", "存储路径", "DLL路径")
-        sort_str = AppFuncCore.get_global_setting_value_by_local_record(f"{self.table_tag}_sort")
+        sort_str = App().fetch_setting_or_set_default(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.sort["col"], self.sort["is_asc"] = sort_str.split(",")
@@ -260,7 +254,7 @@ class SwManagerTAHT(TreeviewAHT):
         for sw in sw_list:
             if sw == "global":
                 continue
-            state = Sw(sw).get_saved_setting(LocalCfg.STATE, SwStates)
+            state = Sw(sw).fetch_setting_or_set_default(LocalCfgKey.STATE, SwStates)
             if table_tag == "enable" and (state != SwStates.VISIBLE and state != SwStates.HIDDEN):
                 continue
             if table_tag == "disable" and state != SwStates.DISABLED:
@@ -268,8 +262,7 @@ class SwManagerTAHT(TreeviewAHT):
 
             display_name = Sw(sw).label
             f_display_name = " " + display_name
-            inst_path, data_dir, dll_dir = subfunc_file.get_settings(
-                sw,
+            inst_path, data_dir, dll_dir = Sw(sw).get_settings(
                 inst_path=None,
                 data_dir=None,
                 dll_dir=None
@@ -324,4 +317,4 @@ class SwManagerTAHT(TreeviewAHT):
         table_tag = self.table_tag
         col = self.default_sort["col"]
         is_asc_after = self.default_sort["is_asc"]
-        AppFuncCore.save_a_global_setting_and_callback(f'{table_tag}_sort', f"{col},{is_asc_after}")
+        App().save_setting_and_do(f'{table_tag}_sort', f"{col},{is_asc_after}")

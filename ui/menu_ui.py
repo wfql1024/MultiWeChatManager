@@ -6,14 +6,12 @@ from functools import partial
 from pathlib import Path
 from tkinter import messagebox, simpledialog
 
-from func_core.sw_func_core import SwOperatorCore
-from functions import subfunc_file
 from func_core.app_func_core import AppFuncCore
-from functions.app_func import App
-from functions.main_func import MultiSwFunc
+from func_core.sw_func_core import SwOperatorCore
+from functions.app_func import App, AppFunc
 from functions.sw_func import Sw
 from public import Strings, Config
-from public.enums import LocalCfg, MultirunMode, CallMode
+from public.enums import LocalCfgKey, MultirunMode, CallMode, RootCfgKey
 from public.global_members import GlobalMembers
 from ui.exe_manager_ui import ExeManagerWndCreator
 from ui.sidebar_ui import SidebarUI
@@ -78,7 +76,7 @@ class MenuUI:
 
     def create_root_menu_bar(self):
         """创建菜单栏"""
-        root_tab = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.ROOT_TAB)
+        root_tab = App().fetch_setting_or_set_default(LocalCfgKey.ROOT_TAB)
         self.is_login_menu = root_tab == "login"
         if self.is_login_menu:
             self.acc_tab_ui = self.root_class.login_ui
@@ -100,7 +98,7 @@ class MenuUI:
         self.menu_bar.delete(0, tk.END)
 
         # ————————————————————————————侧栏菜单————————————————————————————
-        used_sidebar = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.USED_SIDEBAR)
+        used_sidebar = App().fetch_setting_or_set_default(LocalCfgKey.USED_SIDEBAR)
         suffix = "" if used_sidebar is True else Strings.SIDEBAR_HINT
         label = "❯" if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists() else "❮"
         self.sidebar_menu_label = f"{label}{suffix}"
@@ -171,7 +169,7 @@ class MenuUI:
         self.menu_bar.add_cascade(label="视图", menu=self.view_menu)
         if self.is_login_menu:
             # 视图单选
-            view_value = App().global_settings_value.view = Sw(self.sw).get_saved_setting("view")
+            view_value = App().global_settings_value.view = Sw(self.sw).fetch_setting_or_set_default("view")
             view_var = App().global_settings_var.view = tk.StringVar(value=view_value)
 
             self.view_menu.add_radiobutton(label="经典", variable=view_var, value="classic",
@@ -184,24 +182,24 @@ class MenuUI:
         self.view_options_menu = tk.Menu(self.view_menu, tearoff=False)
         self.view_menu.add_cascade(label=f"视图选项", menu=self.view_options_menu)
         sign_vis_value = App().global_settings_value.sign_vis = \
-            AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
+            App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
         sign_vis_var = App().global_settings_var.sign_vis = tk.BooleanVar(value=sign_vis_value)
         self.view_options_menu.add_checkbutton(
             label="显示状态标志", variable=sign_vis_var,
-            command=partial(AppFuncCore.save_a_global_setting_and_callback,
-                            LocalCfg.SIGN_VISIBLE, not App().global_settings_value.sign_vis,
+            command=partial(App().save_setting_and_do,
+                            LocalCfgKey.SIGN_VISIBLE, not App().global_settings_value.sign_vis,
                             self.root_class.login_ui.refresh)
         )
         use_txt_avt = App().global_settings_value.use_txt_avt = \
-            AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.USE_TXT_AVT)
+            App().fetch_setting_or_set_default(LocalCfgKey.USE_TXT_AVT)
         use_txt_avt_var = App().global_settings_var.use_txt_avt = tk.BooleanVar(value=use_txt_avt)
         self.view_options_menu.add_checkbutton(
             label="使用文字头像", variable=use_txt_avt_var,
-            command=partial(AppFuncCore.save_a_global_setting_and_callback,
-                            LocalCfg.USE_TXT_AVT, not use_txt_avt,
+            command=partial(App().save_setting_and_do,
+                            LocalCfgKey.USE_TXT_AVT, not use_txt_avt,
                             self.root_class.login_ui.refresh)
         )
-        scale_value = App().global_settings_value.scale = AppFuncCore.get_global_setting_value_by_local_record(
+        scale_value = App().global_settings_value.scale = App().fetch_setting_or_set_default(
             "scale")
         scale_var = App().global_settings_var.scale = tk.StringVar(value=scale_value)
         self.wnd_scale_menu = tk.Menu(self.view_menu, tearoff=False)
@@ -230,7 +228,7 @@ class MenuUI:
 
         # ————————————————————————————帮助菜单————————————————————————————
         # 检查版本表是否当天已更新
-        subfunc_file.read_remote_cfg_in_rules()
+        # App().regularly_get_remote_cfg()  # 刷新时也会及时获取最新的远程配置
         surprise_sign = Strings.SURPRISE_SIGN
         prefix = surprise_sign if App().need_update is True else ""
         self.help_menu = tk.Menu(self.menu_bar, tearoff=False)
@@ -246,8 +244,8 @@ class MenuUI:
 
         # ————————————————————————————作者标签————————————————————————————
         new_func_value = App().global_settings_value.new_func = \
-            AppFuncCore.get_global_setting_value_by_local_record(
-                LocalCfg.ENABLE_NEW_FUNC)
+            App().fetch_setting_or_set_default(
+                LocalCfgKey.ENABLE_NEW_FUNC)
         author_str = App().author
         hint_str = App().hint
         author_str_without_hint = f"by {author_str}"
@@ -265,7 +263,7 @@ class MenuUI:
             )
             self.menu_bar.entryconfigure(author_str_with_hint, command=handler.on_click_down)
 
-        self.used_tray = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.USED_TRAY)
+        self.used_tray = App().fetch_setting_or_set_default(LocalCfgKey.USED_TRAY)
         suffix = "" if self.used_tray is True else Strings.TRAY_HINT
         self._to_tray_label = f"⌟{suffix}"
         self.menu_bar.add_command(label=self._to_tray_label, command=self._to_bring_tk_to_tray)
@@ -283,7 +281,7 @@ class MenuUI:
             command=partial(self._toggle_auto_start,
                             not App().global_settings_value.auto_start))
         self.auto_start_menu.add_command(
-            label="测试登录自启动账号", command=MultiSwFunc.thread_to_login_auto_start_accounts)
+            label="测试登录自启动账号", command=AppFunc.thread_to_login_auto_start_accounts)
 
         if self.is_login_menu:
             # -应用设置
@@ -295,7 +293,8 @@ class MenuUI:
 
             self.rest_mode_menu = tk.Menu(self.settings_menu, tearoff=False)
             self.settings_menu.add_cascade(label="无补丁多开", menu=self.rest_mode_menu)
-            rest_mode_value = App().global_settings_value.rest_mode = Sw(self.sw).get_saved_setting(LocalCfg.REST_MULTIRUN_MODE)
+            rest_mode_value = App().global_settings_value.rest_mode = Sw(self.sw).fetch_setting_or_set_default(
+                LocalCfgKey.REST_MULTIRUN_MODE)
             # print("当前项", rest_mode_value)
             self.sw_class.multirun_mode = rest_mode_value
             rest_mode_var = App().global_settings_var.rest_mode = tk.StringVar(value=rest_mode_value)  # 设置初始选中的子程序
@@ -329,53 +328,53 @@ class MenuUI:
             self.login_settings_menu.add_command(label="登录说明", command=self._open_login_settings_instructions)
             self.login_settings_menu.add_separator()  # ————————————————分割线————————————————
             prefer_coexist_value = App().global_settings_value.prefer_coexist = \
-                AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.PREFER_COEXIST)
+                App().fetch_setting_or_set_default(LocalCfgKey.PREFER_COEXIST)
             prefer_coexist_var = App().global_settings_var.prefer_coexist = tk.BooleanVar(value=prefer_coexist_value)
             self.login_settings_menu.add_checkbutton(
                 label="手动登录优选共存", variable=prefer_coexist_var,
-                command=partial(AppFuncCore.save_a_global_setting_and_callback,
-                                LocalCfg.PREFER_COEXIST, not prefer_coexist_value, self.create_root_menu_bar))
+                command=partial(App().save_setting_and_do,
+                                LocalCfgKey.PREFER_COEXIST, not prefer_coexist_value, self.create_root_menu_bar))
 
             hide_wnd_value = App().global_settings_value.hide_wnd = \
-                AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.HIDE_WND)
+                App().fetch_setting_or_set_default(LocalCfgKey.HIDE_WND)
             hide_wnd_var = App().global_settings_var.hide_wnd = tk.BooleanVar(value=hide_wnd_value)
             self.login_settings_menu.add_checkbutton(
                 label="一键登录前隐藏软件主窗口", variable=hide_wnd_var,
-                command=partial(AppFuncCore.save_a_global_setting_and_callback,
-                                LocalCfg.HIDE_WND, not hide_wnd_value, self.create_root_menu_bar))
+                command=partial(App().save_setting_and_do,
+                                LocalCfgKey.HIDE_WND, not hide_wnd_value, self.create_root_menu_bar))
 
             kill_idle_value = App().global_settings_value.kill_idle = \
-                AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.KILL_IDLE_LOGIN_WND)
+                App().fetch_setting_or_set_default(LocalCfgKey.KILL_IDLE_LOGIN_WND)
             kill_idle_var = App().global_settings_var.kill_idle = tk.BooleanVar(value=kill_idle_value)
             self.login_settings_menu.add_checkbutton(
                 label="一键登录前关闭多余登录窗口", variable=kill_idle_var,
-                command=partial(AppFuncCore.save_a_global_setting_and_callback,
-                                LocalCfg.KILL_IDLE_LOGIN_WND, not kill_idle_value, self.create_root_menu_bar))
+                command=partial(App().save_setting_and_do,
+                                LocalCfgKey.KILL_IDLE_LOGIN_WND, not kill_idle_value, self.create_root_menu_bar))
 
             # >>互斥体
             self.mutant_menu = tk.Menu(self.login_settings_menu, tearoff=False)
             self.login_settings_menu.add_cascade(label="互斥体", menu=self.mutant_menu)
-            unlock_cfg_value = App().global_settings_value.unlock_cfg = AppFuncCore.get_global_setting_value_by_local_record(
-                LocalCfg.UNLOCK_CFG)
+            unlock_cfg_value = App().global_settings_value.unlock_cfg = App().fetch_setting_or_set_default(
+                LocalCfgKey.UNLOCK_CFG)
             unlock_cfg_var = App().global_settings_var.unlock_cfg = tk.BooleanVar(value=unlock_cfg_value)
             self.mutant_menu.add_checkbutton(
                 label="登录时解锁配置文件", variable=unlock_cfg_var,
-                command=partial(AppFuncCore.save_a_global_setting_and_callback,
-                                LocalCfg.UNLOCK_CFG, not unlock_cfg_value, self.create_root_menu_bar))
-            all_set_has_mutex_value = App().global_settings_value.all_set_has_mutex = AppFuncCore.get_global_setting_value_by_local_record(
-                LocalCfg.ALL_HAS_MUTEX)
+                command=partial(App().save_setting_and_do,
+                                LocalCfgKey.UNLOCK_CFG, not unlock_cfg_value, self.create_root_menu_bar))
+            all_set_has_mutex_value = App().global_settings_value.all_set_has_mutex = App().fetch_setting_or_set_default(
+                LocalCfgKey.ALL_HAS_MUTEX)
             all_set_has_mutex_var = App().global_settings_var.all_set_has_mutex = tk.BooleanVar(
                 value=all_set_has_mutex_value)
             self.mutant_menu.add_checkbutton(
                 label="默认含有互斥体", variable=all_set_has_mutex_var,
-                command=partial(AppFuncCore.save_a_global_setting_and_callback,
-                                LocalCfg.ALL_HAS_MUTEX, not all_set_has_mutex_value, self.create_root_menu_bar))
+                command=partial(App().save_setting_and_do,
+                                LocalCfgKey.ALL_HAS_MUTEX, not all_set_has_mutex_value, self.create_root_menu_bar))
             self.mutant_menu.add_command(label="立即查杀所有互斥体", command=self._to_kill_mutexes)
 
             # >>调用模式
             self.call_mode_menu = tk.Menu(self.login_settings_menu, tearoff=False)
             self.login_settings_menu.add_cascade(label="调用模式", menu=self.call_mode_menu)
-            call_mode_value = App().global_settings_value.call_mode = AppFuncCore.get_global_setting_value_by_local_record(
+            call_mode_value = App().global_settings_value.call_mode = App().fetch_setting_or_set_default(
                 "call_mode")
             call_mode_var = App().global_settings_var.call_mode = tk.StringVar(value=call_mode_value)
             for call_mode in CallMode:
@@ -384,33 +383,42 @@ class MenuUI:
                     label=call_mode.value,
                     value=call_mode.value,
                     variable=call_mode_var,
-                    command=partial(AppFuncCore.save_a_global_setting_and_callback,
-                                    LocalCfg.CALL_MODE, call_mode.value, self.create_root_menu_bar),
+                    command=partial(App().save_setting_and_do,
+                                    LocalCfgKey.CALL_MODE, call_mode.value, self.create_root_menu_bar),
                 )
 
             # >>登录按钮
             self.click_btn_menu = tk.Menu(self.login_settings_menu, tearoff=False)
             self.login_settings_menu.add_cascade(label="登录按钮", menu=self.click_btn_menu)
             auto_press_value = App().global_settings_value.auto_press = \
-                AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.AUTO_PRESS)
+                App().fetch_setting_or_set_default(LocalCfgKey.AUTO_PRESS)
             auto_press_var = App().global_settings_var.auto_press = tk.BooleanVar(value=auto_press_value)
             self.click_btn_menu.add_checkbutton(
                 label="自动点击", variable=auto_press_var,
-                command=partial(AppFuncCore.save_a_global_setting_and_callback,
+                command=partial(App().save_setting_and_do,
                                 "auto_press", not auto_press_value, self.create_root_menu_bar))
             self.click_btn_menu.add_command(label="按钮识别列表", command=self._manager_sw_btn_list)
 
         self.settings_menu.add_separator()  # ————————————————分割线————————————————
         self.settings_menu.add_command(
-            label="重置", command=partial(AppFuncCore.reset, self.root_class.reinit_root_ui))
+            label="重置", command=partial(App().reset, self.root_class.reinit_root_ui))
 
     def _to_update_remote_cfg(self):
         printer.vital("更新远程配置")
-        config_data = subfunc_file.force_fetch_remote_encrypted_cfg()
-        if config_data is None:
-            messagebox.showinfo("提示", "无法获取配置文件，请检查网络连接后重试")
+        remote_global = App().force_get_remote_cfg(RootCfgKey.REMOTE_GLOBAL_NS)
+        remote_sw = App().force_get_remote_cfg(RootCfgKey.REMOTE_SW_NS)
+        # 统一一次性弹窗提示
+        if remote_sw is None and remote_global is None:
+            messagebox.showinfo("提示", "无法获取远程平台和远程全局配置，请检查网络连接后重试")
             return False
-        messagebox.showinfo("提示", "更新成功")
+        if remote_global is None:
+            messagebox.showinfo("提示", "无法获取远程全局配置，请检查网络连接后重试")
+            return False
+        if remote_sw is None:
+            messagebox.showinfo("提示", "无法获取远程平台配置，请检查网络连接后重试")
+            return False
+        # 两者都成功
+        messagebox.showinfo("提示", "已成功更新")
         self.root_class.main_ui.refresh_current_tab()
         return True
 
@@ -442,7 +450,7 @@ class MenuUI:
             new_label = "❯"
             self.menu_bar.entryconfigure(self.sidebar_menu_label, label=new_label)
             if len(self.sidebar_menu_label) > 1:
-                subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_SIDEBAR: True})
+                App().update_settings(**{LocalCfgKey.USED_SIDEBAR: True})
             self.sidebar_menu_label = new_label
             self.sidebar_wnd = tk.Toplevel(self.root)
             self.sidebar_ui = SidebarUI(self.sidebar_wnd, "导航条")
@@ -465,8 +473,8 @@ class MenuUI:
             except (ValueError, TypeError):
                 messagebox.showerror("错误", "无效输入，操作已取消")
                 return
-        AppFuncCore.save_a_global_setting_and_callback(
-            LocalCfg.SCALE,
+        App().save_setting_and_do(
+            LocalCfgKey.SCALE,
             str(scale)
         )
         messagebox.showinfo("提示", "修改成功，将在重新启动程序后生效！")
@@ -488,7 +496,7 @@ class MenuUI:
 
     def _calc_multirun_mode_and_save(self, mode):
         """计算多开模式并保存"""
-        Sw(self.sw).save_setting_and_do(LocalCfg.REST_MULTIRUN_MODE, mode, self.create_root_menu_bar)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.REST_MULTIRUN_MODE, mode, self.create_root_menu_bar)
         _ = Sw(self.sw).multirun_mode
 
     @staticmethod
@@ -507,7 +515,7 @@ class MenuUI:
 
     def _manager_sw_btn_list(self):
         # 弹出输入框
-        sw_login_btn_list = Sw(self.sw).get_saved_setting(LocalCfg.CLICK_BTNS)
+        sw_login_btn_list = Sw(self.sw).fetch_setting_or_set_default(LocalCfgKey.CLICK_BTNS)
         initial_value = sw_login_btn_list if isinstance(sw_login_btn_list, str) else ""
         btn_list = simpledialog.askstring(
             f"{self.sw}按钮识别列表", "当通过位置点击按钮失败, 会尝试根据文字依次查找按钮. "
@@ -516,10 +524,10 @@ class MenuUI:
             initialvalue=initial_value, parent=self.root)
         if btn_list is None:
             return
-        Sw(self.sw).save_setting_and_do(LocalCfg.CLICK_BTNS, btn_list)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.CLICK_BTNS, btn_list)
 
     def _to_enable_new_func(self):
-        AppFuncCore.save_a_global_setting_and_callback('enable_new_func', True)
+        App().save_setting_and_do('enable_new_func', True)
         messagebox.showinfo("发现彩蛋", "解锁新功能，快去找找吧！")
         self.create_root_menu_bar()
 
@@ -528,7 +536,7 @@ class MenuUI:
         self.root.withdraw()
         if self.used_tray is not True:
             self.used_tray = False
-            subfunc_file.update_settings(LocalCfg.GLOBAL_SECTION, **{LocalCfg.USED_TRAY: True})
+            App().update_settings(**{LocalCfgKey.USED_TRAY: True})
             new_label = self._to_tray_label.replace(Strings.TRAY_HINT, "")
             self.menu_bar.entryconfigure(self._to_tray_label, label=new_label)
             self._to_tray_label = new_label

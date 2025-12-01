@@ -22,3 +22,4 @@ __pycache__/
 .idea/
 *.iml
 /external_res/Updater.exe
+/dev_user_files/

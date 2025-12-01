@@ -1,9 +1,9 @@
-from typing import Tuple, Optional
+import weakref
+from tkinter import messagebox
+from typing import Tuple, Optional, Callable
 
 from func_core.sw_func_core import SwInfoFuncCore, SwOperatorCore
-from functions import subfunc_file
 from utils.logger_utils import Logger
-import weakref
 
 
 # class SwSettings:
@@ -88,17 +88,45 @@ class Sw:
         self._ver = ver
         return self._ver
 
-    """配置"""
+    """远程配置"""
 
-    def del_config_and_reset(self):
-        """删除配置并重置"""
-        return SwOperatorCore.del_config_and_reset(self.id)
+    def get_remote(self, *addr, **kwargs):
+        return SwInfoFuncCore.get_remote_sw(self.id, *addr, **kwargs)
 
-    def get_saved_setting(self, key, enum_cls=None):
-        return SwInfoFuncCore.get_sw_setting_by_local_record(self.id, key, enum_cls)
+    """账号信息"""
+
+    def get_acc_data(self, *addr, **kwargs):
+        return SwInfoFuncCore.get_sw_acc_data(self.id, *addr, **kwargs)
+
+    def update_acc_data(self, *addr, **kwargs):
+        return SwInfoFuncCore.update_sw_acc_data(self.id, *addr, **kwargs)
+
+    def clear_data(self, *addr):
+        return SwInfoFuncCore.clear_sw_acc_data(self.id, *addr)
+
+    """本地配置"""
+
+    def get_settings(self, *addr, **kwargs):
+        return SwInfoFuncCore.get_sw_setting(self.id, *addr, **kwargs)
+
+    def update_settings(self, *addr, **kwargs):
+        """更新软件设置"""
+        return SwInfoFuncCore.update_sw_settings(self.id, *addr, **kwargs)
+
+    def fetch_setting_or_set_default(self, key, enum_cls=None):
+        return SwInfoFuncCore.fetch_sw_setting_or_set_default(self.id, key, enum_cls)
 
     def save_setting_and_do(self, key, value, callback=None):
-        return SwInfoFuncCore.save_sw_setting_to_local_record_and_call_back(self.id, key, value, callback)
+        changed = SwInfoFuncCore.save_and_check_changed(self.id, key, value)
+        if changed is True:
+            print(f"成功修改{self.id}的{key}为{value}！")
+        elif changed is False:
+            print(f"一致的值：{self.id}的{key}为{value}！")
+        if changed is not None:
+            if isinstance(callback, Callable):
+                callback()
+        else:
+            print("修改错误！")
 
     """互斥体"""
 
@@ -157,9 +185,10 @@ class Sw:
         return SwOperatorCore.backup_sw_all_patching_files(self.id)
 
     def get_setting_by_local_record(self, key, enum_cls=None):
-        return subfunc_file.fetch_a_setting_or_set_default_or_none(self.id, key, enum_cls)
+        return SwInfoFuncCore.fetch_sw_setting_or_set_default(self.id, key, enum_cls)
 
     """登录"""
+
     def kill_sw_multiple_processes(self):
         return SwOperatorCore.kill_sw_multiple_processes(self.id)
 
@@ -188,8 +217,10 @@ class Sw:
         :param target: True=打补丁, False=撤销补丁, None=自动判断
         :return: True/False, 提示信息
         """
-        return SwOperatorCore.choose_channel_in_conflicts_and_switch_dll_to_(
+        success, msg = SwOperatorCore.choose_channel_in_conflicts_and_switch_dll_to_(
             self.id, mode, channel, conflicts, coexist_channel=coexist_channel, ordinal=ordinal, target=target)
+        if success is not True:
+            messagebox.showerror("错误", f"切换失败: {msg}")
 
     def identify_patch(
             self, mode, channels=None, coexist_channel=None, ordinal=None) -> Tuple[Optional[dict], str]:
@@ -197,7 +228,8 @@ class Sw:
         检查当前补丁状态，返回结果字典(若没有适配则返回None)和消息
         结果字典格式: {channel1: {status:bool, msg:str}, channel2: {...}, ...}
         """
-        return SwInfoFuncCore.identify_dll_core(self.id, mode, channels, coexist_channel, ordinal, self.force_rescan)
+        return SwInfoFuncCore.identify_dll_core(self.id, mode, channels, coexist_channel, ordinal,
+                                                not self.force_rescan)
 
 # class SwInfoFunc:
 #     @staticmethod

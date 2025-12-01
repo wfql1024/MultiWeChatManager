@@ -5,15 +5,13 @@ from tkinter import ttk
 from PIL import ImageTk, Image
 
 from components.composited_controls import TreeviewAHT
-from func_core.sw_func_core import SwInfoFuncCore
-from functions import subfunc_file
 from func_core.acc_func_core import AccInfoFuncCore
-from func_core.app_func_core import AppFuncCore
+from functions.acc_func import Acc
 from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config, Strings
 from public.custom_classes import Condition
-from public.enums import OnlineStatus, LocalCfg, CfgStatus, AccKeys
+from public.enums import OnlineStatus, LocalCfgKey, CfgStatus, AccKeys
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
@@ -130,9 +128,9 @@ class AccLoginTAHT(TreeviewAHT):
         self.main_frame = self.parent_class.ui_frame[self.table_tag]
 
         # self.data_src = self.parent_class.acc_list_dict[self.table_tag]
-        self.sign_visible: bool = AppFuncCore.get_global_setting_value_by_local_record(LocalCfg.SIGN_VISIBLE)
+        self.sign_visible: bool = App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
         self.columns = (" ", "配置", "pid", "账号标识", "平台id", "昵称")
-        sort_str = Sw(self.sw).get_saved_setting(f"{self.table_tag}_sort")
+        sort_str = Sw(self.sw).fetch_setting_or_set_default(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):
             if len(sort_str.split(",")) == 2:
                 self.default_sort["col"], self.default_sort["is_asc"] = sort_str.split(",")
@@ -164,7 +162,7 @@ class AccLoginTAHT(TreeviewAHT):
 
         for account in accounts:
             # 未登录账号中，隐藏的账号不显示
-            hidden, = subfunc_file.get_sw_acc_data(self.sw, account, hidden=None)
+            hidden, = Acc(self.sw, account).get_data(hidden=None)
             if hidden is True and login_status == "logout":
                 continue
             # 账号详情
