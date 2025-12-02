@@ -357,6 +357,11 @@ class PathUtils:
         except (OSError, ValueError):
             return False
 
+    @staticmethod
+    def match_and_capture(path: str, pattern: str):
+        m = re.match(pattern, path)
+        return m.group(1) if m else None
+
 
 class ByteUtils:
     """16进制字符串和字节串互转"""

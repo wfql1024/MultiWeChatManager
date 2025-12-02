@@ -26,7 +26,7 @@ from func_core.sw_func_impl import SwInfoFuncImpl
 from functions.func_tool import FuncTool
 from public import Strings, Config
 from public.custom_classes import FlowControlError
-from public.enums import LocalCfgKey, SwEnum, AccKeys, MultirunMode, RemoteSwKey, CallMode, WndType
+from public.enums import LocalCfgKey, SwEnum, AccKeys, MultirunMode, RemoteSwKey, CallMode, WndType, PathType
 from public.global_members import GlobalMembers
 from public.strings import NEWER_SYS_VER
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
@@ -38,6 +38,7 @@ from utils.hwnd_utils import HwndGetter, Win32HwndGetter
 from utils.logger_utils import mylogger as logger, Printer, Logger
 from utils.logger_utils import myprinter as printer
 from utils.process_utils import Process
+from utils.sys_utils import SysPathUtils
 
 
 class SwInfoFuncCore:
@@ -569,7 +570,7 @@ class SwInfoFuncCore:
 
         def _get_origin_accounts():
             data_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.DATA_DIR)
-            excluded_dirs, = cls.get_remote_sw(sw, excluded_dir_list=[])
+            excluded_dirs, = cls.get_remote_sw(sw, **{RemoteSwKey.EXCLUDED_DIRS: []})
             return {entry.name for entry in os.scandir(data_dir) if entry.is_dir()} - set(excluded_dirs)
 
         def _get_coexist_accounts():
@@ -867,10 +868,10 @@ class SwInfoFuncCore:
                 exe_ext = os.path.splitext(executable)[1].lower()
                 return path_ext == exe_ext
             elif path_type == LocalCfgKey.DATA_DIR:
-                suffix, = cls.get_remote_sw(sw, data_dir_check_suffix=None)
+                suffix, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DATA_DIR: None})
                 return os.path.isdir(os.path.join(path, str(suffix)))
             elif path_type == LocalCfgKey.DLL_DIR:
-                suffix, = cls.get_remote_sw(sw, dll_dir_check_suffix=None)
+                suffix, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DLL_DIR: None})
                 return os.path.isfile(os.path.join(path, suffix))
             return False
         except Exception as e:
@@ -878,7 +879,7 @@ class SwInfoFuncCore:
             return False
 
     @classmethod
-    def get_sw_install_path_from_process(cls, sw: str) -> list:
+    def _get_sw_install_path_from_process(cls, sw: str) -> list:
         executable, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE: None})
         results = []
         for process in psutil.process_iter(['name', 'exe']):
@@ -890,79 +891,178 @@ class SwInfoFuncCore:
         return results
 
     @classmethod
-    def get_sw_install_path_from_machine_register(cls, sw: str) -> list:
-        sub_key, executable = cls.get_remote_sw(sw, mac_reg_sub_key=None, **{RemoteSwKey.EXE: None})
-        results = []
-        try:
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, sub_key)
-
-            found_path = winreg.QueryValueEx(key, "InstallLocation")[0].replace('\\', '/')
-            winreg.CloseKey(key)
-            logger.info(f"通过设备注册表获取了安装地址：{found_path}")
-            if found_path:
-                results.append(os.path.join(found_path, executable).replace('\\', '/'))
-
-            found_path = winreg.QueryValueEx(key, "DisplayIcon")[0].replace('\\', '/')
-            winreg.CloseKey(key)
-            logger.info(f"通过设备注册表获取了安装地址：{found_path}")
-            if found_path:
-                results.append(found_path.replace('\\', '/'))
-        except Exception as e:
-            logger.error(e)
-        return results
+    def _get_sw_data_dir_from_register(cls, sw: str) -> list:
+        paths = []
+        res_list = cls._get_sw_path_by_register(sw, "data_dir")
+        for value, is_dir in res_list:
+            try:
+                if is_dir:
+                    paths.append(value)
+                else:
+                    paths.append(os.path.dirname(value))
+            except Exception as e:
+                Logger().warning(e)
+        return paths
 
     @classmethod
-    def get_sw_install_path_from_user_register(cls, sw: str) -> list:
-        sub_key, executable = cls.get_remote_sw(sw, user_reg_sub_key=None, **{RemoteSwKey.EXE: None})
-        results = []
-        try:
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key)
-            found_path = winreg.QueryValueEx(key, "InstallPath")[0].replace('\\', '/')
-            winreg.CloseKey(key)
-            logger.info(f"通过用户注册表获取了安装地址：{found_path}")
-            if found_path:
-                results.append(os.path.join(found_path, executable).replace('\\', '/'))
-        except Exception as we:
-            logger.warning(we)
-        return results
+    def _get_sw_inst_path_from_register(cls, sw: str) -> list:
+        paths = []
+        res_list = cls._get_sw_path_by_register(sw, "inst_path")
+        exe_name, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE: None})
+        for value, is_dir in res_list:
+            try:
+                if is_dir is False:
+                    paths.append(value)
+                else:
+                    if isinstance(exe_name, str):
+                        paths.append(os.path.join(value, exe_name))
+            except Exception as e:
+                Logger().warning(e)
+        return paths
 
     @classmethod
-    def get_sw_install_path_by_guess(cls, sw: str) -> list:
-        suffix, = cls.get_remote_sw(sw, inst_path_guess_suffix=None)
-        if suffix is None:
+    def _guess_sw_data_dir(cls, sw: str) -> list:
+        paths = []
+        res_list = cls._guess_sw_path(sw, "data_dir")
+        for value, is_dir in res_list:
+            try:
+                if is_dir:
+                    paths.append(value)
+                else:
+                    paths.append(os.path.dirname(value))
+            except Exception as e:
+                Logger().warning(e)
+        return paths
+
+    @classmethod
+    def _guess_sw_inst_path(cls, sw: str) -> list:
+        paths = []
+        res_list = cls._guess_sw_path(sw, "inst_path")
+        exe_name, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE: None})
+        for value, is_dir in res_list:
+            try:
+                if is_dir is False:
+                    paths.append(value)
+                else:
+                    if isinstance(exe_name, str):
+                        paths.append(os.path.join(value, exe_name))
+            except Exception as e:
+                Logger().warning(e)
+        return paths
+
+    @classmethod
+    def _get_sw_inst_path_by_regex(cls, sw: str) -> list:
+        return cls._get_sw_path_by_regex(sw, "inst_path")
+
+    @classmethod
+    def _get_sw_data_dir_by_regex(cls, sw: str) -> list:
+        return cls._get_sw_path_by_regex(sw, "data_dir")
+
+    @classmethod
+    def _guess_sw_path(cls, sw: str, path_type: str) -> List[Tuple[str, bool]]:
+        """
+        path_guess > 路径类型 > addr > 根键 : 适配字典列表
+        字典: 子路径sub_path; 是否为包is_dir
+        :return: [(值, is_dir), (...), ...]
+        """
+        addresses_dict = cls.get_remote_sw(sw, "path_detect", path_type, "addr")
+        if not isinstance(addresses_dict, dict):
             return []
-        guess_paths = [
-            os.path.join(os.environ.get('ProgramFiles'), suffix).replace('\\', '/'),
-            os.path.join(os.environ.get('ProgramFiles(x86)'), suffix).replace('\\', '/'),
-        ]
-        return guess_paths
+        path_and_is_dir_list = []
+        sys_paths = {
+            "~": os.path.expanduser('~'),
+            "Documents": SysPathUtils.get_documents_path(),
+            "ProgramFiles": os.environ.get('ProgramFiles'),
+            "ProgramFiles(x86)": os.environ.get('ProgramFiles(x86)')
+        }
+        for sys_path_key, addr_dicts in addresses_dict.items():
+            sys_path = sys_paths.get(sys_path_key, None)
+            if sys_path is None:
+                continue
+            for addr_dict in addr_dicts:
+                try:
+                    sub_path = addr_dict.get("sub_path", None)
+                    is_dir = addr_dict.get("is_dir", True)
+                    path_value = os.path.join(sys_path, sub_path).replace('\\', '/')
+                    path = path_value.replace('\\', '/').strip('"')
+                    path_and_is_dir_list.append((path, is_dir))
+                except Exception as we:
+                    Logger().warning(we)
+        return path_and_is_dir_list
 
     @classmethod
-    def get_sw_data_dir_from_user_register(cls, sw: str) -> list:
-        sub_key, dir_name = cls.get_remote_sw(sw, user_reg_sub_key=None, data_dir_name=None)
-        results = []
-        try:
-            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, sub_key, 0, winreg.KEY_READ)
-            value, _ = winreg.QueryValueEx(key, "FileSavePath")
-            winreg.CloseKey(key)
-            value = os.path.join(value, dir_name).replace('\\', '/')
-            results.append(value)
-        except Exception as we:
-            logger.warning(we)
-        return results
-
-    @classmethod
-    def get_sw_data_dir_by_guess(cls, sw: str) -> list:
-        data_dir_name, data_dir_guess_suffix = cls.get_remote_sw(sw, data_dir_name=None, data_dir_guess_suffix=None)
-        if data_dir_name is None or data_dir_guess_suffix is None:
+    def _get_sw_path_by_register(cls, sw: str, path_type: str) -> List[Tuple[str, bool]]:
+        """
+        path_guess > 路径类型 > reg > 根键 : 适配字典列表
+        字典: 子键sub_key; 名称value_name; 是否为包is_dir
+        :return: [(值, is_dir), (...), ...]
+        """
+        reg_hkeys_dict = cls.get_remote_sw(sw, "path_detect", path_type, "reg")
+        if not isinstance(reg_hkeys_dict, dict):
             return []
-        guess_paths = [
-            os.path.join(os.path.expanduser('~'), 'Documents', data_dir_name).replace('\\', '/'),
-        ]
-        return guess_paths
+        value_and_is_dir_list = []
+        hkeys = {
+            "classes_root": winreg.HKEY_CLASSES_ROOT,
+            "current_user": winreg.HKEY_CURRENT_USER,
+            "local_machine": winreg.HKEY_LOCAL_MACHINE,
+            "users": winreg.HKEY_USERS,
+            "current_config": winreg.HKEY_CURRENT_CONFIG,
+        }
+        for hkey_name, reg_key_dicts in reg_hkeys_dict.items():
+            root_key = hkeys.get(hkey_name, None)
+            if root_key is None:
+                continue
+            for reg_key_dict in reg_key_dicts:
+                try:
+                    sub_key = reg_key_dict.get("sub_key", None)
+                    value_name = reg_key_dict.get("value_name", None)
+                    is_dir = reg_key_dict.get("is_dir", True)
+                    reg_key = winreg.OpenKey(root_key, sub_key, 0, winreg.KEY_READ)
+                    value_str, _ = winreg.QueryValueEx(reg_key, value_name)
+                    value = value_str.replace('\\', '/').strip('"')
+                    suffix = reg_key_dict.get("suffix", None)
+                    if suffix is not None:
+                        value = os.path.join(value, suffix).replace('\\', '/')
+                    value_and_is_dir_list.append((value, is_dir))
+                except Exception as we:
+                    Logger().warning(we)
+        return value_and_is_dir_list
 
     @classmethod
-    def get_sw_dll_dir_by_memo_maps(cls, sw: str) -> list:
+    def _get_sw_path_by_regex(cls, sw: str, path_type: str) -> List[Tuple[str, bool]]:
+        """
+        path_guess > 路径类型 > regex > 组 : 适配字典列表
+        字典: 表达式regex
+        :return: [值, ...]
+        """
+        regex_groups_dict = cls.get_remote_sw(sw, "path_detect", path_type, "regex")
+        if not isinstance(regex_groups_dict, dict):
+            return []
+        paths = []
+        for group_name, group_regex_dicts in regex_groups_dict.items():
+            for group_regex_dict in group_regex_dicts:
+                try:
+                    regex = group_regex_dict.get("regex", None)
+                    executable_wildcards, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE_WCS: None})
+                    pids = []
+                    if isinstance(executable_wildcards, list):
+                        name_pids_dict = process_utils.psutil_get_pids_by_wildcards_and_grouping_to_dict(
+                            executable_wildcards)
+                        pids = [pid for pid_list in name_pids_dict.values() for pid in pid_list]
+                    pids = process_utils.remove_child_pids(pids)
+                    for pid in pids:
+                        for f in psutil.Process(pid).memory_maps():
+                            normalized_path = f.path.replace('\\', '/')
+                            path = PathUtils.match_and_capture(normalized_path, regex)
+                            if path is not None:
+                                paths.append(path)
+                                break
+                except Exception as we:
+                    Logger().warning(we)
+        return paths
+
+    @classmethod
+    def _get_sw_dll_dir_by_memo_maps(cls, sw: str) -> list:
         dll_name, executable = cls.get_remote_sw(sw, dll_dir_check_suffix=None, **{RemoteSwKey.EXE: None})
         results = []
         exe_pids_dict = process_utils.psutil_get_pids_by_wildcards_and_grouping_to_dict([executable])
@@ -1470,26 +1570,27 @@ class SwInfoFuncCore:
                 })
         return res_dicts
 
-    @staticmethod
-    def _create_path_finders_of_(path_tag) -> list:
+    @classmethod
+    def _create_path_finders_of_(cls, path_tag) -> list:
         """定义方法列表"""
         if path_tag == LocalCfgKey.INST_PATH:
             return [
-                SwInfoFuncCore.get_sw_install_path_from_process,
-                SwInfoFuncCore.get_sw_install_path_from_machine_register,
-                SwInfoFuncCore.get_sw_install_path_from_user_register,
-                SwInfoFuncCore.get_sw_install_path_by_guess,
+                cls._get_sw_install_path_from_process,
+                cls._get_sw_inst_path_from_register,
+                cls._get_sw_inst_path_by_regex,
+                cls._guess_sw_inst_path,
             ]
         elif path_tag == LocalCfgKey.DATA_DIR:
             return [
-                SwInfoFuncCore.get_sw_data_dir_from_user_register,
-                SwInfoFuncCore.get_sw_data_dir_by_guess,
-                SwInfoFuncCore._get_sw_data_dir_from_other_sw,
+                cls._get_sw_data_dir_from_register,
+                cls._get_sw_data_dir_by_regex,
+                cls._guess_sw_data_dir,
+                cls._get_sw_data_dir_from_other_sw,
             ]
         elif path_tag == LocalCfgKey.DLL_DIR:
             return [
-                SwInfoFuncCore.get_sw_dll_dir_by_memo_maps,
-                SwInfoFuncCore._get_sw_dll_dir_by_files,
+                cls._get_sw_dll_dir_by_memo_maps,
+                cls._get_sw_dll_dir_by_files,
             ]
         else:
             return [
@@ -1549,10 +1650,9 @@ class SwInfoFuncCore:
     @classmethod
     def _get_sw_data_dir_from_other_sw(cls, sw: str) -> list:
         """通过其他软件的方式获取微信数据文件夹"""
-        data_dir_name, = cls.get_remote_sw(sw, data_dir_name="")
-        paths = []
+        data_dir_name, = cls.get_remote_sw(sw, **{RemoteSwKey.DATA_DIR_NAME: ""})
         if data_dir_name is None or data_dir_name == "":
-            paths = []
+            return []
         # 微信和新版微信的数据文件夹通常会选择在同一级目录, 微信是WeChat Files, 新版是xwechat_files
         other_sws = [SwEnum.WECHAT, SwEnum.WEIXIN]
         if sw in other_sws:
@@ -1571,7 +1671,7 @@ class SwInfoFuncCore:
                 other_path = SwInfoFuncCore.get_saved_path_of_(osw, LocalCfgKey.DATA_DIR)
                 if other_path is not None:
                     return [other_path]
-        return paths
+        return []
 
     @classmethod
     def _get_sw_dll_dir_by_files(cls, sw: str) -> list:
@@ -2249,7 +2349,7 @@ class SwOperatorCore:
         while True:
             try:
                 # 默认用户名/密码（第一次尝试）
-                Printer().debug(f"使用账号密码登录-{username}-{password}")
+                # Printer().debug(f"使用账号密码登录-{username}-{password}")
                 proc = process_utils.create_process_with_logon(
                     username, password, executable, args, creation_flags
                 )
@@ -2378,7 +2478,7 @@ class SwOperatorCore:
         """打开配置文件夹"""
         data_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.DATA_DIR)
         if os.path.exists(data_path):
-            config_addresses, = SwInfoFuncCore.get_remote_sw(sw, config_addresses=None)
+            config_addresses, = SwInfoFuncCore.get_remote_sw(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
             if not isinstance(config_addresses, list) or len(config_addresses) == 0:
                 messagebox.showinfo("提醒", f"{sw}平台还没有适配")
                 return
@@ -2394,7 +2494,7 @@ class SwOperatorCore:
             f"该操作将会移动{sw}登录配置文件到回收站，可右键撤销删除, 是否继续？"
         )
         if confirm:
-            config_addresses, = SwInfoFuncCore.get_remote_sw(sw, config_addresses=None)
+            config_addresses, = SwInfoFuncCore.get_remote_sw(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
             if not isinstance(config_addresses, list) or len(config_addresses) == 0:
                 messagebox.showinfo("提醒", f"{sw}平台还没有适配")
                 return

@@ -66,17 +66,17 @@ class Sw:
 
     @property
     def logo(self):
-        logo = self._logo
-        if logo is None:
-            logo = SwInfoFuncCore.get_sw_logo(self.id)
+        # logo = self._logo
+        # if logo is None:
+        logo = SwInfoFuncCore.get_sw_logo(self.id)
         self._logo = logo
         return self._logo
 
     @property
-    def label(self):
-        label = self._label
-        if label is None:
-            label = SwInfoFuncCore.get_sw_origin_display_name(self.id)
+    def remark(self):
+        # label = self._label
+        # if label is None:
+        label = SwInfoFuncCore.get_sw_origin_display_name(self.id)
         self._label = label
         return self._label
 

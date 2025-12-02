@@ -316,7 +316,7 @@ class ExeManagerUI:
         else:
             messagebox.showinfo(
                 "成功", f"重置成功!"
-                        f"若仍有未识别的补丁, 请尝试重装{Sw(self.sw).label}")
+                        f"若仍有未识别的补丁, 请尝试重装{Sw(self.sw).remark}")
             self.force_rescan_and_refresh()
 
     def force_rescan_and_refresh(self):

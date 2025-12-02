@@ -1,6 +1,9 @@
 import os
 import re
 
+from data_access import RemoteSw
+from public.enums import RemoteSwKey
+
 
 class SwInfoFuncImpl:
     def __init__(self):
@@ -19,7 +22,7 @@ class WeChatSwInfoFuncImpl(SwInfoFuncImpl):
     def get_curr_wx_id_from_config_file(sw):
         from func_core.sw_func_core import SwInfoFuncCore
         # Printer().debug("进入微信的查找当前微信ID的方法")
-        config_addresses, = RemoteSetting().get_(sw, config_addresses=None)
+        config_addresses, = RemoteSw().get_(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
         if not isinstance(config_addresses, list) or len(config_addresses) == 0:
             return None
         config_address = config_addresses[0]

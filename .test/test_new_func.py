@@ -14,6 +14,7 @@ from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
 from functions import sw_func
 from functions.sw_func import Sw
 from public import Config
+from public.enums import RemoteSwKey
 from ui.sidebar_ui import SidebarUI, WndProperties
 from utils import handle_utils, hwnd_utils
 from utils.hwnd_utils import Win32HwndGetter
@@ -26,7 +27,8 @@ class Test(TestCase):
         print(hwnds)
 
     def test_multi_new_weixin(self):
-        executable_name, cfg_handles = Sw("Weixin").get_remote(executable=None, cfg_handle_regex_list=None)
+        executable_name, cfg_handles = Sw("Weixin").get_remote(
+            **{RemoteSwKey.EXE: None, RemoteSwKey.CONFIG_HANDLES: None})
         # 关闭配置文件锁
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
@@ -290,3 +292,18 @@ class Test(TestCase):
         root.bind("<Button-3>", show_popup)
 
         root.mainloop()
+
+    def test_get_mmap_info(self):
+        import re
+        from pathlib import Path
+
+        def match_and_capture(path: str, pattern: str):
+            m = re.match(pattern, path)
+            # print(m)
+            return m.group(1) if m else None
+
+        pid = 4076
+        for f in psutil.Process(pid).memory_maps():
+            normalized_path = f.path.replace('\\', '/')
+            # print(normalized_path)
+            print(match_and_capture(normalized_path, r"^(.*?)/Profiles/[0-9A-Fa-f]+(/.*)?$"))

@@ -247,13 +247,13 @@
         },
         "alias": "微信3.9",
         "executable": "WeChat.exe",
-        "mutant_handle_infos": [
+        "mutex_handles": [
             {
                 "handle_name": "_WeChat_App_Instance_Identity_Mutex_Name",
                 "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
             }
         ],
-        "cfg_handle_regex_list": [],
+        "config_handles": [],
         "config_addresses": [
             "%data_dir%/All Users/config/config.data"
         ],
@@ -269,7 +269,7 @@
             "conf?g.data",
             "confi?.data"
         ],
-        "excluded_dir_list": [
+        "excluded_dirs": [
             "All Users",
             "Applet",
             "Plugins",
@@ -277,12 +277,82 @@
             "all_users",
             "Msg"
         ],
-        "inst_path_guess_suffix": "Tencent\\WeChat\\WeChat.exe",
-        "data_dir_guess_suffix": "Tencent\\WeChat",
-        "data_dir_check_suffix": "All Users",
-        "dll_dir_check_suffix": "WeChatWin.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",
-        "user_reg_sub_key": "Software\\Tencent\\WeChat",
+        "path_detect": {
+            "inst_path": {
+                "reg": {
+                    "current_user": [
+                        {
+                            "sub_key": "Software\\Tencent\\WeChat",
+                            "value_name": "InstallPath"
+                        }
+                    ],
+                    "local_machine": [
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",
+                            "value_name": "InstallLocation"
+                        },
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WeChat",
+                            "value_name": "DisplayIcon",
+                            "is_dir": false
+                        }
+                    ]
+                },
+                "addr": {
+                    "ProgramFiles": [
+                        {
+                            "sub_path": "Tencent\\WeChat"
+                        },
+                        {
+                            "sub_path": "WeChat"
+                        }
+                    ],
+                    "ProgramFiles(x86)": [
+                        {
+                            "sub_path": "Tencent\\WeChat"
+                        },
+                        {
+                            "sub_path": "Tencent\\WeChat"
+                        }
+                    ]
+                }
+            },
+            "data_dir": {
+                "reg": {},
+                "addr": {
+                    "documents": [
+                        {
+                            "sub_path": "Tencent\\WeChat Files"
+                        },
+                        {
+                            "sub_path": "WeChat Files"
+                        }
+                    ],
+                    "~": [
+                        {
+                            "sub_path": "Documents\\Tencent\\WeChat Files"
+                        },
+                        {
+                            "sub_path": "Documents\\WeChat Files"
+                        },
+                        {
+                            "sub_path": "WeChat Files"
+                        }
+                    ]
+                },
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "^(.*?)/[A-Za-z0-9_-]+/Msg(?:/[^/]+)*$"
+                        }
+                    ]
+                }
+            }
+        },
+        "path_check": {
+            "data_dir": "All Users",
+            "dll_dir": "WeChatWin.dll"
+        },
         "data_dir_name": "WeChat Files",
         "sw_id_trims": {
             "Weixin": [
@@ -294,6 +364,7 @@
         }
     },
     "Weixin": {
+        "alias": "微信4.x",
         "coexist": {
             "alias": "共存",
             "multi_state": true,
@@ -796,13 +867,8 @@
                 }
             }
         },
-        "alias": "微信4.x",
         "executable": "Weixin.exe",
-        "executable_wildcards": [
-            "Weixin?.exe",
-            "Weixi?.exe"
-        ],
-        "mutant_handle_infos": [
+        "mutex_handles": [
             {
                 "handle_name": "lock.ini",
                 "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
@@ -814,12 +880,105 @@
                 "type": "mutant"
             }
         ],
-        "cfg_handle_regex_list": [
+        "config_handles": [
             {
                 "handle_name": "global_config",
                 "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
                 "type": "file"
             }
+        ],
+        "config_addresses": [
+            "%data_dir%/all_users/config/global_config",
+            "%data_dir%/all_users/config/global_config.crc"
+        ],
+        "excluded_dirs": [
+            "All Users",
+            "Applet",
+            "Plugins",
+            "WMPF",
+            "all_users",
+            "Backup",
+            "old_backup"
+        ],
+        "path_detect": {
+            "inst_path": {
+                "reg": {
+                    "current_user": [
+                        {
+                            "sub_key": "Software\\Tencent\\Weixin",
+                            "value_name": "InstallPath"
+                        }
+                    ],
+                    "local_machine": [
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Weixin",
+                            "value_name": "InstallLocation"
+                        },
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Weixin",
+                            "value_name": "DisplayIcon",
+                            "is_dir": false
+                        }
+                    ]
+                },
+                "addr": {
+                    "ProgramFiles": [
+                        {
+                            "sub_path": "Tencent\\Weixin"
+                        },
+                        {
+                            "sub_path": "Weixin"
+                        }
+                    ],
+                    "ProgramFiles(x86)": [
+                        {
+                            "sub_path": "Tencent\\Weixin"
+                        },
+                        {
+                            "sub_path": "Weixin"
+                        }
+                    ]
+                }
+            },
+            "data_dir": {
+                "reg": {},
+                "addr": {
+                    "documents": [
+                        {
+                            "sub_path": "Tencent\\xwechat_files"
+                        },
+                        {
+                            "sub_path": "xwechat_files"
+                        }
+                    ],
+                    "~": [
+                        {
+                            "sub_path": "Documents\\Tencent\\xwechat_files"
+                        },
+                        {
+                            "sub_path": "Documents\\xwechat_files"
+                        },
+                        {
+                            "sub_path": "xwechat_files"
+                        }
+                    ]
+                },
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "^(.*?)/all_users/config(?:/[^/]+)*$"
+                        }
+                    ]
+                }
+            }
+        },
+        "path_check": {
+            "data_dir": "all_users",
+            "dll_dir": "Weixin.dll"
+        },
+        "executable_wildcards": [
+            "Weixin?.exe",
+            "Weixi?.exe"
         ],
         "mutant_handle_wildcards": [
             "?WeChat_App_Instance_Identity_Mutex_Name",
@@ -830,25 +989,6 @@
             "global_conf?g",
             "global_confi?"
         ],
-        "config_addresses": [
-            "%data_dir%/all_users/config/global_config",
-            "%data_dir%/all_users/config/global_config.crc"
-        ],
-        "excluded_dir_list": [
-            "All Users",
-            "Applet",
-            "Plugins",
-            "WMPF",
-            "all_users",
-            "Backup",
-            "old_backup"
-        ],
-        "inst_path_guess_suffix": "Tencent\\Weixin\\Weixin.exe",
-        "data_dir_guess_suffix": "Tencent\\Weixin",
-        "data_dir_check_suffix": "all_users",
-        "dll_dir_check_suffix": "Weixin.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\Weixin",
-        "user_reg_sub_key": "Software\\Tencent\\Weixin",
         "data_dir_name": "xwechat_files",
         "sw_id_trims": {
             "WeChat": [
@@ -1046,7 +1186,7 @@
             "WXWork?.exe",
             "WXWork.exe"
         ],
-        "mutant_handle_infos": [
+        "mutex_handles": [
             {
                 "handle_name": "Tencent.WeWork.ExclusiveObjectInstance1",
                 "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
@@ -1056,7 +1196,7 @@
                 "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
             }
         ],
-        "cfg_handle_regex_list": [],
+        "config_handles": [],
         "mutant_handle_wildcards": [
             "Tencent.WeWork.ExclusiveObject"
         ],
@@ -1064,7 +1204,7 @@
         "config_addresses": [
             "%data_dir%/Global/Config.cfg"
         ],
-        "excluded_dir_list": [
+        "excluded_dirs": [
             "BrowserMetrics",
             "Default",
             "Dictionaries",
@@ -1079,12 +1219,67 @@
             "ShaderCache",
             "WeDrive"
         ],
-        "inst_path_guess_suffix": "Tencent\\WXWork\\WXWork.exe",
-        "data_dir_guess_suffix": "Tencent\\WXWork",
-        "data_dir_check_suffix": "Profiles",
-        "dll_dir_check_suffix": "WXWorkResources.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WXWork",
-        "user_reg_sub_key": "Software\\Tencent\\WXWork",
+        "path_detect": {
+            "inst_path": {
+                "reg": {
+                    "current_user": [
+                        {
+                            "sub_key": "Software\\Tencent\\WXWork",
+                            "value_name": "Executable",
+                            "is_dir": false
+                        }
+                    ],
+                    "local_machine": [
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\企业微信",
+                            "value_name": "DisplayIcon",
+                            "is_dir": false
+                        }
+                    ]
+                },
+                "addr": {
+                    "ProgramFiles(x86)": [
+                        {
+                            "sub_path": "WXWork"
+                        }
+                    ],
+                    "ProgramFiles": [
+                        {
+                            "sub_path": "WXWork"
+                        }
+                    ]
+                }
+            },
+            "data_dir": {
+                "reg": {},
+                "addr": {
+                    "documents": [
+                        {
+                            "sub_path": "WXWork"
+                        }
+                    ],
+                    "~": [
+                        {
+                            "sub_path": "Documents\\WXWork"
+                        },
+                        {
+                            "sub_path": "WXWork"
+                        }
+                    ]
+                },
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "^(.*?)/Profiles/[0-9A-Fa-f]+(?:/[^/]+)*$"
+                        }
+                    ]
+                }
+            }
+        },
+        "path_check": {
+            "inst_path": "Profiles",
+            "data_dir": "WXWorkResources.dll"
+        },
         "data_dir_name": "WXWork",
         "sw_id_trims": {}
     },
@@ -1164,27 +1359,76 @@
         "executable_wildcards": [
             "QQ.exe"
         ],
-        "mutant_handle_infos": [],
-        "cfg_handle_regex_list": [],
+        "mutex_handles": [],
+        "config_handles": [],
         "config_addresses": [
             "%data_dir%/nt_qq/global/nt_db/login.db",
             "%data_dir%/nt_qq/global/nt_db/sign.db"
         ],
-        "excluded_dir_list": [
+        "mutant_handle_wildcards": [],
+        "config_handle_wildcards": [],
+        "excluded_dirs": [
             "All Users",
             "nt_data",
             "nt_db",
             "nt_qq",
             "nt_temp",
-            "Tencent Files"
+            "Tencent Files",
+            "screenshot"
         ],
-        "inst_path_guess_suffix": "Tencent\\QQNT\\QQ.exe",
-        "data_dir_guess_suffix": "Tencent\\QQNT",
-        "data_dir_check_suffix": "nt_qq",
-        "dll_dir_check_suffix": "QQNT.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQNT",
-        "user_reg_sub_key": "Software\\Tencent\\QQNT",
-        "data_dir_name": "QQNT",
+        "path_detect": {
+            "inst_path": {
+                "reg": {
+                    "current_user": [
+                    ],
+                    "local_machine": [
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Tencent\\QQNT",
+                            "value_name": "Install"
+                        }
+                    ]
+                },
+                "addr": {
+                    "ProgramFiles": [
+                        {
+                            "sub_path": "Tencent\\QQNT"
+                        }
+                    ],
+                    "ProgramFiles(x86)": [
+                        {
+                            "sub_path": "Tencent\\QQNT"
+                        }
+                    ]
+                }
+            },
+            "data_dir": {
+                "reg": {},
+                "addr": {
+                    "documents": [
+                        {
+                            "sub_path": "Tencent Files"
+                        }
+                    ],
+                    "~": [
+                        {
+                            "sub_path": "Documents\\Tencent Files"
+                        }
+                    ]
+                },
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "^(.*?)/\\d+/nt_qq/nt_db(?:/[^/]+)*$"
+                        }
+                    ]
+                }
+            }
+        },
+        "path_check": {
+            "data_dir": "nt_qq",
+            "dll_dir": "QQNT.dll"
+        },
+        "data_dir_name": "Tencent Files",
         "sw_id_trims": {
             "QQ": [
                 0,
@@ -1285,25 +1529,85 @@
         "executable_wildcards": [
             "QQ.exe"
         ],
-        "mutant_handle_infos": [],
-        "cfg_handle_regex_list": [],
+        "mutex_handles": [],
+        "config_handles": [],
         "config_addresses": [
             "%data_dir%/All Users/QQ/History.db"
         ],
-        "excluded_dir_list": [
+        "mutant_handle_wildcards": [],
+        "config_handle_wildcards": [],
+        "excluded_dirs": [
             "All Users",
             "nt_data",
             "nt_db",
             "nt_qq",
             "nt_temp",
-            "Tencent Files"
+            "Tencent Files",
+            "screenshot"
         ],
-        "inst_path_guess_suffix": "Tencent\\QQ\\Bin\\QQ.exe",
-        "data_dir_guess_suffix": "Tencent\\QQ",
-        "data_dir_check_suffix": "All Users",
-        "dll_dir_check_suffix": "IM.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\QQ",
-        "user_reg_sub_key": "Software\\Tencent\\QQ",
+        "path_detect": {
+            "inst_path": {
+                "reg": {
+                    "current_user": [
+                        {
+                            "sub_key": "Software\\Tencent\\QQ",
+                            "value_name": "OldQQInstallPathBak",
+                            "suffix": "Bin"
+                        }
+                    ],
+                    "local_machine": [
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Tencent\\QQ2009",
+                            "value_name": "Install",
+                            "suffix": "Bin"
+                        }
+                    ]
+                },
+                "addr": {
+                    "ProgramFiles(x86)": [
+                        {
+                            "sub_path": "Tencent\\QQ\\Bin"
+                        },
+                        {
+                            "sub_path": "QQ\\Bin"
+                        }
+                    ],
+                    "ProgramFiles": [
+                        {
+                            "sub_path": "Tencent\\QQ\\Bin"
+                        },
+                        {
+                            "sub_path": "QQ\\Bin"
+                        }
+                    ]
+                }
+            },
+            "data_dir": {
+                "addr": {
+                    "documents": [
+                        {
+                            "sub_path": "Tencent Files"
+                        }
+                    ],
+                    "~": [
+                        {
+                            "sub_path": "Documents\\Tencent Files"
+                        }
+                    ]
+                },
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "^(.*?)/All Users/QQ(?:/[^/]+)*$"
+                        }
+                    ]
+                }
+            }
+        },
+        "path_check": {
+            "data_dir": "All Users",
+            "dll_dir": "IM.dll"
+        },
         "data_dir_name": "Tencent Files",
         "sw_id_trims": {
             "QQNT": [
@@ -1405,25 +1709,80 @@
         "executable_wildcards": [
             "TIM.exe"
         ],
-        "mutant_handle_infos": [],
-        "cfg_handle_regex_list": [],
+        "mutex_handles": [],
+        "config_handles": [],
         "config_addresses": [
             "%data_dir%/All Users/TIM/History.db"
         ],
-        "excluded_dir_list": [
+        "mutant_handle_wildcards": [],
+        "config_handle_wildcards": [],
+        "excluded_dirs": [
             "All Users",
             "nt_data",
             "nt_db",
             "nt_qq",
             "nt_temp",
-            "Tencent Files"
+            "Tencent Files",
+            "screenshot"
         ],
-        "inst_path_guess_suffix": "Tencent\\TIM\\Bin\\TIM.exe",
-        "data_dir_guess_suffix": "Tencent\\TIM",
-        "data_dir_check_suffix": "All Users",
-        "dll_dir_check_suffix": "IM.dll",
-        "mac_reg_sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TIM",
-        "user_reg_sub_key": "Software\\Tencent\\TIM",
+        "path_detect": {
+            "inst_path": {
+                "reg": {
+                    "current_user": [
+                    ],
+                    "local_machine": [
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Tencent\\TIM",
+                            "value_name": "Install",
+                            "suffix": "Bin"
+                        },
+                        {
+                            "sub_key": "SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\TIM",
+                            "value_name": "InstallLocation",
+                            "suffix": "Bin"
+                        }
+                    ]
+                },
+                "addr": {
+                    "ProgramFiles": [
+                        {
+                            "sub_path": "Tencent\\TIM\\Bin"
+                        }
+                    ],
+                    "ProgramFiles(x86)": [
+                        {
+                            "sub_path": "Tencent\\TIM\\Bin"
+                        }
+                    ]
+                }
+            },
+            "data_dir": {
+                "reg": {},
+                "addr": {
+                    "documents": [
+                        {
+                            "sub_path": "Tencent Files"
+                        }
+                    ],
+                    "~": [
+                        {
+                            "sub_path": "Documents\\Tencent Files"
+                        }
+                    ]
+                },
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "^(.*?)/All Users/TIM(?:/[^/]+)*$"
+                        }
+                    ]
+                }
+            }
+        },
+        "path_check": {
+            "data_dir": "All Users",
+            "dll_dir": "IM.dll"
+        },
         "data_dir_name": "Tencent Files",
         "sw_id_trims": {
             "QQ": [

@@ -316,7 +316,7 @@ class AccOperatorCore:
     @classmethod
     def del_config_of_accounts(cls, sw, accounts: List[str]):
         """批量删除账号的配置, 可从回收站恢复"""
-        config_addresses, = RemoteSw().get_(sw, config_addresses=None)
+        config_addresses, = RemoteSw().get_(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
         if not isinstance(config_addresses, list) or len(config_addresses) == 0:
             messagebox.showinfo("提醒", f"{sw}平台还没有适配")
             return
@@ -358,7 +358,7 @@ class AccOperatorCore:
         if method not in ["use", "add", "del"]:
             logger.error("未知字段：" + method)
             return False, "未知字段"
-        config_addresses, = RemoteSw().get_(sw, config_addresses=None)
+        config_addresses, = RemoteSw().get_(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
         if not isinstance(config_addresses, list):
             return False, "无法获取登录配置文件地址"
 
@@ -582,7 +582,7 @@ echo 共存账号无需替换配置文件
             return replace_cfg_cmd
 
         # 普通账号 --------------------------
-        config_addresses, = RemoteSw().get_(sw, config_addresses=None)
+        config_addresses, = RemoteSw().get_(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
         # 构建相关文件列表
         replace_cmd_list = []
         for addr in config_addresses:
@@ -687,7 +687,7 @@ shell.ShellExecute "{exe_file}", "", "", "", 1
         if not os.path.exists(account_file_path):
             os.makedirs(account_file_path)
         # 保存为批处理文件
-        sw_display_name = StringUtils.clean_texts(Sw(sw).label)
+        sw_display_name = StringUtils.clean_texts(Sw(sw).remark)
         acc_display_name = StringUtils.clean_texts(AccInfoFuncCore.get_acc_origin_display_name(sw, acc))
         admin_bat_file_path = os.path.join(
             user_dir, sw, f'{acc}',
@@ -821,7 +821,7 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
         pid, = AccInfoFuncCore.get_sw_acc_data(sw, acc, pid=None)
         if pid is None:
             return False
-        handle_regex_list, = RemoteSw().get_(sw, mutant_handle_infos=None)
+        handle_regex_list, = RemoteSw().get_(sw, **{RemoteSwKey.MUTEX_HANDLES: None})
         if handle_regex_list is None:
             return True
         handle_names = [handle["handle_name"] for handle in handle_regex_list]
@@ -1020,7 +1020,7 @@ class AccInfoFuncCore:
         :param account: 账号
         :return: 配置状态
         """
-        config_addresses, = RemoteSw().get_(sw, config_addresses=None)
+        config_addresses, = RemoteSw().get_(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
         if not isinstance(config_addresses, list) or len(config_addresses) == 0:
             return "无法获取登录配置文件地址"
         for addr in config_addresses:
@@ -1220,7 +1220,7 @@ class AccInfoFuncCore:
     def get_coexist_acc_mutex_list(cls, sw, acc):
         """获取共存账号所使用的互斥锁列表"""
         mutex_list = []
-        mutant_handle_infos, = RemoteSw().get_(sw, mutant_handle_infos=[])
+        mutant_handle_infos, = RemoteSw().get_(sw, **{RemoteSwKey.MUTEX_HANDLES: None})
         for handle_regex_dict in mutant_handle_infos:
             # print(handle_regex_dict)
             mutex_name = handle_regex_dict.get("handle_name")
@@ -1310,9 +1310,6 @@ class AccInfoFuncCore:
             return False, "数据路径不存在"
         excluded_dirs, executable_wildcards = RemoteSw().get_(
             sw, **{RemoteSwKey.EXCLUDED_DIRS: [], RemoteSwKey.EXE_WCS: []})
-        # if not isinstance(excluded_dirs, list) or not isinstance(executable_wildcards, list):
-        #     messagebox.showerror("错误", f"{sw}平台未适配")
-        #     return False, "该平台未适配[excluded_dir_list, executable_wildcards]"
 
         Printer().vital("进程检测")
         start_time = time.time()
@@ -1469,7 +1466,7 @@ class AccInfoFuncCore:
         """记录窗口句柄并设置标题"""
         SwAccData().update_(sw, acc, main_hwnd=hwnd)
         acc_display_name = cls.get_acc_origin_display_name(sw, acc)
-        sw_display_name = Sw(sw).label
+        sw_display_name = Sw(sw).remark
         hwnd_utils.set_window_title(hwnd, f"{sw_display_name} - {acc_display_name}")
 
     @classmethod

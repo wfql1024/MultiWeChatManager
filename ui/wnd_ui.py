@@ -1595,7 +1595,7 @@ class SettingWndUI(SubToolWndUI):
     def __init__(self, wnd, sw, title):
         self.path_var_dict = {}
         self.clear_acc_var = None
-        self.title_entry = None
+        self.remark_entry = None
         self.need_to_reinit = None
         self.visible_ckb = None
         self.visible_var = None
@@ -1604,8 +1604,8 @@ class SettingWndUI(SubToolWndUI):
         self.error_msg = {}
         self.main_frame = None
         self.multirun_mode = None
-        self.origin_values = None
-        self.changed = None
+        self.origin_values = {}
+        self.changed = {}
         self.login_size_entry = None
         self.login_size_var = None
         self.screen_size_entry = None
@@ -1624,26 +1624,18 @@ class SettingWndUI(SubToolWndUI):
     def initialize_members_in_init(self):
         self.wnd_width, self.wnd_height = Config.SETTING_WND_SIZE
         self.wnd_height = None
-        self.changed: Dict[str, bool] = {
-            "inst_path": False,
-            "data_dir": False,
-            "dll_dir": False,
-            "login_size": False,
-            "state": False,
-        }
         sw = self.sw
-        self.origin_values = {
-            "inst_path": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.INST_PATH),
-            "data_dir": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.DATA_DIR),
-            "dll_dir": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.DLL_DIR),
-            "login_size": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.LOGIN_SIZE),
-            "state": Sw(sw).fetch_setting_or_set_default(LocalCfgKey.STATE),
-        }
+        for key in [LocalCfgKey.INST_PATH, LocalCfgKey.DATA_DIR, LocalCfgKey.DLL_DIR, LocalCfgKey.LOGIN_SIZE,
+                    LocalCfgKey.STATE, LocalCfgKey.REMARK]:
+            self.changed[key] = False
+        for key in [LocalCfgKey.INST_PATH, LocalCfgKey.DATA_DIR, LocalCfgKey.DLL_DIR, LocalCfgKey.LOGIN_SIZE,
+                    LocalCfgKey.STATE, LocalCfgKey.REMARK]:
+            self.origin_values[key] = Sw(sw).fetch_setting_or_set_default(key)
         self.error_msg = {
-            "inst_path": "请选择可执行文件!",
-            "data_dir": "请选择正常的存储文件夹!",
-            "dll_dir": "请选择包含dll文件的版本号最新的文件夹!",
-            "login_size": '不符合"数字*数字"的格式'
+            LocalCfgKey.INST_PATH: "请选择可执行文件!",
+            LocalCfgKey.DATA_DIR: "请选择正确的存储文件夹!",
+            LocalCfgKey.DLL_DIR: "请选择包含dll文件的版本号最新的文件夹!",
+            LocalCfgKey.LOGIN_SIZE: '不符合"数字*数字"的格式'
         }
 
     def load_ui(self):
@@ -1659,10 +1651,10 @@ class SettingWndUI(SubToolWndUI):
         default_value, = Sw(self.sw).get_remote(**{RemoteSwKey.ALIAS: None})
         remark_label = tk.Label(settings_grid_frm, text="平台备注：")
         remark_label.grid(row=current_row, column=0, **Config.W_GRID_PACK)
-        self.title_entry = DefaultEntry(settings_grid_frm, default_label=default_value)
-        self.title_entry.grid(row=current_row, column=1, columnspan=3, **Config.WE_GRID_PACK)
+        self.remark_entry = DefaultEntry(settings_grid_frm, default_label=default_value)
+        self.remark_entry.grid(row=current_row, column=1, columnspan=3, **Config.WE_GRID_PACK)
         sw_remark, = Sw(self.sw).get_settings(**{LocalCfgKey.REMARK: ""})
-        self.title_entry.set_value(sw_remark)
+        self.remark_entry.set_value(sw_remark)
         # 第一行 - 安装路径
         current_row = _get_new_row_in_grid(settings_grid_frm)
         install_label = tk.Label(settings_grid_frm, text="程序路径：")
@@ -1790,12 +1782,13 @@ class SettingWndUI(SubToolWndUI):
         # self.changed[LocalCfg.DLL_DIR] = self.dll_dir_var.get() != self.origin_values[LocalCfg.DLL_DIR]
         self.changed[LocalCfgKey.LOGIN_SIZE] = self.login_size_var.get() != self.origin_values[LocalCfgKey.LOGIN_SIZE]
         self.changed[LocalCfgKey.STATE] = self.get_sw_state_from_ckb() != self.origin_values[LocalCfgKey.STATE]
+        self.changed[LocalCfgKey.REMARK] = self.remark_entry.get_value() != self.origin_values[LocalCfgKey.REMARK]
 
         # # 需要清除平台账号数据的情况
         # keys_to_check = ["data_dir"]
         # self.need_to_clear_acc = any(self.changed[key] for key in keys_to_check)
         # 需要重新初始化的情况
-        if self.changed[LocalCfgKey.STATE]:
+        if self.changed[LocalCfgKey.STATE] or self.changed[LocalCfgKey.REMARK]:
             self.need_to_reinit = True
 
     def on_ok(self):
@@ -1809,14 +1802,14 @@ class SettingWndUI(SubToolWndUI):
         data_dir = None if data_dir.startswith("获取失败") else data_dir
         dll_dir = None if dll_dir.startswith("获取失败") else dll_dir
         state = self.get_sw_state_from_ckb()
-        note = self.title_entry.get_value()
+        remark = self.remark_entry.get_value()
         # print(f"结束时候状态:{state}")
         Sw(self.sw).save_setting_and_do(LocalCfgKey.INST_PATH, inst_path)
         Sw(self.sw).save_setting_and_do(LocalCfgKey.DATA_DIR, data_dir)
         Sw(self.sw).save_setting_and_do(LocalCfgKey.DLL_DIR, dll_dir)
         Sw(self.sw).save_setting_and_do(LocalCfgKey.LOGIN_SIZE, login_size)
         Sw(self.sw).save_setting_and_do(LocalCfgKey.STATE, state)
-        Sw(self.sw).save_setting_and_do(LocalCfgKey.REMARK, note)
+        Sw(self.sw).save_setting_and_do(LocalCfgKey.REMARK, remark)
         self.wnd.destroy()
 
         self.check_bools()

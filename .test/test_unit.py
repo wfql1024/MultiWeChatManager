@@ -22,9 +22,11 @@ from public import Config
 from public.enums import MultirunMode, LocalCfgKey, RemoteSwKey
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
 from utils.hwnd_utils import Win32HwndGetter, HwndGetter
+from utils.sys_utils import SysPathUtils
 
 
 class Test(TestCase):
+    sw_list = ["WeChat", "Weixin", "QQ", "QQNT", "WXWork", "TIM"]
     def SetUp(self):
         self.hwnd = Win32HwndGetter._get_a_hwnd_by_title("微信（测试版）")
         print(self.hwnd)
@@ -38,7 +40,8 @@ class Test(TestCase):
 
     def test_close_sw_mutex_by_handle(self):
         executable_name, cfg_handles = (
-            Sw("Weixin").get_remote(executable=None, cfg_handle_regex_list=None))
+            Sw("Weixin").get_remote(
+            **{RemoteSwKey.EXE: None, RemoteSwKey.CONFIG_HANDLES: None}))
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
@@ -51,7 +54,7 @@ class Test(TestCase):
         # config_path_suffix, cfg_basename_list = RemoteSetting().get_(
         #     sw, config_path_suffix=None, config_file_list=None)
 
-        config_addresses, = Sw(sw).get_remote(config_addresses=None)
+        config_addresses, = Sw(sw).get_remote(**{RemoteSwKey.CONFIG_ADDRESSES: None})
         if not isinstance(config_addresses, list):
             return False, "无法获取登录配置文件地址"
         for config_address in config_addresses:
@@ -77,7 +80,7 @@ class Test(TestCase):
 
     def test_new_get_cfg_files(self):
         sw = "WeChat"
-        config_addresses, = Sw(sw).get_remote(config_addresses=None)
+        config_addresses, = Sw(sw).get_remote(**{RemoteSwKey.CONFIG_ADDRESSES: None})
         if not isinstance(config_addresses, list) or len(config_addresses) == 0:
             messagebox.showinfo("提醒", f"{sw}平台还没有适配")
             return
@@ -518,3 +521,32 @@ class Test(TestCase):
         print(setting)
         print(setting.load())
         setting = LocalSetting()
+
+    def test_get_environ(self):
+        """测试获取环境变量"""
+        print(os.environ.get('ProgramFiles(x86)'))
+
+    def test_get_sw_data_dir_from_user_register(self):
+        print("inst_path", "-------------------------")
+        for sw in self.sw_list:
+            # print(sw)
+            # paths = SwInfoFuncCore.get_sw_inst_path_from_register(sw)
+            # print(paths)
+            # paths = SwInfoFuncCore.guess_sw_inst_path(sw)
+            # print(paths)
+            paths = SwInfoFuncCore._get_sw_inst_path_by_regex(sw)
+            print(paths)
+
+        print("data_path", "-------------------------")
+        for sw in self.sw_list:
+            # print(sw)
+            # paths = SwInfoFuncCore.get_sw_data_dir_from_register(sw)
+            # print(paths)
+            # paths = SwInfoFuncCore.guess_sw_data_dir(sw)
+            # print(paths)
+            paths = SwInfoFuncCore._get_sw_data_dir_by_regex(sw)
+            print(paths)
+
+    def test_get_documents(self):
+        path = SysPathUtils.get_documents_path()
+        print(path)

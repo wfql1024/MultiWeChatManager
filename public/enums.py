@@ -56,11 +56,21 @@ class RemoteSwKey(str, Enum):
     COEXIST_SEQUENCE = "coexist_sequence"
 
     # 平台信息
+    # -属性集
     ALIAS = "alias"
     EXE = "executable"
-    TRIMS = "sw_id_trims"
-    EXCLUDED_DIRS = "excluded_dir_list"
+    DATA_DIR_NAME = "data_dir_name"
+    EXCLUDED_DIRS = "excluded_dirs"
+    MUTEX_HANDLES = "mutex_handles"
+    CONFIG_HANDLES = "config_handles"
+    CONFIG_ADDRESSES = "config_addresses"
     EXE_WCS = "executable_wildcards"
+    MUTEX_HANDLE_WCS = "mutex_handle_wildcards"
+    CONFIG_HANDLE_WCS = "config_handle_wildcards"
+    # -操作集
+    PATH_DETECT = "path_detect"
+    PATH_CHECK = "path_check"
+    TRIMS = "sw_id_trims"
 
     # 补丁适配
     REVOKE = "anti-revoke"
@@ -143,6 +153,13 @@ class LocalCfgKey(str, Enum):
     REMARK = "remark"
     COEXIST_MODE = "coexist_mode"
     CLICK_BTNS = "click_buttons"
+
+class PathType(str, Enum):
+    """路径类型"""
+    INST_PATH = "inst_path"
+    INST_DIR = "inst_dir"
+    DATA_DIR = "data_dir"
+    DLL_DIR = "dll_dir"
 
 
 class WndType(str, Enum):

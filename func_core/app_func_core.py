@@ -14,6 +14,7 @@ import requests
 import win32com
 import winshell
 from PIL import Image
+from pystray import Menu
 from win32com.client import Dispatch
 
 from data_access import SwAccData
@@ -150,15 +151,6 @@ class AppFuncCore:
             _icon.visible = False
             _icon.stop()
             root.after(0, root.destroy)
-
-        menu = MenuItem(
-            Icon("显示窗口", on_restore),
-            Icon("退出", on_exit),
-        )
-
-        icon_img = Image.open(Config.PROJ_ICO_PATH)
-        tray_icon = Icon("JFMC", icon_img, title="极峰多聊", menu=menu)
-
         # 给托盘图标绑定鼠标点击恢复窗口
         def setup(icon):
             icon.visible = True
@@ -167,12 +159,28 @@ class AppFuncCore:
             icon.menu = menu
             icon.title = "极峰多聊"
             icon.update_menu()
-            # 点击事件：多数系统支持
-            icon.on_click = lambda: on_restore(icon)
 
         def run_icon():
-            tray_icon.run(setup)
+            try:
+                print("隐藏主界面")
+                root.after(0, root.withdraw)
+                GlobalMembers().get_root_class().app.global_settings_value.in_tray = True
+                print("安装图标")
+                tray_icon.run(setup)
+            except Exception as e:
+                tray_icon.stop()
+                root.after(0, root.deiconify)
+                GlobalMembers().get_root_class().app.global_settings_value.in_tray = False
+                Logger().error(e)
+                messagebox.showerror("错误", f"创建托盘图标失败: {e}")
 
+        menu = Menu(
+            MenuItem("打开主界面", on_restore, default=True),
+            MenuItem("退出", on_exit)
+        )
+        icon_img = Image.open(Config.PROJ_ICO_PATH)
+        tray_icon = None
+        tray_icon = Icon("JFMC", icon_img, title="极峰多聊", menu=menu)
         # 在后台线程中运行托盘图标
         threading.Thread(target=run_icon, daemon=True).start()
 

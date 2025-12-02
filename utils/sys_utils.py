@@ -153,6 +153,33 @@ class UIUtils:
         screen_height = int(tk.Tk().winfo_screenheight())
         return screen_width, screen_height
 
+class SysPathUtils:
+    # FOLDERID_Documents
+    FOLDERID_Documents = ctypes.c_char_p(
+        b'\xD0\x9A\xD3\xFD\x8F#\xAFF\xAD\xB4l\x85H\x03i\xc7'
+    )
+
+    SHGetKnownFolderPath = ctypes.windll.shell32.SHGetKnownFolderPath
+    SHGetKnownFolderPath.argtypes = [
+        ctypes.c_void_p,
+        wintypes.DWORD,
+        wintypes.HANDLE,
+        ctypes.POINTER(ctypes.c_wchar_p)
+    ]
+
+    @staticmethod
+    def get_user_home_dir():
+        """获取用户主目录"""
+        return os.path.expanduser("~")
+
+    @classmethod
+    def get_documents_path(cls):
+        path_ptr = ctypes.c_wchar_p()
+        hr = cls.SHGetKnownFolderPath(cls.FOLDERID_Documents, 0, None, ctypes.byref(path_ptr))
+        if hr != 0:
+            raise ctypes.WinError(hr)
+        return path_ptr.value
+
 
 if __name__ == "__main__":
     font_size = get_font_size_from_registry()

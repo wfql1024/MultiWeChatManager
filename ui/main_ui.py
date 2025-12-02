@@ -398,7 +398,7 @@ class MainUI:
             print(f"更新{sw}的信息体...")
             if state == SwStates.VISIBLE:
                 sw_cls.frame = ttk.Frame(self.login_frm_pool)
-                self.login_nb_cls.add(sw, sw_cls.label, sw_cls.frame)
+                self.login_nb_cls.add(sw, sw_cls.remark, sw_cls.frame)
             self.root_class.sw_classes[sw] = sw_cls
             self.sw_classes[sw] = sw_cls
         if len(self.login_nb_cls.tabs) == 0:

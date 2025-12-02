@@ -260,7 +260,7 @@ class SwManagerTAHT(TreeviewAHT):
             if table_tag == "disable" and state != SwStates.DISABLED:
                 continue
 
-            display_name = Sw(sw).label
+            display_name = Sw(sw).remark
             f_display_name = " " + display_name
             inst_path, data_dir, dll_dir = Sw(sw).get_settings(
                 inst_path=None,

@@ -76,19 +76,38 @@ class ProgressBarW:
 class CustomDialogW:
     @classmethod
     def ask_username_password(cls):
-        result = []  # 使用列表封装以在内部函数中修改
+        result = None  # 使用列表封装以在内部函数中修改
 
         def on_ok():
-            result[0] = (entry_username.get(), entry_password.get())
+            nonlocal result
+            result = (entry_username.get(), entry_password.get())
             window.destroy()
 
         def on_close():
-            result[0] = None
+            nonlocal result
+            result = None
             window.destroy()
 
-        window = tk.Tk()
+        window = tk.Toplevel()
+        window.grab_set()
         window.title("登录")
         window.protocol("WM_DELETE_WINDOW", on_close)
+
+        frame = ttk.Frame(window)
+        frame.pack()
+
+        # 用户名标签和输入框
+        tk.Label(frame, text="微软注册邮箱:").pack(pady=(10, 0))
+        entry_username = tk.Entry(frame)
+        entry_username.pack()
+
+        # 密码标签和输入框
+        tk.Label(frame, text="密码:").pack(pady=(5, 0))
+        entry_password = tk.Entry(frame, show="*")
+        entry_password.pack()
+
+        # 确认按钮
+        tk.Button(frame, text="确定", command=on_ok).pack(pady=(8, 0))
 
         # 居中窗口
         window.update_idletasks()
@@ -100,21 +119,8 @@ class CustomDialogW:
         y = (screen_h - h) // 2
         window.geometry(f"{w}x{h}+{x}+{y}")
 
-        # 用户名标签和输入框
-        tk.Label(window, text="微软注册邮箱:").pack(pady=(10, 0))
-        entry_username = tk.Entry(window)
-        entry_username.pack()
-
-        # 密码标签和输入框
-        tk.Label(window, text="密码:").pack(pady=(5, 0))
-        entry_password = tk.Entry(window, show="*")
-        entry_password.pack()
-
-        # 确认按钮
-        tk.Button(window, text="确定", command=on_ok).pack(pady=(8, 0))
-
-        window.mainloop()
-        return result[0]
+        window.wait_window()
+        return result
 
 
 class HotkeyEntry4KeyboardW:

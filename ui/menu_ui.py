@@ -17,7 +17,7 @@ from ui.exe_manager_ui import ExeManagerWndCreator
 from ui.sidebar_ui import SidebarUI
 from ui.wnd_ui import WndCreator
 from utils import widget_utils, sys_utils
-from utils.logger_utils import myprinter as printer
+from utils.logger_utils import myprinter as printer, Logger
 
 
 # TODO: 主题色选择
@@ -533,7 +533,6 @@ class MenuUI:
 
     def _to_bring_tk_to_tray(self):
         """将tk窗口最小化到托盘"""
-        self.root.withdraw()
         if self.used_tray is not True:
             self.used_tray = False
             App().update_settings(**{LocalCfgKey.USED_TRAY: True})
@@ -542,4 +541,4 @@ class MenuUI:
             self._to_tray_label = new_label
         if not (App().global_settings_value.in_tray is True):
             AppFuncCore.create_tray(self.root)
-            App().global_settings_value.in_tray = True
+
