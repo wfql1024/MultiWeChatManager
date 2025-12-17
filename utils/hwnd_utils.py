@@ -300,7 +300,8 @@ class HwndGetter:
                 Printer().debug(f"子控件详情:{str(sub_ctrl)}")
                 matched = False
                 if isinstance(sub_ctrl, Control):
-                    sub_hwnd = getattr(sub_ctrl, "Handle", None)
+                    sub_hwnd = getattr(sub_ctrl, "NativeWindowHandle", None)
+                    # Printer().debug(sub_hwnd)
                     if sub_hwnd:
                         sub_matched = cls.uiautomation_filter_hwnds_by_matching_dict([sub_hwnd], value)
                         matched = len(sub_matched) == 1
@@ -339,6 +340,7 @@ class HwndGetter:
         with auto.UIAutomationInitializerInThread():
             matched_hwnds = [hwnd for hwnd in all_hwnds if cls._hwnd_matches_rules(hwnd, hwnd_to_ctrl, rules_dict)]
         # Printer().debug(f"初筛: {matched_hwnds}")
+        Printer().print_vn(f"初筛: {matched_hwnds}")
 
         # 初筛窗口不唯一, 则进入尾筛 FinalSelect
         if "FinalSelect" in rules_dict and len(matched_hwnds) > 1:
@@ -395,6 +397,7 @@ class HwndGetter:
         while time.time() < end_time:
             # 初步获取该 pid 下的 hwnds（不含 exclude_hwnds）
             hwnds = Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)
+            # Printer().debug(f"{pid}: {hwnds}")
             hwnds = [h for h in hwnds if h not in exclude_hwnds]
             for rules_dict in rules_dicts:
                 hwnds = cls.uiautomation_filter_hwnds_by_matching_dict(hwnds, rules_dict)
@@ -575,13 +578,13 @@ def _get_widget_center_pos_by_hwnd_and_possible_titles(main_hwnd, possible_child
 
 
 # 方法 1: 使用 uiautomation
-def find_widget_with_uiautomation(hwnd, title, _control_type="Button"):
+def uiautomation_find_control_by_names(hwnd, names, _control_type="Button"):
     auto.SetGlobalSearchTimeout(0.5)
     try:
         # 获取窗口对象
         with auto.UIAutomationInitializerInThread():
             window = auto.ControlFromHandle(hwnd)
-        for t in title:
+        for t in names:
             try:
                 # 查找控件
                 widget = window.Control(searchDepth=10, Name=t)

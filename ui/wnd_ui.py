@@ -16,6 +16,7 @@ from typing import Dict, Union
 
 import win32com
 import win32com.client
+import win32gui
 import winshell
 from PIL import Image, ImageTk
 
@@ -587,6 +588,9 @@ class DetailUI(SubToolWndUI):
         printer.print_vn(f"加载对应头像...")
         # 获取其余信息
         has_mutex, main_hwnd = Acc(sw, account).get_data(has_mutex=True, main_hwnd=None)
+        if main_hwnd is None or not win32gui.IsWindow(main_hwnd):
+            AccInfoFuncCore.auto_bind_main_wnd_to_accounts_in_sw(self.sw, [self.account])
+        main_hwnd, = Acc(sw, account).get_data(main_hwnd=None)
         avatar_url, alias, nickname, pid = Acc(sw, account).get_data(
             avatar_url=None, alias="请获取数据", nickname="请获取数据", pid=None)
         _, img = AccInfoFuncCore.get_acc_avatar_from_files(sw, account)
@@ -2098,9 +2102,9 @@ class GlobalSettingWndUI(SubToolWndUI):
         self._update_proxy_settings()
         self._update_user_dir()
 
-        remote_sw, = App().get_root_settings(remote_sw=None)
+        remote_sw, = App().get_root_settings(**{RootCfgKey.REMOTE_SW: None})
         self.remote_sw_var.set(remote_sw)
-        remote_global, = App().get_root_settings(remote_global=None)
+        remote_global, = App().get_root_settings(**{RootCfgKey.REMOTE_GLOBAL: None})
         self.remote_global_var.set(remote_global)
 
     def _update_proxy_visible(self):
@@ -2131,8 +2135,8 @@ class GlobalSettingWndUI(SubToolWndUI):
         App().save_setting_and_do(LocalCfgKey.USE_PROXY, use_proxy)
         App().save_setting_and_do(LocalCfgKey.PROXY_IP, ip)
         App().save_setting_and_do(LocalCfgKey.PROXY_PORT, port)
-        App().update_root_settings(remote_global=self.remote_global_var.get())
-        App().update_root_settings(remote_sw=self.remote_sw_var.get())
+        App().update_root_settings(**{RootCfgKey.REMOTE_GLOBAL: self.remote_global_var.get()})
+        App().update_root_settings(**{RootCfgKey.REMOTE_SW: self.remote_sw_var.get()})
         user_dir = self.user_dir_var.get()
         legal, user_dir = self.check_and_format_user_dir_path(user_dir)
         if not legal:
@@ -2140,7 +2144,7 @@ class GlobalSettingWndUI(SubToolWndUI):
             return
         changed = user_dir != self.origin_user_dir
         Printer().debug(f"{changed} {user_dir} {self.origin_user_dir}")
-        App().update_root_settings(user_dir=user_dir)
+        App().update_root_settings(**{RootCfgKey.USER_DIR: user_dir})
 
         printer.vital("设置成功")
         items = self.get_items_in_folder(user_dir)

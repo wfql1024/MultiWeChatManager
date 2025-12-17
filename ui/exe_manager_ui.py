@@ -86,7 +86,7 @@ def _thread_to_load_patching_button(
     # -------------------------
     def _update_ui(res, msg):
         if not isinstance(res, dict):
-            mode_text, = Sw(sw).get_remote(mode, **{RemoteSwKey.ALIAS: ""})
+            mode_text, = Sw(sw).get_remote(mode, **{RemoteSwKey.MODE_ALIAS: ""})
             no_patch_btn = _create_btn_in_(frame, mode_text)
             _pack_btn_right(no_patch_btn)
             no_patch_btn.set_state(CustomBtn.State.DISABLED)
@@ -98,7 +98,7 @@ def _thread_to_load_patching_button(
             for patch_channel, patch_channel_res_dict in res.items():
                 channel_des, = Sw(sw).get_remote(mode, RemoteSwKey.CHANNELS, **{patch_channel: None})
                 try:
-                    channel_label = channel_des[RemoteSwKey.ALIAS]
+                    channel_label = channel_des[RemoteSwKey.CHANNEL_ALIAS]
                 except KeyError:
                     channel_label = patch_channel
                 try:
@@ -404,7 +404,8 @@ class ExeManagerUI:
         def main_frame_do(channels_res_dict, now_coexist_channel):
             for coexist_channel, coexist_channel_dict in channels_res_dict.items():
                 cc_label, = Sw(self.sw).get_remote(
-                    RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, coexist_channel, **{RemoteSwKey.ALIAS: None})
+                    RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, coexist_channel,
+                    **{RemoteSwKey.CHANNEL_ALIAS: None})
                 coexist_channel_btn = _create_btn_in_(self.coexist_selector_frame, f"{cc_label}")
                 self.coexist_channel_btn_dict[coexist_channel] = coexist_channel_btn
                 (coexist_channel_btn.set_bind_map(
@@ -641,7 +642,8 @@ class ExeManagerCkRow(CkbRow):
         self.photo_images.append(photo)
         try:
             channel_label, = Sw(self.sw).get_remote(
-                RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, coexist_channel, **{RemoteSwKey.ALIAS: None})
+                RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, coexist_channel,
+                **{RemoteSwKey.CHANNEL_ALIAS: None})
             channel_checked = channel_label is not None
             channel_label = channel_label if channel_checked else "??"
         except (KeyError, TypeError):

@@ -1,5 +1,6 @@
 import os
 
+import mss
 import requests
 import win32api
 import win32con
@@ -165,3 +166,61 @@ def add_diminished_se_corner_mark_to_image(image_path, mark_path, output_path, d
 
     combined.save(output_path, format='PNG')
     return output_path
+
+
+def gdi_capture_in_wnd(hwnd, capt2w_left, capt2w_top, capt_width, capt_height, output_path):
+    """
+    相对于窗口截图
+    :param hwnd: 窗口句柄
+    :param capt2w_left: 截图区域左上角横坐标（相对于窗口）
+    :param capt2w_top: 截图区域左上角纵坐标（相对于窗口）
+    :param capt_width: 截图宽度
+    :param capt_height: 截图高度
+    :param output_path: 输出路径
+    :return: 是否成功
+    """
+    # 截控件区域（GDI，窗口可被遮挡）
+    hwnd_dc = win32gui.GetWindowDC(hwnd)
+    mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
+    save_dc = mfc_dc.CreateCompatibleDC()
+
+    bitmap = win32ui.CreateBitmap()
+    bitmap.CreateCompatibleBitmap(mfc_dc, capt_width, capt_height)
+    save_dc.SelectObject(bitmap)
+
+    # 从窗口缓冲区拷贝指定矩形
+    save_dc.BitBlt(
+        (0, 0), (capt_width, capt_height),
+        mfc_dc, (capt2w_left, capt2w_top), win32con.SRCCOPY)
+
+    # 转为 PIL Image 并保存
+    bmpinfo = bitmap.GetInfo()
+    bmpstr = bitmap.GetBitmapBits(True)
+    im = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+                          bmpstr, 'raw', 'BGRX', 0, 1)
+    im.save(output_path)
+
+
+def mss_capture_in_wnd(hwnd, capt2w_left, capt2w_top, capt_width, capt_height, output_path):
+    """
+    相对于屏幕截图
+    :param hwnd: 窗口句柄
+    :param capt2w_left: 截图区域左上角横坐标（相对于窗口）
+    :param capt2w_top: 截图区域左上角纵坐标（相对于窗口）
+    :param capt_width: 截图宽度
+    :param capt_height: 截图高度
+    :param output_path: 输出路径
+    :return: 是否成功
+    """
+    # desktop = winshell.desktop()
+    # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    # save_path = os.path.join(desktop, f"capture_{timestamp}.png")
+    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+    with mss.mss() as sct:
+        img = sct.grab({
+            "left": left + capt2w_left,
+            "top": top + capt2w_top,
+            "width": capt_width,
+            "height": capt_height
+        })
+        mss.tools.to_png(img.rgb, img.size, output=output_path)

@@ -52,11 +52,8 @@ class RemoteGlobalKey(str, Enum):
 
 class RemoteSwKey(str, Enum):
     """远程平台配置中的字段"""
-    SP_SW = "support_sw"
-    COEXIST_SEQUENCE = "coexist_sequence"
-
     # 平台信息
-    # -属性集
+    # -属性集3+8
     ALIAS = "alias"
     EXE = "executable"
     DATA_DIR_NAME = "data_dir_name"
@@ -64,36 +61,64 @@ class RemoteSwKey(str, Enum):
     MUTEX_HANDLES = "mutex_handles"
     CONFIG_HANDLES = "config_handles"
     CONFIG_ADDRESSES = "config_addresses"
+    PATCH_ADDRESSES = "patch_addresses"
     EXE_WCS = "executable_wildcards"
     MUTEX_HANDLE_WCS = "mutex_handle_wildcards"
     CONFIG_HANDLE_WCS = "config_handle_wildcards"
-    # -操作集
-    PATH_DETECT = "path_detect"
-    PATH_CHECK = "path_check"
-    TRIMS = "sw_id_trims"
-
-    # 补丁适配
+    # -操作集7
+    PATH_DETECT = "path_detect"  # 路径检测
+    PATH_CHECK = "path_check"  # 路径检查
+    TRIMS = "sw_id_trims"  # 平台ID裁剪
     REVOKE = "anti-revoke"
     MULTI = "multirun"
     COEXIST = "coexist"
-    # - 频道通用
+    WND_CLASS = "wnd_class"
+    AUTO_GET = "auto_get"
+    AUTO_CLICK = "auto_click"
+
+    # PATH_CHECK路径检查下属字段
+    L_CONCAT = "left_concat"
+    R_CONCAT = "right_concat"
+
+    # AUTO_GET自动获取下属字段
+    # -内容
+    NICKNAME = "nickname"
+    AVATAR = "avatar"
+    # -时间段
+    LOGIN = "login"
+    MAIN = "main"
+    # -操作
+    LOCATE = "locate"
+    CUT = "cut"
+    CAPTURE = "capture"
+
+    # AUTO_CLICK自动点击下属字段
+    # -点击类型
+    LOGIN_BTN = "login_btn"
+    # -识别方式
+    CTRL_NAMES = "control_names"
+    LOCATION = "location"
+
+    # 补丁适配REVOKE,MULTI,COEXIST下属字段
+    # -模式通用
+    MODE_ALIAS = "alias"
     CHANNELS = "channels"
+    CHANNEL_ALIAS = "alias"
     INTRO = "introduce"
     AUTHOR = "authors"
     FEATURES = "features"
-    FEATURES_ADAPT = "feature_ver_adaptations"
-    PRECISES = "precise_ver_adaptations"
-    # - 共存频道特有
+    FEATURES_ADAPT = "feature_ver_adaptations"  # 废弃
+    PRECISES = "precise_ver_adaptations"  # 废弃
+    # --补丁模式字段
+    ORIGINAL = "original"
+    MODIFIED = "modified"
+    # -共存特有
     ORDINALS = "ordinals"
     MUTEX_WC = "mutex_wildcard"  # 字典: 此频道互斥体的通配模式
     PATCH_WC = "patch_wildcard"  # 字典: 此频道补丁文件名的通配模式
     EXE_WC = "exe_wildcard"  # str: 此频道主程序名的通配模式
-
-    WND_CLASS = "wnd_class"
+    # -共存与多开特有
     NATIVE = "natively"
-    # dll模式字段
-    ORIGINAL = "original"
-    MODIFIED = "modified"
 
 
 class LocalCfgKey(str, Enum):
@@ -153,6 +178,7 @@ class LocalCfgKey(str, Enum):
     REMARK = "remark"
     COEXIST_MODE = "coexist_mode"
     CLICK_BTNS = "click_buttons"
+
 
 class PathType(str, Enum):
     """路径类型"""

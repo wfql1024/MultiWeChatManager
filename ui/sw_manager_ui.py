@@ -10,7 +10,7 @@ from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config
 from public.custom_classes import Condition
-from public.enums import RemoteSwKey, LocalCfgKey, SwStates
+from public.enums import LocalCfgKey, SwStates, RemoteGlobalKey
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
@@ -117,7 +117,7 @@ class SwManagerUI:
         self.scrollable_canvas = ScrollableCanvasW(self.tab_frame)
         self.main_frame = self.scrollable_canvas.main_frame
 
-        self.sw_list, = App().get_remote_global(**{RemoteSwKey.SP_SW: Config.SP_SW})
+        self.sw_list, = App().get_remote_global(**{RemoteGlobalKey.SP_SW: Config.SP_SW})
         # 添加占位控件
         self.frame_dict["enable"] = ttk.Frame(self.main_frame)
         self.frame_dict["enable"].pack(side=tk.TOP, fill=tk.X)
@@ -193,7 +193,7 @@ class SwManagerUI:
         if self.quick_refresh_mode is True:
             try:
                 # 不要忘记更新数据
-                self.sw_list, = App().get_remote_global(**{RemoteSwKey.SP_SW: []})
+                self.sw_list, = App().get_remote_global(**{RemoteGlobalKey.SP_SW: []})
                 tree_class = self.tree_class
                 if all(tree_class[t].can_quick_refresh for t in tree_class):
                     for t in tree_class:

@@ -15,7 +15,7 @@ from functions.acc_func import Acc
 from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config, Strings
-from public.enums import LocalCfgKey, SwStates, RemoteSwKey, RemoteGlobalKey, RootCfgKey
+from public.enums import LocalCfgKey, SwStates, RemoteGlobalKey, RootCfgKey
 from public.global_members import GlobalMembers
 from ui import login_ui, acc_manager_ui, sw_manager_ui
 from ui.menu_ui import MenuUI
@@ -376,7 +376,7 @@ class MainUI:
         self.login_nb_cls.select_callback = self._on_tab_in_login_selected
         self.login_frm_pool = login_nb_cls.frames_pool
         # 加载各平台
-        sp_sw, = App().get_remote_global(**{RemoteSwKey.SP_SW: Config.SP_SW})
+        sp_sw, = App().get_remote_global(**{RemoteGlobalKey.SP_SW: Config.SP_SW})
         if not isinstance(sp_sw, list):
             return
         for sw in sp_sw:
@@ -408,7 +408,7 @@ class MainUI:
 
     @staticmethod
     def _get_path_thread():
-        sp_sw, = App().get_remote_global(**{RemoteSwKey.SP_SW: Config.SP_SW})
+        sp_sw, = App().get_remote_global(**{RemoteGlobalKey.SP_SW: Config.SP_SW})
         if not isinstance(sp_sw, list):
             return
         for sw in sp_sw:

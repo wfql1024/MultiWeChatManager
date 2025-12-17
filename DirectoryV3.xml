@@ -2,7 +2,8 @@
 <trees>
     <tree path="/.old/Demo" title="与项目相关的独立示例代码，可以探索下"/>
     <tree path="/external_res" title="引用到的外部资源"/>
-    <tree path="/functions" title="功能层代码，实现项目中的具体功能"/>
+    <tree path="/functions" title="功能调用, 更常用的功能在这提供接口" extension="" presentableText="" tooltipTitle=""
+          icon="" textColor="" backgroundColor=""/>
     <tree path="/ui" title="界面层代码，实现界面创建和更新"/>
     <tree path="/utils" title="工具类代码，可移植到其他项目中使用"/>
     <tree path="/.meta/version.txt" title="打包程序的文件版本等信息说明"/>
@@ -39,4 +40,6 @@
     <tree path="/scripts/original_remote_setting_v6.json" title="测试版临时使用, 修改渠道层级高于版本层级" extension=""
           presentableText="" tooltipTitle="" icon="" textColor="" backgroundColor=""/>
     <tree path="/scripts/original_remote_setting_v7.json" title="版本适配调整结构以适应新类型扫描方式"/>
+    <tree path="/data_access" title="数据操作层"/>
+    <tree path="/func_core" title="功能实现"/>
 </trees>

@@ -153,6 +153,7 @@ class UIUtils:
         screen_height = int(tk.Tk().winfo_screenheight())
         return screen_width, screen_height
 
+
 class SysPathUtils:
     # FOLDERID_Documents
     FOLDERID_Documents = ctypes.c_char_p(

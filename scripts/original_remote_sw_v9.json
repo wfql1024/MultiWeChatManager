@@ -1,5 +1,41 @@
 {
     "WeChat": {
+        "alias": "微信3.9",
+        "executable": "WeChat.exe",
+        "data_dir_name": "WeChat Files",
+        "mutex_handles": [
+            {
+                "handle_name": "_WeChat_App_Instance_Identity_Mutex_Name",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+            }
+        ],
+        "config_handles": [],
+        "config_addresses": [
+            "%data_dir%/All Users/config/config.data"
+        ],
+        "patch_addresses": [
+            "%dll_dir%/WeChat.dll"
+        ],
+        "executable_wildcards": [
+            "WeChat?.exe",
+            "WeCha?.exe"
+        ],
+        "mutex_handle_wildcards": [
+            "_W?Chat_App_Instance_Identity_Mutex_Name",
+            "_WeCha?_App_Instance_Identity_Mutex_Name"
+        ],
+        "config_handle_wildcards": [
+            "conf?g.data",
+            "confi?.data"
+        ],
+        "excluded_dirs": [
+            "All Users",
+            "Applet",
+            "Plugins",
+            "WMPF",
+            "all_users",
+            "Msg"
+        ],
         "coexist": {
             "alias": "共存",
             "multi_state": true,
@@ -245,38 +281,6 @@
                 }
             }
         },
-        "alias": "微信3.9",
-        "executable": "WeChat.exe",
-        "mutex_handles": [
-            {
-                "handle_name": "_WeChat_App_Instance_Identity_Mutex_Name",
-                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
-            }
-        ],
-        "config_handles": [],
-        "config_addresses": [
-            "%data_dir%/All Users/config/config.data"
-        ],
-        "executable_wildcards": [
-            "WeChat?.exe",
-            "WeCha?.exe"
-        ],
-        "mutant_handle_wildcards": [
-            "_W?Chat_App_Instance_Identity_Mutex_Name",
-            "_WeCha?_App_Instance_Identity_Mutex_Name"
-        ],
-        "config_handle_wildcards": [
-            "conf?g.data",
-            "confi?.data"
-        ],
-        "excluded_dirs": [
-            "All Users",
-            "Applet",
-            "Plugins",
-            "WMPF",
-            "all_users",
-            "Msg"
-        ],
         "path_detect": {
             "inst_path": {
                 "reg": {
@@ -347,13 +351,28 @@
                         }
                     ]
                 }
+            },
+            "dll_dir": {
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "(.*/\\[[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+\\])/WeChatResource\\.dll$"
+                        }
+                    ]
+                }
             }
         },
         "path_check": {
-            "data_dir": "All Users",
-            "dll_dir": "WeChatWin.dll"
+            "inst_path": {
+                "left_concat": "WeChat"
+            },
+            "data_dir": {
+                "right_concat": "All Users"
+            },
+            "dll_dir": {
+                "right_concat": "WeChatWin.dll"
+            }
         },
-        "data_dir_name": "WeChat Files",
         "sw_id_trims": {
             "Weixin": [
                 0,
@@ -361,10 +380,190 @@
                 0,
                 0
             ]
+        },
+        "auto_get": {
+            "avatar": {
+                "login": {
+                    "locate": [
+                        {
+                            "type": "location",
+                            "rule": [
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "ButtonControl"
+                                    },
+                                    "index": 0
+                                }
+                            ]
+                        }
+                    ],
+                    "cut": {
+                    },
+                    "capture": [
+                        "gdi"
+                    ]
+                },
+                "main": {
+                    "locate": [
+                        {
+                            "type": "location",
+                            "rule": [
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "ToolBarControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "ButtonControl"
+                                    },
+                                    "index": 0
+                                }
+                            ]
+                        }
+                    ],
+                    "cut": {
+                        "r": "-97%w",
+                        "b": "-97%h"
+                    },
+                    "capture": [
+                        "gdi"
+                    ]
+                }
+            },
+            "nickname": {
+                "login": {
+                },
+                "main": {
+                }
+            }
+        },
+        "auto_click": {
+            "login_btn": {
+                "location": [
+                    0.5,
+                    0.75
+                ],
+                "control_names": [
+                    "进入微信",
+                    "Enter WeChat"
+                ]
+            }
         }
     },
     "Weixin": {
         "alias": "微信4.x",
+        "executable": "Weixin.exe",
+        "data_dir_name": "xwechat_files",
+        "mutex_handles": [
+            {
+                "handle_name": "lock.ini",
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
+                "type": "file"
+            },
+            {
+                "handle_name": "XWeChat_App_Instance_Identity_Mutex_Name",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions",
+                "type": "mutant"
+            }
+        ],
+        "config_handles": [
+            {
+                "handle_name": "global_config",
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
+                "type": "file"
+            }
+        ],
+        "config_addresses": [
+            "%data_dir%/all_users/config/global_config",
+            "%data_dir%/all_users/config/global_config.crc"
+        ],
+        "patch_addresses": [
+            "%dll_dir%/Weixin.dll"
+        ],
+        "executable_wildcards": [
+            "Weixin?.exe",
+            "Weixi?.exe"
+        ],
+        "mutex_handle_wildcards": [
+            "?WeChat_App_Instance_Identity_Mutex_Name",
+            "XWeCha?_App_Instance_Identity_Mutex_Name",
+            "lock.ini"
+        ],
+        "config_handle_wildcards": [
+            "global_conf?g",
+            "global_confi?"
+        ],
+        "excluded_dirs": [
+            "All Users",
+            "Applet",
+            "Plugins",
+            "WMPF",
+            "all_users",
+            "Backup",
+            "old_backup"
+        ],
         "coexist": {
             "alias": "共存",
             "multi_state": true,
@@ -867,39 +1066,6 @@
                 }
             }
         },
-        "executable": "Weixin.exe",
-        "mutex_handles": [
-            {
-                "handle_name": "lock.ini",
-                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
-                "type": "file"
-            },
-            {
-                "handle_name": "XWeChat_App_Instance_Identity_Mutex_Name",
-                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions",
-                "type": "mutant"
-            }
-        ],
-        "config_handles": [
-            {
-                "handle_name": "global_config",
-                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
-                "type": "file"
-            }
-        ],
-        "config_addresses": [
-            "%data_dir%/all_users/config/global_config",
-            "%data_dir%/all_users/config/global_config.crc"
-        ],
-        "excluded_dirs": [
-            "All Users",
-            "Applet",
-            "Plugins",
-            "WMPF",
-            "all_users",
-            "Backup",
-            "old_backup"
-        ],
         "path_detect": {
             "inst_path": {
                 "reg": {
@@ -970,26 +1136,28 @@
                         }
                     ]
                 }
+            },
+            "dll_dir": {
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "(.*/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/VoipEngine\\.dll$"
+                        }
+                    ]
+                }
             }
         },
         "path_check": {
-            "data_dir": "all_users",
-            "dll_dir": "Weixin.dll"
+            "inst_path": {
+                "left_concat": "Weixin"
+            },
+            "data_dir": {
+                "right_concat": "all_users"
+            },
+            "dll_dir": {
+                "right_concat": "Weixin.dll"
+            }
         },
-        "executable_wildcards": [
-            "Weixin?.exe",
-            "Weixi?.exe"
-        ],
-        "mutant_handle_wildcards": [
-            "?WeChat_App_Instance_Identity_Mutex_Name",
-            "XWeCha?_App_Instance_Identity_Mutex_Name",
-            "lock.ini"
-        ],
-        "config_handle_wildcards": [
-            "global_conf?g",
-            "global_confi?"
-        ],
-        "data_dir_name": "xwechat_files",
         "sw_id_trims": {
             "WeChat": [
                 0,
@@ -997,9 +1165,108 @@
                 0,
                 5
             ]
+        },
+        "auto_get": {
+            "avatar": {
+                "login": {
+                    "locate": [
+                        {
+                            "type": "kwargs",
+                            "rule": {
+                                "ClassName": "mmui::XAvatarImage"
+                            }
+                        }
+                    ],
+                    "cut": {
+                    },
+                    "capture": [
+                        "gdi"
+                    ]
+                },
+                "main": {
+                    "locate": [
+                        {
+                            "type": "kwargs",
+                            "rule": {
+                                "ClassName": "mmui::MainTabBar"
+                            }
+                        }
+                    ],
+                    "cut": {
+                        "l": "21%w",
+                        "t": "42%w",
+                        "r": "-76%w",
+                        "b": "-97%w"
+                    },
+                    "capture": [
+                        "gdi"
+                    ]
+                }
+            },
+            "nickname": {
+                "login": {
+                },
+                "main": {
+                }
+            }
+        },
+        "auto_click": {
+            "login_btn": {
+                "location": [
+                    0.5,
+                    0.75
+                ],
+                "control_names": [
+                    "进入微信",
+                    "Enter Weixin"
+                ]
+            }
         }
     },
     "WXWork": {
+        "alias": "企微",
+        "executable": "WXWork.exe",
+        "data_dir_name": "WXWork",
+        "executable_wildcards": [
+            "WXWork?.exe",
+            "WXWork.exe"
+        ],
+        "mutex_handles": [
+            {
+                "handle_name": "Tencent.WeWork.ExclusiveObjectInstance1",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+            },
+            {
+                "handle_name": "Tencent.WeWork.ExclusiveObject",
+                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
+            }
+        ],
+        "config_handles": [],
+        "mutex_handle_wildcards": [
+            "Tencent.WeWork.ExclusiveObject"
+        ],
+        "config_handle_wildcards": [],
+        "config_addresses": [
+            "%data_dir%/Global/Config.cfg"
+        ],
+        "patch_addresses": [
+            "%dll_dir%/WXWorkResources.dll"
+        ],
+        "excluded_dirs": [
+            "BrowserMetrics",
+            "Default",
+            "Dictionaries",
+            "extensions_crx_cache",
+            "Global",
+            "GraphiteDawnCache",
+            "GrShaderCache",
+            "Profiles",
+            "qtCef",
+            "Safe Browsing",
+            "segmentation_platform",
+            "ShaderCache",
+            "WeDrive"
+        ],
         "coexist": {
             "alias": "共存",
             "multi_state": true,
@@ -1180,45 +1447,6 @@
                 }
             }
         },
-        "alias": "企微",
-        "executable": "WXWork.exe",
-        "executable_wildcards": [
-            "WXWork?.exe",
-            "WXWork.exe"
-        ],
-        "mutex_handles": [
-            {
-                "handle_name": "Tencent.WeWork.ExclusiveObjectInstance1",
-                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
-            },
-            {
-                "handle_name": "Tencent.WeWork.ExclusiveObject",
-                "regex": "pid:\\s*(\\d+).*?(\\w+):\\s*\\\\Sessions"
-            }
-        ],
-        "config_handles": [],
-        "mutant_handle_wildcards": [
-            "Tencent.WeWork.ExclusiveObject"
-        ],
-        "config_handle_wildcards": [],
-        "config_addresses": [
-            "%data_dir%/Global/Config.cfg"
-        ],
-        "excluded_dirs": [
-            "BrowserMetrics",
-            "Default",
-            "Dictionaries",
-            "extensions_crx_cache",
-            "Global",
-            "GraphiteDawnCache",
-            "GrShaderCache",
-            "Profiles",
-            "qtCef",
-            "Safe Browsing",
-            "segmentation_platform",
-            "ShaderCache",
-            "WeDrive"
-        ],
         "path_detect": {
             "inst_path": {
                 "reg": {
@@ -1274,16 +1502,109 @@
                         }
                     ]
                 }
+            },
+            "dll_dir": {
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "(.*/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/WXWorkResources\\.dll$"
+                        }
+                    ]
+                }
             }
         },
         "path_check": {
-            "inst_path": "Profiles",
-            "data_dir": "WXWorkResources.dll"
+            "inst_path": {
+                "left_concat": "WXWork"
+            },
+            "data_dir": {
+                "right_concat": "Profiles"
+            },
+            "dll_dir": {
+                "right_concat": "WXWorkResources.dll"
+            }
         },
-        "data_dir_name": "WXWork",
-        "sw_id_trims": {}
+        "sw_id_trims": {},
+        "auto_get": {
+            "avatar": {
+                "login": {
+                    "locate": [],
+                    "cut": {
+                        "l": "34%w",
+                        "t": "31%h",
+                        "r": "34%w",
+                        "b": "46%h"
+                    },
+                    "capture": [
+                        "gdi"
+                    ]
+                },
+                "main": {
+                    "locate": [
+                        {
+                            "type": "kwargs",
+                            "rule": {
+                                "ClassName": "TitleBarWindow"
+                            }
+                        }
+                    ],
+                    "cut": {
+                        "l": "60%h",
+                        "t": "96%h",
+                        "r": "-139%h",
+                        "b": "-175%h"
+                    },
+                    "capture": [
+                        "gdi"
+                    ]
+                }
+            },
+            "nickname": {
+                "login": {
+                },
+                "main": {
+                }
+            }
+        },
+        "auto_click": {
+            "login_btn": {
+                "location": [
+                    0.5,
+                    0.78
+                ],
+                "control_names": [
+                    "登录"
+                ]
+            }
+        }
     },
     "QQNT": {
+        "alias": "QQNT",
+        "executable": "QQ.exe",
+        "data_dir_name": "Tencent Files",
+        "executable_wildcards": [
+            "QQ.exe"
+        ],
+        "mutex_handles": [],
+        "config_handles": [],
+        "config_addresses": [
+            "%data_dir%/nt_qq/global/nt_db/login.db",
+            "%data_dir%/nt_qq/global/nt_db/sign.db"
+        ],
+        "patch_addresses": [
+            "%dll_dir%/QQNT.dll"
+        ],
+        "mutex_handle_wildcards": [],
+        "config_handle_wildcards": [],
+        "excluded_dirs": [
+            "All Users",
+            "nt_data",
+            "nt_db",
+            "nt_qq",
+            "nt_temp",
+            "Tencent Files",
+            "screenshot"
+        ],
         "multirun": {
             "alias": "多开",
             "natively": true
@@ -1343,7 +1664,12 @@
                         {
                             "ClassNameWildcards": [
                                 "Chrome_WidgetWin_1"
-                            ]
+                            ],
+                            "FirstChild": {
+                                "!ClassNameWildcards": [
+                                    ""
+                                ]
+                            }
                         }
                     ]
                 },
@@ -1354,28 +1680,6 @@
                 }
             }
         },
-        "alias": "QQNT",
-        "executable": "QQ.exe",
-        "executable_wildcards": [
-            "QQ.exe"
-        ],
-        "mutex_handles": [],
-        "config_handles": [],
-        "config_addresses": [
-            "%data_dir%/nt_qq/global/nt_db/login.db",
-            "%data_dir%/nt_qq/global/nt_db/sign.db"
-        ],
-        "mutant_handle_wildcards": [],
-        "config_handle_wildcards": [],
-        "excluded_dirs": [
-            "All Users",
-            "nt_data",
-            "nt_db",
-            "nt_qq",
-            "nt_temp",
-            "Tencent Files",
-            "screenshot"
-        ],
         "path_detect": {
             "inst_path": {
                 "reg": {
@@ -1422,13 +1726,28 @@
                         }
                     ]
                 }
+            },
+            "dll_dir": {
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "(.*/versions/[0-9]+\\.[0-9]+\\.[0-9]+-[0-9]+)/resources/.*$"
+                        }
+                    ]
+                }
             }
         },
         "path_check": {
-            "data_dir": "nt_qq",
-            "dll_dir": "QQNT.dll"
+            "inst_path": {
+                "left_concat": "QQNT"
+            },
+            "data_dir": {
+                "right_concat": "nt_qq"
+            },
+            "dll_dir": {
+                "right_concat": "QQNT.dll"
+            }
         },
-        "data_dir_name": "Tencent Files",
         "sw_id_trims": {
             "QQ": [
                 0,
@@ -1442,9 +1761,80 @@
                 0,
                 0
             ]
+        },
+        "auto_get": {
+            "avatar": {
+                "login": {
+                    "locate": [],
+                    "cut": {
+                        "l": "34%w",
+                        "t": "22%h",
+                        "r": "34%w",
+                        "b": "56%h"
+                    },
+                    "capture": [
+                        "mss"
+                    ]
+                },
+                "main": {
+                    "locate": [],
+                    "cut": {
+                        "l": "68*",
+                        "t": "8*",
+                        "r": "-91*",
+                        "b": "-31*"
+                    },
+                    "capture": [
+                        "mss"
+                    ]
+                }
+            },
+            "nickname": {
+                "login": {
+                },
+                "main": {
+                }
+            }
+        },
+        "auto_click": {
+            "login_btn": {
+                "location": [
+                    0.5,
+                    0.7
+                ],
+                "control_names": [
+                    "登录",
+                    "Login"
+                ]
+            }
         }
     },
     "QQ": {
+        "alias": "QQ",
+        "executable": "QQ.exe",
+        "data_dir_name": "Tencent Files",
+        "executable_wildcards": [
+            "QQ.exe"
+        ],
+        "mutex_handles": [],
+        "config_handles": [],
+        "config_addresses": [
+            "%data_dir%/All Users/QQ/History.db"
+        ],
+        "patch_addresses": [
+            "%dll_dir%/IM.dll"
+        ],
+        "mutex_handle_wildcards": [],
+        "config_handle_wildcards": [],
+        "excluded_dirs": [
+            "All Users",
+            "nt_data",
+            "nt_db",
+            "nt_qq",
+            "nt_temp",
+            "Tencent Files",
+            "screenshot"
+        ],
         "multirun": {
             "alias": "多开",
             "natively": true
@@ -1497,6 +1887,11 @@
                         {
                             "ClassNameWildcards": [
                                 "TXGuiFoundation"
+                            ],
+                            "FinalSelect": [
+                                {
+                                    "SizeExtreme": "max"
+                                }
                             ]
                         }
                     ]
@@ -1513,6 +1908,11 @@
                         {
                             "ClassNameWildcards": [
                                 "TXGuiFoundation"
+                            ],
+                            "FinalSelect": [
+                                {
+                                    "SizeExtreme": "max"
+                                }
                             ]
                         }
                     ]
@@ -1524,27 +1924,6 @@
                 }
             }
         },
-        "alias": "QQ",
-        "executable": "QQ.exe",
-        "executable_wildcards": [
-            "QQ.exe"
-        ],
-        "mutex_handles": [],
-        "config_handles": [],
-        "config_addresses": [
-            "%data_dir%/All Users/QQ/History.db"
-        ],
-        "mutant_handle_wildcards": [],
-        "config_handle_wildcards": [],
-        "excluded_dirs": [
-            "All Users",
-            "nt_data",
-            "nt_db",
-            "nt_qq",
-            "nt_temp",
-            "Tencent Files",
-            "screenshot"
-        ],
         "path_detect": {
             "inst_path": {
                 "reg": {
@@ -1602,13 +1981,28 @@
                         }
                     ]
                 }
+            },
+            "dll_dir": {
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "(.*/Bin)/MsgMgr\\.dll$"
+                        }
+                    ]
+                }
             }
         },
         "path_check": {
-            "data_dir": "All Users",
-            "dll_dir": "IM.dll"
+            "inst_path": {
+                "left_concat": "QQ/Bin"
+            },
+            "data_dir": {
+                "right_concat": "All Users"
+            },
+            "dll_dir": {
+                "right_concat": "IM.dll"
+            }
         },
-        "data_dir_name": "Tencent Files",
         "sw_id_trims": {
             "QQNT": [
                 0,
@@ -1622,9 +2016,182 @@
                 0,
                 0
             ]
+        },
+        "auto_get": {
+            "avatar": {
+                "login": {
+                    "locate": [
+                        {
+                            "type": "location",
+                            "rule": [
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "ButtonControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                }
+                            ]
+                        }
+                    ],
+                    "cut": {
+                        "l": "0%w",
+                        "t": "0%h",
+                        "r": "0%w",
+                        "b": "0%h"
+                    },
+                    "capture": [
+                        "mss"
+                    ]
+                },
+                "main": {
+                    "locate": [
+                        {
+                            "type": "location",
+                            "rule": [
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 4
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                }
+                            ]
+                        }
+                    ],
+                    "cut": {
+                        "l": "15%",
+                        "t": "15%",
+                        "r": "15%",
+                        "b": "15%"
+                    },
+                    "capture": [
+                        "mss"
+                    ]
+                }
+            },
+            "nickname": {
+                "login": {
+                },
+                "main": {
+                }
+            }
+        },
+        "auto_click": {
+            "login_btn": {
+                "location": [
+                    0.5,
+                    0.78
+                ],
+                "control_names": [
+                    "登录",
+                    "Login"
+                ]
+            }
         }
     },
     "TIM": {
+        "alias": "TIM",
+        "executable": "TIM.exe",
+        "data_dir_name": "Tencent Files",
+        "executable_wildcards": [
+            "TIM.exe"
+        ],
+        "mutex_handles": [],
+        "config_handles": [],
+        "config_addresses": [
+            "%data_dir%/All Users/TIM/History.db"
+        ],
+        "patch_addresses": [
+            "%dll_dir%/IM.dll"
+        ],
+        "mutex_handle_wildcards": [],
+        "config_handle_wildcards": [],
+        "excluded_dirs": [
+            "All Users",
+            "nt_data",
+            "nt_db",
+            "nt_qq",
+            "nt_temp",
+            "Tencent Files",
+            "screenshot"
+        ],
         "multirun": {
             "alias": "多开",
             "natively": true
@@ -1677,6 +2244,11 @@
                         {
                             "ClassNameWildcards": [
                                 "TXGuiFoundation"
+                            ],
+                            "FinalSelect": [
+                                {
+                                    "SizeExtreme": "max"
+                                }
                             ]
                         }
                     ]
@@ -1693,6 +2265,11 @@
                         {
                             "ClassNameWildcards": [
                                 "TXGuiFoundation"
+                            ],
+                            "FinalSelect": [
+                                {
+                                    "SizeExtreme": "max"
+                                }
                             ]
                         }
                     ]
@@ -1704,27 +2281,6 @@
                 }
             }
         },
-        "alias": "TIM",
-        "executable": "TIM.exe",
-        "executable_wildcards": [
-            "TIM.exe"
-        ],
-        "mutex_handles": [],
-        "config_handles": [],
-        "config_addresses": [
-            "%data_dir%/All Users/TIM/History.db"
-        ],
-        "mutant_handle_wildcards": [],
-        "config_handle_wildcards": [],
-        "excluded_dirs": [
-            "All Users",
-            "nt_data",
-            "nt_db",
-            "nt_qq",
-            "nt_temp",
-            "Tencent Files",
-            "screenshot"
-        ],
         "path_detect": {
             "inst_path": {
                 "reg": {
@@ -1777,13 +2333,28 @@
                         }
                     ]
                 }
+            },
+            "dll_dir": {
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "(.*/Bin)/MsgMgr\\.dll$"
+                        }
+                    ]
+                }
             }
         },
         "path_check": {
-            "data_dir": "All Users",
-            "dll_dir": "IM.dll"
+            "inst_path": {
+                "left_concat": "TIM/Bin"
+            },
+            "data_dir": {
+                "right_concat": "All Users"
+            },
+            "dll_dir": {
+                "right_concat": "IM.dll"
+            }
         },
-        "data_dir_name": "Tencent Files",
         "sw_id_trims": {
             "QQ": [
                 0,
@@ -1797,6 +2368,145 @@
                 0,
                 0
             ]
+        },
+        "auto_get": {
+            "avatar": {
+                "login": {
+                    "locate": [
+                        {
+                            "type": "location",
+                            "rule": [
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "ButtonControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                }
+                            ]
+                        }
+                    ],
+                    "cut": {
+                        "l": "0%w",
+                        "t": "0%h",
+                        "r": "0%w",
+                        "b": "0%h"
+                    },
+                    "capture": [
+                        "mss"
+                    ]
+                },
+                "main": {
+                    "locate": [
+                        {
+                            "type": "location",
+                            "rule": [
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 1
+                                },
+                                {
+                                    "kwargs": {
+                                        "ControlTypeName": "PaneControl"
+                                    },
+                                    "index": 0
+                                }
+                            ]
+                        }
+                    ],
+                    "cut": {
+                        "l": "0%",
+                        "t": "0%",
+                        "r": "0%",
+                        "b": "0%"
+                    },
+                    "capture": [
+                        "mss"
+                    ]
+                }
+            },
+            "nickname": {
+                "login": {
+                },
+                "main": {
+                }
+            }
+        },
+        "auto_click": {
+            "login_btn": {
+                "location": [
+                    0.91,
+                    0.56
+                ],
+                "control_names": []
+            }
         }
     }
 }

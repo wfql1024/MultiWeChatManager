@@ -126,8 +126,8 @@ class Config:
     PROJ_META_PATH = fr'{PROJ_PATH}/.meta'
 
     ROOT_CONFIG_PATH = fr"{ROOT_DATA_DIR}/root_config.json"
-    DEFAULT_USER_DIR = fr"{ROOT_DATA_DIR}/user_files" if getattr(sys, "frozen",
-                                                                 False) else fr"{ROOT_DATA_DIR}/dev_user_files"
+    DEFAULT_USER_DIR = fr"{ROOT_DATA_DIR}/user_files" \
+        if getattr(sys, "frozen", False) else fr"{ROOT_DATA_DIR}/dev_user_files"
 
     HANDLE_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/handle.exe'
     WECHAT_DUMP_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/wechat-dump-rs.exe'
@@ -144,11 +144,12 @@ class Config:
     # LOCAL_SETTING_JSON_PATH = fr'{PROJ_USER_PATH}/local_setting.json'
 
     STATISTIC_PATH_SUFFIX = fr"statistics.json"
-    SW_ACC_PATH_SUFFIX = fr"tab_acc_data.json"
+    SW_ACC_PATH_SUFFIX = fr"sw_acc_data.json"
     REMOTE_SW_PATH_SUFFIX = fr"remote_sw.json"
     REMOTE_GLOBAL_PATH_SUFFIX = fr"remote_global.json"
     SW_CACHE_PATH_SUFFIX = fr"sw_cache.json"
     LOCAL_SETTING_PATH_SUFFIX = fr"local_setting.json"
+    AVATAR_CACHE_PATH_SUFFIX = fr"avatar_cache"
 
     # 尺寸定义
     SF = SCALE_FACTOR

@@ -8,7 +8,7 @@ from typing import Callable, Dict
 from func_core.acc_func_core import AccOperatorCore, AccInfoFuncCore
 from func_core.app_func_core import AppFuncCore
 from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
-from public.enums import RemoteSwKey, RootCfgKey
+from public.enums import RootCfgKey, RemoteGlobalKey
 from public.global_members import GlobalMembers
 from utils import file_utils
 from utils.logger_utils import Logger
@@ -244,7 +244,7 @@ class AppFunc:
             items_to_del = []
             try:
                 # 恢复每个平台的补丁dll
-                all_sw, = AppFuncCore.get_remote_global(**{RemoteSwKey.SP_SW: []})
+                all_sw, = AppFuncCore.get_remote_global(**{RemoteGlobalKey.SP_SW: []})
                 # print(all_sw)
                 for sw in all_sw:
                     # sw_obj = cls.get_root_class().get_sw_obj(sw)

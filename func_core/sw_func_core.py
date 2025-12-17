@@ -1,21 +1,26 @@
 import base64
 import glob
 import io
+import math
 import mmap
 import os
 import re
 import shutil
 import subprocess
+import tempfile
 import threading
 import time
 import winreg
+from datetime import datetime
 from tkinter import messagebox
 from typing import Union, Tuple, Optional, List
 
 import psutil
+import uiautomation as auto
 import win32com
 import win32con
 import win32gui
+import win32process
 import winshell
 from PIL import Image
 from win32com.client import Dispatch
@@ -24,7 +29,7 @@ from components import CustomDialogW
 from data_access.setting import SwCache, LocalSetting, SwAccData, RemoteSw, RootSetting, StatisticData
 from func_core.sw_func_impl import SwInfoFuncImpl
 from functions.func_tool import FuncTool
-from public import Strings, Config
+from public import Strings, Config, config
 from public.custom_classes import FlowControlError
 from public.enums import LocalCfgKey, SwEnum, AccKeys, MultirunMode, RemoteSwKey, CallMode, WndType, PathType
 from public.global_members import GlobalMembers
@@ -659,13 +664,9 @@ class SwInfoFuncCore:
             cur_sw_ver = file_utils.get_file_version(exec_path)
             if cur_sw_ver is not None:
                 return cur_sw_ver
-            # Printer().debug(f"未能通过应用程序获取{sw}的版本, 尝试通过动态链接库版本获取...")
-            dll_dir = cls.try_get_path_of_(sw, LocalCfgKey.DLL_DIR)
-            if not isinstance(dll_dir, str):
-                return None
-            dll_dir_check_suffix, = cls.get_remote_sw(sw, dll_dir_check_suffix=None)
-            dll_path = os.path.join(dll_dir, dll_dir_check_suffix).replace("\\", "/")
-            cur_sw_ver = file_utils.get_file_version(dll_path)
+            patch_addresses, = cls.get_remote_sw(sw, **{RemoteSwKey.PATCH_ADDRESSES: []})
+            patch_path = cls.resolve_sw_path(sw, patch_addresses[0])
+            cur_sw_ver = file_utils.get_file_version(patch_path)
             if cur_sw_ver is not None:
                 return cur_sw_ver
             return None
@@ -860,20 +861,26 @@ class SwInfoFuncCore:
         try:
             if path is None or path == "":
                 return False
-            print(path_type)
+            # print(path_type)
             path = str(path).replace('\\', '/')
+            check_dict = {}
             if path_type == LocalCfgKey.INST_PATH:
-                executable, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE: None})
-                path_ext = os.path.splitext(path)[1].lower()
-                exe_ext = os.path.splitext(executable)[1].lower()
-                return path_ext == exe_ext
+                check_dict, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.INST_PATH: None})
             elif path_type == LocalCfgKey.DATA_DIR:
-                suffix, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DATA_DIR: None})
-                return os.path.isdir(os.path.join(path, str(suffix)))
+                check_dict, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DATA_DIR: None})
             elif path_type == LocalCfgKey.DLL_DIR:
-                suffix, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DLL_DIR: None})
-                return os.path.isfile(os.path.join(path, suffix))
-            return False
+                check_dict, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DLL_DIR: None})
+            right_concat = check_dict.get(RemoteSwKey.R_CONCAT, None)
+            if isinstance(right_concat, str):
+                path_right_concat = os.path.join(path, right_concat)
+                if not os.path.exists(path_right_concat):
+                    return False
+            left_concat = check_dict.get(RemoteSwKey.L_CONCAT, None)
+            if isinstance(left_concat, str):
+                dir_name = os.path.dirname(path).replace('\\', '/')
+                if not dir_name.endswith(left_concat):
+                    return False
+            return True
         except Exception as e:
             print(e)
             return False
@@ -887,7 +894,6 @@ class SwInfoFuncCore:
                 path = process.exe().replace('\\', '/')
                 results.append(path)
                 logger.info(f"通过查找进程方式获取了安装地址：{path}")
-                break
         return results
 
     @classmethod
@@ -952,11 +958,15 @@ class SwInfoFuncCore:
 
     @classmethod
     def _get_sw_inst_path_by_regex(cls, sw: str) -> list:
-        return cls._get_sw_path_by_regex(sw, "inst_path")
+        return cls._get_sw_path_by_memo_and_regex(sw, "inst_path")
 
     @classmethod
     def _get_sw_data_dir_by_regex(cls, sw: str) -> list:
-        return cls._get_sw_path_by_regex(sw, "data_dir")
+        return cls._get_sw_path_by_memo_and_regex(sw, "data_dir")
+
+    @classmethod
+    def _get_sw_dll_dir_by_regex(cls, sw: str) -> list:
+        return cls._get_sw_path_by_memo_and_regex(sw, "dll_dir")
 
     @classmethod
     def _guess_sw_path(cls, sw: str, path_type: str) -> List[Tuple[str, bool]]:
@@ -1029,7 +1039,7 @@ class SwInfoFuncCore:
         return value_and_is_dir_list
 
     @classmethod
-    def _get_sw_path_by_regex(cls, sw: str, path_type: str) -> List[Tuple[str, bool]]:
+    def _get_sw_path_by_memo_and_regex(cls, sw: str, path_type: str) -> List[Tuple[str, bool]]:
         """
         path_guess > 路径类型 > regex > 组 : 适配字典列表
         字典: 表达式regex
@@ -1061,29 +1071,31 @@ class SwInfoFuncCore:
                     Logger().warning(we)
         return paths
 
-    @classmethod
-    def _get_sw_dll_dir_by_memo_maps(cls, sw: str) -> list:
-        dll_name, executable = cls.get_remote_sw(sw, dll_dir_check_suffix=None, **{RemoteSwKey.EXE: None})
-        results = []
-        exe_pids_dict = process_utils.psutil_get_pids_by_wildcards_and_grouping_to_dict([executable])
-        if not isinstance(exe_pids_dict, dict) or len(exe_pids_dict.get(executable, [])) == 0:
-            logger.warning(f"没有运行该程序。")
-            return []
-        else:
-            process_id = exe_pids_dict.get(executable, [])[0]
-            try:
-                for f in psutil.Process(process_id).memory_maps():
-                    normalized_path = f.path.replace('\\', '/')
-                    if normalized_path.endswith(dll_name):
-                        dll_dir_path = os.path.dirname(normalized_path)
-                        results.append(dll_dir_path)
-            except psutil.AccessDenied:
-                logger.error(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
-            except psutil.NoSuchProcess:
-                logger.error(f"进程ID为 {process_id} 的进程不存在或已退出。")
-            except Exception as e:
-                logger.error(f"发生意外错误: {e}")
-        return results
+    # @classmethod
+    # def _get_sw_dll_dir_by_memo_maps(cls, sw: str) -> list:
+    #     """在文件映射中获取带dll文件的路径返回"""
+    #     executable, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE: None})
+    #     dll_name, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DLL_DIR: None})
+    #     results = []
+    #     exe_pids_dict = process_utils.psutil_get_pids_by_wildcards_and_grouping_to_dict([executable])
+    #     if not isinstance(exe_pids_dict, dict) or len(exe_pids_dict.get(executable, [])) == 0:
+    #         logger.warning(f"没有运行该程序。")
+    #         return []
+    #     else:
+    #         process_id = exe_pids_dict.get(executable, [])[0]
+    #         try:
+    #             for f in psutil.Process(process_id).memory_maps():
+    #                 normalized_path = f.path.replace('\\', '/')
+    #                 if normalized_path.endswith(dll_name):
+    #                     dll_dir_path = os.path.dirname(normalized_path)
+    #                     results.append(dll_dir_path)
+    #         except psutil.AccessDenied:
+    #             logger.error(f"无法访问进程ID为 {process_id} 的内存映射文件，权限不足。")
+    #         except psutil.NoSuchProcess:
+    #             logger.error(f"进程ID为 {process_id} 的进程不存在或已退出。")
+    #         except Exception as e:
+    #             logger.error(f"发生意外错误: {e}")
+    #     return results
 
     @classmethod
     def _resolve_simple_rule(cls, mm, patching_rule_dict):
@@ -1575,8 +1587,8 @@ class SwInfoFuncCore:
         """定义方法列表"""
         if path_tag == LocalCfgKey.INST_PATH:
             return [
-                cls._get_sw_install_path_from_process,
                 cls._get_sw_inst_path_from_register,
+                cls._get_sw_install_path_from_process,
                 cls._get_sw_inst_path_by_regex,
                 cls._guess_sw_inst_path,
             ]
@@ -1589,8 +1601,9 @@ class SwInfoFuncCore:
             ]
         elif path_tag == LocalCfgKey.DLL_DIR:
             return [
-                cls._get_sw_dll_dir_by_memo_maps,
                 cls._get_sw_dll_dir_by_files,
+                cls._get_sw_dll_dir_by_regex,
+                # cls._get_sw_dll_dir_by_memo_maps,
             ]
         else:
             return [
@@ -1676,29 +1689,285 @@ class SwInfoFuncCore:
     @classmethod
     def _get_sw_dll_dir_by_files(cls, sw: str) -> list:
         """通过文件遍历方式获取dll文件夹"""
-        dll_name, = cls.get_remote_sw(sw, dll_dir_check_suffix=None)
+        res_list = []
         install_path = SwInfoFuncCore.get_saved_path_of_(sw, LocalCfgKey.INST_PATH)
         if install_path is not None and install_path != "":
             install_dir = os.path.dirname(install_path)
         else:
             return []
 
-        version_folders = []
-        # 遍历所有文件及子文件夹
-        for root, dirs, files in os.walk(install_dir):
-            if dll_name in files:
-                version_folders.append(root)  # 将包含WeChatWin.dll的目录添加到列表中
+        dll_addrs, = cls.get_remote_sw(sw, **{RemoteSwKey.PATCH_ADDRESSES: None})
+        for dll_addr in dll_addrs:
+            if dll_addr.startswith("%dll_dir%/"):
+                rest = dll_addr[len("%dll_dir%/"):]
+                if "/" not in rest:  # 不能再有子目录
+                    dll_name = rest  # 如 "WeChat.dll"
+                else:
+                    continue  # 有子目录 → 下一个
+            else:
+                continue
+            version_folders = []
+            # 遍历所有文件及子文件夹
+            for root, dirs, files in os.walk(install_dir):
+                if dll_name in files:
+                    version_folders.append(root)  # 将包含*.dll的目录添加到列表中
+            if not version_folders:
+                continue
+            if len(version_folders) == 1:
+                # 只有一个文件夹，直接返回
+                dll_dir = version_folders[0].replace('\\', '/')
+                print(f"只有一个文件夹：{dll_dir}")
+                res_list.append(dll_dir)
+            else:
+                res_list.append(file_utils.get_newest_full_version_dir(version_folders))
 
-        if not version_folders:
-            return []
+        return res_list
 
-        # 只有一个文件夹，直接返回
-        if len(version_folders) == 1:
-            dll_dir = version_folders[0].replace('\\', '/')
-            print(f"只有一个文件夹：{dll_dir}")
-            return [dll_dir]
+    @staticmethod
+    def _get_control_from_wnd(hwnd, cfg):
+        def _match_control(c, condition: dict):
+            for k, v in condition.items():
+                if not hasattr(c, k):
+                    # print(f"控件 {c} 没有属性 {k}")
+                    return False
+                if getattr(c, k) != v:
+                    # print(f"控件 {c} 的属性 {k} 不等于 {v}")
+                    # print(f"等于 {getattr(c, k)}")
+                    return False
+            return True
 
-        return [file_utils.get_newest_full_version_dir(version_folders)]
+        win = auto.ControlFromHandle(hwnd)
+        ctrl = win
+        if isinstance(cfg, list):
+            for item in cfg:  # cfg 就是 JSON 加载后的 list
+                t = item["type"]
+                rule = item["rule"]
+                if t == "kwargs":
+                    ctrl = ctrl.Control(**rule)
+                elif t == "location":
+                    # 严格：每一步只在 Children 中找
+                    for step in rule:
+                        cond = step.get("kwargs", {})
+                        index = step.get("index", 0)
+                        children = ctrl.GetChildren()
+                        # Printer().debug(children)
+                        matched = []
+                        for c in children:
+                            # print(c)
+                            if _match_control(c, cond):
+                                matched.append(c)
+                        if not matched or index > len(matched):
+                            raise LookupError(
+                                f"找不到第 {index} 个符合条件的控件，"
+                                f"Children 中只有 {len(matched)} 个"
+                            )
+                        ctrl = matched[index]
+
+                else:
+                    raise ValueError(f"Unknown config type: {t}")
+        return ctrl
+
+    @staticmethod
+    def _calc_rect(target_width, target_height, l_cut, t_cut, r_cut, b_cut, width, height):
+        """根据传入配置计算截图的左上角和宽高"""
+
+        # Printer().debug(f"target_width: {target_width}, target_height: {target_height}")
+        # Printer().debug(f"l_cut: {l_cut}, t_cut: {t_cut}, r_cut: {r_cut}, b_cut: {b_cut}")
+        # Printer().debug(f"width: {width}, height: {height}")
+
+        def _parse_value(v, target_w, target_h, axis):
+            """把各类格式转换成正数值，返回 (数值, is_negative)"""
+
+            is_negative = False
+
+            if isinstance(v, int):
+                if v < 0:
+                    is_negative = True
+                    v = -v
+                return v, is_negative
+
+            if not isinstance(v, str):
+                raise ValueError(f"Invalid type: {v!r}")
+
+            s = v.strip().lower()
+
+            # 处理负号形式（如 "-30%", "-20%w"）
+            if s.startswith("-"):
+                is_negative = True
+                s = s[1:].strip()
+
+            # 自动补全 "%" → "%w/%h"
+            if s.endswith("%"):
+                s = s + axis
+
+            # 处理 "数字*" → 数字 * 缩放因子
+            if s.endswith("*"):
+                try:
+                    num = float(s[:-1])
+                except:
+                    raise ValueError(f"Invalid scale-mult format: {v!r}")
+
+                val = math.ceil(num * config.get_scale_factor())
+                return val, is_negative
+
+            # 格式必须是 xx%w 或 xx%h
+            if not (s.endswith("%w") or s.endswith("%h")):
+                raise ValueError(f"Invalid percentage format: {v!r}")
+
+            try:
+                pct = float(s[:-2]) / 100
+            except:
+                raise ValueError(f"Invalid percentage number: {v!r}")
+
+            base = target_w if s.endswith("w") else target_h
+            val = math.ceil(base * pct)
+
+            return val, is_negative
+
+        # -------- 六个参数解析成 (正数值, 是否负号) --------
+        l_margin, l_neg = _parse_value(l_cut, target_width, target_height, "w")
+        t_margin, t_neg = _parse_value(t_cut, target_width, target_height, "h")
+        r_margin, r_neg = _parse_value(r_cut, target_width, target_height, "w")
+        b_margin, b_neg = _parse_value(b_cut, target_width, target_height, "h")
+        width_cut = None if width is None else _parse_value(width, target_width, target_height, "w")
+        height_cut = None if height is None else _parse_value(height, target_width, target_height, "h")
+        # -------- 处理 cut 的负值逻辑（反向计算） --------
+        if l_neg:
+            l_margin = target_width - l_margin
+        if r_neg:
+            r_margin = target_width - r_margin
+        if t_neg:
+            t_margin = target_height - t_margin
+        if b_neg:
+            b_margin = target_height - b_margin
+        # ---------------------------------------------------------
+        #                 处理宽度优先级逻辑
+        # ---------------------------------------------------------
+        if width_cut is not None:
+            width_val, width_neg = width_cut
+            if width_neg:
+                # 负 width = 边距模式：边距 = width_val
+                l_margin = width_val
+                r_margin = width_val
+                need_width = target_width - l_margin - r_margin
+                need_left = l_margin
+            else:
+                # 正 width = 居中截取
+                need_width = width_val
+                need_left = (target_width - width_val) // 2
+        else:
+            need_left = l_margin
+            need_width = target_width - l_margin - r_margin
+        # ---------------------------------------------------------
+        #                 处理高度优先级逻辑
+        # ---------------------------------------------------------
+        if height_cut is not None:
+            height_val, height_neg = height_cut
+            if height_neg:
+                # 负 height = 边距模式
+                t_margin = height_val
+                b_margin = height_val
+                need_height = target_height - t_margin - b_margin
+                need_top = t_margin
+            else:
+                # 正 height = 居中截取
+                need_height = height_val
+                need_top = (target_height - height_val) // 2
+        else:
+            need_top = t_margin
+            need_height = target_height - t_margin - b_margin
+        return need_left, need_top, need_width, need_height
+
+    @classmethod
+    def _get_capture_location_and_size(
+            cls, hwnd,
+            l_cut=0, t_cut=0, r_cut=0, b_cut=0,
+            width=None, height=None,
+            cfg=None):
+        """
+        在窗口中(或其子控件)中区域截图并保存
+        :param hwnd:
+        :param l_cut:
+        :param t_cut:
+        :param r_cut:
+        :param b_cut:
+        :param width:
+        :param height:
+        :param cfg: 如何找到目标控件的配置
+            常用的参数有查找深度searchDepth, 控件类名ClassName
+        :return:
+        """
+        # 窗口矩形（屏幕坐标）
+        win_left, win_top, win_right, win_bottom = win32gui.GetWindowRect(hwnd)
+        # 查找目标控件（按需传参）
+        target = cls._get_control_from_wnd(hwnd, cfg)
+        # 计算控件(窗口)control(c)对于窗口win(w)的相对位置和宽高
+        control_rect = target.BoundingRectangle
+        c_left, c_top, c_right, c_bottom = control_rect.left, control_rect.top, control_rect.right, control_rect.bottom
+        c_width = c_right - c_left
+        c_height = c_bottom - c_top
+        c2w_left = c_left - win_left
+        c2w_top = c_top - win_top
+        c2w_right = c_right - win_left
+        c2w_bottom = c_bottom - win_top
+        # 根据参数进行运算得到截图的宽高和相对于控件的左上角位置
+        capt2c_left, capt2c_top, capt_width, capt_height = cls._calc_rect(
+            c_width, c_height, l_cut, t_cut, r_cut, b_cut, width, height)
+        # 计算截图在窗口中的位置
+        capt2w_left = c2w_left + capt2c_left
+        capt2w_top = c2w_top + capt2c_top
+
+        return capt2w_left, capt2w_top, capt_width, capt_height
+
+    @classmethod
+    def try_capt_avatar_for_sw_when(cls, sw, period, hwnd):
+        _, pid = win32process.GetWindowThreadProcessId(hwnd)
+        avatar_cache_dir = os.path.join(tempfile.gettempdir(), Config.AVATAR_CACHE_PATH_SUFFIX)
+        datestamp = datetime.now().strftime("%Y%m%d")
+        timestamp = datetime.now().strftime("%H%M%S_%f")[:-3]  # 毫秒
+        capt_dir = os.path.join(avatar_cache_dir, f"{pid}_{datestamp}")
+        if not os.path.exists(capt_dir):
+            os.makedirs(capt_dir)
+        capt_path = os.path.join(capt_dir, f"{timestamp}.png")
+        adaptation_dict = cls.get_remote_sw(sw, RemoteSwKey.AUTO_GET, RemoteSwKey.AVATAR, period)
+        locate_config = adaptation_dict.get(RemoteSwKey.LOCATE)
+        cut_config = adaptation_dict.get(RemoteSwKey.CUT)
+        l_cut = cut_config.get("l", 0)
+        t_cut = cut_config.get("t", 0)
+        r_cut = cut_config.get("r", 0)
+        b_cut = cut_config.get("b", 0)
+        width = cut_config.get("w", None)
+        height = cut_config.get("h", None)
+        capt2w_left, capt2w_top, capt_width, capt_height = cls._get_capture_location_and_size(
+            hwnd, l_cut, t_cut, r_cut, b_cut, width, height, locate_config
+        )
+        capture_operate_list = adaptation_dict.get(RemoteSwKey.CAPTURE)
+        for operate in capture_operate_list:
+            if operate == "gdi":
+                image_utils.gdi_capture_in_wnd(hwnd, capt2w_left, capt2w_top, capt_width, capt_height, capt_path)
+            elif operate == "mss":
+                image_utils.mss_capture_in_wnd(hwnd, capt2w_left, capt2w_top, capt_width, capt_height, capt_path)
+            else:
+                ...
+            print(f"控件区域已保存到: {capt_path}")
+
+    @staticmethod
+    def get_today_capt_avatars(pid):
+        today_prefix = datetime.now().strftime("%Y%m%d")
+        pid_prefix = f"{pid}_"
+        avatar_cache_dir = os.path.join(
+            tempfile.gettempdir(),
+            Config.AVATAR_CACHE_PATH_SUFFIX
+        )
+        capt_list = [
+            os.path.join(avatar_cache_dir, name)
+            for name in os.listdir(avatar_cache_dir)
+            if (
+                    name.startswith(pid_prefix)
+                    and name[len(pid_prefix):].startswith(today_prefix)
+            )
+        ]
+        return capt_list
 
 
 class SwOperatorCore:
@@ -1708,7 +1977,7 @@ class SwOperatorCore:
         """查杀所有互斥体: 进程互斥体, 配置文件锁"""
         pids = SwInfoFuncCore.get_sw_all_exe_pids(sw)
         mutant_handle_wildcards, config_handle_wildcards = SwInfoFuncCore.get_remote_sw(
-            sw, mutant_handle_wildcards=None, config_handle_wildcards=None)
+            sw, **{RemoteSwKey.MUTEX_HANDLE_WCS: None, RemoteSwKey.CONFIG_HANDLE_WCS: None})
         handle_wildcards = []
         if isinstance(mutant_handle_wildcards, list):
             handle_wildcards.extend(mutant_handle_wildcards)
@@ -1733,10 +2002,7 @@ class SwOperatorCore:
     @staticmethod
     def try_kill_mutex_if_need_and_return_remained_pids(sw, kill=None):
         """检查并可选择是否关闭互斥体, 返回剩余的含有互斥体的 pid 列表"""
-        mutant_wildcards, = SwInfoFuncCore.get_remote_sw(
-            sw,
-            mutant_handle_wildcards=None,
-        )
+        mutant_wildcards, = SwInfoFuncCore.get_remote_sw(sw, **{RemoteSwKey.MUTEX_HANDLE_WCS: None})
         if not isinstance(mutant_wildcards, list):
             print("未获取到互斥体通配词,将不进行查找...")
             return None
@@ -2082,6 +2348,19 @@ class SwOperatorCore:
             SwInfoFuncCore.set_pid_mutex_all_values_to_false(sw)
             StatisticData().update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
             print(f"打开了登录窗口{sw_hwnd}")
+
+            # 截取图像
+            def _capt_thread():
+                for _ in range(6):  # 3 / 0.5 = 6 次
+                    try:
+                        SwInfoFuncCore.try_capt_avatar_for_sw_when(
+                            sw, RemoteSwKey.LOGIN, sw_hwnd
+                        )
+                    except Exception as e:
+                        logger.error(f"截取头像时出错: {e}")
+                    time.sleep(0.5)
+
+            threading.Thread(target=_capt_thread).start()
         else:
             messagebox.showerror("错误", f"手动登录失败:{msg}")
             return
@@ -2424,14 +2703,19 @@ class SwOperatorCore:
             proc = cls.create_process_without_admin(sw_path)
         elif multirun_mode == MultirunMode.BUILTIN:
             # ————————————————————————————————builtin————————————————————————————————
-            mutant_handle_wildcards, = SwInfoFuncCore.get_remote_sw(sw, mutant_handle_wildcards=None)
+            mutant_handle_wildcards, = SwInfoFuncCore.get_remote_sw(sw, **{RemoteSwKey.MUTEX_HANDLE_WCS: None})
             pids_has_mutex = SwInfoFuncCore.get_pids_has_mutex_from_record(sw)
-            if len(pids_has_mutex) > 0 and len(mutant_handle_wildcards) > 0:
-                Printer().print_vn(f"[INFO]以下进程含有互斥体：{pids_has_mutex}", )
-                handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
-                    pids_has_mutex, mutant_handle_wildcards)
-                Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
-                handle_utils.pywinhandle_close_handles(handle_infos)
+            # Printer().debug(mutant_handle_wildcards)
+            # Printer().debug(pids_has_mutex)
+            try:
+                if len(pids_has_mutex) > 0 and len(mutant_handle_wildcards) > 0:
+                    Printer().print_vn(f"[INFO]以下进程含有互斥体：{pids_has_mutex}", )
+                    handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
+                        pids_has_mutex, mutant_handle_wildcards)
+                    Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
+                    handle_utils.pywinhandle_close_handles(handle_infos)
+            except Exception as e:
+                Logger().warning(f"[ERROR]关闭互斥体时出错：{e}")
             proc = cls.create_process_without_admin(sw_path, None)
         else:
             # 其余的多开模式
@@ -2522,15 +2806,22 @@ class SwOperatorCore:
 
     @staticmethod
     def open_dll_dir(sw):
-        """打开注册表所在文件夹，并将光标移动到文件"""
+        """打开dll所在文件夹，并将光标移动到文件"""
         dll_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.DLL_DIR)
         if os.path.exists(dll_dir):
-            dll_dir_check_suffix, = SwInfoFuncCore.get_remote_sw(sw, dll_dir_check_suffix=None)
+            sub_file = None
+            try:
+                check_dict, = SwInfoFuncCore.get_remote_sw(
+                    sw, RemoteSwKey.PATH_CHECK, **{PathType.DLL_DIR: None})
+                sub_file = check_dict.get(RemoteSwKey.R_CONCAT, None)
+                sub_file = sub_file.split("/")[-1]
+            except Exception as e:
+                print(e)
             # 打开文件夹
             shell = win32com.client.Dispatch("WScript.Shell")
             shell.CurrentDirectory = dll_dir
-            if dll_dir_check_suffix is not None:
-                shell.Run(f'explorer /select,{dll_dir_check_suffix}')
+            if sub_file is not None:
+                shell.Run(f'explorer /select,{sub_file}')
 
     @staticmethod
     def restore_dll_and_get_del_paths(sw):

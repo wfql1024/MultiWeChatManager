@@ -21,7 +21,7 @@ from data_access import SwAccData
 from data_access.setting import LocalSetting, RootSetting, RemoteSw, StatisticData, RemoteGlobal
 from public import Strings
 from public.config import Config
-from public.enums import LocalCfgKey, RemoteGlobalKey, SwStates, RemoteSwKey, RootCfgKey
+from public.enums import LocalCfgKey, RemoteGlobalKey, SwStates, RootCfgKey
 from public.global_members import GlobalMembers
 from utils import file_utils, sys_utils
 from utils.encoding_utils import CryptoUtils
@@ -151,6 +151,7 @@ class AppFuncCore:
             _icon.visible = False
             _icon.stop()
             root.after(0, root.destroy)
+
         # 给托盘图标绑定鼠标点击恢复窗口
         def setup(icon):
             icon.visible = True
@@ -667,7 +668,7 @@ class AppFuncCore:
     @staticmethod
     def get_all_enable_sw() -> list:
         """获取所有启用的平台"""
-        all_sw_list, = RemoteGlobal().get_(**{RemoteSwKey.SP_SW: []})
+        all_sw_list, = RemoteGlobal().get_(**{RemoteGlobalKey.SP_SW: []})
         all_enable_sw = []
         for sw in all_sw_list:
             state = LocalSetting().get_(sw, LocalCfgKey.STATE)
@@ -678,7 +679,7 @@ class AppFuncCore:
     @staticmethod
     def get_all_visible_sw() -> list:
         """获取所有可见的平台"""
-        all_sw_list, = RemoteGlobal().get_(**{RemoteSwKey.SP_SW: []})
+        all_sw_list, = RemoteGlobal().get_(**{RemoteGlobalKey.SP_SW: []})
         all_visible_sw = []
         for sw in all_sw_list:
             state = LocalSetting().get_(sw, LocalCfgKey.STATE)

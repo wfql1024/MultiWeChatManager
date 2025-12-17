@@ -17,7 +17,7 @@ from ui.exe_manager_ui import ExeManagerWndCreator
 from ui.sidebar_ui import SidebarUI
 from ui.wnd_ui import WndCreator
 from utils import widget_utils, sys_utils
-from utils.logger_utils import myprinter as printer, Logger
+from utils.logger_utils import myprinter as printer
 
 
 # TODO: 主题色选择
@@ -541,4 +541,3 @@ class MenuUI:
             self._to_tray_label = new_label
         if not (App().global_settings_value.in_tray is True):
             AppFuncCore.create_tray(self.root)
-

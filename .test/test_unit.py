@@ -27,6 +27,7 @@ from utils.sys_utils import SysPathUtils
 
 class Test(TestCase):
     sw_list = ["WeChat", "Weixin", "QQ", "QQNT", "WXWork", "TIM"]
+
     def SetUp(self):
         self.hwnd = Win32HwndGetter._get_a_hwnd_by_title("微信（测试版）")
         print(self.hwnd)
@@ -41,7 +42,7 @@ class Test(TestCase):
     def test_close_sw_mutex_by_handle(self):
         executable_name, cfg_handles = (
             Sw("Weixin").get_remote(
-            **{RemoteSwKey.EXE: None, RemoteSwKey.CONFIG_HANDLES: None}))
+                **{RemoteSwKey.EXE: None, RemoteSwKey.CONFIG_HANDLES: None}))
         handle_utils.close_sw_mutex_by_handle(
             Config.HANDLE_EXE_PATH, executable_name, cfg_handles)
 
@@ -537,7 +538,7 @@ class Test(TestCase):
             paths = SwInfoFuncCore._get_sw_inst_path_by_regex(sw)
             print(paths)
 
-        print("data_path", "-------------------------")
+        print("data_dir", "-------------------------")
         for sw in self.sw_list:
             # print(sw)
             # paths = SwInfoFuncCore.get_sw_data_dir_from_register(sw)
@@ -547,6 +548,22 @@ class Test(TestCase):
             paths = SwInfoFuncCore._get_sw_data_dir_by_regex(sw)
             print(paths)
 
+        print("dll_dir", "-------------------------")
+        for sw in self.sw_list:
+            # print(sw)
+            # paths = SwInfoFuncCore.get_sw_dll_dir_from_register(sw)
+            # print(paths)
+            # paths = SwInfoFuncCore.guess_sw_dll_dir(sw)
+            # print(paths)
+            paths = SwInfoFuncCore._get_sw_dll_dir_by_regex(sw)
+            print(paths)
+
     def test_get_documents(self):
         path = SysPathUtils.get_documents_path()
         print(path)
+
+    def test_try_capt_avatar_for_sw_when(self):
+        SwInfoFuncCore.try_capt_avatar_for_sw_when("Weixin", "main", 68304)
+
+    def test_print_hwnds_to_md(self):
+        HwndGetter._print_hwnds_to_md([19469250, 2692900, 2228330, 2034380, 986616])

@@ -1,14 +1,15 @@
 import base64
-import datetime
 import os
 import random
 import re
 import shutil
 import sys
+import tempfile
 import threading
 import time
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from fnmatch import fnmatch
 from pathlib import Path
 from tkinter import messagebox, filedialog
@@ -33,7 +34,7 @@ from public.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
 from utils.encoding_utils import StringUtils
 from utils.hwnd_utils import HwndGetter, Win32HwndGetter
-from utils.logger_utils import mylogger as logger, Printer
+from utils.logger_utils import mylogger as logger, Printer, Logger
 from utils.sys_utils import UIUtils
 
 
@@ -144,36 +145,67 @@ class AccOperatorCore:
         login_ui = root_class.login_ui
         auto_press = root_class.app.global_settings_value.auto_press
         if auto_press:
-            # 两轮点击所有窗口的登录，防止遗漏
+            # 通过大约位置点击
             time.sleep(0.5)
+            factor, = RemoteSw().get_(
+                sw, RemoteSwKey.AUTO_CLICK, RemoteSwKey.LOGIN_BTN, **{RemoteSwKey.LOCATION: []})
+            fx = 0.5
+            fy = 0.75
+            try:
+                fx = factor[0]
+                fy = factor[1]
+            except IndexError:
+                Logger().error(f"自动点击位置配置错误: {factor}")
             inner_start_time = time.time()
             for i in range(1):
                 for h in hwnds:
                     if not isinstance(h, int):
                         continue
                     hwnd_details = hwnd_utils.get_hwnd_details_of_(h)
-                    cx = int(hwnd_details["width"] * 0.5)
-                    cy = int(hwnd_details["height"] * 0.75)
+                    cx = int(hwnd_details["width"] * fx)
+                    cy = int(hwnd_details["height"] * fy)
                     hwnd_utils.do_click_in_wnd(h, cx, cy)
                     time.sleep(0.2)
                 print(f"通过位置查找，用时：{time.time() - inner_start_time:.4f}s")
             inner_start_time = time.time()
+
+            # 通过精确控件中心来点击
+            btn_names = []
+            # 远程配置预设
+            preset_btn_names, = RemoteSw().get_(
+                sw, RemoteSwKey.AUTO_CLICK, RemoteSwKey.LOGIN_BTN, **{RemoteSwKey.CTRL_NAMES: []})
+            Printer().debug(preset_btn_names)
+            btn_names.extend(preset_btn_names)
+            # 用户添加的
+            user_btn_names_str = LocalSetting().fetch_or_set_default_or_none(sw, LocalCfgKey.CLICK_BTNS)
+            user_btn_names = user_btn_names_str.split("/")
+            btn_names.extend(user_btn_names)
             for h in hwnds:
                 if not isinstance(h, int):
                     continue
-                click_btn_titles = LocalSetting().fetch_or_set_default_or_none(sw, LocalCfgKey.CLICK_BTNS)
-                titles = click_btn_titles.split("/")
                 try:
-                    cx, cy = hwnd_utils.find_widget_with_uiautomation(h, titles)  # avg:1.9s
-                    # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, titles)  # avg:2.4s
+                    cx, cy = hwnd_utils.uiautomation_find_control_by_names(h, btn_names)  # avg:1.9s
+                    # cx, cy = hwnd_utils.get_widget_center_pos_by_hwnd_and_possible_titles(h, btn_names)  # avg:2.4s
                     # print(hwnd_utils.get_child_hwnd_list_of_(h))
-                    # cx, cy = hwnd_utils.find_widget_with_win32(h, titles)  # 微信窗口非标准窗口，查找不了
-                    # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, titles)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
-                    # cx, cy = hwnd_utils.find_widget_with_uia(h, titles)  # 有问题，修复较复杂，不管
+                    # cx, cy = hwnd_utils.find_widget_with_win32(h, btn_names)  # 微信窗口非标准窗口，查找不了
+                    # cx, cy = hwnd_utils.find_widget_with_pygetwindow(h, btn_names)  # 只能用来查找窗口标题，无法用来查找窗口内的控件
+                    # cx, cy = hwnd_utils.find_widget_with_uia(h, btn_names)  # 有问题，修复较复杂，放弃
                     print(f"通过控件查找，用时：{time.time() - inner_start_time:.4f}s")
                     if cx is not None and cy is not None:
                         hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
-                        break  # 找到有效坐标后退出循环
+
+                        # 截取图像
+                        def _capt_thread():
+                            for _ in range(6):  # 3 / 0.5 = 6 次
+                                try:
+                                    SwInfoFuncCore.try_capt_avatar_for_sw_when(
+                                        sw, RemoteSwKey.LOGIN, h
+                                    )
+                                except Exception as e:
+                                    logger.error(f"截取头像时出错: {e}")
+                                time.sleep(0.5)
+
+                        threading.Thread(target=_capt_thread).start()
                 except TypeError as te:
                     logger.warning(te)
                     print("没有按钮，应该是点过啦~")
@@ -222,10 +254,7 @@ class AccOperatorCore:
                 continue
             # 初始化获取数据 -------------------------------------------------------------------
             multirun_mode = Sw(sw).multirun_mode
-            config_wildcards, = RemoteSw().get_(
-                sw,
-                config_handle_wildcards=None
-            )
+            config_wildcards, = RemoteSw().get_(sw, **{RemoteSwKey.CONFIG_HANDLE_WCS: None})
             # 清空闲置的登录窗口、多开器，清空并拉取各账户的登录和互斥体情况 -------------------------------------------------------------------
             SwOperatorCore.kill_sw_multiple_processes(sw)
             # 是否需要关闭闲置的登录窗口
@@ -265,6 +294,20 @@ class AccOperatorCore:
                         sw_opened_hwnds.append(sw_hwnd)
                     print(f"打开窗口成功：{sw_hwnd}")
                     SwInfoFuncCore.set_pid_mutex_all_values_to_false(sw)
+
+                    # 截取图像
+                    def _capt_thread():
+                        for _ in range(6):  # 3 / 0.5 = 6 次
+                            try:
+                                SwInfoFuncCore.try_capt_avatar_for_sw_when(
+                                    sw, RemoteSwKey.LOGIN, sw_hwnd
+                                )
+                            except Exception as e:
+                                logger.error(f"截取头像时出错: {e}")
+                            time.sleep(0.5)
+
+                    threading.Thread(target=_capt_thread).start()
+
                     if sw_proc_pid is None:
                         _, sw_proc_pid = win32process.GetWindowThreadProcessId(sw_hwnd)
                     SwAccData().update_(AccKeys.RELAY, sw, AccKeys.PID_MUTEX, **{f"{sw_proc_pid}": True})
@@ -934,8 +977,29 @@ class AccInfoFuncCore:
     @staticmethod
     def manual_choose_avatar_for_acc(sw, acc):
         user_dir = RootSetting().user_dir
+        sw_hwnd, = AccInfoFuncCore.get_sw_acc_data(sw, acc, main_hwnd=None)
+
+        # 截取图像
+        def _capt_thread():
+            for _ in range(6):
+                try:
+                    AccOperatorCore.switch_to_sw_account_wnd(sw, acc)
+                    SwInfoFuncCore.try_capt_avatar_for_sw_when(sw, RemoteSwKey.MAIN, sw_hwnd)
+                except Exception as e:
+                    logger.error(f"截取账号 {acc} 的头像时出错: {e}")
+                time.sleep(0.5)
+
+        threading.Thread(target=_capt_thread).start()
+        # 尝试从缓存的头像截图中选择
+        pid, = SwAccData().get_(sw, acc, pid=None)
+        avatar_cache_dir = os.path.join(tempfile.gettempdir(), Config.AVATAR_CACHE_PATH_SUFFIX)
+        datestamp = datetime.now().strftime("%Y%m%d")
+        capt_dir = os.path.join(avatar_cache_dir, f"{pid}_{datestamp}")
+        if not os.path.exists(capt_dir):
+            os.makedirs(capt_dir)
         file_path = filedialog.askopenfilename(
             title="选择头像图片",
+            initialdir=capt_dir if pid is not None else None,
             filetypes=[("Image files", "*.png;*.jpg;*.jpeg;*.bmp;*.gif")]
         )
         if not file_path:
@@ -1045,7 +1109,7 @@ class AccInfoFuncCore:
             f"{account}_{os.path.basename(one_origin_cfg_path)}")
         if os.path.exists(one_acc_cfg_path):
             mod_time = os.path.getmtime(one_acc_cfg_path)
-            date = datetime.datetime.fromtimestamp(mod_time)
+            date = datetime.fromtimestamp(mod_time)
             return f"{date.year % 100:02}/{date.month:02}/{date.day:02} {date.hour:02}:{date.minute:02}"
         else:
             return CfgStatus.NO_CFG.value
@@ -1082,12 +1146,15 @@ class AccInfoFuncCore:
             other_cut_map, now_l, now_r = cls.trims_other_sw(trim_values, other_sw)
             if not isinstance(other_cut_map, dict):
                 continue
-            if not isinstance(now_l, int) or not isinstance(now_r, int):
+            if not isinstance(now_l, int):
+                continue
+            if not (isinstance(now_r, int) or now_r is None):
                 continue
 
             for now_acc in now_acc_list:
                 now_cut_acc = now_acc[now_l:now_r]
                 other_acc = other_cut_map.get(now_cut_acc)
+                # print(f"{now_acc} -> {other_acc}")
                 if other_acc:
                     # 检查头像url是否存在,若不在,则偷取
                     now_avatar_url, = cls.get_sw_acc_data(now_sw, now_acc, avatar_url=None)

@@ -2,12 +2,16 @@ import os
 import shutil
 import time
 import tkinter as tk
+from datetime import datetime
 from unittest import TestCase
 
+import mss
 import psutil
 import uiautomation
+import uiautomation as auto
 import win32con
 import win32gui
+import winshell
 
 from func_core.acc_func_core import AccOperatorCore
 from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
@@ -295,15 +299,245 @@ class Test(TestCase):
 
     def test_get_mmap_info(self):
         import re
-        from pathlib import Path
 
         def match_and_capture(path: str, pattern: str):
             m = re.match(pattern, path)
             # print(m)
             return m.group(1) if m else None
 
-        pid = 4076
+        pid = 26172
         for f in psutil.Process(pid).memory_maps():
             normalized_path = f.path.replace('\\', '/')
-            # print(normalized_path)
-            print(match_and_capture(normalized_path, r"^(.*?)/Profiles/[0-9A-Fa-f]+(/.*)?$"))
+            print(normalized_path)
+            # print(match_and_capture(normalized_path, r"^(.*?)/Profiles/[0-9A-Fa-f]+(/.*)?$"))
+
+    # def test_gdi_sct(self):
+    #     ### 已经移入工具类
+    #     import uiautomation as auto
+    #     import os
+    #
+    #     # ----------------------------
+    #     # 假设已拿到 hwnd
+    #     # ----------------------------
+    #     hwnd = 69372
+    #
+    #     win = auto.ControlFromHandle(hwnd)
+    #
+    #     # 查找目标控件（按 Name，按需修改）
+    #     target = win.Control(ClassName="mmui::MainTabBar")
+    #     rect = target.BoundingRectangle
+    #     left, top, right, bottom = rect.left, rect.top, rect.right, rect.bottom
+    #     width, height = right - left, bottom - top
+    #
+    #     # 窗口矩形（屏幕坐标）
+    #     win_left, win_top, win_right, win_bottom = win32gui.GetWindowRect(hwnd)
+    #
+    #     # 计算控件相对窗口的坐标
+    #     rel_left = left - win_left
+    #     rel_top = top - win_top
+    #
+    #     # 获取真实桌面路径
+    #     desktop = winshell.desktop()
+    #     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #     save_path = os.path.join(desktop, f"capture_{timestamp}.png")
+    #
+    #     # 截控件区域（GDI，窗口可被遮挡或最小化）
+    #     hwnd_dc = win32gui.GetWindowDC(hwnd)
+    #     mfc_dc = win32ui.CreateDCFromHandle(hwnd_dc)
+    #     save_dc = mfc_dc.CreateCompatibleDC()
+    #
+    #     bitmap = win32ui.CreateBitmap()
+    #     bitmap.CreateCompatibleBitmap(mfc_dc, 43, 43)
+    #     save_dc.SelectObject(bitmap)
+    #
+    #     # 从窗口缓冲区拷贝指定矩形
+    #     save_dc.BitBlt((-30,-30), (43, 43), mfc_dc, (rel_left+15, rel_top+31), win32con.SRCCOPY)
+    #
+    #     # 转为 PIL Image 并保存
+    #     bmpinfo = bitmap.GetInfo()
+    #     bmpstr = bitmap.GetBitmapBits(True)
+    #     im = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']),
+    #                           bmpstr, 'raw', 'BGRX', 0, 1)
+    #     im.save(save_path)
+    #
+    #     print(f"控件区域已保存到: {save_path}")
+
+    def test_capture_in_hwnd(self):
+        desktop = winshell.desktop()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        save_path = os.path.join(desktop, f"capture_{timestamp}.png")
+
+        # # Weixin
+        # weixin_cfg = [
+        #     {
+        #         "type": "kwargs",
+        #         "rule": {"ClassName": "mmui::MainTabBar"}
+        #     }
+        # ]
+        # image_utils.capture_in_hwnd(
+        #     69372, save_path,
+        #     "20%w", "41%w", "-77%w", "-98%w",
+        #     cfg=weixin_cfg
+        # )
+
+    #         # WeChat
+    #         wechat_cfg = [
+    #   {
+    #     "type": "location",
+    #     "rule": [
+    #       { "control": "PaneControl", "kwargs": { "foundIndex": 2 } },
+    #       { "control": "PaneControl", "kwargs": { "foundIndex": 1 } },
+    #       { "control": "ToolBarControl", "kwargs": { "foundIndex": 1 } },
+    #       { "control": "ButtonControl", "kwargs": { "foundIndex": 1 } }
+    #     ]
+    #   }
+    # ]
+    #         image_utils.capture_in_hwnd(
+    #             267908, save_path,
+    #             cfg=wechat_cfg)
+
+    # # WXWork
+    # wxwork_cfg = [
+    #     {
+    #         "type": "kwargs",
+    #         "rule": {"ClassName": "TitleBarWindow"}
+    #     }
+    # ]
+    # image_utils.capture_in_hwnd(
+    #     268338, save_path,
+    #     "60%h", "96%h", "-139%h", "-175%h",
+    #     cfg=wxwork_cfg
+    # )
+
+    # # QQNT
+    # qqnt_cfg = []
+    # image_utils.capture_in_hwnd(
+    #     133212, save_path,
+    #     # "68*", "8*", "-91*", "-31*",
+    #     cfg=qqnt_cfg
+    # )
+
+    # QQ
+    # qq_cfg = [
+    #     {
+    #         "type": "location",
+    #         "rule": [
+    #           { "control": "PaneControl", "kwargs": { "foundIndex": 2 } },
+    #           { "control": "PaneControl", "kwargs": { "foundIndex": 1 } },
+    #           { "control": "PaneControl", "kwargs": { "foundIndex": 2 } },
+    #           { "control": "PaneControl", "kwargs": { "foundIndex": 1 } },
+    #           { "control": "PaneControl", "kwargs": { "foundIndex": 1 } },
+    #           { "control": "PaneControl", "kwargs": { "foundIndex": 1 } },
+    #           { "control": "PaneControl", "kwargs": { "foundIndex": 1 } },
+    #           { "control": "ButtonControl", "kwargs": { "foundIndex": 1 } },
+    #           { "control": "PaneControl", "kwargs": { "foundIndex": 1 } },
+    #         ]
+    #       }
+    # ]
+    # image_utils._get_capture_location_and_size(
+    #     136624,
+    #     10, 10, -20, -20,
+    #     cfg=qq_cfg
+    # )
+
+    def test_print_tree(self):
+        def print_tree(ctrl, depth=0):
+            indent = "  " * depth
+            print(
+                f"{indent}{ctrl.ControlTypeName} Name={ctrl.Name!r} ClassName={ctrl.ClassName!r} Rect={ctrl.BoundingRectangle}")
+
+            for child in ctrl.GetChildren():
+                print_tree(child, depth + 1)
+
+        win = auto.ControlFromHandle(333212)
+        print_tree(win)
+
+        # target = (
+        #     win.PaneControl(foundIndex=2)
+        #     .PaneControl(foundIndex=1)
+        #     .ToolBarControl(foundIndex=1)
+        #     .ButtonControl(foundIndex=1)
+        # )
+        # print(target)
+
+    # def test_dxcam(self):
+    #     ### 废弃...
+    #     # 1) 你的窗口
+    #     hwnd = 136624
+    #     l, t, r, b = win32gui.GetWindowRect(hwnd)
+    #
+    #     # 2) 内部坐标
+    #     local_left = 40
+    #     local_top = 60
+    #     w = 300
+    #     h = 200
+    #
+    #     # 3) 计算全局坐标
+    #     x1 = l + local_left
+    #     y1 = t + local_top
+    #     x2 = x1 + w
+    #     y2 = y1 + h
+    #
+    #     # 4) ⬅ 转换为目标屏幕坐标（关键！）
+    #     bbox = to_screen_local_coords(hwnd, x1, y1, x2, y2)
+    #
+    #     # 5) 使用正确屏幕实例化 dxcam
+    #     idx = get_monitor_index_from_hwnd(hwnd)
+    #     cam = dxcam.create(output_idx=idx)
+    #
+    #     # 6) 截图
+    #     frame = cam.grab(bbox)
+    #     print(frame)
+    #     # 去掉 alpha
+    #     bgr = frame[:, :, :3]
+    #
+    #     # gamma 矫正：linear -> sRGB
+    #     gamma = 2.2
+    #     corrected = ((bgr / 255.0) ** (1 / gamma)) * 255
+    #     corrected = corrected.astype("uint8")
+    #     frame = cv2.cvtColor(frame[:, :, :3], cv2.COLOR_BGRA2BGR)
+    #
+    #
+    #     desktop = winshell.desktop()
+    #     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #     save_path = os.path.join(desktop, f"capture_{timestamp}.png")
+    #     cv2.imwrite(save_path, frame)
+    #     print("已保存到:", save_path)
+
+    def test_(self):
+        def capture_window(hwnd, output):
+            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+            width = right - left
+            height = bottom - top
+
+            with mss.mss() as sct:
+                img = sct.grab({
+                    "left": left,
+                    "top": top,
+                    "width": width,
+                    "height": height
+                })
+                mss.tools.to_png(img.rgb, img.size, output=output)
+
+        desktop = winshell.desktop()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        save_path = os.path.join(desktop, f"capture_{timestamp}.png")
+        capture_window(136624, save_path)
+
+# import win32api
+
+# def get_monitor_index_from_hwnd(hwnd):
+#     l, t, r, b = win32gui.GetWindowRect(hwnd)
+#     cx = (l + r) // 2
+#     cy = (t + b) // 2
+#     monitors = win32api.EnumDisplayMonitors()
+#     for idx, (hMonitor, hdcMonitor, (ml, mt, mr, mb)) in enumerate(monitors):
+#         if ml <= cx <= mr and mt <= cy <= mb:
+#             return idx
+#     return 0
+
+# def to_screen_local_coords(hwnd, x1, y1, x2, y2):
+#     monitors = win32api.EnumDisplayMonitors()
+#     idx = get_monitor_index_from_hwnd(hwnd)
+#     (_, _, (ml, mt, mr, mb)) = monitors[idx]
+#     return (x1 - ml, y1 - mt, x2 - ml, y2 - mt)
