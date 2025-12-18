@@ -496,24 +496,25 @@ class AccOperatorCore:
         need_to_notice = []
 
         # 1. 获取所有账号节点的url和昵称，将空的账号返回
-        accounts_need_to_get_avatar = []
+        accounts_need_avatar = []
         accounts_need_to_get_nickname = []
         sw_data = SwAccData().get_(sw)
         # print(login, logout)
         for acc in sw_data:
             avatar_url, nickname = AccInfoFuncCore.get_sw_acc_data(sw, acc, avatar_url=None, nickname=None)
             if avatar_url is None:
-                accounts_need_to_get_avatar.append(acc)
+                accounts_need_avatar.append(acc)
             if nickname is None:
                 accounts_need_to_get_nickname.append(acc)
-        # print(accounts_need_to_get_avatar, accounts_need_to_get_nickname)
+        # print(accounts_need_avatar, accounts_need_to_get_nickname)
         # 2. 对待获取url的账号遍历尝试获取
-        if len(accounts_need_to_get_avatar) > 0:
-            Printer().print_vn(f"无头像: {accounts_need_to_get_avatar}")
+        if len(accounts_need_avatar) > 0:
+            Printer().print_vn(f"无头像: {accounts_need_avatar}")
             need_to_notice.append(
                 FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_avatar_url_from_file(
-                    sw, accounts_need_to_get_avatar, data_dir))
-            need_to_notice.append(AccInfoFuncCore.get_avatar_from_other_sw(sw, accounts_need_to_get_avatar))
+                    sw, accounts_need_avatar, data_dir))
+            need_to_notice.append(AccInfoFuncCore.get_avatar_from_other_sw(sw, accounts_need_avatar))
+            need_to_notice.append(AccInfoFuncCore.get_avatar_from_cache(sw, accounts_need_avatar))
         # 3. 对待获取昵称的账号尝试遍历获取
         if len(accounts_need_to_get_nickname) > 0:
             Printer().print_vn(f"无昵称: {accounts_need_to_get_nickname}")
@@ -1114,6 +1115,39 @@ class AccInfoFuncCore:
         else:
             return CfgStatus.NO_CFG.value
 
+    """缓存"""
+    @classmethod
+    def get_avatar_from_cache(cls, sw, acc_list):
+        user_dir = RootSetting().user_dir
+        changed = False
+        for acc in acc_list:
+            pid, = cls.get_sw_acc_data(sw, acc, pid=None)
+            avatar_path = os.path.join(user_dir, sw, f"{acc}", f"{acc}.jpg")
+            if not os.path.isfile(avatar_path):
+                avatar_cache_dir = os.path.join(tempfile.gettempdir(), Config.AVATAR_CACHE_PATH_SUFFIX)
+                datestamp = datetime.now().strftime("%Y%m%d")
+                capt_dir = os.path.join(avatar_cache_dir, f"{pid}_{datestamp}")
+                if not os.path.isdir(capt_dir):
+                    continue
+                # 在缓存目录中查找第二新的头像
+                files = [
+                    os.path.join(capt_dir, f)
+                    for f in os.listdir(capt_dir)
+                    if os.path.isfile(os.path.join(capt_dir, f))
+                ]
+                if not files:
+                    continue
+                else:
+                    files.sort(key=os.path.getmtime, reverse=True)
+                    cache_avatar_path = files[1] if len(files) > 1 else files[0]
+                # 拷贝缓存头像
+                if os.path.isfile(cache_avatar_path) and not os.path.isfile(avatar_path):
+                    os.makedirs(os.path.dirname(avatar_path), exist_ok=True)
+                    shutil.copyfile(cache_avatar_path, avatar_path)
+                    changed = True
+        return changed
+
+
     """自适应"""
 
     @staticmethod
@@ -1170,13 +1204,13 @@ class AccInfoFuncCore:
                         if now_avatar_url is not None:
                             success = image_utils.download_image(now_avatar_url, now_avatar_path)
                             if success is True:
-                                return True
+                                changed = True
                         other_avatar_path = os.path.join(user_dir, other_sw, f"{other_acc}",
                                                          f"{other_acc}.jpg")
                         if os.path.isfile(other_avatar_path) and not os.path.isfile(now_avatar_path):
                             os.makedirs(os.path.dirname(now_avatar_path), exist_ok=True)
                             shutil.copyfile(other_avatar_path, now_avatar_path)
-                            return True
+                            changed = True
         return changed
 
     @classmethod
