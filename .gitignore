@@ -1,5 +1,4 @@
 # 输出文件
-/user_files/
 /dist/
 /external_res/sy.ini
 
@@ -22,4 +21,4 @@ __pycache__/
 .idea/
 *.iml
 /external_res/Updater.exe
-/dev_user_files/
+/storage/

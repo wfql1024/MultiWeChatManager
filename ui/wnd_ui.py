@@ -23,6 +23,7 @@ from PIL import Image, ImageTk
 from components.custom_widgets import CustomBtn, CustomCornerBtn
 from components.custom_widgets import DefaultEntry
 from components.widget_wrappers import SubToolWndUI, HotkeyEntry4KeyboardW, ScrollableCanvasW
+from data_access import RootSetting
 from data_access.setting import StatisticData
 from func_core.acc_func_core import AccInfoFuncCore, AccOperatorCore
 from func_core.app_func_core import AppFuncCore
@@ -2068,7 +2069,7 @@ class GlobalSettingWndUI(SubToolWndUI):
         user_dir_frame.pack(side="top", fill="x")
         _, user_dir_btn_frame, _, user_dir_var = self._create_label_btn_entry_grid(user_dir_frame, "本地目录:", "")
         self.origin_user_dir = App().user_dir
-        default_dir = Config.DEFAULT_USER_DIR
+        default_dir = RootSetting().ver_root_dir + "/" + Config.DEFAULT_USER_DIR_SUFFIX
         b = _create_btn_in_(user_dir_btn_frame, "默认")
         b.set_bind_map(
             **{"1": partial(user_dir_var.set, default_dir)}).apply_bind(self.root)
@@ -2222,11 +2223,12 @@ class GlobalSettingWndUI(SubToolWndUI):
             return False, None
         normalized = path.replace("\\", "/")
         normalized = normalized.rstrip("/")
-        # 检查末尾是否为 user_files
+        # 检查末尾是否为 %VER%/user_files 或 %VER%/dev_user_files
+        ver = App().curr_full_ver
         if getattr(sys, "frozen", False):
-            suffix = "user_files"
+            suffix = f"{ver}/user_files"
         else:
-            suffix = "dev_user_files"
+            suffix = f"{ver}/dev_user_files"
         if not normalized.endswith(suffix):
             normalized = f"{normalized}/{suffix}"
         return True, normalized

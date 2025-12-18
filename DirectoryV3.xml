@@ -48,4 +48,5 @@
     <tree path="/components/widget_wrappers.py" title="控件包装类"/>
     <tree path="/scripts/dir_tree_creator.py" title="生成项目结构树"/>
     <tree path="/scripts/dir_tree_config.xml" title="项目结构树配置"/>
+    <tree path="/storage" title="项目生成的持久化数据"/>
 </trees>

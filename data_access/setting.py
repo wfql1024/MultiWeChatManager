@@ -1,10 +1,13 @@
 import math
 import os
+import re
+import sys
 from enum import Enum
 from typing import Union, Dict, Tuple, Any, Optional, Type
 
 from public import Config, Strings
 from public.enums import SwEnum, RootCfgKey
+from utils import file_utils
 from utils.file_utils import JsonUtils, DictUtils
 from utils.logger_utils import Logger
 
@@ -85,12 +88,39 @@ class RootSetting(AbsSetting):
         if path is not None:
             self.set_data_src(path)
         else:
-            self.set_data_src(Config.ROOT_CONFIG_PATH)
+            self.set_data_src(self.ver_root_dir + "/" + Config.ROOT_CONFIG_PATH_SUFFIX)
+
+    def get_current_ver_root_dir(self):
+        """获取当前版本的根配置目录"""
+        version = self.get_app_current_version()
+        try:
+            ver_root_dir = Config.ROOT_DATA_ADDR.replace("%VER%", version)
+        except Exception as e:
+            print(e)
+            ver_root_dir = Config.ROOT_DATA_ADDR + f"/{version}"
+        return ver_root_dir
+
+    @staticmethod
+    def get_app_current_version():
+        # 获取版本号
+        if getattr(sys, 'frozen', False):
+            exe_path = sys.executable
+            version_number = file_utils.get_file_version(exe_path)  # 获取当前执行文件的版本信息
+        else:
+            with open(Config.VERSION_FILE, 'r', encoding='utf-8') as version_file:
+                version_info = version_file.read()
+                # 使用正则表达式提取文件版本
+                match = re.search(r'filevers=\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)', version_info)
+                if match:
+                    version_number = '.'.join([match.group(1), match.group(2), match.group(3), match.group(4)])
+                else:
+                    version_number = "未知版本"
+        return f"v{version_number}-{Config.VER_STATUS}"
 
     def fetch_user_dir_or_set_default(self):
         user_dir, = self.get_(**{RootCfgKey.USER_DIR: None})
         if user_dir is None:
-            user_dir = Config.DEFAULT_USER_DIR
+            user_dir = self.ver_root_dir + "/" + Config.DEFAULT_USER_DIR_SUFFIX
             self.update_(**{RootCfgKey.USER_DIR: user_dir})
         return user_dir
 
@@ -107,6 +137,10 @@ class RootSetting(AbsSetting):
             remote_global_url = Strings.REMOTE_GLOBAL_GITEE
             self.update_(**{RootCfgKey.REMOTE_GLOBAL: remote_global_url})
         return remote_global_url
+
+    @property
+    def ver_root_dir(self):
+        return self.get_current_ver_root_dir()
 
     @property
     def user_dir(self):

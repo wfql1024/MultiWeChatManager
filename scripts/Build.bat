@@ -1,4 +1,7 @@
 @echo off
+chcp 65001 >nul
+
+@echo off
 :: 强制切换到脚本所在目录
 cd /d "%~dp0"
 

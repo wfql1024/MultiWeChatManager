@@ -222,21 +222,7 @@ class AppFuncCore:
 
     @staticmethod
     def get_app_current_version():
-        # 获取版本号
-        if getattr(sys, 'frozen', False):
-            exe_path = sys.executable
-            version_number = file_utils.get_file_version(exe_path)  # 获取当前执行文件的版本信息
-        else:
-            with open(Config.VERSION_FILE, 'r', encoding='utf-8') as version_file:
-                version_info = version_file.read()
-                # 使用正则表达式提取文件版本
-                match = re.search(r'filevers=\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)', version_info)
-                if match:
-                    version_number = '.'.join([match.group(1), match.group(2), match.group(3), match.group(4)])
-                else:
-                    version_number = "未知版本"
-
-        return f"v{version_number}-{Config.VER_STATUS}"
+        return RootSetting().get_app_current_version()
 
     @classmethod
     def split_vers_by_cur_from_local(cls, current_ver) -> Union[Tuple[bool, Tuple[list, list]], Tuple[bool, str]]:

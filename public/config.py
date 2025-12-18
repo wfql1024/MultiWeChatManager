@@ -121,13 +121,17 @@ class Config:
     # 路径定义
     PROJ_PATH = os.path.abspath(os.path.join(current_file_dir, '..'))
     ROOT_DATA_DIR = str(Path.home() / fr".JhiFengMultiChat").replace('\\', '/')
+    ROOT_DATA_ADDR = fr"{ROOT_DATA_DIR}/%VER%"
     PROJ_EXTERNAL_RES_PATH = fr'{PROJ_PATH}/external_res'
-    # PROJ_USER_PATH = fr'{PROJ_PATH}/user_files'
     PROJ_META_PATH = fr'{PROJ_PATH}/.meta'
 
-    ROOT_CONFIG_PATH = fr"{ROOT_DATA_DIR}/root_config.json"
-    DEFAULT_USER_DIR = fr"{ROOT_DATA_DIR}/user_files" \
-        if getattr(sys, "frozen", False) else fr"{ROOT_DATA_DIR}/dev_user_files"
+    # PROJ_USER_PATH = fr'{PROJ_PATH}/user_files'
+    # ROOT_CONFIG_PATH = fr"{ROOT_DATA_DIR}/root_config.json" \
+    #     if getattr(sys, "frozen", False) else fr"{ROOT_DATA_DIR}/dev_root_config.json"
+    # DEFAULT_USER_DIR = fr"{ROOT_DATA_DIR}/user_files" \
+    #     if getattr(sys, "frozen", False) else fr"{ROOT_DATA_DIR}/dev_user_files"
+    ROOT_CONFIG_PATH_SUFFIX = fr"root_config.json" if getattr(sys, "frozen", False) else fr"dev_root_config.json"
+    DEFAULT_USER_DIR_SUFFIX = fr"user_files" if getattr(sys, "frozen", False) else fr"dev_user_files"
 
     HANDLE_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/handle.exe'
     WECHAT_DUMP_EXE_PATH = fr'{PROJ_EXTERNAL_RES_PATH}/wechat-dump-rs.exe'
