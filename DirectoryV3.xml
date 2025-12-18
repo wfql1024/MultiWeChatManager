@@ -42,4 +42,10 @@
     <tree path="/scripts/original_remote_setting_v7.json" title="版本适配调整结构以适应新类型扫描方式"/>
     <tree path="/data_access" title="数据操作层"/>
     <tree path="/func_core" title="功能实现"/>
+    <tree path="/components/composited_controls.py" title="自定义的组合套件" extension="" presentableText=""
+          tooltipTitle="" icon="" textColor="" backgroundColor=""/>
+    <tree path="/components/custom_widgets.py" title="对基础控件进行重写的自定义控件"/>
+    <tree path="/components/widget_wrappers.py" title="控件包装类"/>
+    <tree path="/scripts/dir_tree_creator.py" title="生成项目结构树"/>
+    <tree path="/scripts/dir_tree_config.xml" title="项目结构树配置"/>
 </trees>

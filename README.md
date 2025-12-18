@@ -1,4 +1,4 @@
-<h3 align="center"><img src="https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/refs/heads/master/external_res/JFMC.png" width="250px"></h3>
+<h3 align="center"><img src="https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/refs/heads/python/external_res/JFMC.png" width="250px"></h3>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Windows 7~11-blue">
@@ -25,11 +25,11 @@
 |       | 共存多开 | 全局多开 | 免补丁多开 | 防撤回  | 登录状态识别        | △路径自动获取 | △头像,昵称自动获取 | △头像,昵称解密获取 | 免扫码登录        | 侧栏  | 快捷开启 |
 |-------|------|------|-------|------|---------------|---------|------------|------------|--------------|-----|------|
 | 微信    | √    | √    | √     | √    | √             | √       | √          | √          | √            | √   | √    |
-| 微信4.0 | √    | √    | √     | √    | √             | √       | 依赖旧微信      | 版本更新       | √            | √   | √    |
-| 企业微信  | √    | 暂不支持 | √     | 暂不支持 | √(多企业会同时显示在线) | √       | 版本更新       | 版本更新       | 待优化          | √   | √    |
-| QQ    | /    | /    | /     | √    | √             | √       | 版本更新       | 版本更新       | √            | 待优化 | √    |
-| QQNT  | /    | /    | /     | √    | √             | √       | 版本更新       | 版本更新       | /(原生会自动换号登录) | 待优化 | /    |
-| TIM   | /    | /    | /     | √    | √             | √       | 版本更新       | 版本更新       | √            | √   | √    |
+| 微信4.0 | √    | √    | √     | √    | √             | √       | √(截图)      | 版本更新       | √            | √   | √    |
+| 企业微信  | √    | 暂不支持 | √     | 暂不支持 | √(多企业会同时显示在线) | √       | √(截图)       | 版本更新       | 待优化          | √   | √    |
+| QQ    | /    | /    | /     | √    | √             | √       | √(截图)       | 版本更新       | √            | 待优化 | √    |
+| QQNT  | /    | /    | /     | √    | √             | √       | √(截图)       | 版本更新       | /(原生会自动换号登录) | 待优化 | /    |
+| TIM   | /    | /    | /     | √    | √             | √       | √(截图)       | 版本更新       | √            | √   | √    |
 |       |      |      |       |      |               |         |            |            |              |     |      |
 
 ## 核心功能
@@ -69,7 +69,7 @@
 
 - **其他功能**：
     - 统计功能
-    - 创建启动器，则可以通过不使用本软件，而是快捷方式直接切换到想要的账号登录
+    - 创建启动器，可以通过不使用本软件，而是快捷方式直接切换到想要的账号登录
     - 调试器，方便反馈
     - 使用代理运行软件
 
@@ -102,44 +102,73 @@
 ### txt格式
 
 ```
-├─📁 adaptation-------------------#对不同平台的功能实现
-│ ├─📁 impl
-│ ├─📄 interface.py
+├─📁 components-------------------------#在界面层可复用的基本组件
+│ ├─📄 composited_controls.py-----------#自定义的组合套件
+│ ├─📄 custom_widgets.py----------------#对基础控件进行重写的自定义控件
+│ ├─📄 widget_wrappers.py---------------#控件包装类
 │ └─📄 __init__.py
-├─📁 decrypt----------------------#解密方法
-│ ├─📁 impl
-│ │ ├─📄 WeChat_decrypt_impl.py
-│ │ └─📄 Weixin_decrypt_impl.py
-│ ├─📄 interface.py
+├─📁 data_access------------------------#数据操作层
+│ ├─📄 setting.py
 │ └─📄 __init__.py
-├─📁 Demo-------------------------#与项目相关的独立示例代码，可以探索下
-├─📁 external_res-----------------#引用到的外部资源
-│ ├─📄 ...
-│ ├─📄 Updater.exe----------------#升级程序打包得到
-├─📁 functions--------------------#功能层代码，实现项目中的具体功能
+├─📁 docs
+│ ├─📄 logic_filter_rules.md
+│ └─📄 remote_sw_structure.md
+├─📁 external_res-----------------------#引用到的外部资源
+│ ├─📄 Feedback.png
+│ ├─📄 handle.exe
+│ ├─📄 JFMC.ico
+│ ├─📄 JFMC.png
+│ ├─📄 rewards.png
+│ └─📄 Updater.exe
+├─📁 functions--------------------------#功能调用, 更常用的功能在这提供接口
 │ ├─📄 acc_func.py
 │ ├─📄 app_func.py
-│ ├─📄 main_func.py
-│ ├─📄 subfunc_file.py------------#subfunc为介于工具类和功能直接实现类的子功能类
+│ ├─📄 func_tool.py---------------------#中间层, 用来获取实现类
 │ ├─📄 sw_func.py
 │ ├─📄 wnd_func.py
 │ └─📄 __init__.py
-├─📁 public_class-----------------#公用的类
-│ ├─📄 custom_classes.py
-│ ├─📄 custom_widget.py
-│ ├─📄 enums.py
-│ ├─📄 global_members.py----------#作用全局的成员
-│ ├─📄 reusable_widgets.py--------#可复用的控件
-│ ├─📄 widget_frameworks.py
+├─📁 func_core--------------------------#功能实现
+│ ├─📄 acc_func_core.py
+│ ├─📄 acc_func_impl.py
+│ ├─📄 app_func_core.py
+│ ├─📄 sw_func_core.py
+│ ├─📄 sw_func_impl.py
 │ └─📄 __init__.py
-├─📁 resources--------------------#项目代码资源
+├─📁 public-----------------------------#公用资源, 可被其他包调用
 │ ├─📄 config.py
-│ ├─📄 constants.py
+│ ├─📄 custom_classes.py
+│ ├─📄 enums.py
+│ ├─📄 global_members.py----------------#可在全局调用
 │ ├─📄 strings.py
 │ └─📄 __init__.py
-├─📁 ui---------------------------#界面层代码，实现界面创建和更新
+├─📁 remote_configs---------------------#加密的云端配置源
+│ ├─📄 remote_global_v1
+│ ├─📄 remote_setting_v7
+│ ├─📄 remote_setting_v8
+│ └─📄 remote_sw_v9
+├─📁 scripts----------------------------#执行的脚本代码
+│ ├─📄 build.bat
+│ ├─📄 BuildByNuitka.bat
+│ ├─📄 click_me_to_create_lnk.bat
+│ ├─📄 data_revision.py
+│ ├─📄 dir_tree.md
+│ ├─📄 dir_tree.txt
+│ ├─📄 dir_tree_config.xml--------------#项目结构树配置
+│ ├─📄 dir_tree_creator.py--------------#生成项目结构树
+│ ├─📄 encrypt_data.py
+│ ├─📄 extract_common_features.py
+│ ├─📄 fix_project.py
+│ ├─📄 original_remote_global_v1.json
+│ ├─📄 original_remote_setting_v4.json--#3.3前使用, 修改版本适配结构, 增加特征码适配
+│ ├─📄 original_remote_setting_v7.json--#版本适配调整结构以适应新类型扫描方式
+│ ├─📄 original_remote_setting_v8.json
+│ ├─📄 original_remote_sw_v9.json
+│ └─📄 requirements.bat
+├─📁 ui---------------------------------#界面层代码，实现界面创建和更新
 │ ├─📄 acc_manager_ui.py
+│ ├─📄 cfg_manager_ui.py
 │ ├─📄 classic_row_ui.py
+│ ├─📄 exe_manager_ui.py
 │ ├─📄 login_ui.py
 │ ├─📄 main_ui.py
 │ ├─📄 menu_ui.py
@@ -148,26 +177,48 @@
 │ ├─📄 treeview_row_ui.py
 │ ├─📄 wnd_ui.py
 │ └─📄 __init__.py
-├─📁 utils------------------------#工具类代码，可移植到其他项目中使用
-│ ├─📁 better_wx------------------#鸣谢：zetaloop大佬的better-wx项目代码
+├─📁 utils------------------------------#工具类代码，可移植到其他项目中使用
+│ ├─📁 better_wx
+│ │ ├─📁 legacy
+│ │ │ ├─📄 revoke.py
+│ │ │ └─📄 unmutex.py
+│ │ ├─📄 coexist.py
+│ │ ├─📄 inner_utils.py
+│ │ ├─📄 revoke.py
+│ │ ├─📄 sound_extract.py
+│ │ ├─📄 sound_replace.py
+│ │ ├─📄 tmp_coexist.py
+│ │ └─📄 __init__.py
+│ ├─📁 decrypt--------------------------#解密方法
+│ │ ├─📄 interface.py
+│ │ ├─📄 WeChat_decrypt_impl.py
+│ │ ├─📄 Weixin_decrypt_impl.py
+│ │ └─📄 __init__.py
+│ ├─📁 pywinhandle
+│ │ ├─📁 src
+│ │ │ ├─📄 pywinhandle.py
+│ │ │ └─📄 __init__.py
+│ │ └─📄 README.md
+│ ├─📄 collection_utils.py
+│ ├─📄 diff2files.py
 │ ├─📄 encoding_utils.py
 │ ├─📄 file_utils.py
-│ ├─📄 ...
+│ ├─📄 handle_utils.py
+│ ├─📄 hwnd_utils.py
+│ ├─📄 image_utils.py
+│ ├─📄 logger_utils.py
+│ ├─📄 memory_utils.py
+│ ├─📄 parser.py
+│ ├─📄 process_utils.py
 │ ├─📄 sys_utils.py
 │ ├─📄 widget_utils.py
 │ └─📄 __init__.py
 ├─📄 @AutomationLog.txt
-├─📄 Build4Win10+.bat-------------#打包脚本
-├─📄 Build4Win7.bat---------------#打包脚本
-├─📄 click_me_to_create_lnk.bat---#创建软件快捷方式
 ├─📄 DirectoryV3.xml
 ├─📄 LICENSE
-├─📄 main.py----------------------#入口，管理员身份及程序参数解析
+├─📄 main.py----------------------------#入口，管理员身份及程序参数解析
 ├─📄 README.md
-├─📄 remote_setting---------------#v3：加密json适配表得到的云端配置源
-├─📄 remote_setting_v4------------#v4：加密当前使用的适配表得到的云端配置源
+├─📄 remote_setting_v4
 ├─📄 requirements.txt
-├─📄 update_program.py------------#升级器
-├─📄 version_adaptation.json------#v2：2.5左右版本适配表，维护3.9微信的全局多开、防撤回及软件的版本日志
-└─📄 version_config.json----------#v1：2.3.3.333之前使用的适配表，维护3.9微信的全局多开
+└─📄 update_program.py------------------#升级器
 ```
