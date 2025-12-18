@@ -312,7 +312,9 @@ class ExeManagerUI:
         Printer().debug(f"所有补丁文件: {all_patching_files}")
         success, msg = file_utils.restore_files(all_patching_files)
         if success is not True:
-            messagebox.showerror("错误", msg)
+            messagebox.showerror(
+                "错误", f"重置失败: {msg}"
+                        f"请检查软件是否已关闭!")
         else:
             messagebox.showinfo(
                 "成功", f"重置成功!"
