@@ -78,7 +78,7 @@ class DictUtils:
             # 非字典，无法操作
             if not isinstance(data, dict):
                 return False
-            # 地址为空、地址不可解析，无法对自身操作
+            # 地址为空、地址不可解析，不对自身操作
             if keys_chain is None or not isinstance(keys_chain, list):
                 return False
 
@@ -97,7 +97,8 @@ class DictUtils:
     @staticmethod
     def _clear_nested_value(data: dict, keys_chain: Optional[list]) -> bool:
         """
-        按照地址格式清空字典中的子字典或值（可以设置默认值），该方法不会对不存在的键路径进行创建
+        按照地址格式清空字典中的子字典或值
+        注意: 该方法**不会**对不存在的键路径进行创建
         :return: 是否成功
         """
         try:
@@ -113,8 +114,43 @@ class DictUtils:
                 value.clear()
             else:
                 DictUtils._set_nested_value(data, keys_chain, None)
+            Printer().normal(f"置空了{keys_chain[-1]}节点...")
             return True
 
+        except Exception as e:
+            logger.error(e)
+            return False
+
+    @staticmethod
+    def _del_nested_value(data: dict, keys_chain: Optional[list]) -> bool:
+        """
+        按照地址格式删除字典中的节点，该方法不会对不存在的键路径进行创建
+        :return: 是否成功
+        """
+        # Printer().debug(f"删除{keys_chain}处数据...")
+        try:
+            # 不传入data，无法操作
+            if data is None:
+                return False
+            # 地址为空, 对根节点, 无法操作
+            if keys_chain is None or len(keys_chain) == 0:
+                return False
+            # 地址无法解析，无法操作
+            if not isinstance(keys_chain, list):
+                return False
+            # 根据地址，查找对应的子字典或值，路径不存在则无法操作, 存在则删除
+            sub_data = data
+            # 遍历到倒数第二个键，确保路径存在
+            for key in keys_chain[:-1]:
+                if isinstance(sub_data, dict) and key in sub_data:
+                    sub_data = sub_data[key]
+                else:
+                    return False
+            end_node_name = keys_chain[-1]
+            if isinstance(sub_data, dict) and end_node_name in sub_data:
+                Printer().normal(f"删除了{end_node_name}节点...")
+                del sub_data[end_node_name]
+            return True
         except Exception as e:
             logger.error(e)
             return False
@@ -237,18 +273,68 @@ class DictUtils:
                 else:
                     # 合法拼接
                     if len(kwargs) == 0:
-                        # 拼接前置地址，清除该节点
+                        # 拼接前置地址，置空该节点
                         return DictUtils._clear_nested_value(data, list(front_addr))
                     else:
                         # 拼接前置地址，得到中间根节点进行后续处理
                         sub_data = DictUtils._get_nested_value(data, list(front_addr))
 
-            # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给set_nested_value方法批量处理
+            # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给_del_nested_value方法批量处理
+            # 中间根节点不是字典，后续无法处理
+            if not isinstance(sub_data, dict):
+                return False
+            # 中间根节点是字典，交给_clear_nested_value方法批量处理
+            return all(DictUtils._clear_nested_value(sub_data, [key_path])
+                       for key_path, _ in kwargs.items())
+
+        except Exception as e:
+            logger.error(e)
+            return False
+
+    @staticmethod
+    def del_nested_values(data: dict, *front_addr, **kwargs) -> bool:
+        """
+        按照地址格式清空字典中的子字典,子列表或值，该方法不会对不存在的键路径进行创建
+        建议不传入kwargs,单次使用只清理一个位置;批量清理可能并不能达到你想要的效果
+        :param data: 嵌套字典
+        :param front_addr: 前置地址，如：("wechat", "account1")
+        :param kwargs: 需要更新的键地址及其值（如 note="", nickname=None）
+        :return: 是否成功
+        """
+        # print("批量清除节点....................................")
+        # print(data, front_addr, kwargs)
+        try:
+            # 非字典，无法操作
+            if not isinstance(data, dict):
+                return False
+            # 1. 尝试拼接前置地址，得到中间根节点
+            # 没有传入前置地址，或者传入的都是None，则中间根节点为data本身
+            if len(front_addr) == 0:
+                if len(kwargs) == 0:
+                    # 不对自身操作
+                    return False
+                else:
+                    # 中间根节点是data本身，进入后续处理
+                    sub_data = data
+            else:
+                # 存在非法拼接：若前置地址中只能传入空或者字符串，若有其他类型则拼接失败，无法操作
+                if not all(key is None or isinstance(key, str) for key in front_addr):
+                    return False
+                else:
+                    # 合法拼接
+                    if len(kwargs) == 0:
+                        # 拼接前置地址，删除该节点
+                        return DictUtils._del_nested_value(data, list(front_addr))
+                    else:
+                        # 拼接前置地址，得到中间根节点进行后续处理
+                        sub_data = DictUtils._get_nested_value(data, list(front_addr))
+
+            # 2. 中间根节点已经获取，处理一些特殊情况，其余可以交给_del_nested_value方法批量处理
             # 中间根节点不是字典，后续无法处理
             if not isinstance(sub_data, dict):
                 return False
             # 中间根节点是字典，交给set_nested_value方法批量处理
-            return all(DictUtils._clear_nested_value(sub_data, [key_path])
+            return all(DictUtils._del_nested_value(sub_data, [key_path])
                        for key_path, _ in kwargs.items())
 
         except Exception as e:

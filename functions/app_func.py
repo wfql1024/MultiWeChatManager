@@ -288,7 +288,7 @@ class AppFunc:
         print(f"设置了自启动：{accounts_to_auto_start}")
         # 获取已经登录的账号
         for sw in accounts_to_auto_start:
-            success, result = AccInfoFuncCore.get_sw_acc_list(sw)
+            success, result = AccInfoFuncCore.get_sw_accounts_login_status(sw)
             if success is not True:
                 continue
             acc_list_dict, _ = result

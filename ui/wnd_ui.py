@@ -119,6 +119,7 @@ class WndCreator:
         detail_window = cls.create_new_wnd()
         detail_ui = DetailUI(detail_window, f"属性 - {acc}", sw, acc, tab_class)
         detail_ui.set_focus_to_(widget_to_focus)
+        return detail_ui
 
     @classmethod
     def open_statistic(cls, sw):

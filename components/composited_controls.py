@@ -1114,7 +1114,7 @@ class RadioTreeView:
         self.initialize_members_in_init()
 
         self.create_frame()
-        self.create_title() if self.title_text is not None else None
+        self.create_title()  # if self.title_text is not None else ...
         self.tree = self.create_table(self.columns)
         self.display_table()
         self.set_table_style()

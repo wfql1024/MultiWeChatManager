@@ -12,13 +12,15 @@ from PIL import Image, ImageTk
 
 from components.composited_controls import RadioTreeView
 from components.custom_widgets import CustomCornerBtn
+from func_core.acc_func_core import AccOperatorCore
 from functions.acc_func import AccInfoFuncCore, Acc
 from functions.app_func import App
+from functions.sw_func import Sw
 from public import Config
-from public.enums import OnlineStatus
+from public.enums import OnlineStatus, RemoteSwKey
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
-from utils import hwnd_utils
+from utils import widget_utils
 from utils.hwnd_utils import TkWndUtils
 from utils.logger_utils import mylogger as logger, Printer
 from utils.widget_utils import TreeUtils
@@ -231,7 +233,7 @@ class SidebarUI:
                 if self.linked_hwnd and win32gui.IsWindow(self.linked_hwnd):
                     # 获取目标窗口当前各种状态
                     curr_linked_wnd_state = self.get_linked_wnd_state(self.linked_hwnd)
-                    Printer().debug(f"{self.linked_hwnd}当前状态: "
+                    Printer().normal(f"{self.linked_hwnd}当前状态: "
                                     f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
                                     f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
                                     f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
@@ -354,48 +356,51 @@ class SidebarUI:
             new_linked_hwnd = old_linked_hwnd
 
         # 如果原窗口是其他账号的窗口
-        if old_linked_hwnd and win32gui.IsWindow(old_linked_hwnd) and old_linked_hwnd != self.root_hwnd:
-            print("账号切换到账号窗口...")
-            # 获取窗口的位置和尺寸
-            bar_rect = win32gui.GetWindowRect(self.bar_hwnd)
-            old_linked_wnd_rect = win32gui.GetWindowRect(old_linked_hwnd)
-            # 将主窗口调整到侧栏右侧，并设置相同高度
-            hwnd_utils.restore_window(new_linked_hwnd)
-            time.sleep(0.2)
-            # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
-            # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
-            try:
-                win32gui.SetWindowPos(
-                    new_linked_hwnd,
-                    win32con.HWND_TOP,
-                    bar_rect[2],  # x坐标设为侧栏右边界
-                    bar_rect[1],  # y坐标与侧栏对齐
-                    old_linked_wnd_rect[2] - old_linked_wnd_rect[0],  # 保持原有宽度
-                    old_linked_wnd_rect[3] - old_linked_wnd_rect[1],  # 高度与侧栏一致
-                    win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW
-                )
-            except Exception as e:
-                logger.warning(e)
-        else:
-            print("管理器切换到账号窗口...")
-            hwnd_utils.restore_window(new_linked_hwnd)
-            time.sleep(0.2)
-            # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
-            # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
-            # 使用保存的原始位置和大小
-            new_linked_wnd_rect = win32gui.GetWindowRect(new_linked_hwnd)
-            try:
-                win32gui.SetWindowPos(
-                    new_linked_hwnd,
-                    win32con.HWND_TOP,
-                    new_linked_wnd_rect[0],
-                    new_linked_wnd_rect[1],
-                    new_linked_wnd_rect[2] - new_linked_wnd_rect[0],
-                    new_linked_wnd_rect[3] - new_linked_wnd_rect[1],
-                    win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW
-                )
-            except Exception as e:
-                logger.warning(e)
+        if old_linked_hwnd and win32gui.IsWindow(old_linked_hwnd):
+            if old_linked_hwnd != self.root_hwnd:
+                print("账号切换到账号窗口...")
+                # 获取窗口的位置和尺寸
+                bar_rect = win32gui.GetWindowRect(self.bar_hwnd)
+                old_linked_wnd_rect = win32gui.GetWindowRect(old_linked_hwnd)
+                # 将主窗口调整到侧栏右侧，并设置相同高度
+                AccOperatorCore.switch_to_sw_account_wnd(sw, acc)
+                # hwnd_utils.restore_window(new_linked_hwnd)
+                time.sleep(0.2)
+                # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
+                # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
+                try:
+                    win32gui.SetWindowPos(
+                        new_linked_hwnd,
+                        win32con.HWND_TOP,
+                        bar_rect[2],  # x坐标设为侧栏右边界
+                        bar_rect[1],  # y坐标与侧栏对齐
+                        old_linked_wnd_rect[2] - old_linked_wnd_rect[0],  # 保持原有宽度
+                        old_linked_wnd_rect[3] - old_linked_wnd_rect[1],  # 高度与侧栏一致
+                        win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW
+                    )
+                except Exception as e:
+                    logger.warning(e)
+            else:
+                print("管理器切换到账号窗口...")
+                AccOperatorCore.switch_to_sw_account_wnd(sw, acc)
+                # hwnd_utils.restore_window(new_linked_hwnd)
+                time.sleep(0.2)
+                # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
+                # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
+                # 使用保存的原始位置和大小
+                new_linked_wnd_rect = win32gui.GetWindowRect(new_linked_hwnd)
+                try:
+                    win32gui.SetWindowPos(
+                        new_linked_hwnd,
+                        win32con.HWND_TOP,
+                        new_linked_wnd_rect[0],
+                        new_linked_wnd_rect[1],
+                        new_linked_wnd_rect[2] - new_linked_wnd_rect[0],
+                        new_linked_wnd_rect[3] - new_linked_wnd_rect[1],
+                        win32con.SWP_NOZORDER | win32con.SWP_SHOWWINDOW
+                    )
+                except Exception as e:
+                    logger.warning(e)
 
         self.linked_hwnd = new_linked_hwnd
         state = self.get_linked_wnd_state(self.linked_hwnd)
@@ -537,7 +542,8 @@ class SidebarUI:
         self.turn_off_listener()
         time.sleep(1)
         # 打开详情页
-        WndCreator.open_acc_detail(f"{sw}/{acc}", self)
+        detail_ui = WndCreator.open_acc_detail(f"{sw}/{acc}", self)
+        detail_ui.master_wnd = self.root
 
         # 重新获取hwnd
         hwnd, = Acc(sw, acc).get_data(main_hwnd=None)
@@ -584,6 +590,27 @@ class SidebarTree(RadioTreeView, ABC):
         self.data_src = App().get_sw_acc_data()
         pass
 
+    def create_title(self):
+        self.title_frame = ttk.Frame(self.tree_frame)
+        self.title_frame.pack(side="top", fill="x", pady=Config.LOG_IO_FRM_PAD_Y)
+
+        customized_btn_pad = Config.CUS_BTN_PAD
+        btn = CustomCornerBtn(self.title_frame, height=5, text="")
+        btn.pack(side="top", padx=customized_btn_pad, pady=customized_btn_pad)
+        widget_utils.set_widget_tip_when_(self.tooltips, btn, {"点击刷新": True})
+        (btn.set_bind_map(
+            **{"1": lambda: self.quick_refresh_items(App().get_sw_acc_data())})
+         .apply_bind(self.root))
+
+        # # 标题=标签
+        # self.title = ttk.Frame(self.title_frame)
+        # self.title.pack(side="top", fill="x")
+        #
+        # # 标签
+        # self.label = ttk.Label(self.title, text=self.title_text,
+        #                        style='FirstTitle.TLabel')
+        # self.label.pack(side="left", fill="x", anchor="w", pady=Config.LOG_IO_LBL_PAD_Y)
+
     def set_table_style(self):
         super().set_table_style()
 
@@ -599,15 +626,28 @@ class SidebarTree(RadioTreeView, ABC):
         sw_acc_data = self.data_src
         table_tag = self.table_tag
 
-        # 假设你已经有了一个用于存储 sw 节点的字典
-        sw_nodes = {}
+        # # 假设你已经有了一个用于存储 sw 节点的字典
+        # sw_nodes = {}
+
+
 
         for sw in sw_acc_data:
             sw_data = sw_acc_data[sw]
-            for acc in sw_data.keys():
+            excluded_dirs, = Sw(sw).get_remote(**{RemoteSwKey.EXCLUDED_DIRS: []})
+            success, result = AccInfoFuncCore.get_sw_accounts_login_status(sw)
+            if success is not True:
+                continue
+            acc_list_dict, _ = result
+            logins = acc_list_dict["login"]
+            if not isinstance(logins, list):
+                continue
+
+            for acc in logins:
                 if table_tag == OnlineStatus.LOGIN and sw_data[acc].get("pid", None) is None:
                     continue
                 if table_tag == OnlineStatus.LOGOUT and sw_data[acc].get("pid", None) is not None:
+                    continue
+                if acc in excluded_dirs:
                     continue
 
                 # display_name = "  " + AccInfoFunc.get_acc_origin_display_name(sw, acc)

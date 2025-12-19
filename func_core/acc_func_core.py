@@ -1400,7 +1400,7 @@ class AccInfoFuncCore:
                     break
 
     @classmethod
-    def get_sw_acc_list(cls, sw):
+    def get_sw_accounts_login_status(cls, sw):
         """
         获取账号及其登录情况
         :param sw: 平台
@@ -1464,6 +1464,9 @@ class AccInfoFuncCore:
             login_wnd_class, = cls.get_sw_acc_data(sw, acc, login_wnd_class=None)
             if login_wnd_class is None:
                 SwAccData().update_(sw, acc, login_wnd_class=origin_login_wnd_class)
+        # 将排除在外但误记录的账号从数据中移除
+        for excluded_dir in excluded_dirs:
+            SwAccData().del_node(sw, excluded_dir)
         return True, (acc_list_dict, has_mutex)
 
     """详情"""

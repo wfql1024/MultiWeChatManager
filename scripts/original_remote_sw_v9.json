@@ -1603,7 +1603,8 @@
             "nt_qq",
             "nt_temp",
             "Tencent Files",
-            "screenshot"
+            "screenshot",
+            "poke-face"
         ],
         "multirun": {
             "alias": "多开",
@@ -1833,7 +1834,8 @@
             "nt_qq",
             "nt_temp",
             "Tencent Files",
-            "screenshot"
+            "screenshot",
+            "poke-face"
         ],
         "multirun": {
             "alias": "多开",
@@ -2190,7 +2192,8 @@
             "nt_qq",
             "nt_temp",
             "Tencent Files",
-            "screenshot"
+            "screenshot",
+            "poke-face"
         ],
         "multirun": {
             "alias": "多开",

@@ -126,7 +126,7 @@ class LoginUI:
         @ProgressBarW.with_progress_bar_wrapper_factory(self.root_class.progress_bar)
         def _thread():
             self.refreshing = True
-            success, result = AccInfoFuncCore.get_sw_acc_list(self.sw)
+            success, result = AccInfoFuncCore.get_sw_accounts_login_status(self.sw)
             if success is not True:
                 self.root.after(0, self.show_setting_error)
             else:

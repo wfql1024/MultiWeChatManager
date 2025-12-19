@@ -35,21 +35,36 @@ class AbsSetting:
         return self._data
 
     def _save(self):
-        """默认json格式, 可以重写"""
-        return JsonUtils.save_json(self._data_src, self._data)
+        return self.save(self._data)
 
     def save(self, data):
+        """默认json格式, 可以重写"""
         return JsonUtils.save_json(self._data_src, data)
 
     def clear_node(self, *addr) -> bool:
         """
-        清空某平台的账号记录，在对平台重新设置后触发
+        根据路径找到对应节点,将节点置为空字典或None
         :return: 是否成功
         """
         try:
-            print(f"清理{addr}处数据...")
+            # print(f"置空{addr}处数据...")
             data = self.load()
             DictUtils.clear_nested_values(data, *addr)
+            self._save()
+            return True
+        except Exception as e:
+            Logger().error(e)
+            return False
+
+    def del_node(self, *addr) -> bool:
+        """
+        根据路径找到对应节点,将节点删除
+        :return: 是否成功
+        """
+        try:
+            # print(f"删除{addr}处数据...")
+            data = self.load()
+            DictUtils.del_nested_values(data, *addr)
             self._save()
             return True
         except Exception as e:
@@ -247,6 +262,10 @@ class RemoteSw(AbsSetting):
         """本配置是只读文件, 不能修改"""
         raise NotImplementedError
 
+    def save(self, data):
+        """本配置是只读文件, 不能修改"""
+        raise NotImplementedError
+
 
 class RemoteGlobal(AbsSetting):
     def __init__(self, path=None):
@@ -264,6 +283,10 @@ class RemoteGlobal(AbsSetting):
         return setting_path
 
     def _save(self):
+        """本配置是只读文件, 不能修改"""
+        raise NotImplementedError
+
+    def save(self, data):
         """本配置是只读文件, 不能修改"""
         raise NotImplementedError
 

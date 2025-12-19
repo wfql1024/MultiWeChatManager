@@ -8,6 +8,7 @@ from components.composited_controls import TreeviewAHT
 from components.widget_wrappers import SubToolWndUI, ScrollableCanvasW
 from functions.acc_func import Acc
 from functions.app_func import App
+from functions.sw_func import Sw
 from public import Config
 from public.custom_classes import Condition
 from public.enums import AccKeys
@@ -262,6 +263,7 @@ class AccManagerTAHT(TreeviewAHT):
             if sw == AccKeys.RELAY:
                 continue
             sw_data = sw_acc_data[sw]
+            sw_remark = Sw(sw).remark
             for acc in sw_data.keys():
                 if table_tag == "hidden" and sw_data[acc].get("hidden", None) != True:
                     continue
@@ -291,7 +293,7 @@ class AccManagerTAHT(TreeviewAHT):
                 if sw not in sw_nodes:
                     # 插入 sw 节点，并保存节点的 ID
                     sw_node_id = tree.insert("", "end", iid=sw,
-                                             values=(sw, " ", " ", " ", " ", " "), open=True)
+                                             values=(sw_remark, " ", " ", " ", " ", " "), open=True)
                     sw_nodes[sw] = sw_node_id
                 else:
                     # 已经有这个 sw 节点，使用已存储的 ID

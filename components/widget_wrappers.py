@@ -440,6 +440,8 @@ class SubToolWndUI:
 
         self.wnd = wnd
         self.title = title
+        # 这个变量用以手动在外部指定父窗口,如使用侧栏模式,父窗口为侧栏,但侧栏获得焦点后根窗口便无法获得焦点,不符合预期
+        self.master_wnd = self.wnd.master
 
         self.root_class = GlobalMembers().get_root_class()
         self.root = self.root_class.root
@@ -499,7 +501,6 @@ class SubToolWndUI:
         # 关闭前
         self.finally_do()
 
-        master_wnd = self.wnd.master
         self.wnd.destroy()  # 关闭窗口
-        if master_wnd != self.root:
-            master_wnd.grab_set()  # 恢复父窗口的焦点
+        if self.master_wnd != self.root:
+            self.master_wnd.grab_set()  # 恢复父窗口的焦点
