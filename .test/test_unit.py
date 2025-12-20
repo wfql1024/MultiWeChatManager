@@ -567,3 +567,51 @@ class Test(TestCase):
 
     def test_print_hwnds_to_md(self):
         HwndGetter._print_hwnds_to_md([19469250, 2692900, 2228330, 2034380, 986616])
+
+    def test_gitee_download(self):
+        from curl_cffi import requests as cffi_requests
+        import os
+
+        def impersonated_download(url, save_path):
+            """
+            使用curl_cffi模拟浏览器进行下载，绕过指纹检测。
+            """
+            try:
+                # 关键：impersonate参数指定模拟的浏览器版本
+                response = cffi_requests.get(
+                    url,
+                    impersonate="chrome110",  # 可改为 "chrome", "edge", "safari" 等
+                    stream=True,
+                    timeout=60
+                )
+                response.raise_for_status()
+
+                # 获取文件大小用于显示进度
+                total_size = int(response.headers.get('content-length', 0))
+                downloaded = 0
+                block_size = 8192
+
+                with open(save_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=block_size):
+                        if chunk:
+                            f.write(chunk)
+                            downloaded += len(chunk)
+                            if total_size > 0:
+                                percent = (downloaded / total_size) * 100
+                                print(f"\r下载进度: {percent:.1f}% ({downloaded}/{total_size} bytes)", end='',
+                                      flush=True)
+                print(f"\n✅ 文件已成功下载至: {save_path}")
+                return True
+
+            except Exception as e:
+                print(f"❌ 下载失败: {e}")
+                # 如果文件已部分下载，删除不完整文件
+                if os.path.exists(save_path):
+                    os.remove(save_path)
+                return False
+
+        # 使用你的原始链接
+        file_url = "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.3.0.3718-Beta/JhiFengMultiChat_win10%20_x64_v3.3.0.3718-Beta.zip"
+        save_location = "E:/Now/Desktop/JhiFengMultiChat.zip"
+
+        impersonated_download(file_url, save_location)

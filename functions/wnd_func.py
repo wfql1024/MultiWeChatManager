@@ -5,6 +5,8 @@ import subprocess
 import sys
 import threading
 from tkinter import messagebox
+from curl_cffi import requests as cffi_requests
+
 
 import psutil
 import requests
@@ -16,7 +18,7 @@ from functions.sw_func import Sw
 from public.config import Config
 from public.enums import LocalCfgKey, RemoteSwKey
 from utils import image_utils, decrypt, file_utils
-from utils.logger_utils import mylogger as logger
+from utils.logger_utils import mylogger as logger, Logger
 from utils.logger_utils import myprinter as printer
 
 
@@ -190,13 +192,13 @@ class DetailWndFunc:
 
 class UpdateLogWndFunc:
     @staticmethod
-    def download_files(ver_dicts, download_dir, progress_callback, on_complete_callback, status):
+    def download_files(ver_dicts, download_path, progress_callback, on_complete_callback, status):
         try:
             print("进入下载文件方法...")
             for ver_dict in ver_dicts:
                 if status.get("stop"):  # 检查停止状态
-                    print("下载被用户中断")
-                    return False
+                    on_complete_callback(False, "下载被用户中断!")
+                    return
                 url = ver_dict.get("url", "")
                 if not url:
                     print("URL为空，跳过此文件字典...")
@@ -204,34 +206,39 @@ class UpdateLogWndFunc:
                 try:
                     urls = [url]
                     for idx, url in enumerate(urls):
-                        print(f"Downloading to {download_dir}")
-                        with requests.get(url, stream=True, allow_redirects=True) as r:
-                            r.raise_for_status()
-                            total_length = int(r.headers.get('content-length', 0))
-                            with open(download_dir, 'wb') as f:
-                                downloaded = 0
-                                for chunk in r.iter_content(chunk_size=8192):
-                                    if status.get("stop"):  # 每次读取chunk都检查停止状态
-                                        print("下载被用户中断")
-                                        return False
-                                    if chunk:
-                                        f.write(chunk)
-                                        downloaded += len(chunk)
-                                        progress_callback(idx, len(urls), downloaded, total_length)
-
-                    print("所有文件下载成功。")
-                    on_complete_callback()
-                    return True
+                        print(f"Downloading to {download_path}")
+                        r = cffi_requests.get(
+                                url,
+                                stream=True,
+                                allow_redirects=True,
+                                impersonate="chrome110"  # 新增的关键参数
+                        )
+                        r.raise_for_status()
+                        total_length = int(r.headers.get('content-length', 0))
+                        with open(download_path, 'wb') as f:
+                            downloaded = 0
+                            for chunk in r.iter_content(chunk_size=8192):
+                                if status.get("stop"):  # 每次读取chunk都检查停止状态
+                                    on_complete_callback(False, "下载被用户中断!")
+                                    return
+                                if chunk:
+                                    f.write(chunk)
+                                    downloaded += len(chunk)
+                                    progress_callback(idx, len(urls), downloaded, total_length)
+                    on_complete_callback(True, "所有文件下载成功!")
+                    return
                 except Exception as e:
                     print(f"从 {url} 下载失败, 错误: {e}")
-            print("所有提供的URL下载失败。")
-            return False
+                    on_complete_callback(False, f"从 {url} 下载失败, 错误: {e}")
+                    return
+            on_complete_callback(False, "所有提供的URL下载失败!")
+            return
         except Exception as e:
-            print(f"发生异常: {e}")
-            raise e
+            on_complete_callback(False, f"发生异常: {e}")
+            return
 
     @staticmethod
-    def close_and_update(tmp_path):
+    def close_and_update(tmp_path, new_ver):
         if getattr(sys, 'frozen', False):
             answer = messagebox.askokcancel("提醒", "将关闭主程序进行更新操作，请确认")
             if answer:
@@ -245,8 +252,9 @@ class UpdateLogWndFunc:
                     shutil.copy(update_exe_path, new_update_exe_path)
                     print(f"成功将 {update_exe_path} 拷贝到 {new_update_exe_path}")
                 except Exception as e:
-                    print(f"拷贝文件时出错: {e}")
-                subprocess.Popen([new_update_exe_path, current_version, install_dir, tmp_path],
+                    Logger().error(f"拷贝文件时出错: {e}")
+                    messagebox.showerror("错误", f"拷贝文件时出错: {e}")
+                subprocess.Popen([new_update_exe_path, current_version, new_ver, install_dir, tmp_path],
                                  creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS)
         else:
             messagebox.showinfo("提醒", "请在打包环境中执行")

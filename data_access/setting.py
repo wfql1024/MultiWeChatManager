@@ -105,9 +105,11 @@ class RootSetting(AbsSetting):
         else:
             self.set_data_src(self.ver_root_dir + "/" + Config.ROOT_CONFIG_PATH_SUFFIX)
 
-    def get_current_ver_root_dir(self):
-        """获取当前版本的根配置目录"""
-        version = self.get_app_current_version()
+    @classmethod
+    def get_ver_root_dir(cls, version=None):
+        """获取当前或指定版本的根配置目录"""
+        if version is None:
+            version = cls.get_app_current_version()
         try:
             ver_root_dir = Config.ROOT_DATA_ADDR.replace("%VER%", version)
         except Exception as e:
@@ -132,12 +134,18 @@ class RootSetting(AbsSetting):
                     version_number = "未知版本"
         return f"v{version_number}-{Config.VER_STATUS}"
 
-    def fetch_user_dir_or_set_default(self):
-        user_dir, = self.get_(**{RootCfgKey.USER_DIR: None})
-        if user_dir is None:
-            user_dir = self.ver_root_dir + "/" + Config.DEFAULT_USER_DIR_SUFFIX
-            self.update_(**{RootCfgKey.USER_DIR: user_dir})
-        return user_dir
+    def fetch_user_dir_or_set_default(self, ver=None):
+        """
+        若指定版本, 则返回版本号下的
+        若不指定版本, 则会获取或者初始化当前版本的用户文件夹
+        """
+        if ver is None:
+            user_dir, = self.get_(**{RootCfgKey.USER_DIR: None})
+            if user_dir is None:
+                user_dir = self.get_ver_root_dir() + "/" + Config.DEFAULT_USER_DIR_SUFFIX
+                self.update_(**{RootCfgKey.USER_DIR: user_dir})
+            return user_dir
+        return self.get_ver_root_dir(ver) + "/" + Config.DEFAULT_USER_DIR_SUFFIX
 
     def fetch_remote_sw_url_or_set_default(self):
         remote_sw_url, = self.get_(**{RootCfgKey.REMOTE_SW: None})
@@ -155,7 +163,7 @@ class RootSetting(AbsSetting):
 
     @property
     def ver_root_dir(self):
-        return self.get_current_ver_root_dir()
+        return self.get_ver_root_dir()
 
     @property
     def user_dir(self):

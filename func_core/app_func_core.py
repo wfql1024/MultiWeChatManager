@@ -328,7 +328,8 @@ class AppFuncCore:
 
         if answer:
             # 移动文件夹到回收站
-            for item in os.listdir(executable_dir):
+            old_ver_bak_dir = os.path.join(executable_dir, ".old")
+            for item in os.listdir(old_ver_bak_dir):
                 item_path = os.path.join(executable_dir, item)
                 if os.path.isdir(item_path) and item.startswith("[") and item.endswith("]"):
                     items_to_delete.append(item_path)

@@ -1222,6 +1222,9 @@ class FeedBackWndUI(SubToolWndUI):
 
 class UpdateLogWndUI(SubToolWndUI):
     def __init__(self, wnd, title, old_versions, new_versions=None):
+        self.newest_version = None
+        self.download_window = None
+        self.close_and_update_btn = None
         self.log_text = None
         self.old_versions = old_versions
         self.new_versions = new_versions
@@ -1264,6 +1267,7 @@ class UpdateLogWndUI(SubToolWndUI):
         if new_versions:
             try:
                 newest_version = file_utils.get_newest_full_version(new_versions)
+                self.newest_version = newest_version
                 print(newest_version)
                 curr_sys_ver_name = sys_utils.get_sys_major_version_name()
                 curr_sys_newest_ver_dicts = remote_global["update"][newest_version]["pkgs"][curr_sys_ver_name]
@@ -1353,6 +1357,7 @@ class UpdateLogWndUI(SubToolWndUI):
 
         # 创建窗口、设置进度条等 UI 元素
         download_window = tk.Toplevel(self.root)
+        self.download_window = download_window
         download_window.title("下载更新")
         window_width = 300
         window_height = 135
@@ -1370,11 +1375,13 @@ class UpdateLogWndUI(SubToolWndUI):
         progress_bar = ttk.Progressbar(download_window, orient="horizontal", length=250, mode="determinate")
 
         # 关闭并更新按钮
-        close_and_update_btn = ttk.Button(download_window, text="关闭并更新", style='Custom.TButton',
-                                          command=partial(UpdateLogWndFunc.close_and_update, tmp_path=download_path))
+        close_and_update_btn = ttk.Button(
+            download_window, text="关闭并更新", style='Custom.TButton',
+            command=partial(UpdateLogWndFunc.close_and_update, tmp_path=download_path, new_ver=self.newest_version))
         progress_bar.pack(pady=5)
         close_and_update_btn.pack(pady=5)
         close_and_update_btn.config(state="disabled")
+        self.close_and_update_btn = close_and_update_btn
 
         # 当用户关闭窗口时，设置`status["stop"]`为True
         download_window.protocol("WM_DELETE_WINDOW", on_window_close)  # 绑定窗口关闭事件
@@ -1390,8 +1397,15 @@ class UpdateLogWndUI(SubToolWndUI):
             # 开始下载文件（多线程）
             t = threading.Thread(target=UpdateLogWndFunc.download_files,
                                  args=(ver_dicts, download_path, update_progress,
-                                       lambda: close_and_update_btn.config(state="normal"), status))
+                                       self.download_callback, status))
             t.start()
+
+    def download_callback(self, res:bool, msg:str):
+        if res:
+            self.close_and_update_btn.config(state="normal")
+        else:
+            self.download_window.destroy()
+            messagebox.showerror("错误", f"下载发生错误:{msg}")
 
 
 class StatisticWndUI(SubToolWndUI):

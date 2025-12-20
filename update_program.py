@@ -1,113 +1,27 @@
 import argparse
 import ctypes
-import logging
 import os
-import platform
 import shutil
 import subprocess
 import sys
 import threading
 import time
 import tkinter as tk
-import winreg
 import zipfile
 from pathlib import Path
 from tkinter import ttk, messagebox
 
-import colorlog
 import psutil
 
+from data_access import RootSetting
+from public import config, Config
+from public.enums import RootCfgKey
+from utils.logger_utils import Logger
+
 CREATE_NO_WINDOW = 0x08000000
+exe_name_keywords = ["JhiFeng", "Multi", "多开", "多聊"]
 
-
-# 如需使用缩放因子，请直接拷贝以下部分*****************************************************************
-def get_scale_factor():
-    """
-    获取屏幕缩放因子，根据不同系统版本自动选择适配方法：
-    - Windows 7：使用注册表获取缩放因子，精确但仅适用于早期系统。
-    - Windows 10 及以上：使用 ctypes 调用 shcore 获取缩放因子，更准确。
-    - 其他情况：返回默认缩放因子 1。
-    """
-    scale = "auto"
-    if scale == "auto":
-        version = int(platform.release())  # 获取 Windows 版本号
-        if version == 7:
-            # Windows 7 下，使用注册表获取缩放因子
-            try:
-                with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Desktop") as key:
-                    log_pixels, _ = winreg.QueryValueEx(key, "LogPixels")
-                    return log_pixels / 96  # 96 DPI 是标准 100%
-            except FileNotFoundError as e:
-                print(f"无法从注册表获取缩放因子: {e}")
-                return 1
-        elif version >= 10:
-            # Windows 10 及以上，使用 ctypes 调用 shcore 获取缩放因子
-            try:
-                return float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)
-            except Exception as e:
-                print(f"无法从 shcore 获取缩放因子: {e}")
-                return 1
-        else:
-            # 其他系统返回默认缩放因子
-            return 1
-    else:
-        # 用户选择了具体的缩放因子
-        return int(scale) / 100
-
-
-# 获取屏幕缩放因子
-SF = get_scale_factor()
-
-
-# 如需使用缩放因子，请直接拷贝以上部分*****************************************************************
-
-
-class LoggerUtils:
-    def __init__(self, file):
-        self.logger = self.get_logger(file)
-
-    @staticmethod
-    def get_logger(file):
-        # 定log输出格式，配置同时输出到标准输出与log文件，返回logger这个对象
-        log_colors_config = {
-            # 终端输出日志颜色配置
-            'DEBUG': 'white',
-            'INFO': 'green',
-            'WARNING': 'yellow',
-            'ERROR': 'red',
-            'CRITICAL': 'bold_red',
-        }
-
-        default_formats = {
-            # 终端输出格式
-            'color_format':
-                '%(log_color)s%(levelname)s - %(asctime)s - %(filename)s[line:%(lineno)d] - %(message)s',
-            # 日志输出格式
-            'log_format': '%(levelname)s - %(asctime)s - %(filename)s[line:%(lineno)d] - %(message)s'
-        }
-
-        mylogger = logging.getLogger('mylogger')
-        mylogger.setLevel(logging.DEBUG)
-        fh_log_format = logging.Formatter(default_formats["log_format"])
-        ch_log_format = colorlog.ColoredFormatter(default_formats["color_format"], log_colors=log_colors_config)
-
-        # 创建文件处理器
-        log_fh = logging.FileHandler(file)
-        log_fh.setLevel(logging.DEBUG)
-        log_fh.setFormatter(fh_log_format)
-        mylogger.addHandler(log_fh)
-        # 创建控制台处理器
-        log_ch = logging.StreamHandler()
-        log_ch.setFormatter(ch_log_format)
-        log_ch.setLevel(logging.DEBUG)
-        mylogger.addHandler(log_ch)
-
-        return mylogger
-
-
-app_path = os.path.basename(os.path.abspath(sys.argv[0]))
-log_file = app_path.split('.')[0] + '.log'
-logger = LoggerUtils.get_logger(log_file)
+SF = config.get_scale_factor()
 
 
 def find_dir(start_dir, dirname):
@@ -168,19 +82,18 @@ def is_admin():
 
 def quit_main():
     if getattr(sys, 'frozen', False):
-        # 模糊匹配进程名
-        keywords = ["多开", "多聊"]  # 关键字，可以根据实际情况调整
-
         # 遍历所有进程，找到包含关键字的进程名并结束
-        for keyword in keywords:
+        for keyword in exe_name_keywords:
             for proc in psutil.process_iter(['pid', 'name']):
                 try:
                     if proc.info['name'] and keyword in proc.info['name']:
-                        subprocess.run(["taskkill", "/f", "/pid", str(proc.info['pid'])],
-                                       stdout=subprocess.PIPE,
-                                       stderr=subprocess.PIPE,
-                                       creationflags=subprocess.CREATE_NO_WINDOW)
-                        logger.info(f"已结束进程: {proc.info['name']} (PID: {proc.info['pid']})")
+                        subprocess.run(
+                            ["taskkill", "/f", "/pid", str(proc.info['pid'])],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            creationflags=subprocess.CREATE_NO_WINDOW
+                        )
+                        Logger().info(f"已结束进程: {proc.info['name']} (PID: {proc.info['pid']})")
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
 
@@ -188,17 +101,42 @@ def quit_main():
 def update_and_reopen(args, root):
     try:
         # 提取参数
-        before_version = args.before_version
-        install_dir = args.install_dir
+        old_ver = args.old_ver
+        new_ver = args.new_ver
+        inst_dir = args.inst_dir
         download_path = args.download_path
 
-        version_dir = os.path.join(install_dir, f"[{before_version}]")
-        os.makedirs(version_dir, exist_ok=True)
+        old_ver_inst_dir = os.path.join(inst_dir, ".old", f"[{old_ver}]")
+        os.makedirs(old_ver_inst_dir, exist_ok=True)
+
+        # 从旧版根配置中找到旧版用户文件夹, 并推出新版用户文件夹位置存入新版的根配置中
+        old_ver_root_dir = RootSetting.get_ver_root_dir(old_ver)
+        old_ver_root_config_path = old_ver_root_dir + "/" + Config.ROOT_CONFIG_PATH_SUFFIX
+        old_ver_root_config = RootSetting(old_ver_root_config_path)
+        old_ver_user_dir, = old_ver_root_config.get_(**{RootCfgKey.USER_DIR: None})
+
+        new_ver_root_dir = RootSetting.get_ver_root_dir(new_ver)
+        new_ver_root_config_path = new_ver_root_dir + "/" + Config.ROOT_CONFIG_PATH_SUFFIX
+        new_ver_root_config = RootSetting(new_ver_root_config_path)
+
+        try:
+            if isinstance(old_ver_user_dir, str):
+                # 从旧版根配置获得用户文件夹路径, 替换路径中的版本号即可
+                new_ver_user_dir = old_ver_user_dir.replace(old_ver, new_ver)
+            else:
+                # 旧版没有配置, 说明是旧架构, 直接从安装位置拿
+                old_ver_user_dir = find_dir(old_ver_inst_dir, 'user_files')
+                new_ver_user_dir = new_ver_root_config.fetch_user_dir_or_set_default()
+        except Exception as e:
+            Logger().warning(e)
+            new_ver_user_dir = new_ver_root_config.fetch_user_dir_or_set_default()
+
+        new_ver_root_config.update_(**{RootCfgKey.USER_DIR: new_ver_user_dir})
 
         try:
             quit_main()
         except Exception as e:
-            logger.error(f"结束进程时出错: {e}")
+            Logger().error(f"结束进程时出错: {e}")
             messagebox.showerror("错误", f"非常抱歉！{e}，请手动关闭旧版程序后点确定！")
             quit_main()
 
@@ -210,67 +148,79 @@ def update_and_reopen(args, root):
             with zipfile.ZipFile(tmp_zip, 'r') as zip_ref:
                 zip_ref.extractall(tmp_dir)
         except Exception as e:
-            logger.error(e)
+            Logger().error(e)
             messagebox.showerror("错误",
                                  f"非常抱歉解压新版失败！{e}，将打开压缩文件所在目录和当前安装目录，稍后可手动解压替换，或稍后重试！")
             os.startfile(tmp_dir)
-            os.startfile(install_dir)
+            os.startfile(inst_dir)
             root.after(0, root.destroy)  # 安全销毁
 
-        # 2. 拷贝 install_path 中的所有文件和文件夹（排除 “[xxx]” 文件夹）
-        for item in os.listdir(install_dir):
+        # 2. 拷贝 install_path 中的所有文件和文件夹（排除 “.old” 文件夹）
+        for item in os.listdir(inst_dir):
             try:
-                item_path = os.path.join(install_dir, item)
-                if os.path.isdir(item_path) and item.startswith("[") and item.endswith("]"):
-                    continue  # 排除 "[xxx]" 文件夹
-                # shutil.move(item_path, version_dir)  # 移动所有项目到目标文件夹
+                item_path = os.path.join(inst_dir, item)
+                if os.path.isdir(item_path) and item == ".old":
+                    continue  # 排除 ".old" 文件夹
+                # shutil.move(item_path, old_ver_inst_dir)  # 移动所有项目到目标文件夹
                 if os.path.isdir(item_path):
-                    shutil.copytree(item_path, os.path.join(version_dir, item))
+                    shutil.copytree(item_path, os.path.join(old_ver_inst_dir, item))
                 if os.path.isfile(item_path):
-                    shutil.copy2(item_path, os.path.join(version_dir, item))
+                    shutil.copy2(item_path, os.path.join(old_ver_inst_dir, item))
             except Exception as e:
-                logger.error(e)
+                Logger().error(e)
                 messagebox.showerror("错误",
                                      f"非常抱歉备份旧版失败！{e}，\n"
                                      f"将打开压缩文件所在目录和当前安装目录，请备份好user文件夹后手动安装！")
                 os.startfile(tmp_dir)
-                os.startfile(install_dir)
+                os.startfile(inst_dir)
                 root.after(0, root.destroy)  # 安全销毁
 
-        # 3. 拷贝并覆盖旧版 version 文件夹中的 user_files 文件夹到 新版本临时文件夹 中的 external_res 同级目录
-        external_res_path = find_dir(tmp_dir, 'external_res')
-        user_files_src = find_dir(version_dir, 'user_files')
-        logger.info(external_res_path, user_files_src)
-        if user_files_src is not None and external_res_path is not None:
-            dest_path = os.path.join(os.path.dirname(external_res_path), 'user_files')
-            if os.path.exists(dest_path):
-                shutil.rmtree(dest_path)
+        # 3. 拷贝旧版 version 文件夹中的 user_files 文件夹 并覆盖到到 新版本临时文件夹 中的 external_res 同级目录
+        # 新文件架构之后, 用户文件夹并不一定仍在安装目录中...
+        # tmp_external_res_path = find_dir(tmp_dir, 'external_res')
+        # old_ver_user_dir = find_dir(old_ver_inst_dir, 'user_files')
+        Logger().info(new_ver_user_dir, old_ver_user_dir)
+        if old_ver_user_dir is not None and new_ver_user_dir is not None:
+            # new_ver_user_dir = os.path.join(os.path.dirname(tmp_external_res_path), 'user_files')
+            if os.path.exists(new_ver_user_dir):
+                shutil.rmtree(new_ver_user_dir)
             try:
-                shutil.copytree(str(user_files_src), dest_path)
+                shutil.copytree(str(old_ver_user_dir), new_ver_user_dir)
             except Exception as e:
-                logger.error(e)
+                Logger().error(e)
                 messagebox.showerror("错误",
                                      f"非常抱歉迁移user_files失败，\n"
                                      f"将打开新版本临时目录和备份目录，请拷贝旧版user文件夹后手动安装！")
-                os.startfile(os.path.dirname(external_res_path))
-                os.startfile(version_dir)
+                os.startfile(os.path.dirname(tmp_dir))
+                os.startfile(old_ver_inst_dir)
                 root.after(0, root.destroy)  # 安全销毁
         else:
-            logger.error("未找到 external_res 文件夹或 user_files 文件夹。")
+            Logger().error("未找到 external_res 文件夹或 user_files 文件夹。")
             messagebox.showerror("错误",
                                  f"未找到 external_res 文件夹或 user_files 文件夹。\n"
                                  f"将打开压缩文件所在目录和备份目录，请备份好user文件夹后手动安装！")
             os.startfile(tmp_dir)
-            os.startfile(version_dir)
+            os.startfile(old_ver_inst_dir)
             root.after(0, root.destroy)  # 安全销毁
 
         # 4. 拷贝 tmp_dir 中 "?.exe" 所在的目录的所有文件和文件夹到 install_path 中并覆盖
-        new_exe_path = find_file_fuzzy_with_keywords(tmp_dir, ["多开", "多聊"], ".exe")
-        if new_exe_path is not None:
-            exe_dir = os.path.dirname(new_exe_path)
-            for item in os.listdir(exe_dir):
-                item_path = os.path.join(exe_dir, item)
-                target_path = os.path.join(install_dir, item)
+        tmp_new_exe_path = find_file_fuzzy_with_keywords(tmp_dir, exe_name_keywords, ".exe")
+        # 删除inst_dir中除了".old"文件夹外的所有文件和文件夹
+        for item in os.listdir(inst_dir):
+            try:
+                item_path = os.path.join(inst_dir, item)
+                if os.path.isdir(item_path) and item != ".old":
+                    shutil.rmtree(item_path)  # 删除目标文件夹
+                elif os.path.isfile(item_path) and not item.endswith(".log"):
+                    os.remove(item_path)  # 删除目标文件
+            except Exception as e:
+                Logger().error(f"删除对应旧文件出错: {e}")
+        # 拷贝
+        if tmp_new_exe_path is not None:
+            tmp_new_exe_dir = os.path.dirname(tmp_new_exe_path)
+            for item in os.listdir(tmp_new_exe_dir):
+                item_path = os.path.join(tmp_new_exe_dir, item)
+                target_path = os.path.join(inst_dir, item)
                 # 先删除
                 try:
                     if os.path.exists(target_path):
@@ -279,7 +229,7 @@ def update_and_reopen(args, root):
                         else:
                             os.remove(target_path)  # 删除目标文件
                 except Exception as e:
-                    logger.error(f"删除目录出错: {e}")
+                    Logger().error(f"删除对应旧文件出错: {e}")
                 # 再拷贝
                 try:
                     if os.path.isdir(item_path):
@@ -287,45 +237,44 @@ def update_and_reopen(args, root):
                     else:
                         shutil.copy2(item_path, target_path)  # 拷贝文件
                 except Exception as e:
-                    logger.error(f"拷贝错误: {e}")
+                    Logger().error(f"覆盖对应旧文件错误: {e}")
         else:
-            logger.error("未找到新版程序")
+            Logger().error("未找到新版程序")
             messagebox.showerror("错误",
                                  f"未找到新版程序，\n"
                                  f"将打开压缩文件所在目录和备份目录，请备份好user文件夹后手动安装！")
             os.startfile(tmp_dir)
-            os.startfile(version_dir)
+            os.startfile(old_ver_inst_dir)
             root.after(0, root.destroy)  # 安全销毁
 
         # 5. 启动 install_path 中的 "?.exe"
-        # exe_files = glob.glob(os.path.join(install_dir, f"*.exe"))
-        exe_files = [str(p) for p in Path(install_dir).rglob(f"*.exe")]
+        # exe_files = glob.glob(os.path.join(inst_dir, f"*.exe"))
+        exe_files = [str(p) for p in Path(inst_dir).rglob(f"*.exe")]
         exe2open = None
         if len(exe_files) == 0:
-            logger.error("未找到程序")
+            Logger().error("未找到程序")
         elif len(exe_files) == 1:
             exe2open = exe_files[0]
         else:
-            key_words = ["多聊", "多开"]
             for e in exe_files:
-                if any(key_word in e for key_word in key_words):
+                if any(keyword in e for keyword in exe_name_keywords):
                     exe2open = e
                     break
 
         if exe2open is not None:
             # 启动新程序
             subprocess.Popen([exe2open, "--new"])
-            logger.info("新版程序已启动，参数: --new")
+            Logger().info("新版程序已启动，参数: --new")
         else:
-            logger.error("新版程序不存在。")
+            Logger().error("新版程序不存在。")
             messagebox.showerror("错误",
                                  f"未找到新版程序，\n"
                                  f"将打开压缩文件所在目录和备份目录，请备份好user文件夹后手动安装！")
             os.startfile(tmp_dir)
-            os.startfile(version_dir)
+            os.startfile(old_ver_inst_dir)
             root.after(0, root.destroy)  # 安全销毁
     except Exception as e:
-        logger.error(e)
+        Logger().error(e)
     finally:
         # 在主线程中销毁窗口
         root.after(0, root.destroy)  # 安全销毁
@@ -338,20 +287,28 @@ def test_to_destroy(root):
 
 
 def main():
-    # 设置环境变量，告诉 Python 不使用代理
+    # 不使用代理
     os.environ['http_proxy'] = ''
     os.environ['https_proxy'] = ''
     os.environ['no_proxy'] = '*'
-    logger.error(f"是否管理员模式：{is_admin()}")
+    Logger().error(f"是否管理员模式：{is_admin()}")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, 'w')
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, 'w')
+
     # 创建参数解析器
     parser = argparse.ArgumentParser(description="Process command line flags.")
     # 添加 --debug 和 -d 选项
     parser.add_argument('--debug', '-d', action='store_true', help="Enable debug mode.")
-    parser.add_argument("before_version", help="更新前版本号")
-    parser.add_argument("install_dir", help="安装目录")
+    parser.add_argument("old_ver", help="更新前版本号")
+    parser.add_argument("new_ver", help="新版版本号")
+    parser.add_argument("inst_dir", help="安装目录")
     parser.add_argument("download_path", help="下载路径")
     # 解析命令行参数
     args, unknown = parser.parse_known_args()
+    if unknown:
+        Logger().debug(f"忽略的参数: {unknown}")
 
     root = tk.Tk()
     root.title("更新程序")
@@ -383,16 +340,16 @@ def main():
     # threading.Thread(target=test_to_destroy, args=(root,)).start()
 
     root.mainloop()
-    logger.info("窗口已经关闭，才会执行下面")
+    Logger().info("窗口已经关闭，才会执行下面")
     # sys.exit()
 
 
 if __name__ == "__main__":
     if not is_admin():
-        logger.warning("当前没有管理员权限，尝试获取...")
+        Logger().warning("当前没有管理员权限，尝试获取...")
         if not elevate():
-            logger.error("无法获得管理员权限，程序将退出。")
+            Logger().error("无法获得管理员权限，程序将退出。")
             sys.exit(1)
     else:
-        logger.info("已获得管理员权限，正在执行主逻辑...")
+        Logger().info("已获得管理员权限，正在执行主逻辑...")
         main()

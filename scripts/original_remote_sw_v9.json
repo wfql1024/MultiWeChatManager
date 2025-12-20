@@ -1229,7 +1229,8 @@
         "data_dir_name": "WXWork",
         "executable_wildcards": [
             "WXWork?.exe",
-            "WXWork.exe"
+            "WXWork.exe",
+            "WXWor?.exe"
         ],
         "mutex_handles": [
             {

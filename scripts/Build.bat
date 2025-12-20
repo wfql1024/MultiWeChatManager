@@ -43,7 +43,7 @@ if exist "*.spec" del /Q "*.spec"
 
 :: 使用 PyInstaller 创建升级程序（无窗口）
 "%VENV%\Scripts\pyinstaller" --name="Updater" --windowed --onefile --version-file="%META%\version.txt" --noconfirm ^
---distpath="%DIST_PATH%" "%PROJ_ROOT%\update_program.py"
+--distpath="%DIST_PATH%" --exclude-module numpy "%PROJ_ROOT%\update_program.py"
 
 :: 检查打包是否成功
 if exist "%DIST_PATH%\Updater.exe" (
@@ -69,6 +69,7 @@ move /Y "%DIST_PATH%\Updater.exe" "%EXTERNAL_RES%\"
   --version-file="%META%\version.txt" ^
   --noconfirm ^
   --hidden-import=comtypes.stream ^
+  --exclude-module numpy ^
   "%PROJ_ROOT%\main.py"
 
 

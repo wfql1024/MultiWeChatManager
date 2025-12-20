@@ -2374,7 +2374,7 @@ class SwOperatorCore:
         root_class = GlobalMembers().get_root_class()
         coexist_channel, _, _ = SwInfoFuncCore.identity_and_get_available_coexist_mode(sw)
         if not isinstance(coexist_channel, str):
-            return False, "没有可用的共存构造模式!"
+            return False, "没有可用的共存构造模式!请先尝试原生登录!"
         exe_wildcard, ordinals = SwInfoFuncCore.get_remote_sw(
             sw, RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, coexist_channel,
             exe_wildcard=None, **{RemoteSwKey.ORDINALS: None})
