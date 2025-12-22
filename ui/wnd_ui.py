@@ -260,7 +260,7 @@ class CustomizePatchesWnd(SubToolWndUI):
 
         ttk.Button(btn_frame, text="确认", command=self.save_patches).pack(side="right", padx=4)
 
-        Printer().debug(f"加载完成后字典内容: {self.addr_patch_dicts}")
+        # Printer().debug(f"加载完成后字典内容: {self.addr_patch_dicts}")
 
     @staticmethod
     def strip_prefix_suffix(hex_str: str, prefix_hex: str = None, suffix_hex: str = None) -> bytes:
@@ -285,8 +285,9 @@ class CustomizePatchesWnd(SubToolWndUI):
         从 data（bytes）里提取被 prefix_hex 和 suffix_hex 包裹的内容，并 decode 成字符串
         """
         try:
-            hex_str = data.hex(" ")
-            raw_bytes = bytes.fromhex(hex_str)
+            # hex_str = data.hex(" ")
+            # raw_bytes = bytes.fromhex(hex_str)
+            raw_bytes = data
 
             # 前缀
             if prefix:
@@ -422,6 +423,14 @@ class DetailUI(SubToolWndUI):
         avatar_frame.grid(row=0, column=0, **Config.W_GRID_PACK)
         avatar_label = ttk.Label(avatar_frame)
         avatar_label.pack(**Config.T_WGT_PACK)
+        # 使用与正常头像一致尺寸的占位图
+        placeholder_size = tuple(int(dim * 2) for dim in Config.AVT_SIZE)
+        placeholder_img = Image.new("RGBA", placeholder_size, (0, 0, 0, 0))  # type: ignore
+        photo = ImageTk.PhotoImage(placeholder_img)
+        avatar_label.config(image=photo, text="", compound="center")  # type: ignore
+        avatar_label.image = photo
+        avatar_label.config(cursor="")
+        avatar_label.unbind("<Button-1>")
         avatar_operate_frame = ttk.Frame(avatar_frame)
         avatar_operate_frame.pack(**Config.B_WGT_PACK)
         # 左右的占位符
@@ -569,11 +578,14 @@ class DetailUI(SubToolWndUI):
         self.auto_start_var = auto_start_var
 
     def update_content(self):
-        # 更新数据
-        self._update_data_to_ui()
-        widget_utils.enable_widget_when_(self.fetch_button, self.pid is not None)
-        widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button,
-                                          {"请登录后获取": self.pid is None})
+        def _thread():
+            # # 更新数据
+            self._update_data_to_ui()
+            widget_utils.enable_widget_when_(self.fetch_button, self.pid is not None)
+            widget_utils.set_widget_tip_when_(self.tooltips, self.fetch_button,
+                                              {"请登录后获取": self.pid is None})
+
+        threading.Thread(target=_thread).start()
 
     def set_wnd(self):
         # 禁用窗口大小调整
@@ -585,10 +597,7 @@ class DetailUI(SubToolWndUI):
         account = self.account
 
         printer.vital(f"加载账号详情...")
-
         # 获取信息
-        printer.print_vn(f"加载对应头像...")
-        # 获取其余信息
         has_mutex, main_hwnd = Acc(sw, account).get_data(has_mutex=True, main_hwnd=None)
         if main_hwnd is None or not win32gui.IsWindow(main_hwnd):
             AccInfoFuncCore.auto_bind_main_wnd_to_accounts_in_sw(self.sw, [self.account])
@@ -596,19 +605,24 @@ class DetailUI(SubToolWndUI):
         avatar_url, alias, nickname, pid = Acc(sw, account).get_data(
             avatar_url=None, alias="请获取数据", nickname="请获取数据", pid=None)
         _, img = AccInfoFuncCore.get_acc_avatar_from_files(sw, account)
-        self._update_avatar_and_bind(img, avatar_url)
-        # 刷新其他信息
         pid_str = f"{pid}" if pid is not None else "未登录"
-        self.pid_label.config(text=f"进程: {pid_str}")
-        self.mutex_label.config(text=f"互斥体: {has_mutex}")
-        self.hwnd_label.config(text=f"窗口: {main_hwnd}")
-        self.origin_id_var.set(account)
-        self.cur_id_var.set(alias)
-        try:
-            self.nickname_var.set(nickname)
-        except Exception as e:
-            logger.warning(e)
-            self.nickname_var.set(StringUtils.clean_texts(nickname))
+
+        def _update_other_ui():
+            self._update_avatar_and_bind(img, avatar_url)
+            printer.print_vn(f"加载对应头像...")
+            self.pid_label.config(text=f"进程: {pid_str}")
+            self.mutex_label.config(text=f"互斥体: {has_mutex}")
+            self.hwnd_label.config(text=f"窗口: {main_hwnd}")
+            self.origin_id_var.set(account)
+            self.cur_id_var.set(alias)
+            try:
+                self.nickname_var.set(nickname)
+            except Exception as e:
+                logger.warning(e)
+                self.nickname_var.set(StringUtils.clean_texts(nickname))
+
+        self.root.after(0, _update_other_ui)
+
         if not pid:
             Acc(sw, account).update_data(has_mutex=True)
         printer.print_vn(f"载入数据完成")
@@ -650,7 +664,6 @@ class DetailUI(SubToolWndUI):
                 self.avatar_label.unbind("<Button-1>")
         except Exception as e:
             print(f"Error loading avatar: {e}")
-            self.avatar_label.config(text="无头像")
 
     def do_and_update_ui(self, method):
         method()
@@ -959,7 +972,7 @@ class AboutWndUI(SubToolWndUI):
             logger.error(f"无法加载图标图片: {e}")
             # 如果图标加载失败，仍然继续布局
             self.logo_img = ImageTk.PhotoImage(Image.new('RGB', Config.LOGO_SIZE, color='white'))
-        icon_label = ttk.Label(logo_frame, image=self.logo_img)
+        icon_label = ttk.Label(logo_frame, image=self.logo_img)  # type: ignore
         icon_label.image = self.logo_img
         icon_label.pack(**Config.T_WGT_PACK)
 
@@ -1172,7 +1185,7 @@ class RewardsWndUI(SubToolWndUI):
         tk_img = ImageTk.PhotoImage(img)
 
         # 在frame中创建Label用于显示图片
-        label = ttk.Label(frame, image=tk_img)
+        label = ttk.Label(frame, image=tk_img)  # type: ignore
         label.image = tk_img  # 防止图片被垃圾回收
         label.pack()
 
@@ -1215,7 +1228,7 @@ class FeedBackWndUI(SubToolWndUI):
         tk_img = ImageTk.PhotoImage(img)
 
         # 在frame中创建Label用于显示图片
-        label = ttk.Label(frame, image=tk_img)
+        label = ttk.Label(frame, image=tk_img)  # type: ignore
         label.image = tk_img  # 防止图片被垃圾回收
         label.pack()
 
@@ -1400,7 +1413,7 @@ class UpdateLogWndUI(SubToolWndUI):
                                        self.download_callback, status))
             t.start()
 
-    def download_callback(self, res:bool, msg:str):
+    def download_callback(self, res: bool, msg: str):
         if res:
             self.close_and_update_btn.config(state="normal")
         else:

@@ -250,8 +250,9 @@ class LoginUI:
             self.error_frame = ttk.Frame(self.tab_frame, padding=Config.T_FRM_PAD)
 
         self.error_frame.pack(**Config.T_FRM_PACK)
-        error_label = ttk.Label(self.error_frame, text="路径设置错误，请点击按钮修改", foreground="red",
-                                anchor="center")
+        error_label = ttk.Label(
+            self.error_frame, text="路径设置错误, 可先尝试刷新, 若仍有问题请点击按钮修改",
+            foreground="red", anchor="center")
         error_label.pack(**Config.T_WGT_PACK)
         self.settings_button = ttk.Button(self.error_frame, text="设置", style='Custom.TButton',
                                           command=partial(WndCreator.open_sw_settings, self.sw))

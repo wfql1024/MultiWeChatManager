@@ -1,12 +1,11 @@
 import os
+import platform
 import shutil
 import sqlite3
 import subprocess
 import sys
 import threading
 from tkinter import messagebox
-from curl_cffi import requests as cffi_requests
-
 
 import psutil
 import requests
@@ -24,7 +23,7 @@ from utils.logger_utils import myprinter as printer
 
 class DetailWndFunc:
     @staticmethod
-    def _get_decrypt_utils(platform):
+    def _get_decrypt_utils(sw):
         module_name = "decrypt"
         class_name = None
         try:
@@ -33,7 +32,7 @@ class DetailWndFunc:
             # module_name = f"decrypt"
             # module = importlib.import_module(module_name)
             # 从模块中获取工具类，例如 WeChatDecryptUtils
-            class_name = f"{platform}DecryptImpl"
+            class_name = f"{sw}DecryptImpl"
             decrypt_class = getattr(decrypt, class_name)
             return decrypt_class()
         except ModuleNotFoundError:
@@ -193,6 +192,9 @@ class DetailWndFunc:
 class UpdateLogWndFunc:
     @staticmethod
     def download_files(ver_dicts, download_path, progress_callback, on_complete_callback, status):
+        is_win10_plus = platform.system() == "Windows" and platform.release().isdigit() and int(
+            platform.release()) >= 10
+
         try:
             print("进入下载文件方法...")
             for ver_dict in ver_dicts:
@@ -207,12 +209,20 @@ class UpdateLogWndFunc:
                     urls = [url]
                     for idx, url in enumerate(urls):
                         print(f"Downloading to {download_path}")
-                        r = cffi_requests.get(
+                        if is_win10_plus:
+                            from curl_cffi import requests as cffi_requests
+                            r = cffi_requests.get(
                                 url,
                                 stream=True,
                                 allow_redirects=True,
                                 impersonate="chrome110"  # 新增的关键参数
-                        )
+                            )
+                        else:
+                            r = requests.get(
+                                url,
+                                stream=True,
+                                allow_redirects=True
+                            )
                         r.raise_for_status()
                         total_length = int(r.headers.get('content-length', 0))
                         with open(download_path, 'wb') as f:

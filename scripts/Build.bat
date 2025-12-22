@@ -26,6 +26,13 @@ set META=%PROJ_ROOT%\.meta
 :: 虚拟环境路径
 set VENV=%PROJ_ROOT%\.venv%VERSION%
 
+:: 设置7z路径, 按需修改
+set SEVEN_ZIP="D:\software\Tools\7-Zip\7z.exe"
+:: 是否在打包成功后生成压缩包
+:: 1 = 生成压缩包
+:: 0 = 不生成
+set ENABLE_PACKAGE_ARCHIVE=1
+
 :: 在脚本开头添加当前目录检查
 if not exist "%PROJ_ROOT%\main.py" (
     echo 错误：找不到主程序源码
@@ -69,6 +76,8 @@ move /Y "%DIST_PATH%\Updater.exe" "%EXTERNAL_RES%\"
   --version-file="%META%\version.txt" ^
   --noconfirm ^
   --hidden-import=comtypes.stream ^
+  --hidden-import=curl_cffi ^
+  --collect-all curl_cffi ^
   --exclude-module numpy ^
   "%PROJ_ROOT%\main.py"
 
@@ -86,6 +95,25 @@ if exist "%DIST_PATH%\%APP_NAME%\%APP_NAME%.exe" (
 xcopy "click_me_to_create_lnk.bat" "%DIST_PATH%\%APP_NAME%\管理员身份创建快捷方式.bat*" /Y
 
 echo 打包完成！
+
+:: 生成时间戳
+for /f "delims=" %%i in ('powershell -NoProfile -Command "Get-Date -Format ""yyyy-MM-dd HHmmss"""') do set BUILD_TIME=%%i
+echo BUILD_TIME=%BUILD_TIME%
+
+if "%ENABLE_PACKAGE_ARCHIVE%"=="1" (
+    :: zip 压缩（压整个 APP_NAME 文件夹）
+    powershell -NoProfile -Command "Compress-Archive -Path '%DIST_PATH%\%APP_NAME%' -DestinationPath '%DIST_PATH%\%APP_NAME% %BUILD_TIME%.zip' -Force"
+
+
+    :: 7z 压缩
+    if exist %SEVEN_ZIP% (
+        %SEVEN_ZIP% a -t7z "%DIST_PATH%\%APP_NAME% %BUILD_TIME%.7z" "%DIST_PATH%\%APP_NAME%" -mx=9
+    ) else (
+        echo 未找到 7z.exe，跳过 7z 压缩
+    )
+) else (
+    echo 已关闭压缩包生成，跳过 zip / 7z
+)
 
 :end
 :: 清理中间文件

@@ -261,6 +261,7 @@ class RedirectText(io.TextIOBase):
         self.message_queue = message_queue
         self.buffer = ""
         self.original_stdout = sys.stdout  # 保存原始标准输出
+        self.line_buffering = True  # 默认按行缓冲
         self.logs = []  # 用于保存结构化的输出
         self.root = GlobalMembers().get_root_class().root
 
@@ -270,9 +271,23 @@ class RedirectText(io.TextIOBase):
             self.original_stdout.flush()
 
     def write(self, text):
-        self._do_write(text)
+        if self.line_buffering:
+            self._do_write_line_buffered(text)
+        else:
+            self._do_write_direct(text)
 
-    def _do_write(self, text):
+    def _do_write_line_buffered(self, text):
+        self.buffer += text
+        if not text.endswith("\n"):
+            return
+        full_text = self.buffer
+        self.buffer = ""
+        self._flush_text(full_text)
+
+    def _do_write_direct(self, text):
+        self._flush_text(text)
+
+    def _flush_text(self, text):
         # # 在控制台输出
         # if self.original_stdout:
         #     self.original_stdout.write(text)
@@ -280,17 +295,11 @@ class RedirectText(io.TextIOBase):
         # lines = text.splitlines()  # 分割成行
 
         # self.print_direct(f"\033[91m{text}\033[0m")
-        self.buffer += text
-        if not text.endswith("\n"):
-            return  # 继续等数据补齐
-
-        full_text = self.buffer
-        self.buffer = ""  # 清空缓冲
         # 在控制台输出
         if self.original_stdout:
-            self.original_stdout.write(full_text)
+            self.original_stdout.write(text)
             self.original_stdout.flush()
-        lines = full_text.splitlines()  # 分割成行
+        lines = text.splitlines()  # 分割成行
         for line in lines:
             if self.debug:
                 # 去掉最后一行（可能为空或包含特殊符号）
@@ -350,6 +359,16 @@ class Printer:
     REVERSE = "\033[7m"
     NO_REVERSE = "\033[27m"
 
+    # 用于重复消息计数显示
+    SIMPLIFY_COUNT_COLOR = "\033[97m"  # 白色文字
+    SIMPLIFY_COUNT_BG = "\033[48;2;57;59;64m"  # 深灰背景
+    RESET_BG = "\033[0m"
+
+    _anim_chars = ["/", "-", "\\", "|"]
+    # 全局设置计数显示格式
+    # {count} 会被替换为重复次数
+    SIMPLIFY_COUNT_FORMAT = "{count} times"
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -357,38 +376,41 @@ class Printer:
 
     def __init__(self):
         if Printer._initialized is not True:
-            self.vital_msg = None  # 用于保存 Vital 级别的输出
-            self.last_msg = None  # 用于存储最后一条消息
-            self.normal_msg = None
+            self._vital_msg = None  # 用于保存 Vital 级别的输出
+            self._last_msg = None  # 用于存储最后一条消息
+            self._normal_msg = None
+            self._simplify_last = None
+            self._simplify_count = None
+            self._simplify_index = 0
             Printer._initialized = True
 
     def print_vn(self, obj=None):
         if obj is not None:
             self.normal(obj)
-        vn_message = f"{self.vital_msg} | {self.normal_msg}" if self.vital_msg else f"{self.normal_msg}"
+        vn_message = f"{self._vital_msg} | {self._normal_msg}" if self._vital_msg else f"{self._normal_msg}"
         print(vn_message)
         return vn_message
 
     def normal(self, obj):
-        self.normal_msg = str(obj)
+        self._normal_msg = str(obj)
         return self
 
     def vital(self, obj):
-        self.vital_msg = str(obj)
+        self._vital_msg = str(obj)
         return self
 
     def clear_vital(self):
-        self.vital_msg = None
+        self._vital_msg = None
         return self
 
     def print_last(self, obj=None):
         if obj is not None:
             self.last(obj)
-        print(self.last_msg)
-        return self.last_msg
+        print(self._last_msg)
+        return self._last_msg
 
     def last(self, obj):
-        self.last_msg = str(obj)
+        self._last_msg = str(obj)
         return self
 
     def debug(self, *args, **kwargs):
@@ -405,6 +427,56 @@ class Printer:
 
     def cmd_out(self, *args, **kwargs):
         print(f"{self.YELLOW}>", *args, f"{self.RESET}", **kwargs)
+
+    @staticmethod
+    def print_std(*args, **kwargs):
+        builtins.print(*args, **kwargs)
+
+    def _flush_last_msg(self):
+        """
+        输出上一条消息及其计数（如果重复次数>1），换行
+        """
+        if self._simplify_last is not None:
+            if self._simplify_count > 1:
+                count_str = self.SIMPLIFY_COUNT_FORMAT.format(count=self._simplify_count)
+                count_str = f"{self.SIMPLIFY_COUNT_BG}{self.SIMPLIFY_COUNT_COLOR}{count_str}{self.RESET_BG}"
+                sys.stdout.write("\r" + self._simplify_last + " " + count_str + "\n")
+            else:
+                sys.stdout.write("\r" + self._simplify_last + "\n")
+            sys.stdout.flush()
+
+    def print_simplify(self, msg):
+        """
+        重复消息显示动画，变化消息显示计数。
+        动画符号只在重复次数>1时显示，计数也只显示>1。
+        """
+        sys.stdout.line_buffering = False
+        if msg == self._simplify_last:
+            self._simplify_count += 1
+            if self._simplify_count > 1:
+                anim_char = self._anim_chars[self._simplify_index % len(self._anim_chars)]
+                sys.stdout.write("\r" + msg + " " + anim_char)
+                sys.stdout.flush()
+                self._simplify_index += 1
+        else:
+            self._flush_last_msg()
+            # 显示新消息，但不显示动画（重复次数=1）
+            sys.stdout.write(msg)
+            sys.stdout.flush()
+            self._simplify_last = msg
+            self._simplify_count = 1
+            self._simplify_index = 0
+        sys.stdout.line_buffering = True
+
+    def print_simplify_stop(self):
+        """
+        停止当前 simplify 输出，把最后一条消息计数显示出来（如果重复次数>1），并换行
+        """
+        self._flush_last_msg()
+        self._simplify_last = None
+        self._simplify_count = 0
+        self._simplify_index = 0
+        sys.stdout.line_buffering = True
 
 
 class Logger:

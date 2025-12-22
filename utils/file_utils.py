@@ -114,7 +114,7 @@ class DictUtils:
                 value.clear()
             else:
                 DictUtils._set_nested_value(data, keys_chain, None)
-            Printer().normal(f"置空了{keys_chain[-1]}节点...")
+            Printer().print_std(f"置空了{keys_chain[-1]}节点...")
             return True
 
         except Exception as e:
@@ -148,7 +148,7 @@ class DictUtils:
                     return False
             end_node_name = keys_chain[-1]
             if isinstance(sub_data, dict) and end_node_name in sub_data:
-                Printer().normal(f"删除了{end_node_name}节点...")
+                Printer().print_std(f"删除了{end_node_name}节点...")
                 del sub_data[end_node_name]
             return True
         except Exception as e:

@@ -201,6 +201,8 @@ class AccOperatorCore:
                                     SwInfoFuncCore.try_capt_avatar_for_sw_when(
                                         sw, RemoteSwKey.LOGIN, h
                                     )
+                                except LookupError as le:
+                                    Logger().warning(f"警告: 找不到控件: {le}")
                                 except Exception as e:
                                     logger.error(f"截取头像时出错: {e}")
                                 time.sleep(0.5)
@@ -1116,6 +1118,7 @@ class AccInfoFuncCore:
             return CfgStatus.NO_CFG.value
 
     """缓存"""
+
     @classmethod
     def get_avatar_from_cache(cls, sw, acc_list):
         user_dir = RootSetting().user_dir
@@ -1146,7 +1149,6 @@ class AccInfoFuncCore:
                     shutil.copyfile(cache_avatar_path, avatar_path)
                     changed = True
         return changed
-
 
     """自适应"""
 
@@ -1606,7 +1608,10 @@ class AccInfoFuncCore:
 
     @classmethod
     def relink_hwnd_of_account(cls, sw, account):
-        cls.auto_bind_main_wnd_to_accounts_in_sw(sw, [account])
+        def _thread():
+            cls.auto_bind_main_wnd_to_accounts_in_sw(sw, [account])
+
+        threading.Thread(target=_thread).start()
         messagebox.showinfo("成功", "已重新绑定！")
 
     @classmethod

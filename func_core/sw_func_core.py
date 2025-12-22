@@ -460,7 +460,7 @@ class SwInfoFuncCore:
                 continue
         if not channels_res_dict:
             return None, f"错误：该版本 {cur_sw_ver} 的适配在本地平台中未找到"
-        Printer().debug(f"{sw} - {mode} 识别结果: {channels_res_dict}")
+        # Printer().debug(f"{sw} - {mode} 识别结果: {channels_res_dict}")
         return channels_res_dict, f"成功：找到版本 {cur_sw_ver} 的适配"
 
     @classmethod
@@ -1986,7 +1986,7 @@ class SwOperatorCore:
         if isinstance(handle_wildcards, list) and len(handle_wildcards) > 0:
             handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
                 pids, handle_wildcards)
-            Printer().debug(f"[INFO]查询到互斥体: {handle_infos}")
+            Printer().print_std(f"[INFO]查询到互斥体: {handle_infos}")
             if len(handle_infos) == 0:
                 return True, f"{sw}已经不含互斥体和文件锁!"
             success = handle_utils.pywinhandle_close_handles(
@@ -2270,7 +2270,7 @@ class SwOperatorCore:
 
             # 处理前置方案
             for pre_channel in relations_dict["parents"]:
-                Printer().debug(f"{mode} - {channel} 检测到前置方案 {pre_channel}")
+                Printer().print_vn(f"{mode} - {channel} 检测到前置方案 {pre_channel}")
                 success, msg = cls.switch_dll_core(
                     sw, mode, pre_channel, target=True, coexist_channel=coexist_channel, ordinal=ordinal)
                 if not success:
@@ -2332,7 +2332,7 @@ class SwOperatorCore:
             all_excluded_hwnds, sw_proc_pid, login_hwnd_rules_dicts)
         if sub_proc:
             sub_proc.terminate()
-        Printer().debug(sw_hwnd)
+        # Printer().debug(sw_hwnd)
         if sw_hwnd is None:
             return None, "超时未检测到窗口"
         return sw_hwnd, ""
@@ -2356,6 +2356,8 @@ class SwOperatorCore:
                         SwInfoFuncCore.try_capt_avatar_for_sw_when(
                             sw, RemoteSwKey.LOGIN, sw_hwnd
                         )
+                    except LookupError as le:
+                        Logger().warning(f"警告: 找不到控件: {le}")
                     except Exception as e:
                         logger.error(f"截取头像时出错: {e}")
                     time.sleep(0.5)
@@ -2712,7 +2714,7 @@ class SwOperatorCore:
                     Printer().print_vn(f"[INFO]以下进程含有互斥体：{pids_has_mutex}", )
                     handle_infos = handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
                         pids_has_mutex, mutant_handle_wildcards)
-                    Printer().debug(f"[INFO]查询到互斥体：{handle_infos}")
+                    Printer().print_vn(f"[INFO]查询到互斥体：{handle_infos}")
                     handle_utils.pywinhandle_close_handles(handle_infos)
             except Exception as e:
                 Logger().warning(f"[ERROR]关闭互斥体时出错：{e}")

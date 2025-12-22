@@ -186,19 +186,21 @@ def update_and_reopen(args, root):
                 shutil.rmtree(new_ver_user_dir)
             try:
                 shutil.copytree(str(old_ver_user_dir), new_ver_user_dir)
+                with open(os.path.join(new_ver_user_dir, old_ver), 'w') as _f:
+                    print(f"在新版用户文件夹中创建一个空的名为旧版本号的文件: {old_ver}")
             except Exception as e:
                 Logger().error(e)
-                messagebox.showerror("错误",
-                                     f"非常抱歉迁移user_files失败，\n"
-                                     f"将打开新版本临时目录和备份目录，请拷贝旧版user文件夹后手动安装！")
-                os.startfile(os.path.dirname(tmp_dir))
+                messagebox.showerror(
+                    "错误", f"非常抱歉迁移user_files失败，\n"
+                            f"将打开新版本临时目录和备份目录，请拷贝旧版user文件夹后手动安装！")
+                os.startfile(tmp_dir)
                 os.startfile(old_ver_inst_dir)
                 root.after(0, root.destroy)  # 安全销毁
         else:
-            Logger().error("未找到 external_res 文件夹或 user_files 文件夹。")
-            messagebox.showerror("错误",
-                                 f"未找到 external_res 文件夹或 user_files 文件夹。\n"
-                                 f"将打开压缩文件所在目录和备份目录，请备份好user文件夹后手动安装！")
+            Logger().error("未找到 旧版用户文件夹或 新版用户文件夹。")
+            messagebox.showerror(
+                "错误", f"未找到 旧版用户文件夹或 新版用户文件夹。\n"
+                        f"将打开压缩文件所在目录和备份目录，请备份好user文件夹后手动安装！")
             os.startfile(tmp_dir)
             os.startfile(old_ver_inst_dir)
             root.after(0, root.destroy)  # 安全销毁

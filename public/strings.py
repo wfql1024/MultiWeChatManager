@@ -31,6 +31,9 @@ class Strings:
     REFRESH_HINT = "(标签页单击切换,双击可刷新)"
     TRAY_HINT = "(到托盘)"
     SIDEBAR_HINT = "(侧栏)"
+    SIDEBAR_OPEN = "❮" if NEWER_VER else "<"
+    SIDEBAR_CLOSE = "❯" if NEWER_VER else ">"
+    TRAY_SIGN = "⌟" if NEWER_VER else "⤓"
 
     LOGIN_SETTINGS_INSTRUCTIONS = \
         ("\n- 一键登录前隐藏软件主窗口 (:字面意思)\n"

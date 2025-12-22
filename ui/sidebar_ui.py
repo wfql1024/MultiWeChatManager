@@ -233,14 +233,14 @@ class SidebarUI:
                 if self.linked_hwnd and win32gui.IsWindow(self.linked_hwnd):
                     # 获取目标窗口当前各种状态
                     curr_linked_wnd_state = self.get_linked_wnd_state(self.linked_hwnd)
-                    Printer().normal(f"{self.linked_hwnd}当前状态: "
-                                    f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
-                                    f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
-                                    f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
-                                    f"隐藏={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]},"
-                                    f"位置={curr_linked_wnd_state[WndProperties.RECT]}，"
-                                    f"“最大化”={is_def_max_wnd}，"
-                                    f"记录的“非最大化”位置：{self.last_linked_rect}")  # 每次监听都打印状态
+                    Printer().print_vn(f"{self.linked_hwnd}当前状态: "
+                                       f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
+                                       f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
+                                       f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
+                                       f"隐藏={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]},"
+                                       f"位置={curr_linked_wnd_state[WndProperties.RECT]}，"
+                                       f"“最大化”={is_def_max_wnd}，"
+                                       f"记录的“非最大化”位置：{self.last_linked_rect}")  # 每次监听都打印状态
 
                     # 首次运行时初始化 last_linked_wnd_state
                     if last_linked_wnd_state is None:
@@ -628,8 +628,6 @@ class SidebarTree(RadioTreeView, ABC):
 
         # # 假设你已经有了一个用于存储 sw 节点的字典
         # sw_nodes = {}
-
-
 
         for sw in sw_acc_data:
             sw_data = sw_acc_data[sw]

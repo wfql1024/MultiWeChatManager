@@ -6,6 +6,10 @@ from typing import Tuple, List, Optional
 import pygetwindow as gw
 import uiautomation
 import uiautomation as auto
+
+# 设置全局查找超时时间，单位秒
+auto.uiautomation.SetGlobalSearchTimeout(0.5)  # 默认是 10 秒
+
 import win32api
 import win32con
 import win32gui
@@ -144,6 +148,12 @@ class HwndGetter:
 
                 try:
                     with auto.UIAutomationInitializerInThread():
+                        # frame = inspect.currentframe().f_back
+                        # func_name = frame.f_code.co_name
+                        # thread = threading.current_thread()
+                        # Printer().debug(f"[UIA] func={func_name} | "
+                        #                 f"thread={thread.name} | "
+                        #                 f"is_main={thread is threading.main_thread()}")
                         ctrl = uiautomation.ControlFromHandle(hwnd)
                         for wildcard in class_wildcards:
                             if fnmatch.fnmatch(ctrl.ClassName, wildcard):
@@ -171,6 +181,12 @@ class HwndGetter:
         for hwnd in hwnds:
             try:
                 with auto.UIAutomationInitializerInThread():
+                    # frame = inspect.currentframe().f_back
+                    # func_name = frame.f_code.co_name
+                    # thread = threading.current_thread()
+                    # Printer().debug(f"[UIA] func={func_name} | "
+                    #                 f"thread={thread.name} | "
+                    #                 f"is_main={thread is threading.main_thread()}")
                     ctrl = uiautomation.ControlFromHandle(hwnd)
                     if any(fnmatch.fnmatch(ctrl.ClassName, wildcard) for wildcard in class_wildcards):
                         res.append(hwnd)
@@ -338,9 +354,15 @@ class HwndGetter:
         """
         hwnd_to_ctrl = {}
         with auto.UIAutomationInitializerInThread():
+            # frame = inspect.currentframe().f_back
+            # func_name = frame.f_code.co_name
+            # thread = threading.current_thread()
+            # Printer().debug(f"[UIA] func={func_name} | "
+            #         f"thread={thread.name} | "
+            #         f"is_main={thread is threading.main_thread()}")
             matched_hwnds = [hwnd for hwnd in all_hwnds if cls._hwnd_matches_rules(hwnd, hwnd_to_ctrl, rules_dict)]
         # Printer().debug(f"初筛: {matched_hwnds}")
-        Printer().print_vn(f"初筛: {matched_hwnds}")
+        Printer().print_simplify(f"初筛: {matched_hwnds}")
 
         # 初筛窗口不唯一, 则进入尾筛 FinalSelect
         if "FinalSelect" in rules_dict and len(matched_hwnds) > 1:
@@ -371,6 +393,12 @@ class HwndGetter:
 
         for hwnd in hwnds:
             with auto.UIAutomationInitializerInThread():
+                # frame = inspect.currentframe().f_back
+                # func_name = frame.f_code.co_name
+                # thread = threading.current_thread()
+                # Printer().debug(f"[UIA] func={func_name} | "
+                #                 f"thread={thread.name} | "
+                #                 f"is_main={thread is threading.main_thread()}")
                 ctrl = auto.ControlFromHandle(hwnd)
             row = [
                 str(hwnd),
@@ -583,6 +611,12 @@ def uiautomation_find_control_by_names(hwnd, names, _control_type="Button"):
     try:
         # 获取窗口对象
         with auto.UIAutomationInitializerInThread():
+            # frame = inspect.currentframe().f_back
+            # func_name = frame.f_code.co_name
+            # thread = threading.current_thread()
+            # Printer().debug(f"[UIA] func={func_name} | "
+            #                 f"thread={thread.name} | "
+            #                 f"is_main={thread is threading.main_thread()}")
             window = auto.ControlFromHandle(hwnd)
         for t in names:
             try:
@@ -1071,6 +1105,12 @@ def get_wnd_dict_by_pid(pid):
     for hwnd in hwnds:
         try:
             with auto.UIAutomationInitializerInThread():
+                # frame = inspect.currentframe().f_back
+                # func_name = frame.f_code.co_name
+                # thread = threading.current_thread()
+                # Printer().debug(f"[UIA] func={func_name} | "
+                #                 f"thread={thread.name} | "
+                #                 f"is_main={thread is threading.main_thread()}")
                 ctrl = uiautomation.ControlFromHandle(hwnd)
                 windows.append({
                     'hwnd': hwnd,

@@ -215,7 +215,7 @@ class GlobalSettings:
         self.auto_press = None
         self.disable_proxy = None
         self.use_txt_avt = None
-        self.in_tray = False
+        self.in_tray = False  # 是否在托盘运行
         self.prefer_coexist = None
 
 

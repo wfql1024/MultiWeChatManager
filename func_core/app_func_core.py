@@ -1,7 +1,6 @@
 import datetime as dt
 import json
 import os
-import re
 import shutil
 import sys
 import threading
@@ -160,19 +159,24 @@ class AppFuncCore:
             icon.menu = menu
             icon.title = "极峰多聊"
             icon.update_menu()
+            icon.notify(
+                "程序已最小化到系统托盘\n点击托盘图标可重新打开",
+                "极峰多聊"
+            )
 
         def run_icon():
             try:
-                print("隐藏主界面")
+                # print("隐藏主界面")
                 root.after(0, root.withdraw)
                 GlobalMembers().get_root_class().app.global_settings_value.in_tray = True
-                print("安装图标")
+                # print("安装图标")
                 tray_icon.run(setup)
             except Exception as e:
                 tray_icon.stop()
                 root.after(0, root.deiconify)
                 GlobalMembers().get_root_class().app.global_settings_value.in_tray = False
                 Logger().error(e)
+                root.protocol("WM_DELETE_WINDOW", root.destroy)
                 messagebox.showerror("错误", f"创建托盘图标失败: {e}")
 
         menu = Menu(
@@ -330,7 +334,7 @@ class AppFuncCore:
             # 移动文件夹到回收站
             old_ver_bak_dir = os.path.join(executable_dir, ".old")
             for item in os.listdir(old_ver_bak_dir):
-                item_path = os.path.join(executable_dir, item)
+                item_path = os.path.join(old_ver_bak_dir, item)
                 if os.path.isdir(item_path) and item.startswith("[") and item.endswith("]"):
                     items_to_delete.append(item_path)
             try:
@@ -340,7 +344,7 @@ class AppFuncCore:
                 messagebox.showerror("错误", f"移动文件夹到回收站时发生错误：\n"
                                              f"{str(e)}\n将打开程序文件夹")
                 AppFuncCore.open_program_file()
-            messagebox.showinfo("成功", "已成功移动到回收站！")
+            messagebox.showinfo("成功", f"下列项目已成功移动到回收站！\n{items_to_delete}")
 
     @staticmethod
     def force_fetch_remote_encrypted_cfg(ns=RootCfgKey.REMOTE_SW_NS.value, url=None):

@@ -22,6 +22,7 @@ from public import Config
 from public.enums import MultirunMode, LocalCfgKey, RemoteSwKey
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
 from utils.hwnd_utils import Win32HwndGetter, HwndGetter
+from utils.logger_utils import Printer
 from utils.sys_utils import SysPathUtils
 
 
@@ -615,3 +616,15 @@ class Test(TestCase):
         save_location = "E:/Now/Desktop/JhiFengMultiChat.zip"
 
         impersonated_download(file_url, save_location)
+
+    def test_print_simplify(self):
+        msgs = ["初筛: []"] * 5 + ["下一步: 处理"] + ["初筛: []"]
+
+        for m in msgs:
+            Printer().print_simplify(m)
+            time.sleep(0.2)  # 模拟处理时间
+
+        # 最后一条消息换行
+        Printer().print_simplify_stop()
+
+        Printer().debug("测试结束")

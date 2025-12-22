@@ -100,7 +100,7 @@ class MenuUI:
         # ————————————————————————————侧栏菜单————————————————————————————
         used_sidebar = App().fetch_setting_or_set_default(LocalCfgKey.USED_SIDEBAR)
         suffix = "" if used_sidebar is True else Strings.SIDEBAR_HINT
-        label = "❯" if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists() else "❮"
+        label = Strings.SIDEBAR_CLOSE if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists() else Strings.SIDEBAR_OPEN
         self.sidebar_menu_label = f"{label}{suffix}"
         self.menu_bar.add_command(label=self.sidebar_menu_label, command=partial(self._open_sidebar))
         # ————————————————————————————文件菜单————————————————————————————
@@ -265,7 +265,7 @@ class MenuUI:
 
         self.used_tray = App().fetch_setting_or_set_default(LocalCfgKey.USED_TRAY)
         suffix = "" if self.used_tray is True else Strings.TRAY_HINT
-        self._to_tray_label = f"⌟{suffix}"
+        self._to_tray_label = f"{Strings.TRAY_SIGN}{suffix}"
         self.menu_bar.add_command(label=self._to_tray_label, command=self._to_bring_tk_to_tray)
 
     def _create_setting_menu(self):
@@ -438,7 +438,7 @@ class MenuUI:
     def _open_sidebar(self):
         if self.sidebar_wnd is not None and self.sidebar_wnd.winfo_exists():
             print("销毁", self.sidebar_wnd)
-            new_label = "❮"
+            new_label = Strings.SIDEBAR_OPEN
             self.menu_bar.entryconfigure(self.sidebar_menu_label, label=new_label)
             self.sidebar_menu_label = new_label
             if self.sidebar_ui is not None:
@@ -447,7 +447,7 @@ class MenuUI:
             self.sidebar_wnd.destroy()
         else:
             print("创建", self.sidebar_wnd)
-            new_label = "❯"
+            new_label = Strings.SIDEBAR_CLOSE
             self.menu_bar.entryconfigure(self.sidebar_menu_label, label=new_label)
             if len(self.sidebar_menu_label) > 1:
                 App().update_settings(**{LocalCfgKey.USED_SIDEBAR: True})
@@ -541,3 +541,7 @@ class MenuUI:
             self._to_tray_label = new_label
         if not (App().global_settings_value.in_tray is True):
             AppFuncCore.create_tray(self.root)
+            # 重定向关闭按钮为隐藏窗口
+            self.root.protocol("WM_DELETE_WINDOW", lambda: self.root.withdraw())
+        if App().global_settings_value.in_tray is True:
+            self.root.withdraw()
