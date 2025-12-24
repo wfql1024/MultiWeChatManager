@@ -103,6 +103,9 @@ class CfgManagerUI:
 
         slowly_refresh()
         Printer().print_vn("加载完成!")
+        # 加载完成后更新一下界面并且触发事件
+        if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
+            self.scrollable_canvas.refresh_canvas()
 
     def to_del_cfg_of_accounts(self, items: list):
         """删除选中的账号的配置"""
@@ -201,7 +204,7 @@ class CfgManagerCR(CkbRow):
         # 头像标签
         img = img.resize(Config.AVT_SIZE)
         photo = ImageTk.PhotoImage(img)
-        avatar_label = ttk.Label(self.row_frame, image=photo)
+        avatar_label = ttk.Label(self.row_frame, image=photo)  # type: ignore
         avatar_label.image = photo
         avatar_label.pack(side="left")
         # 按钮区域=配置按钮

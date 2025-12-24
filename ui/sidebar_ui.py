@@ -2,7 +2,6 @@ import ctypes
 import threading
 import time
 import tkinter as tk
-from abc import ABC
 from enum import Enum
 from tkinter import ttk
 
@@ -11,7 +10,7 @@ import win32gui
 from PIL import Image, ImageTk
 
 from components.composited_controls import RadioTreeView
-from components.custom_widgets import CustomCornerBtn
+from components.custom_widgets import CustomCornerBtn, CustomBtn
 from func_core.acc_func_core import AccOperatorCore
 from functions.acc_func import AccInfoFuncCore, Acc
 from functions.app_func import App
@@ -39,15 +38,12 @@ class WndProperties(str, Enum):
 
 
 class SidebarUI:
-    # 暂时下架
-    # TODO: 若无法找到窗口，联动详情窗口来获取窗口句柄
-    # TODO: 列表选中状态应该是根据目前已经链接的窗口来确定
     # TODO: 增加最大化判断
     def __init__(self, wnd, title):
         self.thread_result = None
         self.find_acc_wnd_thread = None
         self.logout_class = None
-        self.login_class = None
+        self.sidebar_tree_ui = None
         self.last_linked_rect = None
         self.home_btn = None
         self.logout_frame = None
@@ -82,7 +78,7 @@ class SidebarUI:
 
     def initialize_members_in_init(self):
         self.pause_event = threading.Event()
-        self.root_hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())
+        self.root_hwnd = ctypes.windll.user32.GetParent(self.root.winfo_id())  # type: ignore
         self.bar_width = Config.SIDEBAR_WIDTH
 
     def set_wnd(self):
@@ -98,11 +94,11 @@ class SidebarUI:
         self.bar_frame = tk.Frame(self.wnd, width=self.bar_width)
         self.bar_frame.pack(side="left", fill="y")
         # self.bar_frame.pack_propagate(False)  # 禁止根据子控件调整大小
-        self.bar_hwnd = ctypes.windll.user32.GetParent(self.bar_frame.winfo_id())
+        self.bar_hwnd = ctypes.windll.user32.GetParent(self.bar_frame.winfo_id())  # type: ignore
 
         # 置顶的控件
         self.login_frame = ttk.Frame(self.bar_frame)
-        self.login_frame.pack(side=tk.TOP, fill=tk.X)
+        self.login_frame.pack(side="top", fill="x")
 
         # # 中间框架
         # self.middle_frame = ttk.Frame(self.bar_frame)
@@ -124,13 +120,14 @@ class SidebarUI:
         # self.logout_frame = ttk.Frame(self.bar_frame)
         # self.logout_frame.pack(side=tk.BOTTOM, fill=tk.X)
 
-        self.login_class = SidebarTree(self, self.login_frame, OnlineStatus.LOGIN)
+        self.sidebar_tree_ui = SidebarTree(self, self.login_frame, OnlineStatus.LOGIN)
         # self.logout_class = SidebarTree(self, self.logout_frame, OnlineStatus.LOGOUT)
 
         # 首次显示时，设置 bar 窗口的位置和大小
         self.linked_hwnd = self.root_hwnd
         curr_linked_wnd_state = self.get_linked_wnd_state(self.linked_hwnd)
         self._update_sidebar(curr_linked_wnd_state)
+        self.home_btn.set_state(CustomBtn.State.SELECTED)
 
         # 开启线程监听嵌套窗口的拖动行为
         self.listener_running = True
@@ -222,7 +219,7 @@ class SidebarUI:
         监听频率会随时间增加,状态变化时重置。
         """
         last_change_time = time.time()  # 记录上一次状态变化的时间
-        base_interval = 0.05  # 基础监听间隔
+        base_interval = 0.005  # 基础监听间隔
         current_interval = base_interval  # 初始监听间隔
 
         last_linked_wnd_state = None  # 记录上一次的窗口状态
@@ -233,14 +230,16 @@ class SidebarUI:
                 if self.linked_hwnd and win32gui.IsWindow(self.linked_hwnd):
                     # 获取目标窗口当前各种状态
                     curr_linked_wnd_state = self.get_linked_wnd_state(self.linked_hwnd)
-                    Printer().print_vn(f"{self.linked_hwnd}当前状态: "
-                                       f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
-                                       f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
-                                       f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
-                                       f"隐藏={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]},"
-                                       f"位置={curr_linked_wnd_state[WndProperties.RECT]}，"
-                                       f"“最大化”={is_def_max_wnd}，"
-                                       f"记录的“非最大化”位置：{self.last_linked_rect}")  # 每次监听都打印状态
+                    Printer().print_simplify(
+                        f"{self.linked_hwnd}当前状态: "
+                        f"监听频率={current_interval}, "
+                        f"最小化={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
+                        f"最大化={curr_linked_wnd_state[WndProperties.IS_MAXIMIZED]}, "
+                        f"前台={curr_linked_wnd_state[WndProperties.IS_FOREGROUND]}, "
+                        f"隐藏={curr_linked_wnd_state[WndProperties.IS_MINIMIZED]}, "
+                        f"位置={curr_linked_wnd_state[WndProperties.RECT]}, "
+                        f"“最大化”={is_def_max_wnd}, "
+                        f"记录的“非最大化”位置：{self.last_linked_rect}")  # 每次监听都打印状态
 
                     # 首次运行时初始化 last_linked_wnd_state
                     if last_linked_wnd_state is None:
@@ -307,7 +306,7 @@ class SidebarUI:
             # 计算当前应该的监听间隔
             elapsed_time = time.time() - last_change_time
             if elapsed_time >= 0.5:  # 每0.5秒
-                current_interval = min(current_interval * 2, 1.0)  # 翻倍但不超过1秒
+                current_interval = min(current_interval * 2, 0.5)  # 翻倍但不超过1秒
                 last_change_time = time.time()  # 重置计时
 
             time.sleep(current_interval)
@@ -325,6 +324,7 @@ class SidebarUI:
         :return:
         """
         self.listener_running = False
+        Printer().print_simplify_stop()
 
     def switch_acc_wnd(self, item_id):
         """
@@ -365,7 +365,7 @@ class SidebarUI:
                 # 将主窗口调整到侧栏右侧，并设置相同高度
                 AccOperatorCore.switch_to_sw_account_wnd(sw, acc)
                 # hwnd_utils.restore_window(new_linked_hwnd)
-                time.sleep(0.2)
+                # time.sleep(0.02)
                 # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
                 # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
                 try:
@@ -382,9 +382,10 @@ class SidebarUI:
                     logger.warning(e)
             else:
                 print("管理器切换到账号窗口...")
+                self.home_btn.set_state(CustomBtn.State.NORMAL)
                 AccOperatorCore.switch_to_sw_account_wnd(sw, acc)
                 # hwnd_utils.restore_window(new_linked_hwnd)
-                time.sleep(0.2)
+                # time.sleep(0.02)
                 # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
                 # hwnd_utils.do_click_in_wnd(new_linked_hwnd, 8, 8)
                 # 使用保存的原始位置和大小
@@ -409,6 +410,11 @@ class SidebarUI:
         # 恢复监听线程
         self.turn_on_listener()
 
+    def _clear_acc_selection(self):
+        tree = self.sidebar_tree_ui.tree
+        for i in TreeUtils.get_all_items(tree):
+            TreeUtils.remove_a_tag_of_item(tree, i, "selected")
+
     def switch_root_wnd(self):
         print("切换到管理器窗口...")
         # 暂停监听线程
@@ -416,9 +422,13 @@ class SidebarUI:
 
         # 置顶管理器
         TkWndUtils.bring_wnd_to_front(self.root, self.root)
+        self.root.deiconify()
+        # 更新侧栏位置
         self.linked_hwnd = self.root_hwnd
         self._update_sidebar(self.get_linked_wnd_state(self.linked_hwnd))
-
+        # 清空树的选择, 管理器按钮被选中
+        self._clear_acc_selection()
+        self.home_btn.set_state(CustomBtn.State.SELECTED)
         # 恢复监听线程
         self.turn_on_listener()
 
@@ -511,26 +521,39 @@ class SidebarUI:
         寻找前台的特定窗口
         :return:
         """
-        print("链接窗口不在前台，重新寻找前台窗口...")
-        hwnd_list = []
+        Printer().print_simplify("链接窗口不在前台，重新寻找前台窗口...")
+        self._clear_acc_selection()
+        self.home_btn.set_state(CustomBtn.State.NORMAL)
+        # acc_hwnd = {}
         # 获取当前所有账号
-        tree = self.login_class.tree
+        tree = self.sidebar_tree_ui.tree
         items = tree.get_children()
+        self.linked_hwnd = None
+        if self.root_hwnd and win32gui.IsWindow(self.root_hwnd) and win32gui.GetForegroundWindow() == self.root_hwnd:
+            self.linked_hwnd = self.root_hwnd
+            self._update_sidebar(self.get_linked_wnd_state(self.linked_hwnd))
+            self.home_btn.set_state(CustomBtn.State.SELECTED)
+            return
         for item in items:
             # 获取每个账号的hwnd
             sw, acc = item.split("/")
             hwnd, = Acc(sw, acc).get_data(main_hwnd=None)
-            hwnd_list.append(hwnd)
-
-        hwnd_list.append(self.root_hwnd)
-
-        self.linked_hwnd = None
-        # 寻找前台窗口
-        for hwnd in hwnd_list:
             if hwnd and win32gui.IsWindow(hwnd) and win32gui.GetForegroundWindow() == hwnd:
                 self.linked_hwnd = hwnd
                 self._update_sidebar(self.get_linked_wnd_state(self.linked_hwnd))
+                sidebar_tree_ui: SidebarTree = self.sidebar_tree_ui
+                sidebar_tree_ui.click_on_leaf_item(1, item, "#0")
                 break
+
+        # hwnd_list.append(self.root_hwnd)
+        #
+        # self.linked_hwnd = None
+        # # 寻找前台窗口
+        # for hwnd in hwnd_list:
+        #     if hwnd and win32gui.IsWindow(hwnd) and win32gui.GetForegroundWindow() == hwnd:
+        #         self.linked_hwnd = hwnd
+        #         self._update_sidebar(self.get_linked_wnd_state(self.linked_hwnd))
+        #         break
 
     def wait_for_acc_wnd(self, sw, acc):
         """
@@ -581,9 +604,12 @@ class SidebarUI:
         #     time.sleep(0.02)
 
 
-class SidebarTree(RadioTreeView, ABC):
+class SidebarTree(RadioTreeView):
     def __init__(self, parent_class, parent_frame, tree_tag, title_text=None):
         super().__init__(parent_class, parent_frame, tree_tag, title_text)
+
+    def _refresh(self):
+        self.quick_refresh_items(App().get_sw_acc_data())
 
     def initialize_members_in_init(self):
         self.columns = (" ",)
@@ -599,7 +625,7 @@ class SidebarTree(RadioTreeView, ABC):
         btn.pack(side="top", padx=customized_btn_pad, pady=customized_btn_pad)
         widget_utils.set_widget_tip_when_(self.tooltips, btn, {"点击刷新": True})
         (btn.set_bind_map(
-            **{"1": lambda: self.quick_refresh_items(App().get_sw_acc_data())})
+            **{"1": self._refresh})
          .apply_bind(self.root))
 
         # # 标题=标签
@@ -675,6 +701,7 @@ class SidebarTree(RadioTreeView, ABC):
     def click_on_id_column(self, click_time, item_id):
         # self.click_on_leaf_item(click_time, item_id, None)
         print(item_id)
+        self.click_on_leaf_item(click_time, item_id, "#0")
         if click_time == 1:
             self.parent_class.switch_acc_wnd(item_id)
 
@@ -688,14 +715,14 @@ class SidebarTree(RadioTreeView, ABC):
         total_rows = 0
         for root_item in tree.get_children():
             total_rows += TreeUtils.count_visible_rows_recursive(tree, root_item)
-        print(total_rows)
+        # print(total_rows)
         if self.table_tag == OnlineStatus.LOGOUT:
             set_height = min(total_rows, 5)
         elif self.table_tag == OnlineStatus.LOGIN:
             set_height = min(total_rows, 10)
         else:
             set_height = total_rows
-        print(set_height)
+        # print(set_height)
         tree.configure(height=set_height)
 
 # if __name__ == "__main__":

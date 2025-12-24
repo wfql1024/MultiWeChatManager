@@ -6,7 +6,7 @@ from tkinter import ttk
 from PIL import ImageTk, Image
 
 from components.composited_controls import ClassicAHT, CkbRow
-from components.custom_widgets import CustomCornerBtn, CustomBtn
+from components.custom_widgets import CustomCornerBtn, CustomBtn, ScrollableText
 from func_core.acc_func_core import AccInfoFuncCore
 from functions.acc_func import Acc
 from functions.app_func import App
@@ -199,7 +199,7 @@ class AccLoginCR(CkbRow):
         details = AccInfoFuncCore.get_acc_details(self.sw, account)
         iid = details[AccKeys.IID]
         img = details[AccKeys.AVATAR]
-        wrapped_display_name = details[AccKeys.WRAP_DISPLAY]
+        origin_display_name = details[AccKeys.DISPLAY]
         config_status = details[AccKeys.CONFIG_STATUS]
         has_mutex = details[AccKeys.HAS_MUTEX]
         # 对详情中的数据进行处理
@@ -219,7 +219,7 @@ class AccLoginCR(CkbRow):
         # 头像标签
         img = img.resize(Config.AVT_SIZE)
         photo = ImageTk.PhotoImage(img)
-        avatar_label = ttk.Label(self.row_frame, image=photo)
+        avatar_label = ttk.Label(self.row_frame, image=photo)  # type: ignore
         avatar_label.image = photo
         avatar_label.pack(side="left")
         avatar_label.bind("<Enter>", lambda event: event.widget.config(cursor="hand2"))
@@ -239,25 +239,63 @@ class AccLoginCR(CkbRow):
             **{"1": partial(btn_cmd, [iid])})
          .apply_bind(self.root))
         _pack_btn(acc_btn)
+
         # 账号标签: 账号含有互斥体, 则使用红色字体
         sign_visible: bool = App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
+
+        # 用 ScrollableText 替代 Label
+        self.name_text = ScrollableText(
+            self.row_frame,
+            height=1,
+            wrap="none",  # 关键：不换行，才能横向滚动
+            borderwidth=0,
+            bg=self.root.cget("bg")
+        )
+
+        # 样式处理
         if has_mutex and sign_visible:
-            try:
-                self.item_label = ttk.Label(
-                    self.row_frame, style="Mutex.TLabel", text=wrapped_display_name)
-            except Exception as e:
-                Logger().warning(e)
-                self.item_label = ttk.Label(
-                    self.row_frame, style="Mutex.TLabel", text=StringUtils.clean_texts(wrapped_display_name))
-        else:
-            try:
-                self.item_label = ttk.Label(
-                    self.row_frame, text=wrapped_display_name)
-            except Exception as e:
-                Logger().warning(e)
-                self.item_label = ttk.Label(
-                    self.row_frame, text=StringUtils.clean_texts(wrapped_display_name))
-        self.item_label.pack(side="left", fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
+            self.name_text.tag_configure("mutex", foreground="red")
+
+        # 文本写入（当 Label 用）
+        try:
+            self.name_text.insert("1.0", origin_display_name)
+        except Exception as e:
+            Logger().warning(e)
+            self.name_text.delete("1.0", "end")
+            self.name_text.insert("1.0", StringUtils.clean_texts(origin_display_name))
+
+        self.name_text.configure(state="disabled")
+
+        # 只启用横向滚动
+        self.name_text.disable_auto_scroll_y()
+        self.name_text.enable_auto_scroll_x()
+
+        self.name_text.pack(
+            side="left",
+            fill="x",
+            padx=Config.CLZ_ROW_LBL_PAD_X
+        )
+        self.name_text.config(cursor="arrow")
+
+        # # 账号标签: 账号含有互斥体, 则使用红色字体
+        # sign_visible: bool = App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
+        # if has_mutex and sign_visible:
+        #     try:
+        #         self.item_label = ttk.Label(
+        #             self.row_frame, style="Mutex.TLabel", text=wrapped_display_name)
+        #     except Exception as e:
+        #         Logger().warning(e)
+        #         self.item_label = ttk.Label(
+        #             self.row_frame, style="Mutex.TLabel", text=StringUtils.clean_texts(wrapped_display_name))
+        # else:
+        #     try:
+        #         self.item_label = ttk.Label(
+        #             self.row_frame, text=wrapped_display_name)
+        #     except Exception as e:
+        #         Logger().warning(e)
+        #         self.item_label = ttk.Label(
+        #             self.row_frame, text=StringUtils.clean_texts(wrapped_display_name))
+        # self.item_label.pack(side="left", fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
 
         # 绑定事件到控件范围内所有位置
         widget_utils.exclusively_bind_event_to_frame_when_(

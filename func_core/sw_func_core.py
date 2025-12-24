@@ -161,7 +161,9 @@ class SwInfoFuncCore:
         channels_dict, = cls.get_remote_sw(sw, mode, channels=None)
         if not isinstance(channels_dict, dict):
             return
-        channels_to_update = channels if channels else channels_dict.keys()
+        channels_to_update = channels
+        if channels is None:
+            channels_to_update = channels_dict.keys()
         cur_sw_ver = cls.calc_sw_ver(sw)
         for channel in channels_to_update:
             try:
@@ -421,7 +423,9 @@ class SwInfoFuncCore:
         if not isinstance(all_channels_dict, dict):
             return None, "该模式没有方案"
         # 扫描更新适配--------------------------------------------------------------------------
-        channels_to_scan = channels if channels else list(all_channels_dict.keys())
+        channels_to_scan = channels
+        if channels is None:
+            channels_to_scan = list(all_channels_dict.keys())
         if coexist_channel is None or ordinal is None:
             # "不跳过已有"只对主程序生效
             cls._update_adaptation_from_remote_to_cache(sw, mode, channels_to_scan, skip_cache)

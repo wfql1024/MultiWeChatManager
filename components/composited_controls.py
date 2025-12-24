@@ -481,7 +481,7 @@ class CkbRow:
 
     def __init__(self, parent_class, parent_frame, item, table_tag):
         self.disabled = None
-        self.item_label = None
+        self.name_text = None
         self.checkbox = None
         self.checkbox_var = None
         self.row_frame = None
@@ -550,8 +550,8 @@ class CkbRow:
         self.checkbox = tk.Checkbutton(self.row_frame, variable=self.checkbox_var)
         self.checkbox.pack(side="left")
         # 行内容
-        self.item_label = ttk.Label(self.row_frame, style="Mutex.TLabel", text="请设计行元素")
-        self.item_label.pack(side="left", fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
+        self.name_text = ttk.Label(self.row_frame, style="Mutex.TLabel", text="请设计行元素")
+        self.name_text.pack(side="left", fill="x", padx=Config.CLZ_ROW_LBL_PAD_X)
         widget_utils.bind_event_to_frame_when_(
             self.row_frame, "<Button-1>", self.toggle_checkbox,
             Condition(self.disabled, Condition.ConditionType.NOT_EQUAL, True)
@@ -1244,7 +1244,7 @@ class RadioTreeView:
             self.selected_values["relate_chain"][item_id] = relate_chain
 
         print(self.selected_values)
-        print(tree.selection())
+        # print(tree.selection())
 
     def click_on_id_column(self, click_time, item_id):
         """

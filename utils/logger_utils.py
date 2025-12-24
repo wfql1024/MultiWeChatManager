@@ -364,7 +364,7 @@ class Printer:
     SIMPLIFY_COUNT_BG = "\033[48;2;57;59;64m"  # 深灰背景
     RESET_BG = "\033[0m"
 
-    _anim_chars = ["/", "-", "\\", "|"]
+    _anim_chars = ["/", "-", "\\"]
     # 全局设置计数显示格式
     # {count} 会被替换为重复次数
     SIMPLIFY_COUNT_FORMAT = "{count} times"
@@ -455,7 +455,7 @@ class Printer:
             self._simplify_count += 1
             if self._simplify_count > 1:
                 anim_char = self._anim_chars[self._simplify_index % len(self._anim_chars)]
-                sys.stdout.write("\r" + msg + " " + anim_char)
+                sys.stdout.write("\r" + anim_char + " " + msg)
                 sys.stdout.flush()
                 self._simplify_index += 1
         else:

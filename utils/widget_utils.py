@@ -397,40 +397,6 @@ def add_hyperlink_events(text_widget, text_content):
         text_widget.tag_bind(url, "<Leave>", lambda e: text_widget.config(cursor=""))
 
 
-def auto_scroll_text(tasks, direction_key, text_widget, root, gap=50, scroll_distance=0.005):
-    """每秒滚动一行，保持滚动方向一致"""
-    # 获取当前视图的最大滚动位置（即文本框的底部）
-    top_pos = text_widget.yview()[0]
-    bottom_pos = text_widget.yview()[1]
-    max_pos = 1.0
-
-    # 确保方向状态从外部获取
-    direction = getattr(direction_key, "value", 1)  # 默认向下
-    # print(direction)
-
-    pause = 0
-    if bottom_pos >= max_pos:
-        direction = -1  # 改为向上
-        pause = 1000
-    elif top_pos <= 0:
-        direction = 1  # 改为向下
-        pause = 1000
-
-    # 更新滚动方向到外部变量
-    setattr(direction_key, "value", direction)
-
-    # 根据方向计算目标位置
-    target_pos = top_pos + scroll_distance * direction
-    text_widget.yview_moveto(target_pos)
-
-    # 添加任务并返回
-    scroll_task = root.after(
-        gap + pause,
-        lambda: auto_scroll_text(tasks, direction_key, text_widget, root, gap, scroll_distance)
-    )
-    tasks.append(scroll_task)
-
-
 def insert_as_two_per_line(text_widget, line_list):
     """在Text中插入每行两个元素，并且居中显示"""
     for i in range(0, len(line_list), 2):  # 每两个元素作为一对

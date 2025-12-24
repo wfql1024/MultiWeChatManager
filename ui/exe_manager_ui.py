@@ -68,13 +68,15 @@ def _thread_to_load_patching_button(
     提取的公共方法, 用以批量创建补丁按钮
     switch_and_fresh_func方法参数要求: 必须为mode, patch_channel, conflicts, coexist_channel, ordinal
     """
+    # 扫描补丁的渠道参数为None 可视为主程序补丁扫描
+    is_main_exe_patching_scan = channels is None and mode == RemoteSwKey.REVOKE
 
     # # -------------------------
     # # 顶层函数：纯耗时计算
     # # -------------------------
     def _thread():
         # time.sleep(0.1)
-        if channels is None and mode == RemoteSwKey.REVOKE:
+        if is_main_exe_patching_scan:
             Sw(sw).load_main_patching_finished = False
         # else:
         #     while Sw(sw).load_main_patching_finished is not True:
@@ -85,7 +87,9 @@ def _thread_to_load_patching_button(
     # UI更新方法，必须主线程执行
     # -------------------------
     def _update_ui(res, msg):
+        print(res, msg)
         if not isinstance(res, dict):
+            # 若没有方案, 则创建一个禁用的按钮
             mode_text, = Sw(sw).get_remote(mode, **{RemoteSwKey.MODE_ALIAS: ""})
             no_patch_btn = _create_btn_in_(frame, mode_text)
             _pack_btn_right(no_patch_btn)
@@ -93,7 +97,7 @@ def _thread_to_load_patching_button(
             widget_utils.set_widget_tip_when_(tooltips, no_patch_btn, {msg: True})
         else:
             all_channels = []
-            if channels is None and mode == RemoteSwKey.REVOKE:
+            if is_main_exe_patching_scan:
                 Sw(sw).available_revoke_channels = []
             for patch_channel, patch_channel_res_dict in res.items():
                 channel_des, = Sw(sw).get_remote(mode, RemoteSwKey.CHANNELS, **{patch_channel: None})
@@ -104,12 +108,12 @@ def _thread_to_load_patching_button(
                 try:
                     channel_tip = channel_des[RemoteSwKey.INTRO] + f"  作者: {channel_des[RemoteSwKey.AUTHOR]}"
                 except KeyError:
-                    channel_tip = "该方案尚无简介.  作者: 未知"
+                    channel_tip = "该方案暂无简介.  作者: 未知"
                 patch_status = patch_channel_res_dict["status"]
                 channel_msg = patch_channel_res_dict["msg"]
                 patch_btn = _create_btn_in_(frame, f"{channel_label}")
                 all_channels.append(patch_channel)
-                if channels is None and mode == RemoteSwKey.REVOKE:
+                if is_main_exe_patching_scan:
                     Sw(sw).available_revoke_channels.append(patch_channel)
                 (patch_btn.set_bind_map(
                     **{"1": lambda pc=patch_channel: switch_and_fresh_func(
@@ -125,8 +129,8 @@ def _thread_to_load_patching_button(
                     widget_utils.set_widget_tip_when_(tooltips, patch_btn, {channel_msg: True})
                 else:
                     widget_utils.set_widget_tip_when_(tooltips, patch_btn, {channel_tip: True})
-            if channels is None and mode == RemoteSwKey.REVOKE:
-                Sw(sw).load_main_patching_finished = True
+        if is_main_exe_patching_scan:
+            Sw(sw).load_main_patching_finished = True
 
     GlobalMembers().wait_res_to_run(
         _update_ui, _thread)
@@ -342,6 +346,9 @@ class ExeManagerUI:
             self.create_em_ui()
 
         slowly_refresh()
+        # 加载完成后更新一下界面并且触发事件
+        if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
+            self.scrollable_canvas.refresh_canvas()
         Printer().print_vn("加载完成!")
 
     def _build_header_frame(self):
@@ -664,7 +671,7 @@ class ExeManagerCkRow(CkbRow):
         # 头像标签
         img = img.resize(Config.AVT_SIZE)
         photo = ImageTk.PhotoImage(img)
-        avatar_label = ttk.Label(self.row_frame, image=photo)
+        avatar_label = ttk.Label(self.row_frame, image=photo)  # type: ignore
         avatar_label.image = photo
         avatar_label.pack(side="left")
 
@@ -731,7 +738,7 @@ class ExeManagerCkRow(CkbRow):
 
             import time
 
-            MAX_WAIT = 30
+            MAX_WAIT = 10
             start = time.time()
             # 等待可用（list 且非空）
             while time.time() - start < MAX_WAIT:
@@ -739,12 +746,11 @@ class ExeManagerCkRow(CkbRow):
                     break
                 time.sleep(0.1)  # 避免死循环占满CPU
 
+            if Sw(self.sw).load_main_patching_finished is False:
+                Logger().warning("主程序补丁扫描超时!")
+
             channels = Sw(self.sw).available_revoke_channels
             Printer().debug(f"主程序已识别: {channels}")
-            # 超时或无效
-            if not isinstance(channels, list) or not channels:
-                Logger().warning("等待 available_revoke_channels 超时或无效")
-                return
 
             # 把 UI 更新操作放入主线程
             self.root.after(0, _thread_to_load_patching_button,

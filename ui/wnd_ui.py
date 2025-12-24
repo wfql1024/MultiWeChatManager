@@ -12,7 +12,6 @@ from datetime import datetime
 from functools import partial
 from tkinter import filedialog, scrolledtext, ttk, messagebox
 from tkinter.font import Font
-from typing import Dict, Union
 
 import win32com
 import win32com.client
@@ -20,7 +19,7 @@ import win32gui
 import winshell
 from PIL import Image, ImageTk
 
-from components.custom_widgets import CustomBtn, CustomCornerBtn
+from components.custom_widgets import CustomBtn, CustomCornerBtn, ScrollableText
 from components.custom_widgets import DefaultEntry
 from components.widget_wrappers import SubToolWndUI, HotkeyEntry4KeyboardW, ScrollableCanvasW
 from data_access import RootSetting
@@ -910,12 +909,9 @@ class Direction:
 
 
 class AboutWndUI(SubToolWndUI):
-    # TODO: 提取滚动文本的公共方法
     def __init__(self, wnd, title, app_info):
+        self.scroll_text_dict = {}
         self.logo_img = None
-        self.scroll_text_str = None
-        self.scroll_direction = None
-        self.scroll_tasks = None
         self.remote_cfg_data = None
         self.about_info = None
         self.app_name = None
@@ -927,19 +923,7 @@ class AboutWndUI(SubToolWndUI):
         super().__init__(wnd, title)
 
     def initialize_members_in_init(self):
-        self.wnd_width, self.wnd_height = Config.ABOUT_WND_SIZE
-        self.scroll_tasks: Dict[str, Union[list, None]] = {
-            "reference": None,
-            "sponsor": None,
-        }
-        self.scroll_direction: Dict[str, Union[Direction, None]] = {
-            "reference": None,
-            "sponsor": None,
-        }
-        self.scroll_text_str: Dict[str, Union[str, None]] = {
-            "reference": None,
-            "sponsor": None,
-        }
+        # self.wnd_width, self.wnd_height = Config.ABOUT_WND_SIZE
         self.logo_img = []
 
     def set_wnd(self):
@@ -1017,9 +1001,8 @@ class AboutWndUI(SubToolWndUI):
             lines.append(item["title"])
             lines.append(item["link"])
             lines.append("")  # 空行
-        self.scroll_text_str["reference"] = "\n".join(lines).strip()
-
-        self.pack_scrollable_text(reference_frame, "reference", 12)
+        reference_scroll_text_str = "\n".join(lines).strip()
+        self._pack_scrollable_text("reference", reference_frame, reference_scroll_text_str, 12)
 
         # 赞助
         sponsor_label = ttk.Label(self.content_frame, text="赞助", style='SecondTitle.TLabel')
@@ -1035,9 +1018,8 @@ class AboutWndUI(SubToolWndUI):
             amount = sponsor_list[idx].get('amount', None)
             user = sponsor_list[idx].get('user', None)
             sponsor_list_lines.append(f"• {date}  {currency}{amount}  {user}")
-        self.scroll_text_str["sponsor"] = "\n".join(sponsor_list_lines)
-
-        self.pack_scrollable_text(sponsor_frame, "sponsor", 5)
+        sponsor_scroll_text_str = "\n".join(sponsor_list_lines).strip()
+        self._pack_scrollable_text("sponsor", sponsor_frame, sponsor_scroll_text_str, 5)
 
         # 底部区域=声明+检查更新按钮
         bottom_frame = ttk.Frame(self.content_frame)
@@ -1068,42 +1050,26 @@ class AboutWndUI(SubToolWndUI):
         )
         copyright_label.pack(**Config.T_WGT_PACK)
 
-    def pack_scrollable_text(self, frame, part, height):
-        scrollbar = tk.Scrollbar(frame)
-        scrollbar.pack(side="right", fill="y")
-        text = tk.Text(frame, wrap="word", font=("", Config.LITTLE_FONTSIZE),
-                       height=height, bg=self.wnd.cget("bg"),
-                       yscrollcommand=scrollbar.set, bd=0, highlightthickness=0)
+    def _pack_scrollable_text(self, part, frame, text_str, height):
+        text = ScrollableText(frame, height=height, bg=self.wnd.cget("bg"), font=("", Config.LITTLE_FONTSIZE))
+        self.scroll_text_dict[part] = text
+        # # 水平滚动条
+        # scrollbar = tk.Scrollbar(frame, command=text.xview, orient="horizontal")
+        # scrollbar.pack(side="bottom", fill="x")
+        # text.set_scrollbar(scrollbar)
+        # # 垂直滚动条
+        # scrollbar = tk.Scrollbar(frame, command=text.yview, orient="vertical")
+        # scrollbar.pack(side="right", fill="y")
+        # text.set_scrollbar(scrollbar)
+        # text.enable_auto_scroll_x()
 
         text.insert(tk.END, '\n')
-        text.insert(tk.END, self.scroll_text_str[part])
+        text.insert(tk.END, text_str)
         text.insert(tk.END, '\n')
 
-        widget_utils.add_hyperlink_events(text, self.scroll_text_str[part])
-        text.config(state="disabled")
+        widget_utils.add_hyperlink_events(text, text_str)
+        text.config(state="disabled", cursor="arrow")
         text.pack(side="left", fill="x", expand=False, padx=Config.GRID_PAD)
-        scrollbar.config(command=text.yview)
-        # 创建方向对象
-        self.scroll_direction[part] = Direction(1)  # 初始方向为向下
-        self.scroll_tasks[part] = []
-        # 启动滚动任务
-        widget_utils.auto_scroll_text(
-            self.scroll_tasks[part], self.scroll_direction[part], text, self.root
-        )
-        # 鼠标进入控件时取消所有任务
-        text.bind(
-            "<Enter>",
-            lambda event: [
-                self.root.after_cancel(task) for task in self.scroll_tasks[part]
-            ]
-        )
-        # 鼠标离开控件时继续滚动，保留当前方向
-        text.bind(
-            "<Leave>",
-            lambda event: widget_utils.auto_scroll_text(
-                self.scroll_tasks[part], self.scroll_direction[part], text, self.root
-            )
-        )
 
     def check_for_updates(self, current_full_version):
         config_data = App().force_get_remote_cfg(RootCfgKey.REMOTE_GLOBAL_NS)
@@ -1152,14 +1118,6 @@ class AboutWndUI(SubToolWndUI):
             return
         for url in url_list:
             webbrowser.open_new(url)
-
-    def finally_do(self):
-        for info in self.scroll_tasks.values():
-            for task in info:
-                try:
-                    self.root.after_cancel(task)  # 取消滚动任务
-                except Exception as e:
-                    logger.error(f"Error cancelling task: {e}")
 
 
 class RewardsWndUI(SubToolWndUI):
@@ -1459,6 +1417,10 @@ class StatisticWndUI(SubToolWndUI):
         self.create_manual_table()
         self.create_auto_table()
         self.create_refresh_table()
+
+        # 加载完成后更新一下界面并且触发事件
+        if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
+            self.scrollable_canvas.refresh_canvas()
 
     def update_content(self):
         self.display_table()

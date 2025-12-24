@@ -863,20 +863,16 @@ shell.ShellExecute "{admin_bat_file_path}", "", "", "runas", 1
     @staticmethod
     def kill_mutex_of_acc(sw, acc):
         """关闭指定进程的所有互斥体"""
-        # TODO: 需要适配共存账号
         pid, = AccInfoFuncCore.get_sw_acc_data(sw, acc, pid=None)
         if pid is None:
             return False
-        handle_regex_list, = RemoteSw().get_(sw, **{RemoteSwKey.MUTEX_HANDLES: None})
-        if handle_regex_list is None:
-            return True
-        handle_names = [handle["handle_name"] for handle in handle_regex_list]
-        if handle_names is None or len(handle_names) == 0:
+        mutex_handle_wildcards, = RemoteSw().get_(sw, **{RemoteSwKey.MUTEX_HANDLE_WCS: None})
+        if mutex_handle_wildcards is None:
             return True
         success = handle_utils.pywinhandle_close_handles(
-            handle_utils.pywinhandle_find_handles_by_pids_and_handle_names(
+            handle_utils.pywinhandle_find_handles_by_pids_and_handle_name_wildcards(
                 [pid],
-                handle_names
+                mutex_handle_wildcards
             )
         )
         print(f"kill mutex: {success}")

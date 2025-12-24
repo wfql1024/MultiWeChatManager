@@ -524,20 +524,116 @@ class Test(TestCase):
         save_path = os.path.join(desktop, f"capture_{timestamp}.png")
         capture_window(136624, save_path)
 
-# import win32api
+    # import win32api
 
-# def get_monitor_index_from_hwnd(hwnd):
-#     l, t, r, b = win32gui.GetWindowRect(hwnd)
-#     cx = (l + r) // 2
-#     cy = (t + b) // 2
-#     monitors = win32api.EnumDisplayMonitors()
-#     for idx, (hMonitor, hdcMonitor, (ml, mt, mr, mb)) in enumerate(monitors):
-#         if ml <= cx <= mr and mt <= cy <= mb:
-#             return idx
-#     return 0
+    # def get_monitor_index_from_hwnd(hwnd):
+    #     l, t, r, b = win32gui.GetWindowRect(hwnd)
+    #     cx = (l + r) // 2
+    #     cy = (t + b) // 2
+    #     monitors = win32api.EnumDisplayMonitors()
+    #     for idx, (hMonitor, hdcMonitor, (ml, mt, mr, mb)) in enumerate(monitors):
+    #         if ml <= cx <= mr and mt <= cy <= mb:
+    #             return idx
+    #     return 0
 
-# def to_screen_local_coords(hwnd, x1, y1, x2, y2):
-#     monitors = win32api.EnumDisplayMonitors()
-#     idx = get_monitor_index_from_hwnd(hwnd)
-#     (_, _, (ml, mt, mr, mb)) = monitors[idx]
-#     return (x1 - ml, y1 - mt, x2 - ml, y2 - mt)
+    # def to_screen_local_coords(hwnd, x1, y1, x2, y2):
+    #     monitors = win32api.EnumDisplayMonitors()
+    #     idx = get_monitor_index_from_hwnd(hwnd)
+    #     (_, _, (ml, mt, mr, mb)) = monitors[idx]
+    #     return (x1 - ml, y1 - mt, x2 - ml, y2 - mt)
+
+    def test_listen_hwnd(self):
+        root = tk.Tk()
+        # root.overrideredirect(True)  # 无边框
+        root.attributes("-topmost", True)
+        root.geometry("120x40+0+0")
+
+        label = tk.Label(root, text="Sidebar", bg="black", fg="white")
+        label.pack(fill="both", expand=True)
+
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.windll.user32
+
+        EVENT_OBJECT_LOCATIONCHANGE = 0x800B
+        WINEVENT_OUTOFCONTEXT = 0x0000
+        OBJID_WINDOW = 0
+
+        WinEventProcType = ctypes.WINFUNCTYPE(
+            None,
+            wintypes.HANDLE,
+            wintypes.DWORD,
+            wintypes.HWND,
+            wintypes.LONG,
+            wintypes.LONG,
+            wintypes.DWORD,
+            wintypes.DWORD,
+        )
+
+        target_hwnd = 264990  # ← 你绑定的窗口 hwnd
+        latest_rect = None  # (l, t, r, b)
+
+        def win_event_proc(hWinEventHook, event, hwnd,
+                           idObject, idChild,
+                           dwEventThread, dwmsEventTime):
+            # 只关心窗口本体
+            if idObject != OBJID_WINDOW:
+                return
+
+            # 只关心目标窗口
+            if hwnd != target_hwnd:
+                return
+
+            if event == EVENT_OBJECT_LOCATIONCHANGE:
+                rect = wintypes.RECT()
+                user32.GetWindowRect(hwnd, ctypes.byref(rect))
+                print("Target window moved:", rect.left, rect.top, rect.right, rect.bottom)
+
+            rect = wintypes.RECT()
+            if user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                latest_rect = (rect.left, rect.top, rect.right, rect.bottom)
+                l, t, r, b = latest_rect
+                root.geometry(f"+{l}+{t}")
+
+        callback = WinEventProcType(win_event_proc)
+
+        hook = user32.SetWinEventHook(
+            EVENT_OBJECT_LOCATIONCHANGE,
+            EVENT_OBJECT_LOCATIONCHANGE,
+            0,
+            callback,
+            0,
+            0,
+            WINEVENT_OUTOFCONTEXT,
+        )
+
+        if not hook:
+            raise RuntimeError("SetWinEventHook failed")
+
+        print("Hook installed for target window.")
+
+        # root.mainloop()
+
+        # 同步 Tk
+        root.update_idletasks()
+        root.update()
+
+        msg = wintypes.MSG()
+        last_applied = None
+
+        while True:
+            # 处理 WinEvent 消息（非阻塞）
+            while user32.PeekMessageW(ctypes.byref(msg), 0, 0, 0, 1):
+                user32.TranslateMessage(ctypes.byref(msg))
+                user32.DispatchMessageW(ctypes.byref(msg))
+
+            # 同步 Tk
+            root.update_idletasks()
+            root.update()
+
+            # 如果目标窗口位置变了，就贴过去
+            if latest_rect and latest_rect != last_applied:
+                l, t, r, b = latest_rect
+                root.geometry(f"+{l}+{t}")
+                last_applied = latest_rect

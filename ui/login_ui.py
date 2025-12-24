@@ -215,6 +215,9 @@ class LoginUI:
 
         self.after_success_create_acc_ui_when_start()
         self.after_success_create_acc_ui()
+        # 加载完成后更新一下界面并且触发事件
+        if self.scrollable_canvas is not None and self.scrollable_canvas.canvas.winfo_exists():
+            self.scrollable_canvas.refresh_canvas()
         self.refreshing = False
 
     def _to_manual_login(self):

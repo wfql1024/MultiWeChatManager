@@ -376,7 +376,8 @@ def pywinhandle_find_handles_by_pids_and_handle_names(process_ids=None, handle_n
 
 def pywinhandle_find_handles_by_pids_and_handle_name_wildcards(process_ids=None, handle_name_wildcards=None):
     """根据传入的pid列表和句柄通配列表查找符合条件的句柄,传入空值表示不限制."""
-    Printer().debug(f"参数: {process_ids}, {handle_name_wildcards}")
+    Printer().vital("查找句柄")
+    Printer().print_vn(f"参数: PID: {process_ids}, 通配: {handle_name_wildcards}")
     result = []
     system_info = _pywinhandle_query_system_handle_information()
     if system_info.HandleCount is None:

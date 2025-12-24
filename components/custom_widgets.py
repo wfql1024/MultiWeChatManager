@@ -1,11 +1,374 @@
 import tkinter as tk
+import tkinter.font as tkfont
 from enum import Enum
 from tkinter import ttk
 from typing import Union
 
+from public import Config
 from public.custom_classes import Condition, Conditions
 from utils.encoding_utils import ColorUtils
 from utils.widget_utils import UnlimitedClickHandler, CanvasUtils, WidgetUtils
+
+
+class ScrollableText(tk.Text):
+    DIR_FORWARD = 1
+    DIR_BACKWARD = -1
+
+    def __init__(self, master, **kwargs):
+        self.master = master
+
+        # ---------- Text 约定 ----------
+        kwargs.setdefault("wrap", "word")
+        default_font = tkfont.nametofont("TkDefaultFont")
+        kwargs.setdefault("font", default_font)
+        kwargs.setdefault("bd", 0)
+        kwargs.setdefault("highlightthickness", 0)
+
+        try:
+            kwargs.setdefault("bg", master.cget("bg"))
+        except tk.TclError:
+            pass
+
+        super().__init__(master, **kwargs)
+
+        # ---------- scrollbar（纯 UI） ----------
+        self._scrollbars = {"x": None, "y": None}
+
+        # ---------- 自动滚动（逻辑） ----------
+        self._scroll = {
+            "x": self._init_axis_state(),
+            "y": self._init_axis_state(enabled=True),
+        }
+
+        self._mapped = False
+        self.bind("<Map>", self._on_mapped, add="+")
+
+    def _init_axis_state(self, *, enabled=False):
+        return {
+            "enabled": enabled,
+            "dir": self.DIR_FORWARD,
+            "tasks": [],
+            "gap": 50,
+            "distance": 0.005,
+        }
+
+    # ======================================================
+    # 生命周期
+    # ======================================================
+
+    def _on_mapped(self, event=None):
+        if self._mapped:
+            return
+        self._mapped = True
+
+        self.default_bind()
+
+        for axis in ("x", "y"):
+            if self._scroll[axis]["enabled"]:
+                self._start_axis(axis)
+
+    # ======================================================
+    # scrollbar 管理（每轴独立）
+    # ======================================================
+
+    def set_scrollbar(self, scrollbar):
+        self._set_scrollbar(scrollbar)
+
+    def remove_scrollbar_y(self):
+        self._remove_scrollbar("y")
+
+    def remove_scrollbar_x(self):
+        self._remove_scrollbar("x")
+
+    def _set_scrollbar(self, scrollbar):
+        orient = str(scrollbar.cget("orient")).lower()
+        axis = "y" if orient.startswith("v") else "x"
+        self._remove_scrollbar(axis)
+
+        def dummy_set(_a, _b):
+            pass
+
+        if axis == "y":
+            self.configure(yscrollcommand=scrollbar.set)
+            scrollbar.configure(command=self.yview)
+        else:
+            self.configure(xscrollcommand=scrollbar.set)
+            scrollbar.configure(command=self.xview)
+
+        self._scrollbars[axis] = scrollbar
+
+    def _remove_scrollbar(self, axis):
+        sb = self._scrollbars.get(axis)
+        if not isinstance(sb, tk.Widget):
+            return
+
+        def dummy_set(_a, _b):
+            pass
+
+        if axis == "y":
+            self.configure(yscrollcommand=dummy_set)
+        else:
+            self.configure(xscrollcommand=dummy_set)
+
+        sb.destroy()
+        self._scrollbars[axis] = None
+
+    # ======================================================
+    # 自动滚动（每轴独立）
+    # ======================================================
+
+    def enable_auto_scroll_y(self, *, gap=50, distance=0.005):
+        self._enable_axis("y", gap, distance)
+
+    def enable_auto_scroll_x(self, *, gap=50, distance=0.005):
+        self._enable_axis("x", gap, distance)
+
+    def disable_auto_scroll_y(self):
+        self._disable_axis("y")
+
+    def disable_auto_scroll_x(self):
+        self._disable_axis("x")
+
+    def _enable_axis(self, axis, gap, distance):
+        s = self._scroll[axis]
+        s["enabled"] = True
+        s["gap"] = gap
+        s["distance"] = distance
+
+        if self._mapped and not s["tasks"]:
+            self._start_axis(axis)
+
+    def _disable_axis(self, axis):
+        s = self._scroll[axis]
+        s["enabled"] = False
+        self._cancel_axis(axis)
+
+    def _start_axis(self, axis):
+        self._axis_step(axis)
+
+    def _axis_step(self, axis):
+        s = self._scroll[axis]
+        if not s["enabled"]:
+            return
+
+        if axis == "y":
+            view = self.yview()
+            moveto = self.yview_moveto
+        else:
+            view = self.xview()
+            moveto = self.xview_moveto
+
+        start, end = view
+        pause = 0
+
+        if end >= 1.0:
+            s["dir"] = self.DIR_BACKWARD
+            pause = 1000
+        elif start <= 0.0:
+            s["dir"] = self.DIR_FORWARD
+            pause = 1000
+
+        moveto(start + s["distance"] * s["dir"])
+
+        task = self.after(
+            s["gap"] + pause,
+            self._axis_step,
+            axis
+        )
+        s["tasks"].append(task)
+
+    def _cancel_axis(self, axis):
+        s = self._scroll[axis]
+        for task in s["tasks"]:
+            try:
+                self.after_cancel(task)
+            except tk.TclError:
+                pass
+        s["tasks"].clear()
+
+    # ======================================================
+    # 交互
+    # ======================================================
+
+    def default_bind(self):
+        self.bind("<Enter>", lambda e: self._pause_all())
+        self.bind("<Leave>", lambda e: self._resume_all())
+
+    def _pause_all(self):
+        for axis in ("x", "y"):
+            self._cancel_axis(axis)
+
+    def _resume_all(self):
+        for axis in ("x", "y"):
+            if self._scroll[axis]["enabled"]:
+                self._start_axis(axis)
+
+
+class SingleScrollableText(tk.Text):
+    # 正向 / 反向（下或右 / 上或左）
+    DIR_FORWARD = 1
+    DIR_BACKWARD = -1
+
+    def __init__(self, master, **kwargs):
+        """可滚动的文本框"""
+        self.master = master
+        # —— 约定参数（非 tk.Text 参数） ——
+        self._show_scrollbar = kwargs.pop("show_scrollbar", True)
+        # —— Text 的默认约定 ——
+        kwargs.setdefault("wrap", "word")
+        kwargs.setdefault("font", ("", Config.LITTLE_FONTSIZE))
+        kwargs.setdefault("bd", 0)
+        kwargs.setdefault("highlightthickness", 0)
+        try:
+            default_bg = master.cget("bg")
+        except tk.TclError:
+            default_bg = None
+        if default_bg is not None:
+            kwargs.setdefault("bg", default_bg)
+        super().__init__(master, **kwargs)
+
+        self._scroll_axis = None  # "x" or "y"
+        self._scrollbar = None
+        if self._show_scrollbar:
+            self._init_scrollable_text()
+            ...
+        # 自动滚动相关（约定行为）
+        self._scroll_tasks = []
+        self._auto_scroll_enabled = True
+        self._scroll_dir = self.DIR_FORWARD
+
+        # 绑定但不立即启动
+        self.bind("<Map>", self._on_mapped, add="+")
+
+    def _on_mapped(self, event=None):
+        if event:
+            ...
+        # 防止多次 Map（切换父容器等情况）
+        if getattr(self, "_mapped", False):
+            return
+
+        self._mapped = True
+        self.default_bind()
+        self.enable_auto_scroll()
+
+    def delete_cur_scrollbar(self):
+        """删除当前绑定的滚动条"""
+        # 先清理之前自动创建的滚动条
+        old_scrollbar = self._scrollbar
+        print(f"当前待删除的滚动条: {old_scrollbar}")
+        old_orient = str(old_scrollbar.cget("orient")).lower()
+        print(f"当前待删除的滚动条方向: {old_orient}")
+        if self._scrollbar is not None:
+            # 1. 关键：设置一个哑回调函数，吃掉所有调用
+            def dummy_set(_first, _last):
+                pass  # 什么都不做，静默拦截
+
+            if old_orient.startswith("v"):
+                self.configure(yscrollcommand=dummy_set)
+            elif old_orient.startswith("h"):
+                self.configure(xscrollcommand=dummy_set)
+            old_scrollbar.destroy()
+
+            self._scrollbar = None
+
+    def set_scrollbar(self, scrollbar):
+        self.delete_cur_scrollbar()
+        self.add_scrollbar(scrollbar)
+
+    def add_scrollbar(self, scrollbar):
+        """绑定外部滚动条（以 scrollbar 自身 orient 为唯一事实）"""
+        # 检查方向
+        orient = str(scrollbar.cget("orient")).lower()
+        print(f"添加的滚动条方向: {orient}")
+        if orient.startswith("v"):
+            self._scroll_axis = "y"
+            self.config(yscrollcommand=scrollbar.set)
+            scrollbar.config(command=self.yview)
+        elif orient.startswith("h"):
+            self._scroll_axis = "x"
+            self.config(xscrollcommand=scrollbar.set)
+            scrollbar.config(command=self.xview)
+        else:
+            raise ValueError(f"Unsupported scrollbar orient: {orient}")
+        self._scrollbar = scrollbar
+
+    def _init_scrollable_text(self):
+        """初始化可滚动的文本框"""
+        if self._scrollbar is not None:
+            return
+        # # 初始化横向的
+        # scrollbar = tk.Scrollbar(self.master, orient="horizontal", command=self.xview)
+        # scrollbar.pack(side="bottom", fill="x")
+        # self.config(xscrollcommand=scrollbar.set)
+        # self._scroll_axis = "x"
+        # 初始化纵向的
+        scrollbar = tk.Scrollbar(self.master, orient="vertical", command=self.yview)
+        scrollbar.pack(side="right", fill="y")
+        self.config(yscrollcommand=scrollbar.set)
+        self._scroll_axis = "y"
+
+        self._scrollbar = scrollbar
+
+    def _detect_scroll_axis(self):
+        # 有 scrollbar → 用 scrollbar 的事实
+        if self._scroll_axis:
+            return self._scroll_axis
+        return "y"
+
+    def _auto_scroll_step(self, gap=50, scroll_distance=0.005):
+        if self._auto_scroll_enabled is not True:
+            return
+
+        axis = self._detect_scroll_axis()
+        print(f"当前轴: {axis}")
+
+        if axis == "y":
+            view = self.yview()
+            moveto = self.yview_moveto
+        else:
+            view = self.xview()
+            moveto = self.xview_moveto
+
+        start, end = view
+        pause = 0
+
+        if end >= 1.0:
+            self._scroll_dir = self.DIR_BACKWARD
+            pause = 1000
+        elif start <= 0.0:
+            self._scroll_dir = self.DIR_FORWARD
+            pause = 1000
+
+        target = start + scroll_distance * self._scroll_dir
+        moveto(target)
+
+        task = self.after(
+            gap + pause,
+            self._auto_scroll_step, gap, scroll_distance)
+        self._scroll_tasks.append(task)
+
+    def enable_auto_scroll(self, gap=50, scroll_distance=0.005):
+        self._auto_scroll_enabled = True
+        if self._scroll_tasks:
+            return
+        self._auto_scroll_step(gap, scroll_distance)
+
+    def disable_auto_scroll(self):
+        self._pause_auto_scroll()
+        self._auto_scroll_enabled = False
+
+    def _pause_auto_scroll(self):
+        for task in self._scroll_tasks:
+            self.after_cancel(task)
+        self._scroll_tasks.clear()
+
+    def _resume_auto_scroll(self, gap=50, scroll_distance=0.005):
+        if not self._scroll_tasks:
+            self._auto_scroll_step(gap, scroll_distance)
+
+    def default_bind(self):
+        self.bind("<Enter>", lambda event: self._pause_auto_scroll())
+        self.bind("<Leave>", lambda event: self._resume_auto_scroll())
 
 
 class DefaultEntry(tk.Entry):

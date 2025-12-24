@@ -15,6 +15,7 @@ import win32con
 import win32gui
 import win32process
 
+from components import ScrollableText
 from data_access.setting import RootSetting, RemoteSw, LocalSetting
 from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
 from functions.sw_func import Sw
@@ -411,7 +412,7 @@ class Test(TestCase):
     @staticmethod
     def test_postmessage_restore():
         """方案1：用 PostMessage 异步恢复窗口"""
-        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        hwnd = 18881850
         print("==> 测试 PostMessage 异步恢复窗口")
 
         win32gui.PostMessage(hwnd, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)
@@ -422,7 +423,7 @@ class Test(TestCase):
     @staticmethod
     def test_invoke_threadsafe():
         """方案2：模拟 Qt 主线程调用（仅演示结构）"""
-        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        hwnd = 18881850
         print("==> 测试 Qt 主线程安全调用（示意）")
 
         # 在真实 PyQt 程序中应使用 QMetaObject.invokeMethod()
@@ -437,7 +438,7 @@ class Test(TestCase):
     @staticmethod
     def test_foreground_external():
         """方案3：唤起外部 Qt 程序窗口"""
-        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        hwnd = 18881850
         print("==> 测试外部程序窗口唤起")
 
         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
@@ -452,7 +453,7 @@ class Test(TestCase):
     @staticmethod
     def test_async_thread_postmessage():
         """方案4：子线程中执行异步 PostMessage"""
-        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        hwnd = 18881850
         print("==> 测试子线程中执行 PostMessage")
 
         def worker():
@@ -468,7 +469,7 @@ class Test(TestCase):
     @staticmethod
     def test_attach_thread_input():
         """方案5：使用 AttachThreadInput 提升前台权限"""
-        hwnd = 18881850  # TODO: 替换为你的目标窗口句柄
+        hwnd = 18881850
         print("==> 测试 AttachThreadInput 方式")
 
         try:
@@ -628,3 +629,168 @@ class Test(TestCase):
         Printer().print_simplify_stop()
 
         Printer().debug("测试结束")
+
+    def test_scrollable_text(self):
+        import tkinter as tk
+        from tkinter import ttk
+
+        root = tk.Tk()
+        root.title("ScrollableText Test Bench")
+        root.geometry("400x400")
+
+        # ===============================
+        # 测试区域（可清空）
+        # ===============================
+        test_area = tk.Frame(root, bg="#f0f0f0")
+        test_area.pack(fill="both", expand=True)
+
+        def clear_test_area():
+            for w in test_area.winfo_children():
+                w.destroy()
+
+        # ===============================
+        # 各个测试用例
+        # ===============================
+        def test_default_vertical():
+            clear_test_area()
+            text = ScrollableText(test_area)
+            text.pack(fill="both", expand=True)
+            for i in range(200):
+                text.insert("end", f"Line {i}\n")
+
+        def test_no_scrollbar():
+            clear_test_area()
+            text = ScrollableText(test_area, show_scrollbar=False)
+            text.pack(fill="both", expand=True)
+            for i in range(200):
+                text.insert("end", f"Line {i}\n")
+
+        def test_disable_auto_scroll():
+            clear_test_area()
+            text = ScrollableText(test_area)
+            text.pack(fill="both", expand=True)
+            for i in range(200):
+                text.insert("end", f"Line {i}\n")
+            text.disable_auto_scroll_y()
+
+        def test_horizontal_scroll():
+            print("清理前")
+            clear_test_area()
+            print("清理后")
+            frame = tk.Frame(test_area)
+            frame.pack(fill="both", expand=True)
+
+            text = ScrollableText(frame, wrap="none")
+
+            # 外部创建横向滚动条
+            xbar = tk.Scrollbar(frame, orient="horizontal")
+            xbar.pack(side="bottom", fill="x")
+            text.set_scrollbar(xbar)
+            # 外部创建纵向滚动条
+            y_bar = tk.Scrollbar(frame, orient="vertical")
+            y_bar.pack(side="right", fill="y")
+            text.set_scrollbar(y_bar)
+
+            text.enable_auto_scroll_x()
+
+            text.pack(side="top", fill="both", expand=True)
+
+            for i in range(50):
+                text.insert(
+                    "end",
+                    ("This is a very very very very very long line → " * 2) + "\n"
+                )
+
+        def test_switch_axis_runtime():
+            clear_test_area()
+
+            frame = tk.Frame(test_area)
+            frame.pack(fill="both", expand=True)
+
+            text = ScrollableText(frame, wrap="none")
+            text.pack(fill="both", expand=True)
+
+            for i in range(200):
+                text.insert("end", f"Line {i} " * 50 + "\n")
+
+            def switch():
+                xbar = ttk.Scrollbar(frame, orient="horizontal")
+                xbar.pack(side="bottom", fill="x")
+                text.add_scrollbar(xbar)
+
+            # 3 秒后切换为横向滚动
+            root.after(3000, switch)
+
+        # ===============================
+        # 底部按钮区
+        # ===============================
+        btn_bar = tk.Frame(root)
+        btn_bar.pack(side="bottom", fill="x")
+
+        buttons = [
+            ("默认纵向滚动", test_default_vertical),
+            ("无滚动条", test_no_scrollbar),
+            ("禁用自动滚动", test_disable_auto_scroll),
+            ("横向滚动", test_horizontal_scroll),
+            ("运行时切换方向", test_switch_axis_runtime),
+        ]
+
+        for text, cmd in buttons:
+            tk.Button(btn_bar, text=text, command=cmd).pack(
+                side="left", padx=5, pady=5
+            )
+
+        # 默认先跑一个
+        test_horizontal_scroll()
+
+        root.mainloop()
+
+    def test_safe_delete_scrollbar(self):
+        import tkinter as tk
+
+        def create_widgets():
+            global text_area, v_scrollbar
+            frame = tk.Frame(root)
+            frame.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
+
+            # 创建Text部件
+            text_area = tk.Text(frame, wrap=tk.NONE)
+            text_area.grid(row=0, column=0, sticky='nsew')
+
+            # 创建Scrollbar并与Text绑定
+            v_scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL, command=text_area.yview)
+            v_scrollbar.grid(row=0, column=1, sticky='ns')
+            text_area.configure(yscrollcommand=v_scrollbar.set)
+
+            # 配置网格权重，使Text可扩展
+            frame.grid_rowconfigure(0, weight=1)
+            frame.grid_columnconfigure(0, weight=1)
+
+            # 创建一个用于销毁滚动条的按钮
+            destroy_btn = tk.Button(root, text="安全销毁滚动条", command=safe_destroy_example)
+            destroy_btn.pack(pady=5)
+
+        def safe_destroy_example():
+            """按钮调用的安全销毁函数"""
+            if 'v_scrollbar' in globals() and v_scrollbar.winfo_exists():
+                # 1. 关键：设置一个哑回调函数，吃掉所有调用
+                def dummy_set(first, last):
+                    pass  # 什么都不做，静默拦截
+
+                text_area.configure(yscrollcommand=dummy_set)  # 替换，不是None!
+                # 2. 从grid布局中移除
+                v_scrollbar.grid_forget()
+                # 3. 销毁对象
+                v_scrollbar.destroy()
+
+                # 可选：调整Text布局，让其重新填满原来滚动条的空间
+                text_area.grid(columnspan=2)  # 假设原来占1列，现在扩展到2列
+
+                print("滚动条已安全销毁。")
+            else:
+                print("滚动条不存在或已被销毁。")
+
+        root = tk.Tk()
+        root.title("安全销毁Scrollbar示例")
+        create_widgets()
+        root.mainloop()
