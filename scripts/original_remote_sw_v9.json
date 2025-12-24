@@ -14,7 +14,7 @@
             "%data_dir%/All Users/config/config.data"
         ],
         "patch_addresses": [
-            "%dll_dir%/WeChat.dll"
+            "%dll_dir%/WeChatWin.dll"
         ],
         "executable_wildcards": [
             "WeChat?.exe",

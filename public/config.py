@@ -70,7 +70,7 @@ def scale_dict(d, sf):
 
 
 class Config:
-    VER_STATUS = 'Alpha'
+    VER_STATUS = 'Beta'
     SP_SW = ["WeChat", "Weixin"]
 
     INI_DEFAULT_VALUE = {
