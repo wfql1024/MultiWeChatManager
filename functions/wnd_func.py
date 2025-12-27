@@ -15,7 +15,7 @@ from func_core.app_func_core import AppFuncCore
 from func_core.sw_func_core import SwInfoFuncCore
 from functions.sw_func import Sw
 from public.config import Config
-from public.enums import LocalCfgKey, RemoteSwKey
+from public.enums import LocalSettingKey, RemoteSwKey
 from utils import image_utils, decrypt, file_utils
 from utils.logger_utils import mylogger as logger, Logger
 from utils.logger_utils import myprinter as printer
@@ -100,7 +100,7 @@ class DetailWndFunc:
         decrypted_mm_db_path = result
         print(f"解密成功，数据库临时存在：{decrypted_mm_db_path}")
 
-        data_path = Sw(sw).try_get_path(LocalCfgKey.DATA_DIR)
+        data_path = Sw(sw).try_get_path(LocalSettingKey.DATA_DIR)
         excluded_folders, = SwInfoFuncCore.get_remote_sw(sw, **{RemoteSwKey.EXCLUDED_DIRS: None})
         excluded_folders = set(excluded_folders)
         acc_folders = set(

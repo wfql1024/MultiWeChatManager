@@ -121,7 +121,7 @@ class RemoteSwKey(str, Enum):
     NATIVE = "natively"
 
 
-class LocalCfgKey(str, Enum):
+class LocalSettingKey(str, Enum):
     """本地设置中的字段"""
     GLOBAL_SECTION = "global"
 

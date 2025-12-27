@@ -18,9 +18,10 @@ import win32process
 from components import ScrollableText
 from data_access.setting import RootSetting, RemoteSw, LocalSetting
 from func_core.sw_func_core import SwOperatorCore, SwInfoFuncCore
+from func_core.sw_func_impl import WeixinInfoFuncImpl, WXWorkInfoFuncImpl, WeChatInfoFuncImpl
 from functions.sw_func import Sw
 from public import Config
-from public.enums import MultirunMode, LocalCfgKey, RemoteSwKey
+from public.enums import MultirunMode, LocalSettingKey, RemoteSwKey
 from utils import hwnd_utils, handle_utils, process_utils, file_utils, widget_utils
 from utils.hwnd_utils import Win32HwndGetter, HwndGetter
 from utils.logger_utils import Printer
@@ -51,7 +52,7 @@ class Test(TestCase):
     def test_get_cfg_files(self):
         sw = "WeChat"
         acc = "wxid_t2dchu5zw9y022"
-        data_path = Sw(sw).try_get_path(LocalCfgKey.DATA_DIR)
+        data_path = Sw(sw).try_get_path(LocalSettingKey.DATA_DIR)
         if not data_path:
             return False, "无法获取WeChat数据路径"
         # config_path_suffix, cfg_basename_list = RemoteSetting().get_(
@@ -794,3 +795,14 @@ class Test(TestCase):
         root.title("安全销毁Scrollbar示例")
         create_widgets()
         root.mainloop()
+
+    def test_get_curr_login_acc_avatar_paths(self):
+        sw = "Weixin"
+        paths = WeixinInfoFuncImpl.get_curr_login_acc_avatar_paths()
+        print(paths)
+        sw = "WXWork"
+        paths = WXWorkInfoFuncImpl.get_curr_login_acc_avatar_paths()
+        print(paths)
+        sw = "WeChat"
+        paths = WeChatInfoFuncImpl.get_curr_login_acc_avatar_paths()
+        print(paths)

@@ -13,7 +13,7 @@ from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config, Strings
 from public.custom_classes import Condition
-from public.enums import OnlineStatus, LocalCfgKey, CfgStatus, AccKeys
+from public.enums import OnlineStatus, LocalSettingKey, CfgStatus, AccKeys
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils import widget_utils
@@ -185,7 +185,7 @@ class AccLoginCR(CkbRow):
     def _create_acc_row(self):
         account = self.item
         login_status = self.table_tag
-        sign_visible: bool = App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
+        sign_visible: bool = App().fetch_setting_or_set_default(LocalSettingKey.SIGN_VISIBLE)
         start_time = time.time()
 
         curr_config_acc = Sw(self.sw).get_last_login_acc()
@@ -241,7 +241,7 @@ class AccLoginCR(CkbRow):
         _pack_btn(acc_btn)
 
         # 账号标签: 账号含有互斥体, 则使用红色字体
-        sign_visible: bool = App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
+        sign_visible: bool = App().fetch_setting_or_set_default(LocalSettingKey.SIGN_VISIBLE)
 
         # 用 ScrollableText 替代 Label
         self.name_text = ScrollableText(

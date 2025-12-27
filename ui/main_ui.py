@@ -15,7 +15,7 @@ from functions.acc_func import Acc
 from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config, Strings
-from public.enums import LocalCfgKey, SwStates, RemoteGlobalKey, RootCfgKey
+from public.enums import LocalSettingKey, SwStates, RemoteGlobalKey, RootCfgKey
 from public.global_members import GlobalMembers
 from ui import login_ui, acc_manager_ui, sw_manager_ui
 from ui.menu_ui import MenuUI
@@ -335,7 +335,7 @@ class MainUI:
         # self.progress_bar = TopProgressBar(self.top_bar_frame)
         self._load_root_nb_frame()
         threading.Thread(target=self._get_path_thread).start()
-        root_tab = App().fetch_setting_or_set_default(LocalCfgKey.ROOT_TAB)
+        root_tab = App().fetch_setting_or_set_default(LocalSettingKey.ROOT_TAB)
         self.root_nb_cls.select(root_tab)
 
     def _load_root_nb_frame(self):
@@ -349,7 +349,7 @@ class MainUI:
         self.login_nb_frame = ttk.Frame(root_nb_frm_pool)
         self.manage_nb_frame = ttk.Frame(root_nb_frm_pool)
 
-        self.used_refresh = App().fetch_setting_or_set_default(LocalCfgKey.USED_REFRESH)
+        self.used_refresh = App().fetch_setting_or_set_default(LocalSettingKey.USED_REFRESH)
         suffix = "" if self.used_refresh is True else Strings.REFRESH_HINT
         root_nb_cls.add("manage", f"管理{suffix}", self.manage_nb_frame)
         root_nb_cls.add("login", "登录", self.login_nb_frame)
@@ -381,7 +381,7 @@ class MainUI:
             return
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
-            state = Sw(sw).fetch_setting_or_set_default(LocalCfgKey.STATE, SwStates)
+            state = Sw(sw).fetch_setting_or_set_default(LocalSettingKey.STATE, SwStates)
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             try:
@@ -413,21 +413,21 @@ class MainUI:
             return
         for sw in sp_sw:
             # 使用枚举类型保证其位于正确的状态
-            state = Sw(sw).fetch_setting_or_set_default(LocalCfgKey.STATE, SwStates)
+            state = Sw(sw).fetch_setting_or_set_default(LocalSettingKey.STATE, SwStates)
             if not state == SwStates.VISIBLE and not state == SwStates.HIDDEN:
                 continue
             print(f"创建{sw}的信息体...")
             sw_cls = Sw(sw)
-            sw_cls.data_dir = Sw(sw).try_get_path(LocalCfgKey.DATA_DIR)
-            sw_cls.inst_path = Sw(sw).try_get_path(LocalCfgKey.INST_PATH)
-            sw_cls.dll_dir = Sw(sw).try_get_path(LocalCfgKey.DLL_DIR)
+            sw_cls.data_dir = Sw(sw).try_get_path(LocalSettingKey.DATA_DIR)
+            sw_cls.inst_path = Sw(sw).try_get_path(LocalSettingKey.INST_PATH)
+            sw_cls.dll_dir = Sw(sw).try_get_path(LocalSettingKey.DLL_DIR)
             _ = Sw(sw).ver
         Printer().print_last()
 
     def _on_tab_in_root_selected(self, click_time):
         """根标签切换时,将自动选择下一级的标签"""
         root_tab = self.root_nb_cls.curr_tab_id
-        App().update_settings(**{LocalCfgKey.ROOT_TAB: root_tab})
+        App().update_settings(**{LocalSettingKey.ROOT_TAB: root_tab})
         tab_dict = self.root_nb_cls.tabs[root_tab]
         tab_text = tab_dict["text"]
         if root_tab == "manage":
@@ -441,7 +441,7 @@ class MainUI:
                 # 首次使用,消除提示
                 if self.used_refresh is not True:
                     tab_text = tab_text.replace(Strings.REFRESH_HINT, "")
-                    App().update_settings(**{LocalCfgKey.USED_REFRESH: True})
+                    App().update_settings(**{LocalSettingKey.USED_REFRESH: True})
                     self.used_refresh = True
                 tab_dict["tab_widget"].set_text(f"⟳{tab_text}").redraw()
                 self.root.update_idletasks()
@@ -452,7 +452,7 @@ class MainUI:
             # 自动选择下一级标签
             manage_tab = self.manage_nb_cls.curr_tab_id
             if not manage_tab:
-                manage_tab = App().fetch_setting_or_set_default(LocalCfgKey.MNG_TAB)
+                manage_tab = App().fetch_setting_or_set_default(LocalSettingKey.MNG_TAB)
             try:
                 self.manage_nb_cls.select(manage_tab)
             except Exception as e:
@@ -474,7 +474,7 @@ class MainUI:
             # 自动选择下一级标签
             login_tab = self.login_nb_cls.curr_tab_id
             if not login_tab:
-                login_tab = App().fetch_setting_or_set_default(LocalCfgKey.LOGIN_TAB)
+                login_tab = App().fetch_setting_or_set_default(LocalSettingKey.LOGIN_TAB)
             try:
                 self.login_nb_cls.select(login_tab)
             except Exception as e:
@@ -487,7 +487,7 @@ class MainUI:
         tab_dict = self.login_nb_cls.tabs[self.root_class.login_ui.sw]
         tab_text = tab_dict["text"]
         print(f"当前是{self.root_class.login_ui.sw}的标签页")
-        App().update_settings(**{LocalCfgKey.LOGIN_TAB: self.root_class.login_ui.sw})
+        App().update_settings(**{LocalSettingKey.LOGIN_TAB: self.root_class.login_ui.sw})
         if click_time <= 1:
             self.root_class.login_ui.init_login_ui()
         elif click_time >= 2:
@@ -498,7 +498,7 @@ class MainUI:
 
     def _on_tab_in_manage_selected(self, click_time):
         self.manage_tab = self.manage_nb_cls.curr_tab_id
-        App().update_settings(**{LocalCfgKey.MNG_TAB: self.manage_tab})
+        App().update_settings(**{LocalSettingKey.MNG_TAB: self.manage_tab})
         tab_dict = self.manage_nb_cls.tabs[self.manage_tab]
         tab_text = tab_dict["text"]
         if self.manage_tab == "acc":

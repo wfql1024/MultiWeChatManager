@@ -20,7 +20,7 @@ from data_access import SwAccData
 from data_access.setting import LocalSetting, RootSetting, RemoteSw, StatisticData, RemoteGlobal
 from public import Strings
 from public.config import Config
-from public.enums import LocalCfgKey, RemoteGlobalKey, SwStates, RootCfgKey
+from public.enums import LocalSettingKey, RemoteGlobalKey, SwStates, RootCfgKey
 from public.global_members import GlobalMembers
 from utils import file_utils, sys_utils
 from utils.encoding_utils import CryptoUtils
@@ -54,21 +54,21 @@ class AppFuncCore:
 
     @staticmethod
     def get_global_settings(*addr, **kwargs):
-        return LocalSetting().get_(LocalCfgKey.GLOBAL_SECTION, *addr, **kwargs)
+        return LocalSetting().get_(LocalSettingKey.GLOBAL_SECTION, *addr, **kwargs)
 
     @staticmethod
     def update_global_settings(*front_addr, **kwargs):
-        return LocalSetting().update_(LocalCfgKey.GLOBAL_SECTION, *front_addr, **kwargs)
+        return LocalSetting().update_(LocalSettingKey.GLOBAL_SECTION, *front_addr, **kwargs)
 
     @staticmethod
     def fetch_global_setting_or_set_default(key, enum_cls=None):
         """从本地记录获取软件全局设置值"""
-        return LocalSetting().fetch_or_set_default_or_none(LocalCfgKey.GLOBAL_SECTION, key, enum_cls)
+        return LocalSetting().fetch_or_set_default_or_none(LocalSettingKey.GLOBAL_SECTION, key, enum_cls)
 
     @staticmethod
     def save_global_setting_and_check_changed(key, value):
         try:
-            return LocalSetting().save_and_check_changed(LocalCfgKey.GLOBAL_SECTION, key, value)
+            return LocalSetting().save_and_check_changed(LocalSettingKey.GLOBAL_SECTION, key, value)
         except Exception as e:
             Logger().error(e)
             return e
@@ -194,11 +194,11 @@ class AppFuncCore:
     @classmethod
     def apply_proxy_setting(cls):
         use_proxy = cls.fetch_global_setting_or_set_default(
-            LocalCfgKey.USE_PROXY)
+            LocalSettingKey.USE_PROXY)
         print(use_proxy)
         if use_proxy is True:
-            proxy_ip = cls.fetch_global_setting_or_set_default(LocalCfgKey.PROXY_IP)
-            proxy_port = cls.fetch_global_setting_or_set_default(LocalCfgKey.PROXY_PORT)
+            proxy_ip = cls.fetch_global_setting_or_set_default(LocalSettingKey.PROXY_IP)
+            proxy_port = cls.fetch_global_setting_or_set_default(LocalSettingKey.PROXY_PORT)
             os.environ['http_proxy'] = f"{proxy_ip}:{proxy_port}"
             os.environ['https_proxy'] = f"{proxy_ip}:{proxy_port}"
             # 可选：清空 no_proxy
@@ -431,7 +431,7 @@ class AppFuncCore:
         """
         # 获取存储的日期
         next_check_time_str = LocalSetting().fetch_or_set_default_or_none(
-            LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.NEXT_CHECK_TIME)
+            LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.NEXT_CHECK_TIME)
         if not isinstance(next_check_time_str, str):
             next_check_time = dt.datetime.today().date()
         else:
@@ -447,7 +447,7 @@ class AppFuncCore:
                 next_check_time = today + dt.timedelta(days=1)
                 next_check_time_str = next_check_time.strftime("%Y-%m-%d")
                 LocalSetting().save_and_check_changed(
-                    LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.NEXT_CHECK_TIME, next_check_time_str)
+                    LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.NEXT_CHECK_TIME, next_check_time_str)
                 return config_data
             else:
                 # 失败加载本地
@@ -662,7 +662,7 @@ class AppFuncCore:
         all_sw_list, = RemoteGlobal().get_(**{RemoteGlobalKey.SP_SW: []})
         all_enable_sw = []
         for sw in all_sw_list:
-            state = LocalSetting().get_(sw, LocalCfgKey.STATE)
+            state = LocalSetting().get_(sw, LocalSettingKey.STATE)
             if state == SwStates.HIDDEN or state == SwStates.VISIBLE:
                 all_enable_sw.append(sw)
         return all_enable_sw
@@ -673,7 +673,7 @@ class AppFuncCore:
         all_sw_list, = RemoteGlobal().get_(**{RemoteGlobalKey.SP_SW: []})
         all_visible_sw = []
         for sw in all_sw_list:
-            state = LocalSetting().get_(sw, LocalCfgKey.STATE)
+            state = LocalSetting().get_(sw, LocalSettingKey.STATE)
             if state == SwStates.VISIBLE:
                 all_visible_sw.append(sw)
         return all_visible_sw

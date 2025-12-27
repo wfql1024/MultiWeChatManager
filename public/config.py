@@ -7,7 +7,7 @@ import tkinter as tk
 import winreg
 from pathlib import Path
 
-from public.enums import LocalCfgKey, SwEnum, SwStates, MultirunMode
+from public.enums import LocalSettingKey, SwEnum, SwStates, MultirunMode
 
 # 获取屏幕缩放因子
 current_file_dir = os.path.dirname(os.path.abspath(__file__))
@@ -49,7 +49,7 @@ def get_scale_factor():
         elif version >= 10:
             # Windows 10 及以上，使用 ctypes 调用 shcore 获取缩放因子
             try:
-                return float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)
+                return float(ctypes.windll.shcore.GetScaleFactorForDevice(0) / 100)  # type: ignore
             except Exception as e:
                 print(f"无法从 shcore 获取缩放因子: {e}")
                 return 1
@@ -75,46 +75,46 @@ class Config:
 
     INI_DEFAULT_VALUE = {
         # 默认为空的可不写
-        LocalCfgKey.GLOBAL_SECTION: {
-            LocalCfgKey.SCREEN_SIZE: f"1920*1080",
-            LocalCfgKey.USE_PROXY: False,
+        LocalSettingKey.GLOBAL_SECTION: {
+            LocalSettingKey.SCREEN_SIZE: f"1920*1080",
+            LocalSettingKey.USE_PROXY: False,
             # -软件相关
-            LocalCfgKey.ENABLE_NEW_FUNC: True,
-            LocalCfgKey.USED_TRAY: False,
-            LocalCfgKey.USED_REFRESH: False,
-            LocalCfgKey.USED_SIDEBAR: False,
+            LocalSettingKey.ENABLE_NEW_FUNC: True,
+            LocalSettingKey.USED_TRAY: False,
+            LocalSettingKey.USED_REFRESH: False,
+            LocalSettingKey.USED_SIDEBAR: False,
             # -排序相关
-            LocalCfgKey.HIDDEN_SORT: "#0,True",
-            LocalCfgKey.AUTO_START_SORT: "#0,True",
-            LocalCfgKey.ENABLE_SORT: "#0,True",
-            LocalCfgKey.DISABLE_SORT: "#0,True",
-            LocalCfgKey.ALL_SORT: "#0,True",
+            LocalSettingKey.HIDDEN_SORT: "#0,True",
+            LocalSettingKey.AUTO_START_SORT: "#0,True",
+            LocalSettingKey.ENABLE_SORT: "#0,True",
+            LocalSettingKey.DISABLE_SORT: "#0,True",
+            LocalSettingKey.ALL_SORT: "#0,True",
             # -标签页相关
-            LocalCfgKey.ROOT_TAB: "login",
-            LocalCfgKey.MNG_TAB: "acc",
-            LocalCfgKey.LOGIN_TAB: SwEnum.WECHAT,
+            LocalSettingKey.ROOT_TAB: "login",
+            LocalSettingKey.MNG_TAB: "acc",
+            LocalSettingKey.LOGIN_TAB: SwEnum.WECHAT,
             # -视图相关
-            LocalCfgKey.SCALE: "auto",
-            LocalCfgKey.SIGN_VISIBLE: True,
-            LocalCfgKey.USE_TXT_AVT: True,
+            LocalSettingKey.SCALE: "auto",
+            LocalSettingKey.SIGN_VISIBLE: True,
+            LocalSettingKey.USE_TXT_AVT: True,
             # -登录相关
-            LocalCfgKey.PREFER_COEXIST: True,
-            LocalCfgKey.HIDE_WND: False,
-            LocalCfgKey.KILL_IDLE_LOGIN_WND: False,
-            LocalCfgKey.UNLOCK_CFG: False,
-            LocalCfgKey.ALL_HAS_MUTEX: True,
-            LocalCfgKey.CALL_MODE: "HANDLE",
-            LocalCfgKey.AUTO_PRESS: True,
+            LocalSettingKey.PREFER_COEXIST: True,
+            LocalSettingKey.HIDE_WND: False,
+            LocalSettingKey.KILL_IDLE_LOGIN_WND: False,
+            LocalSettingKey.UNLOCK_CFG: False,
+            LocalSettingKey.ALL_HAS_MUTEX: True,
+            LocalSettingKey.CALL_MODE: "HANDLE",
+            LocalSettingKey.AUTO_PRESS: True,
         },
         SwEnum.DEFAULT: {
-            LocalCfgKey.VIEW: "tree",
-            LocalCfgKey.LOGIN_SORT: "配置,False",
-            LocalCfgKey.LOGOUT_SORT: "配置,False",
-            LocalCfgKey.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
-            LocalCfgKey.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
-            LocalCfgKey.STATE: SwStates.VISIBLE,
-            LocalCfgKey.COEXIST_MODE: "default",
-            LocalCfgKey.CLICK_BTNS: ""
+            LocalSettingKey.VIEW: "tree",
+            LocalSettingKey.LOGIN_SORT: "配置,False",
+            LocalSettingKey.LOGOUT_SORT: "配置,False",
+            LocalSettingKey.LOGIN_SIZE: f"{int(280 * SCALE_FACTOR)}*{int(380 * SCALE_FACTOR)}",
+            LocalSettingKey.REST_MULTIRUN_MODE: MultirunMode.BUILTIN,
+            LocalSettingKey.STATE: SwStates.VISIBLE,
+            LocalSettingKey.COEXIST_MODE: "default",
+            LocalSettingKey.CLICK_BTNS: ""
         }
     }
 

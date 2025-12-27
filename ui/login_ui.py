@@ -12,7 +12,7 @@ from functions.acc_func import Acc
 from functions.app_func import App, AppFunc
 from functions.sw_func import Sw
 from public import Config, Strings
-from public.enums import OnlineStatus, LocalCfgKey
+from public.enums import OnlineStatus, LocalSettingKey
 from public.global_members import GlobalMembers
 from ui.cfg_manager_ui import CfgManagerWndCreator
 from ui.classic_row_ui import ClassicLoginUI
@@ -93,9 +93,9 @@ class LoginUI:
         self.widget_dict = self.sw_class.widget_dict
         # 路径检查
         try:
-            self.sw_class.data_dir = Sw(self.sw).try_get_path(LocalCfgKey.DATA_DIR)
-            self.sw_class.inst_path = Sw(self.sw).try_get_path(LocalCfgKey.INST_PATH)
-            self.sw_class.dll_dir = Sw(self.sw).try_get_path(LocalCfgKey.DLL_DIR)
+            self.sw_class.data_dir = Sw(self.sw).try_get_path(LocalSettingKey.DATA_DIR)
+            self.sw_class.inst_path = Sw(self.sw).try_get_path(LocalSettingKey.INST_PATH)
+            self.sw_class.dll_dir = Sw(self.sw).try_get_path(LocalSettingKey.DLL_DIR)
             _ = Sw(self.sw).ver
         except Exception as e:
             Logger().error(e)
@@ -161,7 +161,7 @@ class LoginUI:
         _pack_btn_left(self.widget_dict["mng_btn"])
         self.widget_dict["mng_btn"].set_bind_map(**{"1": self._to_mng_func}).apply_bind(self.root)
 
-        prefer_coexist = App().fetch_setting_or_set_default(LocalCfgKey.PREFER_COEXIST)
+        prefer_coexist = App().fetch_setting_or_set_default(LocalSettingKey.PREFER_COEXIST)
         self.sw_class.is_original = not (prefer_coexist is False)  # 故意取反后切换
         self._switch_mode()
 

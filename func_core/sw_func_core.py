@@ -31,7 +31,7 @@ from func_core.sw_func_impl import SwInfoFuncImpl
 from functions.func_tool import FuncTool
 from public import Strings, Config, config
 from public.custom_classes import FlowControlError
-from public.enums import LocalCfgKey, SwEnum, AccKeys, MultirunMode, RemoteSwKey, CallMode, WndType, PathType
+from public.enums import LocalSettingKey, SwEnum, AccKeys, MultirunMode, RemoteSwKey, CallMode, WndType, PathType
 from public.global_members import GlobalMembers
 from public.strings import NEWER_SYS_VER
 from utils import file_utils, process_utils, handle_utils, hwnd_utils, image_utils
@@ -99,8 +99,8 @@ class SwInfoFuncCore:
             if part.startswith("%") and part.endswith("%") and len(part) > 2:
                 var_name = part[1:-1]
                 try:
-                    if var_name == LocalCfgKey.INST_DIR:
-                        inst_path = cls.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+                    if var_name == LocalSettingKey.INST_DIR:
+                        inst_path = cls.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
                         resolved = os.path.dirname(inst_path).replace("\\", "/")
                     else:
                         resolved = cls.try_get_path_of_(sw, var_name)
@@ -412,7 +412,7 @@ class SwInfoFuncCore:
         结果字典格式: {channel1: {status:bool, msg:str}, channel2: {...}, ...}
         """
         # Printer().debug(f"{mode}, {channels}, 检测dll")
-        dll_dir = cls.try_get_path_of_(sw, LocalCfgKey.DLL_DIR)
+        dll_dir = cls.try_get_path_of_(sw, LocalSettingKey.DLL_DIR)
         if dll_dir is None:
             return None, "错误：没有找到版本资源目录"
         multi_state, = cls.get_remote_sw(sw, mode, multi_state=None)
@@ -529,7 +529,7 @@ class SwInfoFuncCore:
     @staticmethod
     def get_curr_wx_id_from_cfg_file(sw):
         # Printer().debug(FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw))
-        return FuncTool.get_sw_acc_func_impl(SwInfoFuncImpl, sw).get_curr_wx_id_from_config_file(sw)
+        return FuncTool.get_sw_func_impl(SwInfoFuncImpl, sw).get_curr_login_acc_from_config_file()
 
     @staticmethod
     def get_login_hwnds_of_sw(sw):
@@ -578,12 +578,12 @@ class SwInfoFuncCore:
         """获取平台所有账号, origin为原生账号, coexist为共存账号"""
 
         def _get_origin_accounts():
-            data_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.DATA_DIR)
+            data_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.DATA_DIR)
             excluded_dirs, = cls.get_remote_sw(sw, **{RemoteSwKey.EXCLUDED_DIRS: []})
             return {entry.name for entry in os.scandir(data_dir) if entry.is_dir()} - set(excluded_dirs)
 
         def _get_coexist_accounts():
-            inst_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+            inst_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
             inst_dir = os.path.dirname(inst_path)
             executable_wildcards, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE_WCS: []})
             if executable_wildcards is None:
@@ -602,7 +602,7 @@ class SwInfoFuncCore:
     @classmethod
     def identity_and_get_available_coexist_mode(cls, sw):
         """选择一个可用的共存构造模式, 优先返回用户选择的, 若其不可用则返回可用的第一个模式"""
-        user_coexist_channel = cls.fetch_sw_setting_or_set_default(sw, LocalCfgKey.COEXIST_MODE)
+        user_coexist_channel = cls.fetch_sw_setting_or_set_default(sw, LocalSettingKey.COEXIST_MODE)
         channel_res_dict, msg = cls.identify_dll_core(sw, RemoteSwKey.COEXIST)
         if isinstance(channel_res_dict, dict):
             if user_coexist_channel in channel_res_dict:
@@ -636,7 +636,7 @@ class SwInfoFuncCore:
         if can_freely_multirun:
             return MultirunMode.FREELY_MULTIRUN
         else:
-            return cls.fetch_sw_setting_or_set_default(sw, LocalCfgKey.REST_MULTIRUN_MODE)
+            return cls.fetch_sw_setting_or_set_default(sw, LocalSettingKey.REST_MULTIRUN_MODE)
 
     @staticmethod
     def detect_path_of_(sw, path_type) -> Optional[str]:
@@ -664,7 +664,7 @@ class SwInfoFuncCore:
     def calc_sw_ver(cls, sw) -> Optional[str]:
         """获取软件版本"""
         try:
-            exec_path = cls.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+            exec_path = cls.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
             cur_sw_ver = file_utils.get_file_version(exec_path)
             if cur_sw_ver is not None:
                 return cur_sw_ver
@@ -694,7 +694,7 @@ class SwInfoFuncCore:
 
         # 从图标中提取
         try:
-            executable = cls.get_sw_setting(sw, LocalCfgKey.INST_PATH)
+            executable = cls.get_sw_setting(sw, LocalSettingKey.INST_PATH)
             if executable:
                 image_utils.extract_icon_to_png(executable, avatar_path)
         except Exception as e:
@@ -736,7 +736,7 @@ class SwInfoFuncCore:
         """获取账号的展示名"""
         display_name = str(sw)  # 默认值为 sw
         # 1. 先查本地 remark
-        remark, = cls.get_sw_setting(sw, **{LocalCfgKey.REMARK: None})
+        remark, = cls.get_sw_setting(sw, **{LocalSettingKey.REMARK: None})
         if remark is not None:
             return str(remark)
         # 2. 再查远程 alias（不再存本地）
@@ -749,7 +749,7 @@ class SwInfoFuncCore:
     def get_sw_all_exe_pids_group_by_name(cls, sw) -> dict:
         """获得平台所有进程的pid, 并根据进程名进行分组, 返回字典"""
         executable_wildcards, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE_WCS: None})
-        inst_path = cls.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+        inst_path = cls.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
         inst_dir = os.path.dirname(inst_path)
         name_pids_dict = {}
         if isinstance(executable_wildcards, list):
@@ -772,7 +772,7 @@ class SwInfoFuncCore:
     def get_sw_all_exe_pids(cls, sw) -> list:
         """返回平台所有进程的 pid 列表"""
         executable_wildcards, = cls.get_remote_sw(sw, **{RemoteSwKey.EXE_WCS: None})
-        inst_path = cls.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+        inst_path = cls.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
         inst_dir = os.path.dirname(inst_path)
         pids = []
         if isinstance(executable_wildcards, list):
@@ -796,7 +796,7 @@ class SwInfoFuncCore:
         else:
             # 是否默认全为True
             all_has_mutex_by_default = LocalSetting().fetch_or_set_default_or_none(
-                LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.ALL_HAS_MUTEX)
+                LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.ALL_HAS_MUTEX)
             all_has_mutex_by_default: bool = True if all_has_mutex_by_default is True else False
             if all_has_mutex_by_default is True:
                 Printer().print_vn("[INFO]将所有进程默认含有互斥体")
@@ -868,11 +868,11 @@ class SwInfoFuncCore:
             # print(path_type)
             path = str(path).replace('\\', '/')
             check_dict = {}
-            if path_type == LocalCfgKey.INST_PATH:
+            if path_type == LocalSettingKey.INST_PATH:
                 check_dict, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.INST_PATH: None})
-            elif path_type == LocalCfgKey.DATA_DIR:
+            elif path_type == LocalSettingKey.DATA_DIR:
                 check_dict, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DATA_DIR: None})
-            elif path_type == LocalCfgKey.DLL_DIR:
+            elif path_type == LocalSettingKey.DLL_DIR:
                 check_dict, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DLL_DIR: None})
             right_concat = check_dict.get(RemoteSwKey.R_CONCAT, None)
             if isinstance(right_concat, str):
@@ -1589,21 +1589,21 @@ class SwInfoFuncCore:
     @classmethod
     def _create_path_finders_of_(cls, path_tag) -> list:
         """定义方法列表"""
-        if path_tag == LocalCfgKey.INST_PATH:
+        if path_tag == LocalSettingKey.INST_PATH:
             return [
                 cls._get_sw_inst_path_from_register,
                 cls._get_sw_install_path_from_process,
                 cls._get_sw_inst_path_by_regex,
                 cls._guess_sw_inst_path,
             ]
-        elif path_tag == LocalCfgKey.DATA_DIR:
+        elif path_tag == LocalSettingKey.DATA_DIR:
             return [
                 cls._get_sw_data_dir_from_register,
                 cls._get_sw_data_dir_by_regex,
                 cls._guess_sw_data_dir,
                 cls._get_sw_data_dir_from_other_sw,
             ]
-        elif path_tag == LocalCfgKey.DLL_DIR:
+        elif path_tag == LocalSettingKey.DLL_DIR:
             return [
                 cls._get_sw_dll_dir_by_files,
                 cls._get_sw_dll_dir_by_regex,
@@ -1676,7 +1676,7 @@ class SwInfoFuncCore:
             for osw in other_sws:
                 if sw == osw:
                     continue
-                other_path = SwInfoFuncCore.get_saved_path_of_(osw, LocalCfgKey.DATA_DIR)
+                other_path = SwInfoFuncCore.get_saved_path_of_(osw, LocalSettingKey.DATA_DIR)
                 if other_path is not None:
                     return [os.path.join(os.path.dirname(other_path), data_dir_name).replace('\\', '/')]
         # QQ, 新版QQ, TIM使用同一个文件夹作为数据文件夹
@@ -1685,7 +1685,7 @@ class SwInfoFuncCore:
             for osw in other_sws:
                 if sw == osw:
                     continue
-                other_path = SwInfoFuncCore.get_saved_path_of_(osw, LocalCfgKey.DATA_DIR)
+                other_path = SwInfoFuncCore.get_saved_path_of_(osw, LocalSettingKey.DATA_DIR)
                 if other_path is not None:
                     return [other_path]
         return []
@@ -1694,7 +1694,7 @@ class SwInfoFuncCore:
     def _get_sw_dll_dir_by_files(cls, sw: str) -> list:
         """通过文件遍历方式获取dll文件夹"""
         res_list = []
-        install_path = SwInfoFuncCore.get_saved_path_of_(sw, LocalCfgKey.INST_PATH)
+        install_path = SwInfoFuncCore.get_saved_path_of_(sw, LocalSettingKey.INST_PATH)
         if install_path is not None and install_path != "":
             install_dir = os.path.dirname(install_path)
         else:
@@ -1760,9 +1760,10 @@ class SwInfoFuncCore:
                             # print(c)
                             if _match_control(c, cond):
                                 matched.append(c)
-                        if not matched or index > len(matched):
+                        # print(matched)
+                        if not matched or index >= len(matched):
                             raise LookupError(
-                                f"找不到第 {index} 个符合条件的控件，"
+                                f"找不到第 {index + 1} 个符合条件的控件，"
                                 f"Children 中只有 {len(matched)} 个"
                             )
                         ctrl = matched[index]
@@ -1916,7 +1917,7 @@ class SwInfoFuncCore:
         c2w_bottom = c_bottom - win_top
         # 根据参数进行运算得到截图的宽高和相对于控件的左上角位置
         capt2c_left, capt2c_top, capt_width, capt_height = cls._calc_rect(
-            c_width, c_height, l_cut, t_cut, r_cut, b_cut, width, height)
+            c_width, c_height, l_cut, t_cut, r_cut, b_cut, width, height)  # type: ignore
         # 计算截图在窗口中的位置
         capt2w_left = c2w_left + capt2c_left
         capt2w_top = c2w_top + capt2c_top
@@ -1933,27 +1934,70 @@ class SwInfoFuncCore:
         if not os.path.exists(capt_dir):
             os.makedirs(capt_dir)
         capt_path = os.path.join(capt_dir, f"{timestamp}.png")
-        adaptation_dict = cls.get_remote_sw(sw, RemoteSwKey.AUTO_GET, RemoteSwKey.AVATAR, period)
-        locate_config = adaptation_dict.get(RemoteSwKey.LOCATE)
-        cut_config = adaptation_dict.get(RemoteSwKey.CUT)
-        l_cut = cut_config.get("l", 0)
-        t_cut = cut_config.get("t", 0)
-        r_cut = cut_config.get("r", 0)
-        b_cut = cut_config.get("b", 0)
-        width = cut_config.get("w", None)
-        height = cut_config.get("h", None)
-        capt2w_left, capt2w_top, capt_width, capt_height = cls._get_capture_location_and_size(
-            hwnd, l_cut, t_cut, r_cut, b_cut, width, height, locate_config
-        )
-        capture_operate_list = adaptation_dict.get(RemoteSwKey.CAPTURE)
-        for operate in capture_operate_list:
-            if operate == "gdi":
-                image_utils.gdi_capture_in_wnd(hwnd, capt2w_left, capt2w_top, capt_width, capt_height, capt_path)
-            elif operate == "mss":
-                image_utils.mss_capture_in_wnd(hwnd, capt2w_left, capt2w_top, capt_width, capt_height, capt_path)
-            else:
-                ...
-            print(f"控件区域已保存到: {capt_path}")
+        adaptation_dicts = cls.get_remote_sw(sw, RemoteSwKey.AUTO_GET, RemoteSwKey.AVATAR, period)
+        for adaptation_dict in adaptation_dicts:
+            locate_config = adaptation_dict.get(RemoteSwKey.LOCATE)
+            cut_config = adaptation_dict.get(RemoteSwKey.CUT)
+            l_cut = cut_config.get("l", 0)
+            t_cut = cut_config.get("t", 0)
+            r_cut = cut_config.get("r", 0)
+            b_cut = cut_config.get("b", 0)
+            width = cut_config.get("w", None)
+            height = cut_config.get("h", None)
+            try:
+                capt2w_left, capt2w_top, capt_width, capt_height = cls._get_capture_location_and_size(
+                    hwnd, l_cut, t_cut, r_cut, b_cut, width, height, locate_config
+                )
+            except LookupError as le:
+                Logger().warning(f"警告: 找不到控件: {le}")
+                continue
+            capture_operate_list = adaptation_dict.get(RemoteSwKey.CAPTURE)
+            for operate in capture_operate_list:
+                if operate == "gdi":
+                    image_utils.gdi_capture_in_wnd(hwnd, capt2w_left, capt2w_top, capt_width, capt_height, capt_path)
+                elif operate == "mss":
+                    image_utils.mss_capture_in_wnd(hwnd, capt2w_left, capt2w_top, capt_width, capt_height, capt_path)
+                else:
+                    ...
+                print(f"通过窗口指定位置截取, 已保存到: {capt_path}")
+
+    @staticmethod
+    def start_capt_thread(sw, period, sw_hwnd, times=6, gap=0.5):
+        # 截取图像
+        def _capt_thread():
+            for _ in range(times):  # 3 / 0.5 = 6 次
+                try:
+                    SwInfoFuncCore.try_capt_avatar_for_sw_when(
+                        sw, period, sw_hwnd
+                    )
+                except LookupError as le:
+                    Logger().warning(f"警告: 找不到控件: {le}")
+                except Exception as e:
+                    logger.error(f"截取头像时出错: {e}")
+                time.sleep(gap)
+
+        threading.Thread(target=_capt_thread).start()
+
+    @staticmethod
+    def start_thread_to_copy_curr_avatar(sw, sw_hwnd):
+        def _thread_copy_curr_avatar():
+            """获取路径后转化为图片"""
+            source_paths = FuncTool.get_sw_func_impl(SwInfoFuncImpl, sw).get_curr_login_acc_avatar_paths()
+            # Printer().debug(source_paths)
+            _, pid = win32process.GetWindowThreadProcessId(sw_hwnd)
+            avatar_cache_dir = os.path.join(tempfile.gettempdir(), Config.AVATAR_CACHE_PATH_SUFFIX)
+            datestamp = datetime.now().strftime("%Y%m%d")
+            capt_dir = os.path.join(avatar_cache_dir, f"{pid}_{datestamp}")
+            for src in source_paths or []:
+                name = os.path.basename(src)
+                if not name.lower().endswith('.jpg'):
+                    name += '.jpg'
+                dest_path = os.path.join(capt_dir, name)
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                shutil.copy2(src, dest_path)
+                Printer().print_vn(f"从数据存储文件夹下搜索到图片文件, 已转化和拷贝:{dest_path}")
+
+        threading.Thread(target=_thread_copy_curr_avatar).start()
 
     @staticmethod
     def get_today_capt_avatars(pid):
@@ -2108,7 +2152,7 @@ class SwOperatorCore:
             return False, "未知模式"
         try:
             # 条件检查及询问用户
-            inst_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+            inst_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
             inst_dir = os.path.dirname(inst_path)
             if isinstance(coexist_channel, str) and isinstance(ordinal, str):
                 exe_wildcard = SwInfoFuncCore.get_remote_sw(
@@ -2352,21 +2396,8 @@ class SwOperatorCore:
             SwInfoFuncCore.set_pid_mutex_all_values_to_false(sw)
             StatisticData().update_statistic_data(sw, 'manual', '_', multirun_mode, time.time() - start_time)
             print(f"打开了登录窗口{sw_hwnd}")
-
-            # 截取图像
-            def _capt_thread():
-                for _ in range(6):  # 3 / 0.5 = 6 次
-                    try:
-                        SwInfoFuncCore.try_capt_avatar_for_sw_when(
-                            sw, RemoteSwKey.LOGIN, sw_hwnd
-                        )
-                    except LookupError as le:
-                        Logger().warning(f"警告: 找不到控件: {le}")
-                    except Exception as e:
-                        logger.error(f"截取头像时出错: {e}")
-                    time.sleep(0.5)
-
-            threading.Thread(target=_capt_thread).start()
+            cls.start_capt_thread(sw, RemoteSwKey.LOGIN, sw_hwnd)
+            cls.start_thread_to_copy_curr_avatar(sw, sw_hwnd)
         else:
             messagebox.showerror("错误", f"手动登录失败:{msg}")
             return
@@ -2394,7 +2425,7 @@ class SwOperatorCore:
         exe_name = None
         for ordinal in ordinals:
             exe_name = exe_wildcard.replace("?", ordinal)
-            inst_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+            inst_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
             inst_dir = os.path.dirname(inst_path)
             coexist_exe_path = os.path.join(inst_dir, exe_name).replace("\\", "/")
             # 判定不存在的条件: 文件不存在或者文件没有被运行
@@ -2419,6 +2450,9 @@ class SwOperatorCore:
         print(f"将打开{exe_name}")
         sw_hwnd, msg = cls.open_sw_and_return_hwnd(sw, exe_name)
         if isinstance(sw_hwnd, int):
+            print(f"打开了登录窗口{sw_hwnd}")
+            cls.start_capt_thread(sw, RemoteSwKey.LOGIN, sw_hwnd)
+            cls.start_thread_to_copy_curr_avatar(sw, sw_hwnd)
             SwInfoFuncCore.set_pid_mutex_all_values_to_false(sw)
             StatisticData().update_statistic_data(
                 sw, 'manual', '_', MultirunMode.BUILTIN, time.time() - start_time)
@@ -2453,7 +2487,7 @@ class SwOperatorCore:
         if ordinal is None:
             for o in ordinals:
                 exe_name = exe_wildcard.replace("?", o)
-                inst_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+                inst_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
                 inst_dir = os.path.dirname(inst_path)
                 need_open_exe = os.path.join(inst_dir, exe_name)
                 if not os.path.exists(need_open_exe):
@@ -2536,7 +2570,7 @@ class SwOperatorCore:
                 except Exception as e:
                     print(e)
                     # 未适配的, 只删除入口程序
-                    sw_exe_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+                    sw_exe_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
                     del_path = os.path.join(
                         os.path.dirname(sw_exe_path), acc).replace("\\", "/")
                     os.remove(del_path)
@@ -2566,6 +2600,14 @@ class SwOperatorCore:
             msg_str = "\n".join(f"{acc}: {failed_accounts_msg_dict[acc]}" for acc in failed_accounts_msg_dict)
             messagebox.showerror("失败", f"失败账号及原因:\n{msg_str}")
         return success_exes
+
+    @staticmethod
+    def start_capt_thread(sw, period, sw_hwnd, times=6, gap=0.5):
+        return SwInfoFuncCore.start_capt_thread(sw, period, sw_hwnd, times, gap)
+
+    @staticmethod
+    def start_thread_to_copy_curr_avatar(sw, sw_hwnd):
+        return SwInfoFuncCore.start_thread_to_copy_curr_avatar(sw, sw_hwnd)
 
     @classmethod
     def start_thread_to_manual_login_origin(cls, sw):
@@ -2620,9 +2662,9 @@ class SwOperatorCore:
     def _check_and_create_process_with_logon(cls, executable, args, creation_flags):
         device_info = CryptoUtils.get_device_fingerprint()
         encrypted_username_data = LocalSetting().fetch_or_set_default_or_none(
-            LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.ENCRYPTED_USERNAME)
+            LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.ENCRYPTED_USERNAME)
         encrypted_password_data = LocalSetting().fetch_or_set_default_or_none(
-            LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.ENCRYPTED_PASSWORD)
+            LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.ENCRYPTED_PASSWORD)
         try:
             username = CryptoUtils.decrypt_data(encrypted_username_data, device_info)
             password = CryptoUtils.decrypt_data(encrypted_password_data, device_info)
@@ -2643,9 +2685,9 @@ class SwOperatorCore:
                     encrypted_username_data = CryptoUtils.encrypt_data(username, device_info)
                     encrypted_password_data = CryptoUtils.encrypt_data(password, device_info)
                     LocalSetting().save_and_check_changed(
-                        LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.ENCRYPTED_USERNAME, encrypted_username_data)
+                        LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.ENCRYPTED_USERNAME, encrypted_username_data)
                     LocalSetting().save_and_check_changed(
-                        LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.ENCRYPTED_PASSWORD, encrypted_password_data)
+                        LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.ENCRYPTED_PASSWORD, encrypted_password_data)
                 return proc
             except Exception as e:
                 # 弹窗提示输入新账号信息
@@ -2674,7 +2716,7 @@ class SwOperatorCore:
         """在管理员身份的程序中，以非管理员身份创建进程，即打开的子程序不得继承父进程的权限"""
         if NEWER_SYS_VER:
             call_mode = LocalSetting().fetch_or_set_default_or_none(
-                LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.CALL_MODE)
+                LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.CALL_MODE)
             if call_mode == CallMode.LOGON.value:
                 return cls._check_and_create_process_with_logon(executable, args, creation_flags)  # 使用微软账号登录, 下策
             elif call_mode == CallMode.DEFAULT.value:
@@ -2699,7 +2741,7 @@ class SwOperatorCore:
         Printer().print_vn(f"[INFO]使用{multirun_mode}模式打开{sw}...")
         proc = None
         sub_proc = None
-        sw_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+        sw_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
         if exe:
             sw_path = os.path.join(os.path.dirname(sw_path), exe)
         if not sw_path:
@@ -2766,7 +2808,7 @@ class SwOperatorCore:
     @staticmethod
     def open_config_file(sw):
         """打开配置文件夹"""
-        data_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.DATA_DIR)
+        data_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.DATA_DIR)
         if os.path.exists(data_path):
             config_addresses, = SwInfoFuncCore.get_remote_sw(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
             if not isinstance(config_addresses, list) or len(config_addresses) == 0:
@@ -2813,7 +2855,7 @@ class SwOperatorCore:
     @staticmethod
     def open_dll_dir(sw):
         """打开dll所在文件夹，并将光标移动到文件"""
-        dll_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.DLL_DIR)
+        dll_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.DLL_DIR)
         if os.path.exists(dll_dir):
             sub_file = None
             try:

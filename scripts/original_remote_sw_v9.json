@@ -383,120 +383,129 @@
         },
         "auto_get": {
             "avatar": {
-                "login": {
-                    "locate": [
-                        {
-                            "type": "location",
-                            "rule": [
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                "login": [
+                    {
+                        "locate": [
+                            {
+                                "type": "location",
+                                "rule": [
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "ButtonControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "ButtonControl"
+                                        },
+                                        "index": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        "cut": {
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
+                    }
+                ],
+                "main": [
+                    {
+                        "locate": [
+                            {
+                                "type": "location",
+                                "rule": [
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl",
+                                            "ClassName": ""
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                }
-                            ]
-                        }
-                    ],
-                    "cut": {
-                    },
-                    "capture": [
-                        "gdi"
-                    ]
-                },
-                "main": {
-                    "locate": [
-                        {
-                            "type": "location",
-                            "rule": [
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "ToolBarControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "ToolBarControl"
-                                    },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "ButtonControl"
-                                    },
-                                    "index": 0
-                                }
-                            ]
-                        }
-                    ],
-                    "cut": {
-                        "r": "-97%w",
-                        "b": "-97%h"
-                    },
-                    "capture": [
-                        "gdi"
-                    ]
-                }
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "ButtonControl"
+                                        },
+                                        "index": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        "cut": {
+                            "r": "-97%w",
+                            "b": "-97%h"
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
+                    }
+                ]
             },
             "nickname": {
-                "login": {
-                },
-                "main": {
-                }
+                "login": [
+                    {
+                    }
+                ],
+                "main": [
+                    {
+                    }
+                ]
             }
         },
         "auto_click": {
@@ -1168,46 +1177,67 @@
         },
         "auto_get": {
             "avatar": {
-                "login": {
-                    "locate": [
-                        {
-                            "type": "kwargs",
-                            "rule": {
-                                "ClassName": "mmui::XAvatarImage"
+                "login": [
+                    {
+                        "locate": [
+                            {
+                                "type": "kwargs",
+                                "rule": {
+                                    "ClassName": "mmui::XAvatarImage"
+                                }
                             }
-                        }
-                    ],
-                    "cut": {
-                    },
-                    "capture": [
-                        "gdi"
-                    ]
-                },
-                "main": {
-                    "locate": [
-                        {
-                            "type": "kwargs",
-                            "rule": {
-                                "ClassName": "mmui::MainTabBar"
+                        ],
+                        "cut": {
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
+                    }
+                ],
+                "main": [
+                    {
+                        "locate": [
+                            {
+                                "type": "kwargs",
+                                "rule": {
+                                    "ClassName": "mmui::MainTabBar"
+                                }
                             }
-                        }
-                    ],
-                    "cut": {
-                        "l": "21%w",
-                        "t": "42%w",
-                        "r": "-76%w",
-                        "b": "-97%w"
+                        ],
+                        "cut": {
+                            "l": "21%w",
+                            "t": "42%w",
+                            "r": "-76%w",
+                            "b": "-97%w"
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
                     },
-                    "capture": [
-                        "gdi"
-                    ]
-                }
+                    {
+                        "locate": [
+                        ],
+                        "cut": {
+                            "l": "20*",
+                            "t": "25*",
+                            "r": "-55*",
+                            "b": "-60*"
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
+                    }
+                ]
             },
             "nickname": {
-                "login": {
-                },
-                "main": {
-                }
+                "login": [
+                    {
+                    }
+                ],
+                "main": [
+                    {
+                    }
+                ]
             }
         },
         "auto_click": {
@@ -1528,43 +1558,51 @@
         "sw_id_trims": {},
         "auto_get": {
             "avatar": {
-                "login": {
-                    "locate": [],
-                    "cut": {
-                        "l": "34%w",
-                        "t": "31%h",
-                        "r": "34%w",
-                        "b": "46%h"
-                    },
-                    "capture": [
-                        "gdi"
-                    ]
-                },
-                "main": {
-                    "locate": [
-                        {
-                            "type": "kwargs",
-                            "rule": {
-                                "ClassName": "TitleBarWindow"
+                "login": [
+                    {
+                        "locate": [],
+                        "cut": {
+                            "l": "34%w",
+                            "t": "31%h",
+                            "r": "34%w",
+                            "b": "46%h"
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
+                    }
+                ],
+                "main": [
+                    {
+                        "locate": [
+                            {
+                                "type": "kwargs",
+                                "rule": {
+                                    "ClassName": "TitleBarWindow"
+                                }
                             }
-                        }
-                    ],
-                    "cut": {
-                        "l": "60%h",
-                        "t": "96%h",
-                        "r": "-139%h",
-                        "b": "-175%h"
-                    },
-                    "capture": [
-                        "gdi"
-                    ]
-                }
+                        ],
+                        "cut": {
+                            "l": "60%h",
+                            "t": "96%h",
+                            "r": "-139%h",
+                            "b": "-175%h"
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
+                    }
+                ]
             },
             "nickname": {
-                "login": {
-                },
-                "main": {
-                }
+                "login": [
+                    {
+                    }
+                ],
+                "main": [
+                    {
+                    }
+                ]
             }
         },
         "auto_click": {
@@ -1766,36 +1804,44 @@
         },
         "auto_get": {
             "avatar": {
-                "login": {
-                    "locate": [],
-                    "cut": {
-                        "l": "34%w",
-                        "t": "22%h",
-                        "r": "34%w",
-                        "b": "56%h"
-                    },
-                    "capture": [
-                        "mss"
-                    ]
-                },
-                "main": {
-                    "locate": [],
-                    "cut": {
-                        "l": "68*",
-                        "t": "8*",
-                        "r": "-91*",
-                        "b": "-31*"
-                    },
-                    "capture": [
-                        "mss"
-                    ]
-                }
+                "login": [
+                    {
+                        "locate": [],
+                        "cut": {
+                            "l": "34%w",
+                            "t": "22%h",
+                            "r": "34%w",
+                            "b": "56%h"
+                        },
+                        "capture": [
+                            "mss"
+                        ]
+                    }
+                ],
+                "main": [
+                    {
+                        "locate": [],
+                        "cut": {
+                            "l": "68*",
+                            "t": "8*",
+                            "r": "-91*",
+                            "b": "-31*"
+                        },
+                        "capture": [
+                            "mss"
+                        ]
+                    }
+                ]
             },
             "nickname": {
-                "login": {
-                },
-                "main": {
-                }
+                "login": [
+                    {
+                    }
+                ],
+                "main": [
+                    {
+                    }
+                ]
             }
         },
         "auto_click": {
@@ -2022,138 +2068,146 @@
         },
         "auto_get": {
             "avatar": {
-                "login": {
-                    "locate": [
-                        {
-                            "type": "location",
-                            "rule": [
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                "login": [
+                    {
+                        "locate": [
+                            {
+                                "type": "location",
+                                "rule": [
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "ButtonControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "ButtonControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        "cut": {
+                            "l": "0%w",
+                            "t": "0%h",
+                            "r": "0%w",
+                            "b": "0%h"
+                        },
+                        "capture": [
+                            "mss"
+                        ]
+                    }
+                ],
+                "main": [
+                    {
+                        "locate": [
+                            {
+                                "type": "location",
+                                "rule": [
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 0
-                                }
-                            ]
-                        }
-                    ],
-                    "cut": {
-                        "l": "0%w",
-                        "t": "0%h",
-                        "r": "0%w",
-                        "b": "0%h"
-                    },
-                    "capture": [
-                        "mss"
-                    ]
-                },
-                "main": {
-                    "locate": [
-                        {
-                            "type": "location",
-                            "rule": [
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 4
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 4
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
-                                    },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
-                                    },
-                                    "index": 1
-                                }
-                            ]
-                        }
-                    ],
-                    "cut": {
-                        "l": "15%",
-                        "t": "15%",
-                        "r": "15%",
-                        "b": "15%"
-                    },
-                    "capture": [
-                        "mss"
-                    ]
-                }
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
+                                    }
+                                ]
+                            }
+                        ],
+                        "cut": {
+                            "l": "15%",
+                            "t": "15%",
+                            "r": "15%",
+                            "b": "15%"
+                        },
+                        "capture": [
+                            "mss"
+                        ]
+                    }
+                ]
             },
             "nickname": {
-                "login": {
-                },
-                "main": {
-                }
+                "login": [
+                    {
+                    }
+                ],
+                "main": [
+                    {
+                    }
+                ]
             }
         },
         "auto_click": {
@@ -2375,132 +2429,140 @@
         },
         "auto_get": {
             "avatar": {
-                "login": {
-                    "locate": [
-                        {
-                            "type": "location",
-                            "rule": [
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                "login": [
+                    {
+                        "locate": [
+                            {
+                                "type": "location",
+                                "rule": [
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "ButtonControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "ButtonControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        "cut": {
+                            "l": "0%w",
+                            "t": "0%h",
+                            "r": "0%w",
+                            "b": "0%h"
+                        },
+                        "capture": [
+                            "mss"
+                        ]
+                    }
+                ],
+                "main": [
+                    {
+                        "locate": [
+                            {
+                                "type": "location",
+                                "rule": [
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 0
-                                }
-                            ]
-                        }
-                    ],
-                    "cut": {
-                        "l": "0%w",
-                        "t": "0%h",
-                        "r": "0%w",
-                        "b": "0%h"
-                    },
-                    "capture": [
-                        "mss"
-                    ]
-                },
-                "main": {
-                    "locate": [
-                        {
-                            "type": "location",
-                            "rule": [
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 1
                                     },
-                                    "index": 0
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
-                                    },
-                                    "index": 1
-                                },
-                                {
-                                    "kwargs": {
-                                        "ControlTypeName": "PaneControl"
-                                    },
-                                    "index": 0
-                                }
-                            ]
-                        }
-                    ],
-                    "cut": {
-                        "l": "0%",
-                        "t": "0%",
-                        "r": "0%",
-                        "b": "0%"
-                    },
-                    "capture": [
-                        "mss"
-                    ]
-                }
+                                    {
+                                        "kwargs": {
+                                            "ControlTypeName": "PaneControl"
+                                        },
+                                        "index": 0
+                                    }
+                                ]
+                            }
+                        ],
+                        "cut": {
+                            "l": "0%",
+                            "t": "0%",
+                            "r": "0%",
+                            "b": "0%"
+                        },
+                        "capture": [
+                            "mss"
+                        ]
+                    }
+                ]
             },
             "nickname": {
-                "login": {
-                },
-                "main": {
-                }
+                "login": [
+                    {
+                    }
+                ],
+                "main": [
+                    {
+                    }
+                ]
             }
         },
         "auto_click": {

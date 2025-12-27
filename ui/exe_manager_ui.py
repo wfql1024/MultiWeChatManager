@@ -14,7 +14,7 @@ from functions.acc_func import AccInfoFuncCore, Acc
 from functions.sw_func import Sw
 from public import Config, config
 from public.custom_classes import Condition, FlowControlError
-from public.enums import CfgStatus, AccKeys, RemoteSwKey, LocalCfgKey
+from public.enums import CfgStatus, AccKeys, RemoteSwKey, LocalSettingKey
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils import widget_utils, file_utils
@@ -420,7 +420,7 @@ class ExeManagerUI:
                 (coexist_channel_btn.set_bind_map(
                     **{"1": partial(
                         Sw(self.sw).save_setting_and_do,
-                        LocalCfgKey.COEXIST_MODE.value, coexist_channel,
+                        LocalSettingKey.COEXIST_MODE.value, coexist_channel,
                         self.thread_to_refresh_coexist_selector_frame)})
                  .apply_bind(self.root))
                 _pack_btn_right(coexist_channel_btn)

@@ -11,7 +11,7 @@ from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config, Strings
 from public.custom_classes import Condition
-from public.enums import OnlineStatus, LocalCfgKey, CfgStatus, AccKeys
+from public.enums import OnlineStatus, LocalSettingKey, CfgStatus, AccKeys
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
@@ -128,7 +128,7 @@ class AccLoginTAHT(TreeviewAHT):
         self.main_frame = self.parent_class.ui_frame[self.table_tag]
 
         # self.data_src = self.parent_class.acc_list_dict[self.table_tag]
-        self.sign_visible: bool = App().fetch_setting_or_set_default(LocalCfgKey.SIGN_VISIBLE)
+        self.sign_visible: bool = App().fetch_setting_or_set_default(LocalSettingKey.SIGN_VISIBLE)
         self.columns = (" ", "配置", "pid", "账号标识", "平台id", "昵称")
         sort_str = Sw(self.sw).fetch_setting_or_set_default(f"{self.table_tag}_sort")
         if isinstance(sort_str, str):

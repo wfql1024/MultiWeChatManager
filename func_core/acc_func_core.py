@@ -28,7 +28,7 @@ from func_core.sw_func_core import SwInfoFuncCore, SwOperatorCore
 from functions.func_tool import FuncTool
 from functions.sw_func import Sw
 from public.config import Config
-from public.enums import AccKeys, SwEnum, LocalCfgKey, MultirunMode, CfgStatus, WndType, RemoteSwKey
+from public.enums import AccKeys, SwEnum, LocalSettingKey, MultirunMode, CfgStatus, WndType, RemoteSwKey
 from public.global_members import GlobalMembers
 from public.strings import Strings
 from utils import process_utils, image_utils, hwnd_utils, handle_utils, file_utils
@@ -45,7 +45,7 @@ class AccOperatorCore:
         screen_width, screen_height = UIUtils.get_screen_size()
         if not screen_height or not screen_width:
             size = LocalSetting().fetch_or_set_default_or_none(
-                LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.SCREEN_SIZE).split('*')
+                LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.SCREEN_SIZE).split('*')
             screen_width, screen_height = int(size[0]), int(size[1])
         if not screen_height or not screen_width:
             screen_width, screen_height = 1920, 1080
@@ -136,8 +136,8 @@ class AccOperatorCore:
             except Exception as e:
                 logger.error(e)
 
-    @staticmethod
-    def _thread_to_click_all_login_buttons_and_wait_refresh(sw, hwnds):
+    @classmethod
+    def _thread_to_click_all_login_buttons_and_wait_refresh(cls, sw, hwnds):
         """点击列表所有登录窗口的登录按钮,等待所有窗口关闭则刷新"""
         # 判断是否需要自动点击按钮
         root_class = GlobalMembers().get_root_class()
@@ -177,7 +177,7 @@ class AccOperatorCore:
             Printer().debug(preset_btn_names)
             btn_names.extend(preset_btn_names)
             # 用户添加的
-            user_btn_names_str = LocalSetting().fetch_or_set_default_or_none(sw, LocalCfgKey.CLICK_BTNS)
+            user_btn_names_str = LocalSetting().fetch_or_set_default_or_none(sw, LocalSettingKey.CLICK_BTNS)
             user_btn_names = user_btn_names_str.split("/")
             btn_names.extend(user_btn_names)
             for h in hwnds:
@@ -193,21 +193,8 @@ class AccOperatorCore:
                     print(f"通过控件查找，用时：{time.time() - inner_start_time:.4f}s")
                     if cx is not None and cy is not None:
                         hwnd_utils.do_click_in_wnd(h, int(cx), int(cy))
-
-                        # 截取图像
-                        def _capt_thread():
-                            for _ in range(6):  # 3 / 0.5 = 6 次
-                                try:
-                                    SwInfoFuncCore.try_capt_avatar_for_sw_when(
-                                        sw, RemoteSwKey.LOGIN, h
-                                    )
-                                except LookupError as le:
-                                    Logger().warning(f"警告: 找不到控件: {le}")
-                                except Exception as e:
-                                    logger.error(f"截取头像时出错: {e}")
-                                time.sleep(0.5)
-
-                        threading.Thread(target=_capt_thread).start()
+                        cls.start_capt_thread(sw, RemoteSwKey.LOGIN, h)
+                        cls.start_thread_to_copy_curr_avatar(sw, h)
                 except TypeError as te:
                     logger.warning(te)
                     print("没有按钮，应该是点过啦~")
@@ -225,6 +212,14 @@ class AccOperatorCore:
                 print("登录完成, 刷新...")
                 root.after(0, login_ui.refresh_frame, sw)
                 break
+
+    @staticmethod
+    def start_capt_thread(sw, period, sw_hwnd, times=6, gap=0.5):
+        return SwInfoFuncCore.start_capt_thread(sw, period, sw_hwnd, times, gap)
+
+    @staticmethod
+    def start_thread_to_copy_curr_avatar(sw, sw_hwnd):
+        return SwInfoFuncCore.start_thread_to_copy_curr_avatar(sw, sw_hwnd)
 
     @classmethod
     def _login_accounts(cls, login_dict: Dict[str, List]):
@@ -261,12 +256,12 @@ class AccOperatorCore:
             SwOperatorCore.kill_sw_multiple_processes(sw)
             # 是否需要关闭闲置的登录窗口
             kill_idle = LocalSetting().fetch_or_set_default_or_none(
-                LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.KILL_IDLE_LOGIN_WND) is True
+                LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.KILL_IDLE_LOGIN_WND) is True
             Printer().print_vn(f"[INFO]需要关闭闲置窗口: {kill_idle}")
             remained_idle_wnd_list = SwOperatorCore.get_idle_login_wnd_and_close_if_necessary(sw, kill_idle)
             # 是否需要解锁配置文件
             unlock_cfg = LocalSetting().fetch_or_set_default_or_none(
-                LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.UNLOCK_CFG) is True
+                LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.UNLOCK_CFG) is True
             Printer().print_vn(f"[INFO]需要解锁配置文件: {unlock_cfg}")
             all_excluded_hwnds.extend(remained_idle_wnd_list)
             # 根据是否全局多开, 检查记录所有pid及互斥体情况 -------------------------------------------------------------------
@@ -297,18 +292,8 @@ class AccOperatorCore:
                     print(f"打开窗口成功：{sw_hwnd}")
                     SwInfoFuncCore.set_pid_mutex_all_values_to_false(sw)
 
-                    # 截取图像
-                    def _capt_thread():
-                        for _ in range(6):  # 3 / 0.5 = 6 次
-                            try:
-                                SwInfoFuncCore.try_capt_avatar_for_sw_when(
-                                    sw, RemoteSwKey.LOGIN, sw_hwnd
-                                )
-                            except Exception as e:
-                                logger.error(f"截取头像时出错: {e}")
-                            time.sleep(0.5)
-
-                    threading.Thread(target=_capt_thread).start()
+                    cls.start_capt_thread(sw, RemoteSwKey.LOGIN, sw_hwnd)
+                    cls.start_thread_to_copy_curr_avatar(sw, sw_hwnd)
 
                     if sw_proc_pid is None:
                         _, sw_proc_pid = win32process.GetWindowThreadProcessId(sw_hwnd)
@@ -513,16 +498,16 @@ class AccOperatorCore:
         if len(accounts_need_avatar) > 0:
             Printer().print_vn(f"无头像: {accounts_need_avatar}")
             need_to_notice.append(
-                FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_avatar_url_from_file(
-                    sw, accounts_need_avatar, data_dir))
+                FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_acc_avatar_from_file(
+                    accounts_need_avatar, data_dir))
             need_to_notice.append(AccInfoFuncCore.get_avatar_from_other_sw(sw, accounts_need_avatar))
             need_to_notice.append(AccInfoFuncCore.get_avatar_from_cache(sw, accounts_need_avatar))
         # 3. 对待获取昵称的账号尝试遍历获取
         if len(accounts_need_to_get_nickname) > 0:
             Printer().print_vn(f"无昵称: {accounts_need_to_get_nickname}")
             need_to_notice.append(
-                FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_nickname_from_file(
-                    sw, accounts_need_to_get_nickname, data_dir))
+                FuncTool.get_sw_acc_func_impl(AccInfoFuncImpl, sw).get_acc_nickname_from_file(
+                    accounts_need_to_get_nickname, data_dir))
             need_to_notice.append(AccInfoFuncCore.get_nickname_from_other_sw(sw, accounts_need_to_get_nickname))
         # 4. 偷偷创建配置文件
         curr_config_acc = SwInfoFuncCore.get_curr_wx_id_from_cfg_file(sw)
@@ -907,7 +892,7 @@ class AccInfoFuncCore:
         if cls.is_acc_coexist(sw, acc):
             return cls.get_coexist_acc_exe_path(sw, acc)
         else:
-            return SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+            return SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
 
     """头像, 展示名, 登录配置"""
 
@@ -973,22 +958,27 @@ class AccInfoFuncCore:
         draw.text(position, text, fill="white", font=font)
         return img
 
-    @staticmethod
-    def manual_choose_avatar_for_acc(sw, acc):
+    @classmethod
+    def manual_choose_avatar_for_acc(cls, sw, acc):
         user_dir = RootSetting().user_dir
         sw_hwnd, = AccInfoFuncCore.get_sw_acc_data(sw, acc, main_hwnd=None)
 
+        SwInfoFuncCore.start_thread_to_copy_curr_avatar(sw, sw_hwnd)
+
         # 截取图像
-        def _capt_thread():
+        def _switch_and_capture_thread():
             for _ in range(6):
                 try:
                     AccOperatorCore.switch_to_sw_account_wnd(sw, acc)
                     SwInfoFuncCore.try_capt_avatar_for_sw_when(sw, RemoteSwKey.MAIN, sw_hwnd)
+                except LookupError as le:
+                    Logger().warning(f"警告: 找不到控件: {le}")
                 except Exception as e:
                     logger.error(f"截取账号 {acc} 的头像时出错: {e}")
                 time.sleep(0.5)
 
-        threading.Thread(target=_capt_thread).start()
+        threading.Thread(target=_switch_and_capture_thread).start()
+
         # 尝试从缓存的头像截图中选择
         pid, = SwAccData().get_(sw, acc, pid=None)
         avatar_cache_dir = os.path.join(tempfile.gettempdir(), Config.AVATAR_CACHE_PATH_SUFFIX)
@@ -1057,7 +1047,7 @@ class AccInfoFuncCore:
     def _get_acc_avatar_without_files(cls, sw, acc):
         # 处理没有本地头像的情况
         use_text_avatar = LocalSetting().fetch_or_set_default_or_none(
-            LocalCfgKey.GLOBAL_SECTION, LocalCfgKey.USE_TXT_AVT)
+            LocalSettingKey.GLOBAL_SECTION, LocalSettingKey.USE_TXT_AVT)
         if use_text_avatar:
             return cls._generate_text_avatar(cls.get_acc_origin_display_name(sw, acc))
         else:
@@ -1267,7 +1257,7 @@ class AccInfoFuncCore:
         exe_basename = cls.get_coexist_acc_exe(sw, acc)
         if exe_basename is None:
             return None
-        sw_path = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.INST_PATH)
+        sw_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.INST_PATH)
         sw_path = os.path.join(os.path.dirname(sw_path), cls.get_coexist_acc_exe(sw, acc))
         return sw_path
 
@@ -1404,7 +1394,7 @@ class AccInfoFuncCore:
         :param sw: 平台
         :return: Union[Tuple[True, Tuple[账号字典，进程字典，有无互斥体]], Tuple[False, 错误信息]]
         """
-        data_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalCfgKey.DATA_DIR)
+        data_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.DATA_DIR)
         if data_dir is None or os.path.isdir(data_dir) is False:
             return False, "数据路径不存在"
         excluded_dirs, executable_wildcards = RemoteSw().get_(

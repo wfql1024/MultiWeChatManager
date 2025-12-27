@@ -10,7 +10,7 @@ from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config
 from public.custom_classes import Condition
-from public.enums import LocalCfgKey, SwStates, RemoteGlobalKey
+from public.enums import LocalSettingKey, SwStates, RemoteGlobalKey
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils.encoding_utils import StringUtils
@@ -168,7 +168,7 @@ class SwManagerUI:
     def _create_set_state_method(self, state):
         def set_state(items):
             for sw in items:
-                Sw(sw).update_settings(**{LocalCfgKey.STATE: state})
+                Sw(sw).update_settings(**{LocalSettingKey.STATE: state})
             self.refresh_frame()
 
         return set_state
@@ -254,7 +254,7 @@ class SwManagerTAHT(TreeviewAHT):
         for sw in sw_list:
             if sw == "global":
                 continue
-            state = Sw(sw).fetch_setting_or_set_default(LocalCfgKey.STATE, SwStates)
+            state = Sw(sw).fetch_setting_or_set_default(LocalSettingKey.STATE, SwStates)
             if table_tag == "enable" and (state != SwStates.VISIBLE and state != SwStates.HIDDEN):
                 continue
             if table_tag == "disable" and state != SwStates.DISABLED:
