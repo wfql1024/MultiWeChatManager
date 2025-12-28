@@ -313,6 +313,58 @@
             }
         },
         "update": {
+            "v3.12.0.6136-Beta": {
+                "pkgs": {
+                    "win7": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.12.0.6136-Beta/JhiFengMultiChat_win7_x64_v3.12.0.6136-Beta.zip",
+                            "md5": "744da93b185f64242d9f06399369540b",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win10": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.12.0.6136-Beta/JhiFengMultiChat_win10_x64_v3.12.0.6136-Beta.zip",
+                            "md5": "2f656c0f49c4651894185c155ce4c82f",
+                            "sha-256": ""
+                        }
+                    ],
+                    "win11": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.12.0.6136-Beta/JhiFengMultiChat_win10_x64_v3.12.0.6136-Beta.zip",
+                            "md5": "2f656c0f49c4651894185c155ce4c82f",
+                            "sha-256": ""
+                        }
+                    ],
+                    "default": [
+                        {
+                            "url": "https://gitee.com/wfql1024/MultiWeChatManager/releases/download/v3.12.0.6136-Beta/JhiFengMultiChat_win10_x64_v3.12.0.6136-Beta.zip",
+                            "md5": "2f656c0f49c4651894185c155ce4c82f",
+                            "sha-256": ""
+                        }
+                    ]
+                },
+                "logs": {
+                    "新增": [
+                        "☆新增共存方案, 各共存程序配置独立, 增强免扫码登录的稳定性",
+                        "☆新增\"共存与补丁\"页面, 管理共存程序与补丁",
+                        "☆新增对微信4.x带提示防撤回补丁适配, 新增微信/微信4.x/企业微信的共存多开方案",
+                        "☆新增微信4.x防撤回补丁自定义提示语功能",
+                        "☆新增通过对登录前,登录中,主界面指定区域截图的方式获取头像的功能",
+                        "新增对存储路径的自动检测 (需平台在线)",
+                        "新增软件数据保存位置设置, 远程配置源设置, 支持导入旧版程序数据",
+                        "新增\"创建启动器\"功能对共存账号的支持",
+                        "新增对登录过程自定义: 最小化主窗口? 关闭多余登录窗口? 解锁配置文件? 调用程序方式? 自动点登录? 登录按钮识别? ..."
+                    ],
+                    "优化": [
+                        "优化托盘, 补丁开关等功能体验",
+                        "优化界面按钮等元素设计"
+                    ],
+                    "修复": [
+                        "修复一些已知问题."
+                    ]
+                }
+            },
             "v3.3.0.3718-Beta": {
                 "pkgs": {
                     "win7": [
