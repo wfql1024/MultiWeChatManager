@@ -103,14 +103,23 @@ echo BUILD_TIME=%BUILD_TIME%
 if "%ENABLE_PACKAGE_ARCHIVE%"=="1" (
     :: zip 压缩（压整个 APP_NAME 文件夹）
     powershell -NoProfile -Command "Compress-Archive -Path '%DIST_PATH%\%APP_NAME%' -DestinationPath '%DIST_PATH%\%APP_NAME% %BUILD_TIME%.zip' -Force"
-
-
     :: 7z 压缩
     if exist %SEVEN_ZIP% (
         %SEVEN_ZIP% a -t7z "%DIST_PATH%\%APP_NAME% %BUILD_TIME%.7z" "%DIST_PATH%\%APP_NAME%" -mx=9
     ) else (
         echo 未找到 7z.exe，跳过 7z 压缩
     )
+    :: zip 的 md5
+    if exist "%DIST_PATH%\%APP_NAME% %BUILD_TIME%.zip" (
+        certutil -hashfile "%DIST_PATH%\%APP_NAME% %BUILD_TIME%.zip" MD5
+
+    )
+    :: 7z 的 md5
+    if exist "%DIST_PATH%\%APP_NAME% %BUILD_TIME%.7z" (
+        certutil -hashfile "%DIST_PATH%\%APP_NAME% %BUILD_TIME%.7z" MD5
+
+    )
+
 ) else (
     echo 已关闭压缩包生成，跳过 zip / 7z
 )

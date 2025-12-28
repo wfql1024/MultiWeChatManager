@@ -56,11 +56,11 @@ def find_file_fuzzy_with_keywords(start_dir, keywords, extension=None):
 
 
 def elevate():
-    if ctypes.windll.shell32.IsUserAnAdmin():
+    if ctypes.windll.shell32.IsUserAnAdmin():  # type: ignore
         return True
     else:
         try:
-            hinstance = ctypes.windll.shell32.ShellExecuteW(
+            hinstance = ctypes.windll.shell32.ShellExecuteW(  # type: ignore
                 None, "runas", sys.executable, " ".join(sys.argv), None, 1
             )
             if hinstance <= 32:
@@ -74,7 +74,7 @@ def elevate():
 def is_admin():
     """检查当前进程是否具有管理员权限。"""
     try:
-        return ctypes.windll.shell32.IsUserAnAdmin()
+        return ctypes.windll.shell32.IsUserAnAdmin()  # type: ignore
     except AttributeError:
         # 非 Windows 系统，默认返回 True
         return os.geteuid() == 0
