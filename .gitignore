@@ -11,6 +11,10 @@
 /node_modules/
 /target/
 /package-lock.json
+/external_res/
+/storage/
+/.test/@AutomationLog.txt
+/@AutomationLog.txt
 
 
 # Rust build output
