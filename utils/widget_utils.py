@@ -123,7 +123,7 @@ class UnlimitedClickHandler:
         if self.single_click_id:
             self.root.after_cancel(self.single_click_id)
         # 设置一个延时，等待是否有更多的点击
-        self.single_click_id = self.root.after(200, self.handle_click, event)
+        self.single_click_id = self.root.after(250, self.handle_click, event)
 
     def handle_click(self, event=None):
         print(f"{self.widget}第{self.turn}份事件处理器监听:连续点击{self.click_count}次")

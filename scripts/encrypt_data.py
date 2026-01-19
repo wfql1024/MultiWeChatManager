@@ -33,10 +33,10 @@ print(secure_key)  # 例如：k8DpLmQwXz5RtN=
 #     '../.old/remote_configs/remote_setting', secure_key)
 # print(f"文件已加密并保存为 remote_setting")
 
-encrypt_input_and_append_key_to_output(
-    'original_remote_setting_v4.json',
-    '../remote_setting_v4', secure_key)
-print(f"文件已加密并保存为 remote_setting_v4")
+# encrypt_input_and_append_key_to_output(
+#     'original_remote_setting_v4.json',
+#     '../remote_setting_v4', secure_key)
+# print(f"文件已加密并保存为 remote_setting_v4")
 
 # encrypt_input_and_append_key_to_output(
 #     '../.old/original_remote_configs/original_remote_setting_v5.json',

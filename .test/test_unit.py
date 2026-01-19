@@ -806,3 +806,118 @@ class Test(TestCase):
         sw = "WeChat"
         paths = WeChatInfoFuncImpl.get_curr_login_acc_avatar_paths()
         print(paths)
+
+    def test_move_window_to_foreground_topleft(self):
+        import win32gui
+        import win32con
+
+        def get_primary_monitor_workarea():
+            """返回主显示器工作区左上角坐标"""
+            # 主显示器一定包含 (0, 0)
+            hmon = win32api.MonitorFromPoint((0, 0), win32con.MONITOR_DEFAULTTOPRIMARY)
+            info = win32api.GetMonitorInfo(hmon)
+            # info["Work"] = (left, top, right, bottom)
+            return info["Work"]
+
+        def move_window_to_foreground_topleft(hwnd: int) -> bool:
+            """将指定 hwnd 的窗口移动到当前前台窗口左上角，不改变大小"""
+            if not win32gui.IsWindow(hwnd):
+                return False
+
+            wa_left, wa_top, wa_right, wa_bottom = get_primary_monitor_workarea()
+
+            # 目标窗口当前大小
+            left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+            width = right - left
+            height = bottom - top
+
+            # win32gui.SetWindowPos(
+            #     hwnd,
+            #     None,
+            #     wa_left,
+            #     wa_top,
+            #     width,
+            #     height,
+            #     win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+            # )
+
+            win32gui.SetWindowPos(
+                hwnd,
+                win32con.HWND_TOPMOST,
+                300,
+                300,
+                width,
+                height,
+                win32con.SWP_NOACTIVATE
+            )
+            win32gui.SetWindowPos(
+                hwnd,
+                win32con.HWND_NOTOPMOST,
+                300,
+                300,
+                width,
+                height,
+                win32con.SWP_NOACTIVATE
+            )
+
+            # win32gui.SetWindowPos(
+            #     hwnd,
+            #     None,
+            #     300,
+            #     300,
+            #     width,
+            #     height,
+            #     win32con.SWP_NOZORDER | win32con.SWP_NOACTIVATE
+            # )
+            return True
+
+        def move_window_by_classname(class_name: str) -> bool:
+            """根据窗口类名，移动窗口到当前前台窗口左上角"""
+            hwnd = win32gui.FindWindow(class_name, None)
+            print(hwnd)
+            if not hwnd:
+                return False
+
+            return move_window_to_foreground_topleft(hwnd)
+
+        print(move_window_by_classname("#32770"))
+        print(move_window_to_foreground_topleft(267812))
+
+    def test_enum_hwnds_by_pid(self):
+        import win32gui
+        import win32process
+
+        def enum_hwnds_by_pid(target_pid: int):
+            """枚举指定 pid 下的所有顶级窗口，打印 hwnd / pid / class / title"""
+
+            result = []
+
+            def callback(hwnd, _):
+                try:
+                    _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                    if pid != target_pid:
+                        return True
+
+                    cls = win32gui.GetClassName(hwnd)
+                    title = win32gui.GetWindowText(hwnd)
+
+                    result.append((hwnd, pid, cls, title))
+                except Exception:
+                    pass
+
+                return True
+
+            win32gui.EnumWindows(callback, None)
+
+            for hwnd, pid, cls, title in result:
+
+                print(f"hwnd={hwnd} pid={pid} class='{cls}' title='{title}'")
+                # 目标窗口当前大小
+                left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+                width = right - left
+                height = bottom - top
+                print(left, top, width, height)
+
+            return result
+        enum_hwnds_by_pid(21676)
+

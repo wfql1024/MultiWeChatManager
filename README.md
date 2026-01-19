@@ -4,8 +4,8 @@
   <img src="https://img.shields.io/badge/Platform-Windows 7~11-blue">
   <img src="https://img.shields.io/github/stars/wfql1024/MultiWeChatManager">
   <img src="https://img.shields.io/github/license/wfql1024/MultiWeChatManager"><br>
-  <img src="https://img.shields.io/badge/WeChat-3.9~4.0-green?logo=wechat&logoColor=white" alt="">
-  <img src="https://img.shields.io/badge/WxWork-4.1-0D47A1?logo=wechat&logoColor=white">
+  <img src="https://img.shields.io/badge/WeChat-3.9~4.1-green?logo=wechat&logoColor=white" alt="">
+  <img src="https://img.shields.io/badge/WxWork-4.1~5.0-0D47A1?logo=wechat&logoColor=white">
   <img src="https://img.shields.io/badge/QQ-9.7~9.9-red?logo=qq&logoColor=white">
   <img src="https://img.shields.io/badge/TIM-3.4-blue?logo=qq&logoColor=white">
 </p>
