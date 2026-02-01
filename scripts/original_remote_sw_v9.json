@@ -50,7 +50,7 @@
                     "mutex_wildcard": {
                         "_WeChat_App_Instance_Identity_Mutex_Name": "_WeCha?_App_Instance_Identity_Mutex_Name"
                     },
-                    "ordinals": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "ordinals": "123456789ABCDEFHIJKLMOPQRSUVWXYZ",
                     "patch_wildcard": {
                         "%dll_dir%/WeChatWin.dll": "%dll_dir%/WeChatWi?.dll"
                     },
@@ -588,7 +588,7 @@
                         "XWeChat_App_Instance_Identity_Mutex_Name": "XWeCha?_App_Instance_Identity_Mutex_Name",
                         "lock.ini": "lock.ini"
                     },
-                    "ordinals": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "ordinals": "123456789ABCDEFHIJKLMOPQRSUVWXYZ",
                     "patch_wildcard": {
                         "%dll_dir%/Weixin.dll": "%dll_dir%/Weixi?.dll"
                     },
@@ -1323,7 +1323,7 @@
                         "Tencent.WeWork.ExclusiveObjectInstance1": "Tencent.WeWork.Excl?siveObjectInstance1",
                         "Tencent.WeWork.ExclusiveObject": "Tencent.WeWork.Excl?siveObject"
                     },
-                    "ordinals": "123456789ⓐⓑⓒⓓⓔⓕⓖⓗⓘⓙⓚⓛⓜⓝⓞⓟⓠⓡⓢⓣⓤⓥⓦⓧⓨⓩ",
+                    "ordinals": "123456789ABCDEFHIJKLMPQTVWXYZ",
                     "patch_wildcard": {},
                     "features": [
                         {
