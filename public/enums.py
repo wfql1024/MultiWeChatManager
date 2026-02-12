@@ -79,6 +79,8 @@ class RemoteSwKey(str, Enum):
     # PATH_CHECK路径检查下属字段
     L_CONCAT = "left_concat"
     R_CONCAT = "right_concat"
+    L_CONTAIN = "left_contain"
+    R_CONTAIN = "right_contain"
 
     # AUTO_GET自动获取下属字段
     # -内容

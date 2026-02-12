@@ -54,6 +54,10 @@ class SwInfoFuncCore:
     """
 
     @staticmethod
+    def get_sw_cls(sw):
+        return GlobalMembers().root_class.sw_classes[sw]
+
+    @staticmethod
     def get_remote_sw(sw, *addr, **kwargs):
         return RemoteSw().get_(sw, *addr, **kwargs)
 
@@ -428,6 +432,8 @@ class SwInfoFuncCore:
             channels_to_scan = list(all_channels_dict.keys())
         if coexist_channel is None or ordinal is None:
             # "不跳过已有"只对主程序生效
+            # 是否跳过取决于当前sw的force_rescan标志
+            skip_cache = not cls.get_sw_cls(sw).force_rescan
             cls._update_adaptation_from_remote_to_cache(sw, mode, channels_to_scan, skip_cache)
         else:
             cls._update_adaptation_from_remote_to_cache(sw, mode, channels_to_scan)
@@ -874,16 +880,46 @@ class SwInfoFuncCore:
                 check_dict, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DATA_DIR: None})
             elif path_type == LocalSettingKey.DLL_DIR:
                 check_dict, = cls.get_remote_sw(sw, RemoteSwKey.PATH_CHECK, **{PathType.DLL_DIR: None})
+            # 右接路径(即当前路径下是否有右接字符串的文件或文件夹, 需要传入完整名)
             right_concat = check_dict.get(RemoteSwKey.R_CONCAT, None)
             if isinstance(right_concat, str):
                 path_right_concat = os.path.join(path, right_concat)
                 if not os.path.exists(path_right_concat):
                     return False
+            # 左接路径(即当前路径所在目录是否以传入字符串结尾)
             left_concat = check_dict.get(RemoteSwKey.L_CONCAT, None)
             if isinstance(left_concat, str):
                 dir_name = os.path.dirname(path).replace('\\', '/')
                 if not dir_name.endswith(left_concat):
                     return False
+            # 右含路径
+            right_contain = check_dict.get(RemoteSwKey.R_CONTAIN, None)
+            if isinstance(right_contain, str):
+                found = False
+                for root, dirs, files in os.walk(path):
+                    # 检查目录
+                    for d in dirs:
+                        if right_contain in os.path.join(root, d).replace('\\', '/'):
+                            found = True
+                            break
+                    if found:
+                        break
+                    # 检查文件
+                    for f in files:
+                        if right_contain in os.path.join(root, f).replace('\\', '/'):
+                            found = True
+                            break
+                    if found:
+                        break
+                if not found:
+                    return False
+            # 左含路径
+            left_contain = check_dict.get(RemoteSwKey.L_CONTAIN, None)
+            if isinstance(left_contain, str):
+                dir_path = os.path.dirname(path).replace('\\', '/')
+                if left_contain not in dir_path:
+                    return False
+
             return True
         except Exception as e:
             print(e)

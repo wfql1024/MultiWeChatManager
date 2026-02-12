@@ -1344,6 +1344,9 @@ class AccInfoFuncCore:
                 try:
                     acc_dir_index = path_parts.index(os.path.basename(data_dir)) + 1
                     acc_dir = path_parts[acc_dir_index]
+                    # 如果该文件路径分块长度刚好以存储路径的下级路径结尾, 则排除; 即, 账号文件夹得是个文件夹
+                    if len(path_parts) == acc_dir_index + 1:
+                        return None
                     if acc_dir not in exclude_folders:
                         with lock:
                             pid_acc_dict[pid] = acc_dir

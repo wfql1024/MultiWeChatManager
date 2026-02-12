@@ -680,6 +680,10 @@
                                 {
                                     "type": "simple",
                                     "ver_adaptations": {
+                                        "4.1.7": {
+                                            "original": "0F 85 ?? ?? ?? ?? 48 89 ?? ?? ?? ?? F0 86 08 0F 57 C0 0F 29 45 F0 0F 29 45 E0 B9 20 00 00 00 E8 ?? ?? ?? ??",
+                                            "modified": "90 E9 ..."
+                                        },
                                         "4.1.0": {
                                             "original": "75 1B E8 ?? ?? ?? ?? 84 C0 75 12 E8 ?? ?? ?? ?? 48 89 C1 48 89 F2 E8 ?? ?? ?? ?? 31 FF 89 F8 48 83 C4 28 5F 5E C3 CC CC CC CC",
                                             "modified": "EB ..."
@@ -2582,6 +2586,302 @@
                     0.56
                 ],
                 "control_names": []
+            }
+        }
+    },
+    "DouYinIM": {
+        "alias": "抖音聊天",
+        "executable": "douyinim.exe",
+        "data_dir_name": "db",
+        "executable_wildcards": [
+            "douyinim?.exe",
+            "douyinim.exe",
+            "douyini?.exe"
+        ],
+        "mutex_handles": [
+            {
+                "handle_name": "lockfile",
+                "regex": "pid:\\s*(\\d+)\\s+type:\\s*File\\s+([0-9A-Fa-f]+):",
+                "type": "file"
+            }
+        ],
+        "config_handles": [],
+        "mutex_handle_wildcards": [
+            "lockfile"
+        ],
+        "config_handle_wildcards": [],
+        "config_addresses": [
+            "%data_dir%/Global/Config.cfg"
+        ],
+        "patch_addresses": [
+            "%dll_dir%/main.dll"
+        ],
+        "excluded_dirs": [
+            "MMKV",
+            "specialCharacter"
+        ],
+        "coexist": {
+            "alias": "共存",
+            "multi_state": true,
+            "channels": {
+                "default": {
+                    "alias": "共存",
+                    "introduce": "对host文件,窗口类名,配置文件,互斥体等进行克隆并取别名,实现多套共存程序及配置.",
+                    "authors": [
+                        "afaa1991"
+                    ],
+                    "exe_wildcard": "douyini?.exe",
+                    "mutex_wildcard": {
+                        "Tencent.WeWork.ExclusiveObjectInstance1": "Tencent.WeWork.Excl?siveObjectInstance1",
+                        "Tencent.WeWork.ExclusiveObject": "Tencent.WeWork.Excl?siveObject"
+                    },
+                    "ordinals": "123456789ABCDEFHIJKLMPQTVWXYZ",
+                    "patch_wildcard": {},
+                    "features": [
+                        {
+                            "addr": "%inst_path%",
+                            "patch_rules": [
+                                {
+                                    "type": "simple",
+                                    "ver_adaptations": {
+                                        "1.1": {
+                                            "original": "6D 00 61 00 69 00 6E 00 2E 00 64 00 6C 00 6C 00",
+                                            "modified": "... !! 00 2E 00 64 00 6C 00 6C 00"
+                                        }
+                                    },
+                                    "descript": " m  .  a  .  i  .  ̲n  .  .  .  d  .  l  .  l  ."
+                                }
+                            ],
+                            "wildcard": "douyini?.exe"
+                        },
+                        {
+                            "addr": "%dll_dir%/main.dll",
+                            "patch_rules": [
+                                {
+                                    "type": "simple",
+                                    "ver_adaptations": {
+                                        "1.1": {
+                                            "original": "BC 61 70 70 2E 61 73 61 72 48",
+                                            "modified": "BC 61 70 !! ..."
+                                        }
+                                    },
+                                    "descript": " .  a  p  ̲p  .  a  s  a  r  H"
+                                },
+                                {
+                                    "type": "simple",
+                                    "ver_adaptations": {
+                                        "1.1": {
+                                            "original": "00 61 70 70 2E 61 73 61 72 00",
+                                            "modified": "00 61 70 !! ..."
+                                        }
+                                    },
+                                    "descript": " .  a  p  ̲p  .  a  s  a  r  ."
+                                },
+                                {
+                                    "type": "simple",
+                                    "ver_adaptations": {
+                                        "1.1": {
+                                            "original": "6D 61 69 6E 2E 64 6C 6C 00",
+                                            "modified": "6D 61 69 !! ..."
+                                        }
+                                    },
+                                    "descript": " m  a  i  ̲n  .  d  l  l  ."
+                                },
+                                {
+                                    "type": "simple",
+                                    "ver_adaptations": {
+                                        "1.1": {
+                                            "original": "43 00 68 00 72 00 6F 00 6D 00 65 00 5F 00 4D 00 65 00 73 00 73 00 61 00 67 00 65 00 57 00 69 00 6E 00 64 00 6F 00 77 00",
+                                            "modified": "... !! 00"
+                                        }
+                                    },
+                                    "descript": " C  .  h  .  r  .  o  .  m  .  e  .  _  .  M  .  e  .  s  .  s  .  a  .  g  .  e  .  W  .  i  .  n  .  d  .  o  .  ̲w  ."
+                                },
+                                {
+                                    "type": "simple",
+                                    "ver_adaptations": {
+                                        "1.1": {
+                                            "original": "50 72 6F 63 65 73 73 53 69 6E 67 6C 65 74 6F 6E 53 74 61 72 74 75 70 00 6C 6F 63 6B 66 69 6C 65 00",
+                                            "modified": "... !! 00"
+                                        }
+                                    },
+                                    "descript": " P  r  o  c  e  s  s  S  i  n  g  l  e  t  o  n  S  t  a  r  t  u  p  .  l  o  c  k  f  i  l  ̲e  ."
+                                }
+                            ],
+                            "wildcard": "mai?.dll"
+                        }
+                    ]
+                }
+            }
+        },
+        "multirun": {
+            "alias": "多开"
+        },
+        "anti-revoke": {
+            "alias": "防撤"
+        },
+        "wnd_class": {
+            "login": {
+                "matching": {
+                    "1.1": [
+                        {
+                            "ClassNameWildcards": [
+                                "Chrome_WidgetWin_1"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "1.1": {
+                        "class_name": "Chrome_WidgetWin_1"
+                    }
+                }
+            },
+            "main": {
+                "matching": {
+                    "1.1": [
+                        {
+                            "ClassNameWildcards": [
+                                "Chrome_WidgetWin_1"
+                            ]
+                        }
+                    ]
+                },
+                "original": {
+                    "1.1": {
+                        "class_name": "Chrome_WidgetWin_1"
+                    }
+                }
+            }
+        },
+        "path_detect": {
+            "inst_path": {
+                "reg": {
+                    "local_machine": [
+                        {
+                            "sub_key": "SOFTWARE\\ByteDance\\抖音聊天",
+                            "value_name": "InstallDir"
+                        }
+                    ]
+                },
+                "addr": {
+                    "ProgramFiles(x86)": [
+                        {
+                            "sub_path": "ByteDance\\抖音聊天"
+                        }
+                    ],
+                    "ProgramFiles": [
+                        {
+                            "sub_path": "ByteDance\\抖音聊天"
+                        }
+                    ]
+                }
+            },
+            "data_dir": {
+                "reg": {},
+                "addr": {
+                    "documents": [
+                        {
+                            "sub_path": "抖音聊天\\db"
+                        }
+                    ],
+                    "~": [
+                        {
+                            "sub_path": "AppData\\Roaming\\抖音聊天\\db"
+                        },
+                        {
+                            "sub_path": "抖音聊天\\db"
+                        }
+                    ]
+                },
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "^(.*?)/抖音聊天/db/[0-9A-Fa-f]+(?:/[^/]+)*$"
+                        }
+                    ]
+                }
+            },
+            "dll_dir": {
+                "regex": {
+                    "-": [
+                        {
+                            "regex": "(.*/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+)/main\\.dll$"
+                        }
+                    ]
+                }
+            }
+        },
+        "path_check": {
+            "inst_path": {
+                "left_contain": "抖音聊天"
+            },
+            "data_dir": {
+                "right_concat": "specialCharacter"
+            },
+            "dll_dir": {
+                "right_concat": "main.dll"
+            }
+        },
+        "sw_id_trims": {},
+        "auto_get": {
+            "avatar": {
+                "login": [
+                    {
+                        "locate": [],
+                        "cut": {
+                            "l": "34%w",
+                            "t": "31%h",
+                            "r": "34%w",
+                            "b": "46%h"
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
+                    }
+                ],
+                "main": [
+                    {
+                        "locate": [
+                            {
+                                "type": "kwargs",
+                                "rule": {
+                                    "ClassName": "TitleBarWindow"
+                                }
+                            }
+                        ],
+                        "cut": {
+                            "l": "60%h",
+                            "t": "96%h",
+                            "r": "-139%h",
+                            "b": "-175%h"
+                        },
+                        "capture": [
+                            "gdi"
+                        ]
+                    }
+                ]
+            },
+            "nickname": {
+                "login": [
+                    {
+                    }
+                ],
+                "main": [
+                    {
+                    }
+                ]
+            }
+        },
+        "auto_click": {
+            "login_btn": {
+                "location": [
+                    0.5,
+                    0.78
+                ],
+                "control_names": [
+                    "登录"
+                ]
             }
         }
     }
