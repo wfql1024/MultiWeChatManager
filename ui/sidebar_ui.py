@@ -16,7 +16,7 @@ from functions.acc_func import AccInfoFuncCore, Acc
 from functions.app_func import App
 from functions.sw_func import Sw
 from public import Config
-from public.enums import OnlineStatus, RemoteSwKey
+from public.enums import OnlineStatus, RemoteSwKey, LocalSettingKey, SwStates
 from public.global_members import GlobalMembers
 from ui.wnd_ui import WndCreator
 from utils import widget_utils
@@ -656,6 +656,10 @@ class SidebarTree(RadioTreeView):
         # sw_nodes = {}
 
         for sw in sw_acc_data:
+            # 先判断是否禁用
+            sw_state, = Sw(sw).get_settings(**{LocalSettingKey.STATE:None})
+            if sw_state == SwStates.DISABLED:
+                continue
             sw_data = sw_acc_data[sw]
             excluded_dirs, = Sw(sw).get_remote(**{RemoteSwKey.EXCLUDED_DIRS: []})
             success, result = AccInfoFuncCore.get_sw_accounts_login_status(sw)

@@ -3,7 +3,7 @@ import os
 import re
 import sys
 from enum import Enum
-from typing import Union, Dict, Tuple, Any, Optional, Type
+from typing import Union, Dict, Tuple, Any, Optional, Type, List
 
 from public import Config, Strings
 from public.enums import SwEnum, RootCfgKey
@@ -82,7 +82,7 @@ class AbsSetting:
             Logger().error(e)
             return False
 
-    def get_(self, *front_addr, **kwargs) -> Union[Dict, Tuple[Any, ...]]:
+    def get_(self, *front_addr, **kwargs) -> Union[List, Dict, Tuple[Any, ...]]:
         """
         根据用户输入的变量名，获取对应的账户信息
         :param front_addr: 前置地址，如：("wechat", "account1")
@@ -193,7 +193,7 @@ class LocalSetting(AbsSetting):
         setting_path = os.path.join(user_dir, Config.LOCAL_SETTING_PATH_SUFFIX).replace("\\", "/")
         return setting_path
 
-    def save_and_check_changed(self, section, key, value):
+    def save_and_check_changed(self, section, key, value) -> bool:
         """
         保存设置并回调
         :param section: 配置文件中的section

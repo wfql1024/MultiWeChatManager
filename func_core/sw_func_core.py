@@ -23,6 +23,7 @@ import win32gui
 import win32process
 import winshell
 from PIL import Image
+from typing_extensions import LiteralString
 from win32com.client import Dispatch
 
 from components import CustomDialogW
@@ -523,14 +524,18 @@ class SwInfoFuncCore:
 
     @classmethod
     def get_sw_original_wnd_class_name(cls, sw, wnd_type) -> Optional[str]:
-        type_vers_dict: dict = cls.get_remote_sw(sw, RemoteSwKey.WND_CLASS, wnd_type, "original")
-        if not isinstance(type_vers_dict, dict):
+        try:
+            type_vers_dict: dict = cls.get_remote_sw(sw, RemoteSwKey.WND_CLASS, wnd_type, "original")
+            if not isinstance(type_vers_dict, dict):
+                return None
+            curr_ver = SwInfoFuncCore.calc_sw_ver(sw)
+            compatible_version = VersionUtils.pkg_find_compatible_version(curr_ver, list(type_vers_dict.keys()))
+            if compatible_version is None:
+                return None
+            return type_vers_dict[compatible_version]["class_name"]
+        except Exception as e:
+            Logger().warning(e)
             return None
-        curr_ver = SwInfoFuncCore.calc_sw_ver(sw)
-        compatible_version = VersionUtils.pkg_find_compatible_version(curr_ver, list(type_vers_dict.keys()))
-        if compatible_version is None:
-            return None
-        return type_vers_dict[compatible_version]["class_name"]
 
     @staticmethod
     def get_curr_wx_id_from_cfg_file(sw):
@@ -585,6 +590,7 @@ class SwInfoFuncCore:
 
         def _get_origin_accounts():
             data_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.DATA_DIR)
+            data_dir = str(data_dir)
             excluded_dirs, = cls.get_remote_sw(sw, **{RemoteSwKey.EXCLUDED_DIRS: []})
             return {entry.name for entry in os.scandir(data_dir) if entry.is_dir()} - set(excluded_dirs)
 
@@ -645,13 +651,13 @@ class SwInfoFuncCore:
             return cls.fetch_sw_setting_or_set_default(sw, LocalSettingKey.REST_MULTIRUN_MODE)
 
     @staticmethod
-    def detect_path_of_(sw, path_type) -> Optional[str]:
+    def detect_path_of_(sw, path_type) -> Union[None, LiteralString, bytes]:
         """通过内置方法列表获取路径, 成功获取会保存到配置文件中"""
         _, _, result = SwInfoFuncCore.try_detect_path(sw, path_type)
         return result
 
     @classmethod
-    def try_get_path_of_(cls, sw, path_type) -> Optional[str]:
+    def try_get_path_of_(cls, sw, path_type) -> Union[str, None, LiteralString, bytes]:
         """优先获取已保存的路径, 若没有则通过方法自动搜寻"""
         path = cls.get_saved_path_of_(sw, path_type)
         # Printer().debug(f"从本地记录获取{sw}的{path_type}路径: {path}")
@@ -1661,7 +1667,7 @@ class SwInfoFuncCore:
 
     @staticmethod
     def try_detect_path(sw: str, path_type: str) \
-            -> Union[Tuple[bool, bool, Union[None, str]]]:
+            -> Tuple[bool, bool, Union[None, LiteralString, bytes]]:
         """
         获取微信数据路径的结果元组
         :param path_type: 路径类型
@@ -2591,18 +2597,20 @@ class SwOperatorCore:
         for acc in accounts:
             coexist_channel, ordinal = SwAccData().get_(
                 sw, acc, **{AccKeys.COEXIST_CHANNEL: None, AccKeys.ORDINAL: None})
-            channel_addresses_dict: dict = SwCache().get_(
+            channel_addresses_dicts: list = SwCache().get_(
                 sw, RemoteSwKey.COEXIST, RemoteSwKey.CHANNELS, coexist_channel, RemoteSwKey.PRECISES, curr_ver)
             try:
                 try:
-                    if not isinstance(channel_addresses_dict, dict):
+                    if not isinstance(channel_addresses_dicts, list):
                         raise FlowControlError
-                    for addr in channel_addresses_dict:
+                    for c_a_dict in channel_addresses_dicts:
+                        addr = c_a_dict["addr"]
                         origin_path = SwInfoFuncCore.resolve_sw_path(sw, addr)
-                        name_wildcard = channel_addresses_dict[addr]["wildcard"]
+                        name_wildcard = c_a_dict["wildcard"]
                         del_path = os.path.join(
                             os.path.dirname(origin_path), name_wildcard.replace("?", ordinal)).replace("\\", "/")
                         os.remove(del_path)
+                        print(f"清除共存文件: [{addr}]{del_path}")
                 except Exception as e:
                     print(e)
                     # 未适配的, 只删除入口程序
@@ -2845,6 +2853,7 @@ class SwOperatorCore:
     def open_config_file(sw):
         """打开配置文件夹"""
         data_path = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.DATA_DIR)
+        data_path = str(data_path)
         if os.path.exists(data_path):
             config_addresses, = SwInfoFuncCore.get_remote_sw(sw, **{RemoteSwKey.CONFIG_ADDRESSES: None})
             if not isinstance(config_addresses, list) or len(config_addresses) == 0:
@@ -2892,6 +2901,7 @@ class SwOperatorCore:
     def open_dll_dir(sw):
         """打开dll所在文件夹，并将光标移动到文件"""
         dll_dir = SwInfoFuncCore.try_get_path_of_(sw, LocalSettingKey.DLL_DIR)
+        dll_dir = str(dll_dir)
         if os.path.exists(dll_dir):
             sub_file = None
             try:
