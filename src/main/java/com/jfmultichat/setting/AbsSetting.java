@@ -1,0 +1,82 @@
+package com.jfmultichat.setting;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ * 抽象设置基类 — 对应 Python 的 AbsSetting.
+ * <p>
+ * 封装 JSON 文件读写，提供类似 Python dict 的嵌套路径访问方式：
+ * {@code get("about", "home", "bilibili") → 对应 JSON 的 about.home.bilibili 节点}
+ * <p>
+ * 子类通常为单例，各自对应一个 JSON 文件。
+ */
+public abstract class AbsSetting {
+
+    protected static final Logger LOG = Logger.getLogger(AbsSetting.class.getName());
+    protected final ObjectMapper mapper = new ObjectMapper();
+
+    protected JsonNode data;
+    protected File dataFile;
+
+    /**
+     * 从文件加载 JSON → JsonNode 树（类似 Python dict）
+     */
+    public synchronized JsonNode load() {
+        if (dataFile == null || !dataFile.exists()) {
+            LOG.warning("Data file not found: " + dataFile);
+            data = mapper.createObjectNode();
+            return data;
+        }
+        try {
+            data = mapper.readTree(dataFile);
+            return data;
+        } catch (IOException e) {
+            LOG.log(Level.SEVERE, "Failed to load JSON: " + dataFile, e);
+            data = mapper.createObjectNode();
+            return data;
+        }
+    }
+
+    /**
+     * 按路径获取嵌套 JsonNode，路径为空则返回整个 data.
+     * <p>
+     * 对应 Python 的 {@code get_(*addr)}。
+     */
+    public Optional<JsonNode> get(String... path) {
+        load();
+        JsonNode current = data;
+        for (String key : path) {
+            if (current == null || !current.has(key)) return Optional.empty();
+            current = current.get(key);
+        }
+        return Optional.ofNullable(current);
+    }
+
+    /**
+     * 获取字符串值
+     */
+    public String getString(String... path) {
+        return get(path).map(JsonNode::asText).orElse("");
+    }
+
+    /**
+     * 获取字符串值（带默认值，在路径前以提高区分度）
+     */
+    public String getStringOr(String defaultVal, String... path) {
+        return get(path).map(JsonNode::asText).orElse(defaultVal);
+    }
+
+    /**
+     * 重新加载并返回 data
+     */
+    public JsonNode reload() {
+        return load();
+    }
+}

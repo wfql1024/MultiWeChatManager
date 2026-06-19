@@ -1,0 +1,122 @@
+/* ========================================
+   Theme — CSS Variables
+   ======================================== */
+
+/* Shared layout vars (not theme-dependent) */
+:root {
+    --border-radius: 8px;
+    --sidebar-width: 64px;
+    --sidebar-expanded-width: 200px;
+    --icon-size: 22px;
+    --icon-left: 21px;    /* (64 - 22) / 2 */
+
+    --font-size-sm: 12px;
+    --font-size-md: 14px;
+    --font-size-lg: 16px;
+    --font-size-xl: 22px;
+
+    --space-xs: 4px;
+    --space-sm: 8px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 40px;
+
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== Dark theme (default) ========== */
+:root,
+[data-theme="dark"] {
+    --bg-main: #1e1e1e;
+    --bg-sidebar: #1a1a1a;
+    --bg-card: #252525;
+    --bg-hover: rgba(255, 255, 255, 0.06);
+    --bg-selected: rgba(255, 255, 255, 0.1);
+
+    --border-color: rgba(255, 255, 255, 0.08);
+
+    --text-primary: #d4d4d4;
+    --text-secondary: #9a9a9a;
+    --text-muted: #6c6c6c;
+
+    --color-primary: #4a9eff;
+    --color-primary-light: rgba(74, 158, 255, 0.15);
+    --color-danger: #e64553;
+}
+
+/* ========== Light theme ========== */
+[data-theme="light"] {
+    --bg-main: #f5f5f5;
+    --bg-sidebar: #ebebeb;
+    --bg-card: #ffffff;
+    --bg-hover: rgba(0, 0, 0, 0.05);
+    --bg-selected: rgba(0, 0, 0, 0.08);
+
+    --border-color: rgba(0, 0, 0, 0.10);
+
+    --text-primary: #2c2c2c;
+    --text-secondary: #666666;
+    --text-muted: #999999;
+
+    --color-primary: #0066cc;
+    --color-primary-light: rgba(0, 102, 204, 0.12);
+    --color-danger: #d32f2f;
+
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
+}
+
+/* ========== Auto: follow system preference ========== */
+@media (prefers-color-scheme: light) {
+    [data-theme="auto"] {
+        --bg-main: #f5f5f5;
+        --bg-sidebar: #ebebeb;
+        --bg-card: #ffffff;
+        --bg-hover: rgba(0, 0, 0, 0.05);
+        --bg-selected: rgba(0, 0, 0, 0.08);
+
+        --border-color: rgba(0, 0, 0, 0.10);
+
+        --text-primary: #2c2c2c;
+        --text-secondary: #666666;
+        --text-muted: #999999;
+
+        --color-primary: #0066cc;
+        --color-primary-light: rgba(0, 102, 204, 0.12);
+        --color-danger: #d32f2f;
+
+        --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
+    }
+}
+
+/* ========== Reset ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    font-size: var(--font-size-md);
+    color: var(--text-primary);
+    background: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+a { color: var(--color-primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    background: var(--bg-card);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    transition: background 0.15s;
+}
+.btn:hover { background: var(--bg-hover); }
+.btn-primary { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+.btn-primary:hover { opacity: 0.9; }
+.btn-sm { padding: 3px 8px; font-size: 11px; }

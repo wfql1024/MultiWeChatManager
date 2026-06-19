@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "mcp-universal-icons": {
+      "command": "mcp-universal-icons"
+    },
+    "icons-mcp": {
+      "command": "icons-mcp"
+    }
+  }
+}

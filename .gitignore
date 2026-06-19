@@ -1,23 +1,28 @@
-# 输出文件
+# === 构建产物 ===
+/build/
 /dist/
+/target/
+/.gradle/
 
-# 日志文件
-*.log
-
-# IDE 配置
+# === IDE / 工具配置 ===
 /.idea/
+/.claude/
 *.iml
 
+# === 旧代码 (不参与版本控制) ===
+/legacy_python/
+
+# === 日志 ===
+*.log
+
+# === Node / Rust (已废弃) ===
 /node_modules/
-/target/
 /package-lock.json
+/src-tauri/target
+/src-tauri/gen
+
+# === 外部资源 ===
 /external_res/
 /storage/
 /.test/@AutomationLog.txt
 /@AutomationLog.txt
-
-
-# Rust build output
-/src-tauri/target
-/src-tauri/gen
-/src-tauri/tauri-build

@@ -1,0 +1,69 @@
+/* ========================================
+   主窗口样式 (浅色) — 无标题栏 + 圆角 + 阴影
+   ======================================== */
+
+.root {
+    -fx-background-color: transparent;
+}
+
+.main-window {
+    -fx-background-color: #f0f0f0;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-border-color: rgba(0, 0, 0, 0.08);
+    -fx-border-width: 1px;
+}
+
+.main-window.maximized {
+    -fx-background-radius: 0px;
+    -fx-border-radius: 0px;
+}
+
+.title-bar {
+    -fx-background-color: #e8e8e8;
+    -fx-background-radius: 12px 12px 0 0;
+    -fx-padding: 8px 12px;
+    -fx-min-height: 36px;
+    -fx-max-height: 36px;
+}
+
+.main-window.maximized .title-bar {
+    -fx-background-radius: 0px;
+}
+
+.title-bar .label {
+    -fx-text-fill: #333333;
+    -fx-font-size: 13px;
+    -fx-font-family: "Microsoft YaHei";
+}
+
+.title-bar-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6px;
+    -fx-text-fill: #666666;
+    -fx-font-size: 14px;
+    -fx-min-width: 32px;
+    -fx-min-height: 28px;
+    -fx-max-width: 32px;
+    -fx-max-height: 28px;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+
+.title-bar-btn:hover {
+    -fx-background-color: rgba(0, 0, 0, 0.07);
+}
+
+.close-btn:hover {
+    -fx-background-color: #e64553;
+    -fx-text-fill: white;
+}
+
+.web-view {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0 0 12px 12px;
+}
+
+.main-window.maximized .web-view {
+    -fx-background-radius: 0px;
+}

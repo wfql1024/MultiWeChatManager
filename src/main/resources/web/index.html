@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="auto">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>极峰多聊</title>
+    <link rel="stylesheet" href="css/theme.css">
+    <link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<div id="app" class="app-grid">
+
+    <!-- ======== 左导航侧栏 ======== -->
+    <nav id="nav-sidebar" class="nav-sidebar">
+
+        <!-- 上部导航 -->
+        <ul class="nav-list">
+            <li class="nav-item active" data-page="login">
+                <span class="nav-icon">🔑</span>
+                <span class="nav-label">登录</span>
+            </li>
+            <li class="nav-item" data-page="manage">
+                <span class="nav-icon">📁</span>
+                <span class="nav-label">管理</span>
+            </li>
+            <li class="nav-item" data-page="statistics">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">统计</span>
+            </li>
+        </ul>
+
+        <!-- 底部：设置 -->
+        <div class="nav-spacer"></div>
+        <ul class="nav-list">
+            <li class="nav-item" data-page="settings">
+                <span class="nav-icon">⚙</span>
+                <span class="nav-label">设置</span>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- ======== 主内容区 ======== -->
+    <main id="main-content" class="main-content">
+        <div id="page-container" class="page-container">
+
+            <!-- 登录页 -->
+            <div id="page-login" class="page active">
+                <div class="page-placeholder">登录页面（待实现）</div>
+            </div>
+
+            <!-- 管理页 -->
+            <div id="page-manage" class="page">
+                <div class="page-placeholder">管理页面（待实现）</div>
+            </div>
+
+            <!-- 统计页 -->
+            <div id="page-statistics" class="page">
+                <div class="page-placeholder">统计页面（待实现）</div>
+            </div>
+
+            <!-- 设置页 -->
+            <div id="page-settings" class="page">
+                <div class="settings-layout">
+
+                    <!-- 设置侧栏 -->
+                    <div class="settings-sidebar">
+                        <ul id="settings-nav">
+                            <li class="active" data-setting="appearance">外观</li>
+                            <li data-setting="update">更新</li>
+                            <li data-setting="thanks">鸣谢</li>
+                            <li data-setting="about">关于</li>
+                        </ul>
+                    </div>
+
+                    <!-- 设置内容区 -->
+                    <div id="settings-content" class="settings-form">
+
+                        <!-- 更新 -->
+                        <div id="settings-section-update" class="settings-section-content">
+                            <div class="update-placeholder">
+                                <h3>检查更新</h3>
+                                <p>当前版本：0.1.0</p>
+                                <p style="margin-top: var(--space-md);">点击下方按钮检查最新版本</p>
+                                <button class="btn btn-primary about-check-update" onclick="alert('暂无更新')">检查更新</button>
+                            </div>
+                        </div>
+
+                        <!-- 外观 -->
+                        <div id="settings-section-appearance" class="settings-section-content" style="display:none;">
+                            <div class="settings-section">
+                                <h3>主题</h3>
+                                <p style="color:var(--text-secondary);margin-bottom:12px;">选择应用程序的颜色主题</p>
+                                <div class="theme-segmented" id="theme-segmented">
+                                    <button class="theme-seg-btn" data-theme="light">浅色</button>
+                                    <button class="theme-seg-btn" data-theme="dark">深色</button>
+                                    <button class="theme-seg-btn active" data-theme="auto">跟随系统</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 鸣谢 -->
+                        <div id="settings-section-thanks" class="settings-section-content" style="display:none;">
+                            <div class="about-container">
+                                <h2>鸣谢</h2>
+                                <p class="about-version">感谢以下开发者和用户的贡献与支持</p>
+                                <div class="about-meta" style="text-align:left;">
+                                    <p class="section-title">开发者</p>
+                                    <p>
+                                        <a href="https://github.com/huiyadanli" target="_blank">huiyadanli</a> ·
+                                        <a href="https://github.com/zetaloop" target="_blank">zetaloop</a> ·
+                                        <a href="https://github.com/0xlane" target="_blank">0xlane</a> ·
+                                        <a href="https://github.com/anhkgg" target="_blank">Anhkgg</a> ·
+                                        <a href="https://github.com/yihleego" target="_blank">yihleego</a>
+                                    </p>
+                                    <p class="section-title" style="margin-top:16px;">特别鸣谢</p>
+                                    <p>lyie15 · windion · JackLSQ · de52 · cherub0507 · tnxts · EEEEhex · afaa1991</p>
+                                    <p class="section-title" style="margin-top:16px;">赞助者</p>
+                                    <p class="about-sponsor-list" style="font-size:11px;">
+                                        炫*9 · *叶 · *子 · *华 · *宇 · **江 · *财 · *人 · *制 · *源 · *袋 · *着 · *卫 · *械 · *解 · K*o · 等
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 关于 -->
+                        <div id="settings-section-about" class="settings-section-content" style="display:none;">
+                            <div class="about-container">
+                                <div class="about-logo">
+                                    <img src="icons/logo.png" alt="极峰多聊" onerror="this.style.display='none'">
+                                </div>
+
+                                <h2>极峰多聊</h2>
+                                <p class="about-version">版本 0.1.0 (Phase 0)</p>
+                                <p class="about-author">by 吾峰起浪</p>
+
+                                <div class="about-meta">
+                                    <p class="section-title">项目信息</p>
+                                    <p>
+                                        <a href="https://github.com/wfql1024/JhiFengMultiChat" target="_blank">GitHub</a>
+                                         ·
+                                        <a href="https://gitee.com/wfql1024/JhiFengMultiChat" target="_blank">Gitee</a>
+                                    </p>
+                                    <p style="margin-top:8px;">
+                                        多平台聊天软件多开管理器<br>
+                                        支持微信 / 企业微信 / QQ / TIM / 钉钉 / 飞书
+                                    </p>
+                                    <p class="section-title" style="margin-top:16px;">技术栈</p>
+                                    <p>JavaFX · JNA · SQLite · WebView</p>
+                                </div>
+
+                                <div class="about-disclaimer">
+                                    <p class="warning">仅供学习交流，严禁用于商业用途，请于24小时内删除</p>
+                                    <p class="copyright">Copyright © 2025 吾峰起浪. All rights reserved.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- Scripts -->
+<script src="js/bridge.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/components/nav-sidebar.js"></script>
+<script src="js/pages/settings.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>

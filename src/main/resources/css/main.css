@@ -1,0 +1,74 @@
+/* ========================================
+   主窗口样式 — 无标题栏 + 圆角 + 阴影
+   ======================================== */
+
+.root {
+    -fx-background-color: transparent;
+}
+
+/* 主窗口容器 */
+.main-window {
+    -fx-background-color: #1e1e1e;
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-border-color: rgba(255, 255, 255, 0.06);
+    -fx-border-width: 1px;
+}
+
+/* 最大化时去除圆角 */
+.main-window.maximized {
+    -fx-background-radius: 0px;
+    -fx-border-radius: 0px;
+}
+
+/* 自定义标题栏 */
+.title-bar {
+    -fx-background-color: #1a1a1a;
+    -fx-background-radius: 12px 12px 0 0;
+    -fx-padding: 8px 12px;
+    -fx-min-height: 36px;
+    -fx-max-height: 36px;
+}
+
+.main-window.maximized .title-bar {
+    -fx-background-radius: 0px;
+}
+
+.title-bar .label {
+    -fx-text-fill: #d4d4d4;
+    -fx-font-size: 13px;
+    -fx-font-family: "Microsoft YaHei";
+}
+
+/* 标题栏按钮 */
+.title-bar-btn {
+    -fx-background-color: transparent;
+    -fx-background-radius: 6px;
+    -fx-text-fill: #a0a0a0;
+    -fx-font-size: 14px;
+    -fx-min-width: 32px;
+    -fx-min-height: 28px;
+    -fx-max-width: 32px;
+    -fx-max-height: 28px;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+
+.title-bar-btn:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}
+
+.close-btn:hover {
+    -fx-background-color: #e64553;
+    -fx-text-fill: white;
+}
+
+/* WebView 嵌入区 — 继承父级圆角裁剪 */
+.web-view {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0 0 12px 12px;
+}
+
+.main-window.maximized .web-view {
+    -fx-background-radius: 0px;
+}

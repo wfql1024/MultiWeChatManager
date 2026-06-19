@@ -1,0 +1,376 @@
+/* ========================================
+   Layout — App Grid: sidebar + main
+   ======================================== */
+
+.app-grid {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-rows: 1fr;
+    height: 100vh;
+    overflow: hidden;
+    background: var(--bg-main);
+}
+
+/* ========================================
+   Left Navigation Sidebar
+   Icons are absolutely positioned — they NEVER move.
+   Hover only widens the bar and reveals text labels.
+   ======================================== */
+.nav-sidebar {
+    background: var(--bg-sidebar);
+    display: flex;
+    flex-direction: column;
+    padding-top: 0;
+    padding-bottom: var(--border-radius);
+    overflow: visible;
+    width: var(--sidebar-width);
+    transition: width 0.2s ease;
+    border-right: 1px solid var(--border-color);
+    position: relative;
+    z-index: 100;
+}
+
+.nav-sidebar.expanded {
+    width: var(--sidebar-expanded-width);
+}
+
+/* Nav list */
+.nav-list {
+    list-style: none;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Nav item — icon is abs-positioned, label follows after */
+.nav-item {
+    display: flex;
+    align-items: center;
+    height: 46px;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: var(--font-size-md);
+    user-select: none;
+    position: relative;
+}
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    background: var(--color-primary);
+    border-radius: 0 2px 2px 0;
+}
+.nav-item:hover {
+    background: var(--bg-hover);
+}
+.nav-item.active {
+    background: var(--bg-selected);
+    font-weight: 600;
+}
+
+/* Icon — ABSOLUTE FIXED at collapsed center, never moves */
+.nav-icon {
+    position: absolute;
+    left: var(--icon-left);
+    width: var(--icon-size);
+    height: var(--icon-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    transition: none;  /* no movement */
+}
+.nav-icon svg {
+    display: block;
+}
+
+/* Label — hidden, only appears on expand; positioned after icon anchor */
+.nav-label {
+    font-size: var(--font-size-md);
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.15s;
+    overflow: hidden;
+    margin-left: 53px;  /* icon-left(21) + icon(22) + gap(10) */
+}
+.nav-sidebar.expanded .nav-label {
+    opacity: 1;
+}
+
+/* Bottom spacer */
+.nav-spacer {
+    flex: 1;
+}
+
+/* ========================================
+   Main Content Area
+   ======================================== */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Page Container */
+.page-container {
+    flex: 1;
+    overflow: hidden;
+    padding: var(--space-md);
+}
+
+.page {
+    display: none;
+    height: 100%;
+}
+.page.active {
+    display: block;
+}
+
+/* Placeholder */
+.page-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    font-size: var(--font-size-lg);
+}
+
+/* ========================================
+   Settings Page — Dual Pane (full height,
+   independent scroll, hidden scrollbars)
+   ======================================== */
+.settings-layout {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: var(--space-lg);
+    height: 100%;
+    overflow: hidden;
+}
+
+.settings-sidebar {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--space-sm);
+    overflow-y: auto;
+    scrollbar-width: none;            /* Firefox: hide */
+    -ms-overflow-style: none;         /* IE/Edge: hide */
+}
+.settings-sidebar::-webkit-scrollbar { width: 0; }
+.settings-sidebar:hover {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+.settings-sidebar:hover::-webkit-scrollbar { width: 4px; }
+.settings-sidebar:hover::-webkit-scrollbar-track { background: transparent; }
+.settings-sidebar:hover::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+}
+
+.settings-sidebar ul {
+    list-style: none;
+}
+
+.settings-sidebar li {
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: var(--border-radius);
+    margin-bottom: 2px;
+    font-size: var(--font-size-md);
+    color: var(--text-secondary);
+    transition: background 0.15s;
+}
+
+.settings-sidebar li:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.settings-sidebar li.active {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+.settings-form {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--space-lg);
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.settings-form::-webkit-scrollbar { width: 0; }
+.settings-form:hover {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.12) transparent;
+}
+.settings-form:hover::-webkit-scrollbar { width: 4px; }
+.settings-form:hover::-webkit-scrollbar-track { background: transparent; }
+.settings-form:hover::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.12);
+    border-radius: 2px;
+}
+
+/* ========================================
+   About Page
+   ======================================== */
+.about-container {
+    text-align: center;
+    padding: var(--space-xl) var(--space-lg);
+}
+
+.about-logo {
+    margin-bottom: var(--space-md);
+    display: flex;
+    justify-content: center;
+}
+
+.about-logo img {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    box-shadow: var(--shadow-md);
+}
+
+.about-container h2 {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+}
+
+.about-version {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    margin-bottom: 6px;
+}
+
+.about-author {
+    color: var(--color-primary);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    margin-bottom: var(--space-lg);
+}
+
+.about-meta {
+    display: inline-block;
+    text-align: left;
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: var(--space-md) var(--space-lg);
+    margin-bottom: var(--space-md);
+}
+
+.about-meta .section-title {
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: var(--space-md) 0 var(--space-xs) 0;
+}
+.about-meta .section-title:first-child {
+    margin-top: 0;
+}
+
+.about-meta p {
+    margin-bottom: 4px;
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.about-meta a {
+    color: var(--color-primary);
+    font-size: var(--font-size-sm);
+}
+
+.about-sponsor-list {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    line-height: 1.8;
+}
+
+.about-disclaimer {
+    margin-top: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--bg-sidebar);
+    border-radius: var(--border-radius);
+}
+
+.about-disclaimer .warning {
+    color: var(--color-danger);
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.about-disclaimer .copyright {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+.about-check-update {
+    margin-top: var(--space-md);
+}
+
+/* ========================================
+   Appearance — Theme Segmented Control
+   ======================================== */
+.settings-section {
+    margin-bottom: var(--space-lg);
+}
+.settings-section h3 {
+    font-size: var(--font-size-md);
+    color: var(--text-secondary);
+    margin-bottom: var(--space-md);
+}
+
+.theme-segmented {
+    display: inline-flex;
+    background: var(--bg-sidebar);
+    border-radius: var(--border-radius);
+    padding: 3px;
+    gap: 2px;
+}
+
+.theme-seg-btn {
+    padding: 6px 18px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-family: inherit;
+    transition: all 0.15s;
+}
+.theme-seg-btn:hover {
+    color: var(--text-primary);
+}
+.theme-seg-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+}
+
+/* ========================================
+   Update Page (placeholder)
+   ======================================== */
+.update-placeholder {
+    text-align: center;
+    padding: var(--space-xl);
+    color: var(--text-muted);
+}
+
+.update-placeholder h3 {
+    font-size: var(--font-size-lg);
+    color: var(--text-primary);
+    margin-bottom: var(--space-sm);
+}

@@ -1,0 +1,41 @@
+/* 侧栏样式 — 磨砂玻璃效果 */
+
+.root {
+    -fx-background-color: transparent;
+}
+
+.sidebar {
+    -fx-background-color: rgba(26, 26, 26, 0.88);
+    -fx-background-radius: 12px;
+    -fx-border-radius: 12px;
+    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-width: 1px;
+    -fx-padding: 16px 10px;
+    -fx-spacing: 12px;
+    -fx-alignment: top-center;
+    -fx-min-width: 56px;
+    -fx-max-width: 56px;
+}
+
+/* 侧栏按钮 */
+.sidebar-btn {
+    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-radius: 8px;
+    -fx-text-fill: #d4d4d4;
+    -fx-font-size: 12px;
+    -fx-font-family: "Microsoft YaHei";
+    -fx-min-width: 44px;
+    -fx-min-height: 44px;
+    -fx-max-width: 44px;
+    -fx-max-height: 44px;
+    -fx-cursor: hand;
+    -fx-padding: 0;
+}
+
+.sidebar-btn:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.16);
+}
+
+.sidebar-btn:pressed {
+    -fx-background-color: rgba(255, 255, 255, 0.10);
+}
