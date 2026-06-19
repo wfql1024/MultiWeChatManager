@@ -9,17 +9,12 @@
 /.claude/
 *.iml
 
-# === 旧代码 (不参与版本控制) ===
+# === 旧代码 / 归档 (不参与版本控制) ===
 /legacy_python/
+/.old/
 
 # === 日志 ===
 *.log
-
-# === Node / Rust (已废弃) ===
-/node_modules/
-/package-lock.json
-/src-tauri/target
-/src-tauri/gen
 
 # === 外部资源 ===
 /external_res/
