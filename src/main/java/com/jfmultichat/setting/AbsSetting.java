@@ -2,12 +2,12 @@ package com.jfmultichat.setting;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.Optional;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * 抽象设置基类 — 对应 Python 的 AbsSetting.
@@ -19,7 +19,7 @@ import java.util.logging.Logger;
  */
 public abstract class AbsSetting {
 
-    protected static final Logger LOG = Logger.getLogger(AbsSetting.class.getName());
+    protected final Logger LOG = LoggerFactory.getLogger(getClass());
     protected final ObjectMapper mapper = new ObjectMapper();
 
     protected JsonNode data;
@@ -30,7 +30,7 @@ public abstract class AbsSetting {
      */
     public synchronized JsonNode load() {
         if (dataFile == null || !dataFile.exists()) {
-            LOG.warning("Data file not found: " + dataFile);
+            LOG.warn("Data file not found: {}", dataFile);
             data = mapper.createObjectNode();
             return data;
         }
@@ -38,7 +38,7 @@ public abstract class AbsSetting {
             data = mapper.readTree(dataFile);
             return data;
         } catch (IOException e) {
-            LOG.log(Level.SEVERE, "Failed to load JSON: " + dataFile, e);
+            LOG.error("Failed to load JSON: {}", dataFile, e);
             data = mapper.createObjectNode();
             return data;
         }
@@ -47,7 +47,7 @@ public abstract class AbsSetting {
     /**
      * 按路径获取嵌套 JsonNode，路径为空则返回整个 data.
      * <p>
-     * 对应 Python 的 {@code get_(*addr)}。
+     * 对应 Python 的 {@code get(*addr)}。
      */
     public Optional<JsonNode> get(String... path) {
         load();

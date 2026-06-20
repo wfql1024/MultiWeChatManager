@@ -67,6 +67,7 @@
                     <div class="settings-sidebar">
                         <ul id="settings-nav">
                             <li class="active" data-setting="appearance">外观</li>
+                            <li data-setting="config">配置</li>
                             <li data-setting="update">更新</li>
                             <li data-setting="thanks">鸣谢</li>
                             <li data-setting="about">关于</li>
@@ -78,11 +79,51 @@
 
                         <!-- 更新 -->
                         <div id="settings-section-update" class="settings-section-content">
-                            <div class="update-placeholder">
-                                <h3>检查更新</h3>
-                                <p>当前版本：0.1.0</p>
-                                <p style="margin-top: var(--space-md);">点击下方按钮检查最新版本</p>
-                                <button class="btn btn-primary about-check-update" onclick="alert('暂无更新')">检查更新</button>
+                            <div class="update-page">
+                                <h3 style="margin-bottom: 4px;">软件更新</h3>
+                                <p style="color:var(--text-secondary);margin-bottom:16px;font-size:var(--font-size-sm);">
+                                    检查远程更新并管理自动下载
+                                </p>
+
+                                <label class="config-checkbox">
+                                    <input type="checkbox" id="upd-auto-download"> 发现新版本时尝试自动下载更新
+                                </label>
+                                <label class="config-checkbox" style="margin-bottom: 16px;">
+                                    <input type="checkbox" id="upd-show-changelog"> 更新版本后的首次启动时显示更新日志
+                                </label>
+
+                                <div class="update-version-info">
+                                    <div class="update-ver-row">
+                                        <span class="update-ver-label">当前版本：</span>
+                                        <span id="upd-current-ver" class="update-ver-value">—</span>
+                                    </div>
+                                    <div class="update-ver-row">
+                                        <span class="update-ver-label">代码版本：</span>
+                                        <span id="upd-code-ver" class="update-ver-value">—</span>
+                                    </div>
+                                    <div class="update-ver-row">
+                                        <span class="update-ver-label">提交日期：</span>
+                                        <span id="upd-commit-date" class="update-ver-value">—</span>
+                                    </div>
+                                    <div class="update-ver-row">
+                                        <span class="update-ver-label">最新版本：</span>
+                                        <span id="upd-latest-ver" class="update-ver-value">—</span>
+                                    </div>
+                                </div>
+
+                                <p id="upd-status" class="update-status" style="margin-top:12px;">正在检查更新…</p>
+
+                                <!-- 更新日志 -->
+                                <div id="upd-changelog" class="update-changelog" style="display:none;">
+                                    <p class="section-title" style="margin-top:16px;">更新日志</p>
+                                    <div id="upd-changelog-content"></div>
+                                </div>
+
+                                <div class="config-actions">
+                                    <button id="upd-btn-check" class="btn btn-primary">检查更新</button>
+                                    <button id="upd-btn-open" class="btn" style="background:var(--bg-sidebar);color:var(--text-primary);border:1px solid var(--border-color);display:none;">打开更新窗口</button>
+                                    <span id="upd-msg" class="config-msg" style="display:none;"></span>
+                                </div>
                             </div>
                         </div>
 
@@ -99,57 +140,120 @@
                             </div>
                         </div>
 
+                        <!-- 配置 -->
+                        <div id="settings-section-config" class="settings-section-content" style="display:none;">
+                            <div class="config-form">
+                                <!-- 代理设置 -->
+                                <div class="settings-section">
+                                    <h3>代理</h3>
+                                    <p style="color:var(--text-secondary);margin-bottom:12px;">通过代理访问远程配置与更新服务</p>
+                                    <label class="config-checkbox">
+                                        <input type="checkbox" id="cfg-use-proxy"> 使用代理
+                                    </label>
+                                    <div id="cfg-proxy-detail" class="config-group" style="display:none;">
+                                        <div class="config-row">
+                                            <label class="config-label">代理地址</label>
+                                            <div class="config-input-row">
+                                                <input type="text" id="cfg-proxy-ip" class="config-input" placeholder="http://127.0.0.1">
+                                                <div id="cfg-proxy-ip-presets" class="config-presets"></div>
+                                            </div>
+                                        </div>
+                                        <div class="config-row">
+                                            <label class="config-label">代理端口</label>
+                                            <div class="config-input-row">
+                                                <input type="text" id="cfg-proxy-port" class="config-input config-input-short" placeholder="7890">
+                                                <div id="cfg-proxy-port-presets" class="config-presets"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 本地目录 -->
+                                <div class="settings-section">
+                                    <h3>本地目录</h3>
+                                    <p style="color:var(--text-secondary);margin-bottom:12px;">用户数据存储路径，修改后将自动迁移已有数据</p>
+                                    <p class="config-subtitle">数据目录</p>
+                                    <div class="config-input-row">
+                                        <input type="text" id="cfg-user-dir" class="config-input" placeholder="（默认）自动">
+                                        <button id="cfg-user-dir-browse" class="btn config-preset-btn">浏览</button>
+                                    </div>
+                                    <p id="cfg-user-dir-hint" class="config-hint" style="display:none;"></p>
+                                </div>
+
+                                <!-- 远程配置源 -->
+                                <div class="settings-section">
+                                    <h3>远程配置源</h3>
+                                    <p style="color:var(--text-secondary);margin-bottom:12px;">用于下载平台适配补丁与全局设置的远程地址</p>
+
+                                    <!-- 远程平台 -->
+                                    <p class="config-subtitle">远程平台 (remote_sw)</p>
+                                    <div id="cfg-sw-list" class="url-list"></div>
+                                    <div class="url-list-footer">
+                                        <button id="cfg-sw-test-all" class="btn config-preset-btn">测试全部</button>
+                                        <button id="cfg-sw-add" class="btn config-preset-btn">添加</button>
+                                    </div>
+
+                                    <!-- 远程全局 -->
+                                    <p class="config-subtitle" style="margin-top:16px;">远程全局 (remote_global)</p>
+                                    <div id="cfg-global-list" class="url-list"></div>
+                                    <div class="url-list-footer">
+                                        <button id="cfg-global-test-all" class="btn config-preset-btn">测试全部</button>
+                                        <button id="cfg-global-add" class="btn config-preset-btn">添加</button>
+                                    </div>
+                                </div>
+
+                                <!-- 操作按钮 -->
+                                <div class="config-actions">
+                                    <button id="cfg-btn-save" class="btn btn-primary">保存配置</button>
+                                    <span id="cfg-save-msg" class="config-msg" style="display:none;"></span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- 鸣谢 -->
                         <div id="settings-section-thanks" class="settings-section-content" style="display:none;">
-                            <div class="about-container">
-                                <h2>鸣谢</h2>
-                                <p class="about-version">感谢以下开发者和用户的贡献与支持</p>
-                                <div class="about-meta" style="text-align:left;">
-                                    <p class="section-title">开发者</p>
-                                    <p>
-                                        <a href="https://github.com/huiyadanli" target="_blank">huiyadanli</a> ·
-                                        <a href="https://github.com/zetaloop" target="_blank">zetaloop</a> ·
-                                        <a href="https://github.com/0xlane" target="_blank">0xlane</a> ·
-                                        <a href="https://github.com/anhkgg" target="_blank">Anhkgg</a> ·
-                                        <a href="https://github.com/yihleego" target="_blank">yihleego</a>
-                                    </p>
-                                    <p class="section-title" style="margin-top:16px;">特别鸣谢</p>
-                                    <p>lyie15 · windion · JackLSQ · de52 · cherub0507 · tnxts · EEEEhex · afaa1991</p>
-                                    <p class="section-title" style="margin-top:16px;">赞助者</p>
-                                    <p class="about-sponsor-list" style="font-size:11px;">
-                                        炫*9 · *叶 · *子 · *华 · *宇 · **江 · *财 · *人 · *制 · *源 · *袋 · *着 · *卫 · *械 · *解 · K*o · 等
-                                    </p>
+                            <div class="thanks-page">
+                                <p class="section-title">鸣谢</p>
+                                <p style="color:var(--text-secondary);margin-bottom:16px;font-size:var(--font-body);">
+                                    感谢以下开发者和用户的贡献与支持
+                                </p>
+                                <div id="thanks-grid" class="thanks-grid"></div>
+
+                                <p class="section-title" style="margin-top:16px;">赞助</p>
+                                <div id="sponsor-scroll" class="sponsor-scroll">
+                                    <table id="sponsor-table" class="sponsor-table">
+                                        <thead><tr><th>日期</th><th>金额</th><th>赞助者</th></tr></thead>
+                                        <tbody id="sponsor-tbody"></tbody>
+                                    </table>
+                                </div>
+
+                                <p class="section-title" style="margin-top:16px;">技术参考</p>
+                                <div id="ref-scroll" class="sponsor-scroll">
+                                    <div id="about-ref-list" class="about-ref-list-inner"></div>
                                 </div>
                             </div>
                         </div>
 
                         <!-- 关于 -->
                         <div id="settings-section-about" class="settings-section-content" style="display:none;">
-                            <div class="about-container">
+                            <div class="about-page">
                                 <div class="about-logo">
                                     <img src="icons/logo.png" alt="极峰多聊" onerror="this.style.display='none'">
                                 </div>
 
-                                <h2>极峰多聊</h2>
-                                <p class="about-version">版本 0.1.0 (Phase 0)</p>
-                                <p class="about-author">by 吾峰起浪</p>
+                                <h2 id="about-app-name">极峰多聊</h2>
+                                <p id="about-app-author" class="about-author">by 吾峰起浪</p>
 
                                 <div class="about-meta">
-                                    <p class="section-title">项目信息</p>
-                                    <p>
-                                        <a href="https://github.com/wfql1024/JhiFengMultiChat" target="_blank">GitHub</a>
-                                         ·
-                                        <a href="https://gitee.com/wfql1024/JhiFengMultiChat" target="_blank">Gitee</a>
-                                    </p>
-                                    <p style="margin-top:8px;">
-                                        多平台聊天软件多开管理器<br>
-                                        支持微信 / 企业微信 / QQ / TIM / 钉钉 / 飞书
-                                    </p>
-                                    <p class="section-title" style="margin-top:16px;">技术栈</p>
-                                    <p>JavaFX · JNA · SQLite · WebView</p>
+                                    <p class="section-title">主页</p>
+                                    <div id="about-home-grid" class="about-link-grid"></div>
+
+                                    <p class="section-title" style="margin-top:16px;">项目信息</p>
+                                    <div id="about-project-grid" class="about-link-grid"></div>
                                 </div>
 
-                                <div class="about-disclaimer">
+                                <!-- 免责声明（暂时隐藏） -->
+                                <div class="about-disclaimer" style="display:none;">
                                     <p class="warning">仅供学习交流，严禁用于商业用途，请于24小时内删除</p>
                                     <p class="copyright">Copyright © 2025 吾峰起浪. All rights reserved.</p>
                                 </div>

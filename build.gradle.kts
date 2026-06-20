@@ -30,4 +30,9 @@ repositories {
 
 dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.16.1")
+
+    // Logging — SLF4J + Logback
+    implementation("org.slf4j:slf4j-api:2.0.9")
+    implementation("ch.qos.logback:logback-classic:1.4.14")
+    implementation("org.slf4j:jul-to-slf4j:2.0.9")
 }

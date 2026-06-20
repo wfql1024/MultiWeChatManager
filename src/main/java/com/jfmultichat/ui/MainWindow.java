@@ -20,9 +20,10 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import netscape.javascript.JSObject;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * 无标题栏主窗口 — WebView 嵌入 HTML/CSS/JS 界面.
@@ -30,7 +31,7 @@ import java.util.logging.Logger;
  */
 public class MainWindow {
 
-    private static final Logger LOG = Logger.getLogger(MainWindow.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(MainWindow.class);
 
     private static final double WIDTH  = 1100;
     private static final double HEIGHT = 700;
@@ -244,7 +245,7 @@ public class MainWindow {
         });
 
         webEngine.setOnError(event ->
-            LOG.log(Level.WARNING, "WebView error: " + event.getMessage())
+            LOG.warn("WebView error: " + event.getMessage())
         );
 
         baseUrl = Objects.requireNonNull(
@@ -260,7 +261,7 @@ public class MainWindow {
                 javafx.application.Platform.runLater(() -> {
                     suppressLinkIntercept = true;
                     try { java.awt.Desktop.getDesktop().browse(new java.net.URI(newLoc)); }
-                    catch (Exception ex) { LOG.log(Level.WARNING, "Failed to open URL: " + newLoc, ex); }
+                    catch (Exception ex) { LOG.warn("Failed to open URL: " + newLoc, ex); }
                     webEngine.load(baseUrl);
                 });
             }
@@ -279,7 +280,7 @@ public class MainWindow {
                 bridge.setScriptExecutor(script ->
                     javafx.application.Platform.runLater(() -> {
                         try { webEngine.executeScript(script); }
-                        catch (Exception e) { LOG.log(Level.WARNING, "Failed to exec script: " + script, e); }
+                        catch (Exception e) { LOG.warn("Failed to exec script: " + script, e); }
                     })
                 );
                 bridge.setThemeChangeListener(this::applyTitleBarTheme);
@@ -287,7 +288,7 @@ public class MainWindow {
                 LOG.info("JS Bridge injected successfully");
             }
         } catch (Exception e) {
-            LOG.log(Level.SEVERE, "Failed to inject JS bridge", e);
+            LOG.error("Failed to inject JS bridge", e);
         }
     }
 
@@ -338,7 +339,7 @@ public class MainWindow {
                 logoView.setImage(img);
             }
         } catch (Exception e) {
-            LOG.warning("Failed to load logo: " + e.getMessage());
+            LOG.warn("Failed to load logo: " + e.getMessage());
         }
         logoView.setOnMouseClicked(e -> app.focusMainWindow());
         logoView.setStyle("-fx-cursor: hand;");

@@ -8,13 +8,37 @@
     --sidebar-width: 64px;
     --sidebar-expanded-width: 200px;
     --icon-size: 22px;
-    --icon-left: 21px;    /* (64 - 22) / 2 */
+    --icon-left: 21px;
 
-    --font-size-sm: 12px;
-    --font-size-md: 14px;
-    --font-size-lg: 16px;
-    --font-size-xl: 22px;
+    /* === 统一字体字号规范 === */
+    --font-family-base: "Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+    --font-family-mono: "Cascadia Code", "Consolas", "Sarasa Gothic SC", monospace;
 
+    /* 一级标题 — 区块标题 */
+    --font-h1: 20px;
+    /* 二级标题 — 小节标签 */
+    --font-h2: 17px;
+    /* 正文 */
+    --font-body: 15px;
+    /* 辅助 — 表格、标签 */
+    --font-sm: 14px;
+    /* 提示 — 错误、校验信息 */
+    --font-xs: 13px;
+
+    /* 字重 */
+    --weight-bold: 700;
+    --weight-semibold: 600;
+    --weight-normal: 400;
+
+    /* 按钮 */
+    --btn-pad-y: 6px;
+    --btn-pad-x: 16px;
+    --btn-font: 15px;
+    --btn-pad-y-sm: 3px;
+    --btn-pad-x-sm: 8px;
+    --btn-font-sm: 13px;
+
+    /* 间距 */
     --space-xs: 4px;
     --space-sm: 8px;
     --space-md: 16px;
@@ -42,6 +66,8 @@
     --color-primary: #4a9eff;
     --color-primary-light: rgba(74, 158, 255, 0.15);
     --color-danger: #e64553;
+    --color-success: #40a02b;
+    --color-warning: #df8e1d;
 }
 
 /* ========== Light theme ========== */
@@ -61,6 +87,8 @@
     --color-primary: #0066cc;
     --color-primary-light: rgba(0, 102, 204, 0.12);
     --color-danger: #d32f2f;
+    --color-success: #40a02b;
+    --color-warning: #df8e1d;
 
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
 }
@@ -83,6 +111,8 @@
         --color-primary: #0066cc;
         --color-primary-light: rgba(0, 102, 204, 0.12);
         --color-danger: #d32f2f;
+        --color-success: #40a02b;
+        --color-warning: #df8e1d;
 
         --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
     }
@@ -94,29 +124,51 @@
 html, body {
     height: 100%;
     overflow: hidden;
-    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
-    font-size: var(--font-size-md);
+    font-family: var(--font-family-base);
+    font-size: var(--font-body);
     color: var(--text-primary);
     background: transparent;
     -webkit-user-select: none;
     user-select: none;
 }
 
+/* 所有输入框、按钮、表格继承字体 */
+input, button, textarea, select, table {
+    font-family: var(--font-family-base);
+}
+
 a { color: var(--color-primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
+/* 一级按钮 — 浏览、测试全部、检查更新、保存配置 */
 .btn {
-    padding: 6px 14px;
+    padding: var(--btn-pad-y) var(--btn-pad-x);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     background: var(--bg-card);
     color: var(--text-primary);
     cursor: pointer;
-    font-size: var(--font-size-sm);
+    font-size: var(--btn-font);
     font-family: inherit;
     transition: background 0.15s;
+    white-space: nowrap;
 }
 .btn:hover { background: var(--bg-hover); }
 .btn-primary { background: var(--color-primary); color: #fff; border-color: var(--color-primary); }
 .btn-primary:hover { opacity: 0.9; }
-.btn-sm { padding: 3px 8px; font-size: 11px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 二级按钮 — 网址行内测试、删除 */
+.btn-sm {
+    padding: var(--btn-pad-y-sm) var(--btn-pad-x-sm);
+    font-size: var(--btn-font-sm);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-sidebar);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.12s;
+}
+.btn-sm:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
+.btn-sm:disabled { opacity: 0.3; cursor: not-allowed; }

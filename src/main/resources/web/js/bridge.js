@@ -17,7 +17,6 @@ JFC.bridge = (function() {
         if (isAvailable() && typeof window.javaObject[method] === 'function') {
             return window.javaObject[method]();
         }
-        // Fallback: mimic behavior for testing in browser
         console.log('[bridge] call: ' + method);
         return null;
     }
@@ -32,14 +31,97 @@ JFC.bridge = (function() {
         return null;
     }
 
-    // 暴露常用方法
+    /** 调用 Java 方法并解析返回的 JSON */
+    function callJson(method) {
+        var raw = call(method);
+        if (raw && typeof raw === 'string') {
+            try { return JSON.parse(raw); } catch(e) {}
+        }
+        return null;
+    }
+
+    /** 调用 Java 方法（带参）并解析返回的 JSON */
+    function callJsonWithArgs(method) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        var raw = callWithArgs.apply(null, [method].concat(args));
+        if (raw && typeof raw === 'string') {
+            try { return JSON.parse(raw); } catch(e) {}
+        }
+        return null;
+    }
+
+    // ---- 异步回调系统 ----
+    // Java 后台线程完成后会调用 JFC.bridge._handleAsync(type, cbId, jsonStr)
+    var _pendingCallbacks = {};
+    var _nextCbId = 1;
+
+    /** 注册异步回调，返回 cbId */
+    function registerAsync(fn) {
+        var id = _nextCbId++;
+        _pendingCallbacks[id] = fn;
+        return id;
+    }
+
+    /** Java 推送异步结果时调用（不要手动调用） */
+    function _handleAsync(type, cbId, jsonStr) {
+        console.log('[bridge] async result: ' + type + ' #' + cbId);
+        var fn = _pendingCallbacks[cbId];
+        if (fn) {
+            delete _pendingCallbacks[cbId];
+            var data = null;
+            if (jsonStr && typeof jsonStr === 'string') {
+                try { data = JSON.parse(jsonStr); } catch(e) {}
+            }
+            fn(type, data);
+        }
+    }
+
+    // 暴露
     return {
         isAvailable: isAvailable,
         call: call,
         callWithArgs: callWithArgs,
+        callJson: callJson,
+        callJsonWithArgs: callJsonWithArgs,
+        registerAsync: registerAsync,
+        _handleAsync: _handleAsync,   // Java 通过 executeScript 调用
+
+        // ---- 窗口控制 ----
         ping: function() { return call('ping'); },
         minimize: function() { call('minimize'); },
         toggleMaximize: function() { call('toggleMaximize'); },
-        close: function() { call('close'); }
+        close: function() { call('close'); },
+
+        // ---- 数据访问 ----
+        getSwList: function() { return callJson('getSwList'); },
+        getAccountList: function(swId) { return callJsonWithArgs('getAccountList', swId); },
+        getTheme: function() { return call('getTheme'); },
+        setTheme: function(theme) { callWithArgs('setTheme', theme); },
+        saveTheme: function(theme) { callWithArgs('saveTheme', theme); },
+
+        // ---- 配置页 ----
+        getDefaultUserDir: function() { return call('getDefaultUserDir'); },
+        getConfigData: function() { return callJson('getConfigData'); },
+        getProxyPresets: function() { return callJson('getProxyPresets'); },
+        saveConfigData: function(json) { return callJsonWithArgs('saveConfigData', json); },
+        isDevMode: function() { return call('isDevMode') === true; },
+        getDefaultUrls: function() { return callJson('getDefaultUrls'); },
+        validatePath: function(p) { return callJsonWithArgs('validatePath', p); },
+        browseFolder: function(p) { return callWithArgs('browseFolder', p); },
+        getCommitInfo: function() { return callJson('getCommitInfo'); },
+
+        // ---- 异步操作（不阻塞UI） ----
+        testUrlAsync: function(url, fn) {
+            callWithArgs('testRemoteUrlAsync', url, String(registerAsync(fn)));
+        },
+        fetchUpdateAsync: function(fn) {
+            callWithArgs('fetchUpdateDataAsync', String(registerAsync(fn)));
+        },
+        fetchThanksAsync: function(fn) {
+            callWithArgs('fetchThanksDataAsync', String(registerAsync(fn)));
+        },
+        fetchAboutAsync: function(fn) {
+            callWithArgs('fetchAboutDataAsync', String(registerAsync(fn)));
+        }
     };
 })();

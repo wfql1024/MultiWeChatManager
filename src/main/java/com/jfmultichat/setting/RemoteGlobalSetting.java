@@ -1,19 +1,24 @@
 package com.jfmultichat.setting;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.model.*;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
-import java.util.logging.Level;
 
 /**
  * 远程全局配置 — 对应 Python RemoteGlobal(AbsSetting).
  * <p>
- * 从本地 JSON 文件 {@code remote_global_v1} 读取远程下发的全局配置，
- * 包含：应用名、作者、支持平台列表、关于信息、更新信息。
+ * 从远程下载的配置缓存中读取全局配置（只读），
+ * 包含：应用名、作者、支持 Sw 列表、关于信息.
  * <p>
- * READ-ONLY — 不可通过本类修改配置。
+ * 首次使用时会检查 {@code {user_data_path}/remote_global.json}，
+ * 若不存在则从 classpath 种子数据 {@code data/remote_global_v1.json} 加载.
  */
 public class RemoteGlobalSetting extends AbsSetting {
 
@@ -29,10 +34,36 @@ public class RemoteGlobalSetting extends AbsSetting {
     }
 
     /**
-     * 设置数据文件路径（由应用初始化时调用）
+     * 从 ConfigManager 的 user_data_path 加载数据，不存在时回退到种子文件.
      */
-    public void setDataFile(File file) {
-        this.dataFile = file;
+    @Override
+    public synchronized JsonNode load() {
+        // 优先读取 user_data_path/remote_global.json
+        Path remotePath = ConfigManager.getInstance().getUserDataPath().resolve("remote_global.json");
+        dataFile = remotePath.toFile();
+
+        if (dataFile.exists()) {
+            try {
+                data = mapper.readTree(dataFile);
+                return data;
+            } catch (IOException e) {
+                LOG.warn("Failed to read remote_global.json from user_data_path, falling back to seed", e);
+            }
+        }
+
+        // 回退到 classpath 种子数据
+        try (InputStream is = getClass().getResourceAsStream("/data/remote_global_v1.json")) {
+            if (is != null) {
+                data = mapper.readTree(is);
+                LOG.info("Loaded remote global config from classpath seed");
+                return data;
+            }
+        } catch (IOException e) {
+            LOG.warn("Failed to load remote global seed data", e);
+        }
+
+        data = mapper.createObjectNode();
+        return data;
     }
 
     // ========== 类型化访问方法 ==========
@@ -90,7 +121,7 @@ public class RemoteGlobalSetting extends AbsSetting {
             try {
                 list.add(mapper.treeToValue(item, ReferenceEntry.class));
             } catch (Exception e) {
-                LOG.log(Level.WARNING, "Failed to parse reference entry: " + item, e);
+                LOG.warn("Failed to parse reference entry: {}", item, e);
             }
         });
         return list;
@@ -103,7 +134,7 @@ public class RemoteGlobalSetting extends AbsSetting {
             try {
                 list.add(mapper.treeToValue(item, SponsorEntry.class));
             } catch (Exception e) {
-                LOG.log(Level.WARNING, "Failed to parse sponsor entry: " + item, e);
+                LOG.warn("Failed to parse sponsor entry: {}", item, e);
             }
         });
         return list;

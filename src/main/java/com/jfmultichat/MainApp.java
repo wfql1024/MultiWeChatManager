@@ -1,6 +1,7 @@
 package com.jfmultichat;
 
 import com.jfmultichat.bridge.JsBridge;
+import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.ui.FloatingSidebar;
 import com.jfmultichat.ui.MainWindow;
 import com.jfmultichat.ui.SampleWindow;
@@ -22,6 +23,9 @@ public class MainApp extends Application {
 
     @Override
     public void start(Stage primaryStage) {
+        // 确保 ConfigManager 已初始化（由 Launcher 初始化，此处二次确认）
+        ConfigManager.getInstance();
+
         loadAppIcon(primaryStage);
 
         JsBridge bridge = new JsBridge();
@@ -83,8 +87,13 @@ public class MainApp extends Application {
         });
     }
 
-    /** 退出应用 */
+    /** 退出应用 — 保存所有配置后退出 */
     public void exit() {
+        try {
+            ConfigManager.getInstance().saveAll();
+        } catch (Exception e) {
+            System.err.println("Failed to save config on exit: " + e.getMessage());
+        }
         if (sampleWindow != null) sampleWindow.close();
         if (sidebar != null) sidebar.close();
         Platform.exit();
