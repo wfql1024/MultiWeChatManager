@@ -38,8 +38,9 @@ public class RemoteGlobalSetting extends AbsSetting {
      */
     @Override
     public synchronized JsonNode load() {
-        // 优先读取 user_data_path/remote_global.json
-        Path remotePath = ConfigManager.getInstance().getUserDataPath().resolve("remote_global.json");
+        // 优先读取 user_data_path/remote_global_config.json
+        Path remotePath = ConfigManager.getInstance().getUserDataPath()
+                .resolve("remote_global_config.json");
         dataFile = remotePath.toFile();
 
         if (dataFile.exists()) {
@@ -47,7 +48,7 @@ public class RemoteGlobalSetting extends AbsSetting {
                 data = mapper.readTree(dataFile);
                 return data;
             } catch (IOException e) {
-                LOG.warn("Failed to read remote_global.json from user_data_path, falling back to seed", e);
+                LOG.warn("Failed to read remote_global_config.json from user_data_path, falling back to seed", e);
             }
         }
 

@@ -434,6 +434,28 @@ JFC.pages.settings = (function() {
         updateInited = true;
         bind('upd-btn-check', 'click', function() { updateInited = false; loadUpdateData(); });
 
+        // "更新远程配置"按钮 — 强制重新下载
+        bind('upd-btn-update-config', 'click', function() {
+            if (!JM()) return;
+            var btn = el('upd-btn-update-config');
+            if (btn) btn.disabled = true;
+
+            var result = JFC.bridge.downloadRemoteConfigs();
+            var ready = JFC.bridge.checkRemoteConfigReady();
+
+            if (btn) btn.disabled = false;
+
+            if (ready && ready.ready) {
+                setText('upd-status', '远程配置已更新 ✓');
+                el('upd-status').className = 'update-status';
+            } else {
+                setText('upd-status', '远程配置更新失败，请检查配置页的远程地址');
+                el('upd-status').className = 'update-status has-update';
+                // 跳转到配置页
+                showSection('config');
+            }
+        });
+
         setText('upd-current-ver', '—');
         setText('upd-code-ver', '—');
         setText('upd-commit-date', '—');
@@ -562,36 +584,56 @@ JFC.pages.settings = (function() {
     }
 
     function startAutoScroll(containerId, key) {
-        var el = document.getElementById(containerId);
-        if (!el) return;
-        if (scrollAnims[key]) clearInterval(scrollAnims[key]);
+        var scrollEl = document.getElementById(containerId);
+        if (!scrollEl) return;
+        if (scrollAnims[key]) cancelAnimationFrame(scrollAnims[key]);
 
-        var dir = 1;        // 1=向下, -1=向上
+        var dir = 1;          // 1=向下, -1=向上
         var paused = false;
+        var rafId = null;
+        var ticking = false;  // 节流: 每帧只 tick 一次
 
-        el.onmouseenter = function() { paused = true; };
-        el.onmouseleave = function() { paused = false; };
+        var SPEED = 0.8;      // 每帧滚动像素，保证丝滑且可见
+
+        scrollEl.addEventListener('mouseenter', function() { paused = true; });
+        scrollEl.addEventListener('mouseleave', function() { paused = false; });
 
         function tick() {
-            if (paused) { scrollAnims[key] = setTimeout(tick, 50); return; }
-            var max = el.scrollHeight - el.clientHeight;
-            if (max <= 0) { scrollAnims[key] = setTimeout(tick, 200); return; }
+            if (paused) {
+                rafId = requestAnimationFrame(tick);
+                return;
+            }
 
-            var frac = el.scrollTop / max;
+            var max = scrollEl.scrollHeight - scrollEl.clientHeight;
+            if (max <= 0) {
+                rafId = requestAnimationFrame(tick);
+                return;
+            }
 
-            if (frac >= 0.99) { dir = -1; el.scrollTop = max; }
-            else if (frac <= 0.01) { dir = 1; el.scrollTop = 0; }
+            scrollEl.scrollTop += dir * SPEED;
 
-            el.scrollTop += dir * 0.4;
-            scrollAnims[key] = setTimeout(tick, 16);
+            // 触底反向
+            if (scrollEl.scrollTop >= max - 1) {
+                dir = -1;
+                scrollEl.scrollTop = max;
+            }
+            // 触顶反向
+            else if (scrollEl.scrollTop <= 1) {
+                dir = 1;
+                scrollEl.scrollTop = 0;
+            }
+
+            rafId = requestAnimationFrame(tick);
         }
 
-        // 等两次渲染帧再开始，确保 DOM 已布局
+        // 等两帧确保 DOM 布局完成后再启动
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
                 tick();
             });
         });
+
+        scrollAnims[key] = rafId;
     }
 
 

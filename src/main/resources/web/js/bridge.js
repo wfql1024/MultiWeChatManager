@@ -110,6 +110,23 @@ JFC.bridge = (function() {
         browseFolder: function(p) { return callWithArgs('browseFolder', p); },
         getCommitInfo: function() { return callJson('getCommitInfo'); },
 
+        // ---- 管理页 ----
+        getRemoteSwList: function() { return callJson('getRemoteSwList'); },
+        checkRemoteConfigReady: function() { return callJson('checkRemoteConfigReady'); },
+        downloadRemoteConfigs: function() { return callJson('downloadRemoteConfigs'); },
+        tryEnsureRemoteConfigsAsync: function(fn) {
+            callWithArgs('tryEnsureRemoteConfigsAsync', String(registerAsync(fn)));
+        },
+        getSwConfig: function(swId) { return callJsonWithArgs('getSwConfig', swId); },
+        saveSwConfig: function(swId, configJson) { return callJsonWithArgs('saveSwConfig', swId, configJson); },
+        getSwDetailData: function(swId) { return callJsonWithArgs('getSwDetailData', swId); },
+        updateSwField: function(swId, field, value) { return callJsonWithArgs('updateSwField', swId, field, value); },
+        saveAccount: function(swId, accountId, fieldsJson) { return callJsonWithArgs('saveAccount', swId, accountId, fieldsJson); },
+        deleteAccount: function(swId, accountId) { return callJsonWithArgs('deleteAccount', swId, accountId); },
+        extractExeIcon: function(exePath) { return callJsonWithArgs('extractExeIcon', exePath); },
+        getGlobalConfig: function() { return callJson('getGlobalConfig'); },
+        saveGlobalConfig: function(json) { callWithArgs('saveGlobalConfig', json); },
+
         // ---- 异步操作（不阻塞UI） ----
         testUrlAsync: function(url, fn) {
             callWithArgs('testRemoteUrlAsync', url, String(registerAsync(fn)));

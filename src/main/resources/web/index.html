@@ -11,6 +11,19 @@
 
 <div id="app" class="app-grid">
 
+    <!-- 远程配置缺失遮罩 -->
+    <div id="config-missing-overlay" class="config-missing-overlay" style="display:none;">
+        <div class="config-missing-card">
+            <h2>远程配置未就绪</h2>
+            <p>以下远程配置文件尚未下载，请先在「设置 → 配置」中填写远程 URL 并测试通过。</p>
+            <ul id="config-missing-list"></ul>
+            <div class="config-missing-actions">
+                <button id="config-missing-btn-settings" class="btn btn-primary">前往设置页配置</button>
+                <button id="config-missing-btn-retry" class="btn">重试</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ======== 左导航侧栏 ======== -->
     <nav id="nav-sidebar" class="nav-sidebar">
 
@@ -51,7 +64,96 @@
 
             <!-- 管理页 -->
             <div id="page-manage" class="page">
-                <div class="page-placeholder">管理页面（待实现）</div>
+                <div class="manage-layout">
+                    <!-- 左栏：平台列表 — 完全沿用 .nav-sidebar 样式 -->
+                    <div id="manage-platform-sidebar" class="nav-sidebar">
+                        <!-- 全部按钮 -->
+                        <ul class="nav-list">
+                            <li class="nav-item active" data-page="all" id="manage-all-nav-item">
+                                <span class="nav-icon">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                                </span>
+                                <span class="nav-label">全部</span>
+                            </li>
+                        </ul>
+                        <!-- 平台列表 -->
+                        <ul id="manage-platform-list" class="nav-list">
+                            <li class="nav-item" data-loading="true">
+                                <span class="nav-icon"><span class="manage-temp-icon">...</span></span>
+                                <span class="nav-label">加载中…</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- 右栏：平台详情 -->
+                    <div class="manage-detail-area">
+                        <!-- 全部页面占位 -->
+                        <div id="manage-page-all" class="manage-detail-page active">
+                            <div class="manage-placeholder">
+                                <p style="font-size:var(--font-h2);color:var(--text-secondary);margin-bottom:8px;">选择一个平台以查看详情</p>
+                                <p style="font-size:var(--font-sm);color:var(--text-muted);">左侧列表显示所有平台，点击即可进入管理</p>
+                            </div>
+                        </div>
+
+                        <!-- 平台详情页面（动态生成） -->
+                        <div id="manage-page-detail" class="manage-detail-page" style="display:none;">
+                            <div class="manage-detail-header">
+                                <div class="manage-detail-title-wrap" id="manage-detail-title-wrap">
+                                    <h2 id="manage-detail-title" class="manage-detail-title" title="点击编辑平台名称">平台名称</h2>
+                                    <input type="text" id="manage-detail-title-input" class="manage-detail-title-input"
+                                           placeholder="输入平台名称" style="display:none;">
+                                </div>
+                            </div>
+
+                            <!-- 设置区（窗帘折叠） -->
+                            <div id="manage-settings-panel" class="manage-settings-panel">
+                                <div class="manage-settings-content" id="manage-settings-content">
+                                    <!-- 动态渲染配置表单 -->
+                                </div>
+                            </div>
+
+                            <!-- 窗帘把手 -->
+                            <div id="manage-curtain-handle" class="manage-curtain-handle">
+                                <span class="manage-curtain-arrow">∧</span>
+                                <span class="manage-curtain-label">⚙ 设置</span>
+                                <span class="manage-curtain-arrow">∧</span>
+                            </div>
+
+                            <!-- 账号列表区 -->
+                            <div class="manage-account-section">
+                                <div class="manage-account-toolbar" id="manage-account-toolbar" style="display:none;">
+                                    <span id="manage-selection-count" class="manage-selection-count">已选 0 项</span>
+                                    <div class="manage-batch-actions" id="manage-batch-actions">
+                                        <button class="btn btn-sm" id="manage-batch-hide">批量隐藏</button>
+                                        <button class="btn btn-sm" id="manage-batch-show">批量显示</button>
+                                        <button class="btn btn-sm" id="manage-batch-delete" style="color:var(--color-danger);">批量删除</button>
+                                    </div>
+                                </div>
+                                <div class="manage-account-scroll">
+                                    <table class="manage-account-table">
+                                        <thead>
+                                            <tr>
+                                                <th class="manage-col-check"><input type="checkbox" id="manage-select-all"></th>
+                                                <th class="manage-col-avatar"></th>
+                                                <th class="manage-col-nickname" data-sort="nickname">昵称 ↕</th>
+                                                <th class="manage-col-id" data-sort="id">账号ID ↕</th>
+                                                <th class="manage-col-state" data-sort="hidden">状态 ↕</th>
+                                                <th class="manage-col-actions">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="manage-account-tbody">
+                                            <tr class="manage-empty-row">
+                                                <td colspan="6">
+                                                    <div class="manage-empty-state">暂无账号数据</div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- 统计页 -->
@@ -119,8 +221,9 @@
                                     <div id="upd-changelog-content"></div>
                                 </div>
 
-                                <div class="config-actions">
+                                <div class="config-actions" style="flex-wrap:wrap; gap:8px;">
                                     <button id="upd-btn-check" class="btn btn-primary">检查更新</button>
+                                    <button id="upd-btn-update-config" class="btn">更新远程配置</button>
                                     <button id="upd-btn-open" class="btn" style="background:var(--bg-sidebar);color:var(--text-primary);border:1px solid var(--border-color);display:none;">打开更新窗口</button>
                                     <span id="upd-msg" class="config-msg" style="display:none;"></span>
                                 </div>
@@ -272,6 +375,7 @@
 <script src="js/icons.js"></script>
 <script src="js/components/nav-sidebar.js"></script>
 <script src="js/pages/settings.js"></script>
+<script src="js/pages/manage.js"></script>
 <script src="js/app.js"></script>
 
 </body>

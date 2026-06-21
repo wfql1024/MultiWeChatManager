@@ -85,10 +85,12 @@ public final class RemoteConfigFetcher {
         String[] builtinUrls;
 
         if (NS_REMOTE_SW.equals(ns)) {
-            userUrl = cm.getRootConfig().getRemoteSwUrl();
+            var urls = cm.getRootConfig().getRemoteSwUrls();
+            userUrl = urls.isEmpty() ? "" : urls.get(0);
             builtinUrls = new String[]{REMOTE_SW_GITEE, REMOTE_SW_GITHUB};
         } else {
-            userUrl = cm.getRootConfig().getRemoteGlobalUrl();
+            var urls = cm.getRootConfig().getRemoteGlobalUrls();
+            userUrl = urls.isEmpty() ? "" : urls.get(0);
             builtinUrls = new String[]{REMOTE_GLOBAL_GITEE, REMOTE_GLOBAL_GITHUB};
         }
 
@@ -197,9 +199,9 @@ public final class RemoteConfigFetcher {
     private static Path getLocalPath(String ns) {
         Path userDir = ConfigManager.getInstance().getUserDataPath();
         if (NS_REMOTE_SW.equals(ns)) {
-            return userDir.resolve("remote_sw.json");
+            return userDir.resolve("remote_sw_config.json");
         } else {
-            return userDir.resolve("remote_global.json");
+            return userDir.resolve("remote_global_config.json");
         }
     }
 }

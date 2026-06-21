@@ -61,6 +61,38 @@ public final class AppPaths {
         return getDefaultUserDataDir().resolve("logs");
     }
 
+    // ---- 用户数据目录下的配置文件 ----
+
+    /** local_global_config.json */
+    public static Path getLocalGlobalConfigPath(Path userDataPath) {
+        return userDataPath.resolve("local_global_config.json");
+    }
+
+    /** local_sw_config.json */
+    public static Path getLocalSwConfigPath(Path userDataPath) {
+        return userDataPath.resolve("local_sw_config.json");
+    }
+
+    /** remote_global_config.json */
+    public static Path getRemoteGlobalConfigPath(Path userDataPath) {
+        return userDataPath.resolve("remote_global_config.json");
+    }
+
+    /** remote_sw_config.json */
+    public static Path getRemoteSwConfigPath(Path userDataPath) {
+        return userDataPath.resolve("remote_sw_config.json");
+    }
+
+    /** sw_acc_data.json */
+    public static Path getSwAccDataPath(Path userDataPath) {
+        return userDataPath.resolve("sw_acc_data.json");
+    }
+
+    /** sw_cache.json */
+    public static Path getSwCachePath(Path userDataPath) {
+        return userDataPath.resolve("sw_cache.json");
+    }
+
     /** 确保目录存在（递归创建） */
     public static void ensureDir(Path dir) {
         File f = dir.toFile();

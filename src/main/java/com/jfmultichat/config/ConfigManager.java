@@ -14,44 +14,40 @@ import java.util.*;
 /**
  * 统一配置管理器 — 单例，管理所有配置文件的加载、保存、获取、更新.
  * <p>
- * 职责：
+ * 配置文件一览:
  * <ul>
- *   <li>初始化目录结构和默认配置文件</li>
- *   <li>加载 root_config.json → 确定 user_data_path</li>
- *   <li>管理 local_config.json / sw_acc_data.json / sw_cache.json</li>
- *   <li>提供细粒度 API：按 Sw ID 获取配置、增删改查账号</li>
- *   <li>读写远程配置缓存（remote_global.json / remote_sw.json）</li>
+ *   <li>root_config.json — RootConfig POJO（全局设置：代理、数据目录、远程URL列表）</li>
+ *   <li>local_global_config.json — JsonConfigStore（软件偏好：主题、窗帘状态等）</li>
+ *   <li>local_sw_config.json — JsonConfigStore（各平台设置：路径、尺寸等，一级键=swId）</li>
+ *   <li>sw_acc_data.json — JsonConfigStore（账号数据）</li>
+ *   <li>sw_cache.json — JsonConfigStore（适配缓存）</li>
+ *   <li>remote_global_config.json — JsonConfigStore（远程全局配置缓存，只读）</li>
+ *   <li>remote_sw_config.json — JsonConfigStore（远程平台配置缓存，只读）</li>
  * </ul>
- * <p>
- * 本类所有涉及 "Sw" 的术语均表示 "聊天软件"（Software 缩写）.
  */
 public class ConfigManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(ConfigManager.class);
-
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static volatile ConfigManager instance;
 
-    // ==================== 内存中的配置数据 ====================
+    // ---- 配置存储 ----
+    private RootConfig rootConfig;                    // root_config.json（POJO）
+    private JsonConfigStore localGlobalConfigStore;   // local_global_config.json
+    private JsonConfigStore localSwConfigStore;       // local_sw_config.json
+    private JsonConfigStore swAccDataStore;           // sw_acc_data.json
+    private JsonConfigStore swCacheStore;             // sw_cache.json
+    private JsonConfigStore remoteGlobalConfigStore;  // remote_global_config.json（缓存）
+    private JsonConfigStore remoteSwConfigStore;      // remote_sw_config.json（缓存）
 
-    private RootConfig rootConfig;           // root_config.json
-    private ObjectNode localConfig;          // local_config.json
-    private ObjectNode swAccData;            // sw_acc_data.json
-    private ObjectNode swCache;              // sw_cache.json
-    private ObjectNode remoteGlobal;         // remote_global.json (只读缓存)
-    private ObjectNode remoteSw;             // remote_sw.json (只读缓存)
-
-    private Path userDataPath;               // 实际使用的 user_data_path
+    private Path userDataPath;
     private volatile boolean initialized;
 
     // ==================== 单例 ====================
 
     private ConfigManager() {}
 
-    /**
-     * 获取单例。首次调用自动触发初始化（devMode=false）.
-     */
     public static ConfigManager getInstance() {
         if (instance == null) {
             synchronized (ConfigManager.class) {
@@ -65,11 +61,6 @@ public class ConfigManager {
         return instance;
     }
 
-    /**
-     * 手动初始化（指定 devMode）。需在首次 getInstance() 前调用.
-     *
-     * @param devMode true=使用 dev_root_config.json + dev_user_files/
-     */
     public static synchronized ConfigManager init(boolean devMode) {
         if (instance != null) {
             LOG.warn("ConfigManager already initialized, ignoring init({})", devMode);
@@ -86,45 +77,137 @@ public class ConfigManager {
     // ==================== 初始化 ====================
 
     private void initInternal() {
-        // 1. 创建版本目录
         Path versionDir = AppPaths.getVersionDir();
         AppPaths.ensureDir(versionDir);
 
-        // 2. 加载 root_config.json
+        // 1. 加载 root_config.json
         Path rootConfigPath = AppPaths.getRootConfigPath();
         rootConfig = loadRootConfig(rootConfigPath);
 
-        // 3. 确定 user_data_path（不以 user_files 结尾则自动拼接）
+        // 2. 确定 user_data_path
         userDataPath = resolveUserDataPath(rootConfig.getUserDataPath());
-
-        // 4. 确保 user_data_path 存在并更新 root config
         AppPaths.ensureDir(userDataPath);
         rootConfig.setUserDataPath(userDataPath.toString());
         saveRootConfig();
 
-        // 5. 设置日志系统属性
+        // 3. 设置日志系统属性
         System.setProperty("jfmultichat.logdir", userDataPath.resolve("logs").toString());
 
-        // 6. 创建默认配置文件（不存在则写入空对象）
-        AppPaths.ensureJsonFile(userDataPath.resolve("local_config.json"));
-        AppPaths.ensureJsonFile(userDataPath.resolve("sw_acc_data.json"));
-        AppPaths.ensureJsonFile(userDataPath.resolve("sw_cache.json"));
+        // 4. 确保配置文件存在 + 迁移旧文件
+        migrateOldFiles();
 
-        // 7. 加载所有配置文件到内存
-        localConfig  = loadJson(userDataPath.resolve("local_config.json"));
-        swAccData    = loadJson(userDataPath.resolve("sw_acc_data.json"));
-        swCache      = loadJson(userDataPath.resolve("sw_cache.json"));
-
-        // 8. remote_global.json / remote_sw.json 暂不创建（留待后续网络下载）
-        remoteGlobal = loadJsonOrEmpty(userDataPath.resolve("remote_global.json"));
-        remoteSw     = loadJsonOrEmpty(userDataPath.resolve("remote_sw.json"));
+        // 5. 加载所有配置存储
+        localGlobalConfigStore  = new JsonConfigStore(AppPaths.getLocalGlobalConfigPath(userDataPath));
+        localSwConfigStore      = new JsonConfigStore(AppPaths.getLocalSwConfigPath(userDataPath));
+        swAccDataStore          = new JsonConfigStore(AppPaths.getSwAccDataPath(userDataPath));
+        swCacheStore            = new JsonConfigStore(AppPaths.getSwCachePath(userDataPath));
+        remoteGlobalConfigStore = new JsonConfigStore(AppPaths.getRemoteGlobalConfigPath(userDataPath));
+        remoteSwConfigStore     = new JsonConfigStore(AppPaths.getRemoteSwConfigPath(userDataPath));
 
         initialized = true;
     }
 
-    /**
-     * 解析 user_data_path：如果用户指定的路径不以 user_files 结尾，自动拼接.
-     */
+    /** 迁移旧版配置文件到新命名 */
+    private void migrateOldFiles() {
+        // local_config.json → local_global_config.json + local_sw_config.json
+        Path oldConfig = userDataPath.resolve("local_config.json");
+        if (Files.exists(oldConfig)) {
+            try {
+                ObjectNode old = loadJsonNode(oldConfig);
+                // global 节点 → local_global_config.json
+                if (old.has("global") && old.get("global").isObject()) {
+                    saveJsonNode(AppPaths.getLocalGlobalConfigPath(userDataPath),
+                            (ObjectNode) old.get("global"));
+                    // 同时把旧 global 中的代理/URL迁移到 root_config
+                    JsonNode g = old.get("global");
+                    if (g.has("use_proxy") && rootConfig.getProxyIp().isEmpty())
+                        rootConfig.setUseProxy(g.get("use_proxy").asBoolean());
+                    if (g.has("proxy_ip") && rootConfig.getProxyIp().isEmpty())
+                        rootConfig.setProxyIp(g.get("proxy_ip").asText());
+                    if (g.has("proxy_port") && rootConfig.getProxyPort().isEmpty())
+                        rootConfig.setProxyPort(g.get("proxy_port").asText());
+                    if (g.has("remote_global_urls") && g.get("remote_global_urls").isArray()) {
+                        for (JsonNode u : g.get("remote_global_urls"))
+                            if (u.isTextual() && !rootConfig.getRemoteGlobalUrls().contains(u.asText()))
+                                rootConfig.getRemoteGlobalUrls().add(u.asText());
+                    }
+                    if (g.has("remote_sw_urls") && g.get("remote_sw_urls").isArray()) {
+                        for (JsonNode u : g.get("remote_sw_urls"))
+                            if (u.isTextual() && !rootConfig.getRemoteSwUrls().contains(u.asText()))
+                                rootConfig.getRemoteSwUrls().add(u.asText());
+                    }
+                    saveRootConfig();
+                }
+                // 平台节点 → local_sw_config.json
+                ObjectNode swNode = MAPPER.createObjectNode();
+                var it = old.fieldNames();
+                while (it.hasNext()) {
+                    String key = it.next();
+                    if (!"global".equals(key) && old.get(key).isObject()) {
+                        swNode.set(key, old.get(key).deepCopy());
+                    }
+                }
+                if (!swNode.isEmpty()) {
+                    saveJsonNode(AppPaths.getLocalSwConfigPath(userDataPath), swNode);
+                }
+                Files.deleteIfExists(oldConfig);
+                LOG.info("Migrated local_config.json → local_global_config.json + local_sw_config.json");
+            } catch (Exception e) {
+                LOG.error("Failed to migrate local_config.json", e);
+            }
+        }
+
+        // local_global.json → local_global_config.json
+        Path oldGlobal = userDataPath.resolve("local_global.json");
+        if (Files.exists(oldGlobal)) {
+            try {
+                Files.move(oldGlobal, AppPaths.getLocalGlobalConfigPath(userDataPath));
+                LOG.info("Renamed local_global.json → local_global_config.json");
+            } catch (Exception e) {
+                LOG.warn("Failed to rename local_global.json", e);
+            }
+        }
+
+        // local_sw.json → local_sw_config.json
+        Path oldSw = userDataPath.resolve("local_sw.json");
+        if (Files.exists(oldSw)) {
+            try {
+                Files.move(oldSw, AppPaths.getLocalSwConfigPath(userDataPath));
+                LOG.info("Renamed local_sw.json → local_sw_config.json");
+            } catch (Exception e) {
+                LOG.warn("Failed to rename local_sw.json", e);
+            }
+        }
+
+        // remote_global.json → remote_global_config.json
+        Path oldRg = userDataPath.resolve("remote_global.json");
+        if (Files.exists(oldRg)) {
+            try {
+                Files.move(oldRg, AppPaths.getRemoteGlobalConfigPath(userDataPath));
+                LOG.info("Renamed remote_global.json → remote_global_config.json");
+            } catch (Exception e) {
+                LOG.warn("Failed to rename remote_global.json", e);
+            }
+        }
+
+        // remote_sw.json → remote_sw_config.json
+        Path oldRs = userDataPath.resolve("remote_sw.json");
+        if (Files.exists(oldRs)) {
+            try {
+                Files.move(oldRs, AppPaths.getRemoteSwConfigPath(userDataPath));
+                LOG.info("Renamed remote_sw.json → remote_sw_config.json");
+            } catch (Exception e) {
+                LOG.warn("Failed to rename remote_sw.json", e);
+            }
+        }
+
+        // 确保所有文件存在
+        AppPaths.ensureJsonFile(AppPaths.getLocalGlobalConfigPath(userDataPath));
+        AppPaths.ensureJsonFile(AppPaths.getLocalSwConfigPath(userDataPath));
+        AppPaths.ensureJsonFile(AppPaths.getSwAccDataPath(userDataPath));
+        AppPaths.ensureJsonFile(AppPaths.getSwCachePath(userDataPath));
+    }
+
     private Path resolveUserDataPath(String configured) {
         if (configured == null || configured.isBlank()) {
             return AppPaths.getDefaultUserDataDir();
@@ -138,7 +221,7 @@ public class ConfigManager {
         return p;
     }
 
-    // ==================== JSON 读写 ====================
+    // ==================== JSON 读写工具 ====================
 
     private RootConfig loadRootConfig(Path path) {
         if (Files.exists(path)) {
@@ -151,12 +234,8 @@ public class ConfigManager {
                 LOG.error("Failed to load root_config.json, recreating", e);
             }
         }
-        // 默认值
         RootConfig rc = new RootConfig();
         rc.setUserDataPath(AppPaths.getDefaultUserDataDir().toString());
-        rc.setRemoteGlobalUrl("");
-        rc.setRemoteSwUrl("");
-        // 写入默认配置
         try {
             MAPPER.writeValue(path.toFile(), rc);
             LOG.info("Created default root_config.json at {}", path);
@@ -166,17 +245,7 @@ public class ConfigManager {
         return rc;
     }
 
-    private void saveRootConfig() {
-        try {
-            Path path = AppPaths.getRootConfigPath();
-            AppPaths.ensureDir(path.getParent());
-            MAPPER.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), rootConfig);
-        } catch (IOException e) {
-            LOG.error("Failed to save root_config.json", e);
-        }
-    }
-
-    private ObjectNode loadJson(Path path) {
+    private ObjectNode loadJsonNode(Path path) {
         try {
             if (Files.exists(path)) {
                 String json = Files.readString(path);
@@ -191,11 +260,7 @@ public class ConfigManager {
         return MAPPER.createObjectNode();
     }
 
-    private ObjectNode loadJsonOrEmpty(Path path) {
-        return Files.exists(path) ? loadJson(path) : MAPPER.createObjectNode();
-    }
-
-    private void saveJson(Path path, ObjectNode data) {
+    private void saveJsonNode(Path path, ObjectNode data) {
         try {
             AppPaths.ensureDir(path.getParent());
             MAPPER.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), data);
@@ -206,31 +271,17 @@ public class ConfigManager {
 
     // ==================== 路径访问 ====================
 
-    /** 当前用户数据目录的绝对路径 */
-    public Path getUserDataPath() {
-        return userDataPath;
-    }
-
-    /** 日志目录 */
-    public Path getLogsDir() {
-        return userDataPath.resolve("logs");
-    }
+    public Path getUserDataPath() { return userDataPath; }
+    public Path getLogsDir() { return userDataPath.resolve("logs"); }
 
     // ==================== RootConfig ====================
 
-    public RootConfig getRootConfig() {
-        return rootConfig;
-    }
+    public RootConfig getRootConfig() { return rootConfig; }
 
-    /**
-     * 修改 user_data_path — 触发数据迁移.
-     * 新路径不以 user_files 结尾时自动拼接.
-     */
     public void setUserDataPath(String newPath) {
         Path resolved = resolveUserDataPath(newPath);
         if (resolved.equals(userDataPath)) return;
 
-        // 复制现有文件到新目录
         Path oldPath = userDataPath;
         AppPaths.ensureDir(resolved);
         try {
@@ -245,12 +296,13 @@ public class ConfigManager {
         rootConfig.setUserDataPath(resolved.toString());
         saveRootConfig();
 
-        // 重新加载在新位置的配置
-        localConfig  = loadJson(resolved.resolve("local_config.json"));
-        swAccData    = loadJson(resolved.resolve("sw_acc_data.json"));
-        swCache      = loadJson(resolved.resolve("sw_cache.json"));
-        remoteGlobal = loadJsonOrEmpty(resolved.resolve("remote_global.json"));
-        remoteSw     = loadJsonOrEmpty(resolved.resolve("remote_sw.json"));
+        // 重新加载
+        localGlobalConfigStore  = new JsonConfigStore(AppPaths.getLocalGlobalConfigPath(resolved));
+        localSwConfigStore      = new JsonConfigStore(AppPaths.getLocalSwConfigPath(resolved));
+        swAccDataStore          = new JsonConfigStore(AppPaths.getSwAccDataPath(resolved));
+        swCacheStore            = new JsonConfigStore(AppPaths.getSwCachePath(resolved));
+        remoteGlobalConfigStore = new JsonConfigStore(AppPaths.getRemoteGlobalConfigPath(resolved));
+        remoteSwConfigStore     = new JsonConfigStore(AppPaths.getRemoteSwConfigPath(resolved));
 
         System.setProperty("jfmultichat.logdir", resolved.resolve("logs").toString());
     }
@@ -271,124 +323,64 @@ public class ConfigManager {
 
     // ==================== Sw 列表 ====================
 
-    /**
-     * 获取所有 Sw 配置的 ID 列表（从 local_config.json 的顶层键中排除 "global"）.
-     * 用于前端展示 Sw 列表.
-     */
+    /** 从 local_sw_config.json 读取所有平台 ID */
     public List<String> getSwList() {
         List<String> list = new ArrayList<>();
-        localConfig.fieldNames().forEachRemaining(key -> {
-            if (!"global".equals(key)) list.add(key);
-        });
+        localSwConfigStore.fieldNames().forEachRemaining(list::add);
         return list;
     }
 
-    // ==================== 全局配置 (local_config.json → global) ====================
+    // ==================== LocalGlobalConfig ====================
 
     public ObjectNode getGlobalConfig() {
-        JsonNode global = localConfig.get("global");
-        if (global == null || !global.isObject()) {
-            ObjectNode gn = MAPPER.createObjectNode();
-            localConfig.set("global", gn);
-            return gn;
-        }
-        return (ObjectNode) global;
+        return localGlobalConfigStore.getData();
     }
 
     public void updateGlobalConfig(Map<String, Object> updates) {
-        ObjectNode global = getGlobalConfig();
         updates.forEach((k, v) -> {
-            if (v == null) global.remove(k);
-            else global.putPOJO(k, v);
+            if (v == null) localGlobalConfigStore.remove(k);
+            else localGlobalConfigStore.put(k, v);
         });
-        saveLocalConfig();
+        try { localGlobalConfigStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
-    // ==================== Sw 配置 (local_config.json → {swId}) ====================
+    // ==================== LocalSwConfig ====================
 
-    /**
-     * 获取指定 Sw 的配置（如 "WeChat"、"Weixin"）.
-     * 如果不存在，返回默认配置（state="visible"）.
-     */
     public ObjectNode getSwConfig(String swId) {
-        JsonNode swNode = localConfig.get(swId);
-        if (swNode != null && swNode.isObject()) return (ObjectNode) swNode;
-
-        // 返回默认配置
+        JsonNode node = localSwConfigStore.getData().get(swId);
+        if (node != null && node.isObject()) return (ObjectNode) node;
         ObjectNode defaults = MAPPER.createObjectNode();
         defaults.put("state", "visible");
         return defaults;
     }
 
-    /**
-     * 获取或创建指定 Sw 的配置（不存在时写入 local_config.json）.
-     */
-    public ObjectNode getOrCreateSwConfig(String swId) {
-        JsonNode swNode = localConfig.get(swId);
-        if (swNode != null && swNode.isObject()) return (ObjectNode) swNode;
-
-        ObjectNode defaults = MAPPER.createObjectNode();
-        defaults.put("state", "visible");
-        localConfig.set(swId, defaults);
-        saveLocalConfig();
-        return defaults;
-    }
-
-    /**
-     * 更新指定 Sw 的配置（合并更新）.
-     */
     public void updateSwConfig(String swId, Map<String, Object> updates) {
-        ObjectNode swConfig = getOrCreateSwConfig(swId);
+        ObjectNode swNode = localSwConfigStore.getSubNode(swId);
         updates.forEach((k, v) -> {
-            if (v == null) swConfig.remove(k);
-            else swConfig.putPOJO(k, v);
+            if (v == null) swNode.remove(k);
+            else swNode.putPOJO(k, v);
         });
-        saveLocalConfig();
+        try { localSwConfigStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
     // ==================== 账号管理 (sw_acc_data.json) ====================
 
-    /**
-     * 获取指定 Sw 下的所有账号（Map<accountId, JsonNode>）.
-     */
     public Map<String, ObjectNode> getAccountMap(String swId) {
         Map<String, ObjectNode> map = new LinkedHashMap<>();
-        JsonNode swNode = swAccData.get(swId);
+        JsonNode swNode = swAccDataStore.getData().get(swId);
         if (swNode != null && swNode.isObject()) {
             swNode.fields().forEachRemaining(e -> map.put(e.getKey(), (ObjectNode) e.getValue()));
         }
         return map;
     }
 
-    /**
-     * 获取指定 Sw 下的单个账号.
-     */
-    public Optional<ObjectNode> getAccount(String swId, String accountId) {
-        JsonNode swNode = swAccData.get(swId);
-        if (swNode == null || !swNode.isObject()) return Optional.empty();
-        JsonNode accNode = swNode.get(accountId);
-        if (accNode != null && accNode.isObject()) return Optional.of((ObjectNode) accNode);
-        return Optional.empty();
-    }
-
-    /**
-     * 添加或更新一个账号.
-     *
-     * @param swId      Sw ID
-     * @param accountId 账号 ID（在同一 Sw 内唯一）
-     * @param fields    账号字段
-     */
     public void addAccount(String swId, String accountId, ObjectNode fields) {
-        ObjectNode swNode = getOrCreateSwNode(swId);
-        swNode.set(accountId, fields.deepCopy());
-        saveSwAccData();
+        swAccDataStore.getSubNode(swId).set(accountId, fields.deepCopy());
+        try { swAccDataStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
-    /**
-     * 更新账号的部分字段（合并）.
-     */
     public void updateAccount(String swId, String accountId, Map<String, Object> updates) {
-        ObjectNode swNode = getOrCreateSwNode(swId);
+        ObjectNode swNode = swAccDataStore.getSubNode(swId);
         ObjectNode accNode;
         JsonNode existing = swNode.get(accountId);
         if (existing != null && existing.isObject()) {
@@ -401,93 +393,63 @@ public class ConfigManager {
             if (v == null) accNode.remove(k);
             else accNode.putPOJO(k, v);
         });
-        saveSwAccData();
+        try { swAccDataStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
-    /**
-     * 删除一个账号.
-     */
     public boolean deleteAccount(String swId, String accountId) {
-        JsonNode swNode = swAccData.get(swId);
+        JsonNode swNode = swAccDataStore.getData().get(swId);
         if (swNode == null || !swNode.isObject()) return false;
         boolean removed = ((ObjectNode) swNode).remove(accountId) != null;
-        if (removed) saveSwAccData();
+        if (removed) {
+            try { swAccDataStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
+        }
         return removed;
     }
 
-    private ObjectNode getOrCreateSwNode(String swId) {
-        JsonNode swNode = swAccData.get(swId);
-        if (swNode != null && swNode.isObject()) return (ObjectNode) swNode;
-        ObjectNode newNode = MAPPER.createObjectNode();
-        swAccData.set(swId, newNode);
-        return newNode;
-    }
+    // ==================== Sw 缓存 ====================
 
-    // ==================== Sw 适配缓存 (sw_cache.json) ====================
+    public ObjectNode getSwCache() { return swCacheStore.getData(); }
 
-    /** 获取整个适配缓存（暂作为整体 JSON 对象，不解析内部结构） */
-    public ObjectNode getSwCache() {
-        return swCache;
-    }
-
-    /** 覆写整个适配缓存 */
     public void setSwCache(ObjectNode cache) {
-        this.swCache = cache != null ? cache : MAPPER.createObjectNode();
-        saveSwCache();
+        swCacheStore.setData(cache != null ? cache : MAPPER.createObjectNode());
+        try { swCacheStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
-    // ==================== 远程配置缓存（只读） ====================
+    // ==================== 远程配置缓存 ====================
 
-    /** 获取远程全局配置缓存（只读） */
-    public ObjectNode getRemoteGlobal() {
-        return remoteGlobal;
-    }
+    public ObjectNode getRemoteGlobal() { return remoteGlobalConfigStore.getData(); }
 
-    /** 获取远程平台配置缓存（只读） */
-    public ObjectNode getRemoteSw() {
-        return remoteSw;
-    }
+    public ObjectNode getRemoteSw() { return remoteSwConfigStore.getData(); }
 
-    /**
-     * 写入远程全局配置缓存（由下载逻辑调用，暂留）.
-     */
     public void setRemoteGlobal(ObjectNode data) {
-        this.remoteGlobal = data != null ? data : MAPPER.createObjectNode();
-        saveJson(userDataPath.resolve("remote_global.json"), remoteGlobal);
+        remoteGlobalConfigStore.setData(data != null ? data : MAPPER.createObjectNode());
+        try { remoteGlobalConfigStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
-    /**
-     * 写入远程平台配置缓存（由下载逻辑调用，暂留）.
-     */
     public void setRemoteSw(ObjectNode data) {
-        this.remoteSw = data != null ? data : MAPPER.createObjectNode();
-        saveJson(userDataPath.resolve("remote_sw.json"), remoteSw);
+        remoteSwConfigStore.setData(data != null ? data : MAPPER.createObjectNode());
+        try { remoteSwConfigStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
     // ==================== 持久化 ====================
 
-    public void saveLocalConfig() {
-        saveJson(userDataPath.resolve("local_config.json"), localConfig);
+    private void saveRootConfig() {
+        try {
+            Path path = AppPaths.getRootConfigPath();
+            AppPaths.ensureDir(path.getParent());
+            MAPPER.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), rootConfig);
+        } catch (IOException e) {
+            LOG.error("Failed to save root_config.json", e);
+        }
     }
 
-    public void saveSwAccData() {
-        saveJson(userDataPath.resolve("sw_acc_data.json"), swAccData);
-    }
-
-    public void saveSwCache() {
-        saveJson(userDataPath.resolve("sw_cache.json"), swCache);
-    }
-
-    /** 保存所有可写配置 */
     public void saveAll() {
         saveRootConfig();
-        saveLocalConfig();
-        saveSwAccData();
-        saveSwCache();
+        try { localGlobalConfigStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
+        try { localSwConfigStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
+        try { swAccDataStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
+        try { swCacheStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
-    /** 是否已初始化 */
-    public boolean isInitialized() {
-        return initialized;
-    }
+    public boolean isInitialized() { return initialized; }
 }

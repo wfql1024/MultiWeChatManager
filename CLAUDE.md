@@ -1,7 +1,7 @@
 # CLAUDE.md — JhiFengMultiChat（极峰多聊）
 
-> 最后更新: 2026-06-21  
-> 当前阶段: Phase 0 — 配置管理 + 设置页 UI 完成
+> 最后更新: 2026-06-22  
+> 当前阶段: Phase 1 — 管理页 UI + 配置层重构完成
 
 ---
 
@@ -47,10 +47,12 @@
     │   ├── MainApp.java               # Application, saveAll() on exit
     │   ├── config/
     │   │   ├── AppPaths.java          # %APPDATA%/JhiFengMultiChat/{version}/ 路径规范
-    │   │   ├── AppVersion.java        # 版本号 + 产品名 + 公司名 + parseVersion/splitVersions
-    │   │   ├── RootConfig.java        # root_config.json 模型
-    │   │   ├── ConfigManager.java     # 配置管理器单例（~400行）
-    │   │   ├── CryptoUtils.java       # AES-CBC 解密 (对应 Python decrypt_response)
+    │   │   ├── AppVersion.java        # 版本号 + 产品名 + 公司名
+    │   │   ├── IConfigStore.java      # 统一配置接口（字典式读写）
+    │   │   ├── JsonConfigStore.java   # JSON 配置存储基类
+    │   │   ├── RootConfig.java        # root_config.json POJO（代理/URL/数据目录）
+    │   │   ├── ConfigManager.java     # 配置管理器单例 — 统筹所有 ConfigStore
+    │   │   ├── CryptoUtils.java       # AES-CBC 解密 + [INFO] 级日志
     │   │   └── RemoteConfigFetcher.java # HTTP下载 + 解密 + 本地缓存
     │   ├── bridge/
     │   │   └── JsBridge.java          # JS↔Java 桥 + 异步回调 + 所有数据访问
@@ -72,9 +74,12 @@
             ├── css/ (theme.css, main.css)
             └── js/
                 ├── bridge.js           # JS→Java 桥 (含异步回调 _handleAsync)
-                ├── icons.js / app.js
+                ├── icons.js            # SVG 图标
+                ├── app.js              # 路由 + toast + ensureRemoteConfigs
                 ├── components/nav-sidebar.js
-                └── pages/settings.js   # 设置页全部逻辑 (~600行)
+                └── pages/
+                    ├── settings.js     # 设置页 (~700行)
+                    └── manage.js       # 管理页 (~700行)
 ```
 
 ---
@@ -83,20 +88,62 @@
 
 ```
 %APPDATA%/JhiFengMultiChat/4.0.0.7000/
-├── root_config.json              # 锚点，永不移动
-├── user_files/                   # 正式版
-│   ├── local_config.json         # global设置 + Sw配置
-│   ├── sw_acc_data.json          # 账号数据
-│   ├── sw_cache.json             # 适配缓存（不解析内部结构）
-│   ├── remote_global.json        # 远程全局缓存
-│   ├── remote_sw.json            # 远程平台缓存
+├── root_config.json                  # 锚点，永不移动。存储代理/URL列表/数据目录
+├── user_files/                       # 正式版
+│   ├── local_global_config.json      # 软件偏好（主题、窗帘状态等）
+│   ├── local_sw_config.json          # 各平台设置（{swId: {inst_path, remark, ...}}）
+│   ├── sw_acc_data.json              # 账号数据
+│   ├── sw_cache.json                 # 适配缓存
+│   ├── remote_global_config.json     # 远程全局配置缓存
+│   ├── remote_sw_config.json         # 远程平台配置缓存
 │   └── logs/
-└── dev_user_files/               # 开发版（--dev）
+└── dev_user_files/                   # 开发版（--dev），文件结构相同
 ```
+
+**root_config.json 字段**:
+```json
+{
+  "user_data_path": "...",
+  "remote_global_urls": ["https://..."],
+  "remote_sw_urls": ["https://..."],
+  "use_proxy": false,
+  "proxy_ip": "",
+  "proxy_port": ""
+}
+```
+注意：程序硬编码的默认 URL 不存入配置，仅存用户添加的地址。
 
 ---
 
-## 五、JS↔Java 异步架构（重要！）
+## 五、配置层架构（重要！）
+
+### 接口层次
+
+```
+IConfigStore (interface)
+  ├── getData() / setData() / reload() / save()
+  ├── getString(key, defaultVal) / getBoolean / put / remove / has
+  └── ensureFile() / isEmpty()
+        ↑
+JsonConfigStore (base class — Jackson ObjectNode 读写)
+  ├── getSubNode(key) / setSubNode / removeSubNode / fieldNames()
+  ├── loadFromJson(json) / toJson() / deepCopy()
+        ↑
+ConfigManager (单例 — 统筹 6 个 ConfigStore + RootConfig POJO)
+  ├── getRootConfig()        → RootConfig POJO
+  ├── getGlobalConfig()      → local_global_config.json ObjectNode
+  ├── getSwConfig(swId)      → local_sw_config.json.{swId}
+  ├── getRemoteGlobal()      → remote_global_config.json ObjectNode
+  ├── getRemoteSw()          → remote_sw_config.json ObjectNode
+  ├── getAccountMap(swId)    → sw_acc_data.json.{swId}
+  └── getSwCache()           → sw_cache.json
+```
+
+**未来扩展**：若要更换存储格式（如 YAML、数据库），只需实现新的 `IConfigStore`，替换 `ConfigManager` 中的 store 创建即可。
+
+---
+
+## 六、JS↔Java 异步架构（重要！）
 
 **绝对不能阻塞 UI 线程！** 所有网络操作必须后台线程执行。
 
@@ -104,9 +151,7 @@
 JS 调用 void Java 方法 → 立刻返回
                    ↓
        ThreadPool 后台线程
-       · HTTP 下载
-       · AES 解密 (CryptoUtils.decryptResponse)
-       · JSON 解析
+       · HTTP 下载  · AES 解密  · JSON 解析
                    ↓
        Platform.runLater → scriptExecutor
        → JFC.bridge._handleAsync(type, cbId, jsonStr)
@@ -114,37 +159,83 @@ JS 调用 void Java 方法 → 立刻返回
        JS 回调更新 DOM
 ```
 
-**关键类和方法：**
-- `JsBridge`: `testRemoteUrlAsync(url, cbId)`, `fetchUpdateDataAsync(cbId)`, `fetchThanksDataAsync(cbId)`, `fetchAboutDataAsync(cbId)` — 全是 `void`，结果通过 `pushToJs()` 回传
-- `bridge.js`: `registerAsync(fn)` 注册回调，`_handleAsync(type, cbId, json)` 是 Java 调用的入口
-- `settings.js`: `JFC.bridge.testUrlAsync(url, fn)` → fn 在后台线程完成后被调用
+**关键方法**:
+- 同步: `getSwConfig()`, `getSwDetailData()`, `saveSwConfig()`, `extractExeIcon()`
+- 异步: `testRemoteUrlAsync(url, cbId)`, `fetchUpdateDataAsync(cbId)`, `tryEnsureRemoteConfigsAsync(cbId)`
+- `bridge.js`: `registerAsync(fn)` 注册回调，`_handleAsync(type, cbId, json)` 是 Java 调用入口
 
 ---
 
-## 六、设置页各页面状态
+## 七、远程配置兜底机制
+
+任何需要读取远程配置的操作，都必须先检查 → 缺失则异步下载 → 失败则 toast 提醒 + 强制跳转设置页。
+
+```
+JFC.ensureRemoteConfigs(onReady)
+  ├── checkRemoteConfigReady() — 同步快速检查
+  ├── 已就绪 → onReady()
+  └── 缺失 → tryEnsureRemoteConfigsAsync() — 后台下载
+        ├── 成功 → onReady()
+        └── 失败 → JFC.toastError(msg) + forceGotoSettingsConfig()
+```
+
+**调用点**: `app.js` 启动检查、`manage.js` loadPlatformList / selectPlatform
+
+---
+
+## 八、Toast 通知系统
+
+```javascript
+JFC.toastError('消息', duration);    // 右下角红色，默认 4 秒
+JFC.toastSuccess('消息', duration);  // 右下角绿色，默认 3 秒
+```
+
+动态创建容器 `#toast-container`，带 ✕ 手动关闭。CSS: `main.css` `.toast-container` / `.toast`。
+
+---
+
+## 九、管理页架构
+
+```
+┌─ manage-layout (grid) ────────────────────────────┐
+│ ┌─ 平台侧栏 (z:50) ─┐  ┌─ 详情区 ────────────────┐ │
+│ │ [全部]             │  │ ┌─ 标题（可编辑）─────┐ │ │
+│ │ [WeChat]           │  │ │ remark > alias > id │ │ │
+│ │ [QQ] ...           │  │ └────────────────────┘ │ │
+│ │                    │  │ ┌─ 设置面板（窗帘）───┐ │ │
+│ │ hover展开/收起     │  │ │ 软件路径/数据目录   │ │ │
+│ │                    │  │ │ DLL路径/登录尺寸    │ │ │
+│ └────────────────────┘  │ │ 点击按钮            │ │ │
+│                         │ │ ∧ ⚙ ∧（窗帘把手）  │ │ │
+│                         │ └────────────────────┘ │ │
+│                         │ ┌─ 账号表格 ──────────┐ │ │
+│                         │ │ ☑ 头像 昵称 ID 状态 │ │ │
+│                         │ │ 批量隐藏/显示/删除  │ │ │
+│                         │ └────────────────────┘ │ │
+│                         └────────────────────────┘ │
+└────────────────────────────────────────────────────┘
+```
+
+**平台栏**: 完全复用 `.nav-sidebar` hover 展开/收起样式，z-index:50（低于主导航100）。
+**标题**: remark（本地）> alias（远程）> swId。点击可编辑，Enter 保存到 `local_sw_config.json.{swId}.remark`。
+**设置面板**: 窗帘折叠，偏好持久化到 `local_global_config.json.manage_settings_collapsed`。
+**账号表格**: 复选框多选 + 表头排序 + 行悬浮操作按钮 + 批量操作栏。
+
+---
+
+## 十、设置页各页面状态
 
 | 页面 | 数据来源 | 加载方式 | 关键方法 |
 |------|---------|---------|---------|
-| 外观 | local_config.json | 同步 | `getTheme()` / `saveTheme()` |
-| 配置 | 混合 | 同步 + 异步测试 | `getConfigData()` / `saveConfigData()` / `testUrlAsync()` |
-| 更新 | remote_global (网络) | **异步** | `fetchUpdateDataAsync()` + `AppVersion.splitVersions()` |
-| 鸣谢 | remote_global (网络) | **异步** | `fetchThanksDataAsync()` (含 thanks+sponsor+reference) |
-| 关于 | remote_global (网络) | **异步** | `fetchAboutDataAsync()` (home+project, 不含reference) |
+| 外观 | local_global_config.json | 同步 | `getTheme()` / `saveTheme()` |
+| 配置 | root_config.json | 同步 + 异步测试 | `getConfigData()` / `saveConfigData()` / `testUrlAsync()` |
+| 更新 | remote_global (网络) | **异步** | `fetchUpdateDataAsync()` + "更新远程配置"按钮 |
+| 鸣谢 | remote_global (网络) | **异步** | `fetchThanksDataAsync()` |
+| 关于 | remote_global (网络) | **异步** | `fetchAboutDataAsync()` |
 
 ---
 
-## 七、配置页 URL 列表
-
-远程平台和远程全局各有一个 URL 列表，结构：
-- 默认行（内置 Gitee/GitHub 地址）：`(默认) url`，input readonly，删除按钮禁用
-- 用户行：可编辑/删除
-- 每行有"测试"按钮，异步执行 HTTP → 解密 → JSON解析
-- 底部"测试全部"（所有行并发后台线程）、"添加"（拷贝最后一行 URL）
-- 保存条件：每个 section 至少有一个绿框（测试通过）
-
----
-
-## 八、加密协议
+## 十一、加密协议
 
 远程配置文件加密格式（对应 Python `CryptoUtils.decrypt_response`）：
 ```
@@ -152,61 +243,40 @@ HTTP 响应文本 = base64(IV[16] + ciphertext) + " " + key
 解密: Base64解码 → IV=前16字节, key=key.ljust(16)[:16].encode()
      → AES/CBC/PKCS5Padding 解密 → UTF-8 JSON
 ```
-Java 实现: `CryptoUtils.decryptResponse(String)`
+Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 日志。
+
+**下载/解密日志关键词**: `[下载]` 和 `[解密]`，搜这两个 tag 即可追踪完整流程。
 
 ---
 
-## 九、内置远程配置 URL
+## 十二、用户偏好（严格遵守）
 
-```java
-// RemoteConfigFetcher.java — 四个内置地址
-REMOTE_SW_GITEE   = ".../MultiWeChatManager/raw/main/remote_configs/remote_sw_v9"
-REMOTE_SW_GITHUB  = ".../MultiWeChatManager/main/remote_configs/remote_sw_v9"
-REMOTE_GLOBAL_GITEE  = ".../MultiWeChatManager/raw/main/remote_configs/remote_global_v1"
-REMOTE_GLOBAL_GITHUB = ".../MultiWeChatManager/main/remote_configs/remote_global_v1"
-```
-注意: `main` 分支暂未上传这些文件，用户会手动加 `python` 分支的地址。HTTP 客户端已配置 `.followRedirects(NORMAL)`。
-
----
-
-## 十、用户偏好（严格遵守）
-
-1. **字号要大** — 所有字号 +2：h1=20, h2=17, body=15, sm=14, xs=13, btn=15/13
+1. **字号要大** — 所有字号 +2：h1=20, h2=17, h3=15, body=15, sm=14, xs=13, btn=15/13
 2. **括号规范** — 数据目录输入框: `（默认）`(中文全角括号)；网址列表: `(默认)`(英文半角)
-3. **标题层级** — 一级标题(h1): 区块标题如"软件更新""代理"；二级标题(h2): 小节标签如"数据目录""远程平台"
-4. **"数据目录"/"远程平台"/"远程全局"三者必须用同一个 CSS class** (`config-subtitle`)，统一风格
-5. **后台线程** — 绝对不用 `setTimeout` 模拟异步；必须用 Java `ExecutorService` + `Platform.runLater` + `executeScript`
-6. **编译不要问** — `gradle build` 直接执行，只有 `rm -rf` 这类高风险命令需要确认
-7. **Python 旧版参考** — 业务逻辑优先参考 `legacy_python/` 中对应代码
-8. **字体** — 基础字体 `"Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui`；等宽字体 `"Cascadia Code", "Consolas", monospace`
+3. **标题层级** — 一级标题(h1): 区块标题；二级标题(h2): 小节标签；三级标题(h3): 子节标签
+4. **后台线程** — 绝对不用 `setTimeout` 模拟异步；必须用 Java `ExecutorService` + `Platform.runLater` + `executeScript`
+5. **编译不要问** — `gradle build` 直接执行，只有 `rm -rf` 这类高风险命令需要确认
+6. **Python 旧版参考** — 业务逻辑优先参考 `legacy_python/` 中对应代码
+7. **字体** — 基础字体 `"Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui`；等宽字体 `"Cascadia Code", "Consolas", monospace`
 
 ---
 
-## 十一、已知问题 / 待解决
-
-1. **自动滚动** — 赞助列表和技术参考的自滚动效果不稳定（有时不会向下滚）。当前用 `requestAnimationFrame` 双缓冲启动 + `setTimeout` 链式调度。可能需要调试 `scrollHeight`/`clientHeight` 的获取时机。
-2. **默认 URL 404** — 四个内置 URL 指向 `main` 分支但文件尚未上传。用户手动添加 `python` 分支的地址作为临时方案。
-3. **版本号硬编码** — `AppVersion.VERSION = "4.0.0.7000"`，打包流程需从此处读取并注入 `.exe` 资源。
-4. **`legacy_python/utils/encoding_utils.py` 源码丢失** — 只有 `.pyc` 编译文件，`CryptoUtils.decrypt_response` 的加密密钥逻辑已通过反编译字节码还原为 Java。
-
----
-
-## 十二、关键技术教训
+## 十三、关键技术教训
 
 1. **WebView 拦截鼠标** → 透明 Region 覆盖层绕过
-2. **root 引用时序** → 先建 root 再 buildResizeHandles
-3. **location listener 二次触发** → suppressLinkIntercept 标志
-4. **maximized 拖拽** → DRAG_THRESHOLD=4 阈值
-5. **isDragging 标志** → 防窗口闪移
-6. **UTF-8 BOM** → `.bat` 用 Bash `cat >` 写
-7. **Java 方法签名歧义** → getStringOr(defaultVal, ...path)
-8. **Logback 属性时序** → `jfmultichat.logdir` 必须在首次 `LoggerFactory.getLogger()` 之前
-9. **HTTP 重定向** → `HttpClient` 默认不跟随，必须 `.followRedirects(NORMAL)`
-10. **WebView JS bridge 返回值** → boolean 可能被序列化为字符串，JS 端用 `=== true` 严格比较
+2. **location listener 二次触发** → suppressLinkIntercept 标志
+3. **maximized 拖拽** → DRAG_THRESHOLD=4 阈值
+4. **UTF-8 BOM** → `.bat` 用 Bash `cat >` 写
+5. **Logback 属性时序** → `jfmultichat.logdir` 必须在首次 `LoggerFactory.getLogger()` 之前
+6. **HTTP 重定向** → `HttpClient` 默认不跟随，必须 `.followRedirects(NORMAL)`
+7. **WebView JS bridge 返回值** → boolean 可能被序列化为字符串，JS 端用 `=== true` 严格比较
+8. **配置拆分** → 代理/URL 存 root_config.json（不随数据迁移移动），软件偏好存 local_global_config.json
+9. **URL 保存 bug** → `saveConfigData()` 中 `updateGlobalConfig` 必须在所有字段收集完毕后调用，不能提前
+10. **配置文件名** → 双驼峰命名：`local_global_config.json`, `remote_sw_config.json` 等
 
 ---
 
-## 十三、运行命令
+## 十四、运行命令
 
 ```bash
 cd D:\SpaceDev\MyProj\JhiFengMultiChat
@@ -222,18 +292,18 @@ gradle run --no-daemon --args="--dev"
 # 仅编译
 gradle compileJava --no-daemon
 
-# 完整构建（生成 jar）
+# 完整构建
 gradle build --no-daemon
 # 如果报 "Failed to clean up stale outputs" → taskkill //F //IM java.exe → rm -rf build → 重试
 ```
 
 ---
 
-## 十四、待推进 (后续 Phase)
+## 十五、待推进 (后续 Phase)
 
 1. Native 层 JNA（进程/窗口/注册表）
-2. 登录页 / 管理页 / 统计页
+2. 登录页 / 统计页
 3. 数据库层 SQLite + DAO
-4. 远程配置加密下载完成（URL 就绪后即可工作）
+4. 平台图标提取完善（ExtractIconExW）
 5. 二进制补丁引擎迁移（待评估合法性）
 6. 打包流程（从 AppVersion 读取版本信息，注入 .exe 资源）
