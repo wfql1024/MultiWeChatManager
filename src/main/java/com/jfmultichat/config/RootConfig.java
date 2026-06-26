@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 根配置模型 — root_config.json 的数据结构.
+ * 根配置模型 — RootConfig.json 的数据结构.
  * <p>
  * 存放软件全局设置（代理、数据目录、远程配置源），
  * 此文件永远留在版本根目录，不随 user_data_path 移动.

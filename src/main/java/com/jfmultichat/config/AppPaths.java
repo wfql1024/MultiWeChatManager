@@ -46,13 +46,13 @@ public final class AppPaths {
 
     /** 根配置文件路径 */
     public static Path getRootConfigPath() {
-        String fileName = devMode ? "dev_root_config.json" : "root_config.json";
+        String fileName = devMode ? "DevRootConfig.json" : "RootConfig.json";
         return getVersionDir().resolve(fileName);
     }
 
     /** 默认用户数据目录 */
     public static Path getDefaultUserDataDir() {
-        String dirName = devMode ? "dev_user_files" : "user_files";
+        String dirName = devMode ? "DevUserFiles" : "UserFiles";
         return getVersionDir().resolve(dirName);
     }
 
@@ -61,36 +61,36 @@ public final class AppPaths {
         return getDefaultUserDataDir().resolve("logs");
     }
 
-    // ---- 用户数据目录下的配置文件 ----
+    // ---- 用户数据目录下的配置文件（双驼峰 PascalCase） ----
 
-    /** local_global_config.json */
+    /** LocalGlobalConfig.json */
     public static Path getLocalGlobalConfigPath(Path userDataPath) {
-        return userDataPath.resolve("local_global_config.json");
+        return userDataPath.resolve("LocalGlobalConfig.json");
     }
 
-    /** local_sw_config.json */
+    /** LocalSwConfig.json */
     public static Path getLocalSwConfigPath(Path userDataPath) {
-        return userDataPath.resolve("local_sw_config.json");
+        return userDataPath.resolve("LocalSwConfig.json");
     }
 
-    /** remote_global_config.json */
+    /** RemoteGlobalConfig.json */
     public static Path getRemoteGlobalConfigPath(Path userDataPath) {
-        return userDataPath.resolve("remote_global_config.json");
+        return userDataPath.resolve("RemoteGlobalConfig.json");
     }
 
-    /** remote_sw_config.json */
+    /** RemoteSwConfig.json */
     public static Path getRemoteSwConfigPath(Path userDataPath) {
-        return userDataPath.resolve("remote_sw_config.json");
+        return userDataPath.resolve("RemoteSwConfig.json");
     }
 
-    /** sw_acc_data.json */
+    /** SwAccData.json */
     public static Path getSwAccDataPath(Path userDataPath) {
-        return userDataPath.resolve("sw_acc_data.json");
+        return userDataPath.resolve("SwAccData.json");
     }
 
-    /** sw_cache.json */
+    /** SwCache.json */
     public static Path getSwCachePath(Path userDataPath) {
-        return userDataPath.resolve("sw_cache.json");
+        return userDataPath.resolve("SwCache.json");
     }
 
     /** 确保目录存在（递归创建） */

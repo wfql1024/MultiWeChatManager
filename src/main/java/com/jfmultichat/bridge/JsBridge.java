@@ -5,11 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.config.RootConfig;
+import com.jfmultichat.swcore.SwConfigAccessor;
+import com.jfmultichat.swcore.SwNativeOps;
+import com.jfmultichat.swcore.SwPathDetective;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.awt.Desktop;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -263,7 +270,7 @@ public class JsBridge {
 
     /**
      * 获取所有 Sw 列表.
-     * 从 local_config.json 的顶层键（排除 "global"）中读取.
+     * 从 LocalSwConfig.json 的顶层键（排除 "global"）中读取.
      *
      * @return Sw ID 列表的 JSON 数组字符串，如 {@code ["WeChat","Weixin","QQNT"]}
      */
@@ -279,7 +286,7 @@ public class JsBridge {
 
     /**
      * 获取指定 Sw 下的所有账号列表.
-     * 从 sw_acc_data.json 中读取.
+     * 从 SwAccData.json 中读取.
      *
      * @param swId Sw ID，如 "WeChat"、"Weixin"
      * @return 账号映射的 JSON 字符串，如 {@code {"wxid_xxx":{...},"wxid_yyy":{...}}}
@@ -304,7 +311,7 @@ public class JsBridge {
     }
 
     /**
-     * 获取当前主题设置（从 local_config.json → global → theme）.
+     * 获取当前主题设置（从 LocalGlobalConfig.json 读取 theme）.
      * 供前端初始化时读取.
      *
      * @return 主题字符串: "dark" | "light" | "auto"
@@ -322,7 +329,7 @@ public class JsBridge {
     }
 
     /**
-     * 保存当前主题设置到 local_config.json.
+     * 保存当前主题设置到 LocalGlobalConfig.json.
      */
     public void saveTheme(String theme) {
         try {
@@ -354,7 +361,7 @@ public class JsBridge {
             RootConfig rc = cm.getRootConfig();
             ObjectNode result = MAPPER.createObjectNode();
 
-            // 全部从 root_config.json 读取
+            // 全部从 RootConfig.json 读取
             result.put("useProxy", rc.isUseProxy());
             result.put("proxyIp", rc.getProxyIp());
             result.put("proxyPort", rc.getProxyPort());
@@ -427,7 +434,7 @@ public class JsBridge {
 
     /**
      * 保存配置页数据.
-     * 接收前端 JSON → 分别写入 local_config.json（代理）和 root_config.json（用户目录、远程URL）.
+     * 接收前端 JSON → 写入 RootConfig.json（代理、用户目录、远程URL）.
      *
      * @param json 包含 useProxy, proxyIp, proxyPort, userDataPath, remoteSwUrl, remoteGlobalUrl
      * @return JSON 字符串，包含 success(bool) 和可选的 error(string) / pathChanged(bool) / newPath(string)
@@ -439,7 +446,7 @@ public class JsBridge {
             RootConfig rc = cm.getRootConfig();
             ObjectNode result = MAPPER.createObjectNode();
 
-            // 代理设置 → root_config.json
+            // 代理设置 → RootConfig.json
             if (data.has("useProxy")) {
                 rc.setUseProxy(data.get("useProxy").asBoolean());
             }
@@ -450,7 +457,7 @@ public class JsBridge {
                 rc.setProxyPort(data.get("proxyPort").asText().trim());
             }
 
-            // 远程 URL 列表 → root_config.json（仅保存用户添加的，不包含内置默认）
+            // 远程 URL 列表 → RootConfig.json（仅保存用户添加的，不包含内置默认）
             if (data.has("remoteGlobalUrls") && data.get("remoteGlobalUrls").isArray()) {
                 java.util.List<String> urls = new java.util.ArrayList<>();
                 data.get("remoteGlobalUrls").forEach(u -> {
@@ -762,7 +769,7 @@ public class JsBridge {
     // ========== 全局配置读写（供管理页窗帘偏好等使用） ==========
 
     /**
-     * 获取 global 配置（local_config.json → global）.
+     * 获取 global 配置（LocalGlobalConfig.json）.
      * 供前端读取非敏感的全局偏好（如窗帘展开/收起状态）.
      *
      * @return global 节点的 JSON 字符串
@@ -779,7 +786,7 @@ public class JsBridge {
 
     /**
      * 合并保存 global 配置.
-     * 接收前端 JSON，逐字段合并到 local_config.json → global.
+     * 接收前端 JSON，逐字段合并到 LocalGlobalConfig.json.
      *
      * @param json 要合并的 JSON 对象字符串
      */
@@ -877,7 +884,7 @@ public class JsBridge {
 
     /**
      * 尝试自动下载缺失的远程配置文件.
-     * 从 local_config.json → global → remote_sw_urls / remote_global_urls 读取 URL，
+     * 从 RootConfig.json 读取 remoteGlobalUrls / remoteSwUrls，
      * 逐个尝试下载 → 解密 → 验证 JSON → 保存到磁盘.
      * <p>
      * 此方法同步阻塞（在后台线程调用），逐个 URL 尝试直到成功或全部失败.
@@ -916,7 +923,7 @@ public class JsBridge {
                         ObjectNode data = (ObjectNode) MAPPER.readTree(decrypted);
                         cm.setRemoteSw(data);
                         swOk = true;
-                        LOG.info("[下载] remote_sw.json 保存成功，节点数={}", data.size());
+                        LOG.info("[下载] RemoteSwConfig.json 保存成功，节点数={}", data.size());
                         break;
                     }
                 } catch (Exception e) {
@@ -933,7 +940,7 @@ public class JsBridge {
                         ObjectNode data = (ObjectNode) MAPPER.readTree(decrypted);
                         cm.setRemoteGlobal(data);
                         globalOk = true;
-                        LOG.info("[下载] remote_global.json 保存成功，节点数={}", data.size());
+                        LOG.info("[下载] RemoteGlobalConfig.json 保存成功，节点数={}", data.size());
                         break;
                     }
                 } catch (Exception e) {
@@ -1002,7 +1009,7 @@ public class JsBridge {
 
     /**
      * 获取远程平台列表.
-     * 完全依赖 remote_sw.json 的节点（不含 __info__）。
+     * 完全依赖 RemoteSwConfig.json 的节点（不含 __info__）。
      * 平台名称取自节点的 alias 字段，无 alias 则用 swId。
      *
      * @return JSON: {platforms: [{swId, alias}], remoteRaw: {...}}
@@ -1038,7 +1045,7 @@ public class JsBridge {
 
     /**
      * 获取指定 Sw 的完整配置数据.
-     * 从 local_config.json 中读取该 Sw 的所有字段.
+     * 从 LocalSwConfig.json 中读取该 Sw 的所有字段.
      *
      * @param swId Sw ID
      * @return JSON 字符串，包含 swId + 所有配置字段
@@ -1061,7 +1068,7 @@ public class JsBridge {
 
     /**
      * 保存指定 Sw 的配置.
-     * 将前端传来的完整配置合并到 local_config.json.
+     * 将前端传来的完整配置合并到 LocalSwConfig.json.
      *
      * @param swId    Sw ID
      * @param configJson 前端提交的完整配置 JSON
@@ -1383,6 +1390,350 @@ public class JsBridge {
         } catch (Exception e) {
             LOG.warn("validatePath failed", e);
             return "{\"valid\":false,\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}";
+        }
+    }
+
+    // ==================== 路径自动探测 ====================
+
+    /**
+     * 异步探测指定 SW 的三个路径（inst_path, data_dir, dll_dir）。
+     * 三级探测策略:
+     * 1. reg (注册表) — 从 Windows 注册表读取路径
+     * 2. regex (内存映射正则) — 通过进程内存映射文件匹配正则表达式
+     * 3. addr (猜测) — 从已知系统目录拼接 sub_path
+     *
+     * @param swId   软件标识
+     * @param cbId   JS 回调 ID
+     */
+    public void detectPathsAsync(String swId, String cbId) {
+        THREAD_POOL.submit(() -> {
+            try {
+                ObjectNode result = MAPPER.createObjectNode();
+                result.put("swId", swId);
+
+                // 构建配置访问器
+                SwConfigAccessor accessor = new SwConfigAccessor(new BridgeConfigProvider());
+                // 构建路径探测器（nativeOps=null 时 reg/regex 返回空，addr 仍可用）
+                SwPathDetective detective = new SwPathDetective(new SwNativeOps());
+
+                // 探测三个路径
+                String[] pathTypes = {"inst_path", "data_dir", "dll_dir"};
+                for (String pt : pathTypes) {
+                    List<SwPathDetective.PathEntry> candidates =
+                            detective.detectAll(swId, pt, accessor);
+                    var arr = result.putArray(pt);
+                    for (SwPathDetective.PathEntry entry : candidates) {
+                        ObjectNode item = MAPPER.createObjectNode();
+                        item.put("path", entry.path);
+                        item.put("isDir", entry.isDir);
+                        item.put("exists", java.nio.file.Files.exists(java.nio.file.Path.of(entry.path)));
+                        arr.add(item);
+                    }
+                }
+
+                String json = MAPPER.writeValueAsString(result);
+                pushToJs("JFC.bridge._handleAsync('detectPaths'," + cbId + ",'" + json.replace("'", "\\'") + "')");
+            } catch (Exception e) {
+                LOG.error("detectPathsAsync failed for {}", swId, e);
+                pushToJs("JFC.bridge._handleAsync('detectPaths'," + cbId + ",'{\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}')");
+            }
+        });
+    }
+
+    /**
+     * 将 ConfigManager 适配为 SwConfigAccessor.Provider
+     */
+    private class BridgeConfigProvider implements SwConfigAccessor.Provider {
+
+        // ========== 辅助方法: kwargs → JsonNode ==========
+
+        /**
+         * 解析 kwargs {key: default} → 从指定根节点按路径取值。
+         * 单 key: 直接取该 key 的值，找不到返回 default
+         * 多 key: 逐层嵌套遍历，最后一层的 key 取默认值
+         */
+        private JsonNode resolveKwargs(JsonNode root, Map<String, Object> kwargs) {
+            if (root == null || !root.isObject() || kwargs.isEmpty()) return null;
+            if (kwargs.size() == 1) {
+                Map.Entry<String, Object> entry = kwargs.entrySet().iterator().next();
+                JsonNode node = root.get(entry.getKey());
+                if (node != null) return node;
+                // 有默认值则返回默认值
+                Object def = entry.getValue();
+                if (def != null) {
+                    ObjectMapper mapper = new ObjectMapper();
+                    return mapper.valueToTree(def);
+                }
+                return null;
+            }
+            // 多 key: 逐层深入，最后一个 key 用 kwargs 取值
+            Iterator<Map.Entry<String, Object>> it = kwargs.entrySet().iterator();
+            JsonNode cur = root;
+            while (it.hasNext()) {
+                Map.Entry<String, Object> entry = it.next();
+                String key = entry.getKey();
+                if (!it.hasNext()) {
+                    // 最后一个 key，使用 kwargs 语义
+                    JsonNode node = cur.isObject() ? cur.get(key) : null;
+                    if (node != null) return node;
+                    Object def = entry.getValue();
+                    if (def != null) {
+                        ObjectMapper mapper = new ObjectMapper();
+                        return mapper.valueToTree(def);
+                    }
+                    return null;
+                }
+                // 中间层 key，简单路径遍历
+                if (cur.isObject()) {
+                    cur = cur.get(key);
+                } else {
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        public JsonNode getRemoteSw(String sw, String... addr) {
+            try {
+                JsonNode remoteSw = ConfigManager.getInstance().getRemoteSw();
+                if (remoteSw == null || !remoteSw.isObject()) return null;
+                JsonNode node = remoteSw.get(sw);
+                if (node == null || !node.isObject()) return null;
+                for (String a : addr) {
+                    if (node.isObject()) node = node.get(a);
+                    else return null;
+                }
+                return node;
+            } catch (Exception e) {
+                LOG.warn("[路径探测] getRemoteSw failed for {}: {}", sw, e.getMessage());
+                return null;
+            }
+        }
+
+        @Override
+        public JsonNode getRemoteSw(String sw, Map<String, Object> kwargs) {
+            JsonNode remoteSw = ConfigManager.getInstance().getRemoteSw();
+            JsonNode swNode = (remoteSw != null && remoteSw.isObject()) ? remoteSw.get(sw) : null;
+            return resolveKwargs(swNode, kwargs);
+        }
+
+        @Override
+        public JsonNode getSwSetting(String sw, String... addr) {
+            try {
+                ObjectNode swConfig = ConfigManager.getInstance().getSwConfig(sw);
+                if (swConfig == null) return null;
+                JsonNode node = swConfig;
+                for (String a : addr) {
+                    if (node.isObject()) node = node.get(a);
+                    else return null;
+                }
+                return node;
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        @Override
+        public JsonNode getSwSetting(String sw, Map<String, Object> kwargs) {
+            ObjectNode swConfig = ConfigManager.getInstance().getSwConfig(sw);
+            return resolveKwargs(swConfig, kwargs);
+        }
+
+        @Override
+        public void updateSwSettings(String sw, Map<String, String> frontAddr, Map<String, Object> kwargs) {
+            try {
+                Map<String, Object> updates = new LinkedHashMap<>();
+                // frontAddr 是路径前缀，kwargs 是 key -> value
+                // 逐层嵌套设置
+                ObjectNode target = ConfigManager.getInstance().getSwConfig(sw);
+                if (frontAddr != null) {
+                    for (Map.Entry<String, String> fa : frontAddr.entrySet()) {
+                        String prefix = fa.getKey();
+                        target = (ObjectNode) target.putArray(prefix).get(0);
+                        // 实际上 frontAddr 是 Map，值可能是子节点名
+                        // 简化: 直接将 kwargs 写入目标节点
+                    }
+                }
+                for (Map.Entry<String, Object> entry : kwargs.entrySet()) {
+                    if (entry.getValue() == null) {
+                        target.remove(entry.getKey());
+                    } else {
+                        ObjectMapper mapper = new ObjectMapper();
+                        target.set(entry.getKey(), mapper.valueToTree(entry.getValue()));
+                    }
+                }
+                ConfigManager.getInstance().updateSwConfig(sw,
+                        kwargs.entrySet().stream()
+                                .collect(java.util.stream.Collectors.toMap(
+                                        Map.Entry::getKey, e -> e.getValue())));
+            } catch (Exception e) {
+                LOG.warn("[路径探测] updateSwSettings failed for {}: {}", sw, e.getMessage());
+            }
+        }
+
+        @Override
+        public JsonNode getSwAccData(String sw, String... addr) {
+            try {
+                Map<String, ObjectNode> accMap = ConfigManager.getInstance().getAccountMap(sw);
+                if (accMap.isEmpty()) return null;
+                JsonNode node = null;
+                // 第一个 addr 是账号 ID
+                if (addr.length == 0) {
+                    return MAPPER.valueToTree(accMap);
+                }
+                String accId = addr[0];
+                ObjectNode accNode = accMap.get(accId);
+                if (accNode == null) return null;
+                if (addr.length == 1) return accNode;
+                // 多层路径
+                node = accNode;
+                for (int i = 1; i < addr.length; i++) {
+                    if (node.isObject()) node = node.get(addr[i]);
+                    else return null;
+                }
+                return node;
+            } catch (Exception e) {
+                LOG.warn("[路径探测] getSwAccData failed for {}: {}", sw, e.getMessage());
+                return null;
+            }
+        }
+
+        @Override
+        public JsonNode getSwAccData(String sw, Map<String, Object> kwargs) {
+            Map<String, ObjectNode> accMap = ConfigManager.getInstance().getAccountMap(sw);
+            if (accMap.isEmpty()) return null;
+            // 合并所有账号节点为一个 ObjectNode 再解析
+            ObjectNode combined = MAPPER.createObjectNode();
+            accMap.forEach(combined::set);
+            return resolveKwargs(combined, kwargs);
+        }
+
+        @Override
+        public void updateSwAccData(String sw, Map<String, String> frontAddr, Map<String, Object> kwargs) {
+            try {
+                // frontAddr: [accountId, ...path] → 定位到具体账号节点
+                // kwargs: key -> value → 写入
+                Map<String, Object> updates = new LinkedHashMap<>();
+                kwargs.forEach((k, v) -> updates.put(k, v));
+                // 取第一个 addr 作为 accountId
+                String accId = null;
+                if (frontAddr != null && !frontAddr.isEmpty()) {
+                    accId = frontAddr.values().iterator().next();
+                }
+                if (accId != null) {
+                    ConfigManager.getInstance().updateAccount(sw, accId, updates);
+                } else {
+                    // 无 accountId，直接更新整个账号字典
+                    // 简化处理：写入第一个账号或创建
+                    Map<String, ObjectNode> accMap = ConfigManager.getInstance().getAccountMap(sw);
+                    if (!accMap.isEmpty()) {
+                        String firstAcc = accMap.keySet().iterator().next();
+                        ConfigManager.getInstance().updateAccount(sw, firstAcc, updates);
+                    }
+                }
+            } catch (Exception e) {
+                LOG.warn("[路径探测] updateSwAccData failed for {}: {}", sw, e.getMessage());
+            }
+        }
+
+        @Override
+        public void clearSwAccData(String sw, String... addr) {
+            try {
+                if (addr.length == 0) return;
+                String accId = addr[0];
+                Map<String, ObjectNode> accMap = ConfigManager.getInstance().getAccountMap(sw);
+                ObjectNode accNode = accMap.get(accId);
+                if (accNode == null) return;
+                if (addr.length == 1) {
+                    // 清空整个账号节点
+                    accNode.fieldNames().forEachRemaining(accNode::remove);
+                } else {
+                    // 删除深层路径
+                    JsonNode node = accNode;
+                    for (int i = 1; i < addr.length - 1; i++) {
+                        if (node.isObject()) node = node.get(addr[i]);
+                        else return;
+                    }
+                    if (node.isObject()) ((ObjectNode) node).remove(addr[addr.length - 1]);
+                }
+                ConfigManager.getInstance().saveAll();
+            } catch (Exception e) {
+                LOG.warn("[路径探测] clearSwAccData failed for {}: {}", sw, e.getMessage());
+            }
+        }
+
+        @Override
+        public ObjectNode getSwCache() {
+            return ConfigManager.getInstance().getSwCache();
+        }
+
+        @Override
+        public void setSwCache(ObjectNode data) {
+            ConfigManager.getInstance().setSwCache(data);
+        }
+
+        @Override
+        public boolean saveAndCheckChanged(String sw, String key, Object value) {
+            try {
+                ObjectNode swNode = ConfigManager.getInstance().getSwConfig(sw);
+                if (swNode == null) return false;
+                // 检查是否变化
+                JsonNode existing = swNode.get(key);
+                if (existing != null && existing.isValueNode()) {
+                    String oldVal = existing.asText("");
+                    String newVal = (value != null) ? value.toString() : "";
+                    if (oldVal.equals(newVal)) return false;
+                }
+                // 更新
+                if (value == null) {
+                    swNode.remove(key);
+                } else if (value instanceof Boolean) {
+                    swNode.put(key, (Boolean) value);
+                } else if (value instanceof Number) {
+                    if (value instanceof Integer || value instanceof Long) {
+                        swNode.put(key, ((Number) value).longValue());
+                    } else {
+                        swNode.put(key, ((Number) value).doubleValue());
+                    }
+                } else {
+                    swNode.put(key, value.toString());
+                }
+                ConfigManager.getInstance().updateSwConfig(sw,
+                        java.util.Map.of(key, value));
+                return true;
+            } catch (Exception e) {
+                LOG.warn("[路径探测] saveAndCheckChanged failed for {}: {}", sw, e.getMessage());
+                return false;
+            }
+        }
+
+        @Override
+        public JsonNode fetchOrSetDefault(String sw, String key, String enumCls) {
+            try {
+                ObjectNode swNode = ConfigManager.getInstance().getSwConfig(sw);
+                if (swNode == null) return null;
+                JsonNode existing = swNode.get(key);
+                if (existing != null && !existing.isNull()) {
+                    return existing;
+                }
+                // 设置默认值
+                JsonNode defaultValue;
+                if (enumCls != null && !enumCls.isEmpty()) {
+                    // 尝试从枚举获取默认值（简化：返回 null）
+                    defaultValue = MAPPER.nullNode();
+                } else {
+                    defaultValue = MAPPER.nullNode();
+                }
+                if (defaultValue != null && !defaultValue.isNull()) {
+                    swNode.set(key, defaultValue);
+                    ConfigManager.getInstance().saveAll();
+                }
+                return defaultValue;
+            } catch (Exception e) {
+                LOG.warn("[路径探测] fetchOrSetDefault failed for {}: {}", sw, e.getMessage());
+                return null;
+            }
         }
     }
 }

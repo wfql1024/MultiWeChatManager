@@ -139,6 +139,11 @@ JFC.bridge = (function() {
         },
         fetchAboutAsync: function(fn) {
             callWithArgs('fetchAboutDataAsync', String(registerAsync(fn)));
+        },
+
+        // ---- 路径探测 ----
+        detectPathsAsync: function(swId, cbId) {
+            callWithArgs('detectPathsAsync', swId, String(cbId));
         }
     };
 })();

@@ -199,9 +199,9 @@ public final class RemoteConfigFetcher {
     private static Path getLocalPath(String ns) {
         Path userDir = ConfigManager.getInstance().getUserDataPath();
         if (NS_REMOTE_SW.equals(ns)) {
-            return userDir.resolve("remote_sw_config.json");
+            return userDir.resolve("RemoteSwConfig.json");
         } else {
-            return userDir.resolve("remote_global_config.json");
+            return userDir.resolve("RemoteGlobalConfig.json");
         }
     }
 }

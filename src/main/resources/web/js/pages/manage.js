@@ -423,6 +423,8 @@ JFC.pages.manage = (function() {
                     '<input type="text" id="mg-conf-' + f.key + '" value="' + escapeAttr(val) +
                     '" placeholder="（未设置）" data-field="' + f.key + '">' +
                     '<button class="btn btn-sm" data-path-key="' + f.key + '">浏览</button>' +
+                    '<button class="btn btn-sm btn-detect" data-detect-key="' + f.key + '">自动探测</button>' +
+                    '<div class="manage-detect-results" id="detect-' + f.key + '"></div>' +
                     '</div>';
             } else {
                 // text 类型
@@ -447,6 +449,14 @@ JFC.pages.manage = (function() {
                 var key = this.getAttribute('data-path-key');
                 var currentVal = (getEl('mg-conf-' + key) || {}).value || '';
                 browsePath(key, currentVal);
+            });
+        });
+
+        // 绑定"自动探测"按钮
+        content.querySelectorAll('[data-detect-key]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var key = this.getAttribute('data-detect-key');
+                detectPathCandidates(key);
             });
         });
 
@@ -486,6 +496,58 @@ JFC.pages.manage = (function() {
             flashTitle('未找到远程配置中的尺寸', true);
         } catch(e) {
             flashTitle('获取失败', true);
+        }
+    }
+
+    // ---- 路径自动探测 ----
+    function detectPathCandidates(pathKey) {
+        if (!currentSwId) return;
+        var container = getEl('detect-' + pathKey);
+        if (!container) return;
+        container.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">探测中...</span>';
+
+        try {
+            var cbId = JFC.bridge.registerAsync(function(type, data) {
+                if (type !== 'detectPaths') return;
+                try {
+                    if (data && data.error) {
+                        container.innerHTML = '<span style="color:var(--danger);font-size:12px;">探测失败: ' + escapeHtml(data.error) + '</span>';
+                        return;
+                    }
+                    var candidates = data && data[pathKey];
+                    if (!candidates || candidates.length === 0) {
+                        container.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">未找到候选路径</span>';
+                        return;
+                    }
+                    // 渲染候选列表
+                    var html = '<div class="detect-candidates">';
+                    candidates.forEach(function(c) {
+                        var exists = c.exists ? ' <span style="color:var(--success);font-size:11px;">[存在]</span>' : '';
+                        html += '<button class="btn btn-sm btn-detect-item" data-candidate="' + escapeAttr(c.path) + '">' +
+                            escapeHtml(c.path) + exists +
+                            '</button>';
+                    });
+                    html += '</div>';
+                    container.innerHTML = html;
+
+                    // 绑定候选按钮
+                    container.querySelectorAll('[data-candidate]').forEach(function(btn) {
+                        btn.addEventListener('click', function() {
+                            var path = this.getAttribute('data-candidate');
+                            var input = getEl('mg-conf-' + pathKey);
+                            if (input) input.value = path;
+                            saveFieldNow(pathKey, path);
+                            container.innerHTML = '';
+                            flashTitle('已选择: ' + path.substring(path.lastIndexOf('/') + 1));
+                        });
+                    });
+                } catch(e) {
+                    container.innerHTML = '<span style="color:var(--danger);font-size:12px;">解析失败</span>';
+                }
+            });
+            JFC.bridge.detectPathsAsync(currentSwId, cbId);
+        } catch(e) {
+            container.innerHTML = '<span style="color:var(--danger);font-size:12px;">探测出错</span>';
         }
     }
 

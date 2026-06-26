@@ -1128,6 +1128,48 @@
     flex-shrink: 0;
 }
 
+/* 路径自动探测 */
+.manage-config-input .btn-detect {
+    margin-left: 4px;
+    padding: 2px 8px;
+    font-size: var(--font-xs);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.manage-config-input .btn-detect:hover {
+    background: var(--accent);
+    color: var(--bg-base);
+}
+.manage-detect-results {
+    margin-top: 4px;
+    min-height: 0;
+}
+.detect-candidates {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 4px;
+}
+.btn-detect-item {
+    text-align: left;
+    font-size: var(--font-xs);
+    padding: 3px 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+.btn-detect-item:hover {
+    border-color: var(--accent);
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
 /* Toggle switch */
 .manage-toggle-row {
     display: flex;

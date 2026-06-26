@@ -17,7 +17,7 @@ import java.util.*;
  * 从远程下载的配置缓存中读取全局配置（只读），
  * 包含：应用名、作者、支持 Sw 列表、关于信息.
  * <p>
- * 首次使用时会检查 {@code {user_data_path}/remote_global.json}，
+ * 首次使用时会检查 {@code {user_data_path}/RemoteGlobalConfig.json}，
  * 若不存在则从 classpath 种子数据 {@code data/remote_global_v1.json} 加载.
  */
 public class RemoteGlobalSetting extends AbsSetting {
@@ -38,9 +38,9 @@ public class RemoteGlobalSetting extends AbsSetting {
      */
     @Override
     public synchronized JsonNode load() {
-        // 优先读取 user_data_path/remote_global_config.json
+        // 优先读取 user_data_path/RemoteGlobalConfig.json
         Path remotePath = ConfigManager.getInstance().getUserDataPath()
-                .resolve("remote_global_config.json");
+                .resolve("RemoteGlobalConfig.json");
         dataFile = remotePath.toFile();
 
         if (dataFile.exists()) {
@@ -48,7 +48,7 @@ public class RemoteGlobalSetting extends AbsSetting {
                 data = mapper.readTree(dataFile);
                 return data;
             } catch (IOException e) {
-                LOG.warn("Failed to read remote_global_config.json from user_data_path, falling back to seed", e);
+                LOG.warn("Failed to read RemoteGlobalConfig.json from user_data_path, falling back to seed", e);
             }
         }
 
