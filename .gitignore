@@ -1,11 +1,13 @@
 # === 构建产物 ===
 /build/
+/bin/
 /dist/
 /target/
 /.gradle/
 
 # === IDE / 工具配置 ===
 /.idea/
+/.vscode/
 /.claude/
 *.iml
 
