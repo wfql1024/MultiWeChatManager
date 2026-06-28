@@ -1396,16 +1396,40 @@ public class JsBridge {
     // ==================== 路径自动探测 ====================
 
     /**
-     * 异步探测指定 SW 的三个路径（inst_path, data_dir, dll_dir）。
+     * 异步探测指定 SW 的路径.
+     * <p>
      * 三级探测策略:
-     * 1. reg (注册表) — 从 Windows 注册表读取路径
+     * 1. reg  (注册表) — 从 Windows 注册表读取路径
      * 2. regex (内存映射正则) — 通过进程内存映射文件匹配正则表达式
      * 3. addr (猜测) — 从已知系统目录拼接 sub_path
+     * <p>
+     * 结果通过 {@code _handleAsync('detectPaths', cbId, json)} 推送到 JS.
+     * 每条候选路径包含 path / isDir / exists / sources 字段.
      *
-     * @param swId   软件标识
-     * @param cbId   JS 回调 ID
+     * @param swId         软件标识
+     * @param cbId         JS 回调 ID
+     * @param pathKeysJson 要探测的路径类型 JSON 数组（如 {@code ["inst_path","data_dir"]}）;
+     *                     为空数组时默认探测全部三项
      */
-    public void detectPathsAsync(String swId, String cbId) {
+    public void detectPathsAsync(String swId, String cbId, String pathKeysJson) {
+        // 解析 pathKeys JSON
+        java.util.List<String> pathKeysList = new java.util.ArrayList<>();
+        if (pathKeysJson != null && !pathKeysJson.isBlank()) {
+            try {
+                JsonNode arr = MAPPER.readTree(pathKeysJson);
+                if (arr.isArray()) {
+                    arr.forEach(n -> { if (n.isTextual()) pathKeysList.add(n.asText()); });
+                }
+            } catch (Exception e) {
+                LOG.warn("[路径探测] pathKeysJson 解析失败: {}", pathKeysJson, e);
+            }
+        }
+        String[] keys = pathKeysList.isEmpty()
+                ? new String[]{"inst_path", "data_dir", "dll_dir"}
+                : pathKeysList.toArray(new String[0]);
+
+        LOG.info("[路径探测] 开始: swId={}, keys={}", swId, java.util.Arrays.toString(keys));
+
         THREAD_POOL.submit(() -> {
             try {
                 ObjectNode result = MAPPER.createObjectNode();
@@ -1413,29 +1437,43 @@ public class JsBridge {
 
                 // 构建配置访问器
                 SwConfigAccessor accessor = new SwConfigAccessor(new BridgeConfigProvider());
-                // 构建路径探测器（nativeOps=null 时 reg/regex 返回空，addr 仍可用）
                 SwPathDetective detective = new SwPathDetective(new SwNativeOps());
 
-                // 探测三个路径
-                String[] pathTypes = {"inst_path", "data_dir", "dll_dir"};
-                for (String pt : pathTypes) {
-                    List<SwPathDetective.PathEntry> candidates =
-                            detective.detectAll(swId, pt, accessor);
+                // 批量探测（一次调用，内部并发 + 内存映射共享扫描）
+                java.util.Map<String, java.util.List<SwPathDetective.PathEntry>> detectResults =
+                        detective.detectAll(accessor, swId, keys);
+
+                for (java.util.Map.Entry<String, java.util.List<SwPathDetective.PathEntry>> entry
+                        : detectResults.entrySet()) {
+                    String pt = entry.getKey();
+                    java.util.List<SwPathDetective.PathEntry> candidates = entry.getValue();
                     var arr = result.putArray(pt);
-                    for (SwPathDetective.PathEntry entry : candidates) {
-                        ObjectNode item = MAPPER.createObjectNode();
-                        item.put("path", entry.path);
-                        item.put("isDir", entry.isDir);
-                        item.put("exists", java.nio.file.Files.exists(java.nio.file.Path.of(entry.path)));
-                        arr.add(item);
+                    if (candidates != null) {
+                        for (SwPathDetective.PathEntry pe : candidates) {
+                            ObjectNode item = MAPPER.createObjectNode();
+                            item.put("path", pe.path);
+                            item.put("isDir", pe.isDir);
+                            item.put("exists",
+                                    java.nio.file.Files.exists(java.nio.file.Path.of(pe.path)));
+
+                            // 来源列表
+                            var srcArr = item.putArray("sources");
+                            if (pe.sources != null) {
+                                pe.sources.forEach(srcArr::add);
+                            }
+
+                            arr.add(item);
+                        }
                     }
                 }
 
                 String json = MAPPER.writeValueAsString(result);
-                pushToJs("JFC.bridge._handleAsync('detectPaths'," + cbId + ",'" + json.replace("'", "\\'") + "')");
+                pushToJs("JFC.bridge._handleAsync('detectPaths'," + cbId + ",'"
+                        + json.replace("'", "\\'") + "')");
             } catch (Exception e) {
                 LOG.error("detectPathsAsync failed for {}", swId, e);
-                pushToJs("JFC.bridge._handleAsync('detectPaths'," + cbId + ",'{\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}')");
+                pushToJs("JFC.bridge._handleAsync('detectPaths'," + cbId
+                        + ",'{\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}')");
             }
         });
     }

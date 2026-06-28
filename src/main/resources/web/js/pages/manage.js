@@ -306,6 +306,9 @@ JFC.pages.manage = (function() {
         // 加载数据
         loadSwConfig(swId);
         loadAccountData(swId);
+
+        // 自动探测未填路径（后台执行，不阻塞 UI）
+        setTimeout(function() { autoDetectUnsetPaths(); }, 100);
     }
 
     // ---- 加载 Sw 配置 ----
@@ -390,7 +393,6 @@ JFC.pages.manage = (function() {
 
         setTitleDisplay(displayName);
         refreshSidebarLabel(currentSwId, displayName);
-        flashTitle(trimmed ? '✓ 已保存' : '已重置为默认');
     }
 
     /** 刷新侧栏中指定平台的显示名称 */
@@ -420,11 +422,11 @@ JFC.pages.manage = (function() {
 
             if (f.type === 'path') {
                 html += '<div class="manage-config-input">' +
+                    '<div class="mg-input-dropdown-wrap">' +
                     '<input type="text" id="mg-conf-' + f.key + '" value="' + escapeAttr(val) +
                     '" placeholder="（未设置）" data-field="' + f.key + '">' +
-                    '<button class="btn btn-sm" data-path-key="' + f.key + '">浏览</button>' +
-                    '<button class="btn btn-sm btn-detect" data-detect-key="' + f.key + '">自动探测</button>' +
-                    '<div class="manage-detect-results" id="detect-' + f.key + '"></div>' +
+                    '<button class="btn-detect-dropdown" data-detect-key="' + f.key + '">▼</button>' +
+                    '</div>' +
                     '</div>';
             } else {
                 // text 类型
@@ -443,20 +445,12 @@ JFC.pages.manage = (function() {
 
         content.innerHTML = html;
 
-        // 绑定浏览按钮
-        content.querySelectorAll('[data-path-key]').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var key = this.getAttribute('data-path-key');
-                var currentVal = (getEl('mg-conf-' + key) || {}).value || '';
-                browsePath(key, currentVal);
-            });
-        });
-
-        // 绑定"自动探测"按钮
+        // 绑定下拉探测按钮
         content.querySelectorAll('[data-detect-key]').forEach(function(btn) {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
                 var key = this.getAttribute('data-detect-key');
-                detectPathCandidates(key);
+                toggleDetectDropdown(key);
             });
         });
 
@@ -499,56 +493,253 @@ JFC.pages.manage = (function() {
         }
     }
 
-    // ---- 路径自动探测 ----
-    function detectPathCandidates(pathKey) {
+    // ---- 路径自动探测（下拉面板） ----
+
+    /** pathKey → candidates 缓存，切换平台时清空 */
+    var detectCache = {};
+
+    function clearDetectCache() { detectCache = {}; }
+
+    /** 来源优先级映射（数字越小优先级越高） */
+    var SOURCE_PRIORITY = {
+        '进程': 1,
+        '内存映射': 2,
+        'DLL遍历': 3,
+        '注册表': 4,
+        '猜测': 5,
+        '其他SW': 5
+    };
+
+    /** 取路径的"代表优先级" = 所有来源中最高的优先级 */
+    function repPriority(entry) {
+        if (!entry.sources || entry.sources.length === 0) return 99;
+        var best = 99;
+        entry.sources.forEach(function(s) {
+            var p = SOURCE_PRIORITY[s] || 99;
+            if (p < best) best = p;
+        });
+        return best;
+    }
+
+    /** 选择最佳候选: 存在 > 优先级高 > 来源多 > 第一条 */
+    function selectBestCandidate(candidates) {
+        if (!candidates || candidates.length === 0) return null;
+        var best = null;
+        candidates.forEach(function(c) {
+            if (!best) { best = c; return; }
+            // 存在优先
+            if (c.exists && !best.exists) { best = c; return; }
+            if (!c.exists && best.exists) return;
+            // 代表优先级比较
+            var cp = repPriority(c);
+            var bp = repPriority(best);
+            if (cp < bp) { best = c; return; }
+            if (cp > bp) return;
+            // 来源数量多优先
+            var cSrc = (c.sources && c.sources.length) || 0;
+            var bSrc = (best.sources && best.sources.length) || 0;
+            if (cSrc > bSrc) best = c;
+        });
+        return best;
+    }
+
+    /** 确保 body 下有全局下拉容器 */
+    function getDropdownLayer() {
+        var layer = document.getElementById('mg-dropdown-layer');
+        if (!layer) {
+            layer = document.createElement('div');
+            layer.id = 'mg-dropdown-layer';
+            layer.style.cssText = 'position:fixed;top:0;left:0;width:0;height:0;z-index:40;pointer-events:none;';
+            document.body.appendChild(layer);
+        }
+        return layer;
+    }
+
+    /** 获取或创建某个 pathKey 的下拉面板（挂载在 body 层） */
+    function getOrCreateDropdownPanel(pathKey) {
+        var id = 'detect-panel-' + pathKey;
+        var panel = document.getElementById(id);
+        if (!panel) {
+            panel = document.createElement('div');
+            panel.id = id;
+            panel.className = 'manage-detect-dropdown';
+            panel.style.display = 'none';
+            panel.style.pointerEvents = 'auto';
+            panel.innerHTML = '<div class="detect-dropdown-list" id="detect-list-' + pathKey + '"></div>'
+                + '<div class="detect-dropdown-footer" data-browse-key="' + pathKey + '">浏览...</div>';
+            getDropdownLayer().appendChild(panel);
+
+            // 绑定浏览
+            panel.querySelector('.detect-dropdown-footer').addEventListener('click', function(e) {
+                e.stopPropagation();
+                var cur = (getEl('mg-conf-' + pathKey) || {}).value || '';
+                browsePath(pathKey, cur);
+                closeAllDetectDropdowns();
+            });
+        }
+        return panel;
+    }
+
+    /** 根据输入框位置定位下拉面板 */
+    function positionDropdownPanel(panel, pathKey) {
+        var inputWrap = document.querySelector('#mg-conf-' + pathKey)
+            && document.querySelector('#mg-conf-' + pathKey).closest('.mg-input-dropdown-wrap');
+        if (!inputWrap) return;
+        var rect = inputWrap.getBoundingClientRect();
+        panel.style.position = 'fixed';
+        panel.style.top = rect.bottom + 2 + 'px';
+        panel.style.left = rect.left + 'px';
+        panel.style.width = rect.width + 'px';
+        panel.style.maxHeight = '200px';
+    }
+
+    /** 记录当前打开的面板 key，用于 scroll 事件重定位 */
+    var openPanelKey = null;
+
+    /** scroll/resize 时重定位面板 */
+    function onScrollResize() {
+        if (!openPanelKey) return;
+        var panel = document.getElementById('detect-panel-' + openPanelKey);
+        if (panel && panel.style.display !== 'none') {
+            positionDropdownPanel(panel, openPanelKey);
+        }
+    }
+
+    // 全局 scroll/resize 监听（只绑定一次）
+    var scrollBound = false;
+    function ensureScrollListener() {
+        if (scrollBound) return;
+        scrollBound = true;
+        window.addEventListener('scroll', onScrollResize, true);
+        window.addEventListener('resize', onScrollResize);
+    }
+
+    /** 切换下拉面板 */
+    function toggleDetectDropdown(pathKey) {
+        ensureScrollListener();
+        var btn = document.querySelector('[data-detect-key="' + pathKey + '"]');
+        var panel = getOrCreateDropdownPanel(pathKey);
+        if (!panel || !btn) return;
+
+        // 已展开 → 关闭
+        if (panel.style.display !== 'none') {
+            closeAllDetectDropdowns();
+            return;
+        }
+
+        closeAllDetectDropdowns(pathKey);
+
+        // 定位面板到输入框下方
+        positionDropdownPanel(panel, pathKey);
+        panel.style.display = '';
+        btn.classList.add('active');
+        openPanelKey = pathKey;
+
+        if (detectCache[pathKey]) {
+            renderDropdownList(pathKey, detectCache[pathKey]);
+            return;
+        }
+
+        var list = document.getElementById('detect-list-' + pathKey);
+        if (list) list.innerHTML = '<span class="detect-result-line" style="justify-content:center;color:var(--text-muted);">探测中...</span>';
         if (!currentSwId) return;
-        var container = getEl('detect-' + pathKey);
-        if (!container) return;
-        container.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">探测中...</span>';
 
         try {
             var cbId = JFC.bridge.registerAsync(function(type, data) {
                 if (type !== 'detectPaths') return;
-                try {
-                    if (data && data.error) {
-                        container.innerHTML = '<span style="color:var(--danger);font-size:12px;">探测失败: ' + escapeHtml(data.error) + '</span>';
-                        return;
+                var candidates = data && !data.error ? data[pathKey] : null;
+                detectCache[pathKey] = candidates || [];
+                renderDropdownList(pathKey, detectCache[pathKey]);
+                if (candidates && candidates.length > 0) {
+                    var best = selectBestCandidate(candidates);
+                    if (best) {
+                        var input = getEl('mg-conf-' + pathKey);
+                        if (input && !input.value.trim()) {
+                            input.value = best.path;
+                            saveFieldNow(pathKey, best.path);
+                        }
                     }
-                    var candidates = data && data[pathKey];
-                    if (!candidates || candidates.length === 0) {
-                        container.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">未找到候选路径</span>';
-                        return;
-                    }
-                    // 渲染候选列表
-                    var html = '<div class="detect-candidates">';
-                    candidates.forEach(function(c) {
-                        var exists = c.exists ? ' <span style="color:var(--success);font-size:11px;">[存在]</span>' : '';
-                        html += '<button class="btn btn-sm btn-detect-item" data-candidate="' + escapeAttr(c.path) + '">' +
-                            escapeHtml(c.path) + exists +
-                            '</button>';
-                    });
-                    html += '</div>';
-                    container.innerHTML = html;
-
-                    // 绑定候选按钮
-                    container.querySelectorAll('[data-candidate]').forEach(function(btn) {
-                        btn.addEventListener('click', function() {
-                            var path = this.getAttribute('data-candidate');
-                            var input = getEl('mg-conf-' + pathKey);
-                            if (input) input.value = path;
-                            saveFieldNow(pathKey, path);
-                            container.innerHTML = '';
-                            flashTitle('已选择: ' + path.substring(path.lastIndexOf('/') + 1));
-                        });
-                    });
-                } catch(e) {
-                    container.innerHTML = '<span style="color:var(--danger);font-size:12px;">解析失败</span>';
                 }
             });
-            JFC.bridge.detectPathsAsync(currentSwId, cbId);
+            JFC.bridge.detectPathsAsync(currentSwId, cbId, pathKey);
         } catch(e) {
-            container.innerHTML = '<span style="color:var(--danger);font-size:12px;">探测出错</span>';
+            var flist = document.getElementById('detect-list-' + pathKey);
+            if (flist) flist.innerHTML = '<span class="detect-result-line detect-not-exists">[出错]</span>';
         }
+    }
+
+    function closeAllDetectDropdowns(exceptKey) {
+        if (!exceptKey) openPanelKey = null;
+        ['inst_path', 'data_dir', 'dll_dir'].forEach(function(key) {
+            if (key === exceptKey) return;
+            var panel = document.getElementById('detect-panel-' + key);
+            var btn = document.querySelector('[data-detect-key="' + key + '"]');
+            if (panel) panel.style.display = 'none';
+            if (btn) btn.classList.remove('active');
+        });
+    }
+
+    function renderDropdownList(pathKey, candidates) {
+        var list = document.getElementById('detect-list-' + pathKey);
+        if (!list) return;
+        if (!candidates || candidates.length === 0) {
+            list.innerHTML = '<span class="detect-result-line detect-not-exists">[不存在] （未找到）</span>';
+            return;
+        }
+        var html = '';
+        candidates.forEach(function(c) {
+            html += '<div class="detect-result-line" data-candidate="' + escapeAttr(c.path) + '">'
+                + (c.exists ? '<span class="detect-exists">[存在]</span>' : '<span class="detect-not-exists">[不存在]</span>')
+                + ((c.sources && c.sources.length) ? ' <span class="detect-source">[' + c.sources.join(',') + ']</span>' : '')
+                + ' <span class="detect-path">' + escapeHtml(c.path) + '</span>'
+                + '</div>';
+        });
+        list.innerHTML = html;
+        list.querySelectorAll('[data-candidate]').forEach(function(line) {
+            line.addEventListener('click', function() {
+                var path = this.getAttribute('data-candidate');
+                var input = getEl('mg-conf-' + pathKey);
+                if (input) input.value = path;
+                saveFieldNow(pathKey, path);
+                closeAllDetectDropdowns();
+            });
+        });
+    }
+
+    /** 进入平台时自动探测所有未填路径 */
+    function autoDetectUnsetPaths() {
+        if (!currentSwId) return;
+        clearDetectCache();
+        var emptyKeys = [];
+        ['inst_path', 'data_dir', 'dll_dir'].forEach(function(key) {
+            var input = getEl('mg-conf-' + key);
+            if (input && !input.value.trim()) {
+                emptyKeys.push(key);
+            }
+        });
+        if (emptyKeys.length === 0) return;
+
+        var cbId = JFC.bridge.registerAsync(function(type, data) {
+            if (type !== 'detectPaths') return;
+            if (data && !data.error) {
+                emptyKeys.forEach(function(k) {
+                    var candidates = data[k];
+                    detectCache[k] = candidates || [];
+                    if (candidates && candidates.length > 0) {
+                        var best = selectBestCandidate(candidates);
+                        if (best) {
+                            var input = getEl('mg-conf-' + k);
+                            if (input && !input.value.trim()) {
+                                input.value = best.path;
+                                saveFieldNow(k, best.path);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+        var args = [currentSwId, cbId].concat(emptyKeys);
+        JFC.bridge.detectPathsAsync.apply(JFC.bridge, args);
     }
 
     // ---- 路径浏览 ----
@@ -955,6 +1146,18 @@ JFC.pages.manage = (function() {
             renderAccountTable(accountData);
             updateSelectionUI();
             flashTitle('已删除 ' + count + ' 项');
+        });
+
+        // 点击页面空白处关闭所有探测下拉面板
+        document.addEventListener('click', function(e) {
+            var target = e.target;
+            // 检查点击是否在任何下拉面板或下拉按钮内
+            var insideDropdown = target.closest && (
+                target.closest('.manage-detect-dropdown') ||
+                target.closest('[data-detect-key]'));
+            if (!insideDropdown) {
+                closeAllDetectDropdowns();
+            }
         });
     }
 

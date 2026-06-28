@@ -411,11 +411,264 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
         return results;
     }
 
+    // ==================== 懒加载内存映射迭代器 ====================
+
+    /**
+     * 懒加载迭代器：逐条返回匹配进程的内存映射文件路径.
+     * <p>
+     * 实现策略：
+     * <ol>
+     *   <li>通过 exe 通配符获取目标进程 PID 列表</li>
+     *   <li>剔除子进程</li>
+     *   <li>对每个 PID 创建 {@link NativeMemoryMapIterator}，用 VirtualQueryEx
+     *       逐区域遍历 + GetMappedFileNameW 获取每条映射文件路径</li>
+     *   <li>多个 PID 的迭代器串联为一个组合迭代器</li>
+     * </ol>
+     * <p>
+     * 调用方必须在使用完毕后调用 {@code close()} 释放进程句柄。
+     *
+     * @param sw           软件标识（用于日志）
+     * @param exeWildcards 可执行文件通配符列表
+     * @return 内存映射路径迭代器（可能为空迭代器，绝不返回 null）
+     */
+    @Override
+    public SwPathDetective.NativeOps.MemoryMapIterator iterateMemoryMapPaths(
+            String sw, List<String> exeWildcards) {
+        Map<String, List<Integer>> namePids = getPidsByWildcardsAndGroup(exeWildcards);
+        List<Integer> allPids = new ArrayList<>();
+        for (List<Integer> pids : namePids.values()) allPids.addAll(pids);
+
+        if (allPids.isEmpty()) {
+            LOG.debug("[路径内存映射-ITER] sw={}, 无匹配进程", sw);
+            return EmptyMemoryMapIterator.INSTANCE;
+        }
+
+        LOG.info("[路径内存映射-ITER] sw={}, allPids={}", sw, allPids);
+        allPids = filterOutChildPids(allPids);
+        LOG.info("[路径内存映射-ITER] sw={}, after_remove_child_pids={}", sw, allPids);
+
+        if (allPids.isEmpty()) {
+            return EmptyMemoryMapIterator.INSTANCE;
+        }
+
+        return new CompositeMemoryMapIterator(allPids);
+    }
+
+    /**
+     * 空迭代器 — 无进程匹配时返回.
+     */
+    private static final class EmptyMemoryMapIterator
+            implements SwPathDetective.NativeOps.MemoryMapIterator {
+        static final EmptyMemoryMapIterator INSTANCE = new EmptyMemoryMapIterator();
+
+        @Override
+        public boolean hasNext() { return false; }
+
+        @Override
+        public String next() { throw new java.util.NoSuchElementException(); }
+
+        @Override
+        public void close() {}
+    }
+
+    /**
+     * 组合迭代器 — 串联多个 PID 的 {@link NativeMemoryMapIterator}.
+     */
+    private static final class CompositeMemoryMapIterator
+            implements SwPathDetective.NativeOps.MemoryMapIterator {
+        private final List<Integer> pids;
+        private int pidIndex;
+        private NativeMemoryMapIterator current;
+
+        CompositeMemoryMapIterator(List<Integer> pids) {
+            this.pids = new ArrayList<>(pids);
+            this.pidIndex = 0;
+            advanceToNextPid();
+        }
+
+        /** 前进到下一个有数据的 PID 迭代器 */
+        private void advanceToNextPid() {
+            closeCurrent();
+            while (pidIndex < pids.size()) {
+                int pid = pids.get(pidIndex);
+                pidIndex++;
+                NativeMemoryMapIterator it = new NativeMemoryMapIterator(pid);
+                if (it.hasNext()) {
+                    current = it;
+                    return;
+                }
+                it.close();
+            }
+            current = null;
+        }
+
+        @Override
+        public boolean hasNext() {
+            while (current != null) {
+                if (current.hasNext()) return true;
+                advanceToNextPid();
+            }
+            return false;
+        }
+
+        @Override
+        public String next() {
+            if (!hasNext()) throw new java.util.NoSuchElementException();
+            String path = current.next();
+            // 当前迭代器耗尽时自动前进到下一个 PID
+            if (!current.hasNext()) {
+                advanceToNextPid();
+            }
+            return path;
+        }
+
+        @Override
+        public void close() {
+            closeCurrent();
+        }
+
+        private void closeCurrent() {
+            if (current != null) {
+                current.close();
+                current = null;
+            }
+        }
+    }
+
+    /**
+     * 单进程内存映射迭代器 — 逐区域遍历虚拟地址空间.
+     * <p>
+     * 使用 VirtualQueryEx 遍历每个内存区域，通过 GetMappedFileNameW 获取映射文件路径。
+     * 每次调用 {@code next()} 返回一条路径（统一使用 / 分隔符），
+     * 同时推进到下一个区域。
+     * <p>
+     * 对应 Python: {@code psutil.Process(pid).memory_maps()} 的惰性版本.
+     */
+    private static final class NativeMemoryMapIterator
+            implements SwPathDetective.NativeOps.MemoryMapIterator {
+        private final int pid;
+        private final WinNT.HANDLE hProcess;
+        private long currentAddr;
+        private String nextPath;
+        private boolean exhausted;
+
+        NativeMemoryMapIterator(int pid) {
+            this.pid = pid;
+            this.currentAddr = 0L;
+            this.exhausted = false;
+
+            WinNT.HANDLE h = null;
+            try {
+                h = Kernel32.INSTANCE.OpenProcess(
+                        WinNT.PROCESS_QUERY_INFORMATION | WinNT.PROCESS_VM_READ,
+                        false, pid);
+            } catch (Exception e) {
+                LOG.debug("[路径内存映射-ITER] 无法打开进程: pid={}", pid, e);
+            }
+            this.hProcess = h;
+            if (hProcess == null) {
+                this.exhausted = true;
+                return;
+            }
+            advance();
+        }
+
+        /**
+         * 推进到下一个已提交的内存区域并获取其映射文件路径.
+         */
+        private void advance() {
+            nextPath = null;
+            if (exhausted || hProcess == null) {
+                exhausted = true;
+                return;
+            }
+
+            WinNT.MEMORY_BASIC_INFORMATION mbi = new WinNT.MEMORY_BASIC_INFORMATION();
+            char[] pathBuffer = new char[32768];
+
+            while (true) {
+                WinNT.SIZE_T queried = Kernel32.INSTANCE.VirtualQueryEx(
+                        hProcess,
+                        new com.sun.jna.Pointer(currentAddr),
+                        mbi,
+                        new WinNT.SIZE_T(mbi.size()));
+                if (queried.longValue() == 0) {
+                    exhausted = true;
+                    return;
+                }
+                mbi.read();
+
+                long regionSize = mbi.regionSize.longValue();
+                long baseNative;
+                try {
+                    baseNative = com.sun.jna.Pointer.nativeValue(mbi.baseAddress);
+                } catch (Exception e) {
+                    // Pointer.nativeValue 在某些 JNA 版本不可用，回退到计算
+                    baseNative = currentAddr;
+                }
+
+                // 前进到下一个区域
+                currentAddr = baseNative + regionSize;
+                if (currentAddr <= 0) {
+                    exhausted = true;
+                    return;
+                }
+
+                // 只处理已提交的内存区域
+                if (mbi.state.intValue() == WinNT.MEM_COMMIT) {
+                    Arrays.fill(pathBuffer, '\0');
+                    try {
+                        boolean mappedOk = PsapiExt.INSTANCE.GetMappedFileNameW(
+                                hProcess, mbi.baseAddress, pathBuffer, pathBuffer.length);
+                        if (mappedOk) {
+                            String nativePath = new String(pathBuffer).trim();
+                            if (!nativePath.isEmpty()) {
+                                String dosPath = convertDevicePathToDosPath(nativePath);
+                                if (dosPath != null) {
+                                    nextPath = dosPath.replace('\\', '/');
+                                    return;
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        // 单个区域获取失败，继续下一个
+                        LOG.trace("[路径内存映射-ITER] GetMappedFileNameW 失败: pid={}, addr={}",
+                                pid, baseNative, e);
+                    }
+                }
+                // 未提交或无映射文件 → 继续下一个区域
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            return !exhausted && nextPath != null;
+        }
+
+        @Override
+        public String next() {
+            if (!hasNext()) throw new java.util.NoSuchElementException();
+            String result = nextPath;
+            advance();
+            return result;
+        }
+
+        @Override
+        public void close() {
+            if (hProcess != null) {
+                try {
+                    Kernel32.INSTANCE.CloseHandle(hProcess);
+                } catch (Exception ignored) {}
+            }
+            exhausted = true;
+        }
+    }
+
     /**
      * 从 PID 列表中剔除所有子进程，只保留根进程
      * <p>
-     * 策略：先建立 PID→ParentPID 映射，然后递归剔除所有后代。
-     * 即：如果一个 PID 的父进程（直接或间接）在列表中，则剔除。
+     * 策略：使用 Java ProcessHandle 的 parent()/children() 方法，
+     * 对每个 PID 递归查找所有后代，从目标集合中移除。
      */
     /**
      * 从 PID 列表中剔除所有子进程，只保留根进程

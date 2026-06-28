@@ -15,7 +15,7 @@ JFC.pages.settings = (function() {
 
     var defaultUserDir = '';
     var currentVersion = '4.0.0.7000';
-    var correctSuffix = 'user_files';
+    var correctSuffix = 'UserFiles';
 
     var urlListData = {
         sw:    { defaults: [], userUrls: [], lastValidSet: new Set() },
@@ -82,7 +82,7 @@ JFC.pages.settings = (function() {
             if (!JM()) return;
             var cur = getActualDirVal();
             var sel = JFC.bridge.browseFolder(cur || defaultUserDir || '');
-            if (sel) { setVal('cfg-user-dir', sel); el('cfg-user-dir').classList.remove('cfg-placeholder'); validateUserDir(); }
+            if (sel) { setVal('cfg-user-dir', sel.replace(/\\/g, '/')); el('cfg-user-dir').classList.remove('cfg-placeholder'); validateUserDir(); }
         });
 
         bind('cfg-user-dir', 'blur', validateUserDir);
@@ -167,7 +167,7 @@ JFC.pages.settings = (function() {
         var len = parts.length;
         if (len >= 2 && parts[len-2] === currentVersion && parts[len-1] === correctSuffix) return val;
         if (parts[len-1] === currentVersion) { parts.push(correctSuffix); return parts.join(sep); }
-        if (parts[len-1] === 'user_files' || parts[len-1] === 'dev_user_files') {
+        if (parts[len-1] === 'UserFiles' || parts[len-1] === 'DevUserFiles') {
             parts[parts.length-1] = correctSuffix;
             if (parts.length >= 2 && parts[parts.length-2] === currentVersion) return parts.join(sep);
             parts.splice(parts.length-1, 0, currentVersion);
@@ -334,7 +334,7 @@ JFC.pages.settings = (function() {
         if (!JM()) return;
 
         var dev = JFC.bridge.isDevMode();
-        correctSuffix = dev ? 'dev_user_files' : 'user_files';
+        correctSuffix = dev ? 'DevUserFiles' : 'UserFiles';
 
         var defUrls = JFC.bridge.getDefaultUrls();
         if (defUrls) {
@@ -342,7 +342,7 @@ JFC.pages.settings = (function() {
             urlListData.sw.defaults     = defUrls.remoteSwDefaults || [];
         }
 
-        defaultUserDir = JFC.bridge.getDefaultUserDir() || '';
+        defaultUserDir = (JFC.bridge.getDefaultUserDir() || '').replace(/\\/g, '/');
 
         var data = JFC.bridge.getConfigData();
         if (!data) return;
@@ -354,10 +354,10 @@ JFC.pages.settings = (function() {
         setVal('cfg-proxy-ip', data.proxyIp || '');
         setVal('cfg-proxy-port', data.proxyPort || '');
 
-        var dirVal = data.userDataPath || '';
+        var dirVal = (data.userDataPath || '').replace(/\\/g, '/');
         var dirEl = el('cfg-user-dir');
         if (dirEl) {
-            if (dirVal && dirVal !== defaultUserDir) {
+            if (dirVal && dirVal !== defaultUserDir.replace(/\\/g, '/')) {
                 setVal('cfg-user-dir', dirVal); dirEl.classList.remove('cfg-placeholder');
             } else {
                 dirEl.value = defaultUserDir ? '（默认）' + defaultUserDir : '';
@@ -680,6 +680,7 @@ JFC.pages.settings = (function() {
         document.querySelectorAll('#settings-content > div').forEach(function(div) { div.style.display = 'none'; });
         var target = el('settings-section-' + name);
         if (target) target.style.display = '';
+        if (name === 'appearance') { updateThemeButtons(currentTheme); }
         if (name === 'config')  { initConfigSection(); loadConfigData(); }
         if (name === 'update')  { loadUpdateData(); }
         if (name === 'thanks')  { loadThanksData(); }

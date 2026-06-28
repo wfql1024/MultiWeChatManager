@@ -142,8 +142,11 @@ JFC.bridge = (function() {
         },
 
         // ---- 路径探测 ----
+        // pathKeys 可选，不传则默认探测全部三项；通过 JSON 字符串传递给 Java
         detectPathsAsync: function(swId, cbId) {
-            callWithArgs('detectPathsAsync', swId, String(cbId));
+            var pathKeys = [];
+            for (var i = 2; i < arguments.length; i++) pathKeys.push(arguments[i]);
+            callWithArgs('detectPathsAsync', swId, String(cbId), JSON.stringify(pathKeys));
         }
     };
 })();

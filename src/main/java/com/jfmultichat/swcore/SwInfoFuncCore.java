@@ -101,10 +101,12 @@ public final class SwInfoFuncCore {
      * @return {success, changed, result}
      */
     public String[] detectPath(String sw, String pathType) {
-        List<SwPathDetective.PathEntry> paths = pathDetective.detectAll(sw, pathType, accessor);
-        for (SwPathDetective.PathEntry entry : paths) {
-            if (SwAdapterChecker.isValidSwPath(pathType, sw, entry.path, accessor)) {
-                String standardized = Path.of(entry.path).toAbsolutePath().toString().replace('\\', '/');
+        List<SwPathDetective.PathEntry> entries =
+                pathDetective.detectAll(accessor, sw, pathType).get(pathType);
+        if (entries != null && !entries.isEmpty()) {
+            SwPathDetective.PathEntry first = entries.get(0);
+            if (SwAdapterChecker.isValidSwPath(pathType, sw, first.path, accessor)) {
+                String standardized = Path.of(first.path).toAbsolutePath().toString().replace('\\', '/');
                 boolean changed = accessor.saveAndCheckChanged(sw, pathType, standardized);
                 LOG.info("[路径] 通过探测获得结果: {}", standardized);
                 return new String[]{String.valueOf(true), String.valueOf(changed), standardized};

@@ -4,8 +4,8 @@ set "PATH=D:\SpaceDev\softwareDev\SDKs\gradle-8.8\bin;%JAVA_HOME%\bin;%PATH%"
 cd /d D:\SpaceDev\MyProj\JhiFengMultiChat
 echo.
 echo ========================================
-echo   JhiFengMultiChat Phase 0
+echo           JhiFengMultiChat
 echo ========================================
 echo.
-gradle run --no-daemon
+gradle run --no-daemon --args="--dev"
 pause
