@@ -26,6 +26,13 @@ javafx {
 
 application {
     mainClass.set("com.jfmultichat.Launcher")
+    applicationDefaultJvmArgs = listOf(
+        "--add-exports", "javafx.web/com.sun.javafx.webkit=ALL-UNNAMED"
+    )
+}
+
+tasks.named<JavaExec>("run") {
+    jvmArgs("--add-exports", "javafx.web/com.sun.javafx.webkit=ALL-UNNAMED")
 }
 
 repositories {

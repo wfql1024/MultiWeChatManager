@@ -977,10 +977,11 @@
 
 /* --- Detail Area --- */
 .manage-detail-area {
+    position: relative;
     background: transparent;
     border: none;
     border-radius: 0;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     flex-direction: column;
 }
@@ -1045,14 +1046,6 @@
 }
 
 /* --- Settings Panel (Curtain) --- */
-.manage-settings-panel {
-    border-bottom: 1px solid var(--border-color);
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-}
-.manage-settings-panel.collapsed {
-    max-height: 0 !important;
-}
 .manage-settings-content {
     padding: var(--space-sm) var(--space-md);
     max-height: 180px;
@@ -1243,6 +1236,19 @@
     background: var(--bg-hover);
 }
 
+/* 路径检查提示 */
+.mg-path-hint {
+    position: absolute;
+    top: -18px;
+    right: 4px;
+    font-size: 11px;
+    z-index: 5;
+    pointer-events: none;
+}
+.mg-path-hint.hint-ok  { color: var(--color-success); }
+.mg-path-hint.hint-warn { color: #e6a817; }
+.mg-path-hint.hint-err  { color: var(--color-danger); }
+
 /* 探测结果行 */
 .detect-result-line {
     display: flex;
@@ -1343,31 +1349,36 @@
     background: var(--color-primary);
 }
 
-/* Curtain handle */
+/* Curtain handle — 独立于面板折叠，始终可见 */
+.manage-settings-panel {
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+.manage-settings-panel.collapsed {
+    max-height: 0;
+}
 .manage-curtain-handle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 4px;
-    padding: 4px;
+    position: absolute;
+    left: 0;
+    width: 100%;
+    height: 20px;
+    z-index: 10;
+    overflow: visible;
+    pointer-events: none;
+}
+.manage-curtain-handle #handle-click-zone {
+    pointer-events: auto;
     cursor: pointer;
-    border-top: 1px solid var(--border-color);
-    border-bottom: 1px solid var(--border-color);
-    background: var(--bg-sidebar);
-    transition: background 0.15s;
-    user-select: none;
 }
-.manage-curtain-handle:hover {
-    background: var(--bg-hover);
+.manage-curtain-handle:hover #handle-arrow-up,
+.manage-curtain-handle:hover #handle-arrow-down {
+    stroke: #3b82f6;
 }
-.manage-curtain-arrow {
-    font-size: var(--font-xs);
-    color: var(--text-muted);
+.manage-curtain-handle #handle-curve {
+    pointer-events: none;
 }
-.manage-curtain-label {
-    font-size: var(--font-xs);
-    color: var(--text-secondary);
-}
+.manage-curtain-arrow { display: none; }
+.manage-curtain-label { display: none; }
 
 /* --- Account Section --- */
 .manage-account-section {

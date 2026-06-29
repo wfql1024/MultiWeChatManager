@@ -560,31 +560,61 @@ public final class SwAdapterChecker {
      * @param accessor 配置访问器
      * @return true 如果路径合法
      */
-    public static boolean isValidSwPath(String pathType, String sw, String path, SwConfigAccessor accessor) {
-        if (path == null || path.isBlank()) return false;
+    /**
+     * 路径检查（详细版），返回 valid + 中文提示 reason.
+     */
+    public static Map<String, Object> checkSwPathDetail(
+            String pathType, String sw, String path, SwConfigAccessor accessor) {
+        Map<String, Object> result = new LinkedHashMap<>();
+        LOG.info("[路径检查] sw={}, pathType={}, path={}", sw, pathType, path);
+        if (path == null || path.isBlank()) {
+            result.put("valid", false);
+            result.put("reason", "路径为空，请输入有效路径");
+            LOG.info("[路径检查] 结果=false (路径为空)");
+            return result;
+        }
         path = path.replace('\\', '/');
 
-        // 获取路径检查配置
         JsonNode checkDict = accessor.getRemoteSw(sw, "path_check", pathType);
-        if (checkDict == null || !checkDict.isObject()) return true; // 无检查规则，默认通过
+        if (checkDict == null || !checkDict.isObject()) {
+            result.put("valid", true);
+            result.put("reason", "路径有效");
+            LOG.info("[路径检查] 结果=true (无检查规则，默认通过)");
+            return result;
+        }
+        LOG.info("[路径检查] 检查规则: {}", checkDict);
 
-        // 右接路径检查
-        JsonNode rConcat = checkDict.get("r_concat");
+        // r_concat
+        JsonNode rConcat = checkDict.get(SwCoreConstants.RemoteSwKey.RIGHT_CONCAT);
         if (rConcat != null && rConcat.isTextual()) {
             String rightConcat = rConcat.asText();
             String pathRightConcat = path + "/" + rightConcat;
-            if (!Files.exists(Path.of(pathRightConcat))) return false;
+            boolean exists = Files.exists(Path.of(pathRightConcat));
+            LOG.info("[路径检查] r_concat={}, checkPath={}, exists={}", rightConcat, pathRightConcat, exists);
+            if (!exists) {
+                result.put("valid", false);
+                result.put("reason", "路径下缺少关键文件「" + rightConcat + "」，该路径可能不正确");
+                return result;
+            }
         }
 
-        // 左接路径检查
-        JsonNode lConcat = checkDict.get("l_concat");
+        // l_concat
+        JsonNode lConcat = checkDict.get(SwCoreConstants.RemoteSwKey.LEFT_CONCAT);
         if (lConcat != null && lConcat.isTextual()) {
+            String expected = lConcat.asText();
             String dirName = new File(path).getParent().replace('\\', '/');
-            if (!dirName.endsWith(lConcat.asText())) return false;
+            if (dirName == null) dirName = path;
+            boolean ok = dirName.endsWith(expected);
+            LOG.info("[路径检查] l_concat={}, parentDir={}, endsWith={}", expected, dirName, ok);
+            if (!ok) {
+                result.put("valid", false);
+                result.put("reason", "该路径可能不正确：预期路径应该在「" + expected + "」文件夹之内");
+                return result;
+            }
         }
 
-        // 右含路径检查
-        JsonNode rContain = checkDict.get("r_contain");
+        // r_contain
+        JsonNode rContain = checkDict.get(SwCoreConstants.RemoteSwKey.RIGHT_CONTAIN);
         if (rContain != null && rContain.isTextual()) {
             String containStr = rContain.asText();
             AtomicBoolean found = new AtomicBoolean(false);
@@ -595,16 +625,37 @@ public final class SwAdapterChecker {
                     }
                 });
             } catch (Exception ignored) {}
-            if (!found.get()) return false;
+            LOG.info("[路径检查] r_contain={}, found={}", containStr, found.get());
+            if (!found.get()) {
+                result.put("valid", false);
+                result.put("reason", "该目录下未找到包含「" + containStr + "」的文件，路径可能不完整");
+                return result;
+            }
         }
 
-        // 左含路径检查
-        JsonNode lContain = checkDict.get("l_contain");
+        // l_contain
+        JsonNode lContain = checkDict.get(SwCoreConstants.RemoteSwKey.LEFT_CONTAIN);
         if (lContain != null && lContain.isTextual()) {
+            String expected = lContain.asText();
             String dirPath = new File(path).getParent().replace('\\', '/');
-            if (!dirPath.contains(lContain.asText())) return false;
+            if (dirPath == null) dirPath = path;
+            boolean ok = dirPath.contains(expected);
+            LOG.info("[路径检查] l_contain={}, parentDir={}, contains={}", expected, dirPath, ok);
+            if (!ok) {
+                result.put("valid", false);
+                result.put("reason", "该路径可能不正确：预期路径的上级目录应包含「" + expected + "」");
+                return result;
+            }
         }
 
-        return true;
+        result.put("valid", true);
+        result.put("reason", "路径有效");
+        LOG.info("[路径检查] 结果=true (所有检查通过)");
+        return result;
+    }
+
+    public static boolean isValidSwPath(String pathType, String sw, String path, SwConfigAccessor accessor) {
+        Map<String, Object> detail = checkSwPathDetail(pathType, sw, path, accessor);
+        return Boolean.TRUE.equals(detail.get("valid"));
     }
 }

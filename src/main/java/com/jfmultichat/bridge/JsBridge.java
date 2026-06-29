@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.config.RootConfig;
+import com.jfmultichat.swcore.SwAdapterChecker;
 import com.jfmultichat.swcore.SwConfigAccessor;
 import com.jfmultichat.swcore.SwNativeOps;
 import com.jfmultichat.swcore.SwPathDetective;
@@ -347,7 +348,7 @@ public class JsBridge {
      * 供前端"配置"页的"默认"按钮使用.
      */
     public String getDefaultUserDir() {
-        return com.jfmultichat.config.AppPaths.getDefaultUserDataDir().toString();
+        return com.jfmultichat.config.AppPaths.getDefaultUserDataDir().toString().replace('\\', '/');
     }
 
     /**
@@ -473,15 +474,22 @@ public class JsBridge {
                 rc.setRemoteSwUrls(urls);
             }
 
-            // 用户目录
+            // 用户目录（含冲突处理）
             boolean pathChanged = false;
             if (data.has("userDataPath")) {
-                String newPath = data.get("userDataPath").asText().trim();
-                String oldPath = rc.getUserDataPath();
+                String newPath = data.get("userDataPath").asText().trim().replace('\\', '/');
+                String oldPath = rc.getUserDataPath().replace('\\', '/');
                 if (!newPath.isEmpty() && !newPath.equals(oldPath)) {
-                    cm.setUserDataPath(newPath);
+                    boolean useTarget = data.has("useTarget") && data.get("useTarget").asBoolean(false);
+                    if (!useTarget) {
+                        // 使用当前数据：迁移 + 如有冲突备份目标
+                        cm.migrateAndBackup(newPath, false);
+                    } else {
+                        // 使用目标数据：备份来源，然后切换到目标
+                        cm.migrateAndBackup(newPath, true);
+                    }
                     pathChanged = true;
-                    result.put("newPath", cm.getUserDataPath().toString());
+                    result.put("newPath", cm.getUserDataPath().toString().replace('\\', '/'));
                 }
             }
 
@@ -1476,6 +1484,81 @@ public class JsBridge {
                         + ",'{\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}')");
             }
         });
+    }
+
+    // ==================== 路径检查 ====================
+
+    /**
+     * 检查路径有效性（同步，由输入框 blur 触发）.
+     * 调用 {@link SwAdapterChecker#isValidSwPath} 进行验证.
+     *
+     * @param swId     软件标识
+     * @param pathType 路径类型 (inst_path / data_dir / dll_dir)
+     * @param path     待检查的路径
+     * @return JSON: {valid: bool, exists: bool, reason: string}
+     */
+    public String checkPath(String swId, String pathType, String path) {
+        try {
+            if (path == null || path.isBlank()) {
+                return "{\"valid\":false,\"exists\":false,\"reason\":\"路径为空\"}";
+            }
+            boolean exists = java.nio.file.Files.exists(java.nio.file.Path.of(path));
+            ObjectNode result = MAPPER.createObjectNode();
+            result.put("exists", exists);
+
+            // 路径不存在 → 直接返回，不进入详细检查
+            if (!exists) {
+                result.put("valid", false);
+                result.put("reason", "路径不存在");
+                return MAPPER.writeValueAsString(result);
+            }
+
+            SwConfigAccessor accessor = new SwConfigAccessor(new BridgeConfigProvider());
+            java.util.Map<String, Object> detail =
+                    SwAdapterChecker.checkSwPathDetail(pathType, swId, path, accessor);
+
+            result.put("valid", Boolean.TRUE.equals(detail.get("valid")));
+            String reason = (String) detail.getOrDefault("reason", "路径符合预期");
+            result.put("reason", reason);
+            return MAPPER.writeValueAsString(result);
+        } catch (Exception e) {
+            LOG.warn("checkPath failed for sw={}, type={}, path={}", swId, pathType, path, e);
+            return "{\"valid\":false,\"exists\":false,\"reason\":\"" + e.getMessage() + "\"}";
+        }
+    }
+
+    // ==================== 数据迁移 ====================
+
+    /**
+     * 检查目标数据目录是否存在文件（冲突检测）.
+     *
+     * @param newPath 目标数据目录路径
+     * @return JSON: {conflict: bool, existingFiles: int}
+     */
+    public String checkDataDirConflict(String newPath) {
+        try {
+            ObjectNode result = MAPPER.createObjectNode();
+            if (newPath == null || newPath.isBlank()) {
+                result.put("conflict", false);
+                result.put("existingFiles", 0);
+                return MAPPER.writeValueAsString(result);
+            }
+            java.nio.file.Path target = java.nio.file.Path.of(newPath);
+            boolean hasFiles = java.nio.file.Files.exists(target)
+                    && java.nio.file.Files.isDirectory(target);
+            int count = 0;
+            if (hasFiles) {
+                try (var stream = java.nio.file.Files.list(target)) {
+                    count = (int) stream.count();
+                }
+            }
+            result.put("conflict", count > 0);
+            result.put("existingFiles", count);
+            return MAPPER.writeValueAsString(result);
+        } catch (Exception e) {
+            LOG.warn("checkDataDirConflict failed: {}", newPath, e);
+            return "{\"conflict\":false,\"existingFiles\":0}";
+        }
     }
 
     /**

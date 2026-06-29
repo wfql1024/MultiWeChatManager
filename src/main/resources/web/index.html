@@ -112,12 +112,22 @@
                                 </div>
                             </div>
 
-                            <!-- 窗帘把手 -->
-                            <div id="manage-curtain-handle" class="manage-curtain-handle">
-                                <span class="manage-curtain-arrow">∧</span>
-                                <span class="manage-curtain-label">⚙ 设置</span>
-                                <span class="manage-curtain-arrow">∧</span>
-                            </div>
+                            <!-- 窗帘把手 — 独立于面板折叠状态，始终可见 -->
+                            <svg id="manage-curtain-handle" class="manage-curtain-handle" preserveAspectRatio="none">
+                                <defs>
+                                    <clipPath id="handle-clip">
+                                        <rect x="-9999" y="0" width="19998" height="20"/>
+                                    </clipPath>
+                                </defs>
+                                <g clip-path="url(#handle-clip)">
+                                    <path id="handle-curve" d="" fill="#1e1e1e"/>
+                                </g>
+                                <rect id="handle-click-zone" x="-30" y="0" width="60" height="20" fill="transparent"/>
+                                <g id="handle-arrow-group" pointer-events="none" stroke="#999" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline id="handle-arrow-up" points="-8,9 0,3 8,9" fill="none" style="display:none"/>
+                                    <polyline id="handle-arrow-down" points="-8,3 0,9 8,3" fill="none"/>
+                                </g>
+                            </svg>
 
                             <!-- 账号列表区 -->
                             <div class="manage-account-section">

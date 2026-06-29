@@ -157,24 +157,23 @@ JFC.pages.settings = (function() {
     function getActualDirVal() {
         var input = el('cfg-user-dir');
         if (!input || input.classList.contains('cfg-placeholder')) return '';
-        return getVal('cfg-user-dir');
+        return getVal('cfg-user-dir').replace(/\\/g, '/');
     }
 
     function ensureCorrectTail(val) {
-        var sep = val.indexOf('\\') >= 0 ? '\\' : '/';
         var parts = val.replace(/\\/g, '/').split('/').filter(function(p) { return p.length > 0; });
-        if (parts.length === 0) return currentVersion + sep + correctSuffix;
+        if (parts.length === 0) return currentVersion + '/' + correctSuffix;
         var len = parts.length;
-        if (len >= 2 && parts[len-2] === currentVersion && parts[len-1] === correctSuffix) return val;
-        if (parts[len-1] === currentVersion) { parts.push(correctSuffix); return parts.join(sep); }
+        if (len >= 2 && parts[len-2] === currentVersion && parts[len-1] === correctSuffix) return parts.join('/');
+        if (parts[len-1] === currentVersion) { parts.push(correctSuffix); return parts.join('/'); }
         if (parts[len-1] === 'UserFiles' || parts[len-1] === 'DevUserFiles') {
             parts[parts.length-1] = correctSuffix;
-            if (parts.length >= 2 && parts[parts.length-2] === currentVersion) return parts.join(sep);
+            if (parts.length >= 2 && parts[parts.length-2] === currentVersion) return parts.join('/');
             parts.splice(parts.length-1, 0, currentVersion);
-            return parts.join(sep);
+            return parts.join('/');
         }
         parts.push(currentVersion); parts.push(correctSuffix);
-        return parts.join(sep);
+        return parts.join('/');
     }
 
     // ==================== 远程URL列表 ====================
@@ -408,6 +407,21 @@ JFC.pages.settings = (function() {
             remoteGlobalUrls: collectUserUrls('global'),
             remoteSwUrls: collectUserUrls('sw')
         };
+
+        // 数据目录变更 → 检查目标是否已有文件，弹出迁移提示
+        var newPath = data.userDataPath || '';
+        if (newPath) {
+            var conflict = JFC.bridge.checkDataDirConflict(newPath);
+            if (conflict && conflict.conflict) {
+                var choice = confirm(
+                    '目标目录中已有 ' + conflict.existingFiles + ' 个文件。\n\n' +
+                    '点击「确定」将目标目录中的数据导入当前软件\n' +
+                    '点击「取消」以当前软件数据为准（目标目录将被备份到桌面）\n\n' +
+                    '目标: ' + newPath
+                );
+                data.useTarget = !choice;  // 确定 = 使用目标, 取消 = 使用当前
+            }
+        }
 
         var result = JFC.bridge.saveConfigData(JSON.stringify(data));
         if (result && result.success) {

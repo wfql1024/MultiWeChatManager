@@ -14,16 +14,16 @@ public final class AppPaths {
     /** 当前版本号（来自 AppVersion.VERSION） */
     public static final String VERSION = AppVersion.VERSION;
 
-    private static volatile boolean devMode = false;
-
     private AppPaths() {}
 
+    /** @deprecated 使用 {@link AppEnv#isDev()} 替代 */
+    @Deprecated
     public static void setDevMode(boolean dev) {
-        devMode = dev;
+        System.setProperty("run.mode", dev ? "DEV" : "PROD");
     }
 
     public static boolean isDevMode() {
-        return devMode;
+        return AppEnv.isDev();
     }
 
     // ==================== 目录路径 ====================
@@ -46,13 +46,13 @@ public final class AppPaths {
 
     /** 根配置文件路径 */
     public static Path getRootConfigPath() {
-        String fileName = devMode ? "DevRootConfig.json" : "RootConfig.json";
+        String fileName = AppEnv.isDev() ? "DevRootConfig.json" : "RootConfig.json";
         return getVersionDir().resolve(fileName);
     }
 
     /** 默认用户数据目录 */
     public static Path getDefaultUserDataDir() {
-        String dirName = devMode ? "DevUserFiles" : "UserFiles";
+        String dirName = AppEnv.isDev() ? "DevUserFiles" : "UserFiles";
         return getVersionDir().resolve(dirName);
     }
 

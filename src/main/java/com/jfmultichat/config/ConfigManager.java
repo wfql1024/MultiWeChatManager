@@ -185,33 +185,86 @@ public class ConfigManager {
 
     public RootConfig getRootConfig() { return rootConfig; }
 
-    public void setUserDataPath(String newPath) {
+    /**
+     * 迁移数据目录，支持冲突处理与备份.
+     *
+     * @param newPath   目标路径
+     * @param useTarget true=使用目标已有数据（来源备份到桌面），false=覆盖目标（目标备份到桌面）
+     */
+    public void migrateAndBackup(String newPath, boolean useTarget) {
         Path resolved = resolveUserDataPath(newPath);
         if (resolved.equals(userDataPath)) return;
 
         Path oldPath = userDataPath;
-        AppPaths.ensureDir(resolved);
-        try {
-            copyDir(oldPath, resolved);
-            LOG.info("Migrated user data from {} to {}", oldPath, resolved);
-        } catch (IOException e) {
-            LOG.error("Failed to migrate user data to {}", resolved, e);
-            return;
+        Path newResolved = resolved;
+        AppPaths.ensureDir(newResolved);
+
+        // 备份目标或来源到桌面
+        Path desktop = java.nio.file.Path.of(System.getProperty("user.home"), "Desktop");
+        String dateStr = java.time.LocalDate.now().toString();
+        if (useTarget) {
+            // 使用目标数据 → 备份来源到桌面，保留目标
+            if (java.nio.file.Files.exists(oldPath) && hasFiles(oldPath)) {
+                Path bak = desktop.resolve(oldPath.getFileName() + "_备份_" + dateStr);
+                try {
+                    copyDir(oldPath, bak);
+                    LOG.info("来源数据已备份到 {}", bak);
+                } catch (java.io.IOException e) {
+                    LOG.warn("备份来源失败: {}", e.getMessage());
+                }
+            }
+        } else {
+            // 使用当前数据 → 备份目标到桌面，再迁移
+            if (java.nio.file.Files.exists(newResolved) && hasFiles(newResolved)) {
+                Path bak = desktop.resolve(newResolved.getFileName() + "_备份_" + dateStr);
+                try {
+                    copyDir(newResolved, bak);
+                    LOG.info("目标数据已备份到 {}", bak);
+                } catch (java.io.IOException e) {
+                    LOG.warn("备份目标失败: {}", e.getMessage());
+                }
+            }
         }
 
-        userDataPath = resolved;
-        rootConfig.setUserDataPath(resolved.toString());
+        // 迁移（useTarget=false 时复制来源→目标）
+        if (!useTarget) {
+            try {
+                copyDir(oldPath, newResolved);
+                LOG.info("数据已从 {} 迁移到 {}", oldPath, newResolved);
+            } catch (java.io.IOException e) {
+                LOG.error("迁移失败: {}", e.getMessage());
+                return;
+            }
+        }
+
+        // 更新路径 + 重新加载
+        userDataPath = newResolved;
+        rootConfig.setUserDataPath(newResolved.toString());
         saveRootConfig();
+        reloadStores(newResolved);
+        System.setProperty("jfmultichat.logdir", newResolved.resolve("logs").toString());
+    }
 
-        // 重新加载
-        localGlobalConfigStore  = new JsonConfigStore(AppPaths.getLocalGlobalConfigPath(resolved));
-        localSwConfigStore      = new JsonConfigStore(AppPaths.getLocalSwConfigPath(resolved));
-        swAccDataStore          = new JsonConfigStore(AppPaths.getSwAccDataPath(resolved));
-        swCacheStore            = new JsonConfigStore(AppPaths.getSwCachePath(resolved));
-        remoteGlobalConfigStore = new JsonConfigStore(AppPaths.getRemoteGlobalConfigPath(resolved));
-        remoteSwConfigStore     = new JsonConfigStore(AppPaths.getRemoteSwConfigPath(resolved));
+    private boolean hasFiles(Path dir) {
+        if (!java.nio.file.Files.exists(dir)) return false;
+        try (var s = java.nio.file.Files.list(dir)) {
+            return s.findFirst().isPresent();
+        } catch (java.io.IOException e) {
+            return false;
+        }
+    }
 
-        System.setProperty("jfmultichat.logdir", resolved.resolve("logs").toString());
+    private void reloadStores(Path dataPath) {
+        localGlobalConfigStore  = new JsonConfigStore(AppPaths.getLocalGlobalConfigPath(dataPath));
+        localSwConfigStore      = new JsonConfigStore(AppPaths.getLocalSwConfigPath(dataPath));
+        swAccDataStore          = new JsonConfigStore(AppPaths.getSwAccDataPath(dataPath));
+        swCacheStore            = new JsonConfigStore(AppPaths.getSwCachePath(dataPath));
+        remoteGlobalConfigStore = new JsonConfigStore(AppPaths.getRemoteGlobalConfigPath(dataPath));
+        remoteSwConfigStore     = new JsonConfigStore(AppPaths.getRemoteSwConfigPath(dataPath));
+    }
+
+    public void setUserDataPath(String newPath) {
+        migrateAndBackup(newPath, false);
     }
 
     private void copyDir(Path src, Path dst) throws IOException {

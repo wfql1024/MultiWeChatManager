@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>设置把手形状预览 — Ω 横向拉伸</title>
+<style>
+  :root { --bg: #1a1a2e; --fg: #e0e0e0; --accent: #3b82f6; }
+  body { margin:0; padding:20px; font:14px "Microsoft YaHei",system-ui; background:var(--bg); color:var(--fg); }
+  .layout { display:flex; gap:24px; max-width:1100px; margin:0 auto; align-items:flex-start; }
+  .canvas-box { flex:1; min-width:600px; background:#12121f; border-radius:8px; padding:20px; }
+  canvas { display:block; margin:0 auto; background:#12121f; }
+  .controls { width:280px; background:#1e1e32; border-radius:8px; padding:20px; flex-shrink:0; }
+  .controls label { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; font-size:13px; }
+  .controls input[type=range] { flex:1; margin:0 8px; accent-color:var(--accent); }
+  .controls .val { width:54px; text-align:right; font-family:monospace; color:var(--accent); }
+  h2 { margin:0 0 16px; font-size:18px; }
+  .fixed { color:#888; font-size:12px; margin-bottom:8px; }
+  .fixed b { color:var(--accent); }
+  .note { color:#888; font-size:12px; margin-top:16px; line-height:1.6; max-width:1100px; margin:12px auto 0; }
+  .note b { color:var(--accent); }
+</style>
+<script>
+/*
+  新公式:
+    右侧: f_R(x) = A * (arctan(Ω·x + φ) - y₀)
+    左侧: f_L(x) = A * (arctan(-Ω·x + φ) - y₀)
+
+  帽沿高度（x→±∞）: A * (π/2 - y₀)
+
+  固定参数: A=6, φ=30, y₀=1.2
+  可调参数: Ω (omega) = 横向拉伸
+*/
+
+const A_fixed = 6, phi_fixed = 30, y0_fixed = 1.2;
+let omega = 0.060;
+
+function curveR(x, omega) { return A_fixed * (Math.atan(omega * x + phi_fixed) - y0_fixed); }
+function curveL(x, omega) { return A_fixed * (Math.atan(-omega * x + phi_fixed) - y0_fixed); }
+
+function draw() {
+  const c = document.getElementById('cv');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cx = W / 2;
+  const brimVal = A_fixed * (Math.PI/2 - y0_fixed); // 帽沿函数值
+  const refY = H * 0.45;
+  const scale = 8; // 放大系数使曲线可见
+
+  // 坐标映射
+  function mx(x) { return cx + x; }
+  function my(fx) { return refY - (fx - brimVal) * scale; }
+
+  // 中线
+  ctx.strokeStyle = '#444'; ctx.lineWidth = 1;
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 帽沿参考线
+  ctx.strokeStyle = '#555';
+  ctx.beginPath(); ctx.moveTo(0, refY); ctx.lineTo(W, refY); ctx.stroke();
+  ctx.fillStyle = '#888'; ctx.font = '11px monospace';
+  ctx.fillText('— 设置区域底部（帽沿= A·(π/2−y₀) = ' + brimVal.toFixed(2) + '）', W - 380, refY - 6);
+
+  // 填充形状
+  const halfW = 180;
+  ctx.beginPath();
+  for (let x = 0; x <= halfW; x += 0.5) {
+    const fy = curveR(x, omega);
+    const py = my(fy);
+    if (x === 0) ctx.moveTo(mx(x), py); else ctx.lineTo(mx(x), py);
+  }
+  ctx.lineTo(mx(halfW), H);
+  ctx.lineTo(mx(-halfW), H);
+  for (let x = -halfW; x <= 0; x += 0.5) {
+    const fy = curveL(x, omega);
+    ctx.lineTo(mx(x), my(fy));
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(59,130,246,0.25)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(59,130,246,0.7)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 中心最低点
+  const centerVal = curveR(0, omega);
+  const cy0 = my(centerVal);
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(cx, cy0, 3, 0, Math.PI*2); ctx.fill();
+  ctx.font = '11px monospace';
+  ctx.fillText('点击区', cx + 8, cy0 + 4);
+
+  // 曲线标注
+  ctx.fillStyle = 'rgba(59,130,246,0.6)';
+  ctx.font = '10px monospace';
+  ctx.fillText('f(x)=A·(arctan(Ω·x+φ)−y₀)', mx(20), my(curveR(20, omega)) - 10);
+
+  // 显示值
+  document.getElementById('valOmega').textContent = omega.toFixed(3);
+  document.getElementById('valDip').textContent = Math.abs(centerVal - brimVal).toFixed(2);
+}
+
+function update() {
+  omega = parseFloat(document.getElementById('slOmega').value);
+  draw();
+}
+
+window.onload = update;
+</script>
+</head>
+<body>
+<h2 style="text-align:center;margin-bottom:20px;">把手形状预览 — Ω 横向拉伸参数</h2>
+<div class="layout">
+  <div class="canvas-box">
+    <canvas id="cv" width="700" height="360"></canvas>
+  </div>
+  <div class="controls">
+    <h2>固定参数</h2>
+    <div class="fixed">A = <b>6</b>（竖直压扁）</div>
+    <div class="fixed">φ = <b>30</b>（宽度一半）</div>
+    <div class="fixed">y₀ = <b>1.2</b>（帽沿贴近底部，略小于 π/2≈1.57）</div>
+    <hr style="border-color:#333;margin:16px 0;">
+    <h2>可调参数</h2>
+    <label>Ω (横向拉伸) <input id="slOmega" type="range" min="0.010" max="0.200" step="0.001" value="0.060" oninput="update()"> <span class="val" id="valOmega"></span></label>
+    <hr style="border-color:#333;margin:16px 0;">
+    <h2>派生值</h2>
+    <label>公式 <span style="color:#888;font-size:11px">右: A·(atan(Ω·x+φ)−y₀)<br>左: A·(atan(−Ω·x+φ)−y₀)</span></label>
+    <label>帽沿高度 <span class="val" style="color:#888">A·(π/2−y₀)</span></label>
+  </div>
+</div>
+<div class="note">
+  <b>Ω 作用：</b>控制横向拉伸。Ω 越小 → 曲线越"宽"（拐点间距越大，帽子越宽）<br>
+  <b>帽沿：</b>y = A·(π/2 − y₀)，左右两端趋近于此水平线，与设置区域底部齐平。<br>
+  <b>y₀=1.2</b> 略小于 π/2≈1.57，使帽沿略微低于 arctan 上界，贴合底部参考线。
+</div>
+</body>
+</html>

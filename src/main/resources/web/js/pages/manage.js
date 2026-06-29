@@ -106,31 +106,29 @@ JFC.pages.manage = (function() {
         });
     }
 
-    // ---- 窗帘偏好持久化 ----
+    // ---- 窗帘偏好持久化（per-platform → LocalSwConfig.json.settings_expanded） ----
     function loadCurtainPreferences() {
+        // 改为在 selectPlatform 时按需加载，此处只清空缓存
+        settingsCollapsed = {};
+    }
+
+    function loadCurtainStateForSw(swId) {
         try {
-            var global = JFC.bridge.callJson('getGlobalConfig');
-            if (global && global.manage_settings_collapsed) {
-                var saved = global.manage_settings_collapsed;
-                if (typeof saved === 'object') {
-                    Object.keys(saved).forEach(function(k) {
-                        settingsCollapsed[k] = !!saved[k];
-                    });
-                }
+            var config = JFC.bridge.getSwConfig(swId);
+            if (config && config.hasOwnProperty('settings_expanded')) {
+                settingsCollapsed[swId] = !config.settings_expanded;
+            } else {
+                settingsCollapsed[swId] = false; // 无记录时默认展开
             }
-        } catch(e) { /* 忽略 */ }
+        } catch(e) {
+            settingsCollapsed[swId] = false;
+        }
     }
 
     function saveCurtainPreference(swId, collapsed) {
         settingsCollapsed[swId] = collapsed;
         try {
-            var prefs = {};
-            Object.keys(settingsCollapsed).forEach(function(k) {
-                prefs[k] = settingsCollapsed[k];
-            });
-            JFC.bridge.callWithArgs('saveGlobalConfig', JSON.stringify({
-                manage_settings_collapsed: prefs
-            }));
+            JFC.bridge.updateSwField(swId, 'settings_expanded', JSON.stringify(!collapsed));
         } catch(e) { /* 忽略 */ }
     }
 
@@ -304,6 +302,7 @@ JFC.pages.manage = (function() {
         show('manage-page-detail');
 
         // 加载数据
+        loadCurtainStateForSw(swId);
         loadSwConfig(swId);
         loadAccountData(swId);
 
@@ -468,6 +467,21 @@ JFC.pages.manage = (function() {
                 var field = this.getAttribute('data-field');
                 debounceSaveField(field, this.value);
             });
+        });
+
+        // 绑定路径输入框 blur 检查
+        content.querySelectorAll('#mg-conf-inst_path, #mg-conf-data_dir, #mg-conf-dll_dir').forEach(function(input) {
+            input.addEventListener('blur', function() {
+                validatePathInput(this);
+            });
+            // 下拉面板选路 → 值变化后立即检查
+            input.addEventListener('change', function() {
+                validatePathInput(this);
+            });
+            // 页面初始加载时检查已填值
+            if (input.value.trim()) {
+                setTimeout(function() { validatePathInput(input); }, 200);
+            }
         });
     }
 
@@ -635,11 +649,7 @@ JFC.pages.manage = (function() {
         btn.classList.add('active');
         openPanelKey = pathKey;
 
-        if (detectCache[pathKey]) {
-            renderDropdownList(pathKey, detectCache[pathKey]);
-            return;
-        }
-
+        // 显示加载提示，保留旧缓存（不主动清空）
         var list = document.getElementById('detect-list-' + pathKey);
         if (list) list.innerHTML = '<span class="detect-result-line" style="justify-content:center;color:var(--text-muted);">探测中...</span>';
         if (!currentSwId) return;
@@ -647,16 +657,23 @@ JFC.pages.manage = (function() {
         try {
             var cbId = JFC.bridge.registerAsync(function(type, data) {
                 if (type !== 'detectPaths') return;
-                var candidates = data && !data.error ? data[pathKey] : null;
-                detectCache[pathKey] = candidates || [];
-                renderDropdownList(pathKey, detectCache[pathKey]);
-                if (candidates && candidates.length > 0) {
-                    var best = selectBestCandidate(candidates);
+                var newCandidates = (data && !data.error) ? (data[pathKey] || []) : [];
+                // 合并新结果与旧缓存：同路径覆盖，新路径追加，旧独有保留
+                var oldCache = detectCache[pathKey] || [];
+                var mergedMap = {};
+                oldCache.forEach(function(c) { mergedMap[c.path] = c; });
+                newCandidates.forEach(function(c) { mergedMap[c.path] = c; });
+                var merged = Object.values(mergedMap);
+                detectCache[pathKey] = merged;
+                renderDropdownList(pathKey, merged);
+                if (merged.length > 0) {
+                    var best = selectBestCandidate(newCandidates.length > 0 ? newCandidates : merged);
                     if (best) {
                         var input = getEl('mg-conf-' + pathKey);
                         if (input && !input.value.trim()) {
                             input.value = best.path;
                             saveFieldNow(pathKey, best.path);
+                            validatePathInput(input);
                         }
                     }
                 }
@@ -686,8 +703,17 @@ JFC.pages.manage = (function() {
             list.innerHTML = '<span class="detect-result-line detect-not-exists">[不存在] （未找到）</span>';
             return;
         }
+        // 排序：存在优先 → 来源优先级高优先 → 来源数量多优先
+        var sorted = candidates.slice().sort(function(a, b) {
+            if (a.exists !== b.exists) return a.exists ? -1 : 1;
+            var pa = repPriority(a), pb = repPriority(b);
+            if (pa !== pb) return pa - pb;
+            var sa = (a.sources && a.sources.length) || 0;
+            var sb = (b.sources && b.sources.length) || 0;
+            return sb - sa;
+        });
         var html = '';
-        candidates.forEach(function(c) {
+        sorted.forEach(function(c) {
             html += '<div class="detect-result-line" data-candidate="' + escapeAttr(c.path) + '">'
                 + (c.exists ? '<span class="detect-exists">[存在]</span>' : '<span class="detect-not-exists">[不存在]</span>')
                 + ((c.sources && c.sources.length) ? ' <span class="detect-source">[' + c.sources.join(',') + ']</span>' : '')
@@ -699,9 +725,14 @@ JFC.pages.manage = (function() {
             line.addEventListener('click', function() {
                 var path = this.getAttribute('data-candidate');
                 var input = getEl('mg-conf-' + pathKey);
-                if (input) input.value = path;
+                if (input) {
+                    input.value = path;
+                    removePathHint(input);
+                }
                 saveFieldNow(pathKey, path);
                 closeAllDetectDropdowns();
+                // 选路后触发检查
+                if (input) validatePathInput(input);
             });
         });
     }
@@ -732,6 +763,7 @@ JFC.pages.manage = (function() {
                             if (input && !input.value.trim()) {
                                 input.value = best.path;
                                 saveFieldNow(k, best.path);
+                                validatePathInput(input);
                             }
                         }
                     }
@@ -740,6 +772,56 @@ JFC.pages.manage = (function() {
         });
         var args = [currentSwId, cbId].concat(emptyKeys);
         JFC.bridge.detectPathsAsync.apply(JFC.bridge, args);
+    }
+
+    // ---- 路径输入框失焦检查 ----
+    function validatePathInput(input) {
+        var key = input.getAttribute('data-field');
+        if (!key || !currentSwId) return;
+        var val = input.value.trim();
+        if (!val) { clearPathHint(input); return; }
+
+        var result = JFC.bridge.checkPath(currentSwId, key, val);
+        if (!result) { clearPathHint(input); return; }
+
+        removePathHint(input);
+        var hint = document.createElement('span');
+        hint.className = 'mg-path-hint';
+
+        if (result.valid) {
+            input.style.borderColor = 'var(--color-success)';
+            hint.className += ' hint-ok';
+            hint.textContent = result.reason || '路径有效';
+        } else if (result.exists) {
+            input.style.borderColor = '#e6a817';
+            hint.className += ' hint-warn';
+            hint.textContent = result.reason || '路径不符合预期';
+        } else {
+            input.style.borderColor = 'var(--color-danger)';
+            hint.className += ' hint-err';
+            hint.textContent = result.reason || '路径不存在';
+        }
+
+        var wrap = input.closest('.mg-input-dropdown-wrap');
+        if (wrap) wrap.appendChild(hint);
+
+        // 绿色/橙色自动保存，红色不保存
+        if (result.valid || result.exists) {
+            saveFieldNow(key, val);
+        }
+    }
+
+    function removePathHint(input) {
+        var wrap = input.closest('.mg-input-dropdown-wrap');
+        if (wrap) {
+            var old = wrap.querySelector('.mg-path-hint');
+            if (old) old.remove();
+        }
+        input.style.borderColor = '';
+    }
+
+    function clearPathHint(input) {
+        removePathHint(input);
     }
 
     // ---- 路径浏览 ----
@@ -787,51 +869,149 @@ JFC.pages.manage = (function() {
     }
 
     // ---- 窗帘折叠/展开 ----
+    /* ===== 把手形状参数（已调优，勿改） =====
+     * 公式: fy(x) = A * (atan(Ω * |x| + φ) + Y)
+     * 填充区域: 曲线与 y=0（绘图区顶部/面板底边）围成的封闭区域
+     */
+    var HANDLE_O = 0.5;    // Ω — 横向拉伸
+    var HANDLE_A = 5;      // A — 竖直压扁
+    var HANDLE_P = -15;    // φ — 宽度一半（负值使拐点位于原点附近）
+    var HANDLE_Y = -1.2;   // Y — 帽沿贴近顶部 (略小于 π/2≈1.57)
+    /* =================================== */
+
+    /** 构建全宽 SVG 把手曲线
+     *  单位: px, 1:1 无缩放
+     *  坐标系: 原点(0,0)=绘图区顶部中央, x右正, y上正
+     *  SVG 转换: SVG_x = originX + x,  SVG_y = originY - y
+     *  封闭区域: y=0(顶部) 与 曲线 之间，超出 viewBox 的部分被裁剪 */
+    function buildHandleCurveD(halfW) {
+        var O = HANDLE_O, A = HANDLE_A, P = HANDLE_P, Y = HANDLE_Y;
+        var hw = halfW || 300;
+
+        // fy(x) = A * (atan(Ω * |x| + φ) + Y) — 数学坐标 (y上正)
+        function fy(x) { return A * (Math.atan(O * Math.abs(x) + P) + Y); }
+
+        // 坐标转换: math → SVG, scale=1:1
+        function sx(mx) { return mx; }
+        function sy(my) { return -my; }   // originY=0 → SVG y=0, y上正 → SVG y下正
+
+        var d = '', steps = 120;
+
+        // 裁剪: SVG viewBox 自动裁剪超出部分
+
+        // 封闭区域 = y≥0 与 曲线之间
+        // 路径: 左上→右上(沿y=0)→右下(沿右竖边)→沿曲线→左下(沿左竖边)
+        d += 'M' + (-hw) + ',0';             // 左上角
+        d += ' L' + hw + ',0';               // 右上角 (沿 y=0)
+        d += ' L' + hw + ',' + sy(fy(hw)).toFixed(2);  // 右端降至曲线
+        // 沿曲线从右到左
+        for (var i = steps; i >= -steps; i--) {
+            var mx = i * hw / steps;
+            d += ' L' + sx(mx).toFixed(1) + ',' + sy(fy(mx)).toFixed(2);
+        }
+        d += ' L' + (-hw) + ',0';            // 左端升至左上
+        d += ' Z';
+        return d;
+    }
+
+    // ---- 设置区域高度拖动 ----
+    function positionHandle() {
+        var panel = getEl('manage-settings-panel');
+        var svg = getEl('manage-curtain-handle');
+        if (!panel || !svg) return;
+        var rect = panel.getBoundingClientRect();
+        var parentRect = panel.parentElement.getBoundingClientRect();
+        svg.style.top = (rect.bottom - parentRect.top) + 'px';
+
+        var pw = panel.clientWidth;
+        var halfW = Math.round(pw / 2);
+        svg.setAttribute('viewBox', (-halfW) + ' 0 ' + (2*halfW) + ' 20');
+
+        var path = svg.querySelector('#handle-curve');
+        if (path && !path.getAttribute('d')) {
+            path.setAttribute('d', buildHandleCurveD(halfW));
+        }
+    }
+
     function applyCurtainState(expand) {
         var panel = getEl('manage-settings-panel');
-        var handle = getEl('manage-curtain-handle');
-        if (!panel || !handle) return;
+        if (!panel) return;
 
+        // 延迟测量：等待 WebView 完成新 DOM 布局后再定位
+        requestAnimationFrame(function() {
+            positionHandle();
+        });
+
+        var arrowUp = document.querySelector('#handle-arrow-up');
+        var arrowDown = document.querySelector('#handle-arrow-down');
         if (expand) {
-            // 展开
             panel.classList.remove('collapsed');
-            panel.style.maxHeight = '';
-            handle.innerHTML = '<span class="manage-curtain-arrow">∧</span>' +
-                '<span class="manage-curtain-label">⚙ 设置</span>' +
-                '<span class="manage-curtain-arrow">∧</span>';
+            panel.style.maxHeight = '';  // 清除收起动画残留的 inline max-height:0
+            if (arrowUp) arrowUp.style.display = '';
+            if (arrowDown) arrowDown.style.display = 'none';
         } else {
-            // 收起
             panel.classList.add('collapsed');
             panel.style.maxHeight = '0px';
-            handle.innerHTML = '<span class="manage-curtain-arrow">∨</span>' +
-                '<span class="manage-curtain-label">⚙ 设置</span>' +
-                '<span class="manage-curtain-arrow">∨</span>';
+            if (arrowUp) arrowUp.style.display = 'none';
+            if (arrowDown) arrowDown.style.display = '';
         }
+    }
+
+    /** 动画期间持续更新把手位置 */
+    var _followRaf = null;
+    function startFollow() {
+        stopFollow();
+        var deadline = performance.now() + 400;
+        function tick() {
+            if (performance.now() > deadline) { stopFollow(); return; }
+            positionHandle();
+            _followRaf = requestAnimationFrame(tick);
+        }
+        _followRaf = requestAnimationFrame(tick);
+    }
+    function stopFollow() {
+        if (_followRaf) { cancelAnimationFrame(_followRaf); _followRaf = null; }
     }
 
     function toggleSettingsPanel(expand) {
         if (!currentSwId) return;
-
         var panel = getEl('manage-settings-panel');
         if (!panel) return;
 
+        var arrowUp = document.querySelector('#handle-arrow-up');
+        var arrowDown = document.querySelector('#handle-arrow-down');
+
         if (expand) {
-            // 展开动画
             panel.classList.remove('collapsed');
-            panel.style.maxHeight = panel.scrollHeight + 'px';
-            // 动画结束后取消限制
-            var onTransitionEnd = function() {
-                panel.style.maxHeight = '';
-                panel.removeEventListener('transitionend', onTransitionEnd);
-            };
-            panel.addEventListener('transitionend', onTransitionEnd);
+            var realH = panel.scrollHeight;
+            panel.style.transition = 'none';
+            panel.style.maxHeight = '0px';
+            panel.offsetHeight;
+            requestAnimationFrame(function() {
+                panel.style.transition = '';
+                panel.style.maxHeight = realH + 'px';
+                var done = function() {
+                    panel.style.maxHeight = '';
+                    panel.removeEventListener('transitionend', done);
+                    stopFollow();
+                    positionHandle();
+                };
+                panel.addEventListener('transitionend', done);
+            });
+            if (arrowUp) arrowUp.style.display = '';
+            if (arrowDown) arrowDown.style.display = 'none';
+            startFollow();
         } else {
-            // 收起动画
             panel.style.maxHeight = panel.scrollHeight + 'px';
+            panel.offsetHeight;
             requestAnimationFrame(function() {
                 panel.style.maxHeight = '0px';
                 panel.classList.add('collapsed');
             });
+            if (arrowUp) arrowUp.style.display = 'none';
+            if (arrowDown) arrowDown.style.display = '';
+            startFollow();
+            setTimeout(function() { stopFollow(); positionHandle(); }, 350);
         }
 
         applyCurtainState(expand);
@@ -1092,12 +1272,12 @@ JFC.pages.manage = (function() {
             saveRemark(this.value);
         });
 
-        // 窗帘把手
-        bind('manage-curtain-handle', 'click', function() {
+        // 窗帘把手 — 绑在可接收事件的热区 rect 上（SVG 自身 pointer-events:none）
+        bind('handle-click-zone', 'click', function() {
             if (!currentSwId) return;
             var panel = getEl('manage-settings-panel');
             var isCollapsed = panel && panel.classList.contains('collapsed');
-            toggleSettingsPanel(!!isCollapsed);  // 反转
+            toggleSettingsPanel(!!isCollapsed);
         });
 
         // 批量隐藏

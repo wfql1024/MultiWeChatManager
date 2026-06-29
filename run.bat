@@ -7,5 +7,5 @@ echo ========================================
 echo           JhiFengMultiChat
 echo ========================================
 echo.
-gradle run --no-daemon --args="--dev"
+gradle run --no-daemon
 pause

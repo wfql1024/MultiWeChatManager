@@ -1,5 +1,6 @@
 package com.jfmultichat;
 
+import com.jfmultichat.config.AppEnv;
 import com.jfmultichat.config.AppPaths;
 import com.jfmultichat.config.ConfigManager;
 import javafx.application.Application;
@@ -17,11 +18,10 @@ import javafx.application.Application;
 public class Launcher {
 
     public static void main(String[] args) {
-        // 检测 --dev 标志
-        boolean devMode = false;
+        // --dev → 设置系统属性 run.mode=DEV（AppEnv 自动读取）
         for (String arg : args) {
             if ("--dev".equals(arg)) {
-                devMode = true;
+                System.setProperty("run.mode", "DEV");
                 break;
             }
         }
@@ -31,7 +31,7 @@ public class Launcher {
         System.setProperty("jfmultichat.logdir", defaultLogDir);
 
         // 2. 初始化 ConfigManager（创建目录 + 默认配置文件）
-        ConfigManager.init(devMode);
+        ConfigManager.init(AppEnv.isDev());
 
         // 3. 更新日志目录到实际 user_data_path
         String actualLogDir = ConfigManager.getInstance().getLogsDir().toString();

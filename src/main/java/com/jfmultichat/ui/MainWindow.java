@@ -234,6 +234,11 @@ public class MainWindow {
         webEngine.setJavaScriptEnabled(true);
         webView.setStyle("-fx-background-color: transparent;");
 
+        // JS console.log → Java 日志（终端可见，需要 --add-exports）
+        com.sun.javafx.webkit.WebConsoleListener.setDefaultListener(
+            (wv, msg, line, src) ->
+                LOG.info("[WebView-{}] L{} {}", src, line, msg));
+
         // WebView 级鼠标事件 — 确保内容区也能触发缩放
         webView.addEventFilter(MouseEvent.MOUSE_MOVED, this::onMouseMoved);
         webView.addEventFilter(MouseEvent.MOUSE_PRESSED, this::onScenePressed);
