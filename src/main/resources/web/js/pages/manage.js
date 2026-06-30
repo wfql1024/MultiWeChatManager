@@ -987,6 +987,8 @@ JFC.pages.manage = (function() {
             panel.style.transition = 'none';
             panel.style.maxHeight = '0px';
             panel.offsetHeight;
+            if (arrowUp) arrowUp.style.display = '';
+            if (arrowDown) arrowDown.style.display = 'none';
             requestAnimationFrame(function() {
                 panel.style.transition = '';
                 panel.style.maxHeight = realH + 'px';
@@ -998,23 +1000,26 @@ JFC.pages.manage = (function() {
                 };
                 panel.addEventListener('transitionend', done);
             });
-            if (arrowUp) arrowUp.style.display = '';
-            if (arrowDown) arrowDown.style.display = 'none';
             startFollow();
         } else {
             panel.style.maxHeight = panel.scrollHeight + 'px';
             panel.offsetHeight;
-            requestAnimationFrame(function() {
-                panel.style.maxHeight = '0px';
-                panel.classList.add('collapsed');
-            });
             if (arrowUp) arrowUp.style.display = 'none';
             if (arrowDown) arrowDown.style.display = '';
+            requestAnimationFrame(function() {
+                panel.style.transition = '';
+                panel.style.maxHeight = '0px';
+                panel.classList.add('collapsed');
+                var done2 = function() {
+                    panel.removeEventListener('transitionend', done2);
+                    stopFollow();
+                    positionHandle();
+                };
+                panel.addEventListener('transitionend', done2);
+            });
             startFollow();
-            setTimeout(function() { stopFollow(); positionHandle(); }, 350);
         }
 
-        applyCurtainState(expand);
         saveCurtainPreference(currentSwId, !expand);
     }
 
