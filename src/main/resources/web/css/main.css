@@ -1366,12 +1366,21 @@
     overflow: visible;
     pointer-events: none;
 }
-.manage-curtain-handle #handle-click-zone {
+.manage-curtain-handle #handle-click-zone,
+.manage-curtain-handle #handle-drag-left,
+.manage-curtain-handle #handle-drag-right {
     pointer-events: auto;
+}
+.manage-curtain-handle #handle-click-zone {
     cursor: pointer;
 }
-.manage-curtain-handle:hover #handle-arrow-up,
-.manage-curtain-handle:hover #handle-arrow-down {
+.manage-curtain-handle #handle-drag-left,
+.manage-curtain-handle #handle-drag-right {
+    cursor: ns-resize;
+}
+/* 仅中央点击区悬浮时着色箭头，拖动区不着色 */
+.manage-curtain-handle.click-hover #handle-arrow-up,
+.manage-curtain-handle.click-hover #handle-arrow-down {
     stroke: #3b82f6;
 }
 .manage-curtain-handle #handle-curve {

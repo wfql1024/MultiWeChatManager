@@ -332,7 +332,46 @@ JFC.pages.manage = (function() {
 
         // 恢复窗帘状态
         var shouldExpand = settingsCollapsed[swId] !== true;
-        applyCurtainState(shouldExpand);
+        var panel = getEl('manage-settings-panel');
+        var savedH = loadHeightPreference(swId);
+
+        // 展开状态下恢复存储高度（带过渡动画）
+        if (shouldExpand && panel && savedH !== 180) {
+            // 先快照到默认高度
+            panel.classList.remove('collapsed');
+            panel.style.transition = 'none';
+            panel.style.maxHeight = '180px';
+            panel.offsetHeight;
+            // 再过渡到存储高度
+            requestAnimationFrame(function() {
+                panel.style.transition = '';
+                panel.style.maxHeight = savedH + 'px';
+                var content = getEl('manage-settings-content');
+                if (content) content.style.maxHeight = (savedH - 20) + 'px';
+                var done = function() {
+                    panel.removeEventListener('transitionend', done);
+                    positionHandle();
+                };
+                panel.addEventListener('transitionend', done);
+            });
+            // 动画期间跟随
+            startFollow();
+        } else {
+            applyCurtainState(shouldExpand);
+        }
+
+        // 更新箭头状态
+        var arrowUp = document.querySelector('#handle-arrow-up');
+        var arrowDown = document.querySelector('#handle-arrow-down');
+        if (shouldExpand) {
+            if (arrowUp) arrowUp.style.display = '';
+            if (arrowDown) arrowDown.style.display = 'none';
+        } else {
+            if (arrowUp) arrowUp.style.display = 'none';
+            if (arrowDown) arrowDown.style.display = '';
+        }
+
+        initHeightDrag();
 
         // 如果有 inst_path，尝试加载图标
         if (config.inst_path && config.inst_path.toLowerCase().endsWith('.exe') && !iconCache[swId]) {
@@ -933,20 +972,100 @@ JFC.pages.manage = (function() {
         }
     }
 
+    // ---- 设置区域高度拖动 ----
+    var _dragStartY = 0, _dragStartH = 0, _dragged = false;
+
+    function initHeightDrag() {
+        var left = document.querySelector('#handle-drag-left');
+        var right = document.querySelector('#handle-drag-right');
+        if (!left && !right) return;
+        if (left && left._dragBound) return;
+        if (right && right._dragBound) return;
+
+        function onDown(e) {
+            if (e.button !== 0) return;
+            e.preventDefault();
+            e.stopPropagation();
+            var panel = getEl('manage-settings-panel');
+            if (!panel) return;
+            var ph = parseInt(panel.style.maxHeight) || panel.scrollHeight || 180;
+            _dragStartY = e.clientY;
+            _dragStartH = ph;
+            _dragged = false;
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        }
+        function onMove(e) {
+            if (Math.abs(e.clientY - _dragStartY) < 3) return;
+            _dragged = true;
+            var panel = getEl('manage-settings-panel');
+            if (!panel) return;
+            var content = getEl('manage-settings-content');
+            var maxH = content ? content.scrollHeight + 40 : 600;
+            var minH = 100;
+            var newH = Math.max(minH, Math.min(maxH, _dragStartH - (_dragStartY - e.clientY)));
+            panel.style.transition = 'none';
+            panel.style.maxHeight = newH + 'px';
+            if (content) content.style.maxHeight = (newH - 20) + 'px';
+            positionHandle();
+        }
+        function onUp(e) {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            var panel = getEl('manage-settings-panel');
+            if (panel) { panel.style.transition = ''; positionHandle(); }
+            if (_dragged) {
+                e.stopPropagation();
+                var h = panel ? parseInt(panel.style.maxHeight) || 180 : 180;
+                if (currentSwId) saveHeightPreference(currentSwId, h);
+            }
+        }
+        if (left) { left._dragBound = true; left.addEventListener('mousedown', onDown); }
+        if (right) { right._dragBound = true; right.addEventListener('mousedown', onDown); }
+
+        // 仅中央点击区 hover 时着色箭头
+        var clickZone = document.querySelector('#handle-click-zone');
+        var svg = document.querySelector('#manage-curtain-handle');
+        if (clickZone && svg) {
+            clickZone.addEventListener('mouseenter', function() { svg.classList.add('click-hover'); });
+            clickZone.addEventListener('mouseleave', function() { svg.classList.remove('click-hover'); });
+        }
+    }
+
+    function saveHeightPreference(swId, h) {
+        try {
+            JFC.bridge.updateSwField(swId, 'settings_height', JSON.stringify(Math.round(h)));
+        } catch(e) {}
+    }
+
+    function loadHeightPreference(swId) {
+        try {
+            var config = JFC.bridge.getSwConfig(swId);
+            if (config && config.settings_height) {
+                return parseInt(config.settings_height);
+            }
+        } catch(e) {}
+        return 180; // 默认高度
+    }
+
     function applyCurtainState(expand) {
         var panel = getEl('manage-settings-panel');
         if (!panel) return;
 
-        // 延迟测量：等待 WebView 完成新 DOM 布局后再定位
+        // 双 RAF 等待 WebView 完成新内容布局
         requestAnimationFrame(function() {
-            positionHandle();
+            requestAnimationFrame(function() {
+                positionHandle();
+            });
         });
 
         var arrowUp = document.querySelector('#handle-arrow-up');
         var arrowDown = document.querySelector('#handle-arrow-down');
         if (expand) {
             panel.classList.remove('collapsed');
-            panel.style.maxHeight = '';  // 清除收起动画残留的 inline max-height:0
+            panel.style.maxHeight = '';
+            var content = getEl('manage-settings-content');
+            if (content) content.style.maxHeight = '';
             if (arrowUp) arrowUp.style.display = '';
             if (arrowDown) arrowDown.style.display = 'none';
         } else {
@@ -1021,6 +1140,11 @@ JFC.pages.manage = (function() {
         }
 
         saveCurtainPreference(currentSwId, !expand);
+        // 展开时保存当前高度
+        if (expand) {
+            var h = parseInt(panel.style.maxHeight) || panel.scrollHeight || 180;
+            saveHeightPreference(currentSwId, h);
+        }
     }
 
     // ---- 加载账号数据 ----

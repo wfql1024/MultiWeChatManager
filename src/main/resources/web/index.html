@@ -122,7 +122,12 @@
                                 <g clip-path="url(#handle-clip)">
                                     <path id="handle-curve" d="" fill="#1e1e1e"/>
                                 </g>
-                                <rect id="handle-click-zone" x="-30" y="0" width="60" height="20" fill="transparent"/>
+                                <!-- 左侧拖动区 -->
+                                <rect id="handle-drag-left"  x="-9999" y="0" width="9969" height="20" fill="transparent" style="cursor:ns-resize"/>
+                                <!-- 中央点击区 -->
+                                <rect id="handle-click-zone" x="-30" y="0" width="60" height="20" fill="transparent" style="cursor:pointer"/>
+                                <!-- 右侧拖动区 -->
+                                <rect id="handle-drag-right" x="30" y="0" width="9969" height="20" fill="transparent" style="cursor:ns-resize"/>
                                 <g id="handle-arrow-group" pointer-events="none" stroke="#999" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline id="handle-arrow-up" points="-8,9 0,3 8,9" fill="none" style="display:none"/>
                                     <polyline id="handle-arrow-down" points="-8,3 0,9 8,3" fill="none"/>
