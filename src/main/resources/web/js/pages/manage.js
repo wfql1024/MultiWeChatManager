@@ -281,7 +281,14 @@ JFC.pages.manage = (function() {
         selectPlatformInternal(swId);
     }
 
+    /** 切换前记录上一个平台的高度，供切换动画使用 */
+    var _prevHeight = 180;
+
     function selectPlatformInternal(swId) {
+        var panel = getEl('manage-settings-panel');
+        if (panel && currentSwId) {
+            _prevHeight = panel.getBoundingClientRect().height | 0;
+        }
         currentSwId = swId;
         selectedIds.clear();
         updateSelectionUI();
@@ -330,48 +337,28 @@ JFC.pages.manage = (function() {
         // 渲染设置表单
         renderSettingsPanel(config);
 
-        // 恢复窗帘状态
         var shouldExpand = settingsCollapsed[swId] !== true;
-        var panel = getEl('manage-settings-panel');
         var savedH = loadHeightPreference(swId);
 
-        // 展开状态下恢复存储高度（带过渡动画）
-        if (shouldExpand && panel && savedH !== 180) {
-            // 先快照到默认高度
-            panel.classList.remove('collapsed');
-            panel.style.transition = 'none';
-            panel.style.maxHeight = '180px';
-            panel.offsetHeight;
-            // 再过渡到存储高度
-            requestAnimationFrame(function() {
-                panel.style.transition = '';
-                panel.style.maxHeight = savedH + 'px';
-                var content = getEl('manage-settings-content');
-                if (content) content.style.maxHeight = (savedH - 20) + 'px';
-                var done = function() {
-                    panel.removeEventListener('transitionend', done);
-                    positionHandle();
-                };
-                panel.addEventListener('transitionend', done);
-            });
-            // 动画期间跟随
-            startFollow();
-        } else {
-            applyCurtainState(shouldExpand);
-        }
-
-        // 更新箭头状态
-        var arrowUp = document.querySelector('#handle-arrow-up');
-        var arrowDown = document.querySelector('#handle-arrow-down');
         if (shouldExpand) {
-            if (arrowUp) arrowUp.style.display = '';
-            if (arrowDown) arrowDown.style.display = 'none';
+            // 展开：先设箭头 + 解除 collapsed，再由 animatePanelHeight 接管高度（避免 applyCurtainState 清除 maxHeight 造成闪屏）
+            getEl('manage-settings-panel').classList.remove('collapsed');
+            var aUp = document.querySelector('#handle-arrow-up');
+            var aDown = document.querySelector('#handle-arrow-down');
+            if (aUp) aUp.style.display = '';
+            if (aDown) aDown.style.display = 'none';
+            animatePanelHeight(savedH, null, _prevHeight);
         } else {
-            if (arrowUp) arrowUp.style.display = 'none';
-            if (arrowDown) arrowDown.style.display = '';
+            applyCurtainState(false);
+            var aUp2 = document.querySelector('#handle-arrow-up');
+            var aDown2 = document.querySelector('#handle-arrow-down');
+            if (aUp2) aUp2.style.display = 'none';
+            if (aDown2) aDown2.style.display = '';
         }
 
+        if (swId === 'TestSw') startHeightTest(); else stopHeightTest();
         initHeightDrag();
+        initHandleSvg();
 
         // 如果有 inst_path，尝试加载图标
         if (config.inst_path && config.inst_path.toLowerCase().endsWith('.exe') && !iconCache[swId]) {
@@ -954,18 +941,13 @@ JFC.pages.manage = (function() {
     }
 
     // ---- 设置区域高度拖动 ----
-    function positionHandle() {
-        var panel = getEl('manage-settings-panel');
+    function initHandleSvg() {
         var svg = getEl('manage-curtain-handle');
-        if (!panel || !svg) return;
-        var rect = panel.getBoundingClientRect();
-        var parentRect = panel.parentElement.getBoundingClientRect();
-        svg.style.top = (rect.bottom - parentRect.top) + 'px';
-
-        var pw = panel.clientWidth;
+        if (!svg) return;
+        var container = svg.parentElement;
+        var pw = container ? container.clientWidth : 600;
         var halfW = Math.round(pw / 2);
         svg.setAttribute('viewBox', (-halfW) + ' 0 ' + (2*halfW) + ' 20');
-
         var path = svg.querySelector('#handle-curve');
         if (path && !path.getAttribute('d')) {
             path.setAttribute('d', buildHandleCurveD(halfW));
@@ -989,6 +971,7 @@ JFC.pages.manage = (function() {
             var panel = getEl('manage-settings-panel');
             if (!panel) return;
             var ph = parseInt(panel.style.maxHeight) || panel.scrollHeight || 180;
+            if (ph < 50) ph = panel.scrollHeight || 180;
             _dragStartY = e.clientY;
             _dragStartH = ph;
             _dragged = false;
@@ -1007,16 +990,16 @@ JFC.pages.manage = (function() {
             panel.style.transition = 'none';
             panel.style.maxHeight = newH + 'px';
             if (content) content.style.maxHeight = (newH - 20) + 'px';
-            positionHandle();
+            initHandleSvg();
         }
         function onUp(e) {
             document.removeEventListener('mousemove', onMove);
             document.removeEventListener('mouseup', onUp);
             var panel = getEl('manage-settings-panel');
-            if (panel) { panel.style.transition = ''; positionHandle(); }
+            if (panel) { panel.style.transition = 'max-height 0.3s ease'; initHandleSvg(); }
             if (_dragged) {
                 e.stopPropagation();
-                var h = panel ? parseInt(panel.style.maxHeight) || 180 : 180;
+                var h = panel ? (parseInt(panel.style.maxHeight) || panel.scrollHeight || 180) : 180;
                 if (currentSwId) saveHeightPreference(currentSwId, h);
             }
         }
@@ -1030,6 +1013,50 @@ JFC.pages.manage = (function() {
             clickZone.addEventListener('mouseenter', function() { svg.classList.add('click-hover'); });
             clickZone.addEventListener('mouseleave', function() { svg.classList.remove('click-hover'); });
         }
+    }
+
+    /** 统一的设置区域高度动画：当前高度 → targetH，双向对称 */
+    function animatePanelHeight(targetHeight, callback, fromHeight) {
+        var panel = getEl('manage-settings-panel');
+        if (!panel) return;
+
+        var currentHeight = fromHeight || (panel.getBoundingClientRect().height | 0);
+        console.log('[动画测试] 高度从 ' + currentHeight + ' → ' + targetHeight);
+
+        panel.style.transition = 'none';
+        panel.style.maxHeight = currentHeight + 'px';
+        panel.offsetHeight;
+
+        requestAnimationFrame(function () {
+            // 清除内容限制，让面板的 maxHeight 完全控制可见区域
+            var content = getEl('manage-settings-content');
+            if (content) content.style.maxHeight = 'none';
+
+            panel.style.transition = 'max-height 0.3s ease';
+            panel.style.maxHeight = targetHeight + 'px';
+
+            var done = function (e) {
+                if (e.propertyName !== 'max-height') return;
+                panel.removeEventListener('transitionend', done);
+                if (callback) callback();
+            };
+
+            panel.addEventListener('transitionend', done);
+        });
+    }
+
+    // ==== 调试用：WeChat 平台自动随机高度测试 ====
+    var _testTimer = null;
+    function startHeightTest() {
+        stopHeightTest();
+        _testTimer = setInterval(function() {
+            if (currentSwId !== 'TestSw') return;
+            var h = Math.floor(100 + Math.random() * 200); // 100~300
+            animatePanelHeight(h);
+        }, 1000);
+    }
+    function stopHeightTest() {
+        if (_testTimer) { clearInterval(_testTimer); _testTimer = null; }
     }
 
     function saveHeightPreference(swId, h) {
@@ -1055,7 +1082,7 @@ JFC.pages.manage = (function() {
         // 双 RAF 等待 WebView 完成新内容布局
         requestAnimationFrame(function() {
             requestAnimationFrame(function() {
-                positionHandle();
+                initHandleSvg();
             });
         });
 
@@ -1076,22 +1103,6 @@ JFC.pages.manage = (function() {
         }
     }
 
-    /** 动画期间持续更新把手位置 */
-    var _followRaf = null;
-    function startFollow() {
-        stopFollow();
-        var deadline = performance.now() + 400;
-        function tick() {
-            if (performance.now() > deadline) { stopFollow(); return; }
-            positionHandle();
-            _followRaf = requestAnimationFrame(tick);
-        }
-        _followRaf = requestAnimationFrame(tick);
-    }
-    function stopFollow() {
-        if (_followRaf) { cancelAnimationFrame(_followRaf); _followRaf = null; }
-    }
-
     function toggleSettingsPanel(expand) {
         if (!currentSwId) return;
         var panel = getEl('manage-settings-panel');
@@ -1102,41 +1113,40 @@ JFC.pages.manage = (function() {
 
         if (expand) {
             panel.classList.remove('collapsed');
-            var realH = panel.scrollHeight;
+            var realH = parseInt(panel.style.maxHeight) || panel.scrollHeight || 180;
+            // 如果之前是收起状态（高度0），目标至少是默认展开高度
+            if (realH < 100) realH = panel.scrollHeight || 180;
             panel.style.transition = 'none';
             panel.style.maxHeight = '0px';
             panel.offsetHeight;
             if (arrowUp) arrowUp.style.display = '';
             if (arrowDown) arrowDown.style.display = 'none';
             requestAnimationFrame(function() {
-                panel.style.transition = '';
+                panel.style.transition = 'max-height 0.3s ease';
                 panel.style.maxHeight = realH + 'px';
                 var done = function() {
                     panel.style.maxHeight = '';
                     panel.removeEventListener('transitionend', done);
-                    stopFollow();
-                    positionHandle();
+                    initHandleSvg();
                 };
                 panel.addEventListener('transitionend', done);
             });
-            startFollow();
         } else {
-            panel.style.maxHeight = panel.scrollHeight + 'px';
+            var curH = parseInt(panel.style.maxHeight) || panel.scrollHeight || 180;
+            panel.style.maxHeight = curH + 'px';
             panel.offsetHeight;
             if (arrowUp) arrowUp.style.display = 'none';
             if (arrowDown) arrowDown.style.display = '';
             requestAnimationFrame(function() {
-                panel.style.transition = '';
+                panel.style.transition = 'max-height 0.3s ease';
                 panel.style.maxHeight = '0px';
                 panel.classList.add('collapsed');
                 var done2 = function() {
                     panel.removeEventListener('transitionend', done2);
-                    stopFollow();
-                    positionHandle();
+                    initHandleSvg();
                 };
                 panel.addEventListener('transitionend', done2);
             });
-            startFollow();
         }
 
         saveCurtainPreference(currentSwId, !expand);

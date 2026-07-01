@@ -1349,7 +1349,10 @@
     background: var(--color-primary);
 }
 
-/* Curtain handle — 独立于面板折叠，始终可见 */
+/* Curtain container — 面板 + 把手一体，容器驱动高度，把手自然跟随 */
+.manage-curtain-container {
+    position: relative;
+}
 .manage-settings-panel {
     overflow: hidden;
     transition: max-height 0.3s ease;
@@ -1360,6 +1363,7 @@
 .manage-curtain-handle {
     position: absolute;
     left: 0;
+    bottom: -20px;                  /* 把手顶部对齐面板底部 */
     width: 100%;
     height: 20px;
     z-index: 10;

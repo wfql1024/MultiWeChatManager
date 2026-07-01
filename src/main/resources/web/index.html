@@ -105,15 +105,14 @@
                                 </div>
                             </div>
 
-                            <!-- 设置区（窗帘折叠） -->
-                            <div id="manage-settings-panel" class="manage-settings-panel">
-                                <div class="manage-settings-content" id="manage-settings-content">
-                                    <!-- 动态渲染配置表单 -->
+                            <!-- 窗帘容器：面板 + 把手一体 -->
+                            <div id="manage-curtain-container" class="manage-curtain-container">
+                                <div id="manage-settings-panel" class="manage-settings-panel">
+                                    <div class="manage-settings-content" id="manage-settings-content">
+                                        <!-- 动态渲染配置表单 -->
+                                    </div>
                                 </div>
-                            </div>
-
-                            <!-- 窗帘把手 — 独立于面板折叠状态，始终可见 -->
-                            <svg id="manage-curtain-handle" class="manage-curtain-handle" preserveAspectRatio="none">
+                                <svg id="manage-curtain-handle" class="manage-curtain-handle" preserveAspectRatio="none">
                                 <defs>
                                     <clipPath id="handle-clip">
                                         <rect x="-9999" y="0" width="19998" height="20"/>
@@ -133,6 +132,7 @@
                                     <polyline id="handle-arrow-down" points="-8,3 0,9 8,3" fill="none"/>
                                 </g>
                             </svg>
+                            </div><!-- /manage-curtain-container -->
 
                             <!-- 账号列表区 -->
                             <div class="manage-account-section">
