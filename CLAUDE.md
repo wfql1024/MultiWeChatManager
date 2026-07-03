@@ -1,7 +1,7 @@
 # CLAUDE.md — JhiFengMultiChat（极峰多聊）
 
-> 最后更新: 2026-06-30
-> 当前阶段: Phase 1.7 — SVG 数学曲线把手 + 状态持久化 + AppEnv 环境判断 + 展开收起动画修复
+> 最后更新: 2026-07-04
+> 当前阶段: Phase 1.9 — page-main 独立副本 + 最左栏平台列表 + 双页面共存
 
 ---
 
@@ -285,6 +285,10 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 日志�
 5. **编译不要问** — `gradle build` 直接执行，只有 `rm -rf` 这类高风险命令需要确认
 6. **Python 旧版参考** — 业务逻辑优先参考 `legacy_python/` 中对应代码
 7. **字体** — 基础字体 `"Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui`；等宽字体 `"Cascadia Code", "Consolas", monospace`
+8. **理解指令要精准** — 用户说"复制粘贴"，就是字面意义的完整复制粘贴，不要自作主张做 ID 去重、变量重命名、sed 替换等"优化"。用户说"不要改"，就一个字都别改。
+9. **复用已验证代码** — 已完美工作的动画/逻辑，直接复用，不要重写、不要"改进"、不要创造新方案。用户明确指出参考对象时，照搬即可。
+10. **简单操作不要复杂化** — 移动按钮、复制页面等简单需求，直接操作 DOM/文件，不要引入新架构、新模块、新命名体系。越简单越好。
+11. **回退要干脆** — 用户要求回退到提交时，直接 `git checkout HEAD -- <files>`，不要反复确认、不要保留"可能有用的改动"。
 
 ---
 
@@ -324,6 +328,16 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 日志�
 32. **平台状态持久化** → 设置面板展开/收起状态按平台独立存储在 `LocalSwConfig.json.{swId}.settings_expanded`（boolean），用 `updateSwField` 写入、`getSwConfig` 读取；切换平台时先读后应用
 33. **AppEnv 运行环境判断** → `AppEnv.java`：先读 JVM 系统属性 `run.mode`（支持 DEV/TEST/PROD），再自动检测 code source 路径是否以 `.jar` 结尾 → PROD:DEV；`Launcher` 中 `--dev` 参数改为设 `run.mode=DEV` 系统属性
 34. **路径检查详细提示** → `SwAdapterChecker.checkSwPathDetail()` 返回 `{valid, reason}` 含中文提示：r_concat→"缺少关键文件「{file}」", l_concat→"应在「{text}」文件夹内", r_contain→"未找到含「{text}」的文件", l_contain→"上级目录应包含「{text}」"
+35. **跨平台动画复用原则** → 不同平台之间切换时的高度过渡，视觉效果上完全可以转化为"同一页面内的高度变化动画"。先记录 A 平台当前高度 `_prevHeight`，切换到 B 后直接调用已验证的单页面动画函数 `animatePanelHeight(savedH, null, _prevHeight)`，从 `_prevHeight` 平滑过渡到 `savedH`。不引入新条件分支、不手动控制 transition、不复刻展开/收回逻辑。**已验证可复用的动画函数，就直接复用，不要重写。**
+36. **把手与面板容器一体化** → 将面板和 SVG 把手包裹在 `#manage-curtain-container`（`position:relative`）中，把手 `position:absolute; bottom:-20px` 自动跟随容器底部，移除所有 JS 手动定位代码（`getBoundingClientRect`、`style.top`、`startFollow/stopFollow` RAF 循环）
+37. **内容区 max-height 是高度上限的隐形锁** → CSS `.manage-settings-content { max-height: 180px }` 会限制面板实际高度。自由高度动画前必须将内容区设为 `max-height: none`，否则面板涨不上去
+38. **transition: none 快照与 transition 恢复必须在不同帧** → 单 `requestAnimationFrame` 保证快照帧与过渡帧分离；双 RAF 不一定更好（可能引入额外延迟）
+39. **`getBoundingClientRect().height` 比 `parseInt(style.maxHeight)` 更可靠** → 前者返回实际渲染高度（含 padding/border），后者可能为空字符串或受 CSS 覆盖
+40. **纯复制迁移法** → 从旧代码中完整复制 DOM + JS 到新位置，保持 ID/逻辑完全相同，再通过实际效果逐步调试。不会破坏原本已实现的页面和逻辑，远比"理解后重写"更可靠。例如 page-main 复制自 page-manage，main.js 复制自 manage.js
+41. **`getEl` 作用域隔离** → 复制出的页面与原始页面存在相同 DOM ID，`document.getElementById` 始终返回 DOM 中第一个匹配。修复：`getEl` 改为 `querySelector('#page-main #' + id) || document.getElementById(id)`，优先在目标页面内查找
+42. **`bind()` 也要走 `getEl`** → `bind(id, evt, fn)` 内部必须用 `getEl(id)` 而非 `document.getElementById(id)`，否则事件绑定到原始页面元素而非副本页面
+43. **JS Bridge 注入时序** → `DOMContentLoaded` 时 JS Bridge 尚未注入（Java 端 `injectJsBridge()` 在页面加载完成后才执行）。页面初始化如需调用桥方法，应由 `MainWindow.injectJsBridge()` 末尾主动 `executeScript` 触发，而非依赖 `DOMContentLoaded`
+44. **跨页面联动使用 `document.getElementById`** → 主侧栏 `#nav-platform-list` 不在 `#page-main` 内，不能走 scoped `getEl`。跨页面的元素查询直接用 `document.getElementById`
 
 ---
 

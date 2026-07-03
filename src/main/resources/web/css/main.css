@@ -951,13 +951,20 @@
    ======================================== */
 /* Manage page fills the entire page-container — negate parent padding so
    the platform sidebar sits flush against left/top/bottom edges. */
-#page-manage {
+#page-manage, #page-main {
     margin: calc(-1 * var(--space-md));
     width: calc(100% + 2 * var(--space-md));
     height: calc(100% + 2 * var(--space-md));
 }
-#page-manage .manage-layout {
+#page-manage .manage-layout, #page-main .manage-layout {
     height: 100%;
+}
+/* page-main 无左栏，内容区撑满 */
+#page-main .manage-layout {
+    grid-template-columns: 1fr;
+}
+#page-main #manage-platform-sidebar {
+    display: none;
 }
 .manage-layout {
     display: grid;

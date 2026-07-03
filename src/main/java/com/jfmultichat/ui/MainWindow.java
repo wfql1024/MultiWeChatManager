@@ -291,6 +291,8 @@ public class MainWindow {
                 bridge.setThemeChangeListener(this::applyTitleBarTheme);
                 bridge.setAlignListener(this::alignLogo);
                 LOG.info("JS Bridge injected successfully");
+                // 桥就绪后触发主侧栏平台列表加载
+                webEngine.executeScript("if(JFC.pages.main)JFC.pages.main.init()");
             }
         } catch (Exception e) {
             LOG.error("Failed to inject JS bridge", e);

@@ -24,8 +24,8 @@ JFC.router = (function() {
             console.log('[app] Running without Java Bridge (browser mode)');
         }
 
-        // 默认显示登录页
-        navigate('login');
+        // 默认显示管理页
+        navigate('manage');
 
         // 测量侧栏图标中心位置，报告给 Java 对齐标题栏 logo
         setTimeout(function() {
@@ -65,6 +65,11 @@ JFC.router = (function() {
         // 进入管理页时初始化
         if (page === 'manage' && JFC.pages.manage) {
             JFC.pages.manage.init();
+        }
+
+        // 进入主页面时初始化
+        if (page === 'main' && JFC.pages.main) {
+            JFC.pages.main.init();
         }
     }
 
