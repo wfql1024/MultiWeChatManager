@@ -27,28 +27,16 @@
     <!-- ======== 左导航侧栏 ======== -->
     <nav id="nav-sidebar" class="nav-sidebar">
 
-        <!-- 上部导航 -->
+        <!-- 平台列表 -->
+        <ul id="nav-platform-list" class="nav-list"></ul>
+
+        <!-- 底部：统计 + 设置 -->
+        <div class="nav-spacer"></div>
         <ul class="nav-list">
-            <li class="nav-item active" data-page="login">
-                <span class="nav-icon">🔑</span>
-                <span class="nav-label">登录</span>
-            </li>
-            <li class="nav-item" data-page="manage">
-                <span class="nav-icon">📁</span>
-                <span class="nav-label">管理</span>
-            </li>
             <li class="nav-item" data-page="statistics">
                 <span class="nav-icon">📊</span>
                 <span class="nav-label">统计</span>
             </li>
-        </ul>
-
-        <!-- 平台列表 -->
-        <ul id="nav-platform-list" class="nav-list"></ul>
-
-        <!-- 底部：设置 -->
-        <div class="nav-spacer"></div>
-        <ul class="nav-list">
             <li class="nav-item" data-page="settings">
                 <span class="nav-icon">⚙</span>
                 <span class="nav-label">设置</span>
@@ -61,121 +49,12 @@
         <div id="page-container" class="page-container">
 
             <!-- 登录页 -->
-            <div id="page-login" class="page active">
+            <div id="page-login" class="page">
                 <div class="page-placeholder">登录页面（待实现）</div>
             </div>
 
-            <!-- 管理页 -->
-            <div id="page-manage" class="page">
-                <div class="manage-layout">
-                    <!-- 左栏：平台列表 — 完全沿用 .nav-sidebar 样式 -->
-                    <div id="manage-platform-sidebar" class="nav-sidebar">
-                        <!-- 全部按钮 -->
-                        <ul class="nav-list">
-                            <li class="nav-item active" data-page="all" id="manage-all-nav-item">
-                                <span class="nav-icon">
-                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                                </span>
-                                <span class="nav-label">全部</span>
-                            </li>
-                        </ul>
-                        <!-- 平台列表 -->
-                        <ul id="manage-platform-list" class="nav-list">
-                            <li class="nav-item" data-loading="true">
-                                <span class="nav-icon"><span class="manage-temp-icon">...</span></span>
-                                <span class="nav-label">加载中…</span>
-                            </li>
-                        </ul>
-                    </div>
-
-                    <!-- 右栏：平台详情 -->
-                    <div class="manage-detail-area">
-                        <!-- 全部页面占位 -->
-                        <div id="manage-page-all" class="manage-detail-page active">
-                            <div class="manage-placeholder">
-                                <p style="font-size:var(--font-h2);color:var(--text-secondary);margin-bottom:8px;">选择一个平台以查看详情</p>
-                                <p style="font-size:var(--font-sm);color:var(--text-muted);">左侧列表显示所有平台，点击即可进入管理</p>
-                            </div>
-                        </div>
-
-                        <!-- 平台详情页面（动态生成） -->
-                        <div id="manage-page-detail" class="manage-detail-page" style="display:none;">
-                            <div class="manage-detail-header">
-                                <div class="manage-detail-title-wrap" id="manage-detail-title-wrap">
-                                    <h2 id="manage-detail-title" class="manage-detail-title" title="点击编辑平台名称">平台名称</h2>
-                                    <input type="text" id="manage-detail-title-input" class="manage-detail-title-input"
-                                           placeholder="输入平台名称" style="display:none;">
-                                </div>
-                            </div>
-
-                            <!-- 窗帘容器：面板 + 把手一体 -->
-                            <div id="manage-curtain-container" class="manage-curtain-container">
-                                <div id="manage-settings-panel" class="manage-settings-panel">
-                                    <div class="manage-settings-content" id="manage-settings-content">
-                                        <!-- 动态渲染配置表单 -->
-                                    </div>
-                                </div>
-                                <svg id="manage-curtain-handle" class="manage-curtain-handle" preserveAspectRatio="none">
-                                <defs>
-                                    <clipPath id="handle-clip">
-                                        <rect x="-9999" y="0" width="19998" height="20"/>
-                                    </clipPath>
-                                </defs>
-                                <g clip-path="url(#handle-clip)">
-                                    <path id="handle-curve" d="" fill="#1e1e1e"/>
-                                </g>
-                                <!-- 左侧拖动区 -->
-                                <rect id="handle-drag-left"  x="-9999" y="0" width="9969" height="20" fill="transparent" style="cursor:ns-resize"/>
-                                <!-- 中央点击区 -->
-                                <rect id="handle-click-zone" x="-30" y="0" width="60" height="20" fill="transparent" style="cursor:pointer"/>
-                                <!-- 右侧拖动区 -->
-                                <rect id="handle-drag-right" x="30" y="0" width="9969" height="20" fill="transparent" style="cursor:ns-resize"/>
-                                <g id="handle-arrow-group" pointer-events="none" stroke="#999" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline id="handle-arrow-up" points="-8,9 0,3 8,9" fill="none" style="display:none"/>
-                                    <polyline id="handle-arrow-down" points="-8,3 0,9 8,3" fill="none"/>
-                                </g>
-                            </svg>
-                            </div><!-- /manage-curtain-container -->
-
-                            <!-- 账号列表区 -->
-                            <div class="manage-account-section">
-                                <div class="manage-account-toolbar" id="manage-account-toolbar" style="display:none;">
-                                    <span id="manage-selection-count" class="manage-selection-count">已选 0 项</span>
-                                    <div class="manage-batch-actions" id="manage-batch-actions">
-                                        <button class="btn btn-sm" id="manage-batch-hide">批量隐藏</button>
-                                        <button class="btn btn-sm" id="manage-batch-show">批量显示</button>
-                                        <button class="btn btn-sm" id="manage-batch-delete" style="color:var(--color-danger);">批量删除</button>
-                                    </div>
-                                </div>
-                                <div class="manage-account-scroll">
-                                    <table class="manage-account-table">
-                                        <thead>
-                                            <tr>
-                                                <th class="manage-col-check"><input type="checkbox" id="manage-select-all"></th>
-                                                <th class="manage-col-avatar"></th>
-                                                <th class="manage-col-nickname" data-sort="nickname">昵称 ↕</th>
-                                                <th class="manage-col-id" data-sort="id">账号ID ↕</th>
-                                                <th class="manage-col-state" data-sort="hidden">状态 ↕</th>
-                                                <th class="manage-col-actions">操作</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="manage-account-tbody">
-                                            <tr class="manage-empty-row">
-                                                <td colspan="6">
-                                                    <div class="manage-empty-state">暂无账号数据</div>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- 主页面（复制 page-manage） -->
-            <div id="page-main" class="page">
+            <div id="page-main" class="page active">
                 <div class="manage-layout">
                     <div id="manage-platform-sidebar" class="nav-sidebar">
                         <ul class="nav-list">
@@ -471,7 +350,6 @@
 <script src="js/icons.js"></script>
 <script src="js/components/nav-sidebar.js"></script>
 <script src="js/pages/settings.js"></script>
-<script src="js/pages/manage.js"></script>
 <script src="js/pages/main.js"></script>
 <script src="js/app.js"></script>
 

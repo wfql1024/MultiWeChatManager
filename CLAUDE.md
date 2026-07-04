@@ -1,7 +1,7 @@
 # CLAUDE.md — JhiFengMultiChat（极峰多聊）
 
-> 最后更新: 2026-07-04
-> 当前阶段: Phase 1.9 — page-main 独立副本 + 最左栏平台列表 + 双页面共存
+> 最后更新: 2026-07-05
+> 当前阶段: Phase 1.10 — page-main 替代 page-manage，旧代码剥离至 .old/，侧栏精简
 
 ---
 

@@ -25,7 +25,6 @@ JFC.router = (function() {
         }
 
         // 默认显示管理页
-        navigate('manage');
 
         // 测量侧栏图标中心位置，报告给 Java 对齐标题栏 logo
         setTimeout(function() {
