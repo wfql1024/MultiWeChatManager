@@ -1,7 +1,8 @@
 # CLAUDE.md — JhiFengMultiChat（极峰多聊）
 
-> 最后更新: 2026-07-05
-> 当前阶段: Phase 1.10 — page-main 替代 page-manage，旧代码剥离至 .old/，侧栏精简
+> 最后更新: 2026-07-06
+> 当前阶段: 见 MEMORY/事实.md
+> 记忆系统: MEMORY/（MEMORY.md 索引 + 决策点/待办/事实）
 
 ---
 
@@ -218,35 +219,19 @@ JFC.toastSuccess('消息', duration);  // 右下角绿色，默认 3 秒
 
 ---
 
-## 九、管理页架构
+## 九、页面架构
 
-```
-┌─ manage-layout (grid) ───────────────────────────────────┐
-│ ┌─ 平台侧栏 (z:50) ─┐  ┌─ 详情区 ──────────────────────┐ │
-│ │ [全部]             │  │ ┌─ 标题（可编辑）───────────┐ │ │
-│ │ [WeChat]           │  │ │ remark > alias > id       │ │ │
-│ │ [QQ] ...           │  │ └──────────────────────────┘ │ │
-│ │                    │  │ ┌─ 设置面板（窗帘,180px）──┐ │ │
-│ │ hover展开/收起     │  │ │ 软件路径 [▼下拉]         │ │ │
-│ │                    │  │ │ 数据目录 [▼下拉]         │ │ │
-│ └────────────────────┘  │ │ DLL路径 [▼下拉]          │ │ │
-│                         │ │ 登录尺寸 / 点击按钮      │ │ │
-│                         │ └──────────────────────────┘ │ │
-│                         │ ┌─ 账号表格 ────────────────┐ │ │
-│                         │ │ ☑ 头像 昵称 ID 状态      │ │ │
-│                         │ │ 批量隐藏/显示/删除       │ │ │
-│                         │ └──────────────────────────┘ │ │
-│                         └──────────────────────────────┘ │
-└──────────────────────────────────────────────────────────┘
-```
+### 全局侧栏 (`#nav-sidebar`)
+平台列表（动态渲染）+ 底部统计/设置入口。平台列表由 `main.js` 渲染，进入软件即加载（`MainWindow.injectJsBridge()` 触发）。
 
-**平台栏**: 完全复用 `.nav-sidebar` hover 展开/收起样式，z-index:50（低于主导航100）。
-**标题**: remark（本地）> alias（远程）> swId。点击可编辑，Enter 保存，不再弹 toast。
-**路径输入框**: 内嵌 ▼ 下拉按钮（`position:absolute`，26×26px 触发区，16×16px 圆角正方形边框着色），
-  点击触发探测并在 body 层弹出 `position:fixed` 下拉面板（z-index:40，低于侧栏），
-  面板内显示 `[存在/不存在][来源列表]路径` + 底部"浏览..."。
-**自动填充优先级**: 存在 > 进程(1) > 内存映射(2) > DLL遍历(3) > 注册表(4) > 猜测(5)=其他SW(5) > 来源数量 > 第一条。
-**设置面板**: 窗帘折叠（180px max-height），偏好持久化到 `LocalGlobalConfig.json.manage_settings_collapsed`。
+### 主页面 (`#page-main`)
+唯一主内容区，无内嵌左栏。`main.js` 中 `getEl` 作用域隔离: `querySelector('#page-main #' + id) || document.getElementById(id)`。跨页面元素（`#nav-platform-list`）直接用 `document.getElementById`。
+
+### 已废弃
+`#page-manage` → `.old/`，`manage.js` → `.old/manage.js`。
+
+### 详情区
+路径输入框（内嵌 ▼ 下拉面板，body 层 `position:fixed`，z-index:40）、设置面板（窗帘折叠 + 高度拖动）、账号表格（多选 + 排序 + 批量操作）。自动填充优先级: 存在 > 进程 > 内存映射 > DLL遍历 > 注册表 > 猜测/其他SW > 来源数量。
 
 ---
 
@@ -348,10 +333,7 @@ cd D:\SpaceDev\MyProj\JhiFengMultiChat
 export JAVA_HOME="/d/SpaceDev/softwareDev/SDKs/Java/jdk-17.0.2"
 export PATH="/d/SpaceDev/softwareDev/SDKs/gradle-8.8/bin:$PATH"
 
-# 正式版
-gradle run --no-daemon
-
-# 开发版
+# 开发运行 (scripts/run.bat)
 gradle run --no-daemon --args="--dev"
 
 # 仅编译
@@ -359,20 +341,15 @@ gradle compileJava --no-daemon
 
 # 完整构建
 gradle build --no-daemon
-# 如果报 "Failed to clean up stale outputs" → taskkill //F //IM java.exe → rm -rf build → 重试
+
+# 打包 (见 scripts/package-exe.bat)
+.\scripts\analyze.bat     # 依赖分析
+.\scripts\package-exe.bat # 生成安装版+便携版
 ```
 
----
+## 十五、待推进
 
-## 十五、待推进 (后续 Phase)
-
-1. ~~Native 层 JNA 路径探测~~ ✅ 已完成六级策略 + 批量/并发/懒加载
-2. 登录页 / 统计页
-3. 数据库层 SQLite + DAO
-4. ~~管理页路径探测 UI~~ ✅ 下拉面板 + 自动填充 + 来源追溯
-5. 平台图标提取完善（ExtractIconExW）
-6. 二进制补丁引擎迁移（待评估合法性）
-7. 打包流程（从 AppVersion 读取版本信息，注入 .exe 资源）
+见 `MEMORY/待办.md`。
 
 ---
 

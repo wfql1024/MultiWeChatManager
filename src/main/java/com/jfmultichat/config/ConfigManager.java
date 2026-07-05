@@ -66,7 +66,7 @@ public class ConfigManager {
             LOG.warn("ConfigManager already initialized, ignoring init({})", devMode);
             return instance;
         }
-        AppPaths.setDevMode(devMode);
+        if (devMode) System.setProperty("run.mode", "DEV");
         ConfigManager mgr = new ConfigManager();
         mgr.initInternal();
         instance = mgr;
