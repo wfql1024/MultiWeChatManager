@@ -1,8 +1,8 @@
 # CLAUDE.md — JhiFengMultiChat（极峰多聊）
 
 > 最后更新: 2026-07-06
-> 当前阶段: 见 MEMORY/事实.md
-> 记忆系统: MEMORY/（MEMORY.md 索引 + 决策点/待办/事实）
+> 当前阶段: 见 MEMORY/FACTS.MD
+> 记忆系统: MEMORY/（MEMORY.md 索引 + DECISIONS.MD/TODOS.MD/FACTS.MD + DEV_LOGS.MD）
 
 ---
 
@@ -278,6 +278,10 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 日志�
 ---
 
 ## 十三、关键技术教训
+### DEV_LOGS.md 维护规范
+当用户要求总结时：
+"总结近期开发"：将未添加到 DEV_LOGS.MD 的节点更新上去并附日期，标题格式 ## 功能名称（YYYY-MM-DD）
+"总结近期历史"：新增 ## 标题章节，不追加到之前的"历史对话基本大纲"节点，保持独立可追溯
 
 1. **WebView 拦截鼠标** → 透明 Region 覆盖层绕过
 2. **location listener 二次触发** → suppressLinkIntercept 标志
@@ -394,3 +398,10 @@ static String normalizePath(String rawPath)
 - `[路径内存映射] 匹配成功` — 单条正则命中
 - `[路径注册表]` / `[路径猜测]` / `[路径进程]` / `[路径其他SW]` / `[路径DLL目录]` — 各子查询
 - `[WebView]` — JS console.log 重定向（需 `--add-exports` + `WebConsoleListener`）
+
+---
+
+
+### DEV_LOGS.md 维护规范
+当用户要求总结时："总结近期开发"将节点更新至 DEV_LOGS.MD 并附日期；"总结近期历史"新增 ## 标题章节，保持独立可追溯。
+
