@@ -120,6 +120,10 @@ JFC.bridge = (function() {
         getSwConfig: function(swId) { return callJsonWithArgs('getSwConfig', swId); },
         saveSwConfig: function(swId, configJson) { return callJsonWithArgs('saveSwConfig', swId, configJson); },
         getSwDetailData: function(swId) { return callJsonWithArgs('getSwDetailData', swId); },
+        getSwExistedAccounts: function(swId) { return callJsonWithArgs('getSwExistedAccounts', swId); },
+        getAccAvatarAsync: function(swId, accountId, fn) {
+            callWithArgs('getAccAvatarAsync', swId, accountId, String(registerAsync(fn)));
+        },
         updateSwField: function(swId, field, value) { return callJsonWithArgs('updateSwField', swId, field, value); },
         saveAccount: function(swId, accountId, fieldsJson) { return callJsonWithArgs('saveAccount', swId, accountId, fieldsJson); },
         deleteAccount: function(swId, accountId) { return callJsonWithArgs('deleteAccount', swId, accountId); },

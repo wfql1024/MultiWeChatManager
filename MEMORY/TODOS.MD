@@ -37,3 +37,8 @@
 - [ ] SwNativeOps.closeHandles — Stub（需 JNA DuplicateHandle）
 - [ ] 调研结论：Java 无原生 Handle 操作，需仿照 pywinhandle.py 用 JNA 重写（约 300-500 行）
 - [ ] 需扩展 NtdllExt 接口：NtQueryObject、NtDuplicateObject、NtClose
+
+## AvatarUtils
+- [x] `getAvatarDataUrl(sw, acc, avatarUrl)` — 本地文件 / URL 下载 / SVG 回退三路逻辑
+- [x] `downloadAvatarAsync()` — 异步头像下载支持
+- [x] CSS `.manage-account-avatar` `border-radius` 调整为 6px

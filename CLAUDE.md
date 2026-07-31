@@ -1,8 +1,8 @@
 # CLAUDE.md — JhiFengMultiChat（极峰多聊）
 
-> 最后更新: 2026-07-06
+> 最后更新: 2026-07-31
 > 当前阶段: 见 MEMORY/FACTS.MD
-> 记忆系统: MEMORY/（MEMORY.md 索引 + DECISIONS.MD/TODOS.MD/FACTS.MD + DEV_LOGS.MD）
+> 记忆系统: MEMORY/（MEMORY.md + DECISIONS.MD/TODOS.MD/FACTS.MD/DEV_LOGS.MD）
 
 ---
 
@@ -29,259 +29,100 @@
 | 日志 | SLF4J 2.0.9 + Logback 1.4.14 + jul-to-slf4j 桥 |
 | HTTP | `java.net.http.HttpClient`（JDK 内置） |
 | 加密 | `javax.crypto.Cipher`（AES/CBC/PKCS5Padding） |
-| 异步 | `Executors.newCachedThreadPool` → `Platform.runLater` → `executeScript` |
+| 异步 | `ExecutorService` → `Platform.runLater` → `executeScript` |
 | 图标 | MCP 服务器 `mcp-universal-icons` + `icons-mcp`（`.mcp.json`） |
 | JNA | 5.14.0 (`jna` + `jna-platform`)，用于 Windows API 调用 |
 | 测试 | JUnit 5.10.2 + Mockito 5.10.0 |
 
 ---
 
-## 三、项目结构
-
-```
-├── build.gradle.kts
-├── settings.gradle.kts
-├── run.bat
-├── logo.png
-│
-└── src/main/
-    ├── java/com/jfmultichat/
-    │   ├── Launcher.java              # 入口: 设 logdir → ConfigManager.init() → launch JavaFX
-    │   ├── MainApp.java               # Application, saveAll() on exit
-    │   ├── config/
-    │   │   ├── AppEnv.java            # 运行环境判断 (DEV/TEST/PROD)
-    │   │   ├── AppPaths.java          # %APPDATA%/JhiFengMultiChat/{version}/ 路径规范
-    │   │   ├── AppVersion.java        # 版本号 + 产品名 + 公司名
-    │   │   ├── IConfigStore.java      # 统一配置接口（字典式读写）
-    │   │   ├── JsonConfigStore.java   # JSON 配置存储基类
-    │   │   ├── RootConfig.java        # RootConfig.json POJO（代理/URL/数据目录）
-    │   │   ├── ConfigManager.java     # 配置管理器单例 — 统筹所有 ConfigStore
-    │   │   ├── CryptoUtils.java       # AES-CBC 解密 + [INFO] 级日志
-    │   │   └── RemoteConfigFetcher.java # HTTP下载 + 解密 + 本地缓存
-    │   ├── bridge/
-    │   │   └── JsBridge.java          # JS↔Java 桥 + 异步回调 + 所有数据访问 + BridgeConfigProvider
-    │   ├── swcore/                    # Windows 路径探测 + 补丁引擎（独立包）
-    │   │   ├── SwCoreConstants.java   # 常量统一定义（RemoteSwKey/AccKeys）
-    │   │   ├── SwHexUtils.java        # 特征码扫描（hex模式/通配符/截断）
-    │   │   ├── SwRuleResolver.java    # 规则解析（simple/custom/jmp_offset/relation）
-    │   │   ├── SwAdapterChecker.java  # 补丁状态检测
-    │   │   ├── SwConfigAccessor.java  # 配置读取包装器（Provider 注入）
-    │   │   ├── SwPathResolver.java    # 路径解析（resolve_sw_path, is_valid_sw_path）
-    │   │   ├── SwVersionHelper.java   # 版本计算（calc_sw_ver）
-    │   │   ├── SwRectCalculator.java  # 截图区域计算
-    │   │   ├── SwPidMutexOps.java     # PID-互斥体配置操作
-    │   │   ├── SwAccountOps.java      # 账号列表, 共存模式, 多开检测
-    │   │   ├── SwOperatorCore.java    # DLL切换/共存/登录/备份
-    │   │   ├── SwAvatarOps.java       # 头像截取/缓存
-    │   │   ├── SwInfoFuncCore.java    # Facade 入口
-    │   │   ├── SwPathDetective.java   # 路径探测（六级策略/批量pathType/并发/懒加载）
-    │   │   └── SwNativeOps.java       # JNA 原生操作封装 + MemoryMapIterator
-    │   ├── setting/
-    │   │   ├── AbsSetting.java        # JSON 配置基类 (SLF4J)
-    │   │   └── RemoteGlobalSetting.java # 远程全局配置 (回退 classpath 种子)
-    │   ├── model/
-    │   │   ├── AboutInfo.java / LinkEntry.java / ReferenceEntry.java / SponsorEntry.java
-    │   └── ui/
-    │       ├── MainWindow.java        # 主窗口 (StackPane + 标题栏 + WebView + 缩放手柄)
-    │       ├── FloatingSidebar.java / SampleWindow.java
-    │
-    └── resources/
-        ├── logback.xml
-        ├── css/ (main.css, main-light.css, sidebar.css)
-        ├── data/remote_global_v1.json  # 种子数据
-        └── web/
-            ├── index.html
-            ├── css/ (theme.css, main.css)
-            └── js/
-                ├── bridge.js           # JS→Java 桥 (含异步回调 _handleAsync)
-                ├── icons.js            # SVG 图标
-                ├── app.js              # 路由 + toast + ensureRemoteConfigs
-                ├── components/nav-sidebar.js
-                └── pages/
-                    ├── settings.js     # 设置页
-                    └── manage.js       # 管理页（下拉面板/自动探测/优先级选择）
-
-└── src/test/java/com/jfmultichat/swcore/
-    ├── SwNativeOpsTest.java           # JNA 三方案对比 + 去子进程
-    └── SwPathDetectiveTest.java       # 29 tests (批量/并发/Mock)
-```
 
 ---
 
-## 四、数据存储路径
+## 三、项目结构、数据存储与配置架构
 
-```
-%APPDATA%/JhiFengMultiChat/4.0.0.7000/
-├── RootConfig.json                   # 锚点，永不移动。存储代理/URL列表/数据目录
-├── UserFiles/                        # 正式版
-│   ├── LocalGlobalConfig.json        # 软件偏好（主题、窗帘状态等）
-│   ├── LocalSwConfig.json            # 各平台设置（{swId: {inst_path, remark, ...}}）
-│   ├── SwAccData.json                # 账号数据
-│   ├── SwCache.json                  # 适配缓存
-│   ├── RemoteGlobalConfig.json       # 远程全局配置缓存
-│   ├── RemoteSwConfig.json           # 远程平台配置缓存
-│   └── logs/
-└── DevUserFiles/                     # 开发版（--dev），文件结构相同
-```
-
-**RootConfig.json 字段**:
-```json
-{
-  "user_data_path": "...",
-  "remote_global_urls": ["https://..."],
-  "remote_sw_urls": ["https://..."],
-  "use_proxy": false,
-  "proxy_ip": "",
-  "proxy_port": ""
-}
-```
-注意：程序硬编码的默认 URL 不存入配置，仅存用户添加的地址。
+详见 [`docs/project_structure.md`](docs/project_structure.md)。
 
 ---
 
-## 五、配置层架构（重要！）
-
-### 接口层次
-
-```
-IConfigStore (interface)
-  ├── getData() / setData() / reload() / save()
-  ├── getString(key, defaultVal) / getBoolean / put / remove / has
-  └── ensureFile() / isEmpty()
-        ↑
-JsonConfigStore (base class — Jackson ObjectNode 读写)
-  ├── getSubNode(key) / setSubNode / removeSubNode / fieldNames()
-  ├── loadFromJson(json) / toJson() / deepCopy()
-        ↑
-ConfigManager (单例 — 统筹 6 个 ConfigStore + RootConfig POJO)
-  ├── getRootConfig()        → RootConfig POJO
-  ├── getGlobalConfig()      → LocalGlobalConfig.json ObjectNode
-  ├── getSwConfig(swId)      → LocalSwConfig.json.{swId}
-  ├── getRemoteGlobal()      → RemoteGlobalConfig.json ObjectNode
-  ├── getRemoteSw()          → RemoteSwConfig.json ObjectNode
-  ├── getAccountMap(swId)    → SwAccData.json.{swId}
-  └── getSwCache()           → SwCache.json
-```
-
-**未来扩展**：若要更换存储格式（如 YAML、数据库），只需实现新的 `IConfigStore`，替换 `ConfigManager` 中的 store 创建即可。
-
----
-
-## 六、JS↔Java 异步架构（重要！）
-
-**绝对不能阻塞 UI 线程！** 所有网络操作必须后台线程执行。
-
-```
-JS 调用 void Java 方法 → 立刻返回
-                   ↓
-       ThreadPool 后台线程
-       · HTTP 下载  · AES 解密  · JSON 解析
-                   ↓
-       Platform.runLater → scriptExecutor
-       → JFC.bridge._handleAsync(type, cbId, jsonStr)
-                   ↓
-       JS 回调更新 DOM
-```
-
-**关键方法**:
-- 同步: `getSwConfig()`, `getSwDetailData()`, `saveSwConfig()`, `extractExeIcon()`
-- 异步: `testRemoteUrlAsync(url, cbId)`, `fetchUpdateDataAsync(cbId)`, `tryEnsureRemoteConfigsAsync(cbId)`, `detectPathsAsync(swId, cbId, pathKeysJson)`
-- **detectPathsAsync 注意**: 第三个参数是 JSON 字符串 `'["inst_path","data_dir"]'`（非 varargs！JavaFX JS 桥不支持 varargs），为空时默认全三项
-- `bridge.js`: `registerAsync(fn)` 注册回调，`_handleAsync(type, cbId, json)` 是 Java 调用入口
-
----
-
-## 七、远程配置兜底机制
-
-任何需要读取远程配置的操作，都必须先检查 → 缺失则异步下载 → 失败则 toast 提醒 + 强制跳转设置页。
-
-```
-JFC.ensureRemoteConfigs(onReady)
-  ├── checkRemoteConfigReady() — 同步快速检查
-  ├── 已就绪 → onReady()
-  └── 缺失 → tryEnsureRemoteConfigsAsync() — 后台下载
-        ├── 成功 → onReady()
-        └── 失败 → JFC.toastError(msg) + forceGotoSettingsConfig()
-```
-
-**调用点**: `app.js` 启动检查、`manage.js` loadPlatformList / selectPlatform
-
----
-
-## 八、Toast 通知系统
-
-```javascript
-JFC.toastError('消息', duration);    // 右下角红色，默认 4 秒
-JFC.toastSuccess('消息', duration);  // 右下角绿色，默认 3 秒
-```
-
-动态创建容器 `#toast-container`，带 ✕ 手动关闭。CSS: `main.css` `.toast-container` / `.toast`。
-
----
-
-## 九、页面架构
+## 六、页面架构
 
 ### 全局侧栏 (`#nav-sidebar`)
-平台列表（动态渲染）+ 底部统计/设置入口。平台列表由 `main.js` 渲染，进入软件即加载（`MainWindow.injectJsBridge()` 触发）。
+平台列表（动态渲染）+ 底部统计/设置入口。由 `main.js` 渲染，`MainWindow.injectJsBridge()` 触发加载。
 
 ### 主页面 (`#page-main`)
-唯一主内容区，无内嵌左栏。`main.js` 中 `getEl` 作用域隔离: `querySelector('#page-main #' + id) || document.getElementById(id)`。跨页面元素（`#nav-platform-list`）直接用 `document.getElementById`。
+唯一主内容区，无内嵌左栏。元素查询使用作用域隔离：`querySelector('#page-main #' + id) || document.getElementById(id)`。
 
 ### 已废弃
-`#page-manage` → `.old/`，`manage.js` → `.old/manage.js`。
-
-### 详情区
-路径输入框（内嵌 ▼ 下拉面板，body 层 `position:fixed`，z-index:40）、设置面板（窗帘折叠 + 高度拖动）、账号表格（多选 + 排序 + 批量操作）。自动填充优先级: 存在 > 进程 > 内存映射 > DLL遍历 > 注册表 > 猜测/其他SW > 来源数量。
+`#page-manage` → `.old/`，`manage.js` → `.old/manage.js`。迁移详情见 `MEMORY/DECISIONS.MD`。
 
 ---
 
-## 十、设置页各页面状态
+## 七、运行命令
 
-| 页面 | 数据来源 | 加载方式 | 关键方法 |
-|------|---------|---------|---------|
-| 外观 | LocalGlobalConfig.json | 同步 | `getTheme()` / `saveTheme()` |
-| 配置 | RootConfig.json | 同步 + 异步测试 | `getConfigData()` / `saveConfigData()` / `testUrlAsync()` |
-| 更新 | RemoteGlobalConfig (网络) | **异步** | `fetchUpdateDataAsync()` + "更新远程配置"按钮 |
-| 鸣谢 | RemoteGlobalConfig (网络) | **异步** | `fetchThanksDataAsync()` |
-| 关于 | RemoteGlobalConfig (网络) | **异步** | `fetchAboutDataAsync()` |
-
----
-
-## 十一、加密协议
-
-远程配置文件加密格式（对应 Python `CryptoUtils.decrypt_response`）：
+```bash
+gradle run --no-daemon --args="--dev"      # 开发运行
+gradle compileJava --no-daemon             # 仅编译
+gradle build --no-daemon                   # 完整构建
+.\scripts\analyze.bat                      # 依赖分析
+.\scripts\package-exe.bat                  # EXE 打包 (jlink + jpackage)
 ```
-HTTP 响应文本 = base64(IV[16] + ciphertext) + " " + key
-解密: Base64解码 → IV=前16字节, key=key.ljust(16)[:16].encode()
-     → AES/CBC/PKCS5Padding 解密 → UTF-8 JSON
-```
-Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 日志。
-
-**下载/解密日志关键词**: `[下载]` 和 `[解密]`，搜这两个 tag 即可追踪完整流程。
 
 ---
 
-## 十二、用户偏好（严格遵守）
+## 八、待推进
 
-1. **字号要大** — 所有字号 +2：h1=20, h2=17, h3=15, body=15, sm=14, xs=13, btn=15/13
-2. **括号规范** — 数据目录输入框: `（默认）`(中文全角括号)；网址列表: `(默认)`(英文半角)
-3. **标题层级** — 一级标题(h1): 区块标题；二级标题(h2): 小节标签；三级标题(h3): 子节标签
-4. **后台线程** — 绝对不用 `setTimeout` 模拟异步；必须用 Java `ExecutorService` + `Platform.runLater` + `executeScript`
-5. **编译不要问** — `gradle build` 直接执行，只有 `rm -rf` 这类高风险命令需要确认
-6. **Python 旧版参考** — 业务逻辑优先参考 `legacy_python/` 中对应代码
-7. **字体** — 基础字体 `"Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui`；等宽字体 `"Cascadia Code", "Consolas", monospace`
-8. **理解指令要精准** — 用户说"复制粘贴"，就是字面意义的完整复制粘贴，不要自作主张做 ID 去重、变量重命名、sed 替换等"优化"。用户说"不要改"，就一个字都别改。
-9. **复用已验证代码** — 已完美工作的动画/逻辑，直接复用，不要重写、不要"改进"、不要创造新方案。用户明确指出参考对象时，照搬即可。
-10. **简单操作不要复杂化** — 移动按钮、复制页面等简单需求，直接操作 DOM/文件，不要引入新架构、新模块、新命名体系。越简单越好。
-11. **回退要干脆** — 用户要求回退到提交时，直接 `git checkout HEAD -- <files>`，不要反复确认、不要保留"可能有用的改动"。
+见 `MEMORY/TODOS.MD`：
+
+- 登录页面、统计页面 — 占位未实现
+- 数据库层（SQLite + DAO）— 未开始
+- 平台图标提取 — ExtractIconExW 完善
+- 二进制补丁引擎 — 从 Python 迁移，待评估合法性
+- SSL 握手 — 打包版 handshake_failure
+- LoggerUtils.java — 待移植
+- Handle 操作 — JNA 仿照 pywinhandle.py 重写约 300-500 行
 
 ---
 
-## 十三、关键技术教训
-### DEV_LOGS.md 维护规范
-当用户要求总结时：
-"总结近期开发"：将未添加到 DEV_LOGS.MD 的节点更新上去并附日期，标题格式 ## 功能名称（YYYY-MM-DD）
-"总结近期历史"：新增 ## 标题章节，不追加到之前的"历史对话基本大纲"节点，保持独立可追溯
+## 九、近期重大变更
+
+### page-main 复制迁移（2026-07-04~05）
+
+- **决策**: 从 page-manage 完整复制 DOM+JS 到 page-main 页面，`main.js` 复制自 `manage.js` 后做少量作用域修正
+- **原因**: 逐段理解和改写容易出错，完整复制再逐步调试更可靠；且保持功能一致性
+- **关键修改**:
+  - `getEl(id)` 函数改为优先在 `#page-main` 内查找，后备到全局 `document.getElementById`
+  - 移除了原管理页的"登录"和"管理"按钮，侧栏精简为平台列表 + 统计 + 设置入口
+  - `manage.js` → `.old/manage.js` 归档保留历史
+  - HTML 中删除了旧 `#page-manage` 区块
+
+### 头像显示功能重构（2026-07-30）
+
+- **背景**: 账号列表头像不显示，需将 Java 版本调整至与旧版 Python 一致的行为，同时适配用户可设置的自定义数据目录
+- **新增**: `AvatarUtils.java` — 核心逻辑封装，获取顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字头像回退
+- **路径使用**: `ConfigManager.getInstance().getUserataPath()` 支持用户设置的数据目录
+- **JsBridge** 中 `getAccountGroupData()` 改单行调用 `AvatarUtils.getAvatarDataUrl()`
+- **CSS 调整**: `.manage-account-avatar` `border-radius` 从 `50%` → `6px`（圆角矩形）
+- **SVG 文字头像**: 深灰背景 `#555` + 白色首字母，圆角矩形 `rx=6`
+
+详细迁移过程及经验教训见 `MEMORY/DEV_LOGS.MD`。
+
+---
+
+## 十、关键技术参考
+
+### Avatar 头像获取流程（自 2026-07-30）
+顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字回退。支持用户自定义数据目录，通过 `ConfigManager.getInstance().getUserDataPath()` 获取。详见 `MEMORY/DEV_LOGS.MD` 和 `MEMORY/FACTS.MD`。
+
+### JS↔Java 异步架构
+所有网络操作必须后台线程执行，避免阻塞 UI 线程。调用栈：JS void Java 方法 → 立刻返回 → ExecutorService 后台任务 → Platform.runLater → executeScript → JS 回调更新 DOM。详见 `MEMORY/DEV_LOGS.MD`。
+
+### 六级路径探测策略
+内存映射正则 > 注册表 > 猜测 > 进程 > 其他SW > DLL遍历。由 `SwPathDetective.detectAll()` 并发执行，支持超时保护。`swcore` 包内部详细说明。
+
+---
+
+## 十一、关键技术教训
 
 1. **WebView 拦截鼠标** → 透明 Region 覆盖层绕过
 2. **location listener 二次触发** → suppressLinkIntercept 标志
@@ -327,81 +168,3 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 日志�
 42. **`bind()` 也要走 `getEl`** → `bind(id, evt, fn)` 内部必须用 `getEl(id)` 而非 `document.getElementById(id)`，否则事件绑定到原始页面元素而非副本页面
 43. **JS Bridge 注入时序** → `DOMContentLoaded` 时 JS Bridge 尚未注入（Java 端 `injectJsBridge()` 在页面加载完成后才执行）。页面初始化如需调用桥方法，应由 `MainWindow.injectJsBridge()` 末尾主动 `executeScript` 触发，而非依赖 `DOMContentLoaded`
 44. **跨页面联动使用 `document.getElementById`** → 主侧栏 `#nav-platform-list` 不在 `#page-main` 内，不能走 scoped `getEl`。跨页面的元素查询直接用 `document.getElementById`
-
----
-
-## 十四、运行命令
-
-```bash
-cd D:\SpaceDev\MyProj\JhiFengMultiChat
-export JAVA_HOME="/d/SpaceDev/softwareDev/SDKs/Java/jdk-17.0.2"
-export PATH="/d/SpaceDev/softwareDev/SDKs/gradle-8.8/bin:$PATH"
-
-# 开发运行 (scripts/run.bat)
-gradle run --no-daemon --args="--dev"
-
-# 仅编译
-gradle compileJava --no-daemon
-
-# 完整构建
-gradle build --no-daemon
-
-# 打包 (见 scripts/package-exe.bat)
-.\scripts\analyze.bat     # 依赖分析
-.\scripts\package-exe.bat # 生成安装版+便携版
-```
-
-## 十五、待推进
-
-见 `MEMORY/待办.md`。
-
----
-
-## 十六、swcore 包关键细节
-
-### SwConfigAccessor.Provider 模式
-`SwConfigAccessor` 本身不直接读写配置，而是通过 `Provider` 接口注入。`BridgeConfigProvider`（`JsBridge` 内部类）将 `ConfigManager` 适配为 Provider。所有公共方法都转发给 provider。
-
-### 六级路径探测策略（detectAll 并发执行）
-1. **内存映射正则** → `queryByMemoryRegex()` 多 pathType 共享一次懒加载扫描（`MemoryMapIterator`）
-2. **注册表查询** → `queryByRegister()` 用 `Advapi32Util.registryGetStringValue`
-3. **猜测 (addr)** → `queryByGuess()` 从系统目录拼接 sub_path
-4. **进程枚举** → `queryByProcess()` 用 `CreateToolhelp32Snapshot` + `Process32First/Next`
-5. **其他 SW 推断** → `queryFromOtherSw()` WeChat⇔Weixin / QQ⇔TIM 共用目录
-6. **DLL 目录遍历** → `queryDllDirByFiles()` BFS 遍历安装目录查找 DLL
-
-### detectAll 签名
-```java
-Map<String, List<PathEntry>> detectAll(SwConfigAccessor accessor, String sw, String... pathTypes)
-```
-- 返回每个 pathType 的所有候选 PathEntry（含 `sources: List<String>`）
-- 内部 6 路子查询用 `CachedThreadPool` 并发，`Future.get(30s)` 超时保护
-- 同一路径多来源通过 `PathEntry.withSource()` 合并
-
-### MemoryMapIterator（懒加载迭代器）
-- `iterateMemoryMapPaths(sw, exeWildcards)` 返回 `MemoryMapIterator extends Iterator<String>, AutoCloseable`
-- 内部用 `VirtualQueryEx` + `GetMappedFileNameW` 逐区域推进，每次 `next()` 只返回一条路径
-- 多 PID 通过 `CompositeMemoryMapIterator` 串联，`finally` 块确保 `close()` 释放句柄
-
-### normalizePath 统一规范
-```java
-static String normalizePath(String rawPath)
-```
-去引号 → `\`→`/` → 盘符大写（`c:`→`C:`）→ 去末尾 `/`。所有 PathEntry 构造点调用。
-
-### 自动填充优先级
-存在 > 进程(1) > 内存映射(2) > DLL遍历(3) > 注册表(4) > 猜测(5)=其他SW(5) > 来源数量 > 第一条
-
-### 日志关键词
-- `[路径探测] detectAll 完成` — 汇总结果数
-- `[路径内存映射] 共享扫描启动` — 懒加载扫描开始
-- `[路径内存映射] 匹配成功` — 单条正则命中
-- `[路径注册表]` / `[路径猜测]` / `[路径进程]` / `[路径其他SW]` / `[路径DLL目录]` — 各子查询
-- `[WebView]` — JS console.log 重定向（需 `--add-exports` + `WebConsoleListener`）
-
----
-
-
-### DEV_LOGS.md 维护规范
-当用户要求总结时："总结近期开发"将节点更新至 DEV_LOGS.MD 并附日期；"总结近期历史"新增 ## 标题章节，保持独立可追溯。
-

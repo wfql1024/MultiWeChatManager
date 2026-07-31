@@ -1177,17 +1177,21 @@ JFC.pages.main = (function() {
 
     // ---- 加载账号数据 ----
     function loadAccountData(swId) {
+        // 账号来源: 磁盘扫描已存在的账号（数据目录子目录 + 共存 exe）
+        var existed = JFC.bridge.getSwExistedAccounts(swId) || [];
+
+        // 补充持久化详情（昵称/头像/隐藏/禁用等），未记录的新账号显示为空白详情
+        var detailMap = {};
         var data = JFC.bridge.getSwDetailData(swId);
-        if (!data || !data.accounts) {
-            accountData = [];
-            renderAccountTable([]);
-            return;
+        if (data && data.accounts) {
+            data.accounts.forEach(function(a) { detailMap[a.id] = a; });
         }
 
-        accountData = data.accounts.map(function(acc) {
+        accountData = existed.map(function(id) {
+            var acc = detailMap[id] || {};
             // 标准化字段类型
             return {
-                id: acc.id || '',
+                id: id,
                 nickname: acc.nickname || '',
                 avatar_url: acc.avatar_url || '',
                 hidden: acc.hidden === true || acc.hidden === 'true',
@@ -1199,6 +1203,42 @@ JFC.pages.main = (function() {
             };
         });
         renderAccountTable(accountData);
+        // 异步加载头像（本地文件 → URL下载 → SVG 回退）
+        accountData.forEach(function(acc) { requestAccountAvatar(swId, acc); });
+    }
+
+    // ---- 异步头像加载 ----
+    // 参考 acccore AccInfoFuncCore.getAvatarFromCache + getAccAvatarFromFile
+    function requestAccountAvatar(swId, acc) {
+        if (acc.avatar_data || acc._avatarFetching) return;
+        acc._avatarFetching = true;
+        JFC.bridge.getAccAvatarAsync(swId, acc.id, function(type, data) {
+            acc._avatarFetching = false;
+            if (data && data.dataUrl) {
+                acc.avatar_data = data.dataUrl;
+                updateAccountAvatarCell(acc.id, data.dataUrl);
+            }
+        });
+    }
+
+    // 仅更新对应账号行的头像单元格，避免整表重渲染
+    function updateAccountAvatarCell(accountId, dataUrl) {
+        var tbody = getEl('manage-account-tbody');
+        if (!tbody) return;
+        var rows = tbody.rows;
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i].getAttribute('data-acc-id') === accountId) {
+                var avatarBox = rows[i].querySelector('.manage-col-avatar .manage-account-avatar');
+                if (avatarBox) {
+                    // 若当前已显示真实图片而解析结果仅是文字回退(SVG)，不降级替换
+                    var isFallback = dataUrl.indexOf('image/svg') !== -1;
+                    var hasImg = avatarBox.querySelector('img');
+                    if (isFallback && hasImg) return;
+                    avatarBox.innerHTML = '<img src="' + escapeAttr(dataUrl) + '" alt="" onerror="this.style.display=\'none\';">';
+                }
+                break;
+            }
+        }
     }
 
     function renderAccountTable(accounts) {
@@ -1217,7 +1257,7 @@ JFC.pages.main = (function() {
         accounts.forEach(function(acc) {
             var id = acc.id;
             var nickname = acc.nickname;
-            var avatarUrl = acc.avatar_url;
+            var avatarUrl = acc.avatar_data || acc.avatar_url;
             var hidden = acc.hidden;
             var disabled = acc.disabled;
             var isSelected = selectedIds.has(id);

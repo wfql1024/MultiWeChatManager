@@ -3,10 +3,13 @@ package com.jfmultichat.bridge;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.jfmultichat.acccore.AccInfoFuncCore;
 import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.config.RootConfig;
+import com.jfmultichat.config.SwConfigProvider;
 import com.jfmultichat.swcore.SwAdapterChecker;
 import com.jfmultichat.swcore.SwConfigAccessor;
+import com.jfmultichat.swcore.SwInfoFuncCore;
 import com.jfmultichat.swcore.SwNativeOps;
 import com.jfmultichat.swcore.SwPathDetective;
 import org.slf4j.Logger;
@@ -1165,6 +1168,63 @@ public class JsBridge {
             LOG.error("Failed to get Sw detail data for {}", swId, e);
             return "{\"swId\":\"" + swId + "\",\"accounts\":[]}";
         }
+    }
+
+    /**
+     * 获取磁盘上已存在的账号来源.
+     * 对应 swcore: SwInfoFuncCore.getSwAllAccountsExisted(sw, null)
+     *
+     * @param swId Sw ID
+     * @return 账号 ID 列表的 JSON 数组字符串，如 ["wxid_xxx","wxid_yyy"]
+     */
+    public String getSwExistedAccounts(String swId) {
+        try {
+            SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+            SwInfoFuncCore core = new SwInfoFuncCore(accessor, null, null, null);
+            List<String> existed = core.getSwAllAccountsExisted(swId, null);
+            return MAPPER.writeValueAsString(existed);
+        } catch (Exception e) {
+            LOG.error("Failed to get existed accounts for swId={}", swId, e);
+            return "[]";
+        }
+    }
+
+    /**
+     * 异步获取账号头像 data URL.
+     * 参考 acccore: AccInfoFuncCore.getAvatarFromCache + getAccAvatarFromFile
+     * 解析顺序: 本地文件 {userDir}/{sw}/{acc}/{acc}.jpg → URL 下载（/0 结尾）→ SVG 文字回退
+     *
+     * @param swId       Sw ID
+     * @param accountId  账号 ID
+     * @param cbId       JS 回调 ID（数字字符串）
+     */
+    public void getAccAvatarAsync(String swId, String accountId, String cbId) {
+        THREAD_POOL.submit(() -> {
+            try {
+                // 先从截图缓存恢复本地头像文件（参考 getAvatarFromCache）
+                AccInfoFuncCore.getAvatarFromCache(swId, java.util.List.of(accountId));
+                // 解析头像 data URL（本地文件 → URL下载 → SVG 回退）
+                String dataUrl = AccInfoFuncCore.getAccAvatarFromFile(swId, accountId);
+                if (dataUrl == null) dataUrl = "";
+                String payload = MAPPER.writeValueAsString(Map.of(
+                        "swId", swId, "accountId", accountId, "dataUrl", dataUrl));
+                // _handleAsync 第三参需为字符串，故将 JSON 再编码为 JS 字符串字面量（对 SVG 内单引号安全）
+                pushToJs("JFC.bridge._handleAsync('avatar'," + cbId
+                        + "," + MAPPER.writeValueAsString(payload) + ")");
+            } catch (Exception e) {
+                LOG.error("Failed to get avatar for {}/{}", swId, accountId, e);
+                try {
+                    String payload = MAPPER.writeValueAsString(Map.of(
+                            "swId", swId == null ? "" : swId,
+                            "accountId", accountId == null ? "" : accountId,
+                            "dataUrl", ""));
+                    pushToJs("JFC.bridge._handleAsync('avatar'," + cbId
+                            + "," + MAPPER.writeValueAsString(payload) + ")");
+                } catch (Exception e2) {
+                    LOG.error("Failed to push avatar error to JS", e2);
+                }
+            }
+        });
     }
 
     /**

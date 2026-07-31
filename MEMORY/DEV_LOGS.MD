@@ -129,3 +129,30 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 4. 实现代码修改（Java类、JsBridge引用、CSS样式）
 5. 记忆系统整理：DEV_LOGS.md记录本次任务，FACTS.MD骨架化，CLAUDE.md精简
 6. 验证与问题排查指导（日志级别、SVGcurrentColor问题、路径正确性）
+
+---
+
+## page-main 复制迁移（2026-07-04~05）
+
+### 背景
+将原有的 manage.js 页面功能迁移到 page-main，作为应用的主页。用户希望保持现有功能完整的同时简化侧栏导航。
+
+### 执行过程
+
+1. **完整复制** - 将 manage.js 的内容复制到 main.js，DOM 结构保持不变
+2. **侧栏精简** - 移除"登录"和"管理"两个导航按钮，仅保留平台列表、统计和设置入口
+3. **作用域隔离修复** - `getEl(id)` 函数从 `document.getElementById` 改为 `querySelector('#page-main #' + id) || document.getElementById(id)`，确保元素查询只在主页面内优先查找
+4. **旧代码剥离** - 将 manage.js 移至 `.old/manage.js`，HTML 中删除 `#page-manage` 区块
+5. **JS 注入时序调整** - `MainWindow.injectJsBridge()` 在 WebView 加载完成后注入桥，并主动执行 `if(JFC.pages.main)JFC.pages.main.init()` 触发主页面初始化
+
+### 关键设计决策
+
+- **保守迁移策略**：先完整复制再调试，避免逐行重写导致的功能丢失或回归错误
+- **保留旧代码**：`.old/` 目录保留历史版本，便于回溯和对比
+- **单一主页原则**：page-main 成为默认首页，manage.js 仅作为历史归档
+
+### 验证方式
+启动应用确认：
+- 侧栏仅显示平台列表、统计和设置入口
+- 主页面功能（平台选择、路径探测、账号管理）正常运作
+- Java 控制台无 JS 错误，头像显示正常

@@ -1,6 +1,6 @@
 # MEMORY — 索引与摘要
 
-> 最后更新: 2026-07-30
+> 最后更新: 2026-07-31
 
 ## 决策点
 - [[DECISIONS.MD#page-main 复制迁移]] — 完整复制 DOM+JS，不动旧文件
@@ -9,6 +9,7 @@
 - [[DECISIONS.MD#版本号管理]] — AppVersion.java 唯一来源
 - [[DECISIONS.MD#打包方案]] — jlink + jpackage，便携版 + 安装版
 - [[DECISIONS.MD#常量按包分离]] — config 包用 AppCoreConstants，swcore 包用 SwCoreConstants
+- [[DECISIONS.MD#头像重构]] — AvatarUtils 统一头像获取逻辑（2026-07-30）
 
 ## 待办
 - [[TODOS.MD#登录页面]]、[[TODOS.MD#统计页面]] — 占位未实现
@@ -19,7 +20,7 @@
 - [[TODOS.MD#Handle 操作]] — 需 JNA 重写 NtQuerySystemInformation 系列
 
 ## 事实
-- [[FACTS.MD#当前阶段]]—Phase 1.10
+- [[FACTS.MD#当前阶段]]—Phase 1.10/1.11
 - [[FACTS.MD#打包路径]]—build/portable/, build/exe/
 - [[FACTS.MD#脚本位置]]—scripts/
 - [[FACTS.MD#版本号]]—4.0.0.7000 (AppVersion.java), 4.0.0 (Gradle/packaging)
@@ -33,6 +34,13 @@
 - [[FACTS.MD#Handle 操作]]—SwNativeOps.NtDllExt 已扩展 4 个 NT API 声明
 - [[FACTS.MD#全局 CLAUDE.md]]—SDK 路径/打包流程/项目文档架构/时间标注规则已归档
 - [[FACTS.MD#settings.json]]—showMessageTimestamps=true, claude-time 插件安装失败（hooks 冲突）
+- [[FACTS.MD#AvatarUtils]]—头像获取工具类，本地/URL/SVG 三路回退（2026-07-30）
+- [[FACTS.MD#page-main]]—主页面从 page-manage 复制迁移，作用域隔离修复
 
 ## 开发日志
+- [[DEV_LOGS.MD#page-main 复制迁移（2026-07-04~05）]] — 完整复制 DOM+JS，侧栏精简，旧代码剥离
 - [[DEV_LOGS.MD#头像显示功能重构（2026-07-30）]] — AvatarUtils 引入、用户目录适配、SVG 文字回退样式
+
+## 迁移工程（2026-07-31）
+- [[FACTS.MD#新增模块（2026-07-31）]] — appcore/acccore 包 + SwConfigProvider
+- [[DECISIONS.MD#appcore/acccore 架构]] — Python func_core 迁移为 Java 包

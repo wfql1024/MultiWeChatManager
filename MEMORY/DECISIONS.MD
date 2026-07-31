@@ -28,3 +28,25 @@
   - jlink: `--compress 2 --strip-debug --no-header-files --no-man-pages`
   - jpackage: `--type exe --win-dir-chooser` (安装版), `--type app-image` (便携版)
   - JavaFX jars 从 Gradle 缓存引用，运行时由 jlink 嵌入
+
+## 头像重构（2026-07-30）
+- **决定**: 新增 `AvatarUtils.java` 统一头像获取逻辑，整合本地文件读取、URL 下载和 SVG 文字回退
+- **原因**: 账号列表头像不显示，需与旧版 Python 行为一致，同时支持用户自定义数据目录
+- **日期**: 2026-07-30
+
+## appcore/acccore 架构（2026-07-31）
+
+**决策**: 将 legacy_python 的 func_core + functions 包迁移为 Java appcore/acccore 两个包，参考 swcore 架构模式。
+
+**结构**:
+- `appcore` — 对应 `app_func_core.py` + `app_func.py`（AppConfigAccessor + AppCore + AppCoreConstants）
+- `acccore` — 对应 `acc_func_core.py` + `acc_func.py`（AccConfigAccessor + AccInfoFuncCore + AccOperatorCore + AccOpsProvider + AccCoreConstants）
+
+**关键设计**:
+- appcore/acccore 直接用 `ConfigManager.getInstance()` 读写，不依赖 JsBridge 的 private `BridgeConfigProvider`
+- 新增公开的 `SwConfigProvider`（实现 `SwConfigAccessor.Provider`），供所有包通过 `SwConfigProvider.newAccessor()` 获取配置访问器
+- `AccOpsProvider` 提供 `toSwProvider()` 转换为 swcore 的 `AccountOpsProvider`，避免循环依赖
+
+**原因**: 减少对 JsBridge 私有类的耦合，让核心包可独立编译和测试。
+
+**注意**: 编译时遇到 BridgeConfigProvider 私有访问问题，已通过 SwConfigProvider 解决。
