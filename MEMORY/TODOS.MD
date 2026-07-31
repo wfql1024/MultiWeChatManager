@@ -42,3 +42,6 @@
 - [x] `getAvatarDataUrl(sw, acc, avatarUrl)` — 本地文件 / URL 下载 / SVG 回退三路逻辑
 - [x] `downloadAvatarAsync()` — 异步头像下载支持
 - [x] CSS `.manage-account-avatar` `border-radius` 调整为 6px
+
+## 上传日志功能
+- 设置页"日志"子项已预留"上传日志"按钮（点击 toast「上传功能待实现」），需服务器后实现上传

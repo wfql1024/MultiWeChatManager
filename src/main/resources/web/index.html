@@ -145,6 +145,7 @@
                         <ul id="settings-nav">
                             <li class="active" data-setting="appearance">外观</li>
                             <li data-setting="config">配置</li>
+                            <li data-setting="log">日志</li>
                             <li data-setting="update">更新</li>
                             <li data-setting="thanks">鸣谢</li>
                             <li data-setting="about">关于</li>
@@ -284,6 +285,24 @@
                                 <div class="config-actions">
                                     <button id="cfg-btn-save" class="btn btn-primary">保存配置</button>
                                     <span id="cfg-save-msg" class="config-msg" style="display:none;"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 日志 -->
+                        <div id="settings-section-log" class="settings-section-content" style="display:none;">
+                            <div class="config-form">
+                                <div class="settings-section">
+                                    <h3>日志</h3>
+                                    <p style="color:var(--text-secondary);margin-bottom:12px;">管理本地日志文件</p>
+                                    <div class="config-row">
+                                        <label class="config-label">日志目录</label>
+                                        <span id="log-dir-path" style="color:var(--text-secondary);font-size:var(--font-size-sm);word-break:break-all;"></span>
+                                    </div>
+                                    <div class="config-actions">
+                                        <button id="log-btn-open" class="btn btn-primary">打开日志目录</button>
+                                        <button id="log-btn-upload" class="btn">上传日志</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

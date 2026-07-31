@@ -18,6 +18,10 @@ import javafx.application.Application;
 public class Launcher {
 
     public static void main(String[] args) {
+        // 0. 预设置日志目录 — 必须在任何 LoggerFactory.getLogger() 之前，
+        //    否则 Logback 会解析出 ${jfmultichat.logdir}_IS_UNDEFINED 目录
+        System.setProperty("jfmultichat.logdir", AppPaths.getLogsDir().toString());
+
         // --dev → 设置系统属性 run.mode=DEV（AppEnv 自动读取）
         for (String arg : args) {
             if ("--dev".equals(arg)) {
@@ -26,18 +30,14 @@ public class Launcher {
             }
         }
 
-        // 1. 预设置日志目录（Logback 配置之前）
-        String defaultLogDir = AppPaths.getLogsDir().toString();
-        System.setProperty("jfmultichat.logdir", defaultLogDir);
-
-        // 2. 初始化 ConfigManager（创建目录 + 默认配置文件）
+        // 1. 初始化 ConfigManager（创建目录 + 默认配置文件）
         ConfigManager.init(AppEnv.isDev());
 
-        // 3. 更新日志目录到实际 user_data_path
-        String actualLogDir = ConfigManager.getInstance().getLogsDir().toString();
-        System.setProperty("jfmultichat.logdir", actualLogDir);
+        // 2. 更新日志目录到实际 user_data_path（可能为自定义数据目录）
+        System.setProperty("jfmultichat.logdir",
+                ConfigManager.getInstance().getLogsDir().toString());
 
-        // 4. 启动 JavaFX
+        // 3. 启动 JavaFX
         Application.launch(MainApp.class, args);
     }
 }

@@ -12,10 +12,10 @@
 
     <!-- 文件输出 — 按天滚动，保留 7 天 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${jfmultichat.logdir}/jfmultichat.log</file>
+        <file>${jfmultichat.logdir:-logs}/jfmultichat.log</file>
         <append>true</append>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${jfmultichat.logdir}/jfmultichat.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>${jfmultichat.logdir:-logs}/jfmultichat.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>7</maxHistory>
         </rollingPolicy>
         <encoder>

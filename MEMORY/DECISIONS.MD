@@ -50,3 +50,24 @@
 **原因**: 减少对 JsBridge 私有类的耦合，让核心包可独立编译和测试。
 
 **注意**: 编译时遇到 BridgeConfigProvider 私有访问问题，已通过 SwConfigProvider 解决。
+
+## 账号列表来源 = 磁盘扫描（2026-07-31）
+- **决定**: 平台页账号列表以 `SwInfoFuncCore.getSwAllAccountsExisted`（磁盘扫描：数据目录子目录 − 排除目录 + 共存 exe）为来源，SwAccData.json 仅作详情补充
+- **原因**: 让磁盘真实存在的账号（新增目录/共存 exe）自动出现，移除已删除残留记录
+- **实现**: `JsBridge.getSwExistedAccounts` → `SwConfigProvider.newAccessor()` + `SwInfoFuncCore` facade；main.js 按 ID 合并详情
+
+## 头像接入 acccore/AvatarUtils 管道（2026-07-31）
+- **决定**: 账号列表头像走 `AccInfoFuncCore.getAvatarFromCache` + `getAccAvatarFromFile`（→ `AvatarUtils.getAvatarDataUrl`），异步逐行更新
+- **原因**: 之前直接渲染 avatar_url 不显示；需统一"本地文件 → URL 下载 → SVG 回退"且不阻塞 UI
+
+## 日志目录固定根配置位置（2026-07-31）
+- **决定**: 日志目录固定 `AppPaths.getLogsDir()`（`%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`），不跟随用户自定义数据目录
+- **原因**: 根配置确定日志位置；与 logback 实际写入一致（Launcher 先用该路径设属性）
+
+## legacy_python 保持忽略（2026-07-31 确认）
+- **决定**: `legacy_python/` 继续在 .gitignore 忽略，不纳入版本管理
+- **原因**: 仅供迁移参考，体积大且不支撑项目运行
+
+## 后台会话关闭 worktree 隔离（2026-07-31）
+- **决定**: `.claude/settings.json` 设 `"worktree": {"bgIsolation": "none"}`，后台会话可直接编辑主目录文件
+- **原因**: 用户偏好直接改主目录文件，不接受强制 worktree；该文件被 gitignore，仅本地生效

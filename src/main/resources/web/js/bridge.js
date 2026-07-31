@@ -109,6 +109,8 @@ JFC.bridge = (function() {
         validatePath: function(p) { return callJsonWithArgs('validatePath', p); },
         browseFolder: function(p) { return callWithArgs('browseFolder', p); },
         getCommitInfo: function() { return callJson('getCommitInfo'); },
+        openLogDir: function() { call('openLogDir'); },
+        getLogDir: function() { return call('getLogDir'); },
 
         // ---- 管理页 ----
         getRemoteSwList: function() { return callJson('getRemoteSwList'); },

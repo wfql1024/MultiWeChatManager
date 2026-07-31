@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jfmultichat.acccore.AccInfoFuncCore;
+import com.jfmultichat.config.AppPaths;
 import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.config.RootConfig;
 import com.jfmultichat.config.SwConfigProvider;
@@ -262,6 +263,29 @@ public class JsBridge {
             Desktop.getDesktop().browse(new URI(url));
         } catch (Exception e) {
             LOG.warn("Failed to open URL: {}", url, e);
+        }
+    }
+
+    /** JS 调用：打开日志目录（Explorer）。目录不存在则先创建 */
+    public void openLogDir() {
+        try {
+            // 日志目录固定在根配置位置：%APPDATA%/JhiFengMultiChat/{ver}/{Dev?}UserFiles/logs
+            java.io.File dir = AppPaths.getLogsDir().toFile();
+            if (!dir.exists()) {
+                java.nio.file.Files.createDirectories(dir.toPath());
+            }
+            Desktop.getDesktop().open(dir);
+        } catch (Exception e) {
+            LOG.warn("打开日志目录失败", e);
+        }
+    }
+
+    /** JS 调用：获取日志目录路径（按当前模式 Dev/Prod 解析） */
+    public String getLogDir() {
+        try {
+            return AppPaths.getLogsDir().toString();
+        } catch (Exception e) {
+            return "";
         }
     }
 

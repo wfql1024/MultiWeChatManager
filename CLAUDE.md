@@ -107,12 +107,38 @@ gradle build --no-daemon                   # 完整构建
 
 详细迁移过程及经验教训见 `MEMORY/DEV_LOGS.MD`。
 
+### 账号列表来源接入磁盘扫描（2026-07-31）
+
+- **背景**: 账号列表仅读 `SwAccData.json` 持久化记录，磁盘真实存在的账号目录/共存 exe 未记录时不显示
+- **新增**: `JsBridge.getSwExistedAccounts(swId)` — 用 `SwConfigProvider.newAccessor()` 构建 `SwInfoFuncCore`，调用 `getSwAllAccountsExisted(swId, null)`（磁盘扫描：数据目录子目录 − 排除目录 + 共存 exe）
+- **main.js** `loadAccountData` 改为：以磁盘扫描结果为账号来源，按账号 ID 与 `getSwDetailData`（SwAccData.json）详情合并；磁盘已删的残留记录不再显示
+- **bridge.js** 新增 `getSwExistedAccounts` 包装
+
+### 头像显示接入（2026-07-31）
+
+- **背景**: 账户列表直接渲染原始 `avatar_url`，未走 AvatarUtils 管道，头像常不显示
+- **新增**: `JsBridge.getAccAvatarAsync(swId, accountId, cbId)` — 后台线程先调 `AccInfoFuncCore.getAvatarFromCache`（截图缓存恢复），再用 `getAccAvatarFromFile`（→ `AvatarUtils.getAvatarDataUrl`：本地文件 → URL 下载(`/0` 结尾) → SVG 回退）
+- **main.js**: 头像优先级 `avatar_data > avatar_url > 占位符`；`requestAccountAvatar` 异步加载 + `updateAccountAvatarCell` 逐行更新（SVG 回退不降级替换已有真实图片）
+- **坑**: `_handleAsync` 第三参必须为字符串，推送 JSON 需双编码（见教训 #45）
+
+### 日志目录修复与"日志"设置项（2026-07-31）
+
+- **logback.xml**: `${jfmultichat.logdir:-logs}` 加默认回退，消除 `jfmultichat.logdir_IS_UNDEFINED` 目录
+- **Launcher.java**: `jfmultichat.logdir` 设为 main 首行语句（任何 Logger 前）
+- **设置页新增"日志"子项**: 打开日志目录 + 预留"上传日志"按钮；日志目录固定 `AppPaths.getLogsDir()`（`%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`，按 Dev/Prod 模式自动切换，不随用户配置）
+
 ---
 
 ## 十、关键技术参考
 
 ### Avatar 头像获取流程（自 2026-07-30）
-顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字回退。支持用户自定义数据目录，通过 `ConfigManager.getInstance().getUserDataPath()` 获取。详见 `MEMORY/DEV_LOGS.MD` 和 `MEMORY/FACTS.MD`。
+顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字回退。支持用户自定义数据目录，通过 `ConfigManager.getInstance().getUserDataPath()` 获取。2026-07-31 起账号列表由 `JsBridge.getAccAvatarAsync` 异步接入（先 `getAvatarFromCache` 恢复缓存）。详见 `MEMORY/DEV_LOGS.MD` 和 `MEMORY/FACTS.MD`。
+
+### 账号列表来源（自 2026-07-31）
+磁盘扫描：`SwInfoFuncCore.getSwAllAccountsExisted(sw, null)`（数据目录子目录 − 排除目录 + 共存 exe）。由 `JsBridge.getSwExistedAccounts(swId)` 暴露，main.js `loadAccountData` 以它为来源并与 SwAccData 详情合并。
+
+### 日志目录（自 2026-07-31）
+固定 `AppPaths.getLogsDir()` = `%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`（`AppEnv.isDev()` 决定 Dev/Prod，不随用户配置）。logback 属性 `${jfmultichat.logdir:-logs}` 有默认回退。
 
 ### JS↔Java 异步架构
 所有网络操作必须后台线程执行，避免阻塞 UI 线程。调用栈：JS void Java 方法 → 立刻返回 → ExecutorService 后台任务 → Platform.runLater → executeScript → JS 回调更新 DOM。详见 `MEMORY/DEV_LOGS.MD`。
@@ -168,3 +194,8 @@ gradle build --no-daemon                   # 完整构建
 42. **`bind()` 也要走 `getEl`** → `bind(id, evt, fn)` 内部必须用 `getEl(id)` 而非 `document.getElementById(id)`，否则事件绑定到原始页面元素而非副本页面
 43. **JS Bridge 注入时序** → `DOMContentLoaded` 时 JS Bridge 尚未注入（Java 端 `injectJsBridge()` 在页面加载完成后才执行）。页面初始化如需调用桥方法，应由 `MainWindow.injectJsBridge()` 末尾主动 `executeScript` 触发，而非依赖 `DOMContentLoaded`
 44. **跨页面联动使用 `document.getElementById`** → 主侧栏 `#nav-platform-list` 不在 `#page-main` 内，不能走 scoped `getEl`。跨页面的元素查询直接用 `document.getElementById`
+45. **`_handleAsync` 第三参必须是字符串** → `bridge.js` 的 `_handleAsync(type, cbId, jsonStr)` 仅当 `typeof jsonStr === 'string'` 才 `JSON.parse`。Java 端 `pushToJs` 若直接嵌入 JSON 对象字面量，JS 侧 `data` 为 null（回调拿到 null）。修复：`pushToJs("..._handleAsync('avatar',"+cbId+","+ MAPPER.writeValueAsString(payload) +")")` — 把 JSON 字符串再编码为 JS 字符串字面量（对 SVG data URL 内单引号也安全）
+46. **Logback 未定义属性 → `${name}_IS_UNDEFINED` 目录** → `${jfmultichat.logdir}` 必须加默认值回退 `${jfmultichat.logdir:-logs}`（`<file>` 与 `<fileNamePattern>` 两处）；否则任何绕过 Launcher 的入口（IDE 直接跑 MainApp、测试、回归）都会在 cwd 生成 `jfmultichat.logdir_IS_UNDEFINED/`
+47. **logdir 属性需在首次 `LoggerFactory.getLogger()` 前设置** → Launcher 将 `System.setProperty("jfmultichat.logdir", AppPaths.getLogsDir().toString())` 放在 main 首行；`AppPaths`/`AppEnv`/`AppVersion` 均无 Logger，可在 pre-init 安全读取路径
+48. **后台会话 worktree 隔离可关闭** → `.claude/settings.json` 设 `"worktree": {"bgIsolation": "none"}` 后后台会话可直接编辑主目录文件（需用户授权；该文件被 gitignore，仅本地）
+49. **日志目录固定根配置位置** → 设置页打开/显示日志目录用 `AppPaths.getLogsDir()`（`%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`），不随用户自定义数据目录；与 logback 实际写入位置一致

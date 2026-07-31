@@ -3,6 +3,7 @@
 ## 当前阶段
 - Phase 1.10 — page-main 替代 page-manage，旧代码剥离至 .old/，侧栏精简
 - Phase 1.11 — AvatarUtils 重构账号头像逻辑（2026-07-30）
+- Phase 1.12 — 账号列表来源磁盘扫描 + 头像显示接入 + 日志修复与设置页"日志"子项（2026-07-31）
 
 ## 打包路径
 - 免安装版: `build/portable/JhiFengMultiChat/JhiFengMultiChat.exe`
@@ -96,3 +97,12 @@
 ### 设计决策
 - appcore/acccore 直接用 `ConfigManager.getInstance()` 读写，不依赖 JsBridge 的 private `BridgeConfigProvider`
 - 新增 `SwConfigProvider.newAccessor()` 便捷方法返回 `SwConfigAccessor`
+
+## 新增功能（2026-07-31 会话）
+- **账号列表来源**: `JsBridge.getSwExistedAccounts` → `SwInfoFuncCore.getSwAllAccountsExisted`（磁盘扫描）；main.js `loadAccountData` 以磁盘结果为来源，与 `getSwDetailData` 详情按 ID 合并
+- **头像显示**: `JsBridge.getAccAvatarAsync` → `AccInfoFuncCore.getAvatarFromCache` + `getAccAvatarFromFile`（AvatarUtils 三路）；前端 `requestAccountAvatar`/`updateAccountAvatarCell` 逐行异步更新
+- **日志修复**: logback.xml `${jfmultichat.logdir:-logs}` 默认回退；`Launcher.main` 首行设属性；不再产生 `jfmultichat.logdir_IS_UNDEFINED/`
+- **设置页"日志"子项**: 打开日志目录 + 预留"上传日志"按钮；日志目录固定 `AppPaths.getLogsDir()` = `%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`（`AppEnv.isDev()` 决定 DevUserFiles/UserFiles，不随用户配置）
+- **提交**: `5216773` 已入库（acccore/appcore/SwConfigProvider + docs/project_structure.md + 账号列表/头像两功能）
+- **未提交（6 文件）**: logback.xml, Launcher.java, JsBridge.java, bridge.js, index.html, settings.js
+- **后台会话隔离**: `.claude/settings.json` 设 `"worktree": {"bgIsolation": "none"}`（本地、gitignored），后台会话可直接编辑主目录文件

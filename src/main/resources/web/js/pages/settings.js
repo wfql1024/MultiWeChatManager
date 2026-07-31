@@ -9,6 +9,7 @@ JFC.pages.settings = (function() {
     var currentSection = 'appearance';
     var currentTheme = 'auto';
     var configInited = false;
+    var logInited = false;
     var updateInited = false;
     var thanksInited = false;
     var aboutInited = false;
@@ -684,6 +685,19 @@ JFC.pages.settings = (function() {
         });
     }
 
+    // ==================== 日志 ====================
+
+    function initLogSection() {
+        if (logInited) return;
+        logInited = true;
+        bind('log-btn-open', 'click', function() { JFC.bridge.call('openLogDir'); });
+        bind('log-btn-upload', 'click', function() { JFC.toastError('上传功能待实现'); });
+        if (JM()) {
+            var p = JFC.bridge.call('getLogDir');
+            if (p) setText('log-dir-path', p);
+        }
+    }
+
     // ==================== 导航 ====================
 
     function showSection(name) {
@@ -696,6 +710,7 @@ JFC.pages.settings = (function() {
         if (target) target.style.display = '';
         if (name === 'appearance') { updateThemeButtons(currentTheme); }
         if (name === 'config')  { initConfigSection(); loadConfigData(); }
+        if (name === 'log')     { initLogSection(); }
         if (name === 'update')  { loadUpdateData(); }
         if (name === 'thanks')  { loadThanksData(); }
         if (name === 'about')   { loadAboutData(); }
