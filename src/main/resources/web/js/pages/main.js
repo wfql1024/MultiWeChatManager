@@ -295,6 +295,8 @@ JFC.pages.main = (function() {
     var _prevHeight = 180;
 
     function selectPlatformInternal(swId) {
+        // 通知 Java：进入平台页 → 自动触发数据维护（登录态/PID/互斥体等，后台执行）
+        JFC.bridge.notifyPlatformEntered(swId);
         var panel = getEl('manage-settings-panel');
         if (panel && currentSwId) {
             _prevHeight = panel.getBoundingClientRect().height | 0;
@@ -1243,6 +1245,47 @@ JFC.pages.main = (function() {
         }
     }
 
+    // ---- 事件驱动：Java 推送账号数据变更，定向更新单行/格 ----
+
+    // 状态徽章 HTML（renderAccountTable 与定向更新共用）
+    function stateBadgeHtml(acc) {
+        if (acc.disabled) return '<span class="manage-state-badge state-disabled">禁用</span>';
+        if (acc.hidden) return '<span class="manage-state-badge state-hidden">隐藏</span>';
+        return '<span class="manage-state-badge state-visible">正常</span>';
+    }
+
+    // 原地更新某行的状态徽章
+    function updateRowStateBadge(row, acc) {
+        var badge = row.querySelector('.manage-state-badge');
+        if (badge && badge.parentNode) badge.parentNode.innerHTML = stateBadgeHtml(acc);
+    }
+
+    // Java 通过 JFC.bridge._onAccChanged 推送账号数据变更时调用（仅更新受影响行/格）
+    function onAccountChanged(p) {
+        var row = document.querySelector('#page-main tr[data-acc-id="' + p.accountId + '"]');
+        if (!row) return;
+        var ch = p.changed || {};
+        var acc = accountData.find(function(a) { return a.id === p.accountId; });
+
+        // 状态（hidden/disabled）→ 原地更新徽章
+        if (ch.hidden !== undefined && acc) acc.hidden = ch.hidden;
+        if (ch.disabled !== undefined && acc) acc.disabled = ch.disabled;
+        if (ch.hidden !== undefined || ch.disabled !== undefined) {
+            updateRowStateBadge(row, acc);
+        }
+        // 展示名
+        if (ch.display_name !== undefined) {
+            var nc = row.querySelector('.manage-nickname-cell');
+            if (nc) nc.textContent = ch.display_name;
+            if (acc) acc.display_name = ch.display_name;
+        }
+        // 头像
+        if (ch.avatar_url !== undefined) {
+            if (acc) acc.avatar_url = ch.avatar_url;
+            updateAccountAvatarCell(p.accountId, ch.avatar_url);
+        }
+    }
+
     function renderAccountTable(accounts) {
         var tbody = getEl('manage-account-tbody');
         if (!tbody) return;
@@ -1263,7 +1306,6 @@ JFC.pages.main = (function() {
             var displayName = acc.display_name || nickname || id;
             var avatarUrl = acc.avatar_data || acc.avatar_url;
             var hidden = acc.hidden;
-            var disabled = acc.disabled;
             var isSelected = selectedIds.has(id);
 
             // 头像
@@ -1277,14 +1319,7 @@ JFC.pages.main = (function() {
             }
 
             // 状态徽章
-            var stateBadge;
-            if (disabled) {
-                stateBadge = '<span class="manage-state-badge state-disabled">禁用</span>';
-            } else if (hidden) {
-                stateBadge = '<span class="manage-state-badge state-hidden">隐藏</span>';
-            } else {
-                stateBadge = '<span class="manage-state-badge state-visible">正常</span>';
-            }
+            var stateBadge = stateBadgeHtml(acc);
 
             // 行操作按钮
             var actionsHtml = '<div class="manage-row-actions">' +
@@ -1407,8 +1442,8 @@ JFC.pages.main = (function() {
             var acc = accountData.find(function(a) { return a.id === accountId; });
             if (acc) {
                 acc.hidden = !acc.hidden;
+                // saveAccount 更新后发布 AccountDataChangedEvent → Java 推送 → onAccountChanged 定向更新徽章（不整表重渲染）
                 JFC.bridge.saveAccount(currentSwId, accountId, JSON.stringify({ hidden: acc.hidden }));
-                renderAccountTable(accountData);
             }
         } else if (action === 'delete') {
             if (!confirm('确定要删除账号 "' + accountId + '" 吗？此操作不可撤销。')) return;
@@ -1542,6 +1577,6 @@ JFC.pages.main = (function() {
         });
     }
 
-    return { init: init };
+    return { init: init, onAccountChanged: onAccountChanged };
 })();
 

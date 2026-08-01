@@ -435,13 +435,39 @@ public final class AccInfoFuncCore {
      * 获取账号登录状态
      * 对应 Python: get_sw_accounts_login_status (L1393-L1461)
      * <p>
-     * 通过进程内存映射匹配数据目录中的账号文件夹来判定登录状态。
+     * 门面方法：依次调用拆分后的步骤（解析PID → 共存关联 → 数据回写），并计算登录/未登录列表。
      */
     public static String[] getSwAccountsLoginStatus(String sw) {
+        Map<Integer, String> pidAccMap = resolvePidAccountMap(sw);
+        if (pidAccMap == null) {
+            return new String[]{"false", "数据路径不存在"};
+        }
+        pidAccMap = associateCoexistAccounts(sw, pidAccMap);
+        List<String> allAccs = getSwAllAccountsExisted(sw, null);
+        updateAccLoginData(sw, pidAccMap, allAccs);
+
+        // 计算登录/未登录列表
+        Set<String> loginSet = new HashSet<>(pidAccMap.values());
+        List<String> logins = new ArrayList<>(loginSet);
+        logins.retainAll(allAccs);
+        List<String> logouts = new ArrayList<>(allAccs);
+        logouts.removeAll(loginSet);
+        return new String[]{"true", "{login=" + logins + ",logout=" + logouts + "}"};
+    }
+
+    /**
+     * 解析进程到账号的 PID 映射（配置读取 + 进程枚举/过滤 + 内存映射匹配）.
+     * <p>
+     * 对应 Python: get_sw_accounts_login_status 的 PID 解析段 (L1398-L1425).
+     *
+     * @param sw 软件标识
+     * @return PID → 账号 ID 映射；data_dir 缺失时返回 null（调用方据此提示"数据路径不存在"）
+     */
+    public static Map<Integer, String> resolvePidAccountMap(String sw) {
         SwConfigAccessor swAccessor = com.jfmultichat.config.SwConfigProvider.newAccessor();
         String dataDir = swAccessor.tryGetPathOf(sw, "data_dir");
         if (dataDir == null) {
-            return new String[]{"false", "数据路径不存在"};
+            return null;
         }
         List<String> excludedDirs = swAccessor.getRemoteSwAsList(sw, "excluded_dirs", Collections.emptyList());
         List<String> exeWildcards = swAccessor.getRemoteSwAsList(sw, "executable_wildcards", Collections.emptyList());
@@ -454,7 +480,7 @@ public final class AccInfoFuncCore {
         allPids = com.jfmultichat.swcore.SwNativeOps.removePidsNotInPath(
                 allPids, new File(swAccessor.tryGetPathOf(sw, "inst_path")).getParent());
 
-        // 匹配进程到账号（简化版，完整实现需内存映射）
+        // 匹配进程到账号（内存映射）
         Map<Integer, String> pidAccMap = new HashMap<>();
         for (int pid : allPids) {
             List<String> memPaths = com.jfmultichat.swcore.SwNativeOps.INSTANCE
@@ -479,8 +505,21 @@ public final class AccInfoFuncCore {
                 }
             }
         }
+        return pidAccMap;
+    }
 
-        // 关联共存程序
+    /**
+     * 关联共存进程（写入 linked_acc 并补全 PID 映射）.
+     * <p>
+     * 对应 Python: get_sw_accounts_login_status 的共存段 (L1436-L1447).
+     *
+     * @param sw        软件标识
+     * @param pidAccMap PID → 账号映射（会被修改：新增共存项）
+     * @return 补全后的 PID → 账号映射
+     */
+    public static Map<Integer, String> associateCoexistAccounts(String sw, Map<Integer, String> pidAccMap) {
+        SwConfigAccessor swAccessor = com.jfmultichat.config.SwConfigProvider.newAccessor();
+        List<String> exeWildcards = swAccessor.getRemoteSwAsList(sw, "executable_wildcards", Collections.emptyList());
         String originExe = swAccessor.getRemoteSwAsString(sw, "executable", "");
         for (Map.Entry<Integer, String> entry : pidAccMap.entrySet()) {
             int pid = entry.getKey();
@@ -501,15 +540,19 @@ public final class AccInfoFuncCore {
                 }
             }
         }
+        return pidAccMap;
+    }
 
-        // 计算登录/未登录列表
-        List<String> allAccs = getSwAllAccountsExisted(sw, null);
-        Set<String> loginSet = new HashSet<>(pidAccMap.values());
-        List<String> logins = new ArrayList<>(loginSet);
-        logins.retainAll(allAccs);
-        List<String> logouts = new ArrayList<>(allAccs);
-        logouts.removeAll(loginSet);
-
+    /**
+     * 回写账号登录相关本地数据：PID 与互斥体状态（含 relay 读回）.
+     * <p>
+     * 对应 Python: get_sw_accounts_login_status 的数据回写段 (L1450-L1461).
+     *
+     * @param sw        软件标识
+     * @param pidAccMap PID → 账号映射
+     * @param allAccs   磁盘扫描得到的全部账号 ID 列表
+     */
+    public static void updateAccLoginData(String sw, Map<Integer, String> pidAccMap, List<String> allAccs) {
         // 记录 pid
         for (String acc : allAccs) {
             Integer pid = null;
@@ -519,34 +562,31 @@ public final class AccInfoFuncCore {
                     break;
                 }
             }
-            updateSwAccData(sw, acc, Map.of(
-                    AccCoreConstants.AccKey.PID, pid,
-                    AccCoreConstants.AccKey.HAS_MUTEX, false));
+            // 用 HashMap：pid 可能为 null（未运行的账号），Map.of 不允许 null 值会抛 NPE
+            // updateAccount 对 null 值会移除该键，未运行账号不存 pid
+            Map<String, Object> accData = new HashMap<>();
+            accData.put(AccCoreConstants.AccKey.PID, pid);
+            accData.put(AccCoreConstants.AccKey.HAS_MUTEX, false);
+            updateSwAccData(sw, acc, accData);
         }
 
         // 从记录加载互斥体
-        Map<String, Object> relayData = new HashMap<>();
         JsonNode relayNode = getSwAccData(sw, AccCoreConstants.AccKey.RELAY);
         if (relayNode != null && relayNode.isObject() && relayNode.has("pid_mutex")) {
             JsonNode pidMutexNode = relayNode.get("pid_mutex");
-            final java.util.concurrent.atomic.AtomicBoolean hasMutex = new java.util.concurrent.atomic.AtomicBoolean(false);
             if (pidMutexNode != null && pidMutexNode.isObject()) {
-                pidMutexNode.fields().forEachRemaining(f -> {
-                    if (f.getValue().asBoolean(false)) hasMutex.set(true);
-                });
-            }
-            for (String acc : allAccs) {
-                JsonNode accNode = getSwAccData(sw, acc);
-                if (accNode != null && accNode.isObject() && accNode.has("pid")) {
-                    int accPid = accNode.get("pid").asInt();
-                    Boolean pm = pidMutexNode != null ? pidMutexNode.get(String.valueOf(accPid)).asBoolean(false) : false;
-                    updateSwAccData(sw, acc, Map.of(AccCoreConstants.AccKey.HAS_MUTEX, pm));
-                    if (pm) hasMutex.set(true);
+                for (String acc : allAccs) {
+                    JsonNode accNode = getSwAccData(sw, acc);
+                    if (accNode != null && accNode.isObject() && accNode.has("pid")) {
+                        int accPid = accNode.get("pid").asInt();
+                        // pid 可能不在 pid_mutex 映射中，需判空再取（缺省视为 false）
+                        JsonNode pmNode = pidMutexNode.get(String.valueOf(accPid));
+                        boolean pm = pmNode != null && pmNode.asBoolean(false);
+                        updateSwAccData(sw, acc, Map.of(AccCoreConstants.AccKey.HAS_MUTEX, pm));
+                    }
                 }
             }
         }
-
-        return new String[]{"true", "{login=" + logins + ",logout=" + logouts + "}"};
     }
 
     // ==================== 账号同步 ====================

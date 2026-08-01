@@ -71,3 +71,11 @@
 ## 后台会话关闭 worktree 隔离（2026-07-31）
 - **决定**: `.claude/settings.json` 设 `"worktree": {"bgIsolation": "none"}`，后台会话可直接编辑主目录文件
 - **原因**: 用户偏好直接改主目录文件，不接受强制 worktree；该文件被 gitignore，仅本地生效
+
+## EventBus 事件机制（2026-08-01）
+- **决定**: 自建轻量 EventBus（`core` 包，观察者模式）解耦「数据更新」与「UI 刷新」
+- **原因**: 痛点——之前任何数据更新只能在每个更新方法里触发整表重渲染（`renderAccountTable`），刷新又带动头像重拉等系列加载；且 `getSwAccountsLoginStatus` 为 god-method（配置/pid/写库/状态计算耦合）。EventBus 使新增数据需求 = 新增订阅者，不改既有代码
+- **流A 进入自动维护**: 进入平台页发布 `PlatformEnteredEvent` → 后台自动维护登录态数据（PID/共存/互斥体回写 SwAccData）
+- **流B 定向刷新**: 账号数据写库后发布 `AccountDataChangedEvent` → 定向推送 JS 仅刷新受影响行/格（toggle-hidden 已迁移，删除/批量等后续增量迁移）
+- **选型比较**: ① EventBus 订阅方零依赖、最解耦、可扩展（选定）；② JsBridge 多槽 Consumer 订阅方须持 JsBridge 引用；③ JavaFX Property 有 FX 线程约束（耗时维护须甩后台）。三者中 EventBus 最契合「appcore/acccore 解耦 JsBridge」的既有方向
+- **关键文件**: `core/EventBus.java`、`core/event/*.java`、`PlatformEventBootstrap.java`、`AccInfoFuncCore` 拆分三步

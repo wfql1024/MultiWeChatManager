@@ -8,6 +8,9 @@ import com.jfmultichat.config.AppPaths;
 import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.config.RootConfig;
 import com.jfmultichat.config.SwConfigProvider;
+import com.jfmultichat.core.EventBus;
+import com.jfmultichat.core.event.AccountDataChangedEvent;
+import com.jfmultichat.core.event.PlatformEnteredEvent;
 import com.jfmultichat.swcore.SwAdapterChecker;
 import com.jfmultichat.swcore.SwConfigAccessor;
 import com.jfmultichat.swcore.SwInfoFuncCore;
@@ -46,6 +49,11 @@ public class JsBridge {
         t.setDaemon(true);
         return t;
     });
+
+    /** 在共享后台线程池执行任务（供事件订阅者等非阻塞后台逻辑使用） */
+    public static void runInBackground(Runnable task) {
+        THREAD_POOL.submit(task);
+    }
 
     private Consumer<String> scriptExecutor;
     private Consumer<String> themeChangeListener;
@@ -1276,10 +1284,34 @@ public class JsBridge {
                 else updates.put(key, node.asText());
             });
             ConfigManager.getInstance().updateAccount(swId, accountId, updates);
+            // 发布账号数据变更事件 → UI 定向刷新（不再整表重渲染）
+            EventBus.getInstance().publish(new AccountDataChangedEvent(swId, accountId, updates));
             return "{\"success\":true}";
         } catch (Exception e) {
             LOG.error("Failed to save account for swId={}", swId, e);
             return "{\"success\":false,\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}";
+        }
+    }
+
+    /** JS 调用：进入/切换平台，发布 PlatformEnteredEvent 触发该平台数据维护 */
+    public void notifyPlatformEntered(String swId) {
+        EventBus.getInstance().publish(new PlatformEnteredEvent(swId));
+    }
+
+    /**
+     * 事件订阅者调用：将账号数据变更定向推送到 JS（仅更新对应行/格）.
+     * 供 AccountDataChangedEvent 的 UI 订阅者使用.
+     */
+    public void pushAccountDataChanged(String swId, String accountId, Map<String, Object> changed) {
+        try {
+            String payload = MAPPER.writeValueAsString(Map.of(
+                    "swId", swId,
+                    "accountId", accountId,
+                    "changed", changed));
+            // 双编码：JSON 字符串再编码为 JS 字符串字面量（教训 #45）
+            pushToJs("JFC.bridge._onAccChanged(" + MAPPER.writeValueAsString(payload) + ")");
+        } catch (Exception e) {
+            LOG.warn("推送账号数据变更失败: swId={}, accountId={}", swId, accountId, e);
         }
     }
 

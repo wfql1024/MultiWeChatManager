@@ -1,6 +1,6 @@
 # JhiFengMultiChat 项目结构文档
 
-> 最后更新: 2026-07-31
+> 最后更新: 2026-08-01
 
 ---
 
@@ -22,9 +22,9 @@ JhiFengMultiChat/
 │   └── TODOS.MD                  # 待办列表
 ├── .old/                         # 废弃代码归档
 │   └── manage.js                 # 原管理页 JS
-├.src/                            # 源码目录
-├─ resources/                     # 资源文件目录
-├─ scripts/                       # 打包脚本目录
+├── src/                           # 源码目录
+├── resources/                     # 资源文件目录
+├── scripts/                       # 打包脚本目录
 ├─ .claude/                       # Claude 配置目录
 ├─ .gradle/                       # Gradle 缓存目录
 ├─ .git/                          # Git 版本控制目录
@@ -42,6 +42,19 @@ JhiFengMultiChat/
 com/jfmultichat/
 ├── Launcher.java                    # 程序入口点
 ├── MainApp.java                     # JavaFX Application 主类
+├── PlatformEventBootstrap.java      # EventBus 订阅装配点（流A 平台维护 / 流B 数据定向推送）
+├── acccore/                         # 账号信息核心（对应 Python acc_func_core）
+│   ├── AccCoreConstants.java        # 账号数据键 + 状态枚举
+│   ├── AccConfigAccessor.java       # 账号数据访问器（读写 SwAccData.json）
+│   ├── AccInfoFuncCore.java         # 头像/展示名/登录状态/共存判断/窗口绑定
+│   ├── AccOperatorCore.java         # 登录配置读写/进程管理/互斥体查杀
+│   └── AccOpsProvider.java          # 账号操作提供器（转 swcore 接口）
+├── appcore/                         # 应用信息核心（对应 Python app_func_core）
+│   ├── AppCoreConstants.java        # 常量定义（RootConfig/GlobalSetting/RemoteSw/AccKey 键名）
+│   ├── AppConfigAccessor.java       # 配置访问器，直接读写 ConfigManager
+│   └── AppCore.java                 # 远程配置获取、版本检查、平台列表、数据迁移、代理设置
+├── bridge/                          # JavaScript ↔ Java 桥接
+│   └── JsBridge.java                # JS 调用 Java 的入口 + 异步回调机制 + EventBus 触发/推送
 ├── config/                          # 配置管理子系统
 │   ├── AppEnv.java                  # 运行环境判断 (DEV/TEST/PROD)
 │   ├── AppPaths.java                # 路径规范定义
@@ -51,9 +64,21 @@ com/jfmultichat/
 │   ├── ConfigManager.java           # 配置管理器单例
 │   ├── CryptoUtils.java             # AES-CBC 加密解密工具
 │   ├── RemoteConfigFetcher.java     # 远程配置下载与缓存
-│   └── RootConfig.java              # RootConfig.json POJO
-├── bridge/                          # JavaScript ↔ Java 桥接
-│   └── JsBridge.java                # JS 调用 Java 的入口 + 异步回调机制
+│   ├── RootConfig.java              # RootConfig.json POJO
+│   └── SwConfigProvider.java        # 公开的 SwConfigAccessor.Provider（newAccessor）
+├── core/                            # 跨切面基础设施
+│   ├── EventBus.java                # 轻量事件总线单例（subscribe/publish，观察者模式）
+│   └── event/                       # 事件定义
+│       ├── PlatformEnteredEvent.java    # 平台进入事件（流A 触发自动维护）
+│       └── AccountDataChangedEvent.java # 账号数据变更事件（流B 触发定向 UI 刷新）
+├── model/                           # 数据模型 (用于 About/Reference/Sponsor 页面)
+│   ├── AboutInfo.java               # 关于页面数据模型
+│   ├── LinkEntry.java               # 链接条目
+│   ├── ReferenceEntry.java          # 引用条目
+│   └── SponsorEntry.java            # 赞助条目
+├── setting/                         # 设置项抽象基类
+│   ├── AbsSetting.java              # JSON 配置基类 (SLF4J 日志)
+│   └── RemoteGlobalSetting.java     # 远程全局配置 (回退 classpath 种子)
 ├── swcore/                          # Windows 探测与补丁引擎核心
 │   ├── SwCoreConstants.java         # 常量统一定义 (RemoteSwKey/AccKeys)
 │   ├── SwHexUtils.java              # 特征码扫描 (hex/通配符/截断)
@@ -70,14 +95,6 @@ com/jfmultichat/
 │   ├── SwInfoFuncCore.java          # Facade 入口
 │   ├── SwPathDetective.java         # 六级路径探测策略 (并发执行)
 │   └── SwNativeOps.java             # JNA 原生操作封装 + MemoryMapIterator
-├── setting/                         # 设置项抽象基类
-│   ├── AbsSetting.java              # JSON 配置基类 (SLF4J 日志)
-│   └── RemoteGlobalSetting.java     # 远程全局配置 (回退 classpath 种子)
-├── model/                           # 数据模型 (用于 About/Reference/Sponsor 页面)
-│   ├── AboutInfo.java               # 关于页面数据模型
-│   ├── LinkEntry.java               # 链接条目
-│   ├── ReferenceEntry.java          # 引用条目
-│   └── SponsorEntry.java            # 赞助条目
 ├── ui/                              # UI 窗口管理
 │   ├── MainWindow.java              # 主窗口 (透明 Region + WebView + 缩放手柄)
 │   ├── FloatingSidebar.java         # 浮动侧栏组件

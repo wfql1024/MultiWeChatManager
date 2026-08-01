@@ -193,5 +193,47 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 ### 五、仓库卫生
 - commit `5216773`: 纳入 acccore/appcore/SwConfigProvider + docs/project_structure.md + 账号列表/头像两功能
 - legacy_python 保持忽略（用户确认）；.old 暂不动
-- 未提交（6 文件）: logback.xml, Launcher.java, JsBridge.java, bridge.js, index.html, settings.js
+- 后续提交 `e7e348c`: 日志修复 + 设置页"日志"子项 + 文档（6 文件）
 - 后台会话 worktree 隔离: 用户要求直接改主目录文件，`.claude/settings.json` 设 `"worktree": {"bgIsolation": "none"}`（gitignored）
+
+---
+
+## 展示名 + SwAccData 自动填充 + EventBus 事件机制（2026-08-01）
+
+### 一、账号展示名显示
+- 背景: "昵称"列头名不副实，应显示 remark 优先的展示名
+- 实现:
+  - `JsBridge.getSwDetailData` 每账号注入 `display_name` = `AccInfoFuncCore.getAccOriginDisplayName(sw, id)`（remark→nickname→alias→账号 ID）
+  - index.html 表头 "昵称 ↕" → " ↕"（去文字留排序箭头），`data-sort="nickname"` → `"display_name"`
+  - main.js: `sortField` 默认改 `display_name`；渲染用 `acc.display_name || nickname || id`；头像首字符同步用展示名
+
+### 二、SwAccData 账号自动填充
+- 背景: 磁盘扫描出账号但 SwAccData 无节点，详情无法挂载
+- 实现: `AccInfoFuncCore.syncSwAccAccounts(sw, accountIds)` 遍历 `getSwAccData(sw, acc)` 检查，缺失 `updateSwAccData(sw, acc, emptyMap)` 补空节点；`JsBridge.getSwExistedAccounts` 取得列表后调用
+
+### 三、EventBus 事件机制（核心）
+- **动机/痛点**: 数据更新只能在每个更新方法里触发整表重渲染，刷新带动系列加载；`getSwAccountsLoginStatus` 为 god-method（配置/pid/写库/状态计算耦合）
+- **选型讨论**: ① 自建 EventBus（选定：订阅方零依赖 JsBridge、可扩展）；② JsBridge 多槽 Consumer（订阅方须持 JsBridge 引用）；③ JavaFX Property（FX 线程约束）。用户选定①
+- **新增**:
+  - `core/EventBus.java`: 单例，`ConcurrentHashMap<Class, CopyOnWriteArrayList<Consumer>>`，publish 调用方线程同步分发，单订阅者异常隔离
+  - `core/event/PlatformEnteredEvent(swId)` / `AccountDataChangedEvent(swId, accountId, changed)`
+  - `PlatformEventBootstrap.install(bridge)`: 流A 订阅（后台维护）、流B 订阅（定向推送 UI）
+- **流A 平台进入自动维护**:
+  - 前端 `selectPlatformInternal` 顶部 `JFC.bridge.notifyPlatformEntered(swId)` → `JsBridge.notifyPlatformEntered` 发布事件
+  - 订阅者 `JsBridge.runInBackground` 后台执行: `resolvePidAccountMap` → `associateCoexistAccounts` → `updateAccLoginData`（拆分自 `getSwAccountsLoginStatus`，原方法保留门面，去掉 `relayData`/`hasMutex` 死代码）
+- **流B 数据更新定向刷新**:
+  - `saveAccount` 写库后发布 `AccountDataChangedEvent(swId, acc, updates)`
+  - 订阅者 `JsBridge.pushAccountDataChanged` 双编码推送 `JFC.bridge._onAccChanged(json)`（教训 #45）
+  - 前端 `main.js onAccountChanged`: 定位 `tr[data-acc-id=...]`，按 changed 字段更新徽章（`updateRowStateBadge`，复用 `stateBadgeHtml`）/展示名（`.manage-nickname-cell`）/头像（`updateAccountAvatarCell`），未知字段忽略
+  - toggle-hidden 迁移: 去掉 `renderAccountTable(accountData)`，事件推送定向更新徽章（"返回后仅更新这一块"）
+- **线程模型**: publish 同步（调用方线程）；耗时订阅者 `runInBackground`；UI 推送 `pushToJs`（内部 Platform.runLater）
+
+### 四、NPE 修复（Map.of null 值）
+- 现象: 切换平台约 3 秒后 `[PlatformMaintenance] 维护失败` NPE @ `updateAccLoginData:565`
+- 根因: `Map.of(AccKey.PID, pid, ...)` 中未运行账号 pid=null → `ImmutableCollections$MapN` 构造器 `Objects.requireNonNull` 抛 NPE（原 god-method 未接线从未触发，接入后暴露潜伏 bug）
+- 修复: 改 `HashMap`（`ConfigManager.updateAccount` 对 null 值移除键 → 未运行账号不存 pid）；relay 读回 `pidMutexNode.get(pid)` 先判空再 `.asBoolean`（缺省 false）
+- 教训 #50
+
+### 五、仓库卫生
+- commit `c2561a4`: 展示名 + 自动填充（4 文件）
+- 本次提交: EventBus 全套（MainApp/AccInfoFuncCore/JsBridge/bridge.js/main.js + 新增 core/ + PlatformEventBootstrap）+ 文档（CLAUDE.md/MEMORY/project_structure.md），已通过进入平台页与隐藏切换实测、维护日志无报错

@@ -45,3 +45,11 @@
 
 ## 上传日志功能
 - 设置页"日志"子项已预留"上传日志"按钮（点击 toast「上传功能待实现」），需服务器后实现上传
+
+## 登录状态 UI 接入
+- 登录态数据已自动维护落库（进入平台页后台执行 `resolvePidAccountMap` → `updateAccLoginData`，SwAccData 含 pid/has_mutex/linked_acc），**界面未展示登录态**
+- 后续加 UI：用 EventBus 流A 订阅或直接读 SwAccData 渲染
+
+## 事件驱动定向刷新迁移（EventBus 流B）
+- [x] toggle-hidden 已迁移（saveAccount 发布 AccountDataChangedEvent → 定向更新徽章，不整表重渲染）
+- [ ] 删除/批量隐藏/显示/头像设置/快捷键设置等账号操作按同模式增量迁移：写库后发布 `AccountDataChangedEvent`，`onAccountChanged` 定向更新对应行/格

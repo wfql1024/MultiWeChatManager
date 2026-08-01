@@ -4,6 +4,7 @@
 - Phase 1.10 — page-main 替代 page-manage，旧代码剥离至 .old/，侧栏精简
 - Phase 1.11 — AvatarUtils 重构账号头像逻辑（2026-07-30）
 - Phase 1.12 — 账号列表来源磁盘扫描 + 头像显示接入 + 日志修复与设置页"日志"子项（2026-07-31）
+- Phase 1.13 — 展示名显示 + SwAccData 自动填充 + EventBus 事件机制（2026-08-01）
 
 ## 打包路径
 - 免安装版: `build/portable/JhiFengMultiChat/JhiFengMultiChat.exe`
@@ -68,6 +69,19 @@
 
 未来扩展：如需更换存储格式，只需实现新的 `IConfigStore`
 
+## 包结构
+
+- `acccore` — 账号信息核心（AccConfigAccessor/AccInfoFuncCore/AccOperatorCore/AccOpsProvider/AccCoreConstants）
+- `appcore` — 应用信息核心（AppConfigAccessor/AppCore/AppCoreConstants）
+- `bridge` — JS↔Java 桥接（JsBridge，含 EventBus 触发/推送）
+- `config` — 配置管理（ConfigManager/JsonConfigStore/AppPaths/AppEnv/SwConfigProvider 等）
+- `core` — 跨切面基础设施（EventBus + event/ 平台进入与账号数据变更事件）
+- `model` — 数据模型（About/Reference/Sponsor）
+- `setting` — 设置项抽象（AbsSetting/RemoteGlobalSetting）
+- `swcore` — Windows 探测与补丁引擎核心
+- `ui` — UI 窗口管理（MainWindow/FloatingSidebar/SampleWindow）
+- `utils` — 工具类（AvatarUtils 等）
+
 ## swcore 包关键细节
 ### SwConfigAccessor.Provider 模式：通过 Provider 注入，BridgeConfigProvider 适配 ConfigManager
 ### 六级路径探测：内存映射正则 > 注册表 > 猜测 > 进程 > 其他SW > DLL遍历
@@ -79,7 +93,7 @@
 ## 页面迁移
 - **page-main**: 主内容区，基于 manage.js 完整复制后修正作用域隔离逻辑
 - **main.js**: `getEl(id)` 使用 `querySelector('#page-main #' + id) || document.getElementById(id)` 进行作用域隔离
-- **管理页已废弃**: `#page-manage` HTML 区块已删除，`manage.js` 移至 `.old/`test
+- **管理页已废弃**: `#page-manage` HTML 区块已删除，`manage.js` 移至 `.old/`
 
 ## 新增模块（2026-07-31）
 - **appcore 包** (`src/main/java/com/jfmultichat/appcore/`) — 对应 Python `func_core/app_func_core.py` + `functions/app_func.py`
@@ -104,5 +118,20 @@
 - **日志修复**: logback.xml `${jfmultichat.logdir:-logs}` 默认回退；`Launcher.main` 首行设属性；不再产生 `jfmultichat.logdir_IS_UNDEFINED/`
 - **设置页"日志"子项**: 打开日志目录 + 预留"上传日志"按钮；日志目录固定 `AppPaths.getLogsDir()` = `%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`（`AppEnv.isDev()` 决定 DevUserFiles/UserFiles，不随用户配置）
 - **提交**: `5216773` 已入库（acccore/appcore/SwConfigProvider + docs/project_structure.md + 账号列表/头像两功能）
-- **未提交（6 文件）**: logback.xml, Launcher.java, JsBridge.java, bridge.js, index.html, settings.js
+- **提交**: `e7e348c` 已入库（日志修复 + 设置页"日志"子项 + 文档，6 文件）
 - **后台会话隔离**: `.claude/settings.json` 设 `"worktree": {"bgIsolation": "none"}`（本地、gitignored），后台会话可直接编辑主目录文件
+
+## 新增模块（2026-08-01）
+- **core 包** (`src/main/java/com/jfmultichat/core/`) — 跨切面基础设施
+  - `EventBus.java` — 轻量事件总线单例（subscribe/publish 线程安全，单订阅者异常不拖垮其它）
+  - `event/PlatformEnteredEvent.java` — 平台进入事件（流A 触发自动维护）
+  - `event/AccountDataChangedEvent.java` — 账号数据变更事件（流B 触发定向 UI 刷新）
+- **PlatformEventBootstrap** (`src/main/java/com/jfmultichat/PlatformEventBootstrap.java`) — 事件装配点，`install(bridge)` 注册订阅者，MainApp.start 调用
+
+## 新增功能（2026-08-01 会话）
+- **账号展示名**: "昵称"列头置空；`getSwDetailData` 注入 `display_name`（`getAccOriginDisplayName`: remark→nickname→alias→ID）；前端展示名/头像首字符/排序用之
+- **SwAccData 自动填充**: `syncSwAccAccounts` 在 `getSwExistedAccounts` 取得磁盘扫描列表后补缺失账号节点
+- **EventBus 事件机制**: 流A 进入平台页自动后台维护登录态数据（`resolvePidAccountMap`→`associateCoexistAccounts`→`updateAccLoginData`）；流B `saveAccount` 发布事件 → 定向推送 JS 只刷对应行/格
+- **NPE 修复**: `Map.of(PID, pid)` 因 pid null 抛 NPE → HashMap；relay 读回判空
+- **提交**: `c2561a4` 已入库（展示名 + 自动填充，4 文件）
+- **提交**: 本次提交（EventBus 机制全套 + NPE 修复 + 文档），已通过进入平台页与隐藏切换实测、维护日志无报错

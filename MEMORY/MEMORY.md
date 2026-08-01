@@ -1,6 +1,6 @@
 # MEMORY — 索引与摘要
 
-> 最后更新: 2026-07-31
+> 最后更新: 2026-08-01
 
 ## 决策点
 - [[DECISIONS.MD#page-main 复制迁移]] — 完整复制 DOM+JS，不动旧文件
@@ -15,6 +15,7 @@
 - [[DECISIONS.MD#日志目录固定根配置位置]] — AppPaths.getLogsDir() 不随用户配置（2026-07-31）
 - [[DECISIONS.MD#legacy_python 保持忽略]] — 不入版本管理（2026-07-31 确认）
 - [[DECISIONS.MD#后台会话关闭 worktree 隔离]] — bgIsolation none（2026-07-31）
+- [[DECISIONS.MD#EventBus 事件机制]] — 数据更新↔UI刷新解耦，流A自动维护/流B定向刷新（2026-08-01）
 
 ## 待办
 - [[TODOS.MD#登录页面]]、[[TODOS.MD#统计页面]] — 占位未实现
@@ -24,15 +25,17 @@
 - [[TODOS.MD#utils 包]] — LoggerUtils/decrypt/image_utils/file_utils/Handle 操作待移植
 - [[TODOS.MD#Handle 操作]] — 需 JNA 重写 NtQuerySystemInformation 系列
 - [[TODOS.MD#上传日志功能]] — 设置页"日志"子项已预留按钮，需服务器后实现
+- [[TODOS.MD#登录状态 UI 接入]] — 数据已自动维护落库，界面未展示
+- [[TODOS.MD#事件驱动定向刷新迁移（EventBus 流B）]] — toggle-hidden 已迁移，其余操作待增量迁移
 
 ## 事实
-- [[FACTS.MD#当前阶段]]—Phase 1.12
+- [[FACTS.MD#当前阶段]]—Phase 1.13
 - [[FACTS.MD#打包路径]]—build/portable/, build/exe/
 - [[FACTS.MD#脚本位置]]—scripts/
 - [[FACTS.MD#版本号]]—4.0.0.7000 (AppVersion.java), 4.0.0 (Gradle/packaging)
 - [[FACTS.MD#JavaFX]]—Gradle cache, 17.0.2, 五个模块
 - [[FACTS.MD#WiX]]—C:\Program Files (x86)\WiX Toolset v3.14\bin
-- [[FACTS.MD#包结构]]—config/bridge/acccore/swcore/utils/setting/model/ui/docs
+- [[FACTS.MD#包结构]]—acccore/appcore/bridge/config/core/model/setting/swcore/ui/utils
 - [[FACTS.MD#远程配置]]—RemoteConfigFetcher 默认 URL + AES-CBC 加密格式
 - [[FACTS.MD#物理地图]]—docs/physical_map.md 完整文件树
 - [[FACTS.MD#Handle 操作]]—Java 无原生 Handle 操作，需 JNA 仿照 pywinhandle.py
@@ -42,12 +45,15 @@
 - [[FACTS.MD#settings.json]]—showMessageTimestamps=true, claude-time 插件安装失败（hooks 冲突）
 - [[FACTS.MD#AvatarUtils]]—头像获取工具类，本地/URL/SVG 三路回退（2026-07-30）
 - [[FACTS.MD#page-main]]—主页面从 page-manage 复制迁移，作用域隔离修复
-- [[FACTS.MD#新增功能（2026-07-31 会话）]]—账号列表来源/头像显示/日志修复与设置项/提交 5216773/未提交 6 文件
+- [[FACTS.MD#新增功能（2026-07-31 会话）]]—账号列表来源/头像显示/日志修复与设置项/提交 5216773 + e7e348c
+- [[FACTS.MD#新增模块（2026-08-01）]] — core 包（EventBus + 事件）+ PlatformEventBootstrap
+- [[FACTS.MD#新增功能（2026-08-01 会话）]]—展示名/自动填充/EventBus 事件机制/提交 c2561a4 + EventBus 批次
 
 ## 开发日志
 - [[DEV_LOGS.MD#page-main 复制迁移（2026-07-04~05）]] — 完整复制 DOM+JS，侧栏精简，旧代码剥离
 - [[DEV_LOGS.MD#头像显示功能重构（2026-07-30）]] — AvatarUtils 引入、用户目录适配、SVG 文字回退样式
 - [[DEV_LOGS.MD#账号列表来源 + 头像显示 + 日志设置页（2026-07-31）]] — 磁盘扫描来源/头像异步接入/日志修复/_handleAsync 双编码坑
+- [[DEV_LOGS.MD#展示名 + SwAccData 自动填充 + EventBus 事件机制（2026-08-01）]] — 展示名/自动填充/EventBus 两事件流/NPE 修复
 
 ## 迁移工程（2026-07-31）
 - [[FACTS.MD#新增模块（2026-07-31）]] — appcore/acccore 包 + SwConfigProvider

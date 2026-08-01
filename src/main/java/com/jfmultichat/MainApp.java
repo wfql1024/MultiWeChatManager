@@ -29,6 +29,8 @@ public class MainApp extends Application {
         loadAppIcon(primaryStage);
 
         JsBridge bridge = new JsBridge();
+        // 注册事件订阅者（平台进入维护 / 账号数据定向推送）
+        PlatformEventBootstrap.install(bridge);
         mainWindow = new MainWindow(this, bridge);
 
         // 只显示主窗口，侧栏和示例窗口由按钮触发

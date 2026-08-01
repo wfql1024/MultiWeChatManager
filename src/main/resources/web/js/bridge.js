@@ -85,6 +85,16 @@ JFC.bridge = (function() {
         callJsonWithArgs: callJsonWithArgs,
         registerAsync: registerAsync,
         _handleAsync: _handleAsync,   // Java 通过 executeScript 调用
+        // Java 主动推送账号数据变更（定向更新单行/格），勿手动调用
+        _onAccChanged: function(jsonStr) {
+            var data = null;
+            if (jsonStr && typeof jsonStr === 'string') {
+                try { data = JSON.parse(jsonStr); } catch(e) {}
+            }
+            if (data && JFC.pages && JFC.pages.main && JFC.pages.main.onAccountChanged) {
+                JFC.pages.main.onAccountChanged(data);
+            }
+        },
 
         // ---- 窗口控制 ----
         ping: function() { return call('ping'); },
@@ -123,6 +133,7 @@ JFC.bridge = (function() {
         saveSwConfig: function(swId, configJson) { return callJsonWithArgs('saveSwConfig', swId, configJson); },
         getSwDetailData: function(swId) { return callJsonWithArgs('getSwDetailData', swId); },
         getSwExistedAccounts: function(swId) { return callJsonWithArgs('getSwExistedAccounts', swId); },
+        notifyPlatformEntered: function(swId) { callWithArgs('notifyPlatformEntered', swId); },
         getAccAvatarAsync: function(swId, accountId, fn) {
             callWithArgs('getAccAvatarAsync', swId, accountId, String(registerAsync(fn)));
         },
