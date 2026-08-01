@@ -549,6 +549,34 @@ public final class AccInfoFuncCore {
         return new String[]{"true", "{login=" + logins + ",logout=" + logouts + "}"};
     }
 
+    // ==================== 账号同步 ====================
+
+    /**
+     * 确保 SwAccData 中存在已加载账号的节点；缺失的自动补充为空节点.
+     * <p>
+     * 对应 Python: get_sw_accounts_login_status 中 allAccs = getSwAllAccountsExisted(sw, null)
+     * 之后的账号补齐思路（目前无 pid 获取，仅保证本地数据包含已加载账号）.
+     *
+     * @param sw         软件标识
+     * @param accountIds 已加载的账号 ID 列表（磁盘扫描结果）
+     * @return 本次新增的账号 ID 列表
+     */
+    public static List<String> syncSwAccAccounts(String sw, List<String> accountIds) {
+        List<String> added = new ArrayList<>();
+        if (accountIds == null || accountIds.isEmpty()) return added;
+        for (String acc : accountIds) {
+            JsonNode node = getSwAccData(sw, acc);
+            if (node == null || !node.isObject()) {
+                updateSwAccData(sw, acc, Collections.emptyMap());
+                added.add(acc);
+            }
+        }
+        if (!added.isEmpty()) {
+            LOG.info("[Acc] 自动补充 SwAccData 账号节点: {} -> {}", sw, added);
+        }
+        return added;
+    }
+
     // ==================== 详情 ====================
 
     /**

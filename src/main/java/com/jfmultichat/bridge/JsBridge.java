@@ -1176,6 +1176,8 @@ public class JsBridge {
             accounts.forEach((id, fields) -> {
                 ObjectNode item = MAPPER.createObjectNode();
                 item.put("id", id);
+                // 展示名：remark → nickname → alias，回退账号 ID
+                item.put("display_name", AccInfoFuncCore.getAccOriginDisplayName(swId, id));
                 // 复制所有字段
                 fields.fieldNames().forEachRemaining(key -> {
                     JsonNode node = fields.get(key);
@@ -1206,6 +1208,8 @@ public class JsBridge {
             SwConfigAccessor accessor = SwConfigProvider.newAccessor();
             SwInfoFuncCore core = new SwInfoFuncCore(accessor, null, null, null);
             List<String> existed = core.getSwAllAccountsExisted(swId, null);
+            // 自动补充 SwAccData 缺失账号节点（确保本地数据包含已加载账号）
+            AccInfoFuncCore.syncSwAccAccounts(swId, existed);
             return MAPPER.writeValueAsString(existed);
         } catch (Exception e) {
             LOG.error("Failed to get existed accounts for swId={}", swId, e);

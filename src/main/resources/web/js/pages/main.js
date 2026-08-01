@@ -12,7 +12,7 @@ JFC.pages.main = (function() {
     var swConfigData = {};
     var accountData = [];
     var selectedIds = new Set();
-    var sortField = 'nickname';
+    var sortField = 'display_name';
     var sortAsc = true;
     var settingsCollapsed = {};   // swId → bool, 从 local_config.json 持久化
     var iconCache = {};           // swId → iconUrl (base64 data URL)
@@ -1193,6 +1193,8 @@ JFC.pages.main = (function() {
             return {
                 id: id,
                 nickname: acc.nickname || '',
+                // 展示名：getAccOriginDisplayName（remark→nickname→alias→账号ID）
+                display_name: acc.display_name || '',
                 avatar_url: acc.avatar_url || '',
                 hidden: acc.hidden === true || acc.hidden === 'true',
                 disabled: acc.disabled === true || acc.disabled === 'true',
@@ -1257,6 +1259,8 @@ JFC.pages.main = (function() {
         accounts.forEach(function(acc) {
             var id = acc.id;
             var nickname = acc.nickname;
+            // 展示名：getAccOriginDisplayName 结果，回退原始昵称/账号 ID
+            var displayName = acc.display_name || nickname || id;
             var avatarUrl = acc.avatar_data || acc.avatar_url;
             var hidden = acc.hidden;
             var disabled = acc.disabled;
@@ -1266,9 +1270,9 @@ JFC.pages.main = (function() {
             var avatarHtml;
             if (avatarUrl) {
                 avatarHtml = '<img src="' + escapeAttr(avatarUrl) + '" alt="" onerror="this.parentElement.innerHTML=\'<span class=manage-avatar-placeholder>' +
-                    escapeHtml((nickname || id || '?').charAt(0).toUpperCase()) + '</span>\';">';
+                    escapeHtml((displayName || '?').charAt(0).toUpperCase()) + '</span>\';">';
             } else {
-                var initial = (nickname || id || '?').charAt(0).toUpperCase();
+                var initial = (displayName || '?').charAt(0).toUpperCase();
                 avatarHtml = '<span class="manage-avatar-placeholder">' + escapeHtml(initial) + '</span>';
             }
 
@@ -1295,7 +1299,7 @@ JFC.pages.main = (function() {
                     (isSelected ? ' checked' : '') +
                     ' data-acc-id="' + escapeAttr(id) + '"></td>' +
                 '<td class="manage-col-avatar"><div class="manage-account-avatar">' + avatarHtml + '</div></td>' +
-                '<td class="manage-nickname-cell">' + escapeHtml(nickname) + '</td>' +
+                '<td class="manage-nickname-cell">' + escapeHtml(displayName) + '</td>' +
                 '<td class="manage-id-cell" title="' + escapeAttr(id) + '">' + escapeHtml(id) + '</td>' +
                 '<td>' + stateBadge + '</td>' +
                 '<td>' + actionsHtml + '</td>' +
