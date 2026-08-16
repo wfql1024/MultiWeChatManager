@@ -968,7 +968,7 @@
 }
 .manage-layout {
     display: grid;
-    grid-template-columns: var(--sidebar-width) 1fr;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);   /* 1fr 允许收缩到 0，不被内容撑宽 */
     gap: 0;
     height: 100%;
     overflow: hidden;
@@ -1403,11 +1403,12 @@
 /* --- Account Section（账号区域：宽度随窗口，内容超高时纵向滚动） --- */
 .manage-account-section {
     flex: 1;
+    min-height: 0;
+    min-width: 0;                   /* 允许收缩，不被内容（表格列宽）撑宽 */
     display: flex;
     flex-direction: column;
     overflow-y: auto;               /* 账号区域纵向滚动（参考设置区域做法） */
     overflow-x: hidden;             /* 不横向滚动，宽度随窗口 */
-    min-height: 0;
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
@@ -1419,6 +1420,7 @@
 
 .acc-table-slot {
     flex: none;                     /* 自然高度（表高=内容高，由外部容器滚动） */
+    min-width: 0;                   /* 允许收缩，不被表格列宽撑宽 */
     display: flex;
     flex-direction: column;
     border-top: 1px solid var(--border-color);
@@ -1426,6 +1428,7 @@
 .acc-table-slot:first-child { border-top: none; }
 
 .acc-table {
+    min-width: 0;                   /* 允许收缩，不被表格列宽撑宽 */
     display: flex;
     flex-direction: column;
 }
@@ -1468,7 +1471,8 @@
 }
 
 .acc-table-scroll {
-    overflow-x: auto;               /* 表内横向滚动（列宽总和>表宽时），宽度随窗口 */
+    min-width: 0;                   /* 允许收缩到账号区域宽（=窗口宽），内容超出时内部横向滚动 */
+    overflow-x: auto;               /* 表内横向滚动（列宽总和>表宽时） */
     overflow-y: hidden;             /* 表内不纵向滚动：所有行直接显示，由账号区域纵向滚动查看 */
     background: var(--bg-sidebar);  /* 列头底色：填充表格右侧留白 */
     scrollbar-width: thin;
