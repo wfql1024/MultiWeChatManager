@@ -25,8 +25,8 @@ JFC.pages.main = (function() {
         // 账号类表（原生/共存）
         account: [
             { key: 'check',        label: '勾选框',   mandatory: true,  defVisible: true,  defWidth: 40,  fixed: true  },
-            { key: 'avatar',       label: '头像',     mandatory: true,  defVisible: true,  defWidth: 56,  fixed: true  },
-            { key: 'display_name', label: '展示名',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 200 },
+            { key: 'avatar',       label: '',         mandatory: true,  defVisible: true,  defWidth: 56,  fixed: true  },
+            { key: 'display_name', label: '名称',      mandatory: true,  sortable: true, defVisible: true,  defWidth: 200 },
             { key: 'hotkey',       label: '快捷键',   mandatory: true,  defVisible: true,  defWidth: 110 },
             { key: 'id',           label: 'ID',       mandatory: false, sortable: true, defVisible: true,  defWidth: 150, cellClass: 'manage-id-cell' },
             { key: 'alias',        label: '平台内ID', mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-alias-cell' },
@@ -42,12 +42,14 @@ JFC.pages.main = (function() {
         // 无效账号（原因列）
         invalid: [
             { key: 'check',   label: '勾选框', mandatory: true,  defVisible: true,  defWidth: 40, fixed: true },
-            { key: 'display_name', label: '展示名', mandatory: true, sortable: true, defVisible: true, defWidth: 200 },
+            { key: 'display_name', label: '名称', mandatory: true, sortable: true, defVisible: true, defWidth: 200 },
             { key: 'id',      label: 'ID',     mandatory: false, sortable: true, defVisible: true,  defWidth: 150 },
             { key: 'reason',  label: '无效原因', mandatory: false, sortable: true, defVisible: true, defWidth: 200 }
         ]
     };
     var accountTables = {};
+    var sectionScrollbar = null;   // 账号区域纵向 overlay 滚动条（attachScrollbar 返回）
+    var settingsScrollbar = null;  // 设置区域纵向 overlay 滚动条
 
     // ---- 辅助函数 ----
     function bind(id, evt, fn) {
@@ -141,6 +143,28 @@ JFC.pages.main = (function() {
                 getSwId: function() { return currentSwId; }
             });
         });
+
+        // 账号区域纵向 overlay 滚动条（与表内横向同款：细、无箭头、随主题；原生有箭头且不随主题）
+        var innerArea = document.querySelector('.account-area-inner');
+        if (innerArea) {
+            sectionScrollbar = JFC.AccountTable.attachScrollbar(innerArea, 'y');
+            // 表内容变化（数据加载/渲染）时自动刷新
+            try {
+                var mo = new MutationObserver(function() { sectionScrollbar.update(); });
+                mo.observe(innerArea, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+            } catch (e) { /* 轮询兜底 */ }
+        }
+
+        // 设置区域纵向滚动条（与账号区域同款，统一风格）
+        var settingsContent = document.getElementById('manage-settings-content');
+        if (settingsContent) {
+            settingsScrollbar = JFC.AccountTable.attachScrollbar(settingsContent, 'y');
+            // 设置内容动态渲染，变化时自动刷新
+            try {
+                var mo2 = new MutationObserver(function() { if (settingsScrollbar) settingsScrollbar.update(); });
+                mo2.observe(settingsContent, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+            } catch (e) { /* rAF 兜底 */ }
+        }
     }
 
     // ---- 管理页侧栏 hover 展开/收起（完全沿用 nav-sidebar.js） ----
@@ -388,6 +412,13 @@ JFC.pages.main = (function() {
         loadCurtainStateForSw(swId);
         loadSwConfig(swId);
         loadAccountData(swId);
+        // 进入平台页即刷新设置区域滚动条（覆盖内容填充与展开动画时序，不依赖用户调整高度才显示）
+        if (settingsScrollbar) {
+            settingsScrollbar.update();
+            [120, 350, 800, 1500].forEach(function(d) {
+                setTimeout(function() { if (settingsScrollbar) settingsScrollbar.update(); }, d);
+            });
+        }
 
         // 自动探测未填路径（后台执行，不阻塞 UI）
         setTimeout(function() { autoDetectUnsetPaths(); }, 100);
@@ -1104,20 +1135,20 @@ JFC.pages.main = (function() {
         panel.offsetHeight;
 
         requestAnimationFrame(function () {
-            // 清除内容限制，让面板的 maxHeight 完全控制可见区域
+            // 动画期间清除内容区 max-height 锁（让面板的 maxHeight 完全控制可见区域，面板才能撑高）
             var content = getEl('manage-settings-content');
             if (content) content.style.maxHeight = 'none';
 
             panel.style.transition = 'max-height 0.3s ease';
             panel.style.maxHeight = targetHeight + 'px';
 
-            var done = function (e) {
-                if (e.propertyName !== 'max-height') return;
-                panel.removeEventListener('transitionend', done);
+            // 动画结束后恢复内容区 max-height 限制（否则 content 高度=内容高，永不溢出、滚动条不出现）
+            // JavaFX transitionend 不可靠，用 setTimeout 兜底
+            setTimeout(function() {
+                var c = getEl('manage-settings-content');
+                if (c) c.style.maxHeight = targetHeight + 'px';
                 if (callback) callback();
-            };
-
-            panel.addEventListener('transitionend', done);
+            }, 400);
         });
     }
 
@@ -1271,6 +1302,11 @@ JFC.pages.main = (function() {
         accountTables.invalid_acc.setData([]);
         // 异步加载头像（本地文件 → URL下载 → SVG 回退）
         rows.forEach(function(acc) { requestAccountAvatar(swId, acc); });
+        // 刷新账号区域纵向滚动条（内容高度变化后）
+        if (sectionScrollbar) {
+            sectionScrollbar.update();
+            setTimeout(function() { if (sectionScrollbar) sectionScrollbar.update(); }, 60);
+        }
     }
 
     // ---- 异步头像加载 ----

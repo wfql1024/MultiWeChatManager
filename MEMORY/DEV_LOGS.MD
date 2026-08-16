@@ -342,3 +342,40 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - 应用重启实测：进入 Weixin 平台，6 账号原生表渲染、头像异步加载、平台维护完成，无 JS 错误无 NPE
 - 列宽自适应逻辑待与用户探讨（见上方提问）；GUI 交互实测待用户反馈
 
+---
+
+## 账号列表交互打磨与滚动条体系（2026-08-16 晚间）
+
+### 一、滚动条问题全排查（核心难点，多轮迭代）
+- **现象演变**: ①横向滚动条不出现（列宽总和>容器时无条）；②纵向滚动条不出现；③设置区域滚动条需手动调整高度才触发；④滚动条被内容带着滚（absolute 子元素是滚动内容的一部分）；⑤滚动条不随主题、带箭头
+- **根因链**:
+  1. **列宽联动/无横向滚动**: `table-layout:fixed` + 表格宽=容器宽时多余空间**按比例分配列**（拖宽一列全部变、永不超宽）→ 修：表格宽度恒=可见列宽总和（px）
+  2. **内容撑宽容器**: grid `1fr` 列被表格撑宽（`#page-main .manage-layout { grid-template-columns:1fr }` 高特异性覆盖了 `minmax(0,1fr)`）→ 修：page-main 改 flex column + 各级 `min-width:0`
+  3. **内容撑高容器（纵向滚动条不出现）**: `.manage-detail-area` 高度 auto 被四表内容撑高 → 无纵向溢出 → 修：`.manage-detail-area { flex:1; min-height:0; min-width:0; overflow:hidden }` + flex column 高度链
+  4. **设置区域滚动条需手动触发**: 诊断日志（`console.log` 经 WebView→Java 日志可见）定位——`animatePanelHeight` 动画期间 `content.style.maxHeight='none'`（教训 #37 让面板能撑高）但动画后未恢复 → content 高度=内容高永不溢出 → 修：动画结束恢复 `content.maxHeight=targetHeight`
+  5. **滚动条被内容带着滚**: absolute 子元素在滚动容器内是滚动内容 → 修：滚动条**挂滚动容器父级**（宿主 position:relative）
+  6. **JavaFX 原生滚动条不可靠**: overlay 风格（鼠标悬停才显示）、纵向需手动触发、带上下箭头、不随深浅主题 → 统一用**自定义 overlay 滚动条**（DOM 元素）
+- **自定义滚动条 `attachCustomScrollbar(container, axis)`**（account-table.js）:
+  - 挂宿主（container.parentElement）不随内容滚动；不占位不撑高（absolute）
+  - 5px 胶囊圆角、无箭头、深浅色适配（`[data-theme="light"]` 变深色半透明）
+  - 显示条件 = **内容溢出**（hasOverflow，含子元素实测高度兜底）+ 鼠标在内容区/滚动条上；移出 600ms 隐藏；在滚动条上不隐藏（onBar）；滚动/拖拽显示
+  - **rAF 逐帧检测**位置/尺寸（JavaFX scroll 事件不可靠，setInterval 100ms 会一顿一顿）+ 拖拽即时刷新
+  - 折叠态 track 尺寸 0 保护（NaN 防护）
+- **三处统一**: 表内横向（组件 _buildDom attach）/账号区域纵向（main.js `.account-area-inner` + MutationObserver）/设置区域纵向（main.js `.manage-settings-content`）
+- **教训**: JavaFX WebView 的 scroll 事件、transitionend、内联样式 CSS 变量（`style="background:var(--x)"`）均不可靠——用 rAF 轮询、setTimeout 兜底、CSS 类而非内联变量
+
+### 二、布局与交互细节
+- **高度链**: 见上根因 2/3；页面 `#page-main .manage-layout` 最终用 **flex column**（block 破坏纵向、grid 有覆盖陷阱）
+- **列宽**: 表格宽=列宽总和；固定列（勾选框 40/头像 56）`_loadColumnPrefs` 强制 defWidth 不读持久化（防旧配置污染）；自适应下限=列名宽+8px（展示名列=4字符+按钮占位 96px），无上限；fitColumn 只用本列
+- **整行悬浮高亮**: JS 高亮层 `.acc-row-highlight`（CSS 类背景与 tr:hover 同源 `--bg-hover`）；mousemove 委托匹配**任意 tr**（含空表空行，`closest('tr')` + parentNode 校验）；**移除 `tr:hover` 背景**（叠加导致列区域/剩余区域颜色不一致——用户截图分析出 48/44/64 三色）；render 后清 hover
+- **分割线**: 设置/账号区域分界 `border-top: 1px solid var(--divider-solid)` + 把手 `fill: var(--divider-solid)`；`--divider-solid` = 背景+半透明混合的**不透明等效色**（深 #2c2c2c/浅 #d4d4d4）——用户截图测色（48/44/64）定位出半透明叠加问题
+- **空表**: 行高 ≤ 数据行（删旧 `.manage-empty-row td{padding:var(--space-xl)}` 覆盖规则——**文件后部规则优先**导致前部修改无效）；"暂无数据"居左（不同表合并列宽不同，居中位置不一致）
+- **列名**: 头像列 label ''（不显示"头像"）；展示名列 label '名称'（用户统称"名称"）；右键菜单覆盖滚动容器空白区域（无"该列自适应"项）
+- **NPE 修复**: ①`AccOpsProvider.toSwProvider().updateSwAccData` 从 map 取 **value**（空串）→ 改取 **key**（共存分支写错账号导致读回 null）；②`SwAccountOps.ensureCoexistAccFormatted` 的 `Map.of("linked_acc", null)`（Map.of 禁 null，教训 #50）→ HashMap
+- **验证**: headless Edge 实测（滚动条不随内容滚动/显示条件/高度链列不拉伸）、node --check、gradle compileJava、运行日志无 JS 错误无维护失败
+
+### 三、规则文件
+- 项目 `CLAUDE.md` → `AGENTS.md`（git mv，DSH 与 Claude Code 通用约定）
+- 全局规则 → `~/.dsh/AGENTS.md`（DSH 全局仅认此名；从 `~/.claude/CLAUDE.md` 拷贝，含提交先行/SDK 路径/打包流程/时间戳规则）
+- DSH 规则机制: 项目级候选 `["AGENTS.md","CLAUDE.md"]`、本地级 `AGENTS.local.md`/`CLAUDE.local.md`、全局 `$DSH_HOME/AGENTS.md`；`dsh-agent-instructions` 插件实时 watch 注入
+

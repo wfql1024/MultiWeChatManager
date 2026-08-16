@@ -64,7 +64,8 @@ public final class AccOpsProvider {
             public JsonNode getSwAccData(String s, Map<String, Object> k) { return null; }
             @Override
             public void updateSwAccData(String s, Map<String, String> f, Map<String, Object> k) {
-                String acc = f != null && !f.isEmpty() ? new ArrayList<>(f.values()).get(0) : "";
+                // f 形如 {账号名: ""}——取 key（账号名），不能取 value（可能是空串）
+                String acc = f != null && !f.isEmpty() ? f.keySet().iterator().next() : "";
                 ACC_ACCESSOR.updateSwAccData(s, acc, k);
             }
         };

@@ -91,7 +91,7 @@
                                 </div>
                                 <svg id="manage-curtain-handle" class="manage-curtain-handle" preserveAspectRatio="none">
                                 <defs><clipPath id="handle-clip"><rect x="-9999" y="0" width="19998" height="20"/></clipPath></defs>
-                                <g clip-path="url(#handle-clip)"><path id="handle-curve" d="" fill="#1e1e1e"/></g>
+                                <g clip-path="url(#handle-clip)"><path id="handle-curve" d=""/></g>
                                 <rect id="handle-drag-left" x="-9999" y="0" width="9969" height="20" fill="transparent" style="cursor:ns-resize"/>
                                 <rect id="handle-click-zone" x="-30" y="0" width="60" height="20" fill="transparent" style="cursor:pointer"/>
                                 <rect id="handle-drag-right" x="30" y="0" width="9969" height="20" fill="transparent" style="cursor:ns-resize"/>
@@ -102,11 +102,14 @@
                                 </svg>
                             </div>
                             <div class="manage-account-section" id="manage-account-section">
-                                <!-- 四个可复用表：原生程序 / 原生账号 / 共存账号 / 无效账号 -->
-                                <div id="acc-table-native-prog" class="acc-table-slot"></div>
-                                <div id="acc-table-native-acc" class="acc-table-slot"></div>
-                                <div id="acc-table-coexist-acc" class="acc-table-slot"></div>
-                                <div id="acc-table-invalid-acc" class="acc-table-slot"></div>
+                                <!-- 与设置区域同构的滚动容器（max-height + overflow-y auto + 原生滚动条） -->
+                                <div class="account-area-inner">
+                                    <!-- 四个可复用表：原生程序 / 原生账号 / 共存账号 / 无效账号 -->
+                                    <div id="acc-table-native-prog" class="acc-table-slot"></div>
+                                    <div id="acc-table-native-acc" class="acc-table-slot"></div>
+                                    <div id="acc-table-coexist-acc" class="acc-table-slot"></div>
+                                    <div id="acc-table-invalid-acc" class="acc-table-slot"></div>
+                                </div>
                             </div>
                         </div>
                     </div>

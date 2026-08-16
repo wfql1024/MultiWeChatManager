@@ -959,9 +959,11 @@
 #page-manage .manage-layout, #page-main .manage-layout {
     height: 100%;
 }
-/* page-main 无左栏，内容区撑满 */
+/* page-main 无左栏，内容区撑满——flex 单列布局，min-width/min-height:0 锁死高度与宽度（不被内容撑大） */
 #page-main .manage-layout {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 #page-main #manage-platform-sidebar {
     display: none;
@@ -988,7 +990,10 @@
     background: transparent;
     border: none;
     border-radius: 0;
-    overflow: visible;
+    flex: 1;                        /* 高度占满 manage-layout（固定，不被内容撑高） */
+    min-height: 0;                  /* 关键：允许收缩，不被内部内容撑高 */
+    min-width: 0;                   /* 关键：允许收缩，不被表格列宽撑宽 */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
 }
@@ -1053,18 +1058,18 @@
 }
 
 /* --- Settings Panel (Curtain) --- */
+.manage-settings-panel {
+    position: relative;             /* 容纳 overlay 自定义滚动条（挂在宿主，不随内容滚动） */
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
 .manage-settings-content {
     padding: var(--space-sm) var(--space-md);
     max-height: 180px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.12) transparent;
+    overflow-y: auto;               /* 纵向滚动 */
 }
-.manage-settings-content::-webkit-scrollbar { width: 4px; }
-.manage-settings-content::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.12);
-    border-radius: 2px;
-}
+/* 隐藏原生滚动条（统一用自定义：细、无箭头、随主题、自动隐形） */
+.manage-settings-content::-webkit-scrollbar { width: 0; display: none; }
 
 .manage-config-grid {
     display: flex;
@@ -1396,27 +1401,30 @@
 }
 .manage-curtain-handle #handle-curve {
     pointer-events: none;
+    fill: var(--divider-solid);     /* 不透明等效色：与双区分割线一致，重叠不再叠加变深 */
 }
 .manage-curtain-arrow { display: none; }
 .manage-curtain-label { display: none; }
 
-/* --- Account Section（账号区域：宽度随窗口，内容超高时纵向滚动） --- */
+/* --- Account Section（账号区域：外层占位，内层与设置区域同构的滚动容器） --- */
 .manage-account-section {
+    position: relative;             /* 容纳账号区域纵向 overlay 滚动条（挂在宿主，不随内容滚动） */
     flex: 1;
     min-height: 0;
     min-width: 0;                   /* 允许收缩，不被内容（表格列宽）撑宽 */
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;               /* 账号区域纵向滚动（参考设置区域做法） */
+    overflow: hidden;               /* 外层仅占位，滚动交给内层 */
+    border-top: 1px solid var(--divider-solid);  /* 与设置区域分界：不透明等效色，与把手同色不叠加 */
+}
+/* 内层滚动容器：与 .manage-settings-content 同构的高度约束；滚动条用 overlay 自定义（细、无箭头、随主题） */
+.account-area-inner {
+    position: relative;             /* 容纳 overlay 自定义滚动条 */
+    height: 100%;
+    max-height: 100%;
+    overflow-y: auto;               /* 账号区域纵向滚动 */
     overflow-x: hidden;             /* 不横向滚动，宽度随窗口 */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
-.manage-account-section::-webkit-scrollbar { width: 8px; }
-.manage-account-section::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.15);
-    border-radius: 4px;
-}
+/* 隐藏原生纵向滚动条（有箭头且不随主题，统一用自定义） */
+.account-area-inner::-webkit-scrollbar { width: 0; display: none; }
 
 .acc-table-slot {
     flex: none;                     /* 自然高度（表高=内容高，由外部容器滚动） */
@@ -1428,6 +1436,7 @@
 .acc-table-slot:first-child { border-top: none; }
 
 .acc-table {
+    position: relative;             /* 容纳表内横向 overlay 滚动条（挂在宿主，不随内容滚动） */
     min-width: 0;                   /* 允许收缩，不被表格列宽撑宽 */
     display: flex;
     flex-direction: column;
@@ -1471,17 +1480,57 @@
 }
 
 .acc-table-scroll {
+    position: relative;             /* 容纳 overlay 自定义滚动条 */
     min-width: 0;                   /* 允许收缩到账号区域宽（=窗口宽），内容超出时内部横向滚动 */
     overflow-x: auto;               /* 表内横向滚动（列宽总和>表宽时） */
     overflow-y: hidden;             /* 表内不纵向滚动：所有行直接显示，由账号区域纵向滚动查看 */
     background: var(--bg-sidebar);  /* 列头底色：填充表格右侧留白 */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
-.acc-table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
-.acc-table-scroll::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.15);
-    border-radius: 4px;
+/* 隐藏原生滚动条（overlay 自定义条不占位、不撑高、细） */
+.acc-table-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 自定义 overlay 滚动条（absolute 定位不占位：不撑大高度；细条） */
+.ct-scrollbar {
+    position: absolute;
+    z-index: 30;
+    border-radius: 3px;
+    background: transparent;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.ct-scrollbar.visible { opacity: 1; pointer-events: auto; }
+.ct-scrollbar-x {
+    left: 0; right: 0; bottom: 2px; height: 5px;
+}
+.ct-scrollbar-y {
+    top: 0; bottom: 0; right: 2px; width: 5px;
+}
+.ct-scrollbar-thumb {
+    position: absolute;
+    background: rgba(128,128,128,0.45);
+    border-radius: 999px;           /* 胶囊全圆角（避免半圆半直角） */
+}
+/* 轴向尺寸约束：横向 thumb 高度=轨道高度（无 min-height），纵向宽度=轨道宽度（无 min-width） */
+.ct-scrollbar-x .ct-scrollbar-thumb {
+    height: 100%;
+    min-height: 0;
+    min-width: 20px;                /* 横向最短长度 */
+}
+.ct-scrollbar-y .ct-scrollbar-thumb {
+    width: 100%;
+    min-width: 0;
+    min-height: 20px;               /* 纵向最短长度 */
+}
+.ct-scrollbar-thumb:hover {
+    background: rgba(128,128,128,0.7);
+}
+/* 浅色主题下滚动条用深色半透明，适配外观 */
+[data-theme="light"] .ct-scrollbar-thumb {
+    background: rgba(0,0,0,0.25);
+}
+[data-theme="light"] .ct-scrollbar-thumb:hover {
+    background: rgba(0,0,0,0.4);
 }
 
 .manage-account-table {
@@ -1580,9 +1629,7 @@ body.resizing-cols {
     cursor: pointer;
     transition: background 0.15s;
 }
-.manage-account-table tbody tr:hover {
-    background: var(--bg-hover);
-}
+/* 行悬浮高亮由 JS 高亮层（.acc-row-highlight）统一负责——不再设 tr:hover 背景，避免与高亮层叠加导致列区域/剩余区域颜色不一致 */
 .manage-account-table tbody tr.selected {
     background: var(--bg-selected);
 }
@@ -1796,14 +1843,29 @@ body.resizing-cols {
     margin: 4px 6px;
 }
 
+.manage-empty-row td {
+    padding: 2px 12px;              /* 空表行高 ≤ 数据行高 */
+}
 .manage-empty-state {
-    padding: var(--space-xl);
+    padding: 0;
     color: var(--text-muted);
     font-size: var(--font-sm);
-    text-align: center;
+    text-align: left;               /* 居左：不同表合并列宽度不同，居中会导致位置不一致 */
+    line-height: 1.6;
 }
 
-.manage-empty-row td {
-    padding: var(--space-xl) 0;
-    text-align: center;
+/* 整行悬浮高亮层（JS 控制 top/height，背景与 tr:hover 同源 var(--bg-hover)，颜色统一） */
+.acc-row-highlight {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 0;
+    display: none;
+    pointer-events: none;
+    z-index: 2;
+    background: var(--bg-hover);
+}
+.acc-row-highlight.active {
+    display: block;
 }

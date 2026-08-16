@@ -96,4 +96,13 @@
 - **数据分类**: 原生账号 = `getSwExistedAccounts(swId,'origin')`（数据目录子目录）；共存账号 = `'coexist'`（共存 exe）；原生程序/无效账号暂无数据先空显示
 - **固定列**: 勾选框（40px）/头像（56px）固定宽度不可拖拽/自适应；固定列间与右侧竖线移除；头像改圆角矩形（border-radius 6px）
 - **快捷键录入修复**: ① `document mousedown` 提交替代 blur 同步提交（消除 DOM 竞态导致的"点击无反应"）；② Java Scene 级 EventFilter 兜底捕获（`notifyHotkeyCapture`）——WebView 收不到的带修饰键组合键由 Java 捕获推送回 JS；OS 级全局热键占用仍无法拦截（系统层行为）
-- **列宽自适应**: 临时 span 复制单元格字体测量文本宽度 + padding，取最大值 +4px 余量，上限 600 下限 40；**与用户探讨中**（总宽溢出策略/保底宽度/悬浮按钮宽度计入与否）
+- **列宽自适应**: 已定稿（2026-08-16 晚间）——下限 = 列名宽 + 余量（展示名列 = 4字符 + 按钮占位总宽），无上限；表格宽度恒 = 可见列宽总和（列宽独立、超宽横向滚动）；固定列绝对固定不参与
+
+## 滚动条体系与布局锁定（2026-08-16 晚间）
+- **滚动条方案**: JavaFX WebView 原生滚动条不可靠（overlay 鼠标悬停才显示、纵向需手动触发、带上下箭头、不随深浅主题）→ **统一用自定义 overlay 滚动条**（DOM 元素 `attachCustomScrollbar`，挂滚动容器父级避免随内容滚动、rAF 驱动位置、显示条件=内容溢出+鼠标在内容区/滚动条上、5px 胶囊、不占位不撑高）。"原生能实现才用原生"——走过弯路：曾回归原生滚动条（设置区域需手动触发又改回自定义）
+- **高度链锁定**: 内容撑宽/撑高（flex/grid `min-width:auto`/`min-height:auto`）是横向/纵向滚动条不出现的统一根因 → `#page-main .manage-layout` 改 **flex column** + `.manage-detail-area` `flex:1; min-height:0; min-width:0; overflow:hidden` + 表容器链 `min-width:0`。弯路：grid `1fr` 被 `#page-main` 高特异性规则覆盖、block 布局破坏纵向
+- **列宽规则**: 表格宽度恒 = 可见列宽总和（px，绝不填充容器，否则 `table-layout:fixed` 按比例拉伸列导致列宽联动）；固定列强制 defWidth 不读持久化
+- **整行悬浮高亮**: JS 高亮层 `.acc-row-highlight` 统一负责（mousemove 委托匹配任意 tr 含空行）；**移除 `tr:hover` 背景**——与高亮层叠加会导致列区域/剩余区域颜色不一致
+- **分割线**: 设置/账号区域分界 + 窗帘把手用 `--divider-solid`（背景+半透明混合的**不透明等效色**，深 `#2c2c2c`/浅 `#d4d4d4`），避免半透明重叠区两次叠加变深
+- **设置区域滚动条根因**: `animatePanelHeight` 动画期间 `content.style.maxHeight='none'`（教训 #37 让面板能撑高）但**动画后未恢复** → content 高度=内容高永不溢出。修复：动画结束（setTimeout 兜底，JavaFX transitionend 不可靠）恢复 `content.maxHeight = targetHeight`
+- **规则文件统一 AGENTS.md**: 项目 `CLAUDE.md` → `AGENTS.md`（DSH/CC 通用约定，DSH 默认候选 `["AGENTS.md","CLAUDE.md"]`）；全局 `~/.dsh/AGENTS.md`（DSH 全局仅认此名，不读 `~/.claude/CLAUDE.md`）——用户决策

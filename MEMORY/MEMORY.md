@@ -18,6 +18,7 @@
 - [[DECISIONS.MD#EventBus 事件机制]] — 数据更新↔UI刷新解耦，流A自动维护/流B定向刷新（2026-08-01）
 - [[DECISIONS.MD#账号列表列定制]] — 7列结构/列头右键菜单/列宽拖拽/快捷键编辑/悬浮交互（2026-08-16）
 - [[DECISIONS.MD#四表架构与可复用组件]] — AccountTable 组件/四表分类/标题行/固定列/快捷键修复（2026-08-16 第二轮）
+- [[DECISIONS.MD#滚动条体系与布局锁定]] — 自定义滚动条/高度链/列宽规则/整行高亮/分割线/AGENTS.md（2026-08-16 晚间）
 
 ## 待办
 - [[TODOS.MD#登录页面]]、[[TODOS.MD#统计页面]] — 占位未实现
@@ -31,7 +32,7 @@
 - [[TODOS.MD#事件驱动定向刷新迁移（EventBus 流B）]] — toggle-hidden 已迁移，其余操作待增量迁移
 
 ## 事实
-- [[FACTS.MD#当前阶段]]—Phase 1.15
+- [[FACTS.MD#当前阶段]]—Phase 1.16
 - [[FACTS.MD#打包路径]]—build/portable/, build/exe/
 - [[FACTS.MD#脚本位置]]—scripts/
 - [[FACTS.MD#版本号]]—4.0.0.7000 (AppVersion.java), 4.0.0 (Gradle/packaging)
@@ -43,7 +44,6 @@
 - [[FACTS.MD#Handle 操作]]—Java 无原生 Handle 操作，需 JNA 仿照 pywinhandle.py
 - [[FACTS.MD#解密实现]]—decrypt/ 包（DecryptInterface, WeChatDecrypt, WeixinDecrypt）
 - [[FACTS.MD#Handle 操作]]—SwNativeOps.NtDllExt 已扩展 4 个 NT API 声明
-- [[FACTS.MD#全局 CLAUDE.md]]—SDK 路径/打包流程/项目文档架构/时间标注规则已归档
 - [[FACTS.MD#settings.json]]—showMessageTimestamps=true, claude-time 插件安装失败（hooks 冲突）
 - [[FACTS.MD#AvatarUtils]]—头像获取工具类，本地/URL/SVG 三路回退（2026-07-30）
 - [[FACTS.MD#page-main]]—主页面从 page-manage 复制迁移，作用域隔离修复
@@ -52,6 +52,8 @@
 - [[FACTS.MD#新增功能（2026-08-01 会话）]]—展示名/自动填充/EventBus 事件机制/提交 c2561a4 + EventBus 批次
 - [[FACTS.MD#新增功能（2026-08-16 会话）]]—账号列表列定制：7列/列头右键菜单/列宽拖拽/快捷键编辑
 - [[FACTS.MD#新增模块（2026-08-16 第二轮）]]—AccountTable 组件/快捷键 Scene 捕获/only 参数/NPE 修复
+- [[FACTS.MD#新增功能（2026-08-16 晚间会话）]]—自定义滚动条体系/高度链/整行高亮/列宽规则定稿/分割线/NPE 修复
+- [[FACTS.MD#规则文件（2026-08-16）]]—项目 AGENTS.md/全局 ~/.dsh/AGENTS.md
 
 ## 开发日志
 - [[DEV_LOGS.MD#page-main 复制迁移（2026-07-04~05）]] — 完整复制 DOM+JS，侧栏精简，旧代码剥离
@@ -60,6 +62,7 @@
 - [[DEV_LOGS.MD#展示名 + SwAccData 自动填充 + EventBus 事件机制（2026-08-01）]] — 展示名/自动填充/EventBus 两事件流/NPE 修复
 - [[DEV_LOGS.MD#账号列表列定制与交互升级（2026-08-16）]] — 7列结构/列头右键菜单/列宽拖拽/快捷键编辑/悬浮交互
 - [[DEV_LOGS.MD#账号列表四表架构与交互优化（2026-08-16 第二轮）]] — AccountTable 组件/四表/标题行/固定列/快捷键修复
+- [[DEV_LOGS.MD#账号列表交互打磨与滚动条体系（2026-08-16 晚间）]] — 滚动条全排查/高度链/整行高亮/分割线/AGENTS.md 迁移
 
 ## 迁移工程（2026-07-31）
 - [[FACTS.MD#新增模块（2026-07-31）]] — appcore/acccore 包 + SwConfigProvider

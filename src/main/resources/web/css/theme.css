@@ -60,6 +60,8 @@
     --bg-selected: rgba(255, 255, 255, 0.1);
 
     --border-color: rgba(255, 255, 255, 0.08);
+    /* 分割线/把手的不透明等效色（背景+半透明混合后的实色，避免重叠区域两次叠加变深） */
+    --divider-solid: #2c2c2c;
 
     --text-primary: #d4d4d4;
     --text-secondary: #9a9a9a;
@@ -81,6 +83,8 @@
     --bg-selected: rgba(0, 0, 0, 0.08);
 
     --border-color: rgba(0, 0, 0, 0.10);
+    /* 分割线/把手的不透明等效色（背景+半透明混合后的实色，避免重叠区域两次叠加变深） */
+    --divider-solid: #d4d4d4;
 
     --text-primary: #2c2c2c;
     --text-secondary: #666666;
@@ -105,6 +109,8 @@
         --bg-selected: rgba(0, 0, 0, 0.08);
 
         --border-color: rgba(0, 0, 0, 0.10);
+
+        --divider-solid: #d4d4d4;
 
         --text-primary: #2c2c2c;
         --text-secondary: #666666;

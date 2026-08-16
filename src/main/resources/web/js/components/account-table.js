@@ -123,6 +123,14 @@ JFC.AccountTable = (function() {
         this.tbody = el.querySelector('tbody');
         this.tableEl = el.querySelector('table');
         this.titleEl.textContent = this.title;
+        // 表内横向 overlay 滚动条（列宽总和 > 表宽时显示，不占位不撑高）
+        this._hScrollbar = attachCustomScrollbar(el.querySelector('.acc-table-scroll'), 'x');
+        // 整行高亮层：行悬浮时覆盖列区域 + 右侧空白（行宽=表格宽<容器宽，tr 背景无法覆盖空白）
+        // 背景用 CSS 类（.acc-row-highlight，走 CSS 变量与 tr:hover 同源，颜色统一）
+        this._rowHighlight = document.createElement('div');
+        this._rowHighlight.className = 'acc-row-highlight';
+        el.querySelector('.acc-table-scroll').appendChild(this._rowHighlight);
+        this._hoverRow = null;
     };
 
     // ---- 列配置持久化（LocalGlobalConfig.json.account_columns.<id>） ----
@@ -191,6 +199,7 @@ JFC.AccountTable = (function() {
             }
         }
         this.tableEl.style.width = sum + 'px';
+        if (this._hScrollbar) this._hScrollbar.update();
     };
 
     // ---- 数据 ----
@@ -224,6 +233,10 @@ JFC.AccountTable = (function() {
         tbody.innerHTML = html;
         this._bindRowEvents();
         this._applyColumnLayout();
+        if (this._hScrollbar) this._hScrollbar.update();
+        // 行已重建，清除悬停高亮（旧行元素失效）
+        this._hoverRow = null;
+        this._updateRowHighlight();
     };
 
     AccountTable.prototype._rowHtml = function(acc) {
@@ -397,22 +410,21 @@ JFC.AccountTable = (function() {
             self.batchAction(btn.getAttribute('data-batch'));
         });
 
-        // 列头右键菜单（显示列/自适应）
-        this.tableEl.querySelector('thead').addEventListener('contextmenu', function(e) {
+        // 右键菜单（统一绑在滚动容器，覆盖列头/最右列右侧空白区域 → 列菜单；数据行 → 行菜单）
+        this.el.querySelector('.acc-table-scroll').addEventListener('contextmenu', function(e) {
+            var tr = e.target.closest('tr[data-acc-id]');
+            if (tr) {
+                e.preventDefault();
+                closeColMenu();
+                self._showRowMenu(e.clientX, e.clientY, tr.getAttribute('data-acc-id'));
+                return;
+            }
+            // 列头或空白区域 → 列菜单（无具体列时省略"该列自适应大小"）
             e.preventDefault();
             var th = e.target.closest('th[data-col]');
             var colKey = th ? th.getAttribute('data-col') : null;
             closeRowMenu();
             self._showColMenu(e.clientX, e.clientY, colKey);
-        });
-
-        // 行右键菜单
-        this.tbody.addEventListener('contextmenu', function(e) {
-            var tr = e.target.closest('tr[data-acc-id]');
-            if (!tr) return;
-            e.preventDefault();
-            closeColMenu();
-            self._showRowMenu(e.clientX, e.clientY, tr.getAttribute('data-acc-id'));
         });
 
         // 快捷键单元格点击编辑
@@ -428,8 +440,37 @@ JFC.AccountTable = (function() {
             });
         }
 
+        // 行悬浮整行高亮（JS 层覆盖列区域+右侧空白；mousemove 委托，匹配数据行与空表的空行）
+        var scrollEl2 = this.el.querySelector('.acc-table-scroll');
+        this.tbody.addEventListener('mousemove', function(e) {
+            var tr = e.target.closest('tr');
+            if (tr && tr.parentNode === self.tbody) {
+                if (tr !== self._hoverRow) self._setHoverRow(tr);
+            } else if (self._hoverRow) {
+                self._setHoverRow(null);
+            }
+        });
+        this.tbody.addEventListener('mouseleave', function() { self._setHoverRow(null); });
+        scrollEl2.addEventListener('scroll', function() { self._updateRowHighlight(); });
+
         // 窗口大小变化时刷新表格宽度（列宽总和与容器宽的 max，保证横向滚动正确）
         window.addEventListener('resize', function() { self._updateTableWidth(); });
+    };
+
+    // ---- 整行高亮（hover） ----
+    AccountTable.prototype._setHoverRow = function(row) {
+        this._hoverRow = row;
+        this._updateRowHighlight();
+    };
+    AccountTable.prototype._updateRowHighlight = function() {
+        var h = this._rowHighlight;
+        var scrollEl = this.el.querySelector('.acc-table-scroll');
+        if (!h || !scrollEl) return;
+        var row = this._hoverRow;
+        if (!row || !row.isConnected) { h.classList.remove('active'); return; }
+        h.style.top = (row.offsetTop - scrollEl.scrollTop) + 'px';
+        h.style.height = row.offsetHeight + 'px';
+        h.classList.add('active');
     };
 
     // ---- 标题行：选中计数与批量按钮 ----
@@ -925,6 +966,177 @@ JFC.AccountTable = (function() {
         return _measureEl.offsetWidth;
     }
 
+    /**
+     * 强制同步布局：JavaFX WebView 布局惰性，内容变化后读取 offsetHeight 强制 WebKit 重算。
+     */
+    function forceReflow(el) {
+        if (!el) return;
+        void el.offsetHeight;
+        void el.offsetWidth;
+        setTimeout(function() { if (el.isConnected) { void el.offsetHeight; void el.offsetWidth; } }, 50);
+    }
+
+    /**
+     * 自定义 overlay 滚动条（DOM 元素，absolute 定位不占位 → 不撑大容器高度）。
+     * JavaFX WebView 的原生滚动条不可靠（纵向需手动触发才出现），
+     * 这里用绝对定位细条替代：内容溢出时显示、可拖拽、非交互一段时间后自动隐形。
+     *
+     * 关键：滚动条挂载在滚动容器的【父级】（absolute 子元素会随滚动内容一起滚动，
+     * 导致滚动条被内容带着跑），父级需 position:relative 且尺寸与容器对齐。
+     *
+     * @param container 滚动容器（overflow:auto）
+     * @param axis      'x'=横向, 'y'=纵向
+     * @return { update: function } 内容/尺寸变化后调用 update 刷新
+     */
+    function attachCustomScrollbar(container, axis) {
+        if (!container) return { update: function() {} };
+        // 滚动条宿主 = 容器的父级（避免随内容滚动）；无父级则退化为容器内
+        var host = container.parentElement || container;
+        var bar = document.createElement('div');
+        bar.className = 'ct-scrollbar ' + (axis === 'x' ? 'ct-scrollbar-x' : 'ct-scrollbar-y');
+        var thumb = document.createElement('div');
+        thumb.className = 'ct-scrollbar-thumb';
+        bar.appendChild(thumb);
+        host.appendChild(bar);
+
+        var isX = axis === 'x';
+        var hideTimer = null;
+        var hasOverflow = false;    // 内容是否溢出（是否需要滚动条）——显示的第一条件
+        var onBar = false;          // 鼠标是否在滚动条上（在滚动条上不隐藏）
+
+        // 显示（持续，不设自动隐藏——用于鼠标在滚动条上）
+        function show() {
+            bar.classList.add('visible');
+            if (hideTimer) clearTimeout(hideTimer);
+        }
+        // 显示并 1.5s 后自动隐形（用于鼠标在内容区/滚动时）；内容不溢出则不显示
+        function showTemporarily() {
+            if (!hasOverflow) return;
+            show();
+            hideTimer = setTimeout(function() {
+                if (!onBar) bar.classList.remove('visible');
+            }, 1500);
+        }
+        // 延时隐藏：给鼠标从内容区移到滚动条上的时间
+        function scheduleHide() {
+            if (hideTimer) clearTimeout(hideTimer);
+            hideTimer = setTimeout(function() { bar.classList.remove('visible'); }, 600);
+        }
+        function hide() {
+            if (hideTimer) clearTimeout(hideTimer);
+            bar.classList.remove('visible');
+        }
+
+        function update() {
+            if (!container.isConnected) return;
+            // 强制同步布局：JavaFX WebView 布局惰性，内容变化后 scrollHeight/clientHeight 可能未重算，
+            // 必须读取 offset 尺寸触发重排（否则 hasOverflow 判断基于旧值，滚动条不出现）
+            void container.offsetHeight;
+            void container.offsetWidth;
+            var cw = container.clientWidth, sw = container.scrollWidth;
+            var ch = container.clientHeight, sh = container.scrollHeight;
+            // 内容实际高度/宽度（JavaFX 对 height:auto+max-height 容器的 scrollHeight 可能不更新，用子元素实测）
+            var realH = 0, realW = 0;
+            for (var i = 0; i < container.children.length; i++) {
+                var r = container.children[i].getBoundingClientRect();
+                realH += r.height;
+                if (r.width > realW) realW = r.width;
+            }
+            if (isX) {
+                var canScroll = Math.max(sw, realW) > cw;
+                hasOverflow = canScroll;
+                if (canScroll) {
+                    var trackW = bar.clientWidth;
+                    if (trackW <= 0) { hide(); return; }   // 折叠/隐藏时轨道无尺寸，不计算
+                    var thumbW = Math.max(20, trackW * cw / Math.max(sw, realW));
+                    thumb.style.width = thumbW + 'px';
+                    thumb.style.height = '100%';
+                    thumb.style.left = (trackW - thumbW) * container.scrollLeft / (Math.max(sw, realW) - cw) + 'px';
+                    thumb.style.top = '';
+                    if (onBar) show(); else showTemporarily();
+                } else {
+                    hide();
+                }
+            } else {
+                var canScrollV = Math.max(sh, realH) > ch;
+                hasOverflow = canScrollV;
+                if (canScrollV) {
+                    var trackH = bar.clientHeight;
+                    if (trackH <= 0) { hide(); return; }   // 折叠/隐藏时轨道无尺寸，不计算
+                    var thumbH = Math.max(20, trackH * ch / Math.max(sh, realH));
+                    thumb.style.height = thumbH + 'px';
+                    thumb.style.width = '100%';
+                    thumb.style.top = (trackH - thumbH) * container.scrollTop / (Math.max(sh, realH) - ch) + 'px';
+                    thumb.style.left = '';
+                    if (onBar) show(); else showTemporarily();
+                } else {
+                    hide();
+                }
+            }
+        }
+
+        // 显示条件 = 需要滚动条(hasOverflow) + 鼠标在内容区或滚动条上
+        container.addEventListener('mouseenter', showTemporarily);
+        container.addEventListener('mousemove', showTemporarily);
+        container.addEventListener('mouseleave', scheduleHide);
+        bar.addEventListener('mouseenter', function() { onBar = true; show(); });
+        bar.addEventListener('mouseleave', function() { onBar = false; scheduleHide(); });
+        container.addEventListener('scroll', update);
+        window.addEventListener('resize', update);
+
+        // rAF 检测滚动位置与内容尺寸变化（事件驱动、丝滑；JavaFX WebView scroll 事件可能不触发，作兜底）
+        var lastPos = isX ? container.scrollLeft : container.scrollTop;
+        var lastCw = container.clientWidth, lastSw = container.scrollWidth;
+        var lastCh = container.clientHeight, lastSh = container.scrollHeight;
+        function rafLoop() {
+            if (!container.isConnected) return;
+            var pos = isX ? container.scrollLeft : container.scrollTop;
+            var cw = container.clientWidth, sw = container.scrollWidth;
+            var ch = container.clientHeight, sh = container.scrollHeight;
+            if (pos !== lastPos || cw !== lastCw || sw !== lastSw || ch !== lastCh || sh !== lastSh) {
+                lastPos = pos; lastCw = cw; lastSw = sw; lastCh = ch; lastSh = sh;
+                update();
+            }
+            requestAnimationFrame(rafLoop);
+        }
+        requestAnimationFrame(rafLoop);
+
+        // 拖拽滚动条 → 滚动容器（滚动位置变化由轮询/scroll 事件驱动 update）
+        var dragging = false, startPos = 0, startScroll = 0;
+        thumb.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dragging = true;
+            startPos = isX ? e.clientX : e.clientY;
+            startScroll = isX ? container.scrollLeft : container.scrollTop;
+            showTemporarily();
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+        function onMove(e) {
+            if (!dragging) return;
+            var pos = isX ? e.clientX : e.clientY;
+            var delta = pos - startPos;
+            var maxScroll = isX ? (container.scrollWidth - container.clientWidth)
+                                : (container.scrollHeight - container.clientHeight);
+            var maxTravel = isX ? (bar.clientWidth - thumb.clientWidth)
+                                : (bar.clientHeight - thumb.clientHeight);
+            if (maxTravel > 0 && maxScroll > 0) {
+                if (isX) container.scrollLeft = startScroll + delta * maxScroll / maxTravel;
+                else container.scrollTop = startScroll + delta * maxScroll / maxTravel;
+                update();   // 拖拽中即时刷新 thumb 位置（不依赖 scroll 事件）
+            }
+        }
+        function onUp() {
+            dragging = false;
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        }
+
+        setTimeout(update, 0);
+        return { update: update, bar: bar };
+    }
+
     // ---- 标题闪烁反馈（与 main.js flashTitle 相同，独立实现避免循环依赖） ----
     function flashTitle(msg, isError) {
         var el = document.querySelector('#page-main #manage-detail-title');
@@ -943,6 +1155,8 @@ JFC.AccountTable = (function() {
     AccountTable.closeMenus = function() { closeColMenu(); closeRowMenu(); activeTable = null; };
     AccountTable.getActiveTable = function() { return activeTable; };
     AccountTable.measureTextWidth = measureTextWidth;
+    // overlay 自定义滚动条（供外部容器如账号区域使用）：attachScrollbar(container, 'y')
+    AccountTable.attachScrollbar = attachCustomScrollbar;
 
     // 公开方法：外部路由调用
     AccountTable.prototype.updateAvatar = function(accountId, dataUrl) {

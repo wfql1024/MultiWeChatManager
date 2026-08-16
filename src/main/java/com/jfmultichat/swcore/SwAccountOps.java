@@ -52,22 +52,25 @@ public final class SwAccountOps {
 
         ObjectNode dictNode = (ObjectNode) coexistExeDict;
 
-        // 确保 linked_acc 字段
+        // 确保 linked_acc 字段（Map.of 不允许 null 值，用 HashMap）
         if (!dictNode.has("linked_acc")) {
-            accountOps.updateSwAccData(sw, Map.of(coexistExe, ""),
-                    Map.of("linked_acc", null));
+            java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("linked_acc", null);
+            accountOps.updateSwAccData(sw, Map.of(coexistExe, ""), m);
         }
 
         // 确保 channel 字段
         if (!dictNode.has("channel")) {
-            accountOps.updateSwAccData(sw, Map.of(coexistExe, ""),
-                    Map.of("channel", null));
+            java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("channel", null);
+            accountOps.updateSwAccData(sw, Map.of(coexistExe, ""), m);
         }
 
         // 确保 ordinals 字段
         if (!dictNode.has("ordinals")) {
-            accountOps.updateSwAccData(sw, Map.of(coexistExe, ""),
-                    Map.of("ordinals", null));
+            java.util.Map<String, Object> m = new java.util.HashMap<>();
+            m.put("ordinals", null);
+            accountOps.updateSwAccData(sw, Map.of(coexistExe, ""), m);
         }
     }
 

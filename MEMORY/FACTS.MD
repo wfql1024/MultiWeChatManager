@@ -7,6 +7,7 @@
 - Phase 1.13 — 展示名显示 + SwAccData 自动填充 + EventBus 事件机制（2026-08-01）
 - Phase 1.14 — 账号列表列定制：7 列结构 + 列头右键菜单 + 列宽拖拽 + 快捷键编辑 + 悬浮交互（2026-08-16）
 - Phase 1.15 — 四表架构：可复用 AccountTable 组件 + 原生程序/原生账号/共存账号/无效账号 + 快捷键 Scene 级捕获（2026-08-16 第二轮）
+- Phase 1.16 — 账号列表交互打磨：自定义滚动条体系 + 高度链锁定 + 整行高亮 + 列宽规则定稿 + 分割线（2026-08-16 晚间）
 
 ## 打包路径
 - 免安装版: `build/portable/JhiFengMultiChat/JhiFengMultiChat.exe`
@@ -152,5 +153,20 @@
 - **排序标识**: 去掉 " ↕" 字符，当前排序列 th 加 `.sorted` 高亮（主题色+加粗）
 - **配置持久化**: `LocalGlobalConfig.json.account_columns = {visible, width}`（`getGlobalConfig`/`saveGlobalConfig`）
 - **onAccountChanged 扩展**: 处理 `hotkey`/`alias`/`nickname` 字段定向更新；状态变化走 `updateRowQuickActions`（原 stateBadgeHtml 删除）
-- **提交**: 本次提交（index.html/main.css/main.js + 文档）
-- **验证**: node --check + gradle compileJava 通过；GUI 实测待应用实例停止后重启进行（运行实例锁定 build 目录）
+- **提交**: 625e33d（列定制）/ 9549c6c + 4059ccb（四表架构与文档）
+
+## 新增功能（2026-08-16 晚间会话）
+- **自定义 overlay 滚动条体系**（核心）: JavaFX WebView 原生滚动条不可靠（overlay/需触发/带箭头/不随主题）→ DOM 自定义滚动条 `attachCustomScrollbar`：不占位不撑高、5px 胶囊、无箭头、深浅色适配；显示条件 = 内容溢出 + 鼠标在内容区/滚动条上；挂在滚动容器父级（不随内容滚动）；rAF 驱动（JavaFX scroll 事件不可靠）；三处统一（表内横向/账号区域纵向/设置区域纵向）
+- **高度链锁定**: `#page-main .manage-layout` flex column + `.manage-detail-area` `flex:1; min-height:0; min-width:0; overflow:hidden` + 表容器链 `min-width:0`——解决内容撑宽/撑高导致的无滚动条、列宽联动、设置区域被拉宽
+- **设置区域滚动条根因**: `animatePanelHeight` 动画后未恢复 `content.maxHeight`（动画期间设 'none'）→ 修复为动画后恢复 `targetHeight`
+- **列宽规则定稿**: 表格宽度恒 = 可见列宽总和（px，不填充容器）；固定列绝对固定（不读持久化）；自适应下限 = 列名宽+余量（展示名列 = 4字符+按钮占位），无上限
+- **整行悬浮高亮**: JS 高亮层 `.acc-row-highlight`（mousemove 委托匹配任意 tr）；移除 `tr:hover` 避免叠加颜色不一致
+- **分割线**: `--divider-solid`（背景+半透明混合的不透明等效色，深 `#2c2c2c`/浅 `#d4d4d4`）用于双区分界 + 窗帘把手
+- **细节**: 空表行高 ≤ 数据行、"暂无数据"居左；头像列不显示列名、展示名列改"名称"；右键菜单覆盖空白区域
+- **NPE 修复**: `AccOpsProvider.toSwProvider().updateSwAccData` 取 key（原取 value 写错账号）；`SwAccountOps` 的 `Map.of(..., null)` → HashMap
+- **提交**: 4132a54 / 086197d / d4c7e1a / 37fdcf3 / 5aec864 / b32a3a6 / e4c82bd + 本次提交（晚间全部）
+
+## 规则文件（2026-08-16）
+- **项目级**: `AGENTS.md`（由 `CLAUDE.md` git mv 重命名；DSH 与 Claude Code 通用约定，DSH 默认候选 `["AGENTS.md","CLAUDE.md"]`）
+- **全局级**: `~/.dsh/AGENTS.md`（DSH 全局仅认 AGENTS.md，不读 `~/.claude/CLAUDE.md`；已从全局 CLAUDE.md 拷贝）
+- DSH 规则文件机制: 项目级候选 `AGENTS.md`/`CLAUDE.md`、本地级 `AGENTS.local.md`/`CLAUDE.local.md`、全局 `$DSH_HOME/AGENTS.md`；由 `dsh-agent-instructions` 插件实时 watch 注入（改文件即时生效）
