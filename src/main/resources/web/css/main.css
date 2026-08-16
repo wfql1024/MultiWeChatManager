@@ -1400,18 +1400,19 @@
 .manage-curtain-arrow { display: none; }
 .manage-curtain-label { display: none; }
 
-/* --- Account Section（四个可复用表垂直排列） --- */
+/* --- Account Section（四个可复用表，容器整体垂直滚动） --- */
 .manage-account-section {
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow-y: auto;               /* 整个列表区域垂直滚动 */
     min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
 
 .acc-table-slot {
-    flex: 1;
-    min-height: 0;
+    flex: none;                     /* 自然高度（表高=内容高，由外部容器滚动） */
     display: flex;
     flex-direction: column;
     border-top: 1px solid var(--border-color);
@@ -1419,11 +1420,8 @@
 .acc-table-slot:first-child { border-top: none; }
 
 .acc-table {
-    flex: 1;
-    min-height: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
 }
 
 /* 标题行：标题左端，"已选 N 项"+批量按钮跟随右侧（未选中时隐藏） */
@@ -1463,14 +1461,14 @@
     color: var(--color-danger);
 }
 
-.manage-account-scroll {
-    flex: 1;
-    overflow-y: auto;
+.acc-table-scroll {
+    overflow: auto;                 /* 横向（列宽总和>容器）+ 纵向滚动 */
     scrollbar-width: thin;
     scrollbar-color: rgba(255,255,255,0.12) transparent;
+    background: var(--bg-sidebar);  /* 列头底色：填充表格右侧留白 */
 }
-.manage-account-scroll::-webkit-scrollbar { width: 4px; }
-.manage-account-scroll::-webkit-scrollbar-thumb {
+.acc-table-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+.acc-table-scroll::-webkit-scrollbar-thumb {
     background: rgba(255,255,255,0.12);
     border-radius: 2px;
 }
@@ -1626,24 +1624,24 @@ body.resizing-cols {
 .manage-account-table .manage-nickname-cell {
     font-weight: var(--weight-semibold);
     color: var(--text-primary);
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
     overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 .manage-nickname-cell .dn-text {
-    display: inline-block;
-    max-width: 100%;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    vertical-align: middle;
     white-space: nowrap;
 }
 
-/* 展示名列右端的悬浮操作按钮（选中态 = 对应状态） */
+/* 展示名列右端的悬浮操作按钮（选中态 = 对应状态；悬浮行时显示，优先于展示名内容） */
 .manage-row-quick-actions {
     display: none;
-    margin-left: 8px;
-    vertical-align: middle;
+    margin-left: auto;          /* 贴列空间右端 */
+    flex-shrink: 0;
     white-space: nowrap;
 }
 .manage-account-table tbody tr:hover .manage-row-quick-actions {

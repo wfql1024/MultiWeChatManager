@@ -139,8 +139,10 @@ JFC.AccountTable = (function() {
             self.colVisible[col.key] = col.mandatory ? true :
                 (prefs && prefs.visible && prefs.visible[col.key] !== undefined
                     ? !!prefs.visible[col.key] : col.defVisible);
-            var w = prefs && prefs.width && prefs.width[col.key];
-            self.colWidth[col.key] = (typeof w === 'number' && w > 0) ? w : col.defWidth;
+            // 固定列（勾选框/头像）宽度绝对固定，不读取持久化配置
+            self.colWidth[col.key] = col.fixed ? col.defWidth :
+                ((prefs && prefs.width && prefs.width[col.key] && typeof prefs.width[col.key] === 'number')
+                    ? prefs.width[col.key] : col.defWidth);
         });
         this._applyColumnLayout();
     };
@@ -568,17 +570,14 @@ JFC.AccountTable = (function() {
         if (!table) return;
         table.querySelectorAll('.col-resizer').forEach(function(r) { r.remove(); });
         var ths = table.querySelectorAll('thead th[data-col]');
-        var visibleThs = [];
+        // 所有可见的非固定列都注入竖线（含最右列，可调整其宽度）
         for (var i = 0; i < ths.length; i++) {
             var col = this.colByKey(ths[i].getAttribute('data-col'));
-            // 固定列（如勾选框/头像）不可拖拽，其右侧竖线移除
-            if (this.colVisible[col.key] && !col.fixed) visibleThs.push(ths[i]);
-        }
-        for (var j = 0; j < visibleThs.length - 1; j++) {
-            var th = visibleThs[j];
+            if (!col || col.fixed || !this.colVisible[col.key]) continue;
+            var th = ths[i];
             var rz = document.createElement('div');
             rz.className = 'col-resizer';
-            rz.setAttribute('data-col', th.getAttribute('data-col'));
+            rz.setAttribute('data-col', col.key);
             (function(self, rz) {
                 rz.addEventListener('mousedown', function(e) {
                     e.preventDefault();
@@ -701,30 +700,45 @@ JFC.AccountTable = (function() {
     };
 
     // ---- 列宽自适应 ----
+
+    // 展示名列右端悬浮按钮（隐藏/已隐藏+删除）的占位总宽估算：
+    // 覆盖最长按钮文字（"已隐藏"3字）+ padding + border + gap
+    var QUICK_ACTIONS_WIDTH = 96;
+
     AccountTable.prototype.fitColumn = function(key) {
         var col = this.colByKey(key);
         if (!col || col.fixed) return;   // 固定列不参与自适应
-        var maxW = 0;
         var table = this.tableEl;
-        var self = this;
+
+        // 1. 内容最大宽度（列头文字 + 全部数据单元格），无上限
+        var maxW = 0;
         table.querySelectorAll('thead th[data-col="' + key + '"], tbody td[data-col="' + key + '"]').forEach(function(cell) {
             if (cell.classList.contains('hidden-col')) return;
             var cs = window.getComputedStyle(cell);
             var pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
-            var w;
-            if (cell.classList.contains('manage-col-avatar')) {
-                var inner = cell.querySelector('.manage-account-avatar');
-                w = (inner ? inner.offsetWidth : 0) + pad;
-            } else {
-                var text = cell.innerText.replace(/\s+/g, ' ').trim() || '';
-                w = measureTextWidth(text, cs.fontFamily, cs.fontSize, cs.fontWeight) + pad;
-            }
+            var text = cell.innerText.replace(/\s+/g, ' ').trim() || '';
+            var w = measureTextWidth(text, cs.fontFamily, cs.fontSize, cs.fontWeight) + pad;
             if (w > maxW) maxW = w;
         });
-        maxW = Math.min(Math.round(maxW) + 4, 600);
-        if (maxW < 40) maxW = 40;
-        this.colWidth[key] = maxW;
-        this._applyColumnWidth(key, maxW);
+
+        // 2. 下限：列名宽度 + 余量；展示名列特殊 = 4 字符宽 + 按钮占位总宽 + 余量
+        var th = table.querySelector('thead th[data-col="' + key + '"]');
+        var minW = 0;
+        if (th) {
+            var thCs = window.getComputedStyle(th);
+            if (key === 'display_name') {
+                var fourChars = measureTextWidth('四字姓名', thCs.fontFamily, thCs.fontSize, thCs.fontWeight);
+                minW = fourChars + QUICK_ACTIONS_WIDTH + 8;
+            } else {
+                var thText = th.innerText.replace(/\s+/g, ' ').trim() || '';
+                var thPad = (parseFloat(thCs.paddingLeft) || 0) + (parseFloat(thCs.paddingRight) || 0);
+                minW = measureTextWidth(thText, thCs.fontFamily, thCs.fontSize, thCs.fontWeight) + thPad + 8;
+            }
+        }
+
+        var w = Math.max(Math.round(maxW) + 4, Math.round(minW));
+        this.colWidth[key] = w;
+        this._applyColumnWidth(key, w);
         this._saveColumnPrefs();
     };
 
