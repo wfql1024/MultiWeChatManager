@@ -178,11 +178,11 @@ JFC.AccountTable = (function() {
         this._updateTableWidth();
     };
 
-    // 表格宽度 = max(可见列宽总和, 容器宽)：
-    //   - 列宽总和 > 容器 → 表格扩展 → 容器出现横向滚动条（列不被压缩，互不影响）
-    //   - 列宽总和 < 容器 → 占满容器，右侧由容器背景（列头底色）填充
+    // 表格宽度恒 = 可见列宽总和：
+    //   - 列宽由各 col 固定 px 决定，绝不按比例分配 → 调整某列不影响其它列
+    //   - 总和 > 容器 → 表格扩展 → 容器出现横向滚动条
+    //   - 总和 < 容器 → 表格窄于容器，右侧由容器背景（列头底色）填充
     AccountTable.prototype._updateTableWidth = function() {
-        var scroll = this.el.querySelector('.acc-table-scroll');
         var sum = 0;
         for (var i = 0; i < this.columns.length; i++) {
             var col = this.columns[i];
@@ -190,8 +190,7 @@ JFC.AccountTable = (function() {
                 sum += col.fixed ? col.defWidth : (this.colWidth[col.key] || 0);
             }
         }
-        var containerW = scroll ? scroll.clientWidth : 0;
-        this.tableEl.style.width = Math.max(sum, containerW) + 'px';
+        this.tableEl.style.width = sum + 'px';
     };
 
     // ---- 数据 ----
