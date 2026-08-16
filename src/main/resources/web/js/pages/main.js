@@ -141,6 +141,17 @@ JFC.pages.main = (function() {
                 getSwId: function() { return currentSwId; }
             });
         });
+
+        // 数据区纵向自定义滚动条（JavaFX WebView 原生滚动条 hover 才可见，改用 DOM 常显条）
+        var accSection = document.getElementById('manage-account-section');
+        if (accSection) {
+            var sectionScrollbar = JFC.AccountTable.attachScrollbar(accSection, 'y');
+            // 表内容变化（数据加载/渲染/列宽调整）时自动刷新滚动条
+            try {
+                var mo = new MutationObserver(function() { sectionScrollbar.update(); });
+                mo.observe(accSection, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+            } catch (e) { /* MutationObserver 不可用时依赖 scroll/resize 事件 */ }
+        }
     }
 
     // ---- 管理页侧栏 hover 展开/收起（完全沿用 nav-sidebar.js） ----

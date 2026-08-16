@@ -1402,14 +1402,14 @@
 
 /* --- Account Section（四个可复用表，容器整体垂直滚动） --- */
 .manage-account-section {
+    position: relative;             /* 容纳自定义纵向滚动条 */
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow-y: auto;               /* 整个列表区域垂直滚动 */
     min-height: 0;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.12) transparent;
 }
+.manage-account-section::-webkit-scrollbar { width: 0; display: none; }
 
 .acc-table-slot {
     flex: none;                     /* 自然高度（表高=内容高，由外部容器滚动） */
@@ -1462,22 +1462,38 @@
 }
 
 .acc-table-scroll {
+    position: relative;             /* 容纳自定义滚动条 */
     overflow: auto;                 /* 横向（列宽总和>容器）+ 纵向滚动 */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.25) transparent;
     background: var(--bg-sidebar);  /* 列头底色：填充表格右侧留白 */
 }
-.acc-table-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
-.acc-table-scroll::-webkit-scrollbar-track { background: transparent; }
-.acc-table-scroll::-webkit-scrollbar-thumb {
-    background: rgba(128,128,128,0.35);
+/* 隐藏原生滚动条（JavaFX WebView 原生条为 overlay，hover 才显示，统一用自定义条） */
+.acc-table-scroll::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+/* 自定义常显滚动条（DOM 元素，JavaFX WebView 中确定可见可拖） */
+.ct-scrollbar {
+    position: absolute;
+    z-index: 20;
     border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: content-box;
+    background: transparent;
+    opacity: 0;
+    transition: opacity 0.2s;
 }
-.acc-table-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(128,128,128,0.55);
-    background-clip: content-box;
+.ct-scrollbar.visible { opacity: 1; }
+.ct-scrollbar-x {
+    left: 0; right: 0; bottom: 0; height: 8px;
+}
+.ct-scrollbar-y {
+    top: 0; bottom: 0; right: 0; width: 8px;
+}
+.ct-scrollbar-thumb {
+    position: absolute;
+    background: rgba(128,128,128,0.45);
+    border-radius: 4px;
+    min-width: 30px;
+    min-height: 30px;
+}
+.ct-scrollbar-thumb:hover {
+    background: rgba(128,128,128,0.7);
 }
 
 .manage-account-table {

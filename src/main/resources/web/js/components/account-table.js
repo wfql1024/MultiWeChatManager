@@ -123,6 +123,8 @@ JFC.AccountTable = (function() {
         this.tbody = el.querySelector('tbody');
         this.tableEl = el.querySelector('table');
         this.titleEl.textContent = this.title;
+        // 表内横向自定义滚动条（列宽总和 > 容器时出现）
+        this._hScrollbar = attachCustomScrollbar(el.querySelector('.acc-table-scroll'), 'x');
     };
 
     // ---- 列配置持久化（LocalGlobalConfig.json.account_columns.<id>） ----
@@ -191,6 +193,7 @@ JFC.AccountTable = (function() {
             }
         }
         this.tableEl.style.width = sum + 'px';
+        if (this._hScrollbar) this._hScrollbar.update();
     };
 
     // ---- 数据 ----
@@ -224,6 +227,7 @@ JFC.AccountTable = (function() {
         tbody.innerHTML = html;
         this._bindRowEvents();
         this._applyColumnLayout();
+        if (this._hScrollbar) this._hScrollbar.update();
     };
 
     AccountTable.prototype._rowHtml = function(acc) {
@@ -925,6 +929,91 @@ JFC.AccountTable = (function() {
         return _measureEl.offsetWidth;
     }
 
+    /**
+     * 自定义常显滚动条（DOM 元素）。
+     * JavaFX WebView 的原生滚动条是 overlay 风格（鼠标不悬停时不可见），
+     * 这里用绝对定位的滚动条元素替代，确定可见、可拖拽。
+     *
+     * @param container 滚动容器（需 position:relative + overflow:auto）
+     * @param axis      'x'=横向, 'y'=纵向
+     * @return { update: function } 内容变化后调用 update 刷新
+     */
+    function attachCustomScrollbar(container, axis) {
+        if (!container) return { update: function() {} };
+        var bar = document.createElement('div');
+        bar.className = 'ct-scrollbar ' + (axis === 'x' ? 'ct-scrollbar-x' : 'ct-scrollbar-y');
+        var thumb = document.createElement('div');
+        thumb.className = 'ct-scrollbar-thumb';
+        bar.appendChild(thumb);
+        container.appendChild(bar);
+
+        var isX = axis === 'x';
+        function update() {
+            if (!container.isConnected) return;
+            var cw = container.clientWidth, sw = container.scrollWidth;
+            var ch = container.clientHeight, sh = container.scrollHeight;
+            if (isX) {
+                var canScroll = sw > cw;
+                bar.classList.toggle('visible', canScroll);
+                if (canScroll) {
+                    var trackW = bar.clientWidth;
+                    var thumbW = Math.max(30, trackW * cw / sw);
+                    thumb.style.width = thumbW + 'px';
+                    thumb.style.height = '100%';
+                    thumb.style.left = (trackW - thumbW) * container.scrollLeft / (sw - cw) + 'px';
+                    thumb.style.top = '';
+                }
+            } else {
+                var canScrollV = sh > ch;
+                bar.classList.toggle('visible', canScrollV);
+                if (canScrollV) {
+                    var trackH = bar.clientHeight;
+                    var thumbH = Math.max(30, trackH * ch / sh);
+                    thumb.style.height = thumbH + 'px';
+                    thumb.style.width = '100%';
+                    thumb.style.top = (trackH - thumbH) * container.scrollTop / (sh - ch) + 'px';
+                    thumb.style.left = '';
+                }
+            }
+        }
+
+        container.addEventListener('scroll', update);
+        window.addEventListener('resize', update);
+
+        // 拖拽滚动条 → 滚动容器
+        var dragging = false, startPos = 0, startScroll = 0;
+        thumb.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dragging = true;
+            startPos = isX ? e.clientX : e.clientY;
+            startScroll = isX ? container.scrollLeft : container.scrollTop;
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+        });
+        function onMove(e) {
+            if (!dragging) return;
+            var pos = isX ? e.clientX : e.clientY;
+            var delta = pos - startPos;
+            var maxScroll = isX ? (container.scrollWidth - container.clientWidth)
+                                : (container.scrollHeight - container.clientHeight);
+            var maxTravel = isX ? (bar.clientWidth - thumb.clientWidth)
+                                : (bar.clientHeight - thumb.clientHeight);
+            if (maxTravel > 0 && maxScroll > 0) {
+                if (isX) container.scrollLeft = startScroll + delta * maxScroll / maxTravel;
+                else container.scrollTop = startScroll + delta * maxScroll / maxTravel;
+            }
+        }
+        function onUp() {
+            dragging = false;
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+        }
+
+        setTimeout(update, 0);   // 等容器尺寸稳定后计算
+        return { update: update, bar: bar };
+    }
+
     // ---- 标题闪烁反馈（与 main.js flashTitle 相同，独立实现避免循环依赖） ----
     function flashTitle(msg, isError) {
         var el = document.querySelector('#page-main #manage-detail-title');
@@ -943,6 +1032,8 @@ JFC.AccountTable = (function() {
     AccountTable.closeMenus = function() { closeColMenu(); closeRowMenu(); activeTable = null; };
     AccountTable.getActiveTable = function() { return activeTable; };
     AccountTable.measureTextWidth = measureTextWidth;
+    // 自定义滚动条（供外部容器如数据区使用）：attachCustomScrollbar(container, 'y')
+    AccountTable.attachScrollbar = attachCustomScrollbar;
 
     // 公开方法：外部路由调用
     AccountTable.prototype.updateAvatar = function(accountId, dataUrl) {
