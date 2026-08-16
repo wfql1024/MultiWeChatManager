@@ -291,3 +291,54 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - node --check 通过；gradle compileJava 通过
 - 应用实例正在运行锁定 build 目录 → processResources 清理失败，GUI 实测待应用重启后进行
 
+---
+
+## 账号列表四表架构与交互优化（2026-08-16 第二轮）
+
+### 一、可复用列表组件 `js/components/account-table.js`（核心架构）
+- 新增 `JFC.AccountTable` 组件类：列定义驱动渲染（任意列组合）、标题行、批量操作、列头右键菜单、列宽拖拽/自适应、行右键菜单、快捷键列编辑、EventBus 流B 定向刷新
+- 构造参数：`{id, title, container, columns, enableHotkey, defaultSortField, getSwId}`
+- 列定义：`{key, label, mandatory, sortable, defVisible, defWidth, fixed, cellClass}`（mandatory=必选锁定；fixed=固定宽不可拖拽/自适应；cellClass=td 附加类）
+- 列配置按表独立持久化：`LocalGlobalConfig.json.account_columns.<tableId> = {visible, width}`
+- 全局右键菜单 `#account-col-menu`/`#account-row-menu` 多表共用，`activeTable` 记录当前操作的表；`JFC.AccountTable.closeMenus()` 供外部关闭
+
+### 二、四个表（平台页从上到下）
+| 表 | 列定义 | 数据 |
+|----|--------|------|
+| 原生程序 | 勾选框/名称/路径/状态 | 暂无数据 |
+| 原生账号 | 账号 7 列（勾选框 fixed/头像 fixed/展示名/快捷键/ID/平台内ID/昵称） | `getSwExistedAccounts(swId,'origin')` |
+| 共存账号 | 账号 7 列 | 暂无数据 |
+| 无效账号 | 勾选框/展示名/ID/无效原因 | 暂无数据 |
+
+- `JsBridge.getSwExistedAccounts(swId, only)` 新增 only 参数（"origin"/"coexist"/空=全部），对应 `SwAccountOps.getSwAllAccountsExisted` 的 only 过滤
+
+### 三、标题行（替代原浮动工具行）
+- 每表标题行常显：标题左端，"已选 N 项" + 批量按钮（批量隐藏/显示/删除）跟随右侧，未选中时隐藏
+- 批量操作在组件内独立管理（每表自己的 selectedIds）
+
+### 四、固定列与竖线
+- 勾选框列（40px）/头像列（56px）`fixed: true`：固定宽度、不可拖拽、不参与自适应
+- 固定列之间及固定列右侧不注入 `.col-resizer` 竖线（头像左右两侧均无竖线）
+- 头像 `border-radius: 50%` → `6px`（圆角矩形）
+
+### 五、列头右键菜单
+- 去掉"必选"字样（disabled checkbox 已表达）；固定列"该列自适应大小"显示为禁用
+
+### 六、快捷键录入大修改（修复假死）
+- **根因分析**：旧实现 `blur` 时同步 `commit`（替换单元格 DOM）与 `click` 事件竞态 → 点击其他位置后 DOM 已变，click 目标丢失 → "点击无反应"；被 OS 全局热键占用的组合键在 WebView 收不到 → 表现为录入中断
+- **修复**：
+  - 提交改为 `document mousedown`（点击编辑格外时提交），移除 blur 同步提交，消除竞态
+  - 编辑状态全局单一管理（`_editFinish`/`_editDocMousedown`），切换行/重载数据时正确收尾
+  - **Java Scene 级捕获兜底**：`JsBridge.notifyHotkeyCapture(active)` 在 Scene 挂 `KeyEvent` EventFilter（capture 阶段），带修饰键组合键推送 `JFC.bridge._onHotkeyCapture` → JS 更新输入框（WebView 收不到的按键兜底；OS 级全局热键占用仍无法拦截）
+  - `MainWindow` 创建 Scene 后 `bridge.setScene(scene)`
+  - 输入框支持退格/方向键编辑、Enter 提交、Esc 取消
+- **已知边界**：OS 级全局热键（其他软件 RegisterHotKey）在系统层拦截，JavaFX/WebView 均收不到——该组合无法录入，属桌面应用通例
+
+### 七、NPE 修复（顺带）
+- `AccInfoFuncCore.getSwAllAccountsExisted` 未传 accountOps（null）→ 流A 维护在共存分支 NPE（`ensureCoexistAccFormatted`），WeChat 平台实测触发；改为 `new AccOpsProvider().toSwProvider()`
+
+### 八、验证状态
+- node --check 全部通过；gradle compileJava 通过
+- 应用重启实测：进入 Weixin 平台，6 账号原生表渲染、头像异步加载、平台维护完成，无 JS 错误无 NPE
+- 列宽自适应逻辑待与用户探讨（见上方提问）；GUI 交互实测待用户反馈
+

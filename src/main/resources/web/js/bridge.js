@@ -95,6 +95,16 @@ JFC.bridge = (function() {
                 JFC.pages.main.onAccountChanged(data);
             }
         },
+        // Java Scene 捕获到组合键后推送（快捷键录入兜底通道），勿手动调用
+        _onHotkeyCapture: function(jsonStr) {
+            var combo = null;
+            if (jsonStr && typeof jsonStr === 'string') {
+                try { combo = JSON.parse(jsonStr); } catch(e) {}
+            }
+            if (combo && JFC.pages && JFC.pages.main && JFC.pages.main.onHotkeyCapture) {
+                JFC.pages.main.onHotkeyCapture(combo);
+            }
+        },
 
         // ---- 窗口控制 ----
         ping: function() { return call('ping'); },
@@ -132,8 +142,13 @@ JFC.bridge = (function() {
         getSwConfig: function(swId) { return callJsonWithArgs('getSwConfig', swId); },
         saveSwConfig: function(swId, configJson) { return callJsonWithArgs('saveSwConfig', swId, configJson); },
         getSwDetailData: function(swId) { return callJsonWithArgs('getSwDetailData', swId); },
-        getSwExistedAccounts: function(swId) { return callJsonWithArgs('getSwExistedAccounts', swId); },
+        // only: "origin"=原生账号, "coexist"=共存账号, 不传=全部
+        getSwExistedAccounts: function(swId, only) {
+            return callJsonWithArgs('getSwExistedAccounts', swId, only || '');
+        },
         notifyPlatformEntered: function(swId) { callWithArgs('notifyPlatformEntered', swId); },
+        // 快捷键录入捕获开关（Java Scene 级 EventFilter 兜底）
+        notifyHotkeyCapture: function(active) { callWithArgs('notifyHotkeyCapture', !!active); },
         getAccAvatarAsync: function(swId, accountId, fn) {
             callWithArgs('getAccAvatarAsync', swId, accountId, String(registerAsync(fn)));
         },

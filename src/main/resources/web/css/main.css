@@ -1400,7 +1400,7 @@
 .manage-curtain-arrow { display: none; }
 .manage-curtain-label { display: none; }
 
-/* --- Account Section --- */
+/* --- Account Section（四个可复用表垂直排列） --- */
 .manage-account-section {
     flex: 1;
     display: flex;
@@ -1409,24 +1409,58 @@
     min-height: 0;
 }
 
-.manage-account-toolbar {
+.acc-table-slot {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--border-color);
+}
+.acc-table-slot:first-child { border-top: none; }
+
+.acc-table {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 标题行：标题左端，"已选 N 项"+批量按钮跟随右侧（未选中时隐藏） */
+.acc-table-titlebar {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 6px var(--space-md);
+    gap: 8px;
+    padding: 4px var(--space-md);
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-sidebar);
     font-size: var(--font-sm);
+    flex-shrink: 0;
 }
-.manage-selection-count {
-    color: var(--text-secondary);
+.acc-table-title {
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
 }
-.manage-batch-actions {
+.acc-table-meta {
+    margin-left: auto;
     display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.acc-table-count {
+    color: var(--text-secondary);
+    font-size: var(--font-xs);
+}
+.acc-table-batch {
+    display: inline-flex;
     gap: 4px;
 }
-.manage-batch-actions .btn-sm {
+.acc-table-batch .btn-sm {
     font-size: var(--font-xs);
+}
+.acc-table-batch .batch-danger {
+    color: var(--color-danger);
 }
 
 .manage-account-scroll {
@@ -1569,7 +1603,7 @@ body.resizing-cols {
 .manage-account-table .manage-account-avatar {
     width: 32px;
     height: 32px;
-    border-radius: 50%;
+    border-radius: 6px;             /* 圆角矩形（非圆形） */
     object-fit: cover;
     background: var(--bg-sidebar);
     display: flex;
@@ -1679,6 +1713,7 @@ body.resizing-cols {
     outline: none;
 }
 
+.manage-account-table .manage-text-cell,
 .manage-account-table .manage-alias-cell,
 .manage-account-table .manage-nickname-data-cell {
     color: var(--text-secondary);

@@ -16,6 +16,10 @@ import com.jfmultichat.swcore.SwConfigAccessor;
 import com.jfmultichat.swcore.SwInfoFuncCore;
 import com.jfmultichat.swcore.SwNativeOps;
 import com.jfmultichat.swcore.SwPathDetective;
+import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,10 +63,113 @@ public class JsBridge {
     private Consumer<String> themeChangeListener;
     private java.util.function.DoubleConsumer alignListener;
 
+    // 快捷键录入捕获（Scene 级 EventFilter，兜底 WebView 内收不到的按键）
+    private Scene scene;
+    private EventHandler<KeyEvent> hotkeyFilter;
+
     // ==================== Java→JS 执行 ====================
 
     public void setScriptExecutor(Consumer<String> executor) {
         this.scriptExecutor = executor;
+    }
+
+    /** 注册 Scene 引用（由 MainWindow 在创建 Scene 后调用，供快捷键捕获使用） */
+    public void setScene(Scene s) {
+        this.scene = s;
+    }
+
+    /**
+     * JS 调用：开启/关闭快捷键录入捕获.
+     * 开启时在 Scene 上挂 KeyEvent EventFilter（capture 阶段），把带修饰键的组合键
+     * 推送到 JS（JFC.bridge._onHotkeyCapture）。WebView 内 JS keydown 收不到的按键
+     * （如被 WebKit 消费的组合键）由这里兜底；OS 级全局热键占用仍无法拦截。
+     *
+     * @param active true=开始捕获, false=停止捕获
+     */
+    public void notifyHotkeyCapture(boolean active) {
+        if (scene == null) return;
+        if (active) {
+            if (hotkeyFilter == null) {
+                hotkeyFilter = this::onHotkeyCapture;
+                scene.addEventFilter(KeyEvent.KEY_PRESSED, hotkeyFilter);
+                LOG.info("[热键] 开始捕获快捷键");
+            }
+        } else if (hotkeyFilter != null) {
+            scene.removeEventFilter(KeyEvent.KEY_PRESSED, hotkeyFilter);
+            hotkeyFilter = null;
+            LOG.info("[热键] 停止捕获快捷键");
+        }
+    }
+
+    /** Scene 捕获到组合键时推送 JS（不 consume，WebView 继续正常处理） */
+    private void onHotkeyCapture(KeyEvent ev) {
+        KeyCode code = ev.getCode();
+        // 纯修饰键：跳过（JS 端预览）
+        if (code == KeyCode.CONTROL || code == KeyCode.ALT || code == KeyCode.SHIFT
+                || code == KeyCode.META || code == KeyCode.WINDOWS) {
+            return;
+        }
+        boolean hasMod = ev.isControlDown() || ev.isAltDown() || ev.isShiftDown() || ev.isMetaDown();
+        // 仅处理带修饰键的组合键；无修饰的普通键由 JS keydown 处理（字符输入/Enter/Esc/Backspace）
+        if (!hasMod) return;
+        String combo = formatHotkey(ev);
+        if (combo == null || combo.isEmpty()) return;
+        try {
+            pushToJs("JFC.bridge._onHotkeyCapture(" + MAPPER.writeValueAsString(combo) + ")");
+        } catch (Exception e) {
+            LOG.warn("[热键] 推送捕获失败: {}", combo, e);
+        }
+    }
+
+    /** 将 KeyEvent 格式化为 "Ctrl+Alt+K" 样式字符串 */
+    private static String formatHotkey(KeyEvent ev) {
+        StringBuilder sb = new StringBuilder();
+        if (ev.isControlDown()) sb.append("Ctrl+");
+        if (ev.isAltDown()) sb.append("Alt+");
+        if (ev.isShiftDown()) sb.append("Shift+");
+        if (ev.isMetaDown()) sb.append("Win+");
+        String keyName = keyNameOf(ev.getCode());
+        if (keyName.isEmpty()) return null;
+        sb.append(keyName);
+        return sb.toString();
+    }
+
+    /** KeyCode → 显示名（字母/数字/F键/常见特殊键） */
+    private static String keyNameOf(KeyCode code) {
+        if (code.isLetterKey() || code.isDigitKey()) return code.getName();
+        if (code.isFunctionKey()) return code.getName();  // F1-F24
+        if (code.isKeypadKey()) {
+            String n = code.getName();
+            return n.startsWith("Numpad") ? n.substring("Numpad".length()) : n;
+        }
+        switch (code) {
+            case SPACE: return "Space";
+            case ENTER: return "Enter";
+            case TAB: return "Tab";
+            case ESCAPE: return "Esc";
+            case BACK_SPACE: return "Backspace";
+            case DELETE: return "Delete";
+            case INSERT: return "Insert";
+            case HOME: return "Home";
+            case END: return "End";
+            case PAGE_UP: return "PageUp";
+            case PAGE_DOWN: return "PageDown";
+            case UP: return "Up";
+            case DOWN: return "Down";
+            case LEFT: return "Left";
+            case RIGHT: return "Right";
+            case PRINTSCREEN: return "PrintScreen";
+            case PAUSE: return "Pause";
+            case SCROLL_LOCK: return "ScrollLock";
+            case CAPS: return "CapsLock";
+            case NUMPAD0: case NUMPAD1: case NUMPAD2: case NUMPAD3: case NUMPAD4:
+            case NUMPAD5: case NUMPAD6: case NUMPAD7: case NUMPAD8: case NUMPAD9:
+                return code.getName().substring("NUMPAD".length());
+            default:
+                // 其它键（如标点、括号）用其名称
+                String n = code.getName();
+                return n == null ? "" : n;
+        }
     }
 
     /** 注册主题变更监听器（由 MainWindow 调用） */
@@ -1205,17 +1312,19 @@ public class JsBridge {
     }
 
     /**
-     * 获取磁盘上已存在的账号来源.
-     * 对应 swcore: SwInfoFuncCore.getSwAllAccountsExisted(sw, null)
+     * 获取磁盘上已存在的账号来源（可按原生/共存过滤）.
+     * 对应 swcore: SwInfoFuncCore.getSwAllAccountsExisted(sw, only)
      *
      * @param swId Sw ID
+     * @param only 过滤类型: "origin"=仅原生账号, "coexist"=仅共存账号, null/空=全部
      * @return 账号 ID 列表的 JSON 数组字符串，如 ["wxid_xxx","wxid_yyy"]
      */
-    public String getSwExistedAccounts(String swId) {
+    public String getSwExistedAccounts(String swId, String only) {
         try {
             SwConfigAccessor accessor = SwConfigProvider.newAccessor();
             SwInfoFuncCore core = new SwInfoFuncCore(accessor, null, null, null);
-            List<String> existed = core.getSwAllAccountsExisted(swId, null);
+            List<String> existed = core.getSwAllAccountsExisted(swId,
+                    only == null || only.isEmpty() ? null : only);
             // 自动补充 SwAccData 缺失账号节点（确保本地数据包含已加载账号）
             AccInfoFuncCore.syncSwAccAccounts(swId, existed);
             return MAPPER.writeValueAsString(existed);

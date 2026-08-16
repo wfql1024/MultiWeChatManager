@@ -6,6 +6,7 @@
 - Phase 1.12 — 账号列表来源磁盘扫描 + 头像显示接入 + 日志修复与设置页"日志"子项（2026-07-31）
 - Phase 1.13 — 展示名显示 + SwAccData 自动填充 + EventBus 事件机制（2026-08-01）
 - Phase 1.14 — 账号列表列定制：7 列结构 + 列头右键菜单 + 列宽拖拽 + 快捷键编辑 + 悬浮交互（2026-08-16）
+- Phase 1.15 — 四表架构：可复用 AccountTable 组件 + 原生程序/原生账号/共存账号/无效账号 + 快捷键 Scene 级捕获（2026-08-16 第二轮）
 
 ## 打包路径
 - 免安装版: `build/portable/JhiFengMultiChat/JhiFengMultiChat.exe`
@@ -128,6 +129,12 @@
   - `event/PlatformEnteredEvent.java` — 平台进入事件（流A 触发自动维护）
   - `event/AccountDataChangedEvent.java` — 账号数据变更事件（流B 触发定向 UI 刷新）
 - **PlatformEventBootstrap** (`src/main/java/com/jfmultichat/PlatformEventBootstrap.java`) — 事件装配点，`install(bridge)` 注册订阅者，MainApp.start 调用
+
+## 新增模块（2026-08-16 第二轮）
+- **AccountTable 组件** (`src/main/resources/web/js/components/account-table.js`) — 可复用列表组件：列定义驱动（任意列组合/固定列/必选锁定）、标题行（标题 + 已选计数 + 批量按钮）、列头右键菜单、列宽拖拽/自适应、行右键菜单、快捷键列编辑、EventBus 流B 定向刷新；四个表实例共用
+- **快捷键 Scene 级捕获** — `JsBridge.notifyHotkeyCapture(active)`（Scene KeyEvent EventFilter，capture 阶段）→ 组合键推送 `JFC.bridge._onHotkeyCapture` → JS 更新输入框；`MainWindow` 创建 Scene 后 `bridge.setScene(scene)`
+- **getSwExistedAccounts only 参数** — `JsBridge.getSwExistedAccounts(swId, only)`："origin"=原生/"coexist"=共存/空=全部（对应 SwAccountOps only 过滤）
+- **NPE 修复** — `AccInfoFuncCore.getSwAllAccountsExisted` 传 `new AccOpsProvider().toSwProvider()`（原 null 导致共存分支 NPE）
 
 ## 新增功能（2026-08-01 会话）
 - **账号展示名**: "昵称"列头置空；`getSwDetailData` 注入 `display_name`（`getAccOriginDisplayName`: remark→nickname→alias→ID）；前端展示名/头像首字符/排序用之

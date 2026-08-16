@@ -10,10 +10,6 @@ JFC.pages.main = (function() {
     // ---- 状态 ----
     var currentSwId = null;
     var swConfigData = {};
-    var accountData = [];
-    var selectedIds = new Set();
-    var sortField = 'display_name';
-    var sortAsc = true;
     var settingsCollapsed = {};   // swId → bool, 从 local_config.json 持久化
     var iconCache = {};           // swId → iconUrl (base64 data URL)
     var debounceTimers = {};      // field → timerId, 用于防抖保存
@@ -22,21 +18,36 @@ JFC.pages.main = (function() {
     var DEBOUNCE_MS = 600;        // 输入框防抖延迟
     var isInitialized = false;
 
-    // ---- 账号列表列配置 ----
-    // key 与渲染 td data-col 对应；mandatory 列不可在列头右键菜单中取消
-    var COL_DEFS = [
-        { key: 'check',        label: '勾选框',   mandatory: true,  defVisible: true,  defWidth: 40  },
-        { key: 'avatar',       label: '头像',     mandatory: true,  defVisible: true,  defWidth: 56  },
-        { key: 'display_name', label: '展示名',   mandatory: true,  defVisible: true,  defWidth: 200 },
-        { key: 'hotkey',       label: '快捷键',   mandatory: true,  defVisible: true,  defWidth: 110 },
-        { key: 'id',           label: 'ID',       mandatory: false, defVisible: true,  defWidth: 150 },
-        { key: 'alias',        label: '平台内ID', mandatory: false, defVisible: false, defWidth: 140 },
-        { key: 'nickname',     label: '昵称',     mandatory: false, defVisible: false, defWidth: 140 }
-    ];
-    var colVisible = {};   // key → bool
-    var colWidth = {};     // key → px
-    var resizeState = null;   // 列宽拖拽状态
-    var hotkeyEditAccountId = null;   // 正在编辑快捷键的账号 ID
+    // ---- 四个可复用表实例（原生程序/原生账号/共存账号/无效账号） ----
+    // 列定义: {key,label,mandatory,sortable,defVisible,defWidth,fixed}
+    //   mandatory = 必选列（列头右键菜单锁定）; fixed = 固定宽度（不可拖拽/自适应）
+    var TABLE_COLUMNS = {
+        // 账号类表（原生/共存）
+        account: [
+            { key: 'check',        label: '勾选框',   mandatory: true,  defVisible: true,  defWidth: 40,  fixed: true  },
+            { key: 'avatar',       label: '头像',     mandatory: true,  defVisible: true,  defWidth: 56,  fixed: true  },
+            { key: 'display_name', label: '展示名',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 200 },
+            { key: 'hotkey',       label: '快捷键',   mandatory: true,  defVisible: true,  defWidth: 110 },
+            { key: 'id',           label: 'ID',       mandatory: false, sortable: true, defVisible: true,  defWidth: 150, cellClass: 'manage-id-cell' },
+            { key: 'alias',        label: '平台内ID', mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-alias-cell' },
+            { key: 'nickname',     label: '昵称',     mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-nickname-data-cell' }
+        ],
+        // 程序类表（原生程序）
+        program: [
+            { key: 'check',   label: '勾选框', mandatory: true,  defVisible: true,  defWidth: 40, fixed: true },
+            { key: 'name',    label: '名称',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 160 },
+            { key: 'path',    label: '路径',   mandatory: false, sortable: true, defVisible: true,  defWidth: 320 },
+            { key: 'status',  label: '状态',   mandatory: false, sortable: true, defVisible: true,  defWidth: 90  }
+        ],
+        // 无效账号（原因列）
+        invalid: [
+            { key: 'check',   label: '勾选框', mandatory: true,  defVisible: true,  defWidth: 40, fixed: true },
+            { key: 'display_name', label: '展示名', mandatory: true, sortable: true, defVisible: true, defWidth: 200 },
+            { key: 'id',      label: 'ID',     mandatory: false, sortable: true, defVisible: true,  defWidth: 150 },
+            { key: 'reason',  label: '无效原因', mandatory: false, sortable: true, defVisible: true, defWidth: 200 }
+        ]
+    };
+    var accountTables = {};
 
     // ---- 辅助函数 ----
     function bind(id, evt, fn) {
@@ -98,11 +109,38 @@ JFC.pages.main = (function() {
 
         // 加载持久化的窗帘偏好
         loadCurtainPreferences();
-        // 加载账号列表列配置（显示/宽度，LocalGlobalConfig.json）
-        loadColumnPrefs();
+        // 初始化四个可复用表实例（原生程序/原生账号/共存账号/无效账号）
+        initAccountTables();
         initManageSidebar();
         loadPlatformList();
         bindManageEvents();
+    }
+
+    // ---- 初始化四个可复用表（组件 JFC.AccountTable） ----
+    function initAccountTables() {
+        var defs = [
+            { key: 'origin_prog', title: '原生程序', columns: TABLE_COLUMNS.program, enableHotkey: false, defaultSortField: 'name' },
+            { key: 'origin_acc',  title: '原生账号', columns: TABLE_COLUMNS.account, enableHotkey: true,  defaultSortField: 'display_name' },
+            { key: 'coexist_acc', title: '共存账号', columns: TABLE_COLUMNS.account, enableHotkey: true,  defaultSortField: 'display_name' },
+            { key: 'invalid_acc', title: '无效账号', columns: TABLE_COLUMNS.invalid, enableHotkey: false, defaultSortField: '' }
+        ];
+        var containers = {
+            origin_prog: 'acc-table-native-prog',
+            origin_acc: 'acc-table-native-acc',
+            coexist_acc: 'acc-table-coexist-acc',
+            invalid_acc: 'acc-table-invalid-acc'
+        };
+        defs.forEach(function(def) {
+            accountTables[def.key] = new JFC.AccountTable({
+                id: def.key,
+                title: def.title,
+                container: document.getElementById(containers[def.key]),
+                columns: def.columns,
+                enableHotkey: def.enableHotkey,
+                defaultSortField: def.defaultSortField,
+                getSwId: function() { return currentSwId; }
+            });
+        });
     }
 
     // ---- 管理页侧栏 hover 展开/收起（完全沿用 nav-sidebar.js） ----
@@ -320,8 +358,8 @@ JFC.pages.main = (function() {
             _prevHeight = panel.getBoundingClientRect().height | 0;
         }
         currentSwId = swId;
-        selectedIds.clear();
-        updateSelectionUI();
+        // 清空所有表的选中状态
+        Object.keys(accountTables).forEach(function(k) { accountTables[k].clearSelection(); });
 
         // 更新列表高亮 — 取消"全部"选中，高亮当前平台（page-main侧栏 + 主侧栏）
         var allItem = getEl('manage-all-nav-item');
@@ -1195,10 +1233,10 @@ JFC.pages.main = (function() {
         }
     }
 
-    // ---- 加载账号数据 ----
+    // ---- 加载账号数据（路由到原生账号表） ----
     function loadAccountData(swId) {
-        // 账号来源: 磁盘扫描已存在的账号（数据目录子目录 + 共存 exe）
-        var existed = JFC.bridge.getSwExistedAccounts(swId) || [];
+        // 账号来源: 磁盘扫描已存在的账号，仅原生账号（数据目录子目录）
+        var existed = JFC.bridge.getSwExistedAccounts(swId, 'origin') || [];
 
         // 补充持久化详情（昵称/头像/隐藏/禁用等），未记录的新账号显示为空白详情
         var detailMap = {};
@@ -1207,7 +1245,7 @@ JFC.pages.main = (function() {
             data.accounts.forEach(function(a) { detailMap[a.id] = a; });
         }
 
-        accountData = existed.map(function(id) {
+        var rows = existed.map(function(id) {
             var acc = detailMap[id] || {};
             // 标准化字段类型
             return {
@@ -1226,9 +1264,13 @@ JFC.pages.main = (function() {
                 _raw: acc
             };
         });
-        renderAccountTable(accountData);
+        accountTables.origin_acc.setData(rows);
+        // 其余三个表暂无数据（原生程序/共存账号/无效账号）
+        accountTables.origin_prog.setData([]);
+        accountTables.coexist_acc.setData([]);
+        accountTables.invalid_acc.setData([]);
         // 异步加载头像（本地文件 → URL下载 → SVG 回退）
-        accountData.forEach(function(acc) { requestAccountAvatar(swId, acc); });
+        rows.forEach(function(acc) { requestAccountAvatar(swId, acc); });
     }
 
     // ---- 异步头像加载 ----
@@ -1240,663 +1282,28 @@ JFC.pages.main = (function() {
             acc._avatarFetching = false;
             if (data && data.dataUrl) {
                 acc.avatar_data = data.dataUrl;
-                updateAccountAvatarCell(acc.id, data.dataUrl);
+                accountTables.origin_acc.updateAvatar(acc.id, data.dataUrl);
             }
         });
     }
 
-    // 仅更新对应账号行的头像单元格，避免整表重渲染
-    function updateAccountAvatarCell(accountId, dataUrl) {
-        var tbody = getEl('manage-account-tbody');
-        if (!tbody) return;
-        var rows = tbody.rows;
-        for (var i = 0; i < rows.length; i++) {
-            if (rows[i].getAttribute('data-acc-id') === accountId) {
-                var avatarBox = rows[i].querySelector('.manage-col-avatar .manage-account-avatar');
-                if (avatarBox) {
-                    // 若当前已显示真实图片而解析结果仅是文字回退(SVG)，不降级替换
-                    var isFallback = dataUrl.indexOf('image/svg') !== -1;
-                    var hasImg = avatarBox.querySelector('img');
-                    if (isFallback && hasImg) return;
-                    avatarBox.innerHTML = '<img src="' + escapeAttr(dataUrl) + '" alt="" onerror="this.style.display=\'none\';">';
-                }
-                break;
-            }
-        }
-    }
-
-    // ---- 事件驱动：Java 推送账号数据变更，定向更新单行/格 ----
-
-    // 原地更新某行悬浮操作按钮的选中态 + 禁用标签（状态变化时调用）
-    function updateRowQuickActions(row, acc) {
-        if (!row || !acc) return;
-        var btn = row.querySelector('.qa-btn[data-action="toggle-hidden"]');
-        if (btn) {
-            btn.classList.toggle('on', !!acc.hidden);
-            btn.textContent = acc.hidden ? '已隐藏' : '隐藏';
-            btn.title = acc.hidden ? '取消隐藏' : '隐藏';
-        }
-        var dnCell = row.querySelector('.manage-nickname-cell');
-        var tag = row.querySelector('.manage-disabled-tag');
-        if (acc.disabled && !tag && dnCell) {
-            var t = document.createElement('span');
-            t.className = 'manage-disabled-tag';
-            t.textContent = '禁用';
-            var actions = dnCell.querySelector('.manage-row-quick-actions');
-            dnCell.insertBefore(t, actions);
-        } else if (!acc.disabled && tag) {
-            tag.remove();
-        }
-    }
-
-    // Java 通过 JFC.bridge._onAccChanged 推送账号数据变更时调用（仅更新受影响行/格）
+    // ---- 事件驱动：Java 推送账号数据变更 → 路由到各表定向刷新（组件内处理） ----
     function onAccountChanged(p) {
-        var row = document.querySelector('#page-main tr[data-acc-id="' + p.accountId + '"]');
-        if (!row) return;
-        var ch = p.changed || {};
-        var acc = accountData.find(function(a) { return a.id === p.accountId; });
-
-        // 状态（hidden/disabled）→ 更新悬浮操作按钮选中态 / 禁用标签
-        if (ch.hidden !== undefined && acc) acc.hidden = ch.hidden;
-        if (ch.disabled !== undefined && acc) acc.disabled = ch.disabled;
-        if (ch.hidden !== undefined || ch.disabled !== undefined) {
-            updateRowQuickActions(row, acc);
-        }
-        // 展示名
-        if (ch.display_name !== undefined) {
-            var nc = row.querySelector('.manage-nickname-cell .dn-text');
-            if (nc) nc.textContent = ch.display_name;
-            if (acc) acc.display_name = ch.display_name;
-        }
-        // 头像
-        if (ch.avatar_url !== undefined) {
-            if (acc) acc.avatar_url = ch.avatar_url;
-            updateAccountAvatarCell(p.accountId, ch.avatar_url);
-        }
-        // 快捷键
-        if (ch.hotkey !== undefined) {
-            if (acc) acc.hotkey = ch.hotkey || '';
-            var hc = row.querySelector('.manage-hotkey-cell');
-            if (hc && hc.getAttribute('data-editing') !== '1') {
-                hc.innerHTML = ch.hotkey
-                    ? '<span class="hotkey-text">' + escapeHtml(ch.hotkey) + '</span>'
-                    : '<span class="hotkey-text"><span class="hotkey-placeholder">—</span></span>';
-            }
-        }
-        // 平台内ID（alias）
-        if (ch.alias !== undefined) {
-            if (acc) acc.alias = ch.alias || '';
-            var ac = row.querySelector('.manage-alias-cell');
-            if (ac) {
-                ac.textContent = ch.alias || '';
-                ac.title = ch.alias || '';
-            }
-        }
-        // 昵称
-        if (ch.nickname !== undefined) {
-            if (acc) acc.nickname = ch.nickname || '';
-            var nic = row.querySelector('.manage-nickname-data-cell');
-            if (nic) {
-                nic.textContent = ch.nickname || '';
-                nic.title = ch.nickname || '';
-            }
-        }
-    }
-
-    function renderAccountTable(accounts) {
-        var tbody = getEl('manage-account-tbody');
-        if (!tbody) return;
-
-        accounts = sortAccounts(accounts);
-
-        if (accounts.length === 0) {
-            tbody.innerHTML = '<tr class="manage-empty-row"><td colspan="7">' +
-                '<div class="manage-empty-state">暂无账号数据</div></td></tr>';
-            return;
-        }
-
-        var html = '';
-        accounts.forEach(function(acc) {
-            var id = acc.id;
-            var nickname = acc.nickname;
-            // 展示名：getAccOriginDisplayName 结果，回退原始昵称/账号 ID
-            var displayName = acc.display_name || nickname || id;
-            var avatarUrl = acc.avatar_data || acc.avatar_url;
-            var hidden = acc.hidden;
-            var isSelected = selectedIds.has(id);
-
-            // 头像
-            var avatarHtml;
-            if (avatarUrl) {
-                avatarHtml = '<img src="' + escapeAttr(avatarUrl) + '" alt="" onerror="this.parentElement.innerHTML=\'<span class=manage-avatar-placeholder>' +
-                    escapeHtml((displayName || '?').charAt(0).toUpperCase()) + '</span>\';">';
-            } else {
-                var initial = (displayName || '?').charAt(0).toUpperCase();
-                avatarHtml = '<span class="manage-avatar-placeholder">' + escapeHtml(initial) + '</span>';
-            }
-
-            // 展示名列右端悬浮操作按钮（选中态 = 对应状态；悬浮行时显示）
-            var quickActions = '<span class="manage-row-quick-actions">' +
-                '<button class="qa-btn' + (hidden ? ' on' : '') + '" data-action="toggle-hidden" data-id="' + escapeAttr(id) + '"' +
-                ' title="' + (hidden ? '取消隐藏' : '隐藏') + '">' + (hidden ? '已隐藏' : '隐藏') + '</button>' +
-                '<button class="qa-btn danger" data-action="delete" data-id="' + escapeAttr(id) + '" title="删除账号">删除</button>' +
-                '</span>';
-
-            // 快捷键单元格
-            var hotkeyHtml = acc.hotkey
-                ? '<span class="hotkey-text">' + escapeHtml(acc.hotkey) + '</span>'
-                : '<span class="hotkey-text"><span class="hotkey-placeholder">—</span></span>';
-
-            html += '<tr data-acc-id="' + escapeAttr(id) + '" class="' + (isSelected ? 'selected' : '') + '">' +
-                '<td data-col="check" class="manage-col-check"><input type="checkbox"' +
-                    (isSelected ? ' checked' : '') +
-                    ' data-acc-id="' + escapeAttr(id) + '"></td>' +
-                '<td data-col="avatar" class="manage-col-avatar"><div class="manage-account-avatar">' + avatarHtml + '</div></td>' +
-                '<td data-col="display_name" class="manage-nickname-cell">' +
-                    '<span class="dn-text">' + escapeHtml(displayName) + '</span>' +
-                    (acc.disabled ? '<span class="manage-disabled-tag">禁用</span>' : '') +
-                    quickActions +
-                '</td>' +
-                '<td data-col="hotkey" class="manage-hotkey-cell" title="点击设置快捷键">' + hotkeyHtml + '</td>' +
-                '<td data-col="id" class="manage-id-cell" title="' + escapeAttr(id) + '">' + escapeHtml(id) + '</td>' +
-                '<td data-col="alias" class="manage-alias-cell" title="' + escapeAttr(acc.alias || '') + '">' + escapeHtml(acc.alias || '') + '</td>' +
-                '<td data-col="nickname" class="manage-nickname-data-cell" title="' + escapeAttr(nickname || '') + '">' + escapeHtml(nickname || '') + '</td>' +
-                '</tr>';
-        });
-
-        tbody.innerHTML = html;
-        bindAccountEvents();
-        // 重新应用列布局（可见性/宽度，渲染后统一控制）
-        applyColumnLayout();
-    }
-
-    function sortAccounts(accounts) {
-        return accounts.slice().sort(function(a, b) {
-            var va = a[sortField];
-            var vb = b[sortField];
-            // 处理 null/undefined
-            if (va == null) va = '';
-            if (vb == null) vb = '';
-            if (typeof va === 'boolean') va = va ? '1' : '0';
-            if (typeof vb === 'boolean') vb = vb ? '1' : '0';
-            if (typeof va === 'string' && typeof vb === 'string') {
-                var cmp = va.localeCompare(vb, 'zh-CN');
-                return sortAsc ? cmp : -cmp;
-            }
-            return 0;
+        Object.keys(accountTables).forEach(function(k) {
+            accountTables[k].onAccountChanged(p);
         });
     }
 
-    function bindAccountEvents() {
-        var tbody = getEl('manage-account-tbody');
-        if (!tbody) return;
-        var table = tbody.closest('table');
-
-        // 全选复选框
-        var selectAll = getEl('manage-select-all');
-        if (selectAll) {
-            var allIds = accountData.map(function(a) { return a.id; });
-            var allSelected = allIds.length > 0 && allIds.every(function(id) { return selectedIds.has(id); });
-            selectAll.checked = allSelected;
-            // 移除旧监听器（避免重复绑定）
-            selectAll.replaceWith(selectAll.cloneNode(true));
-            selectAll = getEl('manage-select-all');
-            selectAll.addEventListener('change', function() {
-                if (this.checked) {
-                    accountData.forEach(function(a) { selectedIds.add(a.id); });
-                } else {
-                    selectedIds.clear();
-                }
-                renderAccountTable(accountData);
-                updateSelectionUI();
-            });
-        }
-
-        // 行点击选中
-        tbody.querySelectorAll('tr[data-acc-id]').forEach(function(row) {
-            row.addEventListener('click', function(e) {
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' ||
-                    e.target.closest('.qa-btn') || e.target.closest('.manage-hotkey-cell')) return;
-                var id = this.getAttribute('data-acc-id');
-                if (selectedIds.has(id)) selectedIds.delete(id);
-                else selectedIds.add(id);
-                renderAccountTable(accountData);
-                updateSelectionUI();
-            });
-        });
-
-        // checkbox 选中
-        tbody.querySelectorAll('input[type="checkbox"][data-acc-id]').forEach(function(cb) {
-            cb.addEventListener('change', function(e) {
-                e.stopPropagation();
-                var id = this.getAttribute('data-acc-id');
-                if (this.checked) selectedIds.add(id);
-                else selectedIds.delete(id);
-                // 行高亮即时更新（勾选框常显依赖 selected class）
-                var row = this.closest('tr');
-                if (row) row.classList.toggle('selected', this.checked);
-                updateSelectionUI();
-            });
-        });
-
-        // 行内悬浮操作按钮（展示名列右端）
-        tbody.querySelectorAll('.qa-btn').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                handleAccountAction(this.getAttribute('data-action'), this.getAttribute('data-id'));
-            });
-        });
-
-        // 表头排序（无箭头字符，当前排序列高亮）
-        if (table) {
-            table.querySelectorAll('th[data-sort]').forEach(function(th) {
-                // 避免重复绑定
-                var newTh = th.cloneNode(true);
-                th.parentNode.replaceChild(newTh, th);
-                newTh.addEventListener('click', function(e) {
-                    if (e.target.closest('.col-resizer')) return;
-                    var field = this.getAttribute('data-sort');
-                    if (sortField === field) sortAsc = !sortAsc;
-                    else { sortField = field; sortAsc = true; }
-                    renderAccountTable(accountData);
-                });
-            });
-            applySortIndicator(table);
-            // 列间竖线：列宽拖拽
-            initColResizers(table);
-        }
-    }
-
-    // 当前排序列高亮（无箭头字符）
-    function applySortIndicator(table) {
-        if (!table) return;
-        table.querySelectorAll('th[data-sort]').forEach(function(th) {
-            th.classList.toggle('sorted', th.getAttribute('data-sort') === sortField);
+    // ---- Java Scene 捕获的组合键 → 路由到正在编辑快捷键的表 ----
+    function onHotkeyCapture(combo) {
+        Object.keys(accountTables).forEach(function(k) {
+            accountTables[k].onHotkeyCapture(combo);
         });
     }
 
-    // ---- 列配置：加载/保存/应用（LocalGlobalConfig.json.account_columns） ----
+    // 表格渲染/事件/列配置/菜单/拖拽/快捷键等逻辑已迁移至 js/components/account-table.js
 
-    function loadColumnPrefs() {
-        var prefs = null;
-        try {
-            var cfg = JFC.bridge.getGlobalConfig();
-            if (cfg && cfg.account_columns) prefs = cfg.account_columns;
-        } catch (e) { /* 配置缺失时使用默认值 */ }
-        COL_DEFS.forEach(function(def) {
-            colVisible[def.key] = def.mandatory ? true :
-                (prefs && prefs.visible && prefs.visible[def.key] !== undefined
-                    ? !!prefs.visible[def.key] : def.defVisible);
-            var w = prefs && prefs.width && prefs.width[def.key];
-            colWidth[def.key] = (typeof w === 'number' && w > 0) ? w : def.defWidth;
-        });
-        applyColumnLayout();
-    }
 
-    function saveColumnPrefs() {
-        try {
-            var visible = {}, width = {};
-            COL_DEFS.forEach(function(def) {
-                visible[def.key] = !!colVisible[def.key];
-                width[def.key] = colWidth[def.key];
-            });
-            JFC.bridge.saveGlobalConfig(JSON.stringify({ account_columns: { visible: visible, width: width } }));
-        } catch (e) { /* 保存失败不影响使用 */ }
-    }
-
-    function applyColumnLayout() {
-        var tbody = getEl('manage-account-tbody');
-        var table = tbody ? tbody.closest('table') : null;
-        if (!table) return;
-        table.querySelectorAll('colgroup col[data-col]').forEach(function(col) {
-            var key = col.getAttribute('data-col');
-            col.style.width = (colWidth[key] || 0) + 'px';
-        });
-        table.querySelectorAll('th[data-col], td[data-col]').forEach(function(cell) {
-            var key = cell.getAttribute('data-col');
-            cell.classList.toggle('hidden-col', !colVisible[key]);
-        });
-        // 可见列变化后重建竖线
-        initColResizers(table);
-    }
-
-    function applyColumnWidth(key, w) {
-        var tbody = getEl('manage-account-tbody');
-        var table = tbody ? tbody.closest('table') : null;
-        if (!table) return;
-        var col = table.querySelector('colgroup col[data-col="' + key + '"]');
-        if (col) col.style.width = w + 'px';
-    }
-
-    // ---- 列间竖线：拖拽调整列宽 ----
-
-    function initColResizers(table) {
-        if (!table) return;
-        // 清理旧 resizer（render 会重建 th，防止重复绑定）
-        table.querySelectorAll('.col-resizer').forEach(function(r) { r.remove(); });
-        var ths = table.querySelectorAll('thead th[data-col]');
-        // 只取可见列，最后一个可见列右侧不加竖线
-        var visibleThs = [];
-        for (var i = 0; i < ths.length; i++) {
-            var key = ths[i].getAttribute('data-col');
-            if (colVisible[key]) visibleThs.push(ths[i]);
-        }
-        for (var j = 0; j < visibleThs.length - 1; j++) {
-            var th = visibleThs[j];
-            var rz = document.createElement('div');
-            rz.className = 'col-resizer';
-            rz.setAttribute('data-col', th.getAttribute('data-col'));
-            rz.addEventListener('mousedown', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                startResize(e.clientX, this.getAttribute('data-col'));
-            });
-            th.appendChild(rz);
-        }
-    }
-
-    function startResize(startX, key) {
-        resizeState = { key: key, startX: startX, startWidth: colWidth[key] || 0 };
-        document.body.classList.add('resizing-cols');
-        document.addEventListener('mousemove', onResizeMove);
-        document.addEventListener('mouseup', onResizeEnd);
-    }
-
-    function onResizeMove(e) {
-        if (!resizeState) return;
-        var w = Math.max(30, resizeState.startWidth + (e.clientX - resizeState.startX));
-        colWidth[resizeState.key] = w;
-        applyColumnWidth(resizeState.key, w);
-    }
-
-    function onResizeEnd() {
-        if (!resizeState) return;
-        saveColumnPrefs();
-        resizeState = null;
-        document.body.classList.remove('resizing-cols');
-        document.removeEventListener('mousemove', onResizeMove);
-        document.removeEventListener('mouseup', onResizeEnd);
-    }
-
-    // ---- 列头右键菜单 ----
-
-    function showColMenu(x, y, colKey) {
-        var menu = document.getElementById('account-col-menu');
-        if (!menu) return;
-        var html = '<div class="acm-title">显示列</div>';
-        COL_DEFS.forEach(function(def) {
-            var checked = colVisible[def.key] ? ' checked' : '';
-            var locked = def.mandatory ? ' disabled' : '';
-            html += '<div class="acm-item' + locked + '" data-col-toggle="' + def.key + '">' +
-                '<input type="checkbox" class="acm-checkbox"' + checked + locked + '>' +
-                '<span class="acm-label">' + escapeHtml(def.label) + '</span>' +
-                (def.mandatory ? '<span class="acm-key">必选</span>' : '') +
-                '</div>';
-        });
-        html += '<div class="acm-sep"></div>';
-        html += '<div class="acm-item" data-col-fit="all"><span class="acm-label">所有列自适应大小</span></div>';
-        if (colKey && !colVisible[colKey]) {
-            html += '<div class="acm-item disabled" data-col-fit=""><span class="acm-label">该列自适应大小</span><span class="acm-key">列已隐藏</span></div>';
-        } else if (colKey) {
-            html += '<div class="acm-item" data-col-fit="' + colKey + '"><span class="acm-label">该列自适应大小</span></div>';
-        }
-        menu.innerHTML = html;
-        menu.style.display = 'block';
-        positionMenu(menu, x, y);
-
-        menu.querySelectorAll('.acm-item[data-col-toggle]').forEach(function(item) {
-            var key = item.getAttribute('data-col-toggle');
-            if (item.classList.contains('disabled')) return;
-            var cb = item.querySelector('input');
-            cb.addEventListener('change', function() {
-                colVisible[key] = cb.checked;
-                saveColumnPrefs();
-                applyColumnLayout();
-            });
-            item.addEventListener('click', function(e) {
-                if (e.target !== cb) {
-                    cb.checked = !cb.checked;
-                    colVisible[key] = cb.checked;
-                    saveColumnPrefs();
-                    applyColumnLayout();
-                }
-            });
-        });
-        menu.querySelectorAll('.acm-item[data-col-fit]').forEach(function(item) {
-            item.addEventListener('click', function() {
-                var target = this.getAttribute('data-col-fit');
-                closeColMenu();
-                if (target === 'all') fitAllColumns();
-                else if (target) fitColumn(target);
-            });
-        });
-    }
-
-    function closeColMenu() {
-        var menu = document.getElementById('account-col-menu');
-        if (menu) menu.style.display = 'none';
-    }
-
-    // ---- 行右键菜单 ----
-
-    function showRowMenu(x, y, accountId) {
-        var menu = document.getElementById('account-row-menu');
-        if (!menu) return;
-        var acc = accountData.find(function(a) { return a.id === accountId; });
-        var hidden = !!(acc && acc.hidden);
-        var html = '<div class="acm-title">' + escapeHtml(accountId) + '</div>' +
-            '<div class="acm-item" data-row-action="toggle-hidden">' + (hidden ? '显示' : '隐藏') + '</div>' +
-            '<div class="acm-item danger" data-row-action="delete">删除</div>';
-        menu.innerHTML = html;
-        menu.style.display = 'block';
-        positionMenu(menu, x, y);
-
-        menu.querySelectorAll('.acm-item[data-row-action]').forEach(function(item) {
-            item.addEventListener('click', function() {
-                var action = this.getAttribute('data-row-action');
-                closeRowMenu();
-                handleAccountAction(action, accountId);
-            });
-        });
-    }
-
-    function closeRowMenu() {
-        var menu = document.getElementById('account-row-menu');
-        if (menu) menu.style.display = 'none';
-    }
-
-    // 菜单定位：视口边界翻转
-    function positionMenu(menu, x, y) {
-        var rect = menu.getBoundingClientRect();
-        var vw = window.innerWidth, vh = window.innerHeight;
-        if (x + rect.width > vw - 4) x = vw - rect.width - 4;
-        if (y + rect.height > vh - 4) y = vh - rect.height - 4;
-        menu.style.left = Math.max(4, x) + 'px';
-        menu.style.top = Math.max(4, y) + 'px';
-    }
-
-    // ---- 列宽自适应 ----
-
-    var _measureEl = null;
-    function measureTextWidth(text, fontFamily, fontSize, fontWeight) {
-        if (!_measureEl) {
-            _measureEl = document.createElement('span');
-            _measureEl.style.position = 'absolute';
-            _measureEl.style.visibility = 'hidden';
-            _measureEl.style.whiteSpace = 'pre';
-            document.body.appendChild(_measureEl);
-        }
-        _measureEl.style.fontFamily = fontFamily || '';
-        _measureEl.style.fontSize = fontSize || '';
-        _measureEl.style.fontWeight = fontWeight || '';
-        _measureEl.textContent = text || '';
-        return _measureEl.offsetWidth;
-    }
-
-    function fitColumn(key) {
-        var tbody = getEl('manage-account-tbody');
-        var table = tbody ? tbody.closest('table') : null;
-        if (!table) return;
-        var maxW = 0;
-        table.querySelectorAll('thead th[data-col="' + key + '"], tbody td[data-col="' + key + '"]').forEach(function(cell) {
-            if (cell.classList.contains('hidden-col')) return;
-            var cs = window.getComputedStyle(cell);
-            var pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
-            var w;
-            if (cell.classList.contains('manage-col-avatar')) {
-                var inner = cell.querySelector('.manage-account-avatar');
-                w = (inner ? inner.offsetWidth : 0) + pad;
-            } else {
-                var text = cell.innerText.replace(/\s+/g, ' ').trim() || '';
-                w = measureTextWidth(text, cs.fontFamily, cs.fontSize, cs.fontWeight) + pad;
-            }
-            if (w > maxW) maxW = w;
-        });
-        maxW = Math.min(Math.round(maxW) + 4, 600);
-        if (maxW < 40) maxW = 40;
-        colWidth[key] = maxW;
-        applyColumnWidth(key, maxW);
-        saveColumnPrefs();
-    }
-
-    function fitAllColumns() {
-        COL_DEFS.forEach(function(def) {
-            if (colVisible[def.key]) fitColumn(def.key);
-        });
-    }
-
-    // ---- 快捷键列：点击激活输入框 ----
-
-    function activateHotkeyEdit(cell, accountId) {
-        cancelHotkeyEdit();   // 关闭其它行正在编辑的输入框
-        var acc = accountData.find(function(a) { return a.id === accountId; });
-        var current = (acc && acc.hotkey) ? acc.hotkey : '';
-        hotkeyEditAccountId = accountId;
-        cell.setAttribute('data-editing', '1');
-
-        cell.innerHTML = '<input type="text" class="hotkey-input" value="' + escapeAttr(current) + '" placeholder="按下快捷键…" spellcheck="false">';
-        var input = cell.querySelector('input');
-        input.focus();
-        input.select();
-
-        var done = false;
-        function commit() {
-            if (done) return;
-            done = true;
-            var val = input.value.trim();
-            if (val && val !== current && currentSwId) {
-                if (acc) acc.hotkey = val;
-                JFC.bridge.saveAccount(currentSwId, accountId, JSON.stringify({ hotkey: val }));
-            }
-            hotkeyEditAccountId = null;
-            cell.removeAttribute('data-editing');
-            renderHotkeyCell(cell, accountId, val);
-        }
-        function cancel() {
-            if (done) return;
-            done = true;
-            hotkeyEditAccountId = null;
-            cell.removeAttribute('data-editing');
-            renderHotkeyCell(cell, accountId, current);
-        }
-
-        input.addEventListener('keydown', function(ev) {
-            ev.preventDefault();
-            ev.stopPropagation();
-            if (ev.key === 'Escape') { cancel(); return; }
-            if (ev.key === 'Enter') { commit(); return; }
-            var parts = [];
-            if (ev.ctrlKey) parts.push('Ctrl');
-            if (ev.altKey) parts.push('Alt');
-            if (ev.shiftKey) parts.push('Shift');
-            if (ev.metaKey) parts.push('Win');
-            var k = ev.key;
-            // 单独按下修饰键：仅预览
-            if (k === 'Control' || k === 'Alt' || k === 'Shift' || k === 'Meta') {
-                input.value = parts.join('+');
-                return;
-            }
-            if (parts.length === 0 && k.length === 1 && /^[a-z0-9]$/i.test(k)) {
-                input.value = k.toUpperCase();
-                return;
-            }
-            if (k.length === 1 && /^[a-zA-Z0-9]$/.test(k)) {
-                parts.push(k.toUpperCase());
-                input.value = parts.join('+');
-            } else if (/^F\d{1,2}$/.test(k)) {
-                parts.push(k);
-                input.value = parts.join('+');
-            } else if (parts.length > 0) {
-                var names = { ' ': 'Space', 'ArrowUp': 'Up', 'ArrowDown': 'Down', 'ArrowLeft': 'Left', 'ArrowRight': 'Right', 'Tab': 'Tab', 'Delete': 'Delete', 'Insert': 'Insert', 'Home': 'Home', 'End': 'End', 'PageUp': 'PageUp', 'PageDown': 'PageDown', 'Backspace': 'Backspace' };
-                parts.push(names[k] || (k.length === 1 ? k.toUpperCase() : k));
-                input.value = parts.join('+');
-            }
-        });
-        input.addEventListener('blur', commit);
-        // 阻止点击输入框时触发 tbody click 再次进入编辑
-        cell.addEventListener('click', function(ev) { ev.stopPropagation(); });
-    }
-
-    function cancelHotkeyEdit() {
-        if (!hotkeyEditAccountId) return;
-        var row = document.querySelector('#page-main tr[data-acc-id="' + hotkeyEditAccountId + '"]');
-        if (row) {
-            var cell = row.querySelector('.manage-hotkey-cell');
-            var acc = accountData.find(function(a) { return a.id === hotkeyEditAccountId; });
-            if (cell && acc) renderHotkeyCell(cell, acc.id, acc.hotkey || '');
-        }
-        hotkeyEditAccountId = null;
-    }
-
-    function renderHotkeyCell(cell, accountId, hotkey) {
-        var acc = accountData.find(function(a) { return a.id === accountId; });
-        if (acc) acc.hotkey = hotkey || '';
-        cell.innerHTML = hotkey
-            ? '<span class="hotkey-text">' + escapeHtml(hotkey) + '</span>'
-            : '<span class="hotkey-text"><span class="hotkey-placeholder">—</span></span>';
-    }
-
-    function handleAccountAction(action, accountId) {
-        if (!currentSwId) return;
-
-        if (action === 'toggle-hidden') {
-            var acc = accountData.find(function(a) { return a.id === accountId; });
-            if (acc) {
-                acc.hidden = !acc.hidden;
-                // saveAccount 更新后发布 AccountDataChangedEvent → Java 推送 → onAccountChanged 定向更新按钮选中态
-                JFC.bridge.saveAccount(currentSwId, accountId, JSON.stringify({ hidden: acc.hidden }));
-                // 即时反馈（推送为异步，先本地更新按钮）
-                var row = document.querySelector('#page-main tr[data-acc-id="' + accountId + '"]');
-                if (row) updateRowQuickActions(row, acc);
-            }
-        } else if (action === 'delete') {
-            if (!confirm('确定要删除账号 "' + accountId + '" 吗？此操作不可撤销。')) return;
-            var result = JFC.bridge.deleteAccount(currentSwId, accountId);
-            if (result && result.success) {
-                accountData = accountData.filter(function(a) { return a.id !== accountId; });
-                selectedIds.delete(accountId);
-                renderAccountTable(accountData);
-                updateSelectionUI();
-                flashTitle('已删除');
-            } else {
-                flashTitle('删除失败', true);
-            }
-        }
-    }
-
-    function updateSelectionUI() {
-        var toolbar = getEl('manage-account-toolbar');
-        var countEl = getEl('manage-selection-count');
-        if (!toolbar) return;
-
-        var count = selectedIds.size;
-        if (count > 0) {
-            show('manage-account-toolbar');
-            if (countEl) countEl.textContent = '已选 ' + count + ' 项';
-        } else {
-            hide('manage-account-toolbar');
-        }
-    }
 
     // ---- 事件绑定 ----
     function bindManageEvents() {
@@ -1907,8 +1314,8 @@ JFC.pages.main = (function() {
                 hide('manage-page-detail');
                 show('manage-page-all');
                 currentSwId = null;
-                selectedIds.clear();
-                updateSelectionUI();
+                // 清空所有表的选中状态
+                Object.keys(accountTables).forEach(function(k) { accountTables[k].clearSelection(); });
 
                 // 高亮"全部"，取消所有平台高亮
                 this.classList.add('active');
@@ -1940,87 +1347,6 @@ JFC.pages.main = (function() {
             toggleSettingsPanel(!!isCollapsed);
         });
 
-        // 批量隐藏
-        bind('manage-batch-hide', 'click', function() {
-            if (selectedIds.size === 0) return;
-            var count = selectedIds.size;
-            if (!confirm('确定要隐藏选中的 ' + count + ' 个账号吗？')) return;
-            var fields = { hidden: true };
-            selectedIds.forEach(function(id) {
-                var acc = accountData.find(function(a) { return a.id === id; });
-                if (acc) acc.hidden = true;
-                JFC.bridge.saveAccount(currentSwId, id, JSON.stringify(fields));
-            });
-            selectedIds.clear();
-            renderAccountTable(accountData);
-            updateSelectionUI();
-            flashTitle('已隐藏 ' + count + ' 项');
-        });
-
-        // 批量显示
-        bind('manage-batch-show', 'click', function() {
-            if (selectedIds.size === 0) return;
-            var count = selectedIds.size;
-            var fields = { hidden: false };
-            selectedIds.forEach(function(id) {
-                var acc = accountData.find(function(a) { return a.id === id; });
-                if (acc) acc.hidden = false;
-                JFC.bridge.saveAccount(currentSwId, id, JSON.stringify(fields));
-            });
-            selectedIds.clear();
-            renderAccountTable(accountData);
-            updateSelectionUI();
-            flashTitle('已显示 ' + count + ' 项');
-        });
-
-        // 批量删除
-        bind('manage-batch-delete', 'click', function() {
-            if (selectedIds.size === 0) return;
-            var count = selectedIds.size;
-            if (!confirm('确定要删除选中的 ' + count + ' 个账号吗？此操作不可撤销。')) return;
-            selectedIds.forEach(function(id) {
-                JFC.bridge.deleteAccount(currentSwId, id);
-            });
-            accountData = accountData.filter(function(a) { return !selectedIds.has(a.id); });
-            selectedIds.clear();
-            renderAccountTable(accountData);
-            updateSelectionUI();
-            flashTitle('已删除 ' + count + ' 项');
-        });
-
-        // 列头右键菜单（事件委托，一次性绑定——render 只重建 tbody 内容）
-        var accTable = getEl('manage-account-tbody') ? getEl('manage-account-tbody').closest('table') : null;
-        if (accTable && accTable.querySelector('thead')) {
-            accTable.querySelector('thead').addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                var th = e.target.closest('th[data-col]');
-                var colKey = th ? th.getAttribute('data-col') : null;
-                closeRowMenu();
-                showColMenu(e.clientX, e.clientY, colKey);
-            });
-        }
-
-        // 行右键菜单（隐藏/删除）+ 快捷键单元格点击编辑（事件委托）
-        var accTbody = getEl('manage-account-tbody');
-        if (accTbody) {
-            accTbody.addEventListener('contextmenu', function(e) {
-                var tr = e.target.closest('tr[data-acc-id]');
-                if (!tr) return;
-                e.preventDefault();
-                closeColMenu();
-                showRowMenu(e.clientX, e.clientY, tr.getAttribute('data-acc-id'));
-            });
-            accTbody.addEventListener('click', function(e) {
-                var cell = e.target.closest('.manage-hotkey-cell');
-                if (!cell) return;
-                if (e.target.tagName === 'INPUT') return;
-                e.stopPropagation();
-                var tr = cell.closest('tr[data-acc-id]');
-                if (!tr) return;
-                activateHotkeyEdit(cell, tr.getAttribute('data-acc-id'));
-            });
-        }
-
         // 点击页面空白处关闭所有探测下拉面板
         document.addEventListener('click', function(e) {
             var target = e.target;
@@ -2033,21 +1359,19 @@ JFC.pages.main = (function() {
             }
             // 点击菜单外区域关闭右键菜单
             if (!target.closest || !target.closest('#account-col-menu') && !target.closest('#account-row-menu')) {
-                closeColMenu();
-                closeRowMenu();
+                JFC.AccountTable.closeMenus();
             }
         });
 
         // Esc 关闭右键菜单 / 取消快捷键编辑
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                closeColMenu();
-                closeRowMenu();
-                cancelHotkeyEdit();
+                JFC.AccountTable.closeMenus();
+                Object.keys(accountTables).forEach(function(k) { accountTables[k].cancelHotkeyEdit(); });
             }
         });
     }
 
-    return { init: init, onAccountChanged: onAccountChanged };
+    return { init: init, onAccountChanged: onAccountChanged, onHotkeyCapture: onHotkeyCapture };
 })();
 

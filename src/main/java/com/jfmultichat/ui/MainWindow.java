@@ -120,6 +120,9 @@ public class MainWindow {
                 Objects.requireNonNull(getClass().getResource("/css/main.css")).toExternalForm()
         );
 
+        // 供快捷键录入捕获使用（JsBridge Scene 级 EventFilter）
+        bridge.setScene(scene);
+
         shadow = new DropShadow();
         shadow.setColor(Color.rgb(0, 0, 0, 0.5));
         shadow.setRadius(24);

@@ -157,6 +157,16 @@ gradle build --no-daemon                   # 完整构建
 - **onAccountChanged 扩展**: 新增 `hotkey`/`alias`/`nickname` 字段定向更新；状态变化走 `updateRowQuickActions`（按钮选中态/禁用标签，原 stateBadgeHtml 删除）
 - **事件委托防重复绑定**: thead/tbody 的 contextmenu、tbody click（快捷键激活）绑在 `bindManageEvents`（一次性），不在每次 render 的 `bindAccountEvents` 里重复 addEventListener
 
+### 四表架构与可复用组件（2026-08-16 第二轮）
+
+- **可复用组件 `JFC.AccountTable`**（`js/components/account-table.js`）: 列定义驱动渲染（任意列组合），含标题行/批量操作/列头右键菜单/列宽拖拽/自适应/行右键菜单/快捷键列编辑/流B 定向刷新；构造参数 `{id, title, container, columns, enableHotkey, defaultSortField, getSwId}`；列配置按表独立持久化 `account_columns.<tableId>`
+- **四个表**: 原生程序（勾选框/名称/路径/状态，空）/原生账号（7 列，`getSwExistedAccounts(swId,'origin')`）/共存账号（7 列，空）/无效账号（勾选框/展示名/ID/无效原因，空）
+- **标题行**: 常显，标题左端 + "已选 N 项"/批量按钮右侧（未选中隐藏）
+- **固定列**: 勾选框/头像 `fixed: true`（不可拖拽/自适应），其间与右侧竖线移除；头像圆角矩形 6px
+- **快捷键录入修复**: `document mousedown` 提交替代 blur 同步提交（消除 DOM 竞态假死）；**Java Scene 级 EventFilter 兜底**（`JsBridge.notifyHotkeyCapture` → `JFC.bridge._onHotkeyCapture`，WebView 收不到的带修饰组合键由 Java 捕获；OS 级全局热键占用仍无法拦截）
+- **NPE 修复**: `AccInfoFuncCore.getSwAllAccountsExisted` 传 `AccOpsProvider.toSwProvider()`（原 null 导致流A 共存分支 NPE）
+- **列宽自适应逻辑与用户探讨中**（总宽溢出策略/保底宽度/悬浮按钮宽度计入）
+
 ---
 
 ## 十、关键技术参考

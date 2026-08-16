@@ -102,33 +102,11 @@
                                 </svg>
                             </div>
                             <div class="manage-account-section">
-                                <div class="manage-account-toolbar" id="manage-account-toolbar" style="display:none;">
-                                    <span id="manage-selection-count" class="manage-selection-count">已选 0 项</span>
-                                    <div class="manage-batch-actions" id="manage-batch-actions">
-                                        <button class="btn btn-sm" id="manage-batch-hide">批量隐藏</button>
-                                        <button class="btn btn-sm" id="manage-batch-show">批量显示</button>
-                                        <button class="btn btn-sm" id="manage-batch-delete" style="color:var(--color-danger);">批量删除</button>
-                                    </div>
-                                </div>
-                                <div class="manage-account-scroll">
-                                    <table class="manage-account-table">
-                                        <colgroup id="manage-account-colgroup">
-                                            <col data-col="check"><col data-col="avatar"><col data-col="display_name"><col data-col="hotkey"><col data-col="id"><col data-col="alias"><col data-col="nickname">
-                                        </colgroup>
-                                        <thead><tr>
-                                            <th class="manage-col-check" data-col="check"><input type="checkbox" id="manage-select-all"></th>
-                                            <th class="manage-col-avatar" data-col="avatar"></th>
-                                            <th class="manage-col-display" data-col="display_name" data-sort="display_name"></th>
-                                            <th class="manage-col-hotkey" data-col="hotkey">快捷键</th>
-                                            <th class="manage-col-id" data-col="id" data-sort="id">ID</th>
-                                            <th class="manage-col-alias" data-col="alias" data-sort="alias">平台内ID</th>
-                                            <th class="manage-col-nickname" data-col="nickname" data-sort="nickname">昵称</th>
-                                        </tr></thead>
-                                        <tbody id="manage-account-tbody">
-                                            <tr class="manage-empty-row"><td colspan="7"><div class="manage-empty-state">暂无账号数据</div></td></tr>
-                                        </tbody>
-                                    </table>
-                                </div>
+                                <!-- 四个可复用表：原生程序 / 原生账号 / 共存账号 / 无效账号 -->
+                                <div id="acc-table-native-prog" class="acc-table-slot"></div>
+                                <div id="acc-table-native-acc" class="acc-table-slot"></div>
+                                <div id="acc-table-coexist-acc" class="acc-table-slot"></div>
+                                <div id="acc-table-invalid-acc" class="acc-table-slot"></div>
                             </div>
                         </div>
                     </div>
@@ -375,6 +353,7 @@
 
 <!-- Scripts -->
 <script src="js/bridge.js"></script>
+<script src="js/components/account-table.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/components/nav-sidebar.js"></script>
 <script src="js/pages/settings.js"></script>

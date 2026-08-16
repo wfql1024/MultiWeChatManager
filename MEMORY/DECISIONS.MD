@@ -89,3 +89,11 @@
 - **排序**: 去掉 " ↕" 字符，保留点击排序，当前列用 `.sorted` 高亮（主题色+加粗）
 - **持久化**: 列显示/宽度存 `LocalGlobalConfig.json.account_columns`（全局偏好，不随平台）
 - **原因**: 数据字段（alias/nickname/hotkey）SwAccData 已具备、getSwDetailData 已全量返回，纯前端即可完成；交互贴近 Windows 资源管理器习惯
+
+## 四表架构与可复用组件（2026-08-16 第二轮）
+- **决定**: 平台页从上到下四个表：原生程序/原生账号/共存账号/无效账号；表格封装为可复用组件 `JFC.AccountTable`（`js/components/account-table.js`），列定义驱动，后续不同标题/列组合的表直接实例化复用
+- **标题行**: 常显，标题左端 + "已选 N 项"/批量按钮右侧（未选中隐藏），替代原选中才出现的浮动工具行
+- **数据分类**: 原生账号 = `getSwExistedAccounts(swId,'origin')`（数据目录子目录）；共存账号 = `'coexist'`（共存 exe）；原生程序/无效账号暂无数据先空显示
+- **固定列**: 勾选框（40px）/头像（56px）固定宽度不可拖拽/自适应；固定列间与右侧竖线移除；头像改圆角矩形（border-radius 6px）
+- **快捷键录入修复**: ① `document mousedown` 提交替代 blur 同步提交（消除 DOM 竞态导致的"点击无反应"）；② Java Scene 级 EventFilter 兜底捕获（`notifyHotkeyCapture`）——WebView 收不到的带修饰键组合键由 Java 捕获推送回 JS；OS 级全局热键占用仍无法拦截（系统层行为）
+- **列宽自适应**: 临时 span 复制单元格字体测量文本宽度 + padding，取最大值 +4px 余量，上限 600 下限 40；**与用户探讨中**（总宽溢出策略/保底宽度/悬浮按钮宽度计入与否）

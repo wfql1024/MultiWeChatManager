@@ -428,7 +428,7 @@ public final class AccInfoFuncCore {
                 swAccessor.getRemoteSwAsList(sw, "excluded_dirs", Collections.emptyList()),
                 swAccessor.tryGetPathOf(sw, "inst_path"),
                 swAccessor.getRemoteSwAsList(sw, "executable_wildcards", Collections.emptyList()),
-                swAccessor, null, only);
+                swAccessor, new AccOpsProvider().toSwProvider(), only);
     }
 
     /**
