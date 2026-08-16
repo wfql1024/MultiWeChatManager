@@ -6,7 +6,7 @@
 
 ## 启动前必读
 
-1. **先读 `CLAUDE.md`** — 里面包含了完整的项目结构、技术栈、数据存储路径、异步架构、已知问题。
+1. **先读 `AGENTS.md`** — 里面包含了完整的项目结构、技术栈、数据存储路径、异步架构、已知问题。
 2. 工作目录是 `D:\SpaceDev\MyProj\JhiFengMultiChat`
 3. JDK 17 在 `D:\SpaceDev\softwareDev\SDKs\Java\jdk-17.0.2`
 4. Gradle 8.8 在 `D:\SpaceDev\softwareDev\SDKs\gradle-8.8`

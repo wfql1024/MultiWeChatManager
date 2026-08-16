@@ -13,7 +13,7 @@ JhiFengMultiChat/
 ├── run.bat                       # 运行脚本
 ├── logo.ico                      # 应用图标 (ICO 格式)
 ├── logo.png                      # 应用图标 (PNG 格式)
-├── CLAUDE.md                     # 项目主文档
+├── AGENTS.md                      # 项目主文档（规则文件）
 ├── MEMORY/                       # 记忆系统文档目录
 │   ├── MEMORY.md                 # 索引与摘要
 │   ├── DECISIONS.MD              # 决策记录
