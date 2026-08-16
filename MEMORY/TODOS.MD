@@ -54,3 +54,10 @@
 - [x] toggle-hidden 已迁移（saveAccount 发布 AccountDataChangedEvent → 定向更新徽章/悬浮按钮，不整表重渲染）
 - [x] 快捷键设置（2026-08-16 列定制会话）：快捷键列点击编辑，保存走 `saveAccount({hotkey})` → 流B 推送 → `onAccountChanged` 定向更新快捷键单元格
 - [ ] 删除/批量隐藏/显示/头像设置等账号操作按同模式增量迁移：写库后发布 `AccountDataChangedEvent`，`onAccountChanged` 定向更新对应行/格
+
+## 四表数据接入（2026-08-16 四表架构后）
+- [x] 原生账号表已接数据：`getSwExistedAccounts(swId,'origin')`（数据目录子目录）
+- [ ] 共存账号表：`getSwExistedAccounts(swId,'coexist')`（共存 exe，`only` 参数已就绪）— 待接
+- [ ] 原生程序表：平台主程序/共存程序列表（列：勾选框/名称/路径/状态）— 待定数据源
+- [ ] 无效账号表：SwAccData 有记录但磁盘不存在的残留账号（列：勾选框/展示名/ID/无效原因）— 待定判定逻辑
+- [ ] 列宽自适应逻辑与用户探讨中（上限/总宽溢出策略/保底宽度/悬浮按钮宽度计入）

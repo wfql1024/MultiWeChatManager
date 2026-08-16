@@ -127,7 +127,9 @@ resources/
         ├── app.js                   # 路由 + toast + 远程配置兜底
         ├── bridge.js                # JS↔Java 桥 (含异步回调 _handleAsync)
         ├── icons.js                 # SVG 图标
-        ├── components/nav-sidebar.js # 侧栏导航组件
+        ├── components/
+        │   ├── nav-sidebar.js       # 侧栏导航组件
+        │   └── account-table.js     # 可复用列表组件（四表架构：列定义驱动/标题行/菜单/列宽/快捷键编辑）
         └── pages/                   # 页面模块
             ├── main.js              # 主页面逻辑 (从 manage.js 复制)
             └── settings.js         # 设置页逻辑
