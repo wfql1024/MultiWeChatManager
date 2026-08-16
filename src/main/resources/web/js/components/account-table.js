@@ -668,7 +668,7 @@ JFC.AccountTable = (function() {
         }, this);
         menu.querySelectorAll('.acm-item[data-col-fit]').forEach(function(item) {
             item.addEventListener('click', function() {
-                var target = this.getAttribute('data-col-fit');
+                var target = item.getAttribute('data-col-fit');   // this 被 bind 为表实例，从 item 取属性
                 closeColMenu();
                 if (target === 'all') this.fitAllColumns();
                 else if (target) this.fitColumn(target);
