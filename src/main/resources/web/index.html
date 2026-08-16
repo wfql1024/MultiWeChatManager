@@ -112,16 +112,20 @@
                                 </div>
                                 <div class="manage-account-scroll">
                                     <table class="manage-account-table">
+                                        <colgroup id="manage-account-colgroup">
+                                            <col data-col="check"><col data-col="avatar"><col data-col="display_name"><col data-col="hotkey"><col data-col="id"><col data-col="alias"><col data-col="nickname">
+                                        </colgroup>
                                         <thead><tr>
-                                            <th class="manage-col-check"><input type="checkbox" id="manage-select-all"></th>
-                                            <th class="manage-col-avatar"></th>
-                                            <th class="manage-col-nickname" data-sort="display_name"> ↕</th>
-                                            <th class="manage-col-id" data-sort="id">账号ID ↕</th>
-                                            <th class="manage-col-state" data-sort="hidden">状态 ↕</th>
-                                            <th class="manage-col-actions">操作</th>
+                                            <th class="manage-col-check" data-col="check"><input type="checkbox" id="manage-select-all"></th>
+                                            <th class="manage-col-avatar" data-col="avatar"></th>
+                                            <th class="manage-col-display" data-col="display_name" data-sort="display_name"></th>
+                                            <th class="manage-col-hotkey" data-col="hotkey">快捷键</th>
+                                            <th class="manage-col-id" data-col="id" data-sort="id">ID</th>
+                                            <th class="manage-col-alias" data-col="alias" data-sort="alias">平台内ID</th>
+                                            <th class="manage-col-nickname" data-col="nickname" data-sort="nickname">昵称</th>
                                         </tr></thead>
                                         <tbody id="manage-account-tbody">
-                                            <tr class="manage-empty-row"><td colspan="6"><div class="manage-empty-state">暂无账号数据</div></td></tr>
+                                            <tr class="manage-empty-row"><td colspan="7"><div class="manage-empty-state">暂无账号数据</div></td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -363,6 +367,11 @@
         </div>
     </main>
 </div>
+
+<!-- 账号列头右键菜单（body 层 fixed，脱离父容器裁剪） -->
+<div id="account-col-menu" class="account-context-menu" style="display:none;"></div>
+<!-- 账号行右键菜单 -->
+<div id="account-row-menu" class="account-context-menu" style="display:none;"></div>
 
 <!-- Scripts -->
 <script src="js/bridge.js"></script>

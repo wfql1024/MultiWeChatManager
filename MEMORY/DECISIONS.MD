@@ -79,3 +79,13 @@
 - **流B 定向刷新**: 账号数据写库后发布 `AccountDataChangedEvent` → 定向推送 JS 仅刷新受影响行/格（toggle-hidden 已迁移，删除/批量等后续增量迁移）
 - **选型比较**: ① EventBus 订阅方零依赖、最解耦、可扩展（选定）；② JsBridge 多槽 Consumer 订阅方须持 JsBridge 引用；③ JavaFX Property 有 FX 线程约束（耗时维护须甩后台）。三者中 EventBus 最契合「appcore/acccore 解耦 JsBridge」的既有方向
 - **关键文件**: `core/EventBus.java`、`core/event/*.java`、`PlatformEventBootstrap.java`、`AccInfoFuncCore` 拆分三步
+
+## 账号列表列定制（2026-08-16）
+- **决定**: 账号列表重构为 7 列（勾选框/头像/展示名/快捷键/ID/平台内ID/昵称），参考 Windows 资源管理器交互
+- **状态/操作列移除**: 用户决策——不保留独立"状态"/"操作"列；操作改为展示名列右端悬浮小按钮（隐藏按钮选中态 = 已隐藏），行右键菜单提供隐藏/删除；禁用保留展示名旁小标签
+- **列头右键菜单**: 勾选显示列，勾选框/头像/展示名/快捷键 4 列必选锁定；默认显示 + ID，alias/nickname 默认隐藏；"所有列自适应大小"/"该列自适应大小"
+- **列宽拖拽**: `table-layout: fixed` + colgroup + `.col-resizer` 竖线，拖拽调宽，最后可见列不加竖线
+- **快捷键列**: 点击激活输入框，keydown 捕获组合键，保存 SwAccData.hotkey（走 saveAccount → 流B 定向刷新）
+- **排序**: 去掉 " ↕" 字符，保留点击排序，当前列用 `.sorted` 高亮（主题色+加粗）
+- **持久化**: 列显示/宽度存 `LocalGlobalConfig.json.account_columns`（全局偏好，不随平台）
+- **原因**: 数据字段（alias/nickname/hotkey）SwAccData 已具备、getSwDetailData 已全量返回，纯前端即可完成；交互贴近 Windows 资源管理器习惯

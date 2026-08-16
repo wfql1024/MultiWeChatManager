@@ -51,5 +51,6 @@
 - 后续加 UI：用 EventBus 流A 订阅或直接读 SwAccData 渲染
 
 ## 事件驱动定向刷新迁移（EventBus 流B）
-- [x] toggle-hidden 已迁移（saveAccount 发布 AccountDataChangedEvent → 定向更新徽章，不整表重渲染）
-- [ ] 删除/批量隐藏/显示/头像设置/快捷键设置等账号操作按同模式增量迁移：写库后发布 `AccountDataChangedEvent`，`onAccountChanged` 定向更新对应行/格
+- [x] toggle-hidden 已迁移（saveAccount 发布 AccountDataChangedEvent → 定向更新徽章/悬浮按钮，不整表重渲染）
+- [x] 快捷键设置（2026-08-16 列定制会话）：快捷键列点击编辑，保存走 `saveAccount({hotkey})` → 流B 推送 → `onAccountChanged` 定向更新快捷键单元格
+- [ ] 删除/批量隐藏/显示/头像设置等账号操作按同模式增量迁移：写库后发布 `AccountDataChangedEvent`，`onAccountChanged` 定向更新对应行/格

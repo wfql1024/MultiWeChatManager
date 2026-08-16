@@ -237,3 +237,57 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 ### 五、仓库卫生
 - commit `c2561a4`: 展示名 + 自动填充（4 文件）
 - 本次提交: EventBus 全套（MainApp/AccInfoFuncCore/JsBridge/bridge.js/main.js + 新增 core/ + PlatformEventBootstrap）+ 文档（CLAUDE.md/MEMORY/project_structure.md），已通过进入平台页与隐藏切换实测、维护日志无报错
+
+---
+
+## 账号列表列定制与交互升级（2026-08-16）
+
+### 一、新列结构（7 列，从左到右）
+| 列 | 来源 | 说明 |
+|----|------|------|
+| 勾选框 | — | 行内勾选框默认 opacity:0 + pointer-events:none，仅行悬浮/选中时短暂显示；列头全选框保留常显 |
+| 头像 | 现状 | 无列名、不可排序 |
+| 展示名 | display_name | 无列名；右端悬浮操作按钮（隐藏/删除），仅行悬浮显示；禁用账号旁加小标签 |
+| 快捷键 | SwAccData.hotkey | 点击单元格激活输入框，keydown 捕获组合键（Ctrl/Alt/Shift+字母/数字/F键），Esc 取消、Enter/失焦保存 |
+| ID | id | 列名"账号ID"→"ID" |
+| 平台内ID | SwAccData.alias | 默认不显示 |
+| 昵称 | SwAccData.nickname | 默认不显示 |
+
+### 二、列头右键菜单（Windows 资源管理器风格）
+- thead contextmenu → `#account-col-menu`（body 层 fixed，z-index:500，视口边界翻转定位）
+- 勾选显示列：4 个必选列（勾选框/头像/展示名/快捷键）锁定不可取消；ID 默认显示；平台内ID/昵称默认隐藏
+- "所有列自适应大小" / "该列自适应大小"：临时 span 测量（复制 fontFamily/fontSize/fontWeight）+ padding，头像列按内容物宽度
+- 配置持久化：`LocalGlobalConfig.json.account_columns = {visible: {...}, width: {...}}`（getGlobalConfig/saveGlobalConfig）
+
+### 三、列间竖线拖拽调列宽
+- `table-layout: fixed` + colgroup，列宽由 `<col data-col>` 控制（JS 覆盖 width）
+- 每个可见列 th 右侧注入 `.col-resizer`（absolute，7px 热区 + ::after 1px 竖线），mousedown→mousemove→mouseup 拖拽，最小 30px
+- 拖拽时 `body.resizing-cols` 禁文本选择；松开保存宽度
+- 最后一个可见列不加竖线；可见列变化后重建（applyColumnLayout → initColResizers）
+
+### 四、状态/操作列移除（用户决策）
+- 移除"状态"徽章列与"操作"按钮列
+- 行内操作改为展示名列右端小按钮：`隐藏`（选中态 .on = 已隐藏，高亮）/`删除`（红），仅行悬浮显示
+- 行右键菜单：隐藏/显示、删除（与按钮同走 `handleAccountAction`）
+- 禁用状态保留为展示名旁 `.manage-disabled-tag` 小标签（数据态，无切换入口）
+- 状态推送：saveAccount → AccountDataChangedEvent → `onAccountChanged` → `updateRowQuickActions` 定向更新按钮选中态/标签（原 stateBadgeHtml/updateRowStateBadge 删除）
+
+### 五、排序标识
+- 去掉列头 " ↕" 字符（index.html thead 清理）
+- 保留点击排序，当前排序列 th 加 `.sorted`（主题色 + 加粗）标识
+
+### 六、onAccountChanged 扩展
+- 新增处理字段：hotkey（更新快捷键单元格，data-editing 期间跳过）/alias（平台内ID格）/nickname（昵称格）
+- display_name 更新定位 `.manage-nickname-cell .dn-text`（展示名现在包 span）
+
+### 七、关键实现要点
+- **事件委托防重复绑定**：thead contextmenu / tbody contextmenu / tbody click（快捷键激活）绑在 bindManageEvents（一次性，容器元素不变），不在每次 render 的 bindAccountEvents 里重复 addEventListener（否则监听器累积）
+- **隐藏列**：th/td 同步加 `hidden-col`（display:none），col 宽度保留不影响；7 列始终渲染保证表头与数据对齐
+- **快捷键编辑**：`data-editing` 标记防 EventBus 推送覆盖输入框；blur commit 与 Enter commit 用 done 标志防双触发
+- **行点击选中排除** hotkey cell / qa-btn / input
+- 空行 colspan 6→7
+
+### 八、验证状态
+- node --check 通过；gradle compileJava 通过
+- 应用实例正在运行锁定 build 目录 → processResources 清理失败，GUI 实测待应用重启后进行
+

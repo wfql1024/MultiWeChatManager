@@ -1443,6 +1443,7 @@
 
 .manage-account-table {
     width: 100%;
+    table-layout: fixed;            /* 列宽由 colgroup 控制，支持拖拽/自适应 */
     border-collapse: collapse;
     font-size: var(--font-sm);
 }
@@ -1453,6 +1454,7 @@
     background: var(--bg-sidebar);
 }
 .manage-account-table th {
+    position: relative;             /* 容纳列宽拖拽竖线 */
     padding: 8px 12px;
     text-align: left;
     font-weight: var(--weight-semibold);
@@ -1460,6 +1462,8 @@
     font-size: var(--font-xs);
     border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .manage-account-table th[data-sort] {
     cursor: pointer;
@@ -1468,18 +1472,59 @@
 .manage-account-table th[data-sort]:hover {
     color: var(--text-primary);
 }
+.manage-account-table th.sorted {
+    color: var(--color-primary);
+    font-weight: var(--weight-bold);
+}
 .manage-account-table th.manage-col-check {
-    width: 40px;
     text-align: center;
     padding-left: 8px;
 }
 .manage-account-table th.manage-col-avatar {
-    width: 40px;
     text-align: center;
 }
-.manage-account-table th.manage-col-actions {
-    width: 120px;
-    text-align: center;
+
+/* 列宽默认值（colgroup 内由 JS 按持久化配置覆盖） */
+.manage-account-table col[data-col="check"] { width: 40px; }
+.manage-account-table col[data-col="avatar"] { width: 56px; }
+.manage-account-table col[data-col="display_name"] { width: 200px; }
+.manage-account-table col[data-col="hotkey"] { width: 110px; }
+.manage-account-table col[data-col="id"] { width: 150px; }
+.manage-account-table col[data-col="alias"] { width: 140px; }
+.manage-account-table col[data-col="nickname"] { width: 140px; }
+
+/* 隐藏列（th/td 同步加 hidden-col，col 宽度保留不影响） */
+.manage-account-table .hidden-col { display: none; }
+
+/* 列间竖线（列宽拖拽热区） */
+.col-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: -3px;
+    width: 7px;
+    cursor: col-resize;
+    z-index: 2;
+}
+.col-resizer::after {
+    content: '';
+    position: absolute;
+    top: 18%;
+    bottom: 18%;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+    background: var(--border-color);
+    transition: background 0.15s;
+}
+.col-resizer:hover::after,
+.col-resizer.resizing::after {
+    background: var(--color-primary);
+}
+/* 列宽拖拽期间：全局禁文本选择 + 列宽光标 */
+body.resizing-cols {
+    cursor: col-resize !important;
+    user-select: none !important;
 }
 
 .manage-account-table td {
@@ -1498,10 +1543,6 @@
 .manage-account-table tbody tr.selected {
     background: var(--bg-selected);
 }
-.manage-account-table tbody tr:hover .manage-row-actions {
-    opacity: 1;
-    visibility: visible;
-}
 
 .manage-account-table .manage-col-check {
     text-align: center;
@@ -1512,6 +1553,17 @@
     height: 16px;
     cursor: pointer;
     accent-color: var(--color-primary);
+}
+/* 行内勾选框：不常显，仅行悬浮/选中时短暂显示 */
+.manage-account-table tbody tr .manage-col-check input[type="checkbox"] {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+}
+.manage-account-table tbody tr:hover .manage-col-check input[type="checkbox"],
+.manage-account-table tbody tr.selected .manage-col-check input[type="checkbox"] {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .manage-account-table .manage-account-avatar {
@@ -1540,10 +1592,99 @@
 .manage-account-table .manage-nickname-cell {
     font-weight: var(--weight-semibold);
     color: var(--text-primary);
-    max-width: 200px;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+.manage-nickname-cell .dn-text {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
     white-space: nowrap;
+}
+
+/* 展示名列右端的悬浮操作按钮（选中态 = 对应状态） */
+.manage-row-quick-actions {
+    display: none;
+    margin-left: 8px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+.manage-account-table tbody tr:hover .manage-row-quick-actions {
+    display: inline-flex;
+    gap: 4px;
+}
+.manage-row-quick-actions .qa-btn {
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-size: 11px;
+    line-height: 1.6;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+.manage-row-quick-actions .qa-btn:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+.manage-row-quick-actions .qa-btn.on {
+    background: var(--color-primary-light);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+.manage-row-quick-actions .qa-btn.danger:hover {
+    color: var(--color-danger);
+    border-color: var(--color-danger);
+}
+
+/* 禁用账号小标签（展示名旁） */
+.manage-disabled-tag {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 0 6px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: var(--weight-semibold);
+    background: rgba(230, 69, 83, 0.15);
+    color: var(--color-danger);
+    vertical-align: middle;
+}
+
+/* 快捷键列：可点击激活输入框 */
+.manage-hotkey-cell {
+    cursor: pointer;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    user-select: none;
+}
+.manage-hotkey-cell .hotkey-placeholder {
+    color: var(--text-muted);
+}
+.manage-hotkey-cell input.hotkey-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2px 6px;
+    font-family: var(--font-family-mono);
+    font-size: var(--font-xs);
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: 4px;
+    outline: none;
+}
+
+.manage-account-table .manage-alias-cell,
+.manage-account-table .manage-nickname-data-cell {
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .manage-account-table .manage-id-cell {
@@ -1556,37 +1697,59 @@
     white-space: nowrap;
 }
 
-.manage-account-table .manage-state-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 10px;
+/* 右键菜单（列头/行通用，body 层 fixed，高于所有面板/侧栏） */
+.account-context-menu {
+    position: fixed;
+    z-index: 500;
+    min-width: 190px;
+    max-width: 280px;
+    background: var(--bg-sidebar);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+    padding: 4px;
+    font-size: var(--font-sm);
+    user-select: none;
+    white-space: nowrap;
+}
+[data-theme="light"] .account-context-menu { background: #ffffff; }
+[data-theme="dark"] .account-context-menu { background: #1e1e1e; }
+.acm-title {
+    padding: 4px 10px;
     font-size: var(--font-xs);
-    font-weight: var(--weight-semibold);
+    color: var(--text-muted);
 }
-.manage-state-badge.state-hidden {
-    background: rgba(223, 142, 29, 0.15);
-    color: var(--color-warning);
-}
-.manage-state-badge.state-visible {
-    background: rgba(64, 160, 43, 0.15);
-    color: var(--color-success);
-}
-.manage-state-badge.state-disabled {
-    background: rgba(230, 69, 83, 0.15);
-    color: var(--color-danger);
-}
-
-.manage-row-actions {
+.acm-item {
     display: flex;
-    gap: 4px;
-    justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.15s, visibility 0.15s;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--text-primary);
 }
-.manage-row-actions .btn-sm {
-    padding: 2px 6px;
+.acm-item:hover { background: var(--bg-hover); }
+.acm-item.disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+.acm-item.disabled:hover { background: transparent; }
+.acm-item .acm-checkbox {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+.acm-item .acm-label { flex: 1; }
+.acm-item .acm-key {
     font-size: var(--font-xs);
+    color: var(--text-muted);
+}
+.acm-item.danger { color: var(--color-danger); }
+.acm-sep {
+    height: 1px;
+    background: var(--border-color);
+    margin: 4px 6px;
 }
 
 .manage-empty-state {

@@ -5,6 +5,7 @@
 - Phase 1.11 — AvatarUtils 重构账号头像逻辑（2026-07-30）
 - Phase 1.12 — 账号列表来源磁盘扫描 + 头像显示接入 + 日志修复与设置页"日志"子项（2026-07-31）
 - Phase 1.13 — 展示名显示 + SwAccData 自动填充 + EventBus 事件机制（2026-08-01）
+- Phase 1.14 — 账号列表列定制：7 列结构 + 列头右键菜单 + 列宽拖拽 + 快捷键编辑 + 悬浮交互（2026-08-16）
 
 ## 打包路径
 - 免安装版: `build/portable/JhiFengMultiChat/JhiFengMultiChat.exe`
@@ -135,3 +136,14 @@
 - **NPE 修复**: `Map.of(PID, pid)` 因 pid null 抛 NPE → HashMap；relay 读回判空
 - **提交**: `c2561a4` 已入库（展示名 + 自动填充，4 文件）
 - **提交**: 本次提交（EventBus 机制全套 + NPE 修复 + 文档），已通过进入平台页与隐藏切换实测、维护日志无报错
+
+## 新增功能（2026-08-16 会话）
+- **账号列表 7 列结构**: 勾选框（行悬浮才显示）/头像/展示名（右端悬浮操作按钮：隐藏选中态+删除）/快捷键（点击编辑，存 `hotkey`）/ID/平台内ID（`alias`）/昵称（`nickname`）；移除原"状态"/"操作"两列
+- **列头右键菜单**: 勾选显示列（勾选框/头像/展示名/快捷键 4 列必选锁定；ID 默认显示；alias/nickname 默认隐藏）+ "所有列自适应大小"/"该列自适应大小"（临时 span 测量）
+- **列间竖线拖拽调列宽**: `table-layout: fixed` + colgroup，`.col-resizer` 拖拽（最小 30px），最后可见列不加竖线
+- **行右键菜单**: 隐藏/显示、删除（与悬浮按钮同走 `handleAccountAction`）
+- **排序标识**: 去掉 " ↕" 字符，当前排序列 th 加 `.sorted` 高亮（主题色+加粗）
+- **配置持久化**: `LocalGlobalConfig.json.account_columns = {visible, width}`（`getGlobalConfig`/`saveGlobalConfig`）
+- **onAccountChanged 扩展**: 处理 `hotkey`/`alias`/`nickname` 字段定向更新；状态变化走 `updateRowQuickActions`（原 stateBadgeHtml 删除）
+- **提交**: 本次提交（index.html/main.css/main.js + 文档）
+- **验证**: node --check + gradle compileJava 通过；GUI 实测待应用实例停止后重启进行（运行实例锁定 build 目录）
