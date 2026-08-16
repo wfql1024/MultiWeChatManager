@@ -166,13 +166,32 @@ JFC.AccountTable = (function() {
         if (!table) return;
         table.querySelectorAll('colgroup col[data-col]').forEach(function(col) {
             var key = col.getAttribute('data-col');
-            col.style.width = (this.colWidth[key] || 0) + 'px';
+            var def = this.colByKey(key);
+            // 固定列（勾选框/头像）宽度绝对固定（defWidth），不随任何操作/配置改变
+            col.style.width = (def && def.fixed ? def.defWidth : (this.colWidth[key] || 0)) + 'px';
         }, this);
         table.querySelectorAll('th[data-col], td[data-col]').forEach(function(cell) {
             var key = cell.getAttribute('data-col');
             cell.classList.toggle('hidden-col', !this.colVisible[key]);
         }, this);
         this._initColResizers(table);
+        this._updateTableWidth();
+    };
+
+    // 表格宽度 = max(可见列宽总和, 容器宽)：
+    //   - 列宽总和 > 容器 → 表格扩展 → 容器出现横向滚动条（列不被压缩，互不影响）
+    //   - 列宽总和 < 容器 → 占满容器，右侧由容器背景（列头底色）填充
+    AccountTable.prototype._updateTableWidth = function() {
+        var scroll = this.el.querySelector('.acc-table-scroll');
+        var sum = 0;
+        for (var i = 0; i < this.columns.length; i++) {
+            var col = this.columns[i];
+            if (this.colVisible[col.key]) {
+                sum += col.fixed ? col.defWidth : (this.colWidth[col.key] || 0);
+            }
+        }
+        var containerW = scroll ? scroll.clientWidth : 0;
+        this.tableEl.style.width = Math.max(sum, containerW) + 'px';
     };
 
     // ---- 数据 ----
@@ -409,6 +428,9 @@ JFC.AccountTable = (function() {
                 self.activateHotkeyEdit(cell, tr.getAttribute('data-acc-id'));
             });
         }
+
+        // 窗口大小变化时刷新表格宽度（列宽总和与容器宽的 max，保证横向滚动正确）
+        window.addEventListener('resize', function() { self._updateTableWidth(); });
     };
 
     // ---- 标题行：选中计数与批量按钮 ----
@@ -618,6 +640,7 @@ JFC.AccountTable = (function() {
     AccountTable.prototype._applyColumnWidth = function(key, w) {
         var col = this.tableEl.querySelector('colgroup col[data-col="' + key + '"]');
         if (col) col.style.width = w + 'px';
+        this._updateTableWidth();   // 列宽变化 → 表格总宽随之扩展/收缩
     };
 
     // ---- 列头右键菜单 ----
