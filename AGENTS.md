@@ -290,3 +290,18 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 48. **后台会话 worktree 隔离可关闭** → `.claude/settings.json` 设 `"worktree": {"bgIsolation": "none"}` 后后台会话可直接编辑主目录文件（需用户授权；该文件被 gitignore，仅本地）
 49. **日志目录固定根配置位置** → 设置页打开/显示日志目录用 `AppPaths.getLogsDir()`（`%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`），不随用户自定义数据目录；与 logback 实际写入位置一致
 50. **`Map.of` 不允许 null 键/值** → 写账号数据回写时 `Map.of(PID, pid, ...)` 因未运行账号 pid 为 null 直接 NPE（`ImmutableCollections$MapN` 构造器 `Objects.requireNonNull`）。必须用 `HashMap`；`ConfigManager.updateAccount` 对 null 值会移除该键（未运行账号不存 pid，语义正确）。同理对 `JsonNode.get(key)` 结果先判空再 `.asBoolean`
+
+---
+
+## 十二、代理与网络（2026-10-04）
+
+- **原则**: 代理**只由界面"使用代理"复选框控制**，不做任何自动探测、不默认开启；未勾选一律直连
+- **历史现象**: 直连 `raw.githubusercontent.com` 报 `javax.net.ssl.SSLHandshakeException: Remote host terminated the handshake` —— 根因是 Java **默认不使用 Windows 系统代理**（`java.net.useSystemProxies` 默认 false）；在界面勾选"使用代理"并填好地址端口即可
+- **立即生效**: `AppCore.applyProxySetting()` 设置 JVM 属性 `http(s).proxyHost/Port`（+ `http.nonProxyHosts=localhost|127.*|[::1]`）；`HttpClient` 的默认 `ProxySelector` 每次请求都读这些属性，所以**运行期修改立即生效，无需重启**
+  - 界面勾选 / 改地址端口 → `JFC.bridge.applyProxyConfig(json)`：只持久化代理三个字段 + 立即应用，并回传归一化结果回填输入框（`settings.js` 的 `commitProxyConfig()`）
+  - 点"保存配置" → `saveConfigData()` 内同样调用一次 `applyProxySetting()`
+  - `Launcher.main` 启动时调用一次（覆盖"上次已勾选"的情况）
+- **地址归一化**（`AppCore.splitHostPort` / `isValidPort`）: 允许 `http://127.0.0.1:7890`、`127.0.0.1:7890`、`127.0.0.1` + 端口分开填、`[::1]:7890`；端口必须 1..65535，非法则按直连并提示
+- **教训**: 代理地址不能原样塞进 `https.proxyHost` —— 含 `:` 的"主机"会被 JDK 当成 IPv6 加方括号，报 `java.net.URISyntaxException: Expected closing bracket for IPv6 address at index 20: proxy.https://[http://127.0.0.1]:7890/`。必须剥掉协议前缀并拆出端口
+- **远程配置下载**: `JsBridge.downloadRemoteConfigs()` 的候选 URL = **用户配置 + 内置兜底**（`JsBridge.mergeUrls()`）。此前只取用户列表，用户把「远程配置源」清空后日志出现 `候选URL: 0个`、远程配置永远下载失败 —— 已修复
+- **gitee 现状**: gitee 对 `remote_configs/remote_*` 判定违规返回 451（与网络无关）；候选列表里 gitee 失败会自动继续尝试 GitHub

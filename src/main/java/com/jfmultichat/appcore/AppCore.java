@@ -21,6 +21,7 @@ import java.util.concurrent.Executors;
 import com.jfmultichat.config.AppPaths;
 import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.config.CryptoUtils;
+import com.jfmultichat.config.RootConfig;
 
 /**
  * App 操作核心 — 软件级操作（远程配置、版本检查、统计、托盘等）
@@ -508,32 +509,131 @@ public final class AppCore {
     // ==================== 代理设置 ====================
 
     /**
-     * 应用代理设置
-     * 对应 Python: apply_proxy_setting (L194-L211)
+     * 代理生效状态（供调用方提示用户）.
+     *
+     * @param applied 是否已生效
+     * @param host    实际使用的地址（已归一化）
+     * @param port    实际使用的端口（已归一化）
+     * @param message 中文提示
      */
-    public static void applyProxySetting() {
+    public record ProxyState(boolean applied, String host, String port, String message) {}
+
+    /**
+     * 应用代理设置（启动时调用，以及界面修改代理后立即调用）.
+     *
+     * <p>**仅**由界面上的"使用代理"复选框控制，不做任何自动探测；未勾选时一律直连。
+     *
+     * <p>地址与端口会被归一化：允许用户填 {@code http://127.0.0.1:7890}、{@code 127.0.0.1:7890}
+     * 或分开填 {@code 127.0.0.1} + {@code 7890}；端口非法或地址为空时按直连处理并在提示中说明。
+     *
+     * <p>设置的是 JVM 系统属性（{@code http(s).proxyHost/Port}），
+     * {@code java.net.http.HttpClient} 的默认 {@code ProxySelector} 会在每次请求时读取，
+     * 因此**运行期修改立即生效**，无需重启。
+     *
+     * <p>对应 Python: apply_proxy_setting (L194-L211)。
+     *
+     * @return 生效状态
+     */
+    public static ProxyState applyProxySetting() {
         try {
-            Boolean useProxy = ACCESSOR.fetchOrSetDefaultGlobal(
-                    AppCoreConstants.GlobalSettingKey.USE_PROXY, false).asBoolean();
-            if (useProxy) {
-                String proxyIp = ACCESSOR.fetchOrSetDefaultGlobal(
-                        AppCoreConstants.GlobalSettingKey.PROXY_IP, "").asText("");
-                String proxyPort = ACCESSOR.fetchOrSetDefaultGlobal(
-                        AppCoreConstants.GlobalSettingKey.PROXY_PORT, "").asText("");
-                System.setProperty("http.proxyHost", proxyIp);
-                System.setProperty("http.proxyPort", proxyPort);
-                System.setProperty("https.proxyHost", proxyIp);
-                System.setProperty("https.proxyPort", proxyPort);
-                LOG.info("[代理] 已启用代理: {}:{}", proxyIp, proxyPort);
-            } else {
-                System.clearProperty("http.proxyHost");
-                System.clearProperty("http.proxyPort");
-                System.clearProperty("https.proxyHost");
-                System.clearProperty("https.proxyPort");
-                LOG.info("[代理] 已禁用代理");
+            RootConfig rc = ConfigManager.getInstance().getRootConfig();
+            String[] hostPort = splitHostPort(rc.getProxyIp());
+            String host = hostPort[0];
+            // 端口优先取专门的端口输入框；为空时从地址里拆出来的端口兜底
+            String port = isValidPort(rc.getProxyPort().trim()) ? rc.getProxyPort().trim() : hostPort[1];
+
+            if (!rc.isUseProxy()) {
+                clearProxyProperties();
+                LOG.info("[代理] 未启用（直连）");
+                return new ProxyState(false, host, port, "代理未启用（直连）");
             }
+            if (host.isEmpty() || !isValidPort(port)) {
+                clearProxyProperties();
+                String message = "代理地址或端口无效（地址=" + host + "，端口=" + port + "），已按直连处理";
+                LOG.warn("[代理] {}", message);
+                return new ProxyState(false, host, port, message);
+            }
+
+            System.setProperty("http.proxyHost", host);
+            System.setProperty("http.proxyPort", port);
+            System.setProperty("https.proxyHost", host);
+            System.setProperty("https.proxyPort", port);
+            // 本机地址直连，避免把本地请求也送进代理
+            System.setProperty("http.nonProxyHosts", "localhost|127.*|[::1]");
+
+            String message = "代理已启用: " + host + ":" + port;
+            LOG.info("[代理] {}", message);
+            return new ProxyState(true, host, port, message);
         } catch (Exception e) {
             LOG.warn("[代理] 应用代理设置失败: {}", e.getMessage());
+            return new ProxyState(false, "", "", "代理设置失败: " + e.getMessage());
         }
+    }
+
+    /** 清空全部代理相关系统属性（直连）. */
+    private static void clearProxyProperties() {
+        System.clearProperty("http.proxyHost");
+        System.clearProperty("http.proxyPort");
+        System.clearProperty("https.proxyHost");
+        System.clearProperty("https.proxyPort");
+        System.clearProperty("http.nonProxyHosts");
+    }
+
+    /**
+     * 拆分用户填写的代理地址，容忍常见的几种写法：
+     * <ul>
+     *   <li>{@code http://127.0.0.1:7890} → host=127.0.0.1, port=7890</li>
+     *   <li>{@code 127.0.0.1:7890} → host=127.0.0.1, port=7890</li>
+     *   <li>{@code 127.0.0.1} → host=127.0.0.1, port=""</li>
+     *   <li>{@code [::1]:7890} → host=::1, port=7890</li>
+     * </ul>
+     *
+     * @param raw 用户输入
+     * @return 长度为 2 的数组：{主机, 端口}（端口可能为空字符串）
+     */
+    static String[] splitHostPort(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        int scheme = value.indexOf("://");
+        if (scheme >= 0) {
+            value = value.substring(scheme + 3);
+        }
+        int slash = value.indexOf('/');
+        if (slash >= 0) {
+            value = value.substring(0, slash);
+        }
+        if (value.startsWith("[")) {
+            int end = value.indexOf(']');
+            if (end > 0) {
+                String host = value.substring(1, end);
+                String port = end + 2 < value.length() && value.charAt(end + 1) == ':'
+                        ? value.substring(end + 2) : "";
+                return new String[]{host, port};
+            }
+        }
+        int colon = value.lastIndexOf(':');
+        // 只有一个冒号才当作 host:port（裸 IPv6 有多个冒号，原样保留为主机）
+        if (colon > 0 && value.indexOf(':') == colon) {
+            return new String[]{value.substring(0, colon), value.substring(colon + 1)};
+        }
+        return new String[]{value, ""};
+    }
+
+    /**
+     * 端口是否合法（纯数字且 1..65535）.
+     *
+     * @param port 端口字符串
+     * @return 合法返回 true
+     */
+    static boolean isValidPort(String port) {
+        if (port == null || port.isEmpty() || port.length() > 5) {
+            return false;
+        }
+        for (int i = 0; i < port.length(); i++) {
+            if (!Character.isDigit(port.charAt(i))) {
+                return false;
+            }
+        }
+        int value = Integer.parseInt(port);
+        return value >= 1 && value <= 65535;
     }
 }

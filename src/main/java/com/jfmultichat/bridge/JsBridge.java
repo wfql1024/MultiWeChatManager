@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.jfmultichat.acccore.AccInfoFuncCore;
+import com.jfmultichat.appcore.AppCore;
 import com.jfmultichat.config.AppPaths;
 import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.config.RootConfig;
@@ -636,8 +637,14 @@ public class JsBridge {
             }
 
             cm.saveAll();
+
+            // 代理设置立即生效（无需重启）：系统属性变更后，HttpClient 的默认 ProxySelector 下次请求即读取
+            AppCore.ProxyState proxyState = AppCore.applyProxySetting();
+
             result.put("success", true);
             result.put("pathChanged", pathChanged);
+            result.put("proxyApplied", proxyState.applied());
+            result.put("proxyMessage", proxyState.message());
             LOG.info("Config saved. useProxy={}, userDataPath changed={}, swUrls={}, globalUrls={}",
                     rc.isUseProxy(), pathChanged,
                     rc.getRemoteSwUrls().size(), rc.getRemoteGlobalUrls().size());
@@ -646,6 +653,78 @@ public class JsBridge {
         } catch (Exception e) {
             LOG.error("Failed to save config data", e);
             return "{\"success\":false,\"error\":\"" + e.getMessage() + "\"}";
+        }
+    }
+
+    /**
+     * 合并"用户配置的 URL"与"内置兜底 URL"（去重、保序：用户 URL 优先）.
+     *
+     * <p>用户把远程配置源清空时（列表为空）仍应能下载，故内置 URL 始终作为兜底追加；
+     * 与 {@code RemoteConfigFetcher} 的 URL 组装策略保持一致。
+     *
+     * @param userUrls    用户配置的 URL 列表（可为空）
+     * @param builtinUrls 内置兜底 URL
+     * @return 候选 URL 列表
+     */
+    static List<String> mergeUrls(List<String> userUrls, String[] builtinUrls) {
+        List<String> merged = new ArrayList<>();
+        if (userUrls != null) {
+            for (String url : userUrls) {
+                if (url != null && !url.isBlank() && !merged.contains(url.trim())) {
+                    merged.add(url.trim());
+                }
+            }
+        }
+        if (builtinUrls != null) {
+            for (String url : builtinUrls) {
+                if (url != null && !url.isBlank() && !merged.contains(url)) {
+                    merged.add(url);
+                }
+            }
+        }
+        return merged;
+    }
+
+    /**
+     * 应用并持久化代理设置 —— 供界面勾选"使用代理"/修改地址端口后**立即生效**（无需重启）.
+     *
+     * <p>只写入代理三个字段（{@code use_proxy}/{@code proxy_ip}/{@code proxy_port}），
+     * 不触碰同页面其它配置，避免自动生效时连带提交用户尚未确认的修改。
+     * 地址会被归一化（允许 {@code http://127.0.0.1:7890} 这类写法），归一化结果回传前端回填。
+     *
+     * @param json JSON: {@code {"useProxy":bool,"proxyIp":string,"proxyPort":string}}
+     * @return JSON: {@code {success, useProxy, applied, proxyIp, proxyPort, message}}
+     */
+    public String applyProxyConfig(String json) {
+        try {
+            JsonNode data = MAPPER.readTree(json == null || json.isBlank() ? "{}" : json);
+            ConfigManager cm = ConfigManager.getInstance();
+            RootConfig rc = cm.getRootConfig();
+
+            if (data.has("useProxy")) {
+                rc.setUseProxy(data.get("useProxy").asBoolean());
+            }
+            if (data.has("proxyIp")) {
+                rc.setProxyIp(data.get("proxyIp").asText().trim());
+            }
+            if (data.has("proxyPort")) {
+                rc.setProxyPort(data.get("proxyPort").asText().trim());
+            }
+            cm.saveAll();
+
+            AppCore.ProxyState state = AppCore.applyProxySetting();
+
+            ObjectNode result = MAPPER.createObjectNode();
+            result.put("success", true);
+            result.put("useProxy", rc.isUseProxy());
+            result.put("applied", state.applied());
+            result.put("proxyIp", state.host());
+            result.put("proxyPort", state.port());
+            result.put("message", state.message());
+            return MAPPER.writeValueAsString(result);
+        } catch (Exception e) {
+            LOG.error("Failed to apply proxy config", e);
+            return "{\"success\":false,\"message\":\"应用代理设置失败: " + e.getMessage() + "\"}";
         }
     }
 
@@ -1051,9 +1130,11 @@ public class JsBridge {
             ConfigManager cm = ConfigManager.getInstance();
             RootConfig rc = cm.getRootConfig();
 
-            // 从 RootConfig 读取 URL 列表
-            java.util.List<String> swUrls = new java.util.ArrayList<>(rc.getRemoteSwUrls());
-            java.util.List<String> globalUrls = new java.util.ArrayList<>(rc.getRemoteGlobalUrls());
+            // 候选 URL = 用户配置的 URL + 内置兜底 URL（用户一个都没配时也要能下载）
+            java.util.List<String> swUrls = mergeUrls(rc.getRemoteSwUrls(),
+                    com.jfmultichat.config.RemoteConfigFetcher.getBuiltinRemoteSwUrls());
+            java.util.List<String> globalUrls = mergeUrls(rc.getRemoteGlobalUrls(),
+                    com.jfmultichat.config.RemoteConfigFetcher.getBuiltinRemoteGlobalUrls());
 
             LOG.info("[下载] remote_sw 候选URL: {}个, remote_global 候选URL: {}个",
                     swUrls.size(), globalUrls.size());

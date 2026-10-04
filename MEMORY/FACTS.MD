@@ -181,3 +181,15 @@
 - **兼容性实测**: Java 解密直接读出 Python 产出的 `remote_global_v1` / `remote_sw_v9`，LF 归一化后逐字符一致；Java 加密产物字节数与 Python 版相同（48,657 / 170,429）
 - **内容现状**: `original_remote_global_v2.json` ≡ `legacy_python/.../original_remote_global_v1.json` ≡ `resources/data/remote_global_v1.json`（MD5 `0902DC1C…`）；`original_remote_sw_v10.json` ≡ 旧 `original_remote_sw_v9.json`（MD5 `102713C0…`）——v2/v10 为纯版本号提升
 - **换行处理**: 加密前按通用换行读取（CRLF → LF），与历史 Python 版一致；发布产物解密后与源 JSON 是「LF 归一化后相等」
+
+## 代理设置（2026-10-04）
+
+- **设计原则**: 代理**只由界面"使用代理"复选框控制**（用户要求：不要默认开、不要自动探测）；未勾选一律直连
+- **`AppCore.applyProxySetting()`** → 返回 `ProxyState(applied, host, port, message)`；设置/清除 `http(s).proxyHost/Port` 与 `http.nonProxyHosts`；**运行期修改立即生效**（HttpClient 默认 ProxySelector 每次请求读取系统属性）
+- **地址归一化** `AppCore.splitHostPort()` / `isValidPort()` — 兼容 `http://127.0.0.1:7890`、`127.0.0.1:7890`、`127.0.0.1`+端口分开填、`[::1]:7890`；端口非法则按直连并提示
+- **立即生效链路**: `settings.js` 勾选/change → `JFC.bridge.applyProxyConfig` → `JsBridge.applyProxyConfig`（只持久化代理 3 字段 + 应用 + 回传归一化结果回填）；`saveConfigData()` 保存时、`Launcher` 启动时各调用一次
+- **修复的报错**: `URISyntaxException: Expected closing bracket for IPv6 address ... proxy.https://[http://127.0.0.1]:7890/`（用户把 `http://127.0.0.1` 填进地址框；界面 placeholder 已改为 `127.0.0.1`）
+- **测试**: `AppCoreProxyTest`（3 例：协议/端口拆分、IPv6、端口校验）
+- **备注**: 曾短暂实现"未勾选时跟随系统代理"（`config/SystemProxy`），按用户要求已移除
+- **远程配置候选 URL 兜底**: `JsBridge.mergeUrls()`（用户 URL 优先 + 内置追加 + 去重）—— 修复「用户清空远程配置源后候选 0 个、远程配置永远下载失败」；测试 `JsBridgeUrlTest`（4 例）
+- **代理地址归一化**: `AppCore.splitHostPort()` 剥协议前缀/拆端口（用户填 `http://127.0.0.1` + 端口 `7890` 曾导致 `URISyntaxException: ... proxy.https://[http://127.0.0.1]:7890/`）；界面 placeholder 已改为 `127.0.0.1`；勾选/修改后立即生效

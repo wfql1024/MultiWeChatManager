@@ -77,7 +77,11 @@ JFC.pages.settings = (function() {
         bind('cfg-use-proxy', 'change', function() {
             var d = document.getElementById('cfg-proxy-detail');
             if (d) d.style.display = this.checked ? '' : 'none';
+            commitProxyConfig();
         });
+        // 地址/端口改动后立即生效（无需点"保存配置"、无需重启）
+        bind('cfg-proxy-ip', 'change', commitProxyConfig);
+        bind('cfg-proxy-port', 'change', commitProxyConfig);
 
         bind('cfg-user-dir-browse', 'click', function() {
             if (!JM()) return;
@@ -385,6 +389,36 @@ JFC.pages.settings = (function() {
         }
 
         validateUserDir();
+    }
+
+    // ==================== 代理（改动立即生效） ====================
+
+    /**
+     * 勾选"使用代理"或修改地址/端口后立即生效（无需点"保存配置"、无需重启）。
+     * 后端会持久化这三个字段并归一化地址，归一化结果回填输入框。
+     */
+    function commitProxyConfig() {
+        if (!JM()) { return; }
+
+        var payload = {
+            useProxy: !!(el('cfg-use-proxy') && el('cfg-use-proxy').checked),
+            proxyIp: getVal('cfg-proxy-ip'),
+            proxyPort: getVal('cfg-proxy-port')
+        };
+
+        var res = JFC.bridge.applyProxyConfig(JSON.stringify(payload));
+        if (!res || res.success !== true) {
+            showMsg('代理设置失败: ' + ((res && res.message) || '未知错误'), true);
+            return;
+        }
+
+        if (res.applied) {
+            // 回填归一化结果（如 http://127.0.0.1:7890 → 127.0.0.1 + 7890）
+            setVal('cfg-proxy-ip', res.proxyIp || '');
+            setVal('cfg-proxy-port', res.proxyPort || '');
+        }
+        // 未勾选属正常状态，不用红色提示
+        showMsg(res.message || '代理设置已更新', !res.applied && payload.useProxy);
     }
 
     // ==================== 保存 ====================

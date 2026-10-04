@@ -124,6 +124,7 @@ JFC.bridge = (function() {
         getConfigData: function() { return callJson('getConfigData'); },
         getProxyPresets: function() { return callJson('getProxyPresets'); },
         saveConfigData: function(json) { return callJsonWithArgs('saveConfigData', json); },
+        applyProxyConfig: function(json) { return callJsonWithArgs('applyProxyConfig', json); },
         isDevMode: function() { return call('isDevMode') === true; },
         getDefaultUrls: function() { return callJson('getDefaultUrls'); },
         validatePath: function(p) { return callJsonWithArgs('validatePath', p); },

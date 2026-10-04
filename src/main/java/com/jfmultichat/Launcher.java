@@ -1,5 +1,6 @@
 package com.jfmultichat;
 
+import com.jfmultichat.appcore.AppCore;
 import com.jfmultichat.config.AppEnv;
 import com.jfmultichat.config.AppPaths;
 import com.jfmultichat.config.ConfigManager;
@@ -13,6 +14,7 @@ import javafx.application.Application;
  *   <li>设置 logback 日志目录系统属性（供 logback.xml 读取）</li>
  *   <li>初始化 ConfigManager（创建目录结构和默认配置文件）</li>
  *   <li>更新 logback 日志目录到实际 user_data_path</li>
+ *   <li>应用代理设置（应用内设置优先，否则跟随 Windows 系统代理）</li>
  * </ol>
  */
 public class Launcher {
@@ -37,7 +39,11 @@ public class Launcher {
         System.setProperty("jfmultichat.logdir",
                 ConfigManager.getInstance().getLogsDir().toString());
 
-        // 3. 启动 JavaFX
+        // 3. 应用代理设置 — 必须在任何 HTTP 请求之前
+        //    应用未启用代理时自动跟随 Windows 系统代理，避免直连境外站点握手被 RST
+        AppCore.applyProxySetting();
+
+        // 4. 启动 JavaFX
         Application.launch(MainApp.class, args);
     }
 }
