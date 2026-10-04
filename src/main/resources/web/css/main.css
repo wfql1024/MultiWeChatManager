@@ -1421,6 +1421,16 @@
 .manage-curtain-handle #handle-click-zone {
     cursor: pointer;
 }
+/* 底部分割线拖动区光标：展开=上下拖动，收起=普通（收起时不允许拖动）。
+   状态类挂在 body 上（由面板 collapsed 类的 MutationObserver 同步），避免多处状态改动不同步 */
+.manage-curtain-handle #handle-drag-left,
+.manage-curtain-handle #handle-drag-right {
+    cursor: ns-resize;
+}
+body.curtain-collapsed .manage-curtain-handle #handle-drag-left,
+body.curtain-collapsed .manage-curtain-handle #handle-drag-right {
+    cursor: default;
+}
 .manage-curtain-handle #handle-drag-left,
 .manage-curtain-handle #handle-drag-right {
     cursor: ns-resize;
@@ -1670,6 +1680,11 @@ body.resizing-cols {
 .manage-account-table tbody tr {
     cursor: pointer;
 }
+/* 数据行行高统一（32px 头像 + td 上下 padding）——原生程序表的行与账号表一致；
+   tr 上的 height 在表格布局里是最小高度，内容更高时仍会自动撑开 */
+.manage-account-table tbody tr[data-acc-id] {
+    height: 44px;
+}
 /* 行背景（悬浮/选中）统一由 JS 整行背景层负责：
    .acc-row-highlight（不透明悬浮色，选中行不显示）+ .acc-row-selection-layer（不透明选中色，整行宽）
    所以这里不再给 tr / tr.selected 设背景，避免只覆盖列区域、也避免与色块叠加 */
@@ -1719,13 +1734,21 @@ body.resizing-cols {
     font-weight: var(--weight-bold);
 }
 
+/* 名称单元格：**td 本身保持 table-cell**（若给 td 设 display:flex，它就不再是 table-cell，
+   浏览器会插入匿名 cell，td 自己的 padding/border 便画在里面 → 名称列会多出一条"下划线"）。
+   flex 放在内层 .manage-nickname-inner 上。 */
 .manage-account-table .manage-nickname-cell {
     font-weight: var(--weight-semibold);
     color: var(--text-primary);
+}
+.manage-nickname-cell .manage-nickname-inner {
     display: flex;
     align-items: center;
-    overflow: hidden;
+    position: relative;         /* 容纳绝对定位的悬浮按钮（不占位、不挤压名称） */
     white-space: nowrap;
+    /* min-height 保证按钮（约 22px）不超过内层盒子，否则上下边框会被裁掉；
+       这里不能用 overflow:hidden——那会把按钮的上下边框剪掉 */
+    min-height: 22px;
 }
 .manage-nickname-cell .dn-text {
     flex: 1;
@@ -1735,24 +1758,22 @@ body.resizing-cols {
     white-space: nowrap;
 }
 
-/* 展示名列右端的悬浮操作按钮（选中态 = 对应状态）
-   常驻占位（display:inline-flex + visibility 切换）：若用 display:none 切换，
-   悬浮时按钮才占宽 → .dn-text 被挤压、文字截断/位移。改后布局恒定，只切换可见性。
-   visibility:hidden 的元素不参与命中测试，所以未悬浮时不可点击。 */
+/* 展示名列右端的悬浮操作按钮：**在文档流内**（悬浮出现时挤压名称文字，名称自动以 … 结尾），
+   flex-shrink:0 保证按钮自身不被压缩；"调至合适宽度"时会额外加上这两个按钮的宽度（QUICK_ACTIONS_WIDTH）。
+   背景用不透明色，避免看起来半透明。 */
 .manage-row-quick-actions {
-    display: inline-flex;
+    display: none;
     gap: 4px;
-    visibility: hidden;
     margin-left: auto;          /* 贴列空间右端 */
     flex-shrink: 0;
     white-space: nowrap;
 }
 .manage-account-table tbody tr:hover .manage-row-quick-actions {
-    visibility: visible;
+    display: inline-flex;
 }
 .manage-row-quick-actions .qa-btn {
     border: 1px solid var(--border-color);
-    background: transparent;
+    background: var(--bg-card);          /* 不透明底色：悬浮按钮不半透明 */
     color: var(--text-secondary);
     border-radius: 4px;
     padding: 1px 7px;
@@ -1766,7 +1787,7 @@ body.resizing-cols {
     border-color: var(--color-primary);
 }
 .manage-row-quick-actions .qa-btn.on {
-    background: var(--color-primary-light);
+    background: var(--qa-on-bg);         /* 不透明等效色（原 --color-primary-light 是半透明） */
     color: var(--color-primary);
     border-color: var(--color-primary);
 }
@@ -1775,17 +1796,39 @@ body.resizing-cols {
     border-color: var(--color-danger);
 }
 
-/* 禁用账号小标签（展示名旁） */
-.manage-disabled-tag {
+/* 名称前缀状态标签（失效/禁用/隐藏）：只是视觉前缀，不参与排序.
+   字号比列表正文（--font-sm 14px）小 1px；圆角矩形要完整包住文字（上下留 1px padding + 行高 1.4） */
+.manage-name-tag {
     display: inline-block;
-    margin-left: 6px;
-    padding: 0 6px;
-    border-radius: 8px;
-    font-size: 11px;
+    margin-right: 6px;          /* 前缀标签：与后面的名称拉开距离 */
+    padding: 1px 8px;
+    border-radius: 6px;
+    font-size: var(--font-xs);  /* 13px = 正文 14px - 1 */
+    line-height: 1.4;
     font-weight: var(--weight-semibold);
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+/* 禁用账号 */
+.manage-disabled-tag {
     background: rgba(230, 69, 83, 0.15);
     color: var(--color-danger);
-    vertical-align: middle;
+}
+/* 失效标签（无效账号：SwAccData 有记录但磁盘不存在）——灰色 */
+.manage-invalid-tag {
+    background: var(--bg-hover);
+    color: var(--text-muted);
+}
+/* 隐藏标签（一眼看出哪些号被隐藏） */
+.manage-hidden-tag {
+    background: var(--bg-hover);
+    color: var(--text-secondary);
+}
+/* 失效账号整行灰字（名称列本身用 text-primary，需一并压灰） */
+.manage-account-table tbody tr.invalid-row td,
+.manage-account-table tbody tr.invalid-row .manage-nickname-cell,
+.manage-account-table tbody tr.invalid-row .manage-nickname-cell .dn-text {
+    color: var(--text-muted);
 }
 
 /* 快捷键列：可点击激活输入框 */

@@ -1028,6 +1028,9 @@ public class JsBridge {
      * 合并保存 global 配置.
      * 接收前端 JSON，逐字段合并到 LocalGlobalConfig.json.
      *
+     * <p>值为 {@code null} 表示**删除该字段**（`ConfigManager.updateGlobalConfig` 对 null 走 remove），
+     * 用于清理历史遗留的冗余节点。
+     *
      * @param json 要合并的 JSON 对象字符串
      */
     public void saveGlobalConfig(String json) {
@@ -1036,7 +1039,8 @@ public class JsBridge {
             Map<String, Object> updates = new java.util.LinkedHashMap<>();
             data.fieldNames().forEachRemaining(key -> {
                 JsonNode node = data.get(key);
-                if (node.isTextual()) updates.put(key, node.asText());
+                if (node.isNull()) updates.put(key, null);          // null = 删除该字段
+                else if (node.isTextual()) updates.put(key, node.asText());
                 else if (node.isBoolean()) updates.put(key, node.asBoolean());
                 else if (node.isInt() || node.isLong()) updates.put(key, node.asLong());
                 else if (node.isDouble()) updates.put(key, node.asDouble());
@@ -1429,6 +1433,40 @@ public class JsBridge {
     }
 
     /**
+     * 原生程序表数据：平台主程序（inst_path 指向的 exe）的名称 / 路径 / 版本.
+     *
+     * <p>版本优先取 exe 文件版本（{@code SwVersionHelper.calcSwVer}），取不到时回退到补丁 DLL 版本，
+     * 都取不到则为空字符串。
+     *
+     * @param swId Sw ID
+     * @return JSON: {@code {name, path, version}}
+     */
+    public String getSwProgramData(String swId) {
+        ObjectNode result = MAPPER.createObjectNode();
+        try {
+            SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+            String instPath = accessor.tryGetPathOf(swId,
+                    com.jfmultichat.swcore.SwCoreConstants.LocalSettingKey.INST_PATH);
+            instPath = instPath == null ? "" : instPath.replace('\\', '/');
+            String name = "";
+            if (!instPath.isBlank()) {
+                int slash = instPath.lastIndexOf('/');
+                name = slash >= 0 ? instPath.substring(slash + 1) : instPath;
+            }
+            String version = new SwInfoFuncCore(accessor, null, null, null).calcSwVer(swId);
+            result.put("name", name);
+            result.put("path", instPath);
+            result.put("version", version == null ? "" : version);
+        } catch (Exception e) {
+            LOG.error("Failed to get program data for swId={}", swId, e);
+            result.put("name", "");
+            result.put("path", "");
+            result.put("version", "");
+        }
+        return result.toString();
+    }
+
+    /**
      * 异步获取账号头像 data URL.
      * 参考 acccore: AccInfoFuncCore.getAvatarFromCache + getAccAvatarFromFile
      * 解析顺序: 本地文件 {userDir}/{sw}/{acc}/{acc}.jpg → URL 下载（/0 结尾）→ SVG 文字回退
@@ -1590,65 +1628,196 @@ public class JsBridge {
      * 3. ImageIcon — 最后回退（对 .ico 文件有效）
      */
     private String extractIconFromFile(java.io.File file) {
+        java.awt.Image img = biggestIconImage(file);
+        if (img == null || iconSide(img) < 8) {
+            return "{\"iconUrl\":\"\"}";
+        }
+        return imageToBase64DataUrl(img);
+    }
+
+    /** 平台图标目标尺寸（用户要求 64x64：列表头像列 32px 为 2 倍图，左栏 22px 为降采样） */
+    private static final int SW_ICON_SIZE = 64;
+
+    /**
+     * 候选图标里尺寸最大的那个（null 安全）.
+     *
+     * <p>顺序：ShellFolder 大图标（32x32，需 --add-exports） → FileSystemView（Windows 上 16x16） → ImageIcon 直接加载。
+     * 注意 ShellFolder 返回的是惰性图片，尺寸必须经 {@link #iconSide} 用 ImageIcon 包一层才能拿到。
+     */
+    private java.awt.Image biggestIconImage(java.io.File file) {
         java.awt.Image img = null;
 
-        // 方案1: FileSystemView（官方 API，跨平台）
+        // 方案1: ShellFolder 大图标（Windows 原生 32x32，DPI 缩放后可能更大）
+        try {
+            Class<?> sfClass = Class.forName("sun.awt.shell.ShellFolder");
+            java.lang.reflect.Method getShellFolder =
+                sfClass.getDeclaredMethod("getShellFolder", java.io.File.class);
+            Object shellFolder = getShellFolder.invoke(null, file);
+            java.lang.reflect.Method getIcon =
+                sfClass.getDeclaredMethod("getIcon", boolean.class);
+            img = pickBiggerIcon(img, (java.awt.Image) getIcon.invoke(shellFolder, true));
+        } catch (Exception e) {
+            LOG.debug("ShellFolder.getIcon failed: {}", e.getMessage());
+        }
+
+        // 方案2: FileSystemView（官方 API，跨平台；Windows 上通常只有 16x16）
         try {
             javax.swing.filechooser.FileSystemView fsv =
                 javax.swing.filechooser.FileSystemView.getFileSystemView();
             javax.swing.Icon icon = fsv.getSystemIcon(file);
             if (icon instanceof javax.swing.ImageIcon) {
-                img = ((javax.swing.ImageIcon) icon).getImage();
+                img = pickBiggerIcon(img, ((javax.swing.ImageIcon) icon).getImage());
             } else if (icon != null) {
-                // 非 ImageIcon — 渲染到 BufferedImage
                 int size = Math.max(icon.getIconWidth(), 32);
                 java.awt.image.BufferedImage bi =
                     new java.awt.image.BufferedImage(size, size, java.awt.image.BufferedImage.TYPE_INT_ARGB);
                 java.awt.Graphics2D g = bi.createGraphics();
                 icon.paintIcon(null, g, 0, 0);
                 g.dispose();
-                img = bi;
+                img = pickBiggerIcon(img, bi);
             }
         } catch (Exception e) {
             LOG.debug("FileSystemView.getSystemIcon failed: {}", e.getMessage());
         }
 
-        // 方案2: ShellFolder 内部 API（Windows 原生大图标 32x32）
-        if (img == null || img.getWidth(null) < 8) {
-            try {
-                Class<?> sfClass = Class.forName("sun.awt.shell.ShellFolder");
-                java.lang.reflect.Method getShellFolder =
-                    sfClass.getDeclaredMethod("getShellFolder", java.io.File.class);
-                Object shellFolder = getShellFolder.invoke(null, file);
-                java.lang.reflect.Method getIcon =
-                    sfClass.getDeclaredMethod("getIcon", boolean.class);
-                java.awt.Image largeIcon = (java.awt.Image) getIcon.invoke(shellFolder, true);
-                if (largeIcon != null && largeIcon.getWidth(null) >= 8) {
-                    img = largeIcon;
-                }
-            } catch (Exception e) {
-                LOG.debug("ShellFolder.getIcon failed: {}", e.getMessage());
-            }
-        }
-
         // 方案3: ImageIcon 直接加载（对 .ico 有效）
-        if (img == null || img.getWidth(null) < 8) {
-            try {
-                javax.swing.ImageIcon icon = new javax.swing.ImageIcon(file.getAbsolutePath());
-                java.awt.Image loaded = icon.getImage();
-                if (loaded != null && loaded.getWidth(null) >= 8) {
-                    img = loaded;
-                }
-            } catch (Exception e) {
-                LOG.debug("ImageIcon fallback failed: {}", e.getMessage());
+        try {
+            img = pickBiggerIcon(img, new javax.swing.ImageIcon(file.getAbsolutePath()).getImage());
+        } catch (Exception e) {
+            LOG.debug("ImageIcon fallback failed: {}", e.getMessage());
+        }
+
+        return img;
+    }
+
+    /**
+     * 按指定尺寸提取 exe 图标.
+     *
+     * <p>Windows 上 {@code FileSystemView.getSystemIcon(file, w, h)} 支持任意尺寸
+     * （实测 48/64/128/256 均可用，远好于默认的 16x16），取不到再回退到"候选里最大者"。
+     *
+     * @return 提取到的图像；失败返回 {@code null}
+     */
+    private java.awt.image.BufferedImage extractIconSized(java.io.File exe, int size) {
+        try {
+            javax.swing.Icon ic = javax.swing.filechooser.FileSystemView.getFileSystemView()
+                    .getSystemIcon(exe, size, size);
+            if (ic != null && ic.getIconWidth() >= 8 && ic.getIconHeight() >= 8) {
+                java.awt.image.BufferedImage bi = new java.awt.image.BufferedImage(
+                        ic.getIconWidth(), ic.getIconHeight(), java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                java.awt.Graphics2D g = bi.createGraphics();
+                ic.paintIcon(null, g, 0, 0);
+                g.dispose();
+                return bi;
             }
+        } catch (Throwable t) {
+            LOG.debug("getSystemIcon(size) failed: {}", t.getMessage());
         }
 
-        if (img == null) {
-            return "{\"iconUrl\":\"\"}";
-        }
+        java.awt.Image img = biggestIconImage(exe);
+        if (img == null) return null;
+        int side = Math.max(iconSide(img), 1);
+        java.awt.image.BufferedImage bi = new java.awt.image.BufferedImage(
+                side, side, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g = bi.createGraphics();
+        g.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION,
+                java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(img, 0, 0, side, side, null);
+        g.dispose();
+        return bi;
+    }
 
-        return imageToBase64DataUrl(img);
+    /**
+     * 平台图标（程序图标）.
+     *
+     * <p>缓存文件 {@code {用户数据目录}/{swId}/{swId}.png}（如 {@code Weixin/Weixin.png}）：
+     * <ul>
+     *   <li>已有缓存图且平台软件路径未变 → 直接返回缓存图（不重复提取）</li>
+     *   <li>缺缓存图，或软件路径变了 → 重新按 64x64 提取并覆盖缓存（记录 {@code icon_src_path}）</li>
+     *   <li>提取失败 → 什么都不做，保留原图继续使用</li>
+     * </ul>
+     *
+     * @param swId 平台标识
+     * @return JSON: {@code {iconUrl: "data:image/png;base64,..."}}（无图时为 {@code ""}）
+     */
+    public String getSwIcon(String swId) {
+        ObjectNode result = MAPPER.createObjectNode();
+        result.put("iconUrl", "");
+        try {
+            ConfigManager cm = ConfigManager.getInstance();
+            java.nio.file.Path userDir = cm.getUserDataPath();
+            if (userDir == null) return result.toString();
+            java.nio.file.Path png = userDir.resolve(swId).resolve(swId + ".png");
+
+            SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+            String instPath = accessor.tryGetPathOf(swId,
+                    com.jfmultichat.swcore.SwCoreConstants.LocalSettingKey.INST_PATH);
+            instPath = instPath == null ? "" : instPath.replace('\\', '/');
+
+            String prevSrc = "";
+            ObjectNode swCfg = cm.getSwConfig(swId);
+            if (swCfg != null && swCfg.hasNonNull("icon_src_path")) {
+                prevSrc = swCfg.get("icon_src_path").asText("");
+            }
+
+            boolean hasPng = java.nio.file.Files.exists(png);
+            boolean pathChanged = !instPath.isBlank() && !instPath.equals(prevSrc);
+            if ((!hasPng || pathChanged) && !instPath.isBlank()) {
+                // 单一职责：只看"软件路径"存的值是不是一个程序（exe 文件）。
+                // 不是程序（目录 / 其它文件）就什么都不做——"目录里该是哪个 exe"是路径探测流程的事。
+                java.io.File exe = new java.io.File(instPath);
+                boolean isProgram = exe.isFile() && instPath.toLowerCase().endsWith(".exe");
+                if (isProgram) {
+                    java.awt.image.BufferedImage img = extractIconSized(exe, SW_ICON_SIZE);
+                    if (img != null) {
+                        java.nio.file.Files.createDirectories(png.getParent());
+                        javax.imageio.ImageIO.write(img, "png", png.toFile());
+                        cm.updateSwConfig(swId, java.util.Map.of("icon_src_path", instPath));
+                        hasPng = true;
+                        LOG.info("[图标] 提取并缓存平台图标: {} -> {} ({}x{})",
+                                exe, png, img.getWidth(), img.getHeight());
+                    } else {
+                        LOG.warn("[图标] 提取失败，保留原图标: {}", png);
+                    }
+                } else {
+                    LOG.debug("[图标] 软件路径不是程序文件，跳过提取: {}", instPath);
+                }
+            }
+
+            if (hasPng) {
+                byte[] bytes = java.nio.file.Files.readAllBytes(png);
+                result.put("iconUrl", "data:image/png;base64,"
+                        + java.util.Base64.getEncoder().encodeToString(bytes));
+            }
+        } catch (Exception e) {
+            LOG.warn("getSwIcon failed for {}: {}", swId, e.getMessage());
+        }
+        return result.toString();
+    }
+
+    /** 取尺寸更大的那个图标（null 安全） */
+    private static java.awt.Image pickBiggerIcon(java.awt.Image a, java.awt.Image b) {
+        if (b == null) return a;
+        return iconSide(b) > iconSide(a) ? b : a;
+    }
+
+    /**
+     * 图标边长（像素）.
+     *
+     * <p>关键：{@code sun.awt.shell.ShellFolder.getIcon(true)} 返回的是**惰性图片**，
+     * 直接 {@code img.getWidth(null)} 会得到 -1（旧代码因此永远用不上 32x32 大图标，
+     * 只用了 FileSystemView 的 16x16 小图标 → 放大到 22/32px 就模糊）。
+     * 用 {@link javax.swing.ImageIcon} 包一层可触发同步加载，拿到真实尺寸。
+     */
+    private static int iconSide(java.awt.Image img) {
+        if (img == null) return 0;
+        try {
+            javax.swing.ImageIcon ii = new javax.swing.ImageIcon(img);
+            return Math.max(ii.getIconWidth(), ii.getIconHeight());
+        } catch (Exception e) {
+            int w = img.getWidth(null);
+            return w > 0 ? w : 0;
+        }
     }
 
     /**
@@ -1661,9 +1830,12 @@ public class JsBridge {
             if (w <= 0) w = 32;
             if (h <= 0) h = 32;
 
-            // 限制最大尺寸
-            if (w > 64) w = 64;
-            if (h > 64) h = 64;
+            // 限制最大尺寸（保持宽高比；上限放宽到 256 以便高清图标不被压小）
+            int maxSide = Math.max(w, h);
+            if (maxSide > 256) {
+                w = Math.max(1, w * 256 / maxSide);
+                h = Math.max(1, h * 256 / maxSide);
+            }
 
             java.awt.image.BufferedImage bi =
                 new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB);

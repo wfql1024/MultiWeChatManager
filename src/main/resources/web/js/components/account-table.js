@@ -35,6 +35,15 @@ JFC.AccountTable = (function() {
     // 且行悬浮/选中的感应区天然覆盖整行（占位单元格属于该行）。
     var FILLER_COL = '_filler';
 
+    /** 状态标签（名称前缀）：失效 → 禁用 → 隐藏；只作视觉前缀，不参与排序 */
+    function renderNameTags(acc) {
+        var html = '';
+        if (acc.invalid) html += '<span class="manage-name-tag manage-invalid-tag">失效</span>';
+        if (acc.disabled) html += '<span class="manage-name-tag manage-disabled-tag">禁用</span>';
+        if (acc.hidden) html += '<span class="manage-name-tag manage-hidden-tag">隐藏</span>';
+        return html;
+    }
+
     // ---- 工具函数 ----
     function escapeHtml(str) {
         if (!str) return '';
@@ -144,21 +153,24 @@ JFC.AccountTable = (function() {
         this._hoverRow = null;
     };
 
-    // ---- 列配置持久化（LocalGlobalConfig.json.account_columns.<id>） ----
+    // ---- 列配置持久化（LocalGlobalConfig.json.account_columns.<表id>） ----
     AccountTable.prototype._loadColumnPrefs = function() {
         var prefs = null;
         try {
             var cfg = JFC.bridge.getGlobalConfig();
-            if (cfg) {
-                if (cfg.account_columns && cfg.account_columns[this.id]) {
-                    prefs = cfg.account_columns[this.id];
-                } else if (cfg['account_columns.' + this.id]) {
-                    // 兼容历史扁平键：旧版本保存时写成了 "account_columns.<表id>"，
-                    // 读取端（嵌套结构）永远读不到。这里迁移一次，下次保存即写回嵌套结构。
-                    prefs = cfg['account_columns.' + this.id];
-                }
+            if (cfg && cfg.account_columns && cfg.account_columns[this.id]) {
+                prefs = cfg.account_columns[this.id];
             }
         } catch (e) { /* 配置缺失时使用默认值 */ }
+        // 列定义结构性变化（如"原生程序"表删掉"状态"列、加"版本"列）→ 旧配置里的列名已不存在，
+        // 直接作废回默认值，避免沿用已经不存在的列宽/显隐（例如旧的 path 显示、58px 列宽）
+        if (prefs && prefs.visible) {
+            var stale = false;
+            for (var k in prefs.visible) {
+                if (Object.prototype.hasOwnProperty.call(prefs.visible, k) && !this.colByKey(k)) { stale = true; break; }
+            }
+            if (stale) prefs = null;
+        }
         var self = this;
         this.columns.forEach(function(col) {
             self.colVisible[col.key] = col.mandatory ? true :
@@ -180,13 +192,18 @@ JFC.AccountTable = (function() {
                 width[col.key] = this.colWidth[col.key];
             }, this);
 
-            // 必须写成嵌套的 account_columns.<表id>（与 _loadColumnPrefs 的读取结构一致）。
-            // 曾错写为扁平键 "account_columns.xxx"，读取端永远读不到 → 勾选显示列不生效。
-            // saveGlobalConfig 是顶层浅合并，故先读出现有 account_columns 再合并，避免清掉其它表的配置。
+            // 写嵌套的 account_columns.<表id>（唯一读取结构）。
+            // saveGlobalConfig 是顶层浅合并，故先读出现有 account_columns 再合并，避免清掉其它表的配置；
+            // 同时剔除历史遗留的 visible/width 顶层项（更早版本把单表配置直接挂在 account_columns 下）。
             var all = {};
             try {
                 var cfg = JFC.bridge.getGlobalConfig();
-                if (cfg && cfg.account_columns) all = cfg.account_columns;
+                var exist = cfg && cfg.account_columns;
+                if (exist) {
+                    Object.keys(exist).forEach(function(k) {
+                        if (k !== 'visible' && k !== 'width') all[k] = exist[k];
+                    });
+                }
             } catch (e) { /* 读不到就从空对象开始 */ }
             all[this.id] = { visible: visible, width: width };
 
@@ -306,7 +323,8 @@ JFC.AccountTable = (function() {
         // 占位列单元格：让本行铺满整行（悬浮/选中感应区覆盖到容器右边缘）
         html += '<td class="manage-col-filler"></td>';
 
-        return '<tr data-acc-id="' + escapeAttr(id) + '" class="' + (isSelected ? 'selected' : '') + '">' +
+        return '<tr data-acc-id="' + escapeAttr(id) + '" class="' +
+            (isSelected ? 'selected' : '') + (acc.invalid ? ' invalid-row' : '') + '">' +
             html + '</tr>';
     };
 
@@ -333,13 +351,19 @@ JFC.AccountTable = (function() {
         if (key === 'display_name') {
             var quickActions = '<span class="manage-row-quick-actions">' +
                 '<button class="qa-btn' + (ctx.hidden ? ' on' : '') + '" data-action="toggle-hidden" data-id="' + escapeAttr(id) + '"' +
-                ' title="' + (ctx.hidden ? '取消隐藏' : '隐藏') + '">' + (ctx.hidden ? '已隐藏' : '隐藏') + '</button>' +
+                ' title="' + (ctx.hidden ? '显示账号' : '隐藏账号') + '">' + (ctx.hidden ? '显示' : '隐藏') + '</button>' +
                 '<button class="qa-btn danger" data-action="delete" data-id="' + escapeAttr(id) + '" title="删除账号">删除</button>' +
                 '</span>';
+            // 名称前缀状态标签（失效/禁用/隐藏）：只是视觉前缀，排序仍按 display_name 数据，不受标签影响
+            // 注意：td 本身不能用 display:flex —— 那会让 td 不再是 table-cell，
+            // 浏览器插入匿名 cell，td 自己的 padding/border 就画在里面，名称列会多出一条"下划线"。
+            // 所以 flex 放在内层 div（.manage-nickname-inner）上。
             return '<td data-col="display_name" class="manage-nickname-cell">' +
+                '<div class="manage-nickname-inner">' +
+                renderNameTags(acc) +
                 '<span class="dn-text">' + escapeHtml(ctx.displayName) + '</span>' +
-                (acc.disabled ? '<span class="manage-disabled-tag">禁用</span>' : '') +
-                quickActions + '</td>';
+                quickActions +
+                '</div></td>';
         }
         if (key === 'hotkey' && this.enableHotkey) {
             var hotkeyHtml = acc.hotkey
@@ -355,22 +379,29 @@ JFC.AccountTable = (function() {
     };
 
     // ---- 排序 ----
+    // 排序：先按排序字段，再做"置底分组"——隐藏账号次置底、失效账号永远置底
+    // （Array#sort 在现代浏览器是稳定排序，同组内保持上面的排序结果）
     AccountTable.prototype._sortAccounts = function(accounts) {
         var field = this.sortField;
         var asc = this.sortAsc;
-        if (!field) return accounts.slice();
-        return accounts.slice().sort(function(a, b) {
-            var va = a[field], vb = b[field];
-            if (va == null) va = '';
-            if (vb == null) vb = '';
-            if (typeof va === 'boolean') va = va ? '1' : '0';
-            if (typeof vb === 'boolean') vb = vb ? '1' : '0';
-            if (typeof va === 'string' && typeof vb === 'string') {
-                var cmp = va.localeCompare(vb, 'zh-CN');
-                return asc ? cmp : -cmp;
-            }
-            return 0;
-        });
+        var list = accounts.slice();
+        if (field) {
+            list.sort(function(a, b) {
+                var va = a[field], vb = b[field];
+                if (va == null) va = '';
+                if (vb == null) vb = '';
+                if (typeof va === 'boolean') va = va ? '1' : '0';
+                if (typeof vb === 'boolean') vb = vb ? '1' : '0';
+                if (typeof va === 'string' && typeof vb === 'string') {
+                    var cmp = va.localeCompare(vb, 'zh-CN');
+                    return asc ? cmp : -cmp;
+                }
+                return 0;
+            });
+        }
+        var rank = function(a) { return a.invalid ? 2 : (a.hidden ? 1 : 0); };
+        list.sort(function(a, b) { return rank(a) - rank(b); });
+        return list;
     };
 
     // ---- 事件绑定（render 后：行级元素） ----
@@ -587,7 +618,6 @@ JFC.AccountTable = (function() {
             this.selectedIds.clear();
             this.render();
             this._updateSelectionUI();
-            flashTitle('已' + (action === 'hide' ? '隐藏' : '显示') + ' ' + count + ' 项');
         } else if (action === 'delete') {
             if (!confirm('确定要删除选中的 ' + count + ' 个账号吗？此操作不可撤销。')) return;
             var self2 = this;
@@ -598,7 +628,6 @@ JFC.AccountTable = (function() {
             this.selectedIds.clear();
             this.render();
             this._updateSelectionUI();
-            flashTitle('已删除 ' + count + ' 项');
         }
     };
 
@@ -612,8 +641,10 @@ JFC.AccountTable = (function() {
             if (acc) {
                 acc.hidden = !acc.hidden;
                 JFC.bridge.saveAccount(swId, accountId, JSON.stringify({ hidden: acc.hidden }));
-                var row = this.tbody.querySelector('tr[data-acc-id="' + accountId + '"]');
-                if (row) this._updateRowQuickActions(row, acc);
+                // 整表重渲染：隐藏状态变化会改变置底顺序 + 名称右侧的"隐藏"标签
+                this.render();
+                this._updateSelectionUI();
+                // 不再往平台标题区打"已隐藏/已显示"通知：行上已有"隐藏"标签 + 按钮文案变化，足够可见
             }
         } else if (action === 'delete') {
             if (!confirm('确定要删除账号 "' + accountId + '" 吗？此操作不可撤销。')) return;
@@ -623,9 +654,7 @@ JFC.AccountTable = (function() {
                 this.selectedIds.delete(accountId);
                 this.render();
                 this._updateSelectionUI();
-                flashTitle('已删除');
             } else {
-                flashTitle('删除失败', true);
             }
         }
     };
@@ -680,18 +709,15 @@ JFC.AccountTable = (function() {
         var btn = row.querySelector('.qa-btn[data-action="toggle-hidden"]');
         if (btn) {
             btn.classList.toggle('on', !!acc.hidden);
-            btn.textContent = acc.hidden ? '已隐藏' : '隐藏';
-            btn.title = acc.hidden ? '取消隐藏' : '隐藏';
+            btn.textContent = acc.hidden ? '显示' : '隐藏';
+            btn.title = acc.hidden ? '显示账号' : '隐藏账号';
         }
-        var dnCell = row.querySelector('.manage-nickname-cell');
-        var tag = row.querySelector('.manage-disabled-tag');
-        if (acc.disabled && !tag && dnCell) {
-            var t = document.createElement('span');
-            t.className = 'manage-disabled-tag';
-            t.textContent = '禁用';
-            dnCell.insertBefore(t, dnCell.querySelector('.manage-row-quick-actions'));
-        } else if (!acc.disabled && tag) {
-            tag.remove();
+        // 名称前缀标签整组重画（失效/禁用/隐藏，固定顺序）
+        var inner = row.querySelector('.manage-nickname-inner');
+        if (inner) {
+            inner.querySelectorAll('.manage-name-tag').forEach(function(t) { t.remove(); });
+            var tags = renderNameTags(acc);
+            if (tags) inner.insertAdjacentHTML('afterbegin', tags);
         }
     };
 
@@ -867,9 +893,9 @@ JFC.AccountTable = (function() {
             if (cell.classList.contains('hidden-col')) return;
             var cs = window.getComputedStyle(cell);
             var pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
-            // 名称列：只量名称（.dn-text）+"禁用"小标签，量不到悬浮操作按钮的按钮文字
+            // 名称列：只量名称（.dn-text）+"禁用/失效/隐藏"前缀标签，不量悬浮操作按钮的按钮文字
             var text = '';
-            cell.querySelectorAll('.dn-text, .manage-disabled-tag').forEach(function(sp) { text += sp.textContent; });
+            cell.querySelectorAll('.dn-text, .manage-name-tag').forEach(function(sp) { text += sp.textContent; });
             if (!text) text = cell.innerText || cell.textContent || '';
             text = text.replace(/\s+/g, ' ').trim();
             var w = measureTextWidth(text, cs.fontFamily, cs.fontSize, cs.fontWeight) + pad;
@@ -1232,19 +1258,6 @@ JFC.AccountTable = (function() {
         return { update: update, bar: bar };
     }
 
-    // ---- 标题闪烁反馈（与 main.js flashTitle 相同，独立实现避免循环依赖） ----
-    function flashTitle(msg, isError) {
-        var el = document.querySelector('#page-main #manage-detail-title');
-        if (!el) return;
-        var orig = el.textContent;
-        var origColor = el.style.color;
-        el.textContent = msg;
-        el.style.color = isError ? 'var(--color-danger)' : 'var(--color-success)';
-        setTimeout(function() {
-            el.textContent = orig;
-            el.style.color = origColor;
-        }, 1500);
-    }
 
     // 对外暴露
     AccountTable.closeMenus = function() { closeColMenu(); closeRowMenu(); activeTable = null; };

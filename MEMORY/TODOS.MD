@@ -65,3 +65,22 @@
 - [x] 自定义 overlay 滚动条体系（表内横向/账号区域纵向/设置区域纵向），JavaFX 原生滚动条弃用
 - [x] 高度链锁定、整行悬浮高亮（JS 层）、分割线（--divider-solid）、空表行高/居左、列名（头像空/名称）
 - [x] 规则文件统一 AGENTS.md（项目）+ ~/.dsh/AGENTS.md（全局）
+
+---
+
+# 待推进（自 AGENTS.md 第八节迁入，2026-10-05）
+
+
+见 `MEMORY/TODOS.MD`：
+
+- 登录页面、统计页面 — 占位未实现
+- 数据库层（SQLite + DAO）— 未开始
+- 平台图标提取 — ExtractIconExW 完善
+- 二进制补丁引擎 — 从 Python 迁移，待评估合法性
+- SSL 握手 — 打包版 handshake_failure
+- LoggerUtils.java — 待移植
+- Handle 操作 — JNA 仿照 pywinhandle.py 重写约 300-500 行
+- 登录状态 UI 接入 — 数据已自动维护落库（EventBus 流A），界面未展示
+- 其余账号操作的事件驱动迁移 — 删除/批量/头像/快捷键等按 EventBus 流B 增量迁移
+
+---

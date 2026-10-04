@@ -245,3 +245,116 @@
 - 名称列"调至合适宽度" = 名称宽 + 悬浮按钮预留宽(QUICK_ACTIONS_WIDTH=96)；量取时只取 .dn-text/.manage-disabled-tag，排除按钮文字
 - 悬浮按钮改 visibility 常驻占位（原 display 切换会在悬浮瞬间挤压 .dn-text → 文字截断/位移）
 - 列表内容（td）统一等宽字体 var(--font-family-mono)，表头仍用界面字体
+
+## 无效账号并入 + 原生程序表 + 名称清洗（2026-10-04）
+
+- 名称列下划线 = 账号 ID 里的 `_`（无 remark/nickname/alias 时名称回退成 ID），非 CSS；新增 cleanDisplayName：名称等于 ID 时去下划线（仅显示层，ID 列不变）
+- 无效账号 = SwAccData − 原生 − 共存，按类型并入两表：invalid=true → 灰字 + "失效"标签 + 永远置底；删除无效账号表/容器/列定义（四表→三表）
+- 置底分组：_sortAccounts 稳定排序按 rank（invalid 2 / hidden 1 / 其他 0）分组
+- 原生程序表：数据源 = inst_path 的 exe；列 名称(必选)/版本(必选)/路径(默认隐藏)，状态列删除；新增桥方法 getSwProgramData(swId) → {name,path,version}（版本取 exe 文件版本）
+- 旧列配置作废：持久化配置含已不存在的列名时整份回默认（修复 origin_prog 沿用旧 path 显示/58px 列宽）
+- 悬浮按钮文案 已隐藏/隐藏 → 显示/隐藏；名称右侧新增"隐藏"标签；切换后整表重渲染以落到次置底
+
+## 名称列横线根因 + 程序表头像 + 标签前缀（2026-10-05）
+
+- 名称列横线根因：td 自身 display:flex → 不再是 table-cell，浏览器插入匿名 cell，td 的 padding/border 画在内层盒子 → 名称格底边比同行其它列错位（JavaFX WebView 实测：旧 nameTd bottom=116.0 vs idTd bottom=126.5；新写法两格一致 239.5）
+- 修法：td 保持 table-cell，flex 移到 .manage-nickname-inner
+- 悬浮按钮改 position:absolute + 悬浮 display（不占位、不挤压）；自适应宽度仍额外加 QUICK_ACTIONS_WIDTH
+- 状态标签改名称前缀 .manage-name-tag（失效→禁用→隐藏），排序仍按 display_name
+- 原生程序表加头像列（程序图标，复用 iconCache/extractExeIcon）；行高与账号表一致
+- 新技巧：用项目同款 JavaFX WebView 离屏渲染（stage 移到 -4000,-4000 + executeScript 读几何）验证 WebView 真实布局；javac 需 -encoding UTF-8，module-path 需含 javafx.media
+
+## 高清图标 + 悬浮按钮边框 + 把手宽度 + 收起禁拖（2026-10-05）
+
+- 图标模糊根因：FileSystemView 只给 16x16；32x32 需 sun.awt.shell（未 add-exports + 惰性图片 getWidth=-1 双重拦截）。修复：extractIconFromFile 三方案取最大（pickBiggerIcon/iconSide 用 ImageIcon 触发加载），PNG 上限 64→256；build.gradle.kts 与 package-exe.bat 补 --add-exports java.desktop/sun.awt.shell；实测取到 32px
+- 悬浮按钮上下边框消失：.manage-nickname-inner 的 overflow:hidden 裁掉了超出文字行高的绝对定位按钮 → 去掉 overflow + min-height:22px
+- 把手被拉伸：SVG width:100% + preserveAspectRatio=none，viewBox 必须随窗口宽度同步；此前 resize 未调 initHandleSvg → 补 resize 监听 + 每次重算 path d
+- 收起状态禁止拖动底部分割线（拖动会跳到最小高度与鼠标脱节）：onDown 判 collapsed 直接返回 + 光标 syncHandleDragCursor（收起 default / 展开 ns-resize）
+
+## 平台图标 64x64 + PNG 缓存 + 侧栏/标签/记住平台（2026-10-05）
+
+- FileSystemView.getSystemIcon(file,w,h) 支持任意尺寸（实测 48/64/128/256）→ 用它取 64x64，无需 add-exports
+- 新增 JsBridge.getSwIcon(swId)：缓存 {userData}/{sw}/{sw}.png；有图且 inst_path 未变直接用；缺图或路径变（比对 LocalSwConfig.icon_src_path）才重提取 64x64 覆盖；失败保留原图
+- 左栏与原生程序表共用该缓存；实测 64x64/300+颜色/PNG 2-3KB
+- 悬浮按钮改回文档流内（挤压名称 + …截断），背景不透明（--bg-card / --qa-on-bg）
+- 状态标签字号 13px（正文-1）+ padding 1px 8px + 圆角 6px + line-height 1.4
+- 最左栏收不起兜底：文档级 mousemove + 400ms elementFromPoint 定时校验；统一 collapse()
+- 移除左栏"统计"按钮（页面与图标资源保留）
+- 记住最后平台：LocalGlobalConfig.last_sw_id，启动直接进入
+
+## 设置区域高度/展开态全局统一 + 图标程序校验 + 光标 + 撤销下划线清洗（2026-10-05）
+
+- 窗帘高度/展开态由 per-platform 改全局（LocalGlobalConfig.settings_height/settings_expanded）；未启用平台（三路径未填全）强制展开且不写全局记录；高度拖动始终全局；旧版按平台记录仅作一次性迁移
+- 跨平台丝滑动画保留：animatePanelHeight(targetH, null, _prevHeight)，全局收起→切到未启用平台时从 0 平滑展开
+- 改造前代码与经验结晶存档：MEMORY/ARCHIVE_settings_curtain_animation.md（AGENTS 第二十四节引用）
+- getSwIcon 增加"必须是程序"校验（isFile && .exe；目录则拼远程 executable，拼不到跳过），避免把文件夹图标当程序图标
+- 分割线光标改 CSS 驱动（body.curtain-collapsed）+ MutationObserver 同步（原内联 cursor + 改类前调用导致错位）
+- 删除 cleanDisplayName（用户澄清是口误：要的是去分割线，不是去下划线）
+
+## 单一职责修正 + 高度漂移根治（2026-10-05）
+
+- getSwIcon 只判断"软件路径是不是程序"（isFile && .exe），删掉目录+executable 拼接（那是路径探测流程的活）
+- 未启用判定改为只读绿框：validatePathInput 写 input-ok/warn/error 类 + swPathGreen[swId][key]；isSwSettingsComplete 只读三项是否都绿；检查结果晚到用 enforceCurtainForCompleteness() 补强制展开
+- 高度漂移根因：拖动 content.maxHeight = 面板高-20、动画收尾却用 面板高（+手动展开清空 maxHeight）→ 两套算法；修复为唯一入口 applyPanelHeight(H)（成对设置），_prevHeight 改取语义高度
+
+## 设置区域切换"闪一下"根因：写死的 20px（2026-10-05）
+
+- 现象：跨平台切换 100->100 无动画却闪到 ~120 再回 100；100->300 动画到 ~320 再弹回 300
+- 离屏 WebView 逐 25ms 采样四方案高度轨迹：V0(现状 -20)=100->80 闪 / V1(border-box 无内容上限)=滚动条失效 / V2(实测chrome=0)=不丝滑 / V3(面板与内容同值+动画期间内容解除上限)=精确稳定且滚动条正常
+- 根因：内容区 max-height 写死 面板高-20，动画期间却 none → 动画到 H、停下回落 H-20，两套高度语义
+- 修复：applyPanelHeight(h) 面板与内容区同值，去掉一切偏移数字；教训：父子同高度约束必须同值
+
+## LocalGlobalConfig 冗余清理 + 账号区滚动自动收起（2026-10-05）
+
+- 清理前 11 个顶层节点 → 后 5 个（theme/account_columns/last_sw_id/settings_height/settings_expanded）
+- 删除：manage_settings_collapsed（连未引用常量一起删）、manage_settings_height、account_columns.<表id> 扁平键、account_columns.visible/width、account_columns.invalid_acc、account_columns.origin_prog（含已删列 status）
+- 新增语义：JsBridge.saveGlobalConfig 中 JSON null = 删除该字段；main.js cleanLegacyGlobalConfig() 启动跑一次；account-table.js 去掉扁平键兼容读取 + 保存时剔除 visible/width
+- 两份实际配置文件已就地清理并备份 .bak-20261005
+- 账号区滚轮"有效滚动"（scrollTop 真变化）→ 自动收起设置区域；无滚动条/到边界算无效；收起统一走 toggleSettingsPanel(false)，未启用平台不记录
+
+## "刚进平台从 0 涨上来"根因与修复（2026-10-05）
+
+- 离屏采样三场景：A 首次(起点180)=16->180->200 / B 稳定=200 无动画 / C 起点0=0->20->65->...->200（与用户描述一致）
+- 根因：未启用平台的本地收起不写全局记录，但面板 inline 高度已是 0；切平台时全局=展开→shouldExpand=true，动画起点取面板当前高度=0 → 走了 0→目标 的假动画
+- 每个平台点开一遍后消失：首次访问自动探测路径→平台变启用→不再有本地收起残影
+- 修复：首次进入直接落位；本地收起+全局展开直接落位；其余照常动画（全局收起→强制展开仍从 0 涨，保留 4.3 效果）；新增 _prevWasCollapsed/_panelShownOnce
+
+## 设置区域单一渲染依据重构（2026-10-05）
+
+- 现象：记录收起时重启 → 记录收起但渲染展开；切换平台时两套规则拉扯几天才统一（多条写入路径读不同状态）
+- 重构：desiredCurtainState() 唯一推导（全局记录 + 未启用平台强制展开）；applyCurtainRender() 唯一 DOM 写入；setCurtainExpanded/setCurtainHeight 先改事实来源再渲染；enforceCurtainForCompleteness 只重调渲染；_lastRender 取代 _prevHeight/_prevWasCollapsed/_panelShownOnce
+- 进平台先同步跑绿框检查（避免 200ms 后强制展开造成闪烁）；setPathGreen 在变启用时清 forcedLocalState
+- 删除旧 applyCurtainState 与 toggleSettingsPanel 内的独立动画，统一走 animatePanelHeight
+
+## 未启用平台改为"每次渲染强制展开"（2026-10-05）
+
+- 回归问题：单一渲染依据重构后，未启用平台变成了"遵从上次本地状态"，不再强制展开
+- 修正：desiredCurtainState 对未启用平台恒返回 expanded=true（每次渲染都无视记录强制展开）；用户本次访问里的临时收起只通过 applyCurtainRender(override) 生效一次，不写记录、不留本地状态（删除 forcedLocalState）
+- setPathGreen 只在"启用↔未启用"真正变化时触发重渲染（swEnabledKnown），避免每次失焦检查都把面板重新撑开
+
+## 去掉显示/隐藏的标题区通知 + 标题区写入点排查（2026-10-05）
+
+- 移除 account-table.js 单行"显示/隐藏"操作后的 flashTitle('已隐藏/已显示')（行上已有"隐藏"标签 + 按钮文案变化）
+- 标题区（#manage-detail-title）写入点排查：main.js setTitleDisplay（平台进入/备注保存/标题输入回车，唯一正当写入）、main.js flashTitle（仅用于"获取登录窗口尺寸"的成败提示）、account-table.js flashTitle（批量隐藏/显示、批量删除、单行删除 的反馈）
+
+## 彻底移除"借标题当提示条"（flashTitle）（2026-10-05）
+
+- 删除 main.js 与 account-table.js 各自的 flashTitle() 实现（两处独立实现），以及全部 8 个调用点：
+  account-table.js（批量隐藏/显示、批量删除、单行删除成功/失败）、main.js（获取登录窗口尺寸的三种提示）
+- 标题区 #manage-detail-title 现在只有正当写入：setTitleDisplay()（平台进入 / 保存备注 / 标题输入回车），以及标题输入框的 keydown/blur 绑定
+- 副作用：删除失败、获取尺寸失败等错误路径不再有任何提示（行会消失/字段保持空白即为结果）；如需反馈应另建非标题的提示渠道
+
+---
+
+# 当前事实速查（2026-10-05 快照）
+
+- **表结构**：3 张表 —— 原生程序（勾选框/图标/名称/版本/路径）、原生账号（7 列）、共存账号（7 列 + 最后登录账号）；无效账号已并入后两张（置底 + 灰字 + "失效"标签）
+- **列配置**：`LocalGlobalConfig.json` → `account_columns.<表id>`（嵌套；`saveGlobalConfig` 顶层浅合并，写入前先读出再合并）
+- **设置区窗帘**：`settings_height` / `settings_expanded`（全局一份）；未启用平台（三路径非全绿）每次渲染强制展开且不写记录；唯一渲染入口 `applyCurtainRender()`
+- **路径绿框**：由 `validatePathInput` → `JFC.bridge.checkPath` 判定，写 `input-ok/warn/error` 类 + `swPathGreen[swId][key]`；窗帘只读
+- **平台图标**：缓存 `{用户数据目录}/{swId}/{swId}.png`（64×64），来源路径记在 `LocalSwConfig.<sw>.icon_src_path`
+- **启动行为**：读 `last_sw_id` 直接进入上次的平台页；`manage_settings_*` 等历史节点已清理（现只有 theme / account_columns / last_sw_id / settings_height / settings_expanded）
+- **账号区交互**：滚轮**有效滚动**（`scrollTop` 真的变化）→ 自动收起设置区（未启用平台只收起不记录）
+- **行/列观感**：行高统一（32px 头像列 + `tr[data-acc-id]` 兜底 44px）；悬浮/选中为不透明色块层；表格末尾有占位列
+- **标题区**：只显示平台名称（`setTitleDisplay`），无任何"借标题当通知"的写入
+- **文档**：`AGENTS.md`（全局视图，136 行）｜`MEMORY/{DEV_LOGS,LESSONS,FACTS,DECISIONS,TODOS,MEMORY}.MD`｜`docs/project_structure.md`

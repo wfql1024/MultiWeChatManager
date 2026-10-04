@@ -25,6 +25,13 @@ JFC.components.navSidebar = (function() {
         }, EXPAND_DELAY);
     }
 
+    /** 收起侧栏 */
+    function collapse() {
+        clearTimeout(expandTimer);
+        expandTimer = null;
+        if (sidebar) sidebar.classList.remove('expanded');
+    }
+
     function init() {
         sidebar = document.getElementById('nav-sidebar');
         if (!sidebar) return;
@@ -47,11 +54,27 @@ JFC.components.navSidebar = (function() {
             scheduleExpand();   // 明显移动：重新计时
         });
 
-        sidebar.addEventListener('mouseleave', function() {
-            clearTimeout(expandTimer);
-            expandTimer = null;
-            sidebar.classList.remove('expanded');
-        });
+        sidebar.addEventListener('mouseleave', collapse);
+
+        // ---- 兜底 1：文档级 mousemove ----
+        // 点击平台后账号列表加载会卡一下，期间的 mouseleave 可能被吞掉，
+        // 侧栏就会一直保持展开（只有再次进出才收回）。这里补上文档级监听：
+        // 指针在侧栏外移动且侧栏已展开 → 立即收起。
+        document.addEventListener('mousemove', function(e) {
+            lastX = e.clientX;
+            lastY = e.clientY;
+            if (sidebar && sidebar.classList.contains('expanded') && !sidebar.contains(e.target)) {
+                collapse();
+            }
+        }, true);
+
+        // ---- 兜底 2：展开期间定时校验 ----
+        // 鼠标停住不动、事件完全丢失时也能收起：用 elementFromPoint 看指针是否还在侧栏内。
+        setInterval(function() {
+            if (!sidebar || !sidebar.classList.contains('expanded')) return;
+            var el = document.elementFromPoint(lastX, lastY);
+            if (!el || !sidebar.contains(el)) collapse();
+        }, 400);
 
         // ---- 导航项点击 ----
         var items = sidebar.querySelectorAll('.nav-item');

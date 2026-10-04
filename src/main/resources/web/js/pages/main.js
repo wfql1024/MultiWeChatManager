@@ -10,7 +10,7 @@ JFC.pages.main = (function() {
     // ---- 状态 ----
     var currentSwId = null;
     var swConfigData = {};
-    var settingsCollapsed = {};   // swId → bool, 从 local_config.json 持久化
+    var curtainGlobal = null;     // 设置区域展开/高度：全局统一（LocalGlobalConfig）{height, collapsed}
     var iconCache = {};           // swId → iconUrl (base64 data URL)
     var debounceTimers = {};      // field → timerId, 用于防抖保存
     var expandTimer = null;
@@ -32,19 +32,14 @@ JFC.pages.main = (function() {
             { key: 'alias',        label: '平台内ID', mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-alias-cell' },
             { key: 'nickname',     label: '昵称',     mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-nickname-data-cell' }
         ],
-        // 程序类表（原生程序）
+        // 程序类表（原生程序）：头像(程序图标) / 名称 / 版本（必显）/ 路径（默认隐藏）
+        // 头像列与账号表同款，保证行高一致（32px 头像 + 内边距）
         program: [
             { key: 'check',   label: '勾选框', mandatory: true,  defVisible: true,  defWidth: 40, fixed: true },
-            { key: 'name',    label: '名称',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 160 },
-            { key: 'path',    label: '路径',   mandatory: false, sortable: true, defVisible: true,  defWidth: 320 },
-            { key: 'status',  label: '状态',   mandatory: false, sortable: true, defVisible: true,  defWidth: 90  }
-        ],
-        // 无效账号（原因列）
-        invalid: [
-            { key: 'check',   label: '勾选框', mandatory: true,  defVisible: true,  defWidth: 40, fixed: true },
-            { key: 'display_name', label: '名称', mandatory: true, sortable: true, defVisible: true, defWidth: 200 },
-            { key: 'id',      label: 'ID',     mandatory: false, sortable: true, defVisible: true,  defWidth: 150 },
-            { key: 'reason',  label: '无效原因', mandatory: false, sortable: true, defVisible: true, defWidth: 200 }
+            { key: 'avatar',  label: '',       mandatory: true,  defVisible: true,  defWidth: 56, fixed: true },
+            { key: 'name',    label: '名称',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 220 },
+            { key: 'version', label: '版本',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 120 },
+            { key: 'path',    label: '路径',   mandatory: false, sortable: true, defVisible: false, defWidth: 360 }
         ]
     };
     // 共存账号 = 账号列 + 「最后登录账号」（linked_acc：该共存 exe 当前关联/最后登录的原生账号）；非必选、默认显示
@@ -91,19 +86,6 @@ JFC.pages.main = (function() {
         return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    /** 短暂闪烁标题作为反馈 */
-    function flashTitle(msg, isError) {
-        var el = getEl('manage-detail-title');
-        if (!el) return;
-        var orig = el.textContent;
-        var origColor = el.style.color;
-        el.textContent = msg;
-        el.style.color = isError ? 'var(--color-danger)' : 'var(--color-success)';
-        setTimeout(function() {
-            el.textContent = orig;
-            el.style.color = origColor;
-        }, 1500);
-    }
 
     // ---- 初始化 ----
     function init() {
@@ -113,28 +95,91 @@ JFC.pages.main = (function() {
         }
         isInitialized = true;
 
-        // 加载持久化的窗帘偏好
-        loadCurtainPreferences();
-        // 初始化四个可复用表实例（原生程序/原生账号/共存账号/无效账号）
+        // 初始化三个可复用表实例（原生程序/原生账号/共存账号）
         initAccountTables();
+        cleanLegacyGlobalConfig();   // 清理 LocalGlobalConfig 中已废弃的冗余节点（需在表实例就绪后跑）
         initManageSidebar();
+        initAccountWheelCollapse();
         loadPlatformList();
         bindManageEvents();
     }
 
-    // ---- 初始化四个可复用表（组件 JFC.AccountTable） ----
+    /**
+     * 账号区域"有效滚动" → 自动收起设置区域.
+     *
+     * <p>有效 = 滚轮真的滚动了账号区域（`scrollTop` 发生变化）。若账号区域根本没有纵向滚动条、
+     * 或已滚到边界，`scrollTop` 不变 → 视为无效滚动，不收起重置。
+     * 收起走 `toggleSettingsPanel(false)`：已启用平台会写全局记录，未启用（设置不完备）平台只本地收起、不记录。
+     */
+    function initAccountWheelCollapse() {
+        var area = document.querySelector('#page-main .account-area-inner') ||
+                   document.querySelector('.account-area-inner');
+        if (!area || area._wheelCollapseBound) return;
+        area._wheelCollapseBound = true;
+        area.addEventListener('wheel', function() {
+            if (!currentSwId || isSettingsCollapsed()) return;
+            var before = area.scrollTop;
+            // 原生滚动属于事件的默认动作：下一轮事件循环再比对 scrollTop 才能判断"是否真的滚动了"
+            setTimeout(function() {
+                if (!currentSwId || isSettingsCollapsed()) return;
+                if (area.scrollTop === before) return;   // 没有滚动条 / 已到边界 → 无效滚动
+                toggleSettingsPanel(false);
+            }, 0);
+        }, { passive: true });
+    }
+
+    /**
+     * 清理 LocalGlobalConfig.json 中**已无任何读写代码**的历史遗留节点.
+     *
+     * <p>（值传 null = 删除该字段，由 JsBridge.saveGlobalConfig → ConfigManager.updateGlobalConfig 实现）
+     *  · `manage_settings_height` / `manage_settings_collapsed`：早期"全局设置区高度/各平台收起态"记录，
+     *    已被 `settings_height` / `settings_expanded` 取代，代码里连常量都删了
+     *  · `account_columns.<表id>` 扁平键：曾错写为扁平键的列配置（读取端只认嵌套结构）
+     *  · `account_columns.visible` / `account_columns.width`：更早版本把单表配置直接挂在 account_columns 下
+     *  · `account_columns.<已删除的表>`（如 invalid_acc）：表已不存在
+     */
+    function cleanLegacyGlobalConfig() {
+        try {
+            var g = JFC.bridge.getGlobalConfig() || {};
+            var dead = { manage_settings_height: null, manage_settings_collapsed: null };
+
+            // 顶层扁平键（account_columns.<表id>）
+            Object.keys(g).forEach(function(k) {
+                if (k.indexOf('account_columns.') === 0) dead[k] = null;
+            });
+
+            // account_columns 内部：剔除历史结构（visible/width）与已删除的表
+            var ac = g.account_columns;
+            if (ac) {
+                var validIds = {};
+                Object.keys(accountTables).forEach(function(id) { validIds[id] = true; });
+                var pruned = {};
+                Object.keys(ac).forEach(function(k) {
+                    if (k === 'visible' || k === 'width') return;   // 更早版本的历史结构
+                    if (!validIds[k]) return;                       // 表已删除
+                    pruned[k] = ac[k];
+                });
+                if (Object.keys(pruned).length !== Object.keys(ac).length) {
+                    dead.account_columns = pruned;                  // 有变化才整体覆盖
+                }
+            }
+
+            JFC.bridge.saveGlobalConfig(JSON.stringify(dead));
+        } catch (e) { /* 清理失败不影响使用 */ }
+    }
+
+    // ---- 初始化三个可复用表（组件 JFC.AccountTable） ----
+    // 无效账号（SwAccData 有记录但磁盘不存在）不再单独成表，而是并入原生/共存表，置底 + 灰字 + "失效"标签
     function initAccountTables() {
         var defs = [
             { key: 'origin_prog', title: '原生程序', columns: TABLE_COLUMNS.program, enableHotkey: false, defaultSortField: 'name' },
             { key: 'origin_acc',  title: '原生账号', columns: TABLE_COLUMNS.account, enableHotkey: true,  defaultSortField: 'display_name' },
-            { key: 'coexist_acc', title: '共存账号', columns: TABLE_COLUMNS.coexist, enableHotkey: true,  defaultSortField: 'display_name' },
-            { key: 'invalid_acc', title: '无效账号', columns: TABLE_COLUMNS.invalid, enableHotkey: false, defaultSortField: '' }
+            { key: 'coexist_acc', title: '共存账号', columns: TABLE_COLUMNS.coexist, enableHotkey: true,  defaultSortField: 'display_name' }
         ];
         var containers = {
             origin_prog: 'acc-table-native-prog',
             origin_acc: 'acc-table-native-acc',
-            coexist_acc: 'acc-table-coexist-acc',
-            invalid_acc: 'acc-table-invalid-acc'
+            coexist_acc: 'acc-table-coexist-acc'
         };
         defs.forEach(function(def) {
             accountTables[def.key] = new JFC.AccountTable({
@@ -189,30 +234,192 @@ JFC.pages.main = (function() {
         });
     }
 
-    // ---- 窗帘偏好持久化（per-platform → LocalSwConfig.json.settings_expanded） ----
-    function loadCurtainPreferences() {
-        // 改为在 selectPlatform 时按需加载，此处只清空缓存
-        settingsCollapsed = {};
+    // ---- 设置区域展开/收起 + 高度：全局统一（LocalGlobalConfig.settings_height / settings_expanded） ----
+    // 规则（2026-10-05 改造）：
+    //  · 高度与展开/收起态都是【全局一份】，任一平台切换/拖动/点击都写回同一记录，所有平台共用
+    //  · 例外：设置不完备的平台（"未启用平台"）强制展开，其展开/收起【不写全局记录】；高度拖动照常同步全局
+    //  · 旧版按平台记录（LocalSwConfig.<sw>.settings_height / .settings_expanded）仅用于一次性迁移
+    var CURTAIN_DEFAULT_HEIGHT = 180;
+    /** 三个路径类设置项（也是"绿框"状态的三个 key） */
+    var PATH_FIELD_KEYS = ['inst_path', 'data_dir', 'dll_dir'];
+    /** swId → { inst_path: bool, data_dir: bool, dll_dir: bool }：路径检查流程写入，窗帘判断只读 */
+    var swPathGreen = {};
+    /** 上次算出来的"该平台是否启用"（只有启用状态发生变化时才需要重渲染） */
+    var swEnabledKnown = {};
+    /** 上一次真正渲染出来的状态（唯一渲染依据的"上一帧"，用于决定是否动画、从哪开始） */
+    var _lastRender = { shown: false, expanded: false, byRecord: false, height: 0 };
+    /** 同步跑绿框检查期间，抑制"完备性变化"触发的重渲染 */
+    var _suppressCurtainEnforce = false;
+
+    function loadCurtainGlobal(swId) {
+        if (curtainGlobal) return curtainGlobal;
+        curtainGlobal = { height: CURTAIN_DEFAULT_HEIGHT, collapsed: false };
+        try {
+            var g = JFC.bridge.getGlobalConfig() || {};
+            var h = parseInt(g.settings_height, 10);
+            if (h > 0) curtainGlobal.height = h;
+            if (g.hasOwnProperty('settings_expanded')) curtainGlobal.collapsed = !g.settings_expanded;
+            // 一次性迁移：全局还没有高度记录时，沿用旧版当前平台记录的高度
+            if (!(h > 0) && swId) {
+                var swCfg = JFC.bridge.getSwConfig(swId) || {};
+                var legacyH = parseInt(swCfg.settings_height, 10);
+                if (legacyH > 0) {
+                    curtainGlobal.height = legacyH;
+                    saveCurtainGlobalHeight(legacyH);
+                }
+            }
+        } catch (e) { /* 用默认值 */ }
+        return curtainGlobal;
     }
 
-    function loadCurtainStateForSw(swId) {
-        try {
-            var config = JFC.bridge.getSwConfig(swId);
-            if (config && config.hasOwnProperty('settings_expanded')) {
-                settingsCollapsed[swId] = !config.settings_expanded;
+    function saveCurtainGlobalHeight(h) {
+        if (!curtainGlobal) curtainGlobal = { height: CURTAIN_DEFAULT_HEIGHT, collapsed: false };
+        curtainGlobal.height = Math.round(h);
+        try { JFC.bridge.saveGlobalConfig(JSON.stringify({ settings_height: curtainGlobal.height })); } catch (e) { }
+    }
+
+    function saveCurtainGlobalExpanded(expanded) {
+        if (!curtainGlobal) curtainGlobal = { height: CURTAIN_DEFAULT_HEIGHT, collapsed: false };
+        curtainGlobal.collapsed = !expanded;
+        try { JFC.bridge.saveGlobalConfig(JSON.stringify({ settings_expanded: !!expanded })); } catch (e) { }
+    }
+
+    /**
+     * 平台设置是否完备（完备 = "启用平台"）.
+     *
+     * <p>单一职责：本函数**只读取**三个路径项的"绿框"状态；
+     * 绿框与否由路径检查流程（`validatePathInput` → `JFC.bridge.checkPath`）判定并记录在 `swPathGreen`。
+     * 三项都绿 = 启用；任一项非绿 = 未启用（强制展开，且展开/收起不影响全局记录）。
+     * 尚未检查过的平台按"启用"处理，等检查结果回来再由 `enforceCurtainForCompleteness()` 兜底强制展开。
+     */
+    function isSwSettingsComplete(swId) {
+        var st = swPathGreen[swId];
+        if (!st) return true;
+        for (var i = 0; i < PATH_FIELD_KEYS.length; i++) {
+            if (st[PATH_FIELD_KEYS[i]] !== true) return false;
+        }
+        return true;
+    }
+
+    /** 记录/更新某平台某个路径项的绿框状态（由路径检查流程调用） */
+    function setPathGreen(swId, key, green) {
+        if (!swId || PATH_FIELD_KEYS.indexOf(key) === -1) return;
+        if (!swPathGreen[swId]) swPathGreen[swId] = {};
+        swPathGreen[swId][key] = green === true;
+        // 只有"启用 ↔ 未启用"发生变化时才需要重渲染（避免每次失焦检查都把面板重新撑开/收起）
+        var enabled = isSwSettingsComplete(swId);
+        if (swEnabledKnown[swId] !== undefined && swEnabledKnown[swId] !== enabled) {
+            enforceCurtainForCompleteness();
+        }
+        swEnabledKnown[swId] = enabled;
+    }
+
+    /**
+     * ===== 设置区域展开/收起/高度的**唯一渲染依据**（2026-10-05 重构）=====
+     *
+     * 期望状态（desiredCurtainState）由两样东西推导，别处不再各自为政：
+     *   1) 全局记录（LocalGlobalConfig 的 settings_height / settings_expanded）——所有平台共用
+     *   2) 例外：未启用平台（三个路径不全是绿框）**每次渲染都无视记录强制展开**；用户在本次访问里
+     *      临时收起只在"这一次渲染"生效（`applyCurtainRender(true/false)` 的 override），
+     *      **不写记录、也不留本地状态**，下次渲染依旧强制展开
+     *
+     * 规则：**所有渲染只走 applyCurtainRender()；启用平台的状态变更一律先写记录再渲染** ——
+     * 不再有第二条写入面板高度/类名的路径互相撕扯。
+     */
+    function desiredCurtainState(swId) {
+        var g = loadCurtainGlobal(swId);
+        var enabled = isSwSettingsComplete(swId);
+        return {
+            enabled: enabled,
+            forced: !enabled,
+            // 未启用平台：**每次渲染都无视记录强制展开**（本地怎么改都不写记录，下次渲染又回到展开）
+            expanded: enabled ? !g.collapsed : true,
+            height: g.height
+        };
+    }
+
+    /** 设置区域的两个方向箭头 */
+    function setCurtainArrows(expanded) {
+        var up = document.querySelector('#page-main #handle-arrow-up');
+        var down = document.querySelector('#page-main #handle-arrow-down');
+        if (up) up.style.display = expanded ? '' : 'none';
+        if (down) down.style.display = expanded ? 'none' : '';
+    }
+
+    /** 应用"收起"外观（类 + 箭头 + 高度 0）；分割线光标由 body 类经 MutationObserver 同步 */
+    function applyCollapsedCurtain() {
+        var panel = getEl('manage-settings-panel');
+        if (!panel) return;
+        // 双 RAF 等待 WebView 完成新内容布局
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() { initHandleSvg(); });
+        });
+        panel.classList.add('collapsed');
+        panel.style.maxHeight = '0px';
+        setCurtainArrows(false);
+    }
+
+    /** 按"期望状态"渲染（唯一的 DOM 写入点；状态没变化时直接返回，不重放动画）
+     *  @param overrideExpanded 仅本次渲染生效的展开态（未启用平台允许用户在本次访问里临时收起） */
+    function applyCurtainRender(overrideExpanded) {
+        var panel = getEl('manage-settings-panel');
+        if (!panel || !currentSwId) return;
+        var st = desiredCurtainState(currentSwId);
+        var prev = _lastRender;
+        var expanded = (typeof overrideExpanded === 'boolean') ? overrideExpanded : st.expanded;
+
+        // 状态与上一帧完全一致 → 什么都不做（避免重复动画/无谓重排）
+        if (prev.shown && prev.expanded === expanded &&
+            (expanded ? Math.round(prev.height) === Math.round(st.height) : true)) {
+            return;
+        }
+
+        if (!expanded) {
+            applyCollapsedCurtain();
+            _lastRender = { shown: true, expanded: false, byRecord: !st.forced, height: 0 };
+            return;
+        }
+
+        panel.classList.remove('collapsed');
+        setCurtainArrows(true);
+
+        var animate = false, fromHeight = 0;
+        if (prev.shown) {
+            if (!prev.expanded && !prev.byRecord) {
+                animate = false;                                      // 上次是"未启用平台的本地收起" → 直接落位
             } else {
-                settingsCollapsed[swId] = false; // 无记录时默认展开
+                animate = true;
+                fromHeight = prev.expanded ? prev.height : 0;          // 记录本身是收起 → 从 0 平滑展开（4.3）
             }
-        } catch(e) {
-            settingsCollapsed[swId] = false;
+        }
+        if (animate) animatePanelHeight(st.height, null, fromHeight);
+        else applyPanelHeight(st.height);
+        _lastRender = { shown: true, expanded: true, byRecord: !st.forced, height: st.height };
+    }
+
+    /** 切换展开/收起：启用平台先写记录再渲染；未启用平台只"这一次渲染"生效（不写任何持久状态） */
+    function setCurtainExpanded(expand) {
+        if (!currentSwId) return;
+        if (isSwSettingsComplete(currentSwId)) {
+            saveCurtainGlobalExpanded(expand);       // 启用平台：先写记录，再按记录渲染
+            applyCurtainRender();
+        } else {
+            // 未启用平台：不写记录、也不留本地状态 —— 下次渲染依旧强制展开
+            applyCurtainRender(expand);
         }
     }
 
-    function saveCurtainPreference(swId, collapsed) {
-        settingsCollapsed[swId] = collapsed;
-        try {
-            JFC.bridge.updateSwField(swId, 'settings_expanded', JSON.stringify(!collapsed));
-        } catch(e) { /* 忽略 */ }
+    /** 拖动改变高度：写记录 + 立即按记录渲染 */
+    function setCurtainHeight(h) {
+        saveCurtainGlobalHeight(h);
+        applyPanelHeight(h);
+        _lastRender.height = Math.max(0, Math.round(h || 0));
+    }
+
+    /** 路径检查结果更新后调用：完备性可能变了 → 按期望状态重渲染（幂等） */
+    function enforceCurtainForCompleteness() {
+        if (_suppressCurtainEnforce) return;
+        applyCurtainRender();
     }
 
     // ---- 加载平台列表 ----
@@ -248,24 +455,34 @@ JFC.pages.main = (function() {
         // 预加载各平台的 inst_path 图标
         preloadPlatformIcons(platforms);
         renderPlatformList(platforms);
+
+        // 恢复上次显示的平台：存在则直接进入平台页（不再停在"点击平台"的占位页）
+        if (!currentSwId) {
+            var lastSw = null;
+            try {
+                var g = JFC.bridge.getGlobalConfig();
+                lastSw = g && g.last_sw_id ? g.last_sw_id : null;
+            } catch (e) { /* 无配置则忽略 */ }
+            var exists = lastSw && platforms.some(function(p) { return p.swId === lastSw; });
+            if (exists) {
+                currentSwId = null;          // 确保 selectPlatform 不会被"重复加载"拦截
+                selectPlatform(lastSw);
+            }
+        }
     }
 
     function preloadPlatformIcons(platforms) {
         platforms.forEach(function(p) {
             if (iconCache[p.swId]) return;
-            try {
-                var config = JFC.bridge.getSwConfig(p.swId);
-                if (config && config.inst_path && config.inst_path.toLowerCase().endsWith('.exe')) {
-                    loadIconForSwId(p.swId, config.inst_path);
-                }
-            } catch(e) { /* 忽略 */ }
+            loadIconForSwId(p.swId);
         });
     }
 
+    /** 平台图标：Java 侧优先用缓存的 {userData}/{sw}/{sw}.png，缺图或软件路径变更时才重新提取 */
     function loadIconForSwId(swId, exePath) {
         if (iconCache[swId]) return;
         try {
-            var result = JFC.bridge.extractExeIcon(exePath);
+            var result = JFC.bridge.getSwIcon(swId);
             if (result && result.iconUrl) {
                 iconCache[swId] = result.iconUrl;
                 refreshPlatformIcon(swId);
@@ -376,16 +593,13 @@ JFC.pages.main = (function() {
     }
 
     /** 切换前记录上一个平台的高度，供切换动画使用 */
-    var _prevHeight = 180;
 
     function selectPlatformInternal(swId) {
         // 通知 Java：进入平台页 → 自动触发数据维护（登录态/PID/互斥体等，后台执行）
         JFC.bridge.notifyPlatformEntered(swId);
-        var panel = getEl('manage-settings-panel');
-        if (panel && currentSwId) {
-            _prevHeight = panel.getBoundingClientRect().height | 0;
-        }
         currentSwId = swId;
+        // 记住最后显示的平台（下次启动直接进入该平台页）
+        try { JFC.bridge.saveGlobalConfig(JSON.stringify({ last_sw_id: swId })); } catch (e) { /* 忽略 */ }
         // 清空所有表的选中状态
         Object.keys(accountTables).forEach(function(k) { accountTables[k].clearSelection(); });
 
@@ -413,7 +627,6 @@ JFC.pages.main = (function() {
         show('manage-page-detail');
 
         // 加载数据
-        loadCurtainStateForSw(swId);
         loadSwConfig(swId);
         loadAccountData(swId);
         // 进入平台页即刷新设置区域滚动条（覆盖内容填充与展开动画时序，不依赖用户调整高度才显示）
@@ -448,24 +661,17 @@ JFC.pages.main = (function() {
         // 渲染设置表单
         renderSettingsPanel(config);
 
-        var shouldExpand = settingsCollapsed[swId] !== true;
-        var savedH = loadHeightPreference(swId);
+        // 先同步跑一遍三个路径的"绿框"检查（checkPath 是同步桥调用）：
+        // 让"是否启用"在渲染前就确定，避免"先按记录渲染、200ms 后检查结果回来又强制展开"的闪烁
+        _suppressCurtainEnforce = true;
+        PATH_FIELD_KEYS.forEach(function(key) {
+            var input = getEl('mg-conf-' + key);
+            if (input) validatePathInput(input);
+        });
+        _suppressCurtainEnforce = false;
 
-        if (shouldExpand) {
-            // 展开：先设箭头 + 解除 collapsed，再由 animatePanelHeight 接管高度（避免 applyCurtainState 清除 maxHeight 造成闪屏）
-            getEl('manage-settings-panel').classList.remove('collapsed');
-            var aUp = document.querySelector('#page-main #handle-arrow-up');
-            var aDown = document.querySelector('#page-main #handle-arrow-down');
-            if (aUp) aUp.style.display = '';
-            if (aDown) aDown.style.display = 'none';
-            animatePanelHeight(savedH, null, _prevHeight);
-        } else {
-            applyCurtainState(false);
-            var aUp2 = document.querySelector('#page-main #handle-arrow-up');
-            var aDown2 = document.querySelector('#page-main #handle-arrow-down');
-            if (aUp2) aUp2.style.display = 'none';
-            if (aDown2) aDown2.style.display = '';
-        }
+        // 渲染的唯一依据 = 期望状态（全局记录 + 未启用平台的强制展开）
+        applyCurtainRender();
 
         if (swId === 'TestSw') startHeightTest(); else stopHeightTest();
         initHeightDrag();
@@ -634,13 +840,10 @@ JFC.pages.main = (function() {
                     var input = getEl('mg-conf-login_size');
                     if (input) input.value = size;
                     saveFieldNow('login_size', size);
-                    flashTitle('尺寸已获取');
-                    return;
+                        return;
                 }
             }
-            flashTitle('未找到远程配置中的尺寸', true);
         } catch(e) {
-            flashTitle('获取失败', true);
         }
     }
 
@@ -911,33 +1114,39 @@ JFC.pages.main = (function() {
         JFC.bridge.detectPathsAsync.apply(JFC.bridge, args);
     }
 
-    // ---- 路径输入框失焦检查 ----
+    // ---- 路径输入框失焦检查（"绿框"的判定就在这里，窗帘状态只读取结果） ----
     function validatePathInput(input) {
         var key = input.getAttribute('data-field');
         if (!key || !currentSwId) return;
         var val = input.value.trim();
-        if (!val) { clearPathHint(input); return; }
+        if (!val) { clearPathHint(input); setPathGreen(currentSwId, key, false); return; }
 
         var result = JFC.bridge.checkPath(currentSwId, key, val);
-        if (!result) { clearPathHint(input); return; }
+        if (!result) { clearPathHint(input); setPathGreen(currentSwId, key, false); return; }
 
         removePathHint(input);
         var hint = document.createElement('span');
         hint.className = 'mg-path-hint';
 
+        // 同时用类名标记状态（input-ok = 绿框），供其它流程只读判断
+        input.classList.remove('input-ok', 'input-warn', 'input-error');
         if (result.valid) {
             input.style.borderColor = 'var(--color-success)';
+            input.classList.add('input-ok');
             hint.className += ' hint-ok';
             hint.textContent = result.reason || '路径有效';
         } else if (result.exists) {
             input.style.borderColor = '#e6a817';
+            input.classList.add('input-warn');
             hint.className += ' hint-warn';
             hint.textContent = result.reason || '路径不符合预期';
         } else {
             input.style.borderColor = 'var(--color-danger)';
+            input.classList.add('input-error');
             hint.className += ' hint-err';
             hint.textContent = result.reason || '路径不存在';
         }
+        setPathGreen(currentSwId, key, result.valid === true);
 
         var wrap = input.closest('.mg-input-dropdown-wrap');
         if (wrap) wrap.appendChild(hint);
@@ -946,6 +1155,9 @@ JFC.pages.main = (function() {
         if (result.valid || result.exists) {
             saveFieldNow(key, val);
         }
+
+        // 检查结果可能揭示"未启用"（例如刚进入平台时结果还没回来）→ 强制展开
+        enforceCurtainForCompleteness();
     }
 
     function removePathHint(input) {
@@ -955,6 +1167,7 @@ JFC.pages.main = (function() {
             if (old) old.remove();
         }
         input.style.borderColor = '';
+        input.classList.remove('input-ok', 'input-warn', 'input-error');
     }
 
     function clearPathHint(input) {
@@ -1058,15 +1271,44 @@ JFC.pages.main = (function() {
         var container = svg.parentElement;
         var pw = container ? container.clientWidth : 600;
         var halfW = Math.round(pw / 2);
+        // SVG 是 width:100% + preserveAspectRatio="none"：viewBox 宽度必须与元素宽度一致，
+        // 否则把手会被横向拉伸/压缩（窗口最大化后把手变宽就是这个原因）→ 每次尺寸变化都重设。
         svg.setAttribute('viewBox', (-halfW) + ' 0 ' + (2*halfW) + ' 20');
         var path = svg.querySelector('#handle-curve');
-        if (path && !path.getAttribute('d')) {
+        if (path) {
             path.setAttribute('d', buildHandleCurveD(halfW));
         }
     }
 
     // ---- 设置区域高度拖动 ----
     var _dragStartY = 0, _dragStartH = 0, _dragged = false;
+
+    /** 是否处于收起状态（收起时不允许拖动底部分割线，只能点把手展开） */
+    function isSettingsCollapsed() {
+        var panel = getEl('manage-settings-panel');
+        return !!(panel && panel.classList.contains('collapsed'));
+    }
+
+    /**
+     * 同步"收起"状态到 body（CSS 据此切换分割线拖动区的光标：展开 ns-resize / 收起 default）。
+     *
+     * <p>用 MutationObserver 监听面板的 collapsed 类：面板状态在多处被改动
+     * （applyCurtainState / toggleSettingsPanel / 切换平台…），逐个改光标容易漏，
+     * 这里统一由状态类驱动，绝不会出现"收起/展开光标都一样"的错位。
+     */
+    function installCurtainStateClassSync() {
+        var panel = getEl('manage-settings-panel');
+        if (!panel) return;
+        document.body.classList.toggle('curtain-collapsed', isSettingsCollapsed());
+        if (panel._curtainSyncBound) return;
+        panel._curtainSyncBound = true;
+        try {
+            var mo = new MutationObserver(function() {
+                document.body.classList.toggle('curtain-collapsed', isSettingsCollapsed());
+            });
+            mo.observe(panel, { attributes: true, attributeFilter: ['class', 'style'] });
+        } catch (e) { /* 老 WebView 无 MutationObserver：至少初始状态是对的 */ }
+    }
 
     function initHeightDrag() {
         var left = document.querySelector('#page-main #handle-drag-left');
@@ -1075,8 +1317,14 @@ JFC.pages.main = (function() {
         if (left && left._dragBound) return;
         if (right && right._dragBound) return;
 
+        // 窗口尺寸变化 → 同步把手 viewBox（否则 width:100% 的 SVG 会被横向拉伸/压缩）
+        window.addEventListener('resize', function() { initHandleSvg(); });
+        installCurtainStateClassSync();
+
         function onDown(e) {
             if (e.button !== 0) return;
+            // 收起状态：不允许拖动分割线（此时面板高度为 0，拖动会瞬间跳到最小高度、与鼠标脱节）
+            if (isSettingsCollapsed()) return;
             e.preventDefault();
             e.stopPropagation();
             var panel = getEl('manage-settings-panel');
@@ -1099,8 +1347,7 @@ JFC.pages.main = (function() {
             var minH = 100;
             var newH = Math.max(minH, Math.min(maxH, _dragStartH - (_dragStartY - e.clientY)));
             panel.style.transition = 'none';
-            panel.style.maxHeight = newH + 'px';
-            if (content) content.style.maxHeight = (newH - 20) + 'px';
+            applyPanelHeight(newH);
             initHandleSvg();
         }
         function onUp(e) {
@@ -1111,7 +1358,7 @@ JFC.pages.main = (function() {
             if (_dragged) {
                 e.stopPropagation();
                 var h = panel ? (parseInt(panel.style.maxHeight) || panel.scrollHeight || 180) : 180;
-                if (currentSwId) saveHeightPreference(currentSwId, h);
+                setCurtainHeight(h);   // 写记录 + 同步渲染状态
             }
         }
         if (left) { left._dragBound = true; left.addEventListener('mousedown', onDown); }
@@ -1149,8 +1396,7 @@ JFC.pages.main = (function() {
             // 动画结束后恢复内容区 max-height 限制（否则 content 高度=内容高，永不溢出、滚动条不出现）
             // JavaFX transitionend 不可靠，用 setTimeout 兜底
             setTimeout(function() {
-                var c = getEl('manage-settings-content');
-                if (c) c.style.maxHeight = targetHeight + 'px';
+                applyPanelHeight(targetHeight);
                 if (callback) callback();
             }, 400);
         });
@@ -1170,107 +1416,32 @@ JFC.pages.main = (function() {
         if (_testTimer) { clearInterval(_testTimer); _testTimer = null; }
     }
 
-    function saveHeightPreference(swId, h) {
-        try {
-            JFC.bridge.updateSwField(swId, 'settings_height', JSON.stringify(Math.round(h)));
-        } catch(e) {}
-    }
-
-    function loadHeightPreference(swId) {
-        try {
-            var config = JFC.bridge.getSwConfig(swId);
-            if (config && config.settings_height) {
-                return parseInt(config.settings_height);
-            }
-        } catch(e) {}
-        return 180; // 默认高度
-    }
-
-    function applyCurtainState(expand) {
+    /**
+     * 统一的"设置区域高度"应用：面板与内容区**取同一个高度值**。
+     *
+     * <p>踩坑记录（2026-10-05 实测 JavaFX WebView）：
+     * 曾经给内容区写死 `面板高 - 20` 作为"预留"，而动画期间内容区是解除上限的，
+     * 于是动画能涨到 `H`、停下来却回落到 `H - 20` →
+     * 切换平台时表现为"没动画也闪一下 / 有动画先冲到 H+20 再弹回"。
+     * 实测结论：面板与内容区同值即可，靠内容区自己的 `overflow-y:auto` 出滚动条（写死偏移量只会造成不一致）。
+     */
+    function applyPanelHeight(panelH) {
         var panel = getEl('manage-settings-panel');
-        if (!panel) return;
-
-        // 双 RAF 等待 WebView 完成新内容布局
-        requestAnimationFrame(function() {
-            requestAnimationFrame(function() {
-                initHandleSvg();
-            });
-        });
-
-        var arrowUp = document.querySelector('#page-main #handle-arrow-up');
-        var arrowDown = document.querySelector('#page-main #handle-arrow-down');
-        if (expand) {
-            panel.classList.remove('collapsed');
-            panel.style.maxHeight = '';
-            var content = getEl('manage-settings-content');
-            if (content) content.style.maxHeight = '';
-            if (arrowUp) arrowUp.style.display = '';
-            if (arrowDown) arrowDown.style.display = 'none';
-        } else {
-            panel.classList.add('collapsed');
-            panel.style.maxHeight = '0px';
-            if (arrowUp) arrowUp.style.display = 'none';
-            if (arrowDown) arrowDown.style.display = '';
-        }
+        var content = getEl('manage-settings-content');
+        var h = Math.max(0, Math.round(panelH || 0));
+        if (panel) panel.style.maxHeight = h + 'px';
+        if (content) content.style.maxHeight = h + 'px';
+        return h;
     }
 
+    /** 点把手：切换展开/收起（先改事实来源，再统一渲染） */
     function toggleSettingsPanel(expand) {
-        if (!currentSwId) return;
-        var panel = getEl('manage-settings-panel');
-        if (!panel) return;
-
-        var arrowUp = document.querySelector('#page-main #handle-arrow-up');
-        var arrowDown = document.querySelector('#page-main #handle-arrow-down');
-
-        if (expand) {
-            panel.classList.remove('collapsed');
-            var realH = parseInt(panel.style.maxHeight) || panel.scrollHeight || 180;
-            // 如果之前是收起状态（高度0），目标至少是默认展开高度
-            if (realH < 100) realH = panel.scrollHeight || 180;
-            panel.style.transition = 'none';
-            panel.style.maxHeight = '0px';
-            panel.offsetHeight;
-            if (arrowUp) arrowUp.style.display = '';
-            if (arrowDown) arrowDown.style.display = 'none';
-            requestAnimationFrame(function() {
-                panel.style.transition = 'max-height 0.3s ease';
-                panel.style.maxHeight = realH + 'px';
-                var done = function() {
-                    panel.style.maxHeight = '';
-                    panel.removeEventListener('transitionend', done);
-                    initHandleSvg();
-                };
-                panel.addEventListener('transitionend', done);
-            });
-        } else {
-            var curH = parseInt(panel.style.maxHeight) || panel.scrollHeight || 180;
-            panel.style.maxHeight = curH + 'px';
-            panel.offsetHeight;
-            if (arrowUp) arrowUp.style.display = 'none';
-            if (arrowDown) arrowDown.style.display = '';
-            requestAnimationFrame(function() {
-                panel.style.transition = 'max-height 0.3s ease';
-                panel.style.maxHeight = '0px';
-                panel.classList.add('collapsed');
-                var done2 = function() {
-                    panel.removeEventListener('transitionend', done2);
-                    initHandleSvg();
-                };
-                panel.addEventListener('transitionend', done2);
-            });
-        }
-
-        saveCurtainPreference(currentSwId, !expand);
-        // 展开时保存当前高度
-        if (expand) {
-            var h = parseInt(panel.style.maxHeight) || panel.scrollHeight || 180;
-            saveHeightPreference(currentSwId, h);
-        }
+        setCurtainExpanded(expand);
     }
 
-    // ---- 加载账号数据（原生账号 + 共存账号） ----
+    // ---- 加载账号/程序数据 ----
     function loadAccountData(swId) {
-        // 详情来源：SwAccData（两个表共用）
+        // 详情来源：SwAccData（两个账号表共用）
         var detailMap = {};
         var data = JFC.bridge.getSwDetailData(swId);
         if (data && data.accounts) {
@@ -1278,14 +1449,42 @@ JFC.pages.main = (function() {
         }
 
         // 原生账号 = 数据目录下的账号子目录；共存账号 = 安装目录下的共存 exe
-        var originRows = buildAccountRows(JFC.bridge.getSwExistedAccounts(swId, 'origin') || [], detailMap, false);
-        var coexistRows = buildAccountRows(JFC.bridge.getSwExistedAccounts(swId, 'coexist') || [], detailMap, true);
+        var originIds = JFC.bridge.getSwExistedAccounts(swId, 'origin') || [];
+        var coexistIds = JFC.bridge.getSwExistedAccounts(swId, 'coexist') || [];
+        var originRows = buildAccountRows(originIds, detailMap, false);
+        var coexistRows = buildAccountRows(coexistIds, detailMap, true);
+
+        // 无效账号 = SwAccData 中所有账号 − 原生账号 − 共存账号
+        // 按自身类型（共存 exe / 原生账号）并入对应表：置底 + 灰字 + "失效"标签
+        var known = {};
+        originIds.forEach(function(id) { known[id] = true; });
+        coexistIds.forEach(function(id) { known[id] = true; });
+        Object.keys(detailMap).forEach(function(id) {
+            if (known[id]) return;
+            var isCoexist = isCoexistAccount(detailMap[id], id);
+            var rows = buildAccountRows([id], detailMap, isCoexist);
+            if (!rows.length) return;
+            rows[0].invalid = true;
+            (isCoexist ? coexistRows : originRows).push(rows[0]);
+        });
 
         accountTables.origin_acc.setData(originRows);
         accountTables.coexist_acc.setData(coexistRows);
-        // 原生程序 / 无效账号：数据源待定，暂不接入
-        accountTables.origin_prog.setData([]);
-        accountTables.invalid_acc.setData([]);
+
+        // 原生程序表：软件路径对应的那个程序（图标/名称/版本/路径）
+        var prog = JFC.bridge.getSwProgramData(swId);
+        var progRows = [];
+        if (prog && (prog.name || prog.path)) {
+            progRows.push({
+                id: prog.path || prog.name,
+                display_name: prog.name || '',      // 无图标时的文字头像取首字母
+                avatar_data: programIcon(swId),
+                name: prog.name || '',
+                version: prog.version || '',
+                path: prog.path || ''
+            });
+        }
+        accountTables.origin_prog.setData(progRows);
 
         // 异步加载头像（本地文件 → URL下载 → SVG 回退）
         originRows.forEach(function(acc) { requestAccountAvatar(swId, acc, accountTables.origin_acc); });
@@ -1298,6 +1497,28 @@ JFC.pages.main = (function() {
         }
     }
 
+    /** 程序图标（原生程序表头像列）：与左栏同源，走 Java 侧的 PNG 缓存（{userData}/{sw}/{sw}.png） */
+    function programIcon(swId) {
+        if (iconCache[swId]) return iconCache[swId];
+        if (!swId || !window.JFC.bridge) return '';
+        try {
+            var res = JFC.bridge.getSwIcon(swId);
+            if (res && res.iconUrl) {
+                iconCache[swId] = res.iconUrl;
+                return res.iconUrl;
+            }
+        } catch (e) { /* 提取失败则无图标（文字占位） */ }
+        return '';
+    }
+
+    /** 判断 SwAccData 中的账号属于共存账号还是原生账号（用于无效账号归类）.
+     *  共存账号节点的特征是带 linked_acc 字段（ensureCoexistAccFormatted 会补齐）；
+     *  兜底再按 id 是否为 exe 名判断。 */
+    function isCoexistAccount(acc, id) {
+        if (acc && Object.prototype.hasOwnProperty.call(acc, 'linked_acc')) return true;
+        return /\.exe$/i.test(id || '');
+    }
+
     // ---- 账号 ID 列表 + SwAccData 详情 → 表行数据（原生/共存共用） ----
     // followLinkedAcc = 共存账号：自身只认 remark，昵称/平台内ID/头像一律取 linked_acc 指向的账号
     //   名称回退链：自身 remark > 链接账号 nickname > 链接账号 alias > 链接账号 id > 自身 id
@@ -1308,15 +1529,16 @@ JFC.pages.main = (function() {
             var linkedAccId = followLinkedAcc ? (acc.linked_acc || '') : '';
             var linked = (linkedAccId && detailMap[linkedAccId]) ? detailMap[linkedAccId] : null;
             var src = linked || {};   // 共存账号的昵称/平台内ID/头像来源
+            var name = followLinkedAcc
+                ? (acc.remark || src.nickname || src.alias || linkedAccId || id)
+                : (acc.display_name || '');
             // 标准化字段类型；未记录的新账号显示为空白详情
             return {
                 id: id,
                 nickname: followLinkedAcc ? (src.nickname || '') : (acc.nickname || ''),
                 alias: followLinkedAcc ? (src.alias || '') : (acc.alias || ''),
                 hotkey: acc.hotkey || '',
-                display_name: followLinkedAcc
-                    ? (acc.remark || src.nickname || src.alias || linkedAccId || id)
-                    : (acc.display_name || ''),
+                display_name: name,
                 avatar_url: followLinkedAcc ? (src.avatar_url || '') : (acc.avatar_url || ''),
                 hidden: acc.hidden === true || acc.hidden === 'true',
                 disabled: acc.disabled === true || acc.disabled === 'true',

@@ -62,6 +62,7 @@ jpackage --name JhiFengMultiChat --app-version %APPV3% ^
     --input "%INPUT%" --main-jar "%JAR%" --main-class com.jfmultichat.Launcher ^
     --runtime-image "%RUNTIME%" --type exe ^
     --java-options "--add-exports javafx.web/com.sun.javafx.webkit=ALL-UNNAMED" ^
+--java-options "--add-exports java.desktop/sun.awt.shell=ALL-UNNAMED" ^
     --icon logo.ico --win-dir-chooser --dest build\exe
 
 if %ERRORLEVEL% equ 0 (
@@ -78,6 +79,7 @@ jpackage --name JhiFengMultiChat --app-version %APPVER% ^
     --runtime-image "%RUNTIME%" --type app-image ^
     --icon logo.ico ^
     --java-options "--add-exports javafx.web/com.sun.javafx.webkit=ALL-UNNAMED" ^
+--java-options "--add-exports java.desktop/sun.awt.shell=ALL-UNNAMED" ^
     --dest build\portable
 
 if %ERRORLEVEL% equ 0 (

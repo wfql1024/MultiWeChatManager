@@ -464,3 +464,488 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - 名称列"调至合适宽度" = 名称宽 + 悬浮按钮预留宽(QUICK_ACTIONS_WIDTH=96)；量取时只取 .dn-text/.manage-disabled-tag，排除按钮文字
 - 悬浮按钮改 visibility 常驻占位（原 display 切换会在悬浮瞬间挤压 .dn-text → 文字截断/位移）
 - 列表内容（td）统一等宽字体 var(--font-family-mono)，表头仍用界面字体
+
+## 无效账号并入 + 原生程序表 + 名称清洗（2026-10-04）
+
+- 名称列下划线 = 账号 ID 里的 `_`（无 remark/nickname/alias 时名称回退成 ID），非 CSS；新增 cleanDisplayName：名称等于 ID 时去下划线（仅显示层，ID 列不变）
+- 无效账号 = SwAccData − 原生 − 共存，按类型并入两表：invalid=true → 灰字 + "失效"标签 + 永远置底；删除无效账号表/容器/列定义（四表→三表）
+- 置底分组：_sortAccounts 稳定排序按 rank（invalid 2 / hidden 1 / 其他 0）分组
+- 原生程序表：数据源 = inst_path 的 exe；列 名称(必选)/版本(必选)/路径(默认隐藏)，状态列删除；新增桥方法 getSwProgramData(swId) → {name,path,version}（版本取 exe 文件版本）
+- 旧列配置作废：持久化配置含已不存在的列名时整份回默认（修复 origin_prog 沿用旧 path 显示/58px 列宽）
+- 悬浮按钮文案 已隐藏/隐藏 → 显示/隐藏；名称右侧新增"隐藏"标签；切换后整表重渲染以落到次置底
+
+## 名称列横线根因 + 程序表头像 + 标签前缀（2026-10-05）
+
+- 名称列横线根因：td 自身 display:flex → 不再是 table-cell，浏览器插入匿名 cell，td 的 padding/border 画在内层盒子 → 名称格底边比同行其它列错位（JavaFX WebView 实测：旧 nameTd bottom=116.0 vs idTd bottom=126.5；新写法两格一致 239.5）
+- 修法：td 保持 table-cell，flex 移到 .manage-nickname-inner
+- 悬浮按钮改 position:absolute + 悬浮 display（不占位、不挤压）；自适应宽度仍额外加 QUICK_ACTIONS_WIDTH
+- 状态标签改名称前缀 .manage-name-tag（失效→禁用→隐藏），排序仍按 display_name
+- 原生程序表加头像列（程序图标，复用 iconCache/extractExeIcon）；行高与账号表一致
+- 新技巧：用项目同款 JavaFX WebView 离屏渲染（stage 移到 -4000,-4000 + executeScript 读几何）验证 WebView 真实布局；javac 需 -encoding UTF-8，module-path 需含 javafx.media
+
+## 高清图标 + 悬浮按钮边框 + 把手宽度 + 收起禁拖（2026-10-05）
+
+- 图标模糊根因：FileSystemView 只给 16x16；32x32 需 sun.awt.shell（未 add-exports + 惰性图片 getWidth=-1 双重拦截）。修复：extractIconFromFile 三方案取最大（pickBiggerIcon/iconSide 用 ImageIcon 触发加载），PNG 上限 64→256；build.gradle.kts 与 package-exe.bat 补 --add-exports java.desktop/sun.awt.shell；实测取到 32px
+- 悬浮按钮上下边框消失：.manage-nickname-inner 的 overflow:hidden 裁掉了超出文字行高的绝对定位按钮 → 去掉 overflow + min-height:22px
+- 把手被拉伸：SVG width:100% + preserveAspectRatio=none，viewBox 必须随窗口宽度同步；此前 resize 未调 initHandleSvg → 补 resize 监听 + 每次重算 path d
+- 收起状态禁止拖动底部分割线（拖动会跳到最小高度与鼠标脱节）：onDown 判 collapsed 直接返回 + 光标 syncHandleDragCursor（收起 default / 展开 ns-resize）
+
+## 平台图标 64x64 + PNG 缓存 + 侧栏/标签/记住平台（2026-10-05）
+
+- FileSystemView.getSystemIcon(file,w,h) 支持任意尺寸（实测 48/64/128/256）→ 用它取 64x64，无需 add-exports
+- 新增 JsBridge.getSwIcon(swId)：缓存 {userData}/{sw}/{sw}.png；有图且 inst_path 未变直接用；缺图或路径变（比对 LocalSwConfig.icon_src_path）才重提取 64x64 覆盖；失败保留原图
+- 左栏与原生程序表共用该缓存；实测 64x64/300+颜色/PNG 2-3KB
+- 悬浮按钮改回文档流内（挤压名称 + …截断），背景不透明（--bg-card / --qa-on-bg）
+- 状态标签字号 13px（正文-1）+ padding 1px 8px + 圆角 6px + line-height 1.4
+- 最左栏收不起兜底：文档级 mousemove + 400ms elementFromPoint 定时校验；统一 collapse()
+- 移除左栏"统计"按钮（页面与图标资源保留）
+- 记住最后平台：LocalGlobalConfig.last_sw_id，启动直接进入
+
+## 设置区域高度/展开态全局统一 + 图标程序校验 + 光标 + 撤销下划线清洗（2026-10-05）
+
+- 窗帘高度/展开态由 per-platform 改全局（LocalGlobalConfig.settings_height/settings_expanded）；未启用平台（三路径未填全）强制展开且不写全局记录；高度拖动始终全局；旧版按平台记录仅作一次性迁移
+- 跨平台丝滑动画保留：animatePanelHeight(targetH, null, _prevHeight)，全局收起→切到未启用平台时从 0 平滑展开
+- 改造前代码与经验结晶存档：MEMORY/ARCHIVE_settings_curtain_animation.md（AGENTS 第二十四节引用）
+- getSwIcon 增加"必须是程序"校验（isFile && .exe；目录则拼远程 executable，拼不到跳过），避免把文件夹图标当程序图标
+- 分割线光标改 CSS 驱动（body.curtain-collapsed）+ MutationObserver 同步（原内联 cursor + 改类前调用导致错位）
+- 删除 cleanDisplayName（用户澄清是口误：要的是去分割线，不是去下划线）
+
+## 单一职责修正 + 高度漂移根治（2026-10-05）
+
+- getSwIcon 只判断"软件路径是不是程序"（isFile && .exe），删掉目录+executable 拼接（那是路径探测流程的活）
+- 未启用判定改为只读绿框：validatePathInput 写 input-ok/warn/error 类 + swPathGreen[swId][key]；isSwSettingsComplete 只读三项是否都绿；检查结果晚到用 enforceCurtainForCompleteness() 补强制展开
+- 高度漂移根因：拖动 content.maxHeight = 面板高-20、动画收尾却用 面板高（+手动展开清空 maxHeight）→ 两套算法；修复为唯一入口 applyPanelHeight(H)（成对设置），_prevHeight 改取语义高度
+
+## 设置区域切换"闪一下"根因：写死的 20px（2026-10-05）
+
+- 现象：跨平台切换 100->100 无动画却闪到 ~120 再回 100；100->300 动画到 ~320 再弹回 300
+- 离屏 WebView 逐 25ms 采样四方案高度轨迹：V0(现状 -20)=100->80 闪 / V1(border-box 无内容上限)=滚动条失效 / V2(实测chrome=0)=不丝滑 / V3(面板与内容同值+动画期间内容解除上限)=精确稳定且滚动条正常
+- 根因：内容区 max-height 写死 面板高-20，动画期间却 none → 动画到 H、停下回落 H-20，两套高度语义
+- 修复：applyPanelHeight(h) 面板与内容区同值，去掉一切偏移数字；教训：父子同高度约束必须同值
+
+## LocalGlobalConfig 冗余清理 + 账号区滚动自动收起（2026-10-05）
+
+- 清理前 11 个顶层节点 → 后 5 个（theme/account_columns/last_sw_id/settings_height/settings_expanded）
+- 删除：manage_settings_collapsed（连未引用常量一起删）、manage_settings_height、account_columns.<表id> 扁平键、account_columns.visible/width、account_columns.invalid_acc、account_columns.origin_prog（含已删列 status）
+- 新增语义：JsBridge.saveGlobalConfig 中 JSON null = 删除该字段；main.js cleanLegacyGlobalConfig() 启动跑一次；account-table.js 去掉扁平键兼容读取 + 保存时剔除 visible/width
+- 两份实际配置文件已就地清理并备份 .bak-20261005
+- 账号区滚轮"有效滚动"（scrollTop 真变化）→ 自动收起设置区域；无滚动条/到边界算无效；收起统一走 toggleSettingsPanel(false)，未启用平台不记录
+
+## "刚进平台从 0 涨上来"根因与修复（2026-10-05）
+
+- 离屏采样三场景：A 首次(起点180)=16->180->200 / B 稳定=200 无动画 / C 起点0=0->20->65->...->200（与用户描述一致）
+- 根因：未启用平台的本地收起不写全局记录，但面板 inline 高度已是 0；切平台时全局=展开→shouldExpand=true，动画起点取面板当前高度=0 → 走了 0→目标 的假动画
+- 每个平台点开一遍后消失：首次访问自动探测路径→平台变启用→不再有本地收起残影
+- 修复：首次进入直接落位；本地收起+全局展开直接落位；其余照常动画（全局收起→强制展开仍从 0 涨，保留 4.3 效果）；新增 _prevWasCollapsed/_panelShownOnce
+
+## 设置区域单一渲染依据重构（2026-10-05）
+
+- 现象：记录收起时重启 → 记录收起但渲染展开；切换平台时两套规则拉扯几天才统一（多条写入路径读不同状态）
+- 重构：desiredCurtainState() 唯一推导（全局记录 + 未启用平台强制展开）；applyCurtainRender() 唯一 DOM 写入；setCurtainExpanded/setCurtainHeight 先改事实来源再渲染；enforceCurtainForCompleteness 只重调渲染；_lastRender 取代 _prevHeight/_prevWasCollapsed/_panelShownOnce
+- 进平台先同步跑绿框检查（避免 200ms 后强制展开造成闪烁）；setPathGreen 在变启用时清 forcedLocalState
+- 删除旧 applyCurtainState 与 toggleSettingsPanel 内的独立动画，统一走 animatePanelHeight
+
+## 未启用平台改为"每次渲染强制展开"（2026-10-05）
+
+- 回归问题：单一渲染依据重构后，未启用平台变成了"遵从上次本地状态"，不再强制展开
+- 修正：desiredCurtainState 对未启用平台恒返回 expanded=true（每次渲染都无视记录强制展开）；用户本次访问里的临时收起只通过 applyCurtainRender(override) 生效一次，不写记录、不留本地状态（删除 forcedLocalState）
+- setPathGreen 只在"启用↔未启用"真正变化时触发重渲染（swEnabledKnown），避免每次失焦检查都把面板重新撑开
+
+---
+
+# 开发日志（自 AGENTS.md 迁入：原第九节 + 第十二~二十九节，2026-10-05）
+
+## 九、近期重大变更
+
+### page-main 复制迁移（2026-07-04~05）
+
+- **决策**: 从 page-manage 完整复制 DOM+JS 到 page-main 页面，`main.js` 复制自 `manage.js` 后做少量作用域修正
+- **原因**: 逐段理解和改写容易出错，完整复制再逐步调试更可靠；且保持功能一致性
+- **关键修改**:
+  - `getEl(id)` 函数改为优先在 `#page-main` 内查找，后备到全局 `document.getElementById`
+  - 移除了原管理页的"登录"和"管理"按钮，侧栏精简为平台列表 + 统计 + 设置入口
+  - `manage.js` → `.old/manage.js` 归档保留历史
+  - HTML 中删除了旧 `#page-manage` 区块
+
+### 头像显示功能重构（2026-07-30）
+
+- **背景**: 账号列表头像不显示，需将 Java 版本调整至与旧版 Python 一致的行为，同时适配用户可设置的自定义数据目录
+- **新增**: `AvatarUtils.java` — 核心逻辑封装，获取顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字头像回退
+- **路径使用**: `ConfigManager.getInstance().getUserDataPath()` 支持用户设置的数据目录
+- **JsBridge** 中 `getAccountGroupData()` 改单行调用 `AvatarUtils.getAvatarDataUrl()`
+- **CSS 调整**: `.manage-account-avatar` `border-radius` 从 `50%` → `6px`（圆角矩形）
+- **SVG 文字头像**: 深灰背景 `#555` + 白色首字母，圆角矩形 `rx=6`
+
+详细迁移过程及经验教训见 `MEMORY/DEV_LOGS.MD`。
+
+### 账号列表来源接入磁盘扫描（2026-07-31）
+
+- **背景**: 账号列表仅读 `SwAccData.json` 持久化记录，磁盘真实存在的账号目录/共存 exe 未记录时不显示
+- **新增**: `JsBridge.getSwExistedAccounts(swId)` — 用 `SwConfigProvider.newAccessor()` 构建 `SwInfoFuncCore`，调用 `getSwAllAccountsExisted(swId, null)`（磁盘扫描：数据目录子目录 − 排除目录 + 共存 exe）
+- **main.js** `loadAccountData` 改为：以磁盘扫描结果为账号来源，按账号 ID 与 `getSwDetailData`（SwAccData.json）详情合并；磁盘已删的残留记录不再显示
+- **bridge.js** 新增 `getSwExistedAccounts` 包装
+
+### 头像显示接入（2026-07-31）
+
+- **背景**: 账户列表直接渲染原始 `avatar_url`，未走 AvatarUtils 管道，头像常不显示
+- **新增**: `JsBridge.getAccAvatarAsync(swId, accountId, cbId)` — 后台线程先调 `AccInfoFuncCore.getAvatarFromCache`（截图缓存恢复），再用 `getAccAvatarFromFile`（→ `AvatarUtils.getAvatarDataUrl`：本地文件 → URL 下载(`/0` 结尾) → SVG 回退）
+- **main.js**: 头像优先级 `avatar_data > avatar_url > 占位符`；`requestAccountAvatar` 异步加载 + `updateAccountAvatarCell` 逐行更新（SVG 回退不降级替换已有真实图片）
+- **坑**: `_handleAsync` 第三参必须为字符串，推送 JSON 需双编码（见教训 #45）
+
+### 日志目录修复与"日志"设置项（2026-07-31）
+
+- **logback.xml**: `${jfmultichat.logdir:-logs}` 加默认回退，消除 `jfmultichat.logdir_IS_UNDEFINED` 目录
+- **Launcher.java**: `jfmultichat.logdir` 设为 main 首行语句（任何 Logger 前）
+- **设置页新增"日志"子项**: 打开日志目录 + 预留"上传日志"按钮；日志目录固定 `AppPaths.getLogsDir()`（`%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`，按 Dev/Prod 模式自动切换，不随用户配置）
+
+### 账号展示名显示（2026-08-01，commit `c2561a4`）
+
+- 账号列表"昵称"列头改为空白（讨论中用"展示名"列代表），`data-sort` 改 `display_name`
+- `JsBridge.getSwDetailData` 每账号注入 `display_name` = `AccInfoFuncCore.getAccOriginDisplayName`（remark → nickname → alias → 账号 ID）
+- `main.js`：展示名列/头像首字符/排序均改用展示名（前端兜底 `nickname`/`id`）
+
+### SwAccData 账号自动填充（2026-08-01，commit `c2561a4`）
+
+- `AccInfoFuncCore.syncSwAccAccounts(sw, accountIds)` — 遍历磁盘扫描账号列表，SwAccData 缺失节点自动补空
+- `JsBridge.getSwExistedAccounts` 取得列表后调用（进入平台页即触发）
+
+### EventBus 事件机制（2026-08-01）
+
+- **新增 `core` 包**: `EventBus` 单例（subscribe/publish）+ `event/PlatformEnteredEvent`、`event/AccountDataChangedEvent`
+- **流A 平台进入自动维护**: `selectPlatformInternal` 顶部 → `notifyPlatformEntered(swId)` → `PlatformEnteredEvent` → 后台执行登录态维护（`AccInfoFuncCore.resolvePidAccountMap` → `associateCoexistAccounts` → `updateAccLoginData`，拆分自原 god-method `getSwAccountsLoginStatus`，原方法保留为门面）
+- **流B 数据更新定向刷新**: `saveAccount` 更新 SwAccData 后发布 `AccountDataChangedEvent` → UI 订阅者 `pushAccountDataChanged` → `JFC.bridge._onAccChanged` → `main.js onAccountChanged` 仅更新对应行/格（隐藏/禁用→徽章、展示名、头像），不再整表重渲染；`toggle-hidden` 已迁移为事件驱动
+- **装配**: `PlatformEventBootstrap.install(bridge)`（MainApp.start 调用）
+- **NPE 修复**: `updateAccLoginData` 的 `Map.of(PID, pid, ...)` 因 pid 为 null 抛 NPE → 改 `HashMap`（`updateAccount` 对 null 移除键）；relay 读回 `pidMutexNode.get(pid)` 判空
+
+### 账号列表列定制与交互升级（2026-08-16）
+
+- **7 列结构**: 勾选框（行悬浮才短暂显示，`opacity:0`+`pointer-events:none`）/头像/展示名（右端悬浮操作按钮：隐藏选中态+删除，禁用小标签）/快捷键（点击激活输入框，keydown 捕获组合键，存 SwAccData.hotkey）/ID/平台内ID（`alias`）/昵称（`nickname`）；移除原"状态"/"操作"两列
+- **列头右键菜单**（Windows 资源管理器风格）: 勾选显示列（勾选框/头像/展示名/快捷键 4 列必选锁定；ID 默认显示；alias/nickname 默认隐藏）+ "所有列自适应大小"/"该列自适应大小"（临时 span 测量文本宽度）
+- **列间竖线拖拽**: `table-layout: fixed` + colgroup，每个可见列 th 右侧注入 `.col-resizer`（7px 热区 + ::after 竖线），拖拽调宽最小 30px，最后可见列不加
+- **行右键菜单**: 隐藏/显示、删除（与悬浮按钮同走 `handleAccountAction`）
+- **排序标识**: 去掉 " ↕" 字符，当前排序列 th 加 `.sorted`（主题色+加粗）
+- **持久化**: 列显示/宽度存 `LocalGlobalConfig.json.account_columns = {visible, width}`（`getGlobalConfig`/`saveGlobalConfig`）
+- **onAccountChanged 扩展**: 新增 `hotkey`/`alias`/`nickname` 字段定向更新；状态变化走 `updateRowQuickActions`（按钮选中态/禁用标签，原 stateBadgeHtml 删除）
+- **事件委托防重复绑定**: thead/tbody 的 contextmenu、tbody click（快捷键激活）绑在 `bindManageEvents`（一次性），不在每次 render 的 `bindAccountEvents` 里重复 addEventListener
+
+### 四表架构与可复用组件（2026-08-16 第二轮）
+
+- **可复用组件 `JFC.AccountTable`**（`js/components/account-table.js`）: 列定义驱动渲染（任意列组合），含标题行/批量操作/列头右键菜单/列宽拖拽/自适应/行右键菜单/快捷键列编辑/流B 定向刷新；构造参数 `{id, title, container, columns, enableHotkey, defaultSortField, getSwId}`；列配置按表独立持久化 `account_columns.<tableId>`
+- **四个表**: 原生程序（勾选框/名称/路径/状态，空）/原生账号（7 列，`getSwExistedAccounts(swId,'origin')`）/共存账号（7 列，空）/无效账号（勾选框/展示名/ID/无效原因，空）
+- **标题行**: 常显，标题左端 + "已选 N 项"/批量按钮右侧（未选中隐藏）
+- **固定列**: 勾选框/头像 `fixed: true`（不可拖拽/自适应），其间与右侧竖线移除；头像圆角矩形 6px
+- **快捷键录入修复**: `document mousedown` 提交替代 blur 同步提交（消除 DOM 竞态假死）；**Java Scene 级 EventFilter 兜底**（`JsBridge.notifyHotkeyCapture` → `JFC.bridge._onHotkeyCapture`，WebView 收不到的带修饰组合键由 Java 捕获；OS 级全局热键占用仍无法拦截）
+- **NPE 修复**: `AccInfoFuncCore.getSwAllAccountsExisted` 传 `AccOpsProvider.toSwProvider()`（原 null 导致流A 共存分支 NPE）
+- **列宽自适应**: 下限 = 列名宽 + 余量（展示名列 = 4 字符 + 按钮占位），无上限；表格宽度恒 = 可见列宽总和（列宽独立、超宽横向滚动）；固定列（勾选框/头像）绝对固定
+
+### 账号列表交互打磨与滚动条体系（2026-08-16 晚间）
+
+- **滚动条体系（核心难点）**: JavaFX WebView 原生滚动条不可靠——overlay 风格（鼠标悬停才显示）、纵向需手动触发才出现、带上下箭头、不随深浅主题 → 统一改用**自定义 overlay 滚动条**（DOM 元素 `attachCustomScrollbar`）：
+  - 不占位不撑高（absolute 定位）、5px 胶囊圆角、无箭头、深浅色适配（`--divider-solid` 同源半透明灰）
+  - 显示条件 = **内容溢出** + 鼠标在内容区或滚动条上；移出 600ms 隐藏；在滚动条上不隐藏；滚动/拖拽时显示
+  - **挂在滚动容器父级**（absolute 子元素是滚动内容的一部分，挂容器内会被内容带着滚走）；rAF 逐帧检测位置（JavaFX scroll 事件不可靠）+ 拖拽即时刷新
+  - 三处统一：表内横向 / 账号区域纵向 / 设置区域纵向
+- **高度链锁定（关键）**: 内容撑宽/撑高导致无滚动条、列宽联动、设置区域被拉宽——根因是 flex/grid 交叉轴 `min-width:auto` 与主轴 `min-height:auto`。最终方案：`#page-main .manage-layout` 用 **flex column** + `.manage-detail-area` `flex:1; min-height:0; min-width:0; overflow:hidden` + 表容器链 `min-width:0`；走过弯路：grid `1fr` 被 `#page-main` 高特异性规则覆盖、block 布局破坏纵向
+- **设置区域滚动条根因**: `animatePanelHeight` 动画期间 `content.style.maxHeight='none'`（让面板能撑高）但动画后未恢复 → content 高度=内容高永不溢出。修复：动画结束（setTimeout 400ms 兜底，JavaFX transitionend 不可靠）恢复 `content.maxHeight = targetHeight`
+- **列宽**: 表格宽度 = 可见列宽总和（px，绝不填充容器，否则 fixed layout 按比例拉伸列）；固定列 `_loadColumnPrefs` 强制 defWidth（不读持久化）；"该列自适应"只改本列
+- **整行悬浮高亮**: JS 高亮层 `.acc-row-highlight`（mousemove 委托匹配任意 tr，含空表空行）；**移除 `tr:hover` 背景**避免与高亮层叠加导致列区域/剩余区域颜色不一致
+- **分割线**: 设置/账号区域分界线 + 窗帘把手统一用 `--divider-solid`（背景+半透明混合的**不透明等效色**，深 `#2c2c2c`/浅 `#d4d4d4`），避免半透明叠加区两次变深
+- **细节**: 空表行高 ≤ 数据行（删旧 `.manage-empty-row td` padding 覆盖）、"暂无数据"居左（不同表合并列宽不同，居中位置不一致）；头像列不显示列名、展示名列改名"名称"；右键菜单扩展覆盖滚动容器空白区域（无"该列自适应"项）
+- **NPE 修复**: `AccOpsProvider.toSwProvider().updateSwAccData` 误取 map value（空串）→ 改取 key（共存分支写错账号）；`SwAccountOps.ensureCoexistAccFormatted` 的 `Map.of("linked_acc", null)`（Map.of 禁 null）→ HashMap
+- **规则文件**: 项目 `CLAUDE.md` → `AGENTS.md`（DSH/CC 通用约定，DSH 默认候选 `["AGENTS.md","CLAUDE.md"]`）；全局规则在 `~/.dsh/AGENTS.md`（DSH 全局仅认 AGENTS.md，不读 `~/.claude/CLAUDE.md`）
+
+---
+
+## 十二、代理与网络（2026-10-04）
+
+- **原则**: 代理**只由界面"使用代理"复选框控制**，不做任何自动探测、不默认开启；未勾选一律直连
+- **历史现象**: 直连 `raw.githubusercontent.com` 报 `javax.net.ssl.SSLHandshakeException: Remote host terminated the handshake` —— 根因是 Java **默认不使用 Windows 系统代理**（`java.net.useSystemProxies` 默认 false）；在界面勾选"使用代理"并填好地址端口即可
+- **立即生效**: `AppCore.applyProxySetting()` 设置 JVM 属性 `http(s).proxyHost/Port`（+ `http.nonProxyHosts=localhost|127.*|[::1]`）；`HttpClient` 的默认 `ProxySelector` 每次请求都读这些属性，所以**运行期修改立即生效，无需重启**
+  - 界面勾选 / 改地址端口 → `JFC.bridge.applyProxyConfig(json)`：只持久化代理三个字段 + 立即应用，并回传归一化结果回填输入框（`settings.js` 的 `commitProxyConfig()`）
+  - 点"保存配置" → `saveConfigData()` 内同样调用一次 `applyProxySetting()`
+  - `Launcher.main` 启动时调用一次（覆盖"上次已勾选"的情况）
+- **地址归一化**（`AppCore.splitHostPort` / `isValidPort`）: 允许 `http://127.0.0.1:7890`、`127.0.0.1:7890`、`127.0.0.1` + 端口分开填、`[::1]:7890`；端口必须 1..65535，非法则按直连并提示
+- **教训**: 代理地址不能原样塞进 `https.proxyHost` —— 含 `:` 的"主机"会被 JDK 当成 IPv6 加方括号，报 `java.net.URISyntaxException: Expected closing bracket for IPv6 address at index 20: proxy.https://[http://127.0.0.1]:7890/`。必须剥掉协议前缀并拆出端口
+- **远程配置下载**: `JsBridge.downloadRemoteConfigs()` 的候选 URL = **用户配置 + 内置兜底**（`JsBridge.mergeUrls()`）。此前只取用户列表，用户把「远程配置源」清空后日志出现 `候选URL: 0个`、远程配置永远下载失败 —— 已修复
+- **gitee 现状**: gitee 对 `remote_configs/remote_*` 判定违规返回 451（与网络无关）；候选列表里 gitee 失败会自动继续尝试 GitHub
+---
+
+## 十三、共存账号数据接入（2026-10-04）
+
+- **前端**: `main.js` 的 `loadAccountData(swId)` 现在同时拉取原生与共存两路数据，抽公共的 `buildAccountRows(ids, detailMap)` 生成行；`origin_acc` / `coexist_acc` 各自 `setData`；头像按表路由（`requestAccountAvatar(swId, acc, table)`，此前写死更新原生表）
+- **共存账号来源**: `JsBridge.getSwExistedAccounts(swId, 'coexist')` → `SwAccountOps.getSwAllAccountsExisted(..., only='coexist')` → 安装目录中匹配 `executable_wildcards` 的 exe（排除原生 exe），并 `ensureCoexistAccFormatted` 写入 SwAccData
+- **本次修掉三个 Java 缺陷**（否则共存表永远是空的）:
+  1. **取错配置键**: `SwInfoFuncCore.getSwAllAccountsExisted` 读的是 `exe_wcs`（该键在远程配置中根本不存在，Python 里 `RemoteSwKey.EXE_WCS = "executable_wildcards"`）→ 通配符列表恒空 → 共存扫描恒 0。改为常量 `SwCoreConstants.RemoteSwKey.EXECUTABLE_WILDCARDS`
+  2. **accountOps 传 null**: `JsBridge.getSwExistedAccounts` 构造 `SwInfoFuncCore` 时第 4 参为 null，共存分支调用 `ensureCoexistAccFormatted` 直接 NPE（WXWork 实测）→ 改传 `new AccOpsProvider().toSwProvider()`
+  3. **inst_path 可能是目录**: `SwAccountOps` 原来一律 `new File(instPath).getParent()`；WeChat/DouYinIM 的 inst_path 存的是**安装目录本身** → 扫到上一级目录、共存 exe 全漏。抽出 `resolveInstDir()`：是目录就用它，是 exe 才取父目录
+- **实测结果**（2026-10-04 本机）: WeChat 2 个（`WeCha1.exe`/`WeCha2.exe`）、WXWork 1 个（`WXWor1.exe`）；Weixin/QQNT/QQ/TIM/DouYinIM 无（该目录下确无匹配 exe）
+- **已知数据问题（非代码）**: `LocalSwConfig.json` 里 TIM 的 `inst_path` 指向 `D:/software/Tencent/QQNT/QQ.exe`（应为 TIM 自己的 Bin 目录），导致 TIM 共存扫描找不到东西——需要重新探测/修正路径
+- **测试**: 新增 `SwAccountOpsTest`（3 例，覆盖 exe 路径/目录/null 三种 inst_path）
+---
+
+## 十四、共存账号列 + 列配置持久化 + 侧栏展开（2026-10-04）
+
+- **共存账号新增列「最后登录账号」**: `TABLE_COLUMNS.coexist = TABLE_COLUMNS.account.concat([{key:'linked_acc', ...}])`（非必选、默认显示、宽 170）；值来自 SwAccData 的 `linked_acc`（该共存 exe 当前关联/最后登录的原生账号），行数据在 `buildAccountRows()` 里已带出
+- **列显隐/列宽不持久化（已修）**: `AccountTable._saveColumnPrefs` 写的是**扁平键** `"account_columns.<表id>"`，而 `_loadColumnPrefs` 读的是**嵌套** `account_columns[表id]` → 右键勾选的显示列下次启动就丢
+  - 修复：写嵌套结构；因 `saveGlobalConfig` 是**顶层浅合并**，必须先 `getGlobalConfig()` 读出 `account_columns` 再合并本表，否则会清掉其它表的列配置
+  - 兼容：`_loadColumnPrefs` 增加历史扁平键回退读取（迁移一次，下次保存写回嵌套），用户此前勾选的列不会丢
+- **最左栏（`#nav-sidebar`）展开改为「静止 2 秒」**: `nav-sidebar.js` 的 `EXPAND_DELAY` 300ms → **2000ms**，并新增 `MOVE_THRESHOLD = 6px`：鼠标在区域内移动超过阈值就**重新计时**，微动（<6px）不重置，真正停下 2 秒才展开；移出立即收起
+  - 注：页面内的次级左栏 `#manage-platform-sidebar` 被 CSS `display:none` 隐藏，其 `main.js#initManageSidebar` 的 300ms 逻辑实际不生效，未改动
+- **测试**: JS 侧 `node --check` 通过（无 JS 单测框架）；Java 侧未改动逻辑
+---
+
+## 十五、设置页"配置"三块独立保存（2026-10-04）
+
+- **背景**: 原来只有一个"保存配置"按钮，同时校验本地目录 + 要求"平台/全局各自至少一个地址测试通过"，于是"只想改本地目录"也会被"远程配置源测试失败"挡住
+- **结构**: 代理 / 本地目录 / 远程配置源 三块，用两个 `.config-divider` 分隔，每块右下角一个"保存"（`.config-actions config-actions-block`：靠右、无上边框）
+  - 每块只提交**自己的字段**：Java `JsBridge.saveConfigData` 本来就是 `if (data.has("x"))` 逐字段合并 → 天然支持部分提交，未提交字段保持原值
+  - JS 侧：`saveBlock(payload, msgId, onSuccess)` 共用；`saveProxyConfig` / `saveDirConfig` / `saveUrlConfig` 各自独立
+- **代理块**: 地址/端口**常驻显示**（不再随"使用代理"勾选显隐）；点"保存"才持久化 + 立即应用
+  - `applyProxyConfig` 新增 **`requiresRestart`**：持久化成功但运行期应用抛异常时为 `true` → 前端 `alert` 提示需重启；正常应用 → "保存成功"；勾选了但地址非法（`applied=false`）→ 红字说明并按直连
+- **本地目录块**: 保存按钮默认禁用，仅 `#cfg-user-dir` 带 `input-ok`（绿框）时启用；目标目录已有文件时仍弹迁移确认
+- **远程配置源块**: "测试全部/添加"移到各自列表头部右侧（`.url-block` + `.url-block-head`，原 `.url-list-footer` 删除）；保存按钮仅在 `sw`/`global` 中**至少一个**地址测试通过时启用；加载时**不再预置绿框**（`lastValidSet` 不再用于标记），必须本次会话实际测试成功
+- **风格统一**（跨板块一致）: 新增 `.config-desc`（板块介绍，替换各板块行内样式：主题/配置三块/日志/更新）；`.config-label` 字号 `--font-h2`→`--font-h3`（与 `.config-subtitle` 一致）；输入框（`.config-input` 与 `.url-input-line input`）统一 `padding:7px 10px` + `var(--font-sm)` + `var(--border-radius)` + `font-family:inherit`（URL 输入框不再用等宽字体）；次级按钮（`.config-preset-btn`/`.config-presets .btn`/`.url-input-line .btn-sm`）统一 `6px 12px` + `var(--font-sm)`；提示文字统一 `var(--font-xs)`；`.config-form .settings-section` 的 margin-bottom 归零，间距交给 `.config-divider`
+- **清理**: 删除旧的全局 `#cfg-btn-save`/`#cfg-save-msg`；`showMsg` 签名改为 `showMsg(元素id, msg, isErr)`；`updateSaveButton` → `updateBlockButtons`（按块判定）
+---
+
+## 十六、账号列表细节打磨 + 共存账号属性来源（2026-10-04）
+
+- **共存账号属性一律参考 linked_acc**（自身只认 remark）: `main.js` 的 `buildAccountRows(ids, detailMap, followLinkedAcc)` —— 共存表传 `true`
+  - 名称链：自身 `remark` > 链接账号 `nickname` > 链接账号 `alias` > 链接账号 id（`linked_acc`）> 共存账号自身 id
+  - `nickname`/`alias`/`avatar_url` 三列直接取链接账号的值（共存 exe 一般没有这三个属性）；原生账号走原逻辑（Java `getAccOriginDisplayName`）
+- **共存账号头像链**: `AvatarUtils.getCoexistAvatarDataUrl(sw, coexistAcc, linkedAcc, linkedAvatarUrl)` = 自身本地文件 > 链接账号本地文件 > 链接账号头像地址（下载）> 默认文字头像
+  - 接线在 `JsBridge.getAccAvatarAsync`：SwAccData 里该账号带非空 `linked_acc` 就走共存链（原生账号没有这个字段），**无需新增桥方法**，前端调用不变
+  - 新增 `AvatarUtils.getLocalAvatarDataUrl(sw, acc)`（仅本地判定，不联网）供链路前两步使用
+- **列宽拖拽热区修复**: `.col-resizer` 原来 `right: -3px; width: 7px`，被 `th { overflow: hidden }` 裁掉一半（实际可点约 4px，且落在最右列的表格边界上很难命中）→ 改为 `right: 0; width: 7px`（热区完全在列内），竖线用 `::after { right: 0 }` 画在列右边界。`linked_acc` 等新列由此与其它列一样可拖拽、可"所有列/该列自适应"
+- **整行背景层（悬浮/选中）**: `tr` 背景只能覆盖列区域，覆盖不到表格右侧空白 → 统一用绝对定位色块层，且放到**表格内容之下**
+  - `.acc-row-highlight`（悬浮，不透明 `--bg-row-hover`）+ 新增 `.acc-row-selection-layer`（选中，每选中行一个 `.acc-row-sel`，`--bg-row-selected`）
+  - 两层 `z-index: -1`，配合 `.acc-table-scroll { z-index: 0; isolation: isolate }` 形成层叠上下文 → 色块盖住容器整宽又不遮挡文字；宽度由 JS 设为 `max(表格宽, 容器可视宽)`
+  - 选中行**不再显示悬浮色**（`_updateRowHighlight` 遇到 `.selected` 直接隐藏）；移除 `tr.selected` 背景与 `tr{transition:background}`，避免半透明叠加
+  - 新增不透明色变量（theme.css 三个主题块）：`--bg-row-hover` `#282828`/`#dfdfdf`、`--bg-row-selected` `#313131`/`#d8d8d8`（= 原半透明色叠在 `--bg-sidebar` 上的不透明等效色）
+- **表头行高度**: `.acc-table-titlebar` 加 `min-height: 38px; box-sizing: border-box` —— 选中后出现"已选 N 项"+批量按钮时不再把这一行撑高
+- **最左栏展开延时**: `nav-sidebar.js` `EXPAND_DELAY` 2000ms → **1000ms**（静止 1 秒展开，`MOVE_THRESHOLD` 6px 不变）
+- **远程配置源保存条件**: 平台(remote_sw) 与 全局(remote_global) **都**要有绿框（AND），`updateBlockButtons`/`saveUrlConfig` 同步改
+---
+
+## 十七、账号表末尾占位列 + 菜单文案（2026-10-04）
+
+- **末尾占位列（filler column）**: 表格末尾多一个内部列 `_filler`（`FILLER_COL`），**不在 `columns` 里**，因此不参与排序/显隐勾选/列菜单
+  - 宽度 = `容器可视宽 - 可见列宽总和`（下限 0）；`_updateTableWidth()` 里一并算出：`table.style.width = 可见列宽总和 + filler`
+  - 效果：① 表格总宽恒 ≥ 容器宽 → **所有真实列（含最右列）右侧都有邻居**，列宽拖拽热区不再压在表格边界上；② 占位单元格属于该行 → **行悬浮/选中的感应区天然覆盖整行**（此前鼠标移到最右列右侧空白处，`closest('tr')` 为 null，悬浮色会消失）
+  - 列宽总和 ≥ 容器宽时 filler = 0，其 th/td 加 `hidden-col`（不显示多余边框），横向滚动条照常出现
+  - 细节：th/td 用类名 `.manage-col-filler`（**不带 `data-col`**）→ 不会被 `_applyColumnLayout` 的显隐循环碰到；`col` 仍带 `data-col="_filler"` 供设置宽度；空表行 `colspan = columns.length + 1`
+  - 右键占位列 → `colByKey('_filler')` 为 null → 菜单**不出现"该列调至合适宽度"**（用户要求）
+- **菜单文案**: "所有列自适应大小" → **"所有列调至合适宽度"**；"该列自适应大小" → **"该列调至合适宽度"**
+- **表头行更高**: `.acc-table-titlebar` `min-height` 38px → **46px**（选中后出现批量按钮时高度完全不变）
+---
+
+## 十八、列宽不生效的真正根因：隐藏列的 col 宽度（2026-10-04）
+
+- **现象**（用户实测）: 隐藏了部分列之后，**最右可见列**既拖不动也"调至合适宽度"无效；**只有所有列都显示时列宽才正常**
+- **根因**: `table-layout: fixed` 下**列宽取自 `<col>`**。原实现隐藏列时只给该列的 `th/td` 加了 `.hidden-col { display: none }`，**`<col>` 的宽度仍是原值** →
+  - 表格 CSS 宽度 = 可见列宽总和（`_updateTableWidth`）
+  - 但声明的列宽总和 = 可见列 + 隐藏列（更大）
+  - 固定的表格布局在"列宽总和 > 表格宽度"时会**重新分配/撑开列宽** → 真实渲染宽度不再等于 `colWidth` → 拖动最后一列或自适应改的是声明值，渲染结果被重新分配吃掉，看起来"完全改不动"；所有列都显示时两者恰好相等，所以一切正常
+- **修复**: `_applyColumnLayout` 里隐藏列的 `<col>` 同时**归零并隐藏**：`col.classList.toggle('hidden-col', !visible)` + `col.style.width = visible ? 实际宽 : '0px'`（真实宽度仍保存在 `colWidth`，重新显示即恢复）
+  - 另加取整：拖拽宽度 `Math.round` + `_updateTableWidth` 里 `sum = Math.round(sum)`，避免小数宽度让"总和 + 占位列"恰好超出容器 1px 而冒出横向滚动条
+- **占位列宽度**: `filler = 容器可显示宽(clientWidth) - 可见列宽总和`（≥0）→ 占位列右端**恰好落在列表区域右边缘**；可见列总宽超过容器时 filler = 0、横向滚动条出现
+---
+
+## 十九、名称列宽度/悬浮按钮占位/等宽字体（2026-10-04）
+
+- **名称列"调至合适宽度"要含按钮预留宽**: `fitColumn` 里名称列的量取改为**只量名称**（`.dn-text` + `.manage-disabled-tag`，用 `querySelectorAll(...).textContent` 拼接，避免把按钮文字"隐藏/删除"算进去），然后 `maxW += QUICK_ACTIONS_WIDTH`（96，两个按钮最宽态"已隐藏"+"删除" + gap + padding + border 的估算）；下限仍是 `4 字宽 + QUICK_ACTIONS_WIDTH + 8`
+- **悬浮按钮常驻占位（修复悬浮时文字位移/截断）**: `.manage-row-quick-actions` 从 `display:none ↔ inline-flex` 切换改为 **`display:inline-flex` + `visibility:hidden ↔ visible`**
+  - 根因：按钮用 display 切换时，悬浮瞬间才占宽 → `.dn-text`（flex:1）被挤压、长名称当场变省略号，视觉上就是"文字位移"
+  - `visibility:hidden` 的元素不参与命中测试，未悬浮时按钮仍不可点击
+  - 与上一条配套：合适宽度已包含按钮预留宽，所以常驻占位不会白白浪费空间
+- **列表内容统一等宽字体**: `.manage-account-table td { font-family: var(--font-family-mono) }`（Cascadia Code / Consolas / Sarasa Gothic SC，中文有 Sarasa 兜底）；**表头 th 仍用界面字体**（次级色 + 半粗，作为"标题"与内容区分）
+---
+
+## 二十、无效账号并入 + 原生程序表 + 名称清洗（2026-10-04）
+
+- **名称列"下划线"根因**: 不是 CSS，而是**账号 ID 里的下划线字符**——SwAccData 里这些账号没有 remark/nickname/alias，名称直接回退成账号 ID（`wxid_5daddxikoccs22`、`wxid_h5m0aq1uvr2f22_32ac`）；换成等宽字体后 `_` 又宽又靠下，看起来就像给名字加了下划线
+  - 修复（仅显示层）: `main.js` 新增 `cleanDisplayName(name, idCandidates)`——**当名称恰好等于账号 ID 时去掉下划线**；ID 列仍显示原始 ID，用户自己填的备注/昵称/平台内ID 不动；`AccountTable.onAccountChanged` 里的 `display_name` 定向更新也做同样处理
+- **无效账号不再单列一张表**: 无效账号 = `SwAccData` 全部账号 − 原生账号 − 共存账号，按自身类型并入原生/共存表
+  - 类型判定 `isCoexistAccount(acc, id)`: SwAccData 节点带 `linked_acc` 字段（`ensureCoexistAccFormatted` 会补齐）→ 共存；兜底按 `id` 是否 `.exe` 结尾
+  - 行上打 `invalid: true` → 整行灰字（`tr.invalid-row`）、名称右边加"失效"标签、**永远置底**
+  - `index.html` 删除 `#acc-table-invalid-acc` 容器；`TABLE_COLUMNS.invalid` 删除；四表 → 三表
+- **置底分组**: `_sortAccounts` 先按排序字段排，再用稳定排序按 `rank` 分组——`invalid` = 2（最底）、`hidden` = 1（次底）、其余 0
+- **原生程序表**: 数据源 = 平台 `inst_path` 指向的那个 exe
+  - 列: 名称(必选)/版本(**必选，必须显示**)/路径(默认不显示)——原"状态"列删除
+  - 新增桥方法 `JsBridge.getSwProgramData(swId)` → `{name, path, version}`；版本取 exe 文件版本（`SwVersionHelper.calcSwVer`，取不到回退补丁 DLL 版本）
+  - **旧列配置作废规则**: `_loadColumnPrefs` 增加"陈旧列名"检查——若持久化配置里出现当前列定义中不存在的列名（如被删掉的 `status`），整份列配置作废回默认值（否则会沿用旧的 path 显示与 58px 列宽）
+- **隐藏状态可见化**: 悬浮按钮文案 `已隐藏/隐藏` → **`显示/隐藏`**（title 同步为 `显示账号/隐藏账号`），并在名称右边紧挨位置加"隐藏"标签；点按钮后整表重渲染，让隐藏行立即落到"次置底"位置
+---
+
+## 二十一、名称列横线真正根因 + 程序表头像 + 标签前缀（2026-10-05）
+
+- **名称列"下划线/分割线"真正根因**: `td` 自身被设成 `display: flex` → 它**不再是 table-cell**，浏览器插入匿名 table-cell 包住它，于是 `td` 自己的 `padding`/`border-bottom` 变成画在**内层盒子**上 → 名称列的底边与其它列错位，看起来就是名称内容下面多了一条横线（其它列是普通 td，所以只有名称列有）
+  - **实测证据**（项目同款 JavaFX WebView 17.0.2，见下方验证技巧）:
+    - 旧写法 `td{display:flex}`: nameTd `top=82.0 h=34.0 bottom=116.0`，同排 idTd `top=81.5 h=45.0 bottom=126.5` → 名称格比同行矮 11px、底边错位 10.5px
+    - 新写法（td 保持 table-cell）: 两格完全一致 `top=194.5 h=45.0 bottom=239.5`
+  - 修法: `td.manage-nickname-cell` 不再设 flex，flex 移到内层 `.manage-nickname-inner`
+- **悬浮按钮不再占位**: `.manage-row-quick-actions` 改为 `position:absolute; right:0; top:50%` + 悬浮时 `display:inline-flex`（默认 `display:none`）——脱离文档流，悬浮出现时不挤压/位移名称文字，也不预留宽度；"调至合适宽度"仍按用户澄清额外加 `QUICK_ACTIONS_WIDTH`
+- **状态标签改成名称前缀**: `.manage-name-tag`（统一类，便于整组重画）+ `.manage-invalid-tag` / `.manage-disabled-tag` / `.manage-hidden-tag`，固定顺序 **失效 → 禁用 → 隐藏**，放在名称前（如 `失效 吾峰起浪`）；只作视觉前缀，**排序仍按 `display_name` 数据**，标签不参与排序
+- **原生程序表加头像列**: 显示程序图标——复用侧栏的 `iconCache[swId]`（侧栏已用 `JFC.bridge.extractExeIcon` 提取），未命中则现场提取；行高与账号表一致（同为 32px 头像列；`.manage-account-table tbody tr[data-acc-id] { height: 44px }` 作兜底最小高度）
+
+### 验证技巧：不打扰用户地校验 WebView 里的真实布局（本轮新增）
+
+JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的实际几何/样式，就用项目同款 JavaFX WebView 离屏渲染**：
+
+1. 生成一个只含目标 DOM + 项目 CSS 的临时 HTML（CSS 直接内联进 `<style>`，避免 file:// 相对路径问题）
+2. 写个小 `Application`：`WebView` 放进 `Scene`，`stage.setX(-4000); setY(-4000); show()`（屏幕外，用户看不到），`eng.executeScript("... getBoundingClientRect()/getComputedStyle ...")` 把结果 `System.out.println` 出来
+3. 运行（**注意两个坑**）:
+   - `javac` 必须加 `-encoding UTF-8`，否则中文注释按 GBK 解析报错
+   - `--module-path` 要带上 `javafx-base/graphics/controls/media/web` 的 **win** jar（`javafx.web` 依赖 `javafx.media`）
+   ```bash
+   javac -encoding UTF-8 --module-path "<fx win jars>" --add-modules javafx.controls,javafx.web NickCheck.java
+   java  --module-path "<fx win jars>" --add-modules javafx.controls,javafx.web -cp . NickCheck
+   ```
+4. 校验完删除临时文件（放在 `build/` 下，gitignore 已覆盖）
+---
+
+## 二十二、高清图标 + 悬浮按钮边框 + 把手宽度 + 收起禁拖（2026-10-05）
+
+- **程序图标/左栏图标模糊的根因**: `FileSystemView.getSystemIcon()` 在 Windows 上只给 **16x16** 小图标，渲染到 22px（左栏）/32px（列表）被放大 → 模糊
+  - 真正的 32x32 大图标要经 `sun.awt.shell.ShellFolder.getIcon(true)`，但有两道坎：
+    1. **模块导出**: 需 `--add-exports java.desktop/sun.awt.shell=ALL-UNNAMED`（此前只导出了 `javafx.web/com.sun.javafx.webkit`）→ 反射被拒 → 一直退回 16px
+    2. **惰性图片**: 该 Image 的 `getWidth(null)` 返回 **-1**，旧代码 `width >= 8` 判断失败 → 即使能反射也拿不到。用 `new ImageIcon(img)` 包一层可触发同步加载拿到真实尺寸
+  - 修复: `JsBridge.extractIconFromFile` 改为**三种方案各取候选、选尺寸最大者**（`pickBiggerIcon` + `iconSide`）；`imageToBase64DataUrl` 上限 64→**256**（保持宽高比）
+  - 实测（`--add-exports` 下）: Weixin/WeChat/QQ 的 exe 均选出 **32px**（改前 16px），PNG data URL 约 1.3–1.8KB；32px 正好 1:1 用于列表头像列，左栏 22px 为降采样 ✓
+  - 同步在 `build.gradle.kts`（`applicationDefaultJvmArgs` + `run` jvmArgs）与 `scripts/package-exe.bat`（两处 `--java-options`）加上该导出；反射被拒时只是回退 16px，不会崩
+- **悬浮按钮上下边框消失**: `.manage-nickname-inner` 之前有 `overflow: hidden`，而按钮改为绝对定位后不再贡献高度 → 内层盒只有文字行高（~21px）< 按钮高度（~22px）→ **上下边框被裁掉**。修复：内层去掉 `overflow: hidden`（名称截断本来就由 `.dn-text` 自己负责）+ `min-height: 22px`
+- **把手宽度随窗口变化**: 把手 SVG 是 `width:100%` + `preserveAspectRatio="none"`，viewBox 宽度必须与元素宽度一致；而 `initHandleSvg()` 只在切换平台/展开收起时调用，**窗口 resize 时没调用** → viewBox 停留在旧宽度 → 把手被非等比拉伸/压缩（点一次把手触发 `initHandleSvg` 才恢复）。修复：`initHeightDrag` 里注册 `window.resize → initHandleSvg()`，并让 `initHandleSvg` **每次都重算 path d**（不再只在 d 为空时设置）
+- **收起状态禁止拖动底部分割线**: 收起时面板高度为 0，拖动会瞬间跳到最小高度、与鼠标脱节。修复：`onDown` 里若 `panel.classList.contains('collapsed')` 直接返回；并用 `syncHandleDragCursor()` 把两个拖动区的光标切成 `default`（展开时 `ns-resize`），在 `applyCurtainState` 与初始化时同步
+---
+
+## 二十三、平台图标 64x64 + PNG 缓存 + 侧栏/标签/记住平台（2026-10-05）
+
+- **图标升级到 64x64（关键发现）**: `FileSystemView.getSystemIcon(File, int w, int h)` 在 Windows 上**支持任意尺寸**（实测 48/64/128/256 全部可用），是公开 API、不需要 `--add-exports` —— 比之前"取系统大图标 32x32"更容易也更清晰
+- **新增桥方法 `JsBridge.getSwIcon(swId)`**: 图标缓存到 **`{用户数据目录}/{swId}/{swId}.png`**（如 `Weixin/Weixin.png`，与老 `SwAccountOps.getSwLogo` 的路径约定一致）
+  - 有缓存图且平台软件路径（`inst_path`）未变 → 直接用缓存图，不重复提取
+  - 缺图，或 `inst_path` 与记录的 `icon_src_path` 不一致（用户改了软件路径）→ 重新按 **64x64** 提取并覆盖缓存，同时把 `icon_src_path` 写回 `LocalSwConfig`
+  - 提取失败 → **什么都不做**，保留原图继续使用（无图时返回空串，前端回退文字图标）
+  - 左栏与"原生程序"表头像列都走它（同一份缓存）；实测 Weixin/QQ 的 exe 均得到 64x64、300+ 颜色、PNG 约 2–3KB
+- **悬浮按钮改回文档流内**: 悬浮显示时**挤压名称文字**、名称自动以 `…` 结尾（`flex-shrink: 0` 保证按钮不被压缩）；背景改不透明（`--bg-card`；"已隐藏"态用不透明等效色新变量 `--qa-on-bg`，深 `#2d3a48` / 浅 `#e0edf9`）—— 之前 `background: transparent` + `--color-primary-light` 看起来发虚/半透明
+- **状态标签放大**: `.manage-name-tag` 字号 `--font-xs`(13px) = 列表正文 14px − 1；`padding: 1px 8px` + `border-radius: 6px` + `line-height: 1.4`，圆角矩形完整包住文字
+- **最左栏"卡住不收"兜底**: 点击平台后账号列表加载会卡顿，期间的 `mouseleave` 可能被吞掉 → 侧栏保持展开。新增两层兜底：
+  1. **文档级 `mousemove`**（capture）：指针在侧栏外移动且侧栏已展开 → 立即 `collapse()`
+  2. **展开期间 400ms 定时校验**：`document.elementFromPoint(lastX, lastY)` 不在侧栏内 → `collapse()`
+  3. 抽出统一的 `collapse()` 供 mouseleave/兜底共用
+- **移除最左栏"统计"按钮**: `index.html` 的 `#nav-sidebar` 底部只留"设置"（`#page-statistics` 占位页与 `icons.js` 的 statistics 图标资源保留备用）
+- **记住最后显示的平台**: 切换平台时 `saveGlobalConfig({last_sw_id})`（存 `LocalGlobalConfig.json`）；启动时 `loadPlatformListInternal` 读到该字段且平台仍存在 → 直接 `selectPlatform(lastSwId)`，不再停在"点击平台"占位页
+---
+
+## 二十四、设置区域高度/展开态全局统一 + 若干修正（2026-10-05）
+
+### 设置区域"窗帘"：由 per-platform 改为全局统一（"违背祖宗"的决定）
+
+> **改造前的实现与经验结晶已完整存档** → [`MEMORY/ARCHIVE_settings_curtain_animation.md`](MEMORY/ARCHIVE_settings_curtain_animation.md)（含逐字代码 + 13 条踩坑结论）
+
+- **新规则**:
+  - **高度**与**展开/收起态**都只存一份（`LocalGlobalConfig.json` 的 `settings_height` / `settings_expanded`），所有平台共用；任一平台拖动高度、点击把手都会写回同一记录
+  - **例外（未启用平台）**: 三个路径项（`inst_path`/`data_dir`/`dll_dir`）**未填全**的平台视为"未启用" → **强制展开**，且它的展开/收起**不写全局记录**（`isSwSettingsComplete()` 把关）；高度拖动不受此限制，照常同步全局
+  - 设置填全后即变"启用"，此时展开/收起才影响所有平台
+- **一次性迁移**: 全局无高度记录时，沿用旧版当前平台的 `LocalSwConfig.<sw>.settings_height` 作为初始全局高度
+- **跨平台丝滑动画仍保留且更有用**: 全局处于收起态时切到"未启用平台"会强制展开，此时正是靠 `animatePanelHeight(targetH, null, _prevHeight)`（`_prevHeight` 为上一平台的实际高度，收起时≈0）从 0 平滑涨到目标高度
+- 实现要点: `loadCurtainGlobal(swId)` / `saveCurtainGlobalHeight(h)` / `saveCurtainGlobalExpanded(expand)` / `isSwSettingsComplete(swId)`；切换平台时 `shouldExpand = 启用 ? !全局collapsed : true`，目标高度一律 `curtain.height`
+- 手动展开的目标高度改为**以全局记录为准**（而不是 `scrollHeight`），保证"拖过一次的高度"对所有平台生效
+
+### 本轮其他修正
+
+- **图标提取必须先确认是"程序"**: `inst_path` 存成目录的平台（如 WeChat）会被当文件夹取图标 → `getSwIcon` 现在要求 `isFile() && .exe`；若是目录则尝试拼远程配置的 `executable`（`WeChat.exe` 之类），拼不到就跳过（保留原图/无图）
+- **分割线光标**: 原实现把光标写在拖动 rect 的**内联 style** 上、且 `syncHandleDragCursor()` 在 `applyCurtainState` **改类之前**调用 → 状态错位（收起/展开都可能显示同一种光标）。改为 **CSS 驱动**：移除内联光标，`body.curtain-collapsed` 时拖动区 `cursor: default`（否则 `ns-resize`），并用 **MutationObserver 监听面板 `collapsed` 类**同步 body 类——面板状态在多处被改动也不会漏
+- **撤销名称下划线清洗**: 用户澄清当初要的是"去掉分割线"，"下划线"是口误 → 删除 `cleanDisplayName`（`main.js` + `account-table.js` 的定向更新），名称恢复原样显示
+---
+
+## 二十五、单一职责修正：图标只认程序、未启用只读绿框、高度漂移根治（2026-10-05）
+
+- **图标提取（单一职责）**: `getSwIcon` 只做一件事——看"软件路径"存的值**是不是程序**（`isFile() && .exe`）；不是就什么都不做。**删掉了**上一轮加的"目录 + 远程 executable 拼接"逻辑——"目录里该是哪个 exe"属于**路径探测流程**的职责，不该由图标提取越界处理
+- **"未启用"判定改为只读绿框（单一职责）**: 不再自己判断"三个路径填没填全"，而是**读取三个路径项的绿框状态**
+  - 绿框由路径检查流程（`validatePathInput` → `JFC.bridge.checkPath`）判定：现在除了改边框色，还写入 `input-ok` / `input-warn` / `input-error` 类，并把结果记到 `swPathGreen[swId][key]`
+  - 窗帘侧只读：`isSwSettingsComplete(swId)` 遍历 `PATH_FIELD_KEYS = ['inst_path','data_dir','dll_dir']`，三项都 `true` 才算启用
+  - **时序兜底**: 进入平台时检查结果尚未回来 → 先按"启用"处理；结果回来后若发现未启用，由 `enforceCurtainForCompleteness()` 补一次强制展开（带高度动画）
+- **"拖完高度后第一次切换平台总会变高一点点"根因**: 两套内容区高度算法不一致——
+  - 拖动中用 `content.maxHeight = 面板高 - 20`；而 `animatePanelHeight` 收尾用 `content.maxHeight = 面板高` → 切换平台后内容区松了 20px，面板就"变高一点点"，再切一次因为两边都稳定了所以看不出变化
+  - 手动展开的动画收尾还有 `panel.style.maxHeight = ''`（清空上限 → 按自然内容高度渲染），与记录高度又不同
+  - **修复**: 新增 `applyPanelHeight(panelH)` 作为唯一入口（面板 `max-height = H` 且 `content.max-height = H - 20`，成对设置），拖动、动画收尾、手动展开、`applyCurtainState(true)` 全部改走它；另外 `_prevHeight` 改取**语义高度**（`parseInt(panel.style.maxHeight)`）而不是含 padding/border 的渲染高度，作为动画起点不再多算一截
+---
+
+## 二十六、设置区域切换时"闪一下"的真正根因：写死的 20px 偏移（2026-10-05）
+
+- **现象**（用户描述）: 跨平台切换时，高度不变（100→100）会"没动画但闪到 ~120 再跳回 100"；高度变化（100→300）会"动画到 ~320 再闪回 300"
+- **排查方式**: 用项目同款 JavaFX WebView 离屏渲染一个**复刻面板结构 + 真实 CSS** 的页面，逐 25ms 采样面板渲染高度，对比四种方案的"高度轨迹"：
+
+| 方案 | 100→100 | 100→300 | 内容可滚动 |
+|---|---|---|---|
+| V0 现状（内容区 `面板高 - 20`） | `100 -> 80` ✗ 闪 | `... -> 300 -> 280` ✗ 冲到 300 再弹回 280 | true |
+| V1 面板 border-box + 内容不设上限 | 100 ✓ | 100 → … → 300 ✓ | **false** ✗ 滚动条再也不出现 |
+| V2 实测 chrome 补偿 | 100 ✓ | 100 → 300（无中间帧，不丝滑）✗ | true |
+| **V3 面板与内容区同值 + 动画期间内容区解除上限** | **100 ✓** | **100→122→…→300 ✓ 精确收在 300** | **true ✓** |
+
+- **根因**: 内容区被写死 `max-height = 面板高 - 20`（所谓"预留"），而动画期间内容区是 `max-height:none` → 动画能涨到 `H`，停下来却回落到 `H - 20` → 切换平台就表现为"闪一下"或"冲过头再弹回"。**写死的偏移量制造了两套不一致的高度语义**（记录值 = 渲染值 + 20）
+- **修复（无任何魔法数字）**: `applyPanelHeight(h)` 给**面板与内容区同一个值**；动画期间内容区 `max-height:none`（否则涨不上去）保留；滚动条靠内容区自己的 `overflow-y:auto` 照常出现（V3 实测 `scrollHeight > clientHeight` 为 true）
+- **教训**: 面板与内容区这类"父子都被同一高度约束"的场景，**必须同值**；任何 `- N` 的预留都会在"动画/静态"两条路径上产生不一致。要补偿也应实测（V2 的 chrome 实测值是 0，说明当初那个 20 纯属臆测）
+---
+
+## 二十七、LocalGlobalConfig 冗余节点清理 + 账号区滚动自动收起（2026-10-05）
+
+### 一、配置节点审计（实测 storage/4.0.0.7000/DevUserFiles/LocalGlobalConfig.json）
+
+清理前 11 个顶层节点 → 清理后 **5 个**：`theme` / `account_columns` / `last_sw_id` / `settings_height` / `settings_expanded`
+
+| 节点 | 判定 | 依据 / 处理 |
+|---|---|---|
+| `manage_settings_collapsed`（各平台收起态 map） | ✗ 冗余 | 早期 Python 移植遗留；代码里只剩一个**从未被引用**的常量 → 连常量一起删掉 |
+| `manage_settings_height` | ✗ 冗余 | 更早的"全局高度"记录，已被 `settings_height` 取代；代码零引用 |
+| `account_columns.<表id>`（扁平键，出现 3~4 份） | ✗ 冗余 | 历史 bug：保存写成了扁平键，读取端只认嵌套结构 → 读取端兼容分支一并删除（仅删代码会留脏数据，故补一次性清理） |
+| `account_columns.visible` / `.width` | ✗ 冗余 | 更早版本把单表配置直接挂在 `account_columns` 下；无任何读取代码 → 首次启动清理 + `_saveColumnPrefs` 保存时顺手剔除（防回归） |
+| `account_columns.invalid_acc` | ✗ 冗余 | 该表已删除（无效账号并入原生/共存表） |
+| `account_columns.origin_prog` | ✗ 冗余 | 内含已删除的 `status` 列 → 代码本就会按"陈旧列名"作废该配置（等于没在用），直接删除 |
+| `theme` / `account_columns.{origin_acc,coexist_acc}` / `last_sw_id` / `settings_height` / `settings_expanded` | ✓ 在用 | 保留 |
+
+- **删除能力**: `JsBridge.saveGlobalConfig` 增加「**JSON null = 删除该字段**」语义（`ConfigManager.updateGlobalConfig` 对 null 走 `remove`），前端 `cleanLegacyGlobalConfig()` 在 `init()` 里跑一次即完成清理（表实例就绪后再跑，才能判定哪些表还活着）
+- **代码清理**: `SwCoreConstants.MANAGE_SETTINGS_COLLAPSED` 删除；`account-table.js` 去掉扁平键兼容读取；保存时剔除 `account_columns` 下的 `visible`/`width`
+- **数据清理**: 两份实际文件（`D:\SpaceDev\MyProj\JhiFengMultiChat\storage\...` 与项目内 `storage\...`）已就地清理，备份为 `LocalGlobalConfig.json.bak-20261005`
+
+### 二、账号区域"有效滚动"→ 自动收起设置区域
+
+- **触发**: 在账号区域（`.account-area-inner`）滚动滚轮，且**确实滚动了内容** → 自动收起设置区域
+- **"有效"判定**: 滚轮事件里记下 `scrollTop`，下一轮事件循环比对是否变化 —— 没有纵向滚动条、或已滚到边界（`scrollTop` 不变）都算**无效滚动**，不收起
+- **记录规则**: 收起统一走 `toggleSettingsPanel(false)` → 已**启用**平台会写全局记录（所有平台一起收起）；**未启用**（设置不完备）平台只本地收起、**不记录**（复用第二十五节的绿框 gating，无需新分支）
+---
+
+## 二十八、"刚进平台时莫名从 0 涨上来"的根因：本地收起残影被当成动画起点（2026-10-05）
+
+- **现象**（偶发、只在启动初期）：记录为展开、跨平台高度相同时，进入平台会看到面板"从 0（但不完全是从 0）涨到目标高度"；每个平台都点开过一遍后就不再出现
+- **实测（复刻面板 + 真实 CSS 的离屏 WebView 采样，三种起点）**:
+  | 场景 | 高度轨迹 |
+  |---|---|
+  | A 首次进入（内容先空后填，起点=180） | `16 -> 180 -> 200` |
+  | B 已稳定（起点=实际渲染高度 200） | `200`（无动画） |
+  | **C 起点=0（面板当时确实是收起的）** | **`0 -> 20 -> 65 -> 131 -> 159 -> 178 -> 190 -> 197 -> 200`** ← 与用户描述完全一致 |
+- **根因**: 未启用平台的收起按 4.2 **不写全局记录**，但**面板元素的 inline 高度确实变成了 0**。切到下一个平台时：
+  - 全局记录仍是"展开" ⇒ `shouldExpand = true`（符合预期，面板应该就是展开的）
+  - 而动画起点取的是面板当前高度 ⇒ **0** ⇒ 于是走了 `0 -> 目标高度` 的动画（用户感知为"刚进页面莫名跳一段动画"）
+  - "每个平台都点开过一遍就不再出现"的原因：首次访问会**自动探测路径** → 平台变"启用" → 不再有强制展开的平台 → 也就不会出现"只在本地收起"的残影
+- **修复**（三条分支，各司其职）:
+  1. **首次进入平台**（页面刚从"全部平台"占位切过来，面板从未按平台显示过）→ **直接落位**，不做动画（没有有意义的"上一个高度"）
+  2. **上一个平台只是本地收起 + 全局记录仍是展开** → **直接落位**，避免假动画
+  3. 其余情况照常动画：普通跨平台从上一个高度滑到目标高度；**全局收起 → 切到强制展开平台时仍从 0 平滑涨上来**（4.3 要的效果，保留）
+  - 新增状态: `_prevWasCollapsed`（切换前那个平台是否收起）、`_panelShownOnce`（是否已按平台显示过一次）
+---
+
+## 二十九、设置区域"单一渲染依据"重构（2026-10-05）
+
+- **背景（用户实测）**: 记录为"收起"时关闭程序 → 重启后**记录是收起、渲染却是展开**；切换平台时两种规则互相拉扯，切几个平台后才统一。
+  根因：面板的高度/类名有**多条写入路径**（切换平台、点把手、拖动、完备性回调、强制展开…），各自读不同的状态，导致"记录"与"渲染"长期不一致
+- **重构原则（用户提出，已落地）**: **渲染的唯一依据是"期望状态"，状态变更一律先落到事实来源，再统一渲染**
+  - `desiredCurtainState(swId)`：**唯一推导处** = ① 全局记录（`settings_height` / `settings_expanded`）② 例外：未启用平台恒为展开，其本地展开/收起记在 `forcedLocalState`（不写记录，4.2）
+  - `applyCurtainRender()`：**唯一 DOM 写入点**（类名/箭头/高度/动画都在这里决定）；状态与上一帧一致时直接返回（不重放动画）
+  - `setCurtainExpanded(expand)`：启用平台 → 先 `saveCurtainGlobalExpanded` 写记录；未启用平台 → 只改 `forcedLocalState`；然后统一渲染
+  - `setCurtainHeight(h)`：写记录 + 立即渲染（拖动结束调用）
+  - `enforceCurtainForCompleteness()`：完备性变化后只是**再调一次渲染**（幂等）
+  - `_lastRender` 记录"上一帧真实渲染状态"（是否显示过 / 展开 / 是否来自记录 / 高度），动画起点与"是否做动画"都由它推导，取代原先散落的 `_prevHeight` / `_prevWasCollapsed` / `_panelShownOnce`
+- **消除闪烁**: 进入平台时**先同步跑一遍三个路径的绿框检查**（`checkPath` 是同步桥调用），让"是否启用"在渲染前就确定，避免"先按记录收起渲染、200ms 后检查回来又强制展开"
+- **平台由未启用变为启用**: `setPathGreen` 里清掉该平台的 `forcedLocalState` → 此后完全跟随全局记录（不再有历史残影）
+- 顺带删除：旧的 `applyCurtainState()`（及其手写展开/收起动画）与 `toggleSettingsPanel()` 里那套独立动画，全并到 `applyCurtainRender()` + `animatePanelHeight()`

@@ -26,13 +26,16 @@ javafx {
 
 application {
     mainClass.set("com.jfmultichat.Launcher")
+    // sun.awt.shell：取 Windows 原生大图标（32x32）提取 exe 图标用（FileSystemView 只有 16x16，放大后模糊）
     applicationDefaultJvmArgs = listOf(
-        "--add-exports", "javafx.web/com.sun.javafx.webkit=ALL-UNNAMED"
+        "--add-exports", "javafx.web/com.sun.javafx.webkit=ALL-UNNAMED",
+        "--add-exports", "java.desktop/sun.awt.shell=ALL-UNNAMED"
     )
 }
 
 tasks.named<JavaExec>("run") {
     jvmArgs("--add-exports", "javafx.web/com.sun.javafx.webkit=ALL-UNNAMED")
+    jvmArgs("--add-exports", "java.desktop/sun.awt.shell=ALL-UNNAMED")
 }
 
 // === 开发者工具源集（发布辅助工具，复用 main 的类与依赖，但不进入应用产物） ===

@@ -229,3 +229,50 @@ JS 调用 void Java 方法 → 立刻返回
 | `remote_sw_structure.md` | 远程结构定义 |
 | `logic_filter_rules.md` | 逻辑过滤规则 |
 | `handle-shape-preview.html` | Handle 形状预览 |
+
+---
+
+# 关键技术参考（自 AGENTS.md 第十节迁入，2026-10-05）
+
+## 十、关键技术参考
+
+### Avatar 头像获取流程（自 2026-07-30）
+顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字回退。支持用户自定义数据目录，通过 `ConfigManager.getInstance().getUserDataPath()` 获取。2026-07-31 起账号列表由 `JsBridge.getAccAvatarAsync` 异步接入（先 `getAvatarFromCache` 恢复缓存）。详见 `MEMORY/DEV_LOGS.MD` 和 `MEMORY/FACTS.MD`。
+
+### 账号列表来源（自 2026-07-31）
+磁盘扫描：`SwInfoFuncCore.getSwAllAccountsExisted(sw, null)`（数据目录子目录 − 排除目录 + 共存 exe）。由 `JsBridge.getSwExistedAccounts(swId)` 暴露，main.js `loadAccountData` 以它为来源并与 SwAccData 详情合并。
+
+### 日志目录（自 2026-07-31）
+固定 `AppPaths.getLogsDir()` = `%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`（`AppEnv.isDev()` 决定 Dev/Prod，不随用户配置）。logback 属性 `${jfmultichat.logdir:-logs}` 有默认回退。
+
+### JS↔Java 异步架构
+所有网络操作必须后台线程执行，避免阻塞 UI 线程。调用栈：JS void Java 方法 → 立刻返回 → ExecutorService 后台任务 → Platform.runLater → executeScript → JS 回调更新 DOM。详见 `MEMORY/DEV_LOGS.MD`。
+
+### 六级路径探测策略
+内存映射正则 > 注册表 > 猜测 > 进程 > 其他SW > DLL遍历。由 `SwPathDetective.detectAll()` 并发执行，支持超时保护。`swcore` 包内部详细说明。
+
+### 账号展示名（自 2026-08-01）
+`AccInfoFuncCore.getAccOriginDisplayName(sw, acc)` — remark → nickname → alias → 账号 ID。`JsBridge.getSwDetailData` 每账号注入 `display_name`，前端展示名列/头像首字符/排序均用之。
+
+### EventBus 事件机制（自 2026-08-01）— 新增数据操作逻辑的标准路径
+
+**核心**: 数据更新与 UI 刷新解耦。账号/平台数据更新操作写库后发布事件，UI 订阅者自动定向刷新对应 UI 块，**不再整表重渲染**。
+
+**新增一条「账号字段更新」操作的标准步骤**:
+1. **Java 写库后发布事件**: 更新方法中 `ConfigManager.getInstance().updateAccount(...)` 之后加 `EventBus.getInstance().publish(new AccountDataChangedEvent(swId, accountId, changedMap))`（changedMap = 本次更新的字段 map）
+2. **前端定向更新**: 在 `main.js` 的 `onAccountChanged(payload)` 中按 `payload.changed` 字段处理对应单元格——`hidden`/`disabled` → `updateRowStateBadge`、`display_name` → `.manage-nickname-cell`、`avatar_url` → `updateAccountAvatarCell`；未知字段忽略（幂等）
+3. **无需改装配**: `PlatformEventBootstrap` 已注册流B订阅，自动推送
+
+**新增一条独立数据需求（如登录态 UI、HWND 等）**:
+1. 在 `core/event/` 包定义新事件（record）
+2. 发布点发布；`PlatformEventBootstrap.install` 中 `EventBus.getInstance().subscribe(事件类, 处理器)` 注册
+3. 耗时处理放 `JsBridge.runInBackground()`（共享 THREAD_POOL），UI 推送用 `pushToJs`（内部 Platform.runLater）
+
+**关键实现**:
+- `com.jfmultichat.core.EventBus` — 单例，`ConcurrentHashMap<Class, CopyOnWriteArrayList<Consumer>>`，单个订阅者异常不拖垮其它；publish 在调用方线程同步分发
+- 事件: `PlatformEnteredEvent(swId)` / `AccountDataChangedEvent(swId, accountId, changed)`
+- Java→JS 主动推送: `JsBridge.pushAccountDataChanged` → `JFC.bridge._onAccChanged(json)`（**双编码**，见教训 #45）→ `JFC.pages.main.onAccountChanged`
+- JS→Java 触发: `JFC.bridge.notifyPlatformEntered(swId)` → `JsBridge.notifyPlatformEntered` → 发布 `PlatformEnteredEvent`
+- 登录态维护管线（流A）: `AccInfoFuncCore.resolvePidAccountMap` → `associateCoexistAccounts` → `updateAccLoginData`（原 `getSwAccountsLoginStatus` god-method 拆分）
+
+---

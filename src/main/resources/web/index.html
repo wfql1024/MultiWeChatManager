@@ -30,13 +30,9 @@
         <!-- 平台列表 -->
         <ul id="nav-platform-list" class="nav-list"></ul>
 
-        <!-- 底部：统计 + 设置 -->
+        <!-- 底部：设置（"统计"入口已移除，图标资源仍保留在 icons.js 中备用） -->
         <div class="nav-spacer"></div>
         <ul class="nav-list">
-            <li class="nav-item" data-page="statistics">
-                <span class="nav-icon">📊</span>
-                <span class="nav-label">统计</span>
-            </li>
             <li class="nav-item" data-page="settings">
                 <span class="nav-icon">⚙</span>
                 <span class="nav-label">设置</span>
@@ -92,9 +88,9 @@
                                 <svg id="manage-curtain-handle" class="manage-curtain-handle" preserveAspectRatio="none">
                                 <defs><clipPath id="handle-clip"><rect x="-9999" y="0" width="19998" height="20"/></clipPath></defs>
                                 <g clip-path="url(#handle-clip)"><path id="handle-curve" d=""/></g>
-                                <rect id="handle-drag-left" x="-9999" y="0" width="9969" height="20" fill="transparent" style="cursor:ns-resize"/>
+                                <rect id="handle-drag-left" x="-9999" y="0" width="9969" height="20" fill="transparent"/>
                                 <rect id="handle-click-zone" x="-30" y="0" width="60" height="20" fill="transparent" style="cursor:pointer"/>
-                                <rect id="handle-drag-right" x="30" y="0" width="9969" height="20" fill="transparent" style="cursor:ns-resize"/>
+                                <rect id="handle-drag-right" x="30" y="0" width="9969" height="20" fill="transparent"/>
                                 <g id="handle-arrow-group" pointer-events="none" stroke="#999" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                                     <polyline id="handle-arrow-up" points="-8,9 0,3 8,9" fill="none" style="display:none"/>
                                     <polyline id="handle-arrow-down" points="-8,3 0,9 8,3" fill="none"/>
@@ -108,7 +104,6 @@
                                     <div id="acc-table-native-prog" class="acc-table-slot"></div>
                                     <div id="acc-table-native-acc" class="acc-table-slot"></div>
                                     <div id="acc-table-coexist-acc" class="acc-table-slot"></div>
-                                    <div id="acc-table-invalid-acc" class="acc-table-slot"></div>
                                 </div>
                             </div>
                         </div>

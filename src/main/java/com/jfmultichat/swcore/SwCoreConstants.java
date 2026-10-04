@@ -103,7 +103,6 @@ public final class SwCoreConstants {
         public static final String ENCRYPTED_USERNAME = "encrypted_username";
         public static final String ENCRYPTED_PASSWORD = "encrypted_password";
         public static final String CALL_MODE = "call_mode";
-        public static final String MANAGE_SETTINGS_COLLAPSED = "manage_settings_collapsed";
         public static final String THEME = "theme";
     }
 

@@ -143,6 +143,10 @@ JFC.bridge = (function() {
         getSwConfig: function(swId) { return callJsonWithArgs('getSwConfig', swId); },
         saveSwConfig: function(swId, configJson) { return callJsonWithArgs('saveSwConfig', swId, configJson); },
         getSwDetailData: function(swId) { return callJsonWithArgs('getSwDetailData', swId); },
+        // 原生程序表：平台主程序（inst_path 指向的 exe）名称/路径/版本
+        getSwProgramData: function(swId) { return callJsonWithArgs('getSwProgramData', swId); },
+        // 平台图标（程序图标）：优先用缓存的 {userData}/{sw}/{sw}.png，缺图/软件路径变更时才重新提取
+        getSwIcon: function(swId) { return callJsonWithArgs('getSwIcon', swId); },
         // only: "origin"=原生账号, "coexist"=共存账号, 不传=全部
         getSwExistedAccounts: function(swId, only) {
             return callJsonWithArgs('getSwExistedAccounts', swId, only || '');

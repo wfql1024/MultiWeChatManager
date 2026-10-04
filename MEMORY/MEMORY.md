@@ -70,3 +70,17 @@
 - [[FACTS.MD#新增模块（2026-07-31）]] — appcore/acccore 包 + SwConfigProvider
 - [[DECISIONS.MD#appcore/acccore 架构]] — Python func_core 迁移为 Java 包
 - [[DEV_LOGS.MD#远程配置加密发布工具（2026-10-04）]] — src/tools 源集决策/兼容性验证证据/两个踩坑
+
+---
+
+## 文件清单（2026-10-05 整理）
+
+| 文件 | 作用 |
+|---|---|
+| `MEMORY.md` | 本索引 |
+| `FACTS.MD` | 当前事实（环境/数据/路径/键名等） |
+| `DECISIONS.MD` | 决策记录（为什么这么做） |
+| `TODOS.MD` | 待推进事项 |
+| `DEV_LOGS.MD` | 开发日志（每次变更过程，含原 AGENTS.md 第九、十二~二十九节） |
+| `LESSONS.MD` | 技术教训与经验结晶（含原 AGENTS.md 第十一节 50 条） |
+| `ARCHIVE_settings_curtain_animation.md` | 设置区域窗帘改造前的实现与经验存档 |
