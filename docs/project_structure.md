@@ -22,9 +22,10 @@ JhiFengMultiChat/
 │   └── TODOS.MD                  # 待办列表
 ├── .old/                         # 废弃代码归档
 │   └── manage.js                 # 原管理页 JS
-├── src/                           # 源码目录
+├── src/                           # 源码目录（main / test / tools 三个源集）
 ├── resources/                     # 资源文件目录
-├── scripts/                       # 打包脚本目录
+├── scripts/                       # 构建/运行/发布脚本 + 远程配置源 JSON
+├── remote_configs/                # 远程配置发布产物（加密后，客户端按 URL 下载）
 ├─ .claude/                       # Claude 配置目录
 ├─ .gradle/                       # Gradle 缓存目录
 ├─ .git/                          # Git 版本控制目录
@@ -102,6 +103,27 @@ com/jfmultichat/
 └── utils/                           # 工具类
     └── AvatarUtils.java             # 头像获取工具类 (本地/URL/SVG 三路回退)
 ```
+
+### 开发者工具源集 (`src/tools/java`)
+
+发布辅助工具，不进应用产物（独立 `tools` 源集，`gradle jar` 中不含 `com/jfmultichat/tools`）：
+
+```
+com/jfmultichat/tools/
+└── EncryptRemoteConfigs.java        # 远程配置加密发布（复用 config.CryptoUtils）
+```
+
+**远程配置发布流程**：
+
+| 步骤 | 操作 |
+|---|---|
+| 1. 维护源 JSON | 编辑 `scripts/original_remote_global_<vN>.json` / `original_remote_sw_<vN>.json` |
+| 2. 加密产出 | `gradle encryptRemoteConfigs`（或 `scripts\encrypt-configs.bat`）→ 写 `remote_configs/remote_global_<vN>` / `remote_sw_<vN>` |
+| 3. 更新客户端内置 URL | `RemoteConfigFetcher.BUILTIN_REMOTE_*_VERSION`（改了版本号才需要） |
+| 4. 提交推送 | `remote_configs/` 随仓库发布，客户端按 main 分支 raw URL 下载 |
+
+- 加密格式在 `config` 包内只有一份实现：`CryptoUtils.encryptAndAppendKey` / `decryptResponse`；`CryptoUtilsTest` 覆盖往返、已知向量与历史 Python 产物兼容性。
+- 加密前按通用换行读取源文件（CRLF → LF），与历史 Python 版行为一致。
 
 ---
 

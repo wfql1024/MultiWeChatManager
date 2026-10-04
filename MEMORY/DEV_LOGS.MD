@@ -379,3 +379,24 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - 全局规则 → `~/.dsh/AGENTS.md`（DSH 全局仅认此名；从 `~/.claude/CLAUDE.md` 拷贝，含提交先行/SDK 路径/打包流程/时间戳规则）
 - DSH 规则机制: 项目级候选 `["AGENTS.md","CLAUDE.md"]`、本地级 `AGENTS.local.md`/`CLAUDE.local.md`、全局 `$DSH_HOME/AGENTS.md`；`dsh-agent-instructions` 插件实时 watch 注入
 
+
+---
+
+## 远程配置加密发布工具（2026-10-04）
+
+### 一、需求与参照
+- 参照 `legacy_python/scripts/encrypt_data.py`（注释掉的 v3~v9 旧版本未移植），用 Java 重写；加密 `scripts/original_remote_global_v2.json`、`original_remote_sw_v10.json` → `remote_configs/`
+- 算法: `key.ljust(16)[:16]` → AES/CBC/PKCS5Padding + 随机 16 字节 IV → `base64(IV + ciphertext) + " " + key`
+
+### 二、结构决策（用户提出"脚本区不入 classpath 怪怪的"）
+- 采纳 `src/tools` 独立源集 + `JavaExec` 任务：工具复用 `CryptoUtils`（消除加密逻辑双份这一真实风险），且不进应用产物
+- 已删除最初的 `scripts/EncryptData.java` 单文件版（正是"双份实现"要避免的形态）
+
+### 三、兼容性验证（关键证据）
+- 用 Java 解密 `legacy_python/remote_configs/remote_global_v1`、`remote_sw_v9`（Python 产出）→ LF 归一化后与源 JSON 逐字符一致
+- Java 加密产物字节数 = Python 版（48,657 / 170,429）
+- 发现 v2/v10 与 v1/v9 **内容完全相同**（MD5 一致），本次发布实为版本号提升
+
+### 四、踩坑
+- 测试里用"补齐后的 key（尾部带空格）"构造密文会失败：格式按**最后一个空格**切分，key 不能带尾随空格（线上 key 为 15 随机字符 + `=`，天然满足）
+- `Path.of(".").toAbsolutePath()` 不会规范化 `.`，`getParent()` 会返回自身 → 输出目录跑到 `scripts/` 下；需 `.normalize()`

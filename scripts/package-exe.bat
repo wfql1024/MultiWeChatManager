@@ -1,6 +1,6 @@
 @echo off
-set JAVA_HOME=D:\SpaceDev\softwareDev\SDKs\Java\jdk-17.0.2
-set GRADLE_HOME=D:\SpaceDev\softwareDev\SDKs\gradle-8.8
+set JAVA_HOME=D:\SpaceDev\Env\Infrastructure\runtime\Java\jdk-17.0.2
+set GRADLE_HOME=D:\SpaceDev\Env\Infrastructure\runtime\gradle-9.8.0
 set PATH=%JAVA_HOME%\bin;%GRADLE_HOME%\bin;%PATH%
 set "WIXPATH=C:\Program Files (x86)\WiX Toolset v3.14\bin"
 if exist "%WIXPATH%" set "PATH=%PATH%;%WIXPATH%"

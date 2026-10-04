@@ -36,15 +36,23 @@ public final class RemoteConfigFetcher {
     public static final String NS_REMOTE_SW = "RemoteSw";
     public static final String NS_REMOTE_GLOBAL = "RemoteGlobal";
 
+    /** 内置远程配置版本号 —— 与 {@code remote_configs/} 下发布产物的文件名后缀保持一致 */
+    public static final String BUILTIN_REMOTE_SW_VERSION = "v10";
+    public static final String BUILTIN_REMOTE_GLOBAL_VERSION = "v2";
+
     /** 内置 URL（与旧版 Python 一致） */
     private static final String REMOTE_SW_GITEE =
-            "https://gitee.com/wfql1024/MultiWeChatManager/raw/main/remote_configs/remote_sw_v9";
+            "https://gitee.com/wfql1024/MultiWeChatManager/raw/main/remote_configs/remote_sw_"
+                    + BUILTIN_REMOTE_SW_VERSION;
     private static final String REMOTE_SW_GITHUB =
-            "https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/main/remote_configs/remote_sw_v9";
+            "https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/main/remote_configs/remote_sw_"
+                    + BUILTIN_REMOTE_SW_VERSION;
     private static final String REMOTE_GLOBAL_GITEE =
-            "https://gitee.com/wfql1024/MultiWeChatManager/raw/main/remote_configs/remote_global_v1";
+            "https://gitee.com/wfql1024/MultiWeChatManager/raw/main/remote_configs/remote_global_"
+                    + BUILTIN_REMOTE_GLOBAL_VERSION;
     private static final String REMOTE_GLOBAL_GITHUB =
-            "https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/main/remote_configs/remote_global_v1";
+            "https://raw.githubusercontent.com/wfql1024/MultiWeChatManager/main/remote_configs/remote_global_"
+                    + BUILTIN_REMOTE_GLOBAL_VERSION;
 
     private RemoteConfigFetcher() {}
 

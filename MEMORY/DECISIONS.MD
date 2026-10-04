@@ -106,3 +106,14 @@
 - **分割线**: 设置/账号区域分界 + 窗帘把手用 `--divider-solid`（背景+半透明混合的**不透明等效色**，深 `#2c2c2c`/浅 `#d4d4d4`），避免半透明重叠区两次叠加变深
 - **设置区域滚动条根因**: `animatePanelHeight` 动画期间 `content.style.maxHeight='none'`（教训 #37 让面板能撑高）但**动画后未恢复** → content 高度=内容高永不溢出。修复：动画结束（setTimeout 兜底，JavaFX transitionend 不可靠）恢复 `content.maxHeight = targetHeight`
 - **规则文件统一 AGENTS.md**: 项目 `CLAUDE.md` → `AGENTS.md`（DSH/CC 通用约定，DSH 默认候选 `["AGENTS.md","CLAUDE.md"]`）；全局 `~/.dsh/AGENTS.md`（DSH 全局仅认此名，不读 `~/.claude/CLAUDE.md`）——用户决策
+
+## 开发者工具源集与加密单一实现（2026-10-04）
+
+- **背景**: 远程配置加密原本是 Python 脚本（`legacy_python/scripts/encrypt_data.py`），需要与 Java 侧解密联动；用户日常既要开发软件、又要维护两份远程配置 JSON
+- **决定**: 新增 **`src/tools/java` 源集**承载开发/发布工具，配 `JavaExec` 任务 `encryptRemoteConfigs`；工具**复用** `config.CryptoUtils` 的加密实现，而不是在脚本里重写一套
+- **原因**:
+  - 加密格式是对外契约（已发布产物必须永远可解），实现只能有一份；`CryptoUtils` 现在同时提供 `encryptAndAppendKey`/`decryptResponse`，并有测试锁定格式
+  - `src/tools` 独立源集 → 工具能用项目类与依赖、能进编译检查，但**不进应用 jar/安装包**（区别于塞进 `src/main`）
+  - 单文件 `java scripts/X.java` 方案被否：无法 `import com.jfmultichat.config.CryptoUtils`，会导致加密逻辑双份、易漂移
+- **约定**: 新增此类工具一律放 `src/tools/java` + 注册 Gradle 任务；版本号提升只改 `RemoteConfigFetcher.BUILTIN_REMOTE_*_VERSION`
+- **验证**: `gradle test` 全绿（CryptoUtilsTest 6 + 既有用例）；`gradle jar` 中无 tools 包；与历史 Python 产物兼容性有测试与实测双重证据

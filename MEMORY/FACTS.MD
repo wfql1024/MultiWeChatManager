@@ -170,3 +170,14 @@
 - **项目级**: `AGENTS.md`（由 `CLAUDE.md` git mv 重命名；DSH 与 Claude Code 通用约定，DSH 默认候选 `["AGENTS.md","CLAUDE.md"]`）
 - **全局级**: `~/.dsh/AGENTS.md`（DSH 全局仅认 AGENTS.md，不读 `~/.claude/CLAUDE.md`；已从全局 CLAUDE.md 拷贝）
 - DSH 规则文件机制: 项目级候选 `AGENTS.md`/`CLAUDE.md`、本地级 `AGENTS.local.md`/`CLAUDE.local.md`、全局 `$DSH_HOME/AGENTS.md`；由 `dsh-agent-instructions` 插件实时 watch 注入（改文件即时生效）
+
+## 远程配置发布工具（2026-10-04）
+
+- **新增源集 `src/tools/java`**（`com.jfmultichat.tools.EncryptRemoteConfigs`）— 发布辅助工具，复用 `config.CryptoUtils`，**不进入应用产物**（`gradle jar` 无 `com/jfmultichat/tools` 条目）
+- **Gradle 任务**: `gradle encryptRemoteConfigs`（`scripts\encrypt-configs.bat` 为包装）；输入 `scripts/original_remote_<global|sw>_<vN>.json` → 输出 `remote_configs/remote_<global|sw>_<vN>`
+- **加密单一实现**: `CryptoUtils` 新增 `encryptAndAppendKey`（与 `decryptResponse` 同源，key 规则 `ljust(16)[:16]` 共用 `normalizeKey`）
+- **内置 URL 版本常量**: `RemoteConfigFetcher.BUILTIN_REMOTE_SW_VERSION = "v10"` / `BUILTIN_REMOTE_GLOBAL_VERSION = "v2"`（4 条 URL 由常量拼接；设置页默认 URL 列表来自同一 getter，前端无硬编码 URL）
+- **测试 `CryptoUtilsTest`**（6 例全绿）: 往返、已知向量（格式冻结）、key 补齐/截断、**历史 Python 产物兼容**、**当前发布产物自校验**
+- **兼容性实测**: Java 解密直接读出 Python 产出的 `remote_global_v1` / `remote_sw_v9`，LF 归一化后逐字符一致；Java 加密产物字节数与 Python 版相同（48,657 / 170,429）
+- **内容现状**: `original_remote_global_v2.json` ≡ `legacy_python/.../original_remote_global_v1.json` ≡ `resources/data/remote_global_v1.json`（MD5 `0902DC1C…`）；`original_remote_sw_v10.json` ≡ 旧 `original_remote_sw_v9.json`（MD5 `102713C0…`）——v2/v10 为纯版本号提升
+- **换行处理**: 加密前按通用换行读取（CRLF → LF），与历史 Python 版一致；发布产物解密后与源 JSON 是「LF 归一化后相等」

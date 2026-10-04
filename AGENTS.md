@@ -1,8 +1,9 @@
 # AGENTS.md — JhiFengMultiChat（极峰多聊）
 
-> 最后更新: 2026-08-16
+> 最后更新: 2026-10-04
 > 当前阶段: 见 MEMORY/FACTS.MD
 > 记忆系统: MEMORY/（MEMORY.md + DECISIONS.MD/TODOS.MD/FACTS.MD/DEV_LOGS.MD）
+> 本文件只写**本项目自身**的事实；机器环境、SDK/工具链路径与版本见全局 `~/.dsh/AGENTS.md`，此处不重复记录。
 
 ---
 
@@ -12,8 +13,7 @@
 - **定位**: Windows 桌面端多平台聊天软件管理器（Java 17 重写版）
 - **功能**: 微信/企业微信/QQ/TIM/钉钉/飞书多账号管理 — 多开、防撤回、一键登录、窗口切换
 - **Python 旧版参考**: `legacy_python/`（不在版本控制中，仅供数据结构/业务逻辑参考）
-- **工作目录**: `D:\SpaceDev\MyProj\JhiFengMultiChat`
-- **远端**: `main` 分支
+- **远端**: `origin` = GitHub `wfql1024/MultiWeChatManager`（SSH 443）+ `gitee` 镜像；默认分支 `main`
 
 ---
 
@@ -21,8 +21,8 @@
 
 | 层面 | 选型 |
 |------|------|
-| JDK | 17 LTS (`D:\SpaceDev\softwareDev\SDKs\Java\jdk-17.0.2`) |
-| 构建 | Gradle 8.8 (Kotlin DSL) |
+| JDK | 17 LTS |
+| 构建 | Gradle (Kotlin DSL) |
 | UI | JavaFX 17, `StageStyle.TRANSPARENT` |
 | 渲染 | WebView 内嵌 HTML/CSS/JS |
 | JSON | Jackson 2.16 |
@@ -62,9 +62,19 @@
 gradle run --no-daemon --args="--dev"      # 开发运行
 gradle compileJava --no-daemon             # 仅编译
 gradle build --no-daemon                   # 完整构建
+gradle test --no-daemon                    # 单元测试
+gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_configs/（发布工具）
 .\scripts\analyze.bat                      # 依赖分析
 .\scripts\package-exe.bat                  # EXE 打包 (jlink + jpackage)
+.\scripts\encrypt-configs.bat              # 远程配置加密（encryptRemoteConfigs 的包装）
 ```
+
+### 远程配置维护（日常两大工作之一）
+
+- **源文件**：`scripts/original_remote_global_<vN>.json`、`scripts/original_remote_sw_<vN>.json`
+- **流程**：改源 JSON → `gradle encryptRemoteConfigs`（写 `remote_configs/remote_<global|sw>_<vN>`）→ 若版本号变了同步 `RemoteConfigFetcher.BUILTIN_REMOTE_*_VERSION` → 提交推送（客户端按仓库 raw URL 下载）
+- **加密实现**：`config.CryptoUtils.encryptAndAppendKey`（与解密同源，工具在 `src/tools` 源集，不进应用产物），测试见 `CryptoUtilsTest`
+- 详见 [`docs/project_structure.md`](docs/project_structure.md) 的"开发者工具源集"一节。
 
 ---
 

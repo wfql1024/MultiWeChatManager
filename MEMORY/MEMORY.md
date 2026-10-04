@@ -1,6 +1,6 @@
 # MEMORY — 索引与摘要
 
-> 最后更新: 2026-08-01
+> 最后更新: 2026-10-04
 
 ## 决策点
 - [[DECISIONS.MD#page-main 复制迁移]] — 完整复制 DOM+JS，不动旧文件
@@ -19,6 +19,7 @@
 - [[DECISIONS.MD#账号列表列定制]] — 7列结构/列头右键菜单/列宽拖拽/快捷键编辑/悬浮交互（2026-08-16）
 - [[DECISIONS.MD#四表架构与可复用组件]] — AccountTable 组件/四表分类/标题行/固定列/快捷键修复（2026-08-16 第二轮）
 - [[DECISIONS.MD#滚动条体系与布局锁定]] — 自定义滚动条/高度链/列宽规则/整行高亮/分割线/AGENTS.md（2026-08-16 晚间）
+- [[DECISIONS.MD#开发者工具源集与加密单一实现]] — src/tools 源集 + encryptRemoteConfigs 任务，复用 CryptoUtils（2026-10-04）
 
 ## 待办
 - [[TODOS.MD#登录页面]]、[[TODOS.MD#统计页面]] — 占位未实现
@@ -54,6 +55,7 @@
 - [[FACTS.MD#新增模块（2026-08-16 第二轮）]]—AccountTable 组件/快捷键 Scene 捕获/only 参数/NPE 修复
 - [[FACTS.MD#新增功能（2026-08-16 晚间会话）]]—自定义滚动条体系/高度链/整行高亮/列宽规则定稿/分割线/NPE 修复
 - [[FACTS.MD#规则文件（2026-08-16）]]—项目 AGENTS.md/全局 ~/.dsh/AGENTS.md
+- [[FACTS.MD#远程配置发布工具（2026-10-04）]]—src/tools 源集/encryptRemoteConfigs 任务/CryptoUtils 加密单一实现/内置 URL v10+v2/Python 产物兼容实测
 
 ## 开发日志
 - [[DEV_LOGS.MD#page-main 复制迁移（2026-07-04~05）]] — 完整复制 DOM+JS，侧栏精简，旧代码剥离
@@ -67,3 +69,4 @@
 ## 迁移工程（2026-07-31）
 - [[FACTS.MD#新增模块（2026-07-31）]] — appcore/acccore 包 + SwConfigProvider
 - [[DECISIONS.MD#appcore/acccore 架构]] — Python func_core 迁移为 Java 包
+- [[DEV_LOGS.MD#远程配置加密发布工具（2026-10-04）]] — src/tools 源集决策/兼容性验证证据/两个踩坑

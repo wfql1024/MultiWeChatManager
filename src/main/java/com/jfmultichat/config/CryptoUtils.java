@@ -27,7 +27,45 @@ public final class CryptoUtils {
 
     private static final Logger LOG = LoggerFactory.getLogger(CryptoUtils.class);
 
+    /** AES 分组长度 = IV 长度（字节） */
+    private static final int BLOCK_SIZE = 16;
+
+    /** IV 随机源（加密侧使用；与 Python Crypto.Random 同等强度） */
+    private static final java.security.SecureRandom RANDOM = new java.security.SecureRandom();
+
     private CryptoUtils() {}
+
+    /**
+     * 加密 JSON 文本并追加 key.
+     * 与 Python {@code CryptoUtils.encrypt_and_append_key} 等效，是 {@link #decryptResponse(String)} 的逆操作。
+     * <p>
+     * 输出格式: {@code base64(IV + ciphertext) + " " + key}，IV 为每次随机生成的 16 字节。
+     *
+     * @param jsonData 明文 JSON
+     * @param key      追加到输出末尾的密钥（不足 16 位右侧补空格，超出截断为前 16 位）
+     * @return 可被 {@link #decryptResponse(String)} 还原的密文文本
+     * @throws Exception 加密失败
+     */
+    public static String encryptAndAppendKey(String jsonData, String key) throws Exception {
+        byte[] iv = new byte[BLOCK_SIZE];
+        RANDOM.nextBytes(iv);
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(normalizeKey(key), "AES"), new IvParameterSpec(iv));
+        byte[] ciphertext = cipher.doFinal(jsonData.getBytes(StandardCharsets.UTF_8));
+
+        byte[] combined = new byte[iv.length + ciphertext.length];
+        System.arraycopy(iv, 0, combined, 0, iv.length);
+        System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
+
+        LOG.info("[加密] 明文长度={}字符, 密文长度={}字节, key='{}'", jsonData.length(), combined.length, key);
+        return Base64.getEncoder().encodeToString(combined) + " " + key;
+    }
+
+    /** {@code key.ljust(16)[:16]} —— 不足 16 位右侧补空格，超出截断为前 16 位. */
+    private static byte[] normalizeKey(String key) {
+        return (key + "                ").substring(0, BLOCK_SIZE).getBytes(StandardCharsets.UTF_8);
+    }
 
     /**
      * 解密远程配置响应文本.
@@ -62,16 +100,15 @@ public final class CryptoUtils {
                 bytesToHex(decoded, 4));
 
         // 3. Key 处理: key.ljust(16)[:16].encode()
-        String paddedKey = (key + "                ").substring(0, 16);
-        byte[] aesKey = paddedKey.getBytes(StandardCharsets.UTF_8);
-        LOG.info("[解密] Key处理: paddedKey='{}' (长度={})", paddedKey, aesKey.length);
+        byte[] aesKey = normalizeKey(key);
+        LOG.info("[解密] Key处理: key='{}' → aesKey 长度={}", key, aesKey.length);
 
         // 4. 前 16 字节 = IV，剩余 = ciphertext
-        byte[] iv = new byte[16];
-        byte[] ciphertext = new byte[decoded.length - 16];
-        System.arraycopy(decoded, 0, iv, 0, 16);
-        System.arraycopy(decoded, 16, ciphertext, 0, ciphertext.length);
-        LOG.info("[解密] IV(hex)={}, 密文长度={}字节", bytesToHex(iv, 16), ciphertext.length);
+        byte[] iv = new byte[BLOCK_SIZE];
+        byte[] ciphertext = new byte[decoded.length - BLOCK_SIZE];
+        System.arraycopy(decoded, 0, iv, 0, BLOCK_SIZE);
+        System.arraycopy(decoded, BLOCK_SIZE, ciphertext, 0, ciphertext.length);
+        LOG.info("[解密] IV(hex)={}, 密文长度={}字节", bytesToHex(iv, BLOCK_SIZE), ciphertext.length);
 
         // 5. AES/CBC/PKCS5Padding 解密
         Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
