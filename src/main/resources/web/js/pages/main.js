@@ -47,6 +47,10 @@ JFC.pages.main = (function() {
             { key: 'reason',  label: '无效原因', mandatory: false, sortable: true, defVisible: true, defWidth: 200 }
         ]
     };
+    // 共存账号 = 账号列 + 「最后登录账号」（linked_acc：该共存 exe 当前关联/最后登录的原生账号）；非必选、默认显示
+    TABLE_COLUMNS.coexist = TABLE_COLUMNS.account.concat([
+        { key: 'linked_acc', label: '最后登录账号', mandatory: false, sortable: true, defVisible: true, defWidth: 170, cellClass: 'manage-linked-acc-cell' }
+    ]);
     var accountTables = {};
     var sectionScrollbar = null;   // 账号区域纵向 overlay 滚动条（attachScrollbar 返回）
     var settingsScrollbar = null;  // 设置区域纵向 overlay 滚动条
@@ -123,7 +127,7 @@ JFC.pages.main = (function() {
         var defs = [
             { key: 'origin_prog', title: '原生程序', columns: TABLE_COLUMNS.program, enableHotkey: false, defaultSortField: 'name' },
             { key: 'origin_acc',  title: '原生账号', columns: TABLE_COLUMNS.account, enableHotkey: true,  defaultSortField: 'display_name' },
-            { key: 'coexist_acc', title: '共存账号', columns: TABLE_COLUMNS.account, enableHotkey: true,  defaultSortField: 'display_name' },
+            { key: 'coexist_acc', title: '共存账号', columns: TABLE_COLUMNS.coexist, enableHotkey: true,  defaultSortField: 'display_name' },
             { key: 'invalid_acc', title: '无效账号', columns: TABLE_COLUMNS.invalid, enableHotkey: false, defaultSortField: '' }
         ];
         var containers = {
@@ -1264,44 +1268,29 @@ JFC.pages.main = (function() {
         }
     }
 
-    // ---- 加载账号数据（路由到原生账号表） ----
+    // ---- 加载账号数据（原生账号 + 共存账号） ----
     function loadAccountData(swId) {
-        // 账号来源: 磁盘扫描已存在的账号，仅原生账号（数据目录子目录）
-        var existed = JFC.bridge.getSwExistedAccounts(swId, 'origin') || [];
-
-        // 补充持久化详情（昵称/头像/隐藏/禁用等），未记录的新账号显示为空白详情
+        // 详情来源：SwAccData（两个表共用）
         var detailMap = {};
         var data = JFC.bridge.getSwDetailData(swId);
         if (data && data.accounts) {
             data.accounts.forEach(function(a) { detailMap[a.id] = a; });
         }
 
-        var rows = existed.map(function(id) {
-            var acc = detailMap[id] || {};
-            // 标准化字段类型
-            return {
-                id: id,
-                nickname: acc.nickname || '',
-                alias: acc.alias || '',
-                hotkey: acc.hotkey || '',
-                // 展示名：getAccOriginDisplayName（remark→nickname→alias→账号ID）
-                display_name: acc.display_name || '',
-                avatar_url: acc.avatar_url || '',
-                hidden: acc.hidden === true || acc.hidden === 'true',
-                disabled: acc.disabled === true || acc.disabled === 'true',
-                login_time: acc.login_time || acc.last_login || '',
-                remark: acc.remark || '',
-                // 保留原始字段以便后续使用
-                _raw: acc
-            };
-        });
-        accountTables.origin_acc.setData(rows);
-        // 其余三个表暂无数据（原生程序/共存账号/无效账号）
+        // 原生账号 = 数据目录下的账号子目录；共存账号 = 安装目录下的共存 exe
+        var originRows = buildAccountRows(JFC.bridge.getSwExistedAccounts(swId, 'origin') || [], detailMap, false);
+        var coexistRows = buildAccountRows(JFC.bridge.getSwExistedAccounts(swId, 'coexist') || [], detailMap, true);
+
+        accountTables.origin_acc.setData(originRows);
+        accountTables.coexist_acc.setData(coexistRows);
+        // 原生程序 / 无效账号：数据源待定，暂不接入
         accountTables.origin_prog.setData([]);
-        accountTables.coexist_acc.setData([]);
         accountTables.invalid_acc.setData([]);
+
         // 异步加载头像（本地文件 → URL下载 → SVG 回退）
-        rows.forEach(function(acc) { requestAccountAvatar(swId, acc); });
+        originRows.forEach(function(acc) { requestAccountAvatar(swId, acc, accountTables.origin_acc); });
+        coexistRows.forEach(function(acc) { requestAccountAvatar(swId, acc, accountTables.coexist_acc); });
+
         // 刷新账号区域纵向滚动条（内容高度变化后）
         if (sectionScrollbar) {
             sectionScrollbar.update();
@@ -1309,16 +1298,49 @@ JFC.pages.main = (function() {
         }
     }
 
+    // ---- 账号 ID 列表 + SwAccData 详情 → 表行数据（原生/共存共用） ----
+    // followLinkedAcc = 共存账号：自身只认 remark，昵称/平台内ID/头像一律取 linked_acc 指向的账号
+    //   名称回退链：自身 remark > 链接账号 nickname > 链接账号 alias > 链接账号 id > 自身 id
+    //   （原生账号：Java 端 getAccOriginDisplayName 已算好 remark > nickname > alias > id）
+    function buildAccountRows(ids, detailMap, followLinkedAcc) {
+        return ids.map(function(id) {
+            var acc = detailMap[id] || {};
+            var linkedAccId = followLinkedAcc ? (acc.linked_acc || '') : '';
+            var linked = (linkedAccId && detailMap[linkedAccId]) ? detailMap[linkedAccId] : null;
+            var src = linked || {};   // 共存账号的昵称/平台内ID/头像来源
+            // 标准化字段类型；未记录的新账号显示为空白详情
+            return {
+                id: id,
+                nickname: followLinkedAcc ? (src.nickname || '') : (acc.nickname || ''),
+                alias: followLinkedAcc ? (src.alias || '') : (acc.alias || ''),
+                hotkey: acc.hotkey || '',
+                display_name: followLinkedAcc
+                    ? (acc.remark || src.nickname || src.alias || linkedAccId || id)
+                    : (acc.display_name || ''),
+                avatar_url: followLinkedAcc ? (src.avatar_url || '') : (acc.avatar_url || ''),
+                hidden: acc.hidden === true || acc.hidden === 'true',
+                disabled: acc.disabled === true || acc.disabled === 'true',
+                login_time: acc.login_time || acc.last_login || '',
+                remark: acc.remark || '',
+                // 共存账号特有：关联/最后登录的原生账号
+                linked_acc: linkedAccId,
+                // 保留原始字段以便后续使用
+                _raw: acc
+            };
+        });
+    }
+
     // ---- 异步头像加载 ----
     // 参考 acccore AccInfoFuncCore.getAvatarFromCache + getAccAvatarFromFile
-    function requestAccountAvatar(swId, acc) {
+    function requestAccountAvatar(swId, acc, table) {
         if (acc.avatar_data || acc._avatarFetching) return;
         acc._avatarFetching = true;
         JFC.bridge.getAccAvatarAsync(swId, acc.id, function(type, data) {
             acc._avatarFetching = false;
             if (data && data.dataUrl) {
                 acc.avatar_data = data.dataUrl;
-                accountTables.origin_acc.updateAvatar(acc.id, data.dataUrl);
+                var target = table || accountTables.origin_acc;
+                if (target) target.updateAvatar(acc.id, data.dataUrl);
             }
         });
     }

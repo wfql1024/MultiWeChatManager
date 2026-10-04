@@ -150,7 +150,7 @@ public final class SwAccountOps {
         if (!"origin".equals(only)) {
             // 共存账号
             if (instPath != null && !instPath.isBlank() && executableWildcards != null) {
-                String instDir = new java.io.File(instPath).getParent();
+                String instDir = resolveInstDir(instPath);
                 String originExe = accessor.getRemoteSwAsString(sw, SwCoreConstants.RemoteSwKey.EXECUTABLE, "");
                 List<String> coexistExes = getAllCoexistAccAndEnsureFormatted(
                         sw, instDir, executableWildcards, originExe, accessor, accountOps);
@@ -159,6 +159,21 @@ public final class SwAccountOps {
         }
 
         return new ArrayList<>(accounts);
+    }
+
+    /**
+     * 解析安装目录：{@code inst_path} 通常是主程序 exe 路径（取父目录），
+     * 但个别平台保存的是安装目录本身，此时直接使用（否则会扫描到上一级目录，共存 exe 全部漏掉）。
+     *
+     * @param instPath 主程序 exe 路径或安装目录
+     * @return 安装目录；入参为空时返回 {@code null}
+     */
+    static String resolveInstDir(String instPath) {
+        if (instPath == null || instPath.isBlank()) {
+            return null;
+        }
+        java.io.File file = new java.io.File(instPath);
+        return file.isDirectory() ? file.getPath() : file.getParent();
     }
 
     // ==================== 可用共存模式识别 ====================

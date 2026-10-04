@@ -108,6 +108,57 @@ public final class AvatarUtils {
         return userDir + "/" + sw + "/" + acc + "/" + acc + ".jpg";
     }
 
+    /**
+     * 只尝试本地头像文件（不联网下载），命中返回 data URL，未命中返回 {@code null}.
+     *
+     * <p>共存账号头像链的第一、二步需要"仅本地"的判定，故单独抽出。
+     *
+     * @param sw  平台标识
+     * @param acc 账号 ID（或共存 exe 名）
+     * @return data URL 或 {@code null}
+     */
+    public static String getLocalAvatarDataUrl(String sw, String acc) {
+        if (sw == null || sw.isBlank() || acc == null || acc.isBlank()) return null;
+        try {
+            ConfigManager cm = ConfigManager.getInstance();
+            if (cm == null || cm.getUserDataPath() == null) return null;
+            String userDir = cm.getUserDataPath().toString().replace('\\', '/');
+            File file = new File(buildAvatarPath(userDir, sw, acc));
+            if (!file.exists()) return null;
+            return encodeToDataUrl(file);
+        } catch (Exception e) {
+            LOG.warn("[头像] 读取本地头像失败: sw={}, acc={}, {}", sw, acc, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 共存账号头像：自身本地头像 &gt; 链接账号本地头像 &gt; 链接账号头像地址（下载） &gt; 默认头像.
+     *
+     * @param sw              平台标识
+     * @param coexistAcc      共存账号（exe 名）
+     * @param linkedAcc       链接账号（原生账号 ID），可为空
+     * @param linkedAvatarUrl 链接账号在 SwAccData 里的 avatar_url，可为空
+     * @return data URL（兜底为文字头像，不会返回 {@code null}）
+     */
+    public static String getCoexistAvatarDataUrl(String sw, String coexistAcc,
+                                                 String linkedAcc, String linkedAvatarUrl) {
+        // 1. 自身本地头像文件
+        String own = getLocalAvatarDataUrl(sw, coexistAcc);
+        if (own != null) {
+            LOG.info("[头像] 共存账号使用自身本地头像: {}", coexistAcc);
+            return own;
+        }
+        // 2 & 3. 链接账号：本地文件 → 头像地址下载（getAvatarDataUrl 内部已按此顺序）
+        if (linkedAcc != null && !linkedAcc.isBlank()) {
+            LOG.info("[头像] 共存账号回退到链接账号头像: {} -> {}", coexistAcc, linkedAcc);
+            return getAvatarDataUrl(sw, linkedAcc, linkedAvatarUrl);
+        }
+        // 4. 无链接账号 → 默认文字头像（generateTextAvatarSvgFallback 自行取首字符）
+        LOG.info("[头像] 共存账号无链接账号, 使用默认文字头像: {}", coexistAcc);
+        return generateTextAvatarSvgFallback(coexistAcc);
+    }
+
     private static boolean downloadImage(String urlStr, String filePath) {
         try {
             URL url = new URL(urlStr);

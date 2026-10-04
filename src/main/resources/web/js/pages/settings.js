@@ -74,14 +74,8 @@ JFC.pages.settings = (function() {
         if (configInited) return;
         configInited = true;
 
-        bind('cfg-use-proxy', 'change', function() {
-            var d = document.getElementById('cfg-proxy-detail');
-            if (d) d.style.display = this.checked ? '' : 'none';
-            commitProxyConfig();
-        });
-        // 地址/端口改动后立即生效（无需点"保存配置"、无需重启）
-        bind('cfg-proxy-ip', 'change', commitProxyConfig);
-        bind('cfg-proxy-port', 'change', commitProxyConfig);
+        // 代理块：勾选只切换启用状态，点"保存"才持久化 + 立即应用
+        bind('cfg-proxy-save', 'click', saveProxyConfig);
 
         bind('cfg-user-dir-browse', 'click', function() {
             if (!JM()) return;
@@ -92,17 +86,31 @@ JFC.pages.settings = (function() {
 
         bind('cfg-user-dir', 'blur', validateUserDir);
         bind('cfg-user-dir', 'focus', onUserDirFocus);
+        bind('cfg-dir-save', 'click', saveDirConfig);
 
         bind('cfg-sw-add', 'click', function() { addUrl('sw'); });
         bind('cfg-sw-test-all', 'click', function() { testAllUrls('sw'); });
         bind('cfg-global-add', 'click', function() { addUrl('global'); });
         bind('cfg-global-test-all', 'click', function() { testAllUrls('global'); });
-
-        bind('cfg-btn-save', 'click', saveConfigData);
+        bind('cfg-urls-save', 'click', saveUrlConfig);
     }
 
     function bind(id, evt, fn) { var e = document.getElementById(id); if (e) e.addEventListener(evt, fn); }
     function el(id) { return document.getElementById(id); }
+
+    /** 按"各板块自身是否可保存"更新三个保存按钮（互不牵连） */
+    function updateBlockButtons() {
+        var dir = el('cfg-user-dir');
+        var dirOk = !!(dir && dir.classList.contains('input-ok'));
+        setDisabled('cfg-dir-save', !dirOk);
+        // 远程配置源：平台和全局都至少有一个地址测试成功（绿框）才可保存
+        setDisabled('cfg-urls-save', !(hasGreen('sw') && hasGreen('global')));
+    }
+
+    function setDisabled(id, disabled) {
+        var e = el(id);
+        if (e) e.disabled = !!disabled;
+    }
 
     // ==================== 用户目录 ====================
 
@@ -115,7 +123,7 @@ JFC.pages.settings = (function() {
 
     function validateUserDir() {
         var input = el('cfg-user-dir');
-        if (!input || !JM()) { updateSaveButton(); return; }
+        if (!input || !JM()) { updateBlockButtons(); return; }
         var val = getActualDirVal();
 
         if (!val || val === defaultUserDir) {
@@ -124,7 +132,7 @@ JFC.pages.settings = (function() {
             input.classList.remove('input-error', 'input-warn');
             input.classList.add('input-ok');
             hideEl('cfg-user-dir-hint');
-            updateSaveButton();
+            updateBlockButtons();
             return;
         }
 
@@ -134,7 +142,7 @@ JFC.pages.settings = (function() {
         if (!r || !r.valid) {
             input.classList.add('input-error'); input.classList.remove('input-ok', 'input-warn');
             showEl('cfg-user-dir-hint', (r && r.error) || '路径格式不合法', 'config-hint error');
-            updateSaveButton(); return;
+            updateBlockButtons(); return;
         }
 
         var corrected = ensureCorrectTail(val);
@@ -144,7 +152,7 @@ JFC.pages.settings = (function() {
         if (!r || !r.valid) {
             input.classList.add('input-error'); input.classList.remove('input-ok', 'input-warn');
             showEl('cfg-user-dir-hint', (r && r.error) || '修正后路径不合法', 'config-hint error');
-            updateSaveButton(); return;
+            updateBlockButtons(); return;
         }
 
         var matches = val.match(/\d+\.\d+\.\d+\.\d+/g);
@@ -156,7 +164,7 @@ JFC.pages.settings = (function() {
             input.classList.remove('input-error', 'input-warn'); input.classList.add('input-ok');
             hideEl('cfg-user-dir-hint');
         }
-        updateSaveButton();
+        updateBlockButtons();
     }
 
     function getActualDirVal() {
@@ -208,11 +216,11 @@ JFC.pages.settings = (function() {
         input.type = 'text'; input.spellcheck = false;
         input.value = isDefault ? '(默认) ' + url : url;
         input.readOnly = isDefault;
-        if (data.lastValidSet.has(url)) input.classList.add('input-ok');
+        // 不预置绿框：远程配置源的"保存"必须在本次会话里至少测试成功一个地址才启用
         input.addEventListener('input', function() {
             input.classList.remove('input-ok', 'input-error');
             hideRowHint(row);
-            updateSaveButton();
+            updateBlockButtons();
         });
         inputLine.appendChild(input);
 
@@ -277,7 +285,7 @@ JFC.pages.settings = (function() {
                 data.lastValidSet.delete(url);
                 showRowHint(row, '测试失败: ' + ((result && result.error) || '连接失败'), 'error');
             }
-            updateSaveButton();
+            updateBlockButtons();
             if (onDone) onDone();
         });
     }
@@ -302,14 +310,14 @@ JFC.pages.settings = (function() {
         // 直接拷贝最后一条 URL（不管是不是默认）
         var lastUrl = rows.length > 0 ? getRowUrl(rows[rows.length-1]) : '';
         addUrlRow(container, ns, lastUrl, false);
-        updateSaveButton();
+        updateBlockButtons();
     }
 
     function deleteUrlRow(ns, row) {
         if (row.dataset.isDefault === '1') return;
         urlListData[ns].lastValidSet.delete(getRowUrl(row));
         row.remove();
-        updateSaveButton();
+        updateBlockButtons();
     }
 
     function collectUserUrls(ns) {
@@ -353,8 +361,7 @@ JFC.pages.settings = (function() {
 
         var cb = el('cfg-use-proxy');
         if (cb) cb.checked = !!data.useProxy;
-        var detail = el('cfg-proxy-detail');
-        if (detail) detail.style.display = data.useProxy ? '' : 'none';
+        // 代理明细常驻显示（不再随勾选切换）
         setVal('cfg-proxy-ip', data.proxyIp || '');
         setVal('cfg-proxy-port', data.proxyPort || '');
 
@@ -397,8 +404,8 @@ JFC.pages.settings = (function() {
      * 勾选"使用代理"或修改地址/端口后立即生效（无需点"保存配置"、无需重启）。
      * 后端会持久化这三个字段并归一化地址，归一化结果回填输入框。
      */
-    function commitProxyConfig() {
-        if (!JM()) { return; }
+    function saveProxyConfig() {
+        if (!JM()) { showMsg('cfg-proxy-msg', '保存失败: 桥接不可用', true); return; }
 
         var payload = {
             useProxy: !!(el('cfg-use-proxy') && el('cfg-use-proxy').checked),
@@ -408,7 +415,7 @@ JFC.pages.settings = (function() {
 
         var res = JFC.bridge.applyProxyConfig(JSON.stringify(payload));
         if (!res || res.success !== true) {
-            showMsg('代理设置失败: ' + ((res && res.message) || '未知错误'), true);
+            showMsg('cfg-proxy-msg', '保存失败: ' + ((res && res.message) || '未知错误'), true);
             return;
         }
 
@@ -417,34 +424,46 @@ JFC.pages.settings = (function() {
             setVal('cfg-proxy-ip', res.proxyIp || '');
             setVal('cfg-proxy-port', res.proxyPort || '');
         }
-        // 未勾选属正常状态，不用红色提示
-        showMsg(res.message || '代理设置已更新', !res.applied && payload.useProxy);
+
+        // 能直接应用 → 保存成功；无法运行期应用 → 弹窗提示重启；勾选了但地址非法 → 红字说明
+        if (res.requiresRestart) {
+            alert('代理设置已保存。\n\n该设置需要重启应用后才能生效，请手动重启。');
+            showMsg('cfg-proxy-msg', '已保存，需重启生效', true);
+            return;
+        }
+        if (payload.useProxy && !res.applied) {
+            showMsg('cfg-proxy-msg', res.message || '代理地址无效，已按直连处理', true);
+            return;
+        }
+        showMsg('cfg-proxy-msg', '保存成功');
     }
 
-    // ==================== 保存 ====================
+    // ==================== 保存（三个板块互相独立） ====================
 
-    function saveConfigData() {
-        if (!JM()) { showMsg('保存失败: 桥接不可用', true); return; }
+    /** 通用保存：payload 只带本板块字段（后端 saveConfigData 按字段合并，缺省字段不动） */
+    function saveBlock(payload, msgId, onSuccess) {
+        var res = JFC.bridge.saveConfigData(JSON.stringify(payload));
+        if (res && res.success) {
+            showMsg(msgId, '保存成功');
+            if (onSuccess) onSuccess(res);
+            return res;
+        }
+        showMsg(msgId, (res && res.error) || '保存失败', true);
+        return null;
+    }
+
+    /** 本地目录块：绿框才允许保存；目标目录已有文件时先询问迁移方向 */
+    function saveDirConfig() {
+        if (!JM()) { showMsg('cfg-dir-msg', '保存失败: 桥接不可用', true); return; }
         validateUserDir();
+        var dirEl = el('cfg-user-dir');
+        if (dirEl && dirEl.classList.contains('input-error')) {
+            showMsg('cfg-dir-msg', '请先修正用户目录路径错误', true);
+            return;
+        }
 
-        var hasDirErr = (el('cfg-user-dir') && el('cfg-user-dir').classList.contains('input-error'));
-        var noGreen = false;
-        ['sw','global'].forEach(function(ns) { if (!hasGreen(ns)) noGreen = true; });
-
-        if (hasDirErr) { showMsg('请先修正用户目录路径错误', true); return; }
-        if (noGreen) { showMsg('远程平台和远程全局都至少需要一个地址测试通过（绿框）', true); return; }
-
-        var data = {
-            useProxy: el('cfg-use-proxy').checked,
-            proxyIp: getVal('cfg-proxy-ip'),
-            proxyPort: getVal('cfg-proxy-port'),
-            userDataPath: getActualDirVal(),
-            remoteGlobalUrls: collectUserUrls('global'),
-            remoteSwUrls: collectUserUrls('sw')
-        };
-
-        // 数据目录变更 → 检查目标是否已有文件，弹出迁移提示
-        var newPath = data.userDataPath || '';
+        var payload = { userDataPath: getActualDirVal() };
+        var newPath = payload.userDataPath || '';
         if (newPath) {
             var conflict = JFC.bridge.checkDataDirConflict(newPath);
             if (conflict && conflict.conflict) {
@@ -454,26 +473,33 @@ JFC.pages.settings = (function() {
                     '点击「取消」以当前软件数据为准（目标目录将被备份到桌面）\n\n' +
                     '目标: ' + newPath
                 );
-                data.useTarget = !choice;  // 确定 = 使用目标, 取消 = 使用当前
+                payload.useTarget = !choice;  // 确定 = 使用目标, 取消 = 使用当前
             }
         }
 
-        var result = JFC.bridge.saveConfigData(JSON.stringify(data));
-        if (result && result.success) {
-            showMsg('保存成功');
-            if (result.pathChanged) setVal('cfg-user-dir', result.newPath || data.userDataPath);
-            collectUserUrls('global').forEach(function(u) { urlListData.global.lastValidSet.add(u); });
-            collectUserUrls('sw').forEach(function(u) { urlListData.sw.lastValidSet.add(u); });
-            el('cfg-user-dir').classList.remove('input-error', 'input-warn');
-        } else {
-            showMsg((result && result.error) || '保存失败', true);
-        }
+        saveBlock(payload, 'cfg-dir-msg', function(res) {
+            if (res.pathChanged) setVal('cfg-user-dir', res.newPath || payload.userDataPath);
+            if (dirEl) dirEl.classList.remove('input-error', 'input-warn');
+            updateBlockButtons();
+        });
     }
 
-    function updateSaveButton() {
-        var btn = el('cfg-btn-save'); if (!btn) return;
-        var err = (el('cfg-user-dir') && el('cfg-user-dir').classList.contains('input-error'));
-        btn.disabled = err;
+    /** 远程配置源块：平台和全局都必须至少有一个地址测试通过才可保存 */
+    function saveUrlConfig() {
+        if (!JM()) { showMsg('cfg-urls-msg', '保存失败: 桥接不可用', true); return; }
+        if (!(hasGreen('sw') && hasGreen('global'))) {
+            showMsg('cfg-urls-msg', '请先测试地址：平台(remote_sw) 和 全局(remote_global) 都至少要有一个测试成功（绿框）', true);
+            return;
+        }
+
+        var payload = {
+            remoteGlobalUrls: collectUserUrls('global'),
+            remoteSwUrls: collectUserUrls('sw')
+        };
+        saveBlock(payload, 'cfg-urls-msg', function() {
+            collectUserUrls('global').forEach(function(u) { urlListData.global.lastValidSet.add(u); });
+            collectUserUrls('sw').forEach(function(u) { urlListData.sw.lastValidSet.add(u); });
+        });
     }
 
     // ==================== 更新（异步） ====================
@@ -761,8 +787,8 @@ JFC.pages.settings = (function() {
         });
     }
 
-    function showMsg(msg, isErr) {
-        var e = el('cfg-save-msg'); if (!e) return;
+    function showMsg(msgId, msg, isErr) {
+        var e = el(msgId); if (!e) return;
         e.textContent = msg; e.className = 'config-msg' + (isErr ? ' error' : ''); e.style.display = '';
         setTimeout(function() { e.style.display = 'none'; }, 3000);
     }

@@ -305,3 +305,94 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - **教训**: 代理地址不能原样塞进 `https.proxyHost` —— 含 `:` 的"主机"会被 JDK 当成 IPv6 加方括号，报 `java.net.URISyntaxException: Expected closing bracket for IPv6 address at index 20: proxy.https://[http://127.0.0.1]:7890/`。必须剥掉协议前缀并拆出端口
 - **远程配置下载**: `JsBridge.downloadRemoteConfigs()` 的候选 URL = **用户配置 + 内置兜底**（`JsBridge.mergeUrls()`）。此前只取用户列表，用户把「远程配置源」清空后日志出现 `候选URL: 0个`、远程配置永远下载失败 —— 已修复
 - **gitee 现状**: gitee 对 `remote_configs/remote_*` 判定违规返回 451（与网络无关）；候选列表里 gitee 失败会自动继续尝试 GitHub
+---
+
+## 十三、共存账号数据接入（2026-10-04）
+
+- **前端**: `main.js` 的 `loadAccountData(swId)` 现在同时拉取原生与共存两路数据，抽公共的 `buildAccountRows(ids, detailMap)` 生成行；`origin_acc` / `coexist_acc` 各自 `setData`；头像按表路由（`requestAccountAvatar(swId, acc, table)`，此前写死更新原生表）
+- **共存账号来源**: `JsBridge.getSwExistedAccounts(swId, 'coexist')` → `SwAccountOps.getSwAllAccountsExisted(..., only='coexist')` → 安装目录中匹配 `executable_wildcards` 的 exe（排除原生 exe），并 `ensureCoexistAccFormatted` 写入 SwAccData
+- **本次修掉三个 Java 缺陷**（否则共存表永远是空的）:
+  1. **取错配置键**: `SwInfoFuncCore.getSwAllAccountsExisted` 读的是 `exe_wcs`（该键在远程配置中根本不存在，Python 里 `RemoteSwKey.EXE_WCS = "executable_wildcards"`）→ 通配符列表恒空 → 共存扫描恒 0。改为常量 `SwCoreConstants.RemoteSwKey.EXECUTABLE_WILDCARDS`
+  2. **accountOps 传 null**: `JsBridge.getSwExistedAccounts` 构造 `SwInfoFuncCore` 时第 4 参为 null，共存分支调用 `ensureCoexistAccFormatted` 直接 NPE（WXWork 实测）→ 改传 `new AccOpsProvider().toSwProvider()`
+  3. **inst_path 可能是目录**: `SwAccountOps` 原来一律 `new File(instPath).getParent()`；WeChat/DouYinIM 的 inst_path 存的是**安装目录本身** → 扫到上一级目录、共存 exe 全漏。抽出 `resolveInstDir()`：是目录就用它，是 exe 才取父目录
+- **实测结果**（2026-10-04 本机）: WeChat 2 个（`WeCha1.exe`/`WeCha2.exe`）、WXWork 1 个（`WXWor1.exe`）；Weixin/QQNT/QQ/TIM/DouYinIM 无（该目录下确无匹配 exe）
+- **已知数据问题（非代码）**: `LocalSwConfig.json` 里 TIM 的 `inst_path` 指向 `D:/software/Tencent/QQNT/QQ.exe`（应为 TIM 自己的 Bin 目录），导致 TIM 共存扫描找不到东西——需要重新探测/修正路径
+- **测试**: 新增 `SwAccountOpsTest`（3 例，覆盖 exe 路径/目录/null 三种 inst_path）
+---
+
+## 十四、共存账号列 + 列配置持久化 + 侧栏展开（2026-10-04）
+
+- **共存账号新增列「最后登录账号」**: `TABLE_COLUMNS.coexist = TABLE_COLUMNS.account.concat([{key:'linked_acc', ...}])`（非必选、默认显示、宽 170）；值来自 SwAccData 的 `linked_acc`（该共存 exe 当前关联/最后登录的原生账号），行数据在 `buildAccountRows()` 里已带出
+- **列显隐/列宽不持久化（已修）**: `AccountTable._saveColumnPrefs` 写的是**扁平键** `"account_columns.<表id>"`，而 `_loadColumnPrefs` 读的是**嵌套** `account_columns[表id]` → 右键勾选的显示列下次启动就丢
+  - 修复：写嵌套结构；因 `saveGlobalConfig` 是**顶层浅合并**，必须先 `getGlobalConfig()` 读出 `account_columns` 再合并本表，否则会清掉其它表的列配置
+  - 兼容：`_loadColumnPrefs` 增加历史扁平键回退读取（迁移一次，下次保存写回嵌套），用户此前勾选的列不会丢
+- **最左栏（`#nav-sidebar`）展开改为「静止 2 秒」**: `nav-sidebar.js` 的 `EXPAND_DELAY` 300ms → **2000ms**，并新增 `MOVE_THRESHOLD = 6px`：鼠标在区域内移动超过阈值就**重新计时**，微动（<6px）不重置，真正停下 2 秒才展开；移出立即收起
+  - 注：页面内的次级左栏 `#manage-platform-sidebar` 被 CSS `display:none` 隐藏，其 `main.js#initManageSidebar` 的 300ms 逻辑实际不生效，未改动
+- **测试**: JS 侧 `node --check` 通过（无 JS 单测框架）；Java 侧未改动逻辑
+---
+
+## 十五、设置页"配置"三块独立保存（2026-10-04）
+
+- **背景**: 原来只有一个"保存配置"按钮，同时校验本地目录 + 要求"平台/全局各自至少一个地址测试通过"，于是"只想改本地目录"也会被"远程配置源测试失败"挡住
+- **结构**: 代理 / 本地目录 / 远程配置源 三块，用两个 `.config-divider` 分隔，每块右下角一个"保存"（`.config-actions config-actions-block`：靠右、无上边框）
+  - 每块只提交**自己的字段**：Java `JsBridge.saveConfigData` 本来就是 `if (data.has("x"))` 逐字段合并 → 天然支持部分提交，未提交字段保持原值
+  - JS 侧：`saveBlock(payload, msgId, onSuccess)` 共用；`saveProxyConfig` / `saveDirConfig` / `saveUrlConfig` 各自独立
+- **代理块**: 地址/端口**常驻显示**（不再随"使用代理"勾选显隐）；点"保存"才持久化 + 立即应用
+  - `applyProxyConfig` 新增 **`requiresRestart`**：持久化成功但运行期应用抛异常时为 `true` → 前端 `alert` 提示需重启；正常应用 → "保存成功"；勾选了但地址非法（`applied=false`）→ 红字说明并按直连
+- **本地目录块**: 保存按钮默认禁用，仅 `#cfg-user-dir` 带 `input-ok`（绿框）时启用；目标目录已有文件时仍弹迁移确认
+- **远程配置源块**: "测试全部/添加"移到各自列表头部右侧（`.url-block` + `.url-block-head`，原 `.url-list-footer` 删除）；保存按钮仅在 `sw`/`global` 中**至少一个**地址测试通过时启用；加载时**不再预置绿框**（`lastValidSet` 不再用于标记），必须本次会话实际测试成功
+- **风格统一**（跨板块一致）: 新增 `.config-desc`（板块介绍，替换各板块行内样式：主题/配置三块/日志/更新）；`.config-label` 字号 `--font-h2`→`--font-h3`（与 `.config-subtitle` 一致）；输入框（`.config-input` 与 `.url-input-line input`）统一 `padding:7px 10px` + `var(--font-sm)` + `var(--border-radius)` + `font-family:inherit`（URL 输入框不再用等宽字体）；次级按钮（`.config-preset-btn`/`.config-presets .btn`/`.url-input-line .btn-sm`）统一 `6px 12px` + `var(--font-sm)`；提示文字统一 `var(--font-xs)`；`.config-form .settings-section` 的 margin-bottom 归零，间距交给 `.config-divider`
+- **清理**: 删除旧的全局 `#cfg-btn-save`/`#cfg-save-msg`；`showMsg` 签名改为 `showMsg(元素id, msg, isErr)`；`updateSaveButton` → `updateBlockButtons`（按块判定）
+---
+
+## 十六、账号列表细节打磨 + 共存账号属性来源（2026-10-04）
+
+- **共存账号属性一律参考 linked_acc**（自身只认 remark）: `main.js` 的 `buildAccountRows(ids, detailMap, followLinkedAcc)` —— 共存表传 `true`
+  - 名称链：自身 `remark` > 链接账号 `nickname` > 链接账号 `alias` > 链接账号 id（`linked_acc`）> 共存账号自身 id
+  - `nickname`/`alias`/`avatar_url` 三列直接取链接账号的值（共存 exe 一般没有这三个属性）；原生账号走原逻辑（Java `getAccOriginDisplayName`）
+- **共存账号头像链**: `AvatarUtils.getCoexistAvatarDataUrl(sw, coexistAcc, linkedAcc, linkedAvatarUrl)` = 自身本地文件 > 链接账号本地文件 > 链接账号头像地址（下载）> 默认文字头像
+  - 接线在 `JsBridge.getAccAvatarAsync`：SwAccData 里该账号带非空 `linked_acc` 就走共存链（原生账号没有这个字段），**无需新增桥方法**，前端调用不变
+  - 新增 `AvatarUtils.getLocalAvatarDataUrl(sw, acc)`（仅本地判定，不联网）供链路前两步使用
+- **列宽拖拽热区修复**: `.col-resizer` 原来 `right: -3px; width: 7px`，被 `th { overflow: hidden }` 裁掉一半（实际可点约 4px，且落在最右列的表格边界上很难命中）→ 改为 `right: 0; width: 7px`（热区完全在列内），竖线用 `::after { right: 0 }` 画在列右边界。`linked_acc` 等新列由此与其它列一样可拖拽、可"所有列/该列自适应"
+- **整行背景层（悬浮/选中）**: `tr` 背景只能覆盖列区域，覆盖不到表格右侧空白 → 统一用绝对定位色块层，且放到**表格内容之下**
+  - `.acc-row-highlight`（悬浮，不透明 `--bg-row-hover`）+ 新增 `.acc-row-selection-layer`（选中，每选中行一个 `.acc-row-sel`，`--bg-row-selected`）
+  - 两层 `z-index: -1`，配合 `.acc-table-scroll { z-index: 0; isolation: isolate }` 形成层叠上下文 → 色块盖住容器整宽又不遮挡文字；宽度由 JS 设为 `max(表格宽, 容器可视宽)`
+  - 选中行**不再显示悬浮色**（`_updateRowHighlight` 遇到 `.selected` 直接隐藏）；移除 `tr.selected` 背景与 `tr{transition:background}`，避免半透明叠加
+  - 新增不透明色变量（theme.css 三个主题块）：`--bg-row-hover` `#282828`/`#dfdfdf`、`--bg-row-selected` `#313131`/`#d8d8d8`（= 原半透明色叠在 `--bg-sidebar` 上的不透明等效色）
+- **表头行高度**: `.acc-table-titlebar` 加 `min-height: 38px; box-sizing: border-box` —— 选中后出现"已选 N 项"+批量按钮时不再把这一行撑高
+- **最左栏展开延时**: `nav-sidebar.js` `EXPAND_DELAY` 2000ms → **1000ms**（静止 1 秒展开，`MOVE_THRESHOLD` 6px 不变）
+- **远程配置源保存条件**: 平台(remote_sw) 与 全局(remote_global) **都**要有绿框（AND），`updateBlockButtons`/`saveUrlConfig` 同步改
+---
+
+## 十七、账号表末尾占位列 + 菜单文案（2026-10-04）
+
+- **末尾占位列（filler column）**: 表格末尾多一个内部列 `_filler`（`FILLER_COL`），**不在 `columns` 里**，因此不参与排序/显隐勾选/列菜单
+  - 宽度 = `容器可视宽 - 可见列宽总和`（下限 0）；`_updateTableWidth()` 里一并算出：`table.style.width = 可见列宽总和 + filler`
+  - 效果：① 表格总宽恒 ≥ 容器宽 → **所有真实列（含最右列）右侧都有邻居**，列宽拖拽热区不再压在表格边界上；② 占位单元格属于该行 → **行悬浮/选中的感应区天然覆盖整行**（此前鼠标移到最右列右侧空白处，`closest('tr')` 为 null，悬浮色会消失）
+  - 列宽总和 ≥ 容器宽时 filler = 0，其 th/td 加 `hidden-col`（不显示多余边框），横向滚动条照常出现
+  - 细节：th/td 用类名 `.manage-col-filler`（**不带 `data-col`**）→ 不会被 `_applyColumnLayout` 的显隐循环碰到；`col` 仍带 `data-col="_filler"` 供设置宽度；空表行 `colspan = columns.length + 1`
+  - 右键占位列 → `colByKey('_filler')` 为 null → 菜单**不出现"该列调至合适宽度"**（用户要求）
+- **菜单文案**: "所有列自适应大小" → **"所有列调至合适宽度"**；"该列自适应大小" → **"该列调至合适宽度"**
+- **表头行更高**: `.acc-table-titlebar` `min-height` 38px → **46px**（选中后出现批量按钮时高度完全不变）
+---
+
+## 十八、列宽不生效的真正根因：隐藏列的 col 宽度（2026-10-04）
+
+- **现象**（用户实测）: 隐藏了部分列之后，**最右可见列**既拖不动也"调至合适宽度"无效；**只有所有列都显示时列宽才正常**
+- **根因**: `table-layout: fixed` 下**列宽取自 `<col>`**。原实现隐藏列时只给该列的 `th/td` 加了 `.hidden-col { display: none }`，**`<col>` 的宽度仍是原值** →
+  - 表格 CSS 宽度 = 可见列宽总和（`_updateTableWidth`）
+  - 但声明的列宽总和 = 可见列 + 隐藏列（更大）
+  - 固定的表格布局在"列宽总和 > 表格宽度"时会**重新分配/撑开列宽** → 真实渲染宽度不再等于 `colWidth` → 拖动最后一列或自适应改的是声明值，渲染结果被重新分配吃掉，看起来"完全改不动"；所有列都显示时两者恰好相等，所以一切正常
+- **修复**: `_applyColumnLayout` 里隐藏列的 `<col>` 同时**归零并隐藏**：`col.classList.toggle('hidden-col', !visible)` + `col.style.width = visible ? 实际宽 : '0px'`（真实宽度仍保存在 `colWidth`，重新显示即恢复）
+  - 另加取整：拖拽宽度 `Math.round` + `_updateTableWidth` 里 `sum = Math.round(sum)`，避免小数宽度让"总和 + 占位列"恰好超出容器 1px 而冒出横向滚动条
+- **占位列宽度**: `filler = 容器可显示宽(clientWidth) - 可见列宽总和`（≥0）→ 占位列右端**恰好落在列表区域右边缘**；可见列总宽超过容器时 filler = 0、横向滚动条出现
+---
+
+## 十九、名称列宽度/悬浮按钮占位/等宽字体（2026-10-04）
+
+- **名称列"调至合适宽度"要含按钮预留宽**: `fitColumn` 里名称列的量取改为**只量名称**（`.dn-text` + `.manage-disabled-tag`，用 `querySelectorAll(...).textContent` 拼接，避免把按钮文字"隐藏/删除"算进去），然后 `maxW += QUICK_ACTIONS_WIDTH`（96，两个按钮最宽态"已隐藏"+"删除" + gap + padding + border 的估算）；下限仍是 `4 字宽 + QUICK_ACTIONS_WIDTH + 8`
+- **悬浮按钮常驻占位（修复悬浮时文字位移/截断）**: `.manage-row-quick-actions` 从 `display:none ↔ inline-flex` 切换改为 **`display:inline-flex` + `visibility:hidden ↔ visible`**
+  - 根因：按钮用 display 切换时，悬浮瞬间才占宽 → `.dn-text`（flex:1）被挤压、长名称当场变省略号，视觉上就是"文字位移"
+  - `visibility:hidden` 的元素不参与命中测试，未悬浮时按钮仍不可点击
+  - 与上一条配套：合适宽度已包含按钮预留宽，所以常驻占位不会白白浪费空间
+- **列表内容统一等宽字体**: `.manage-account-table td { font-family: var(--font-family-mono) }`（Cascadia Code / Consolas / Sarasa Gothic SC，中文有 Sarasa 兜底）；**表头 th 仍用界面字体**（次级色 + 半粗，作为"标题"与内容区分）

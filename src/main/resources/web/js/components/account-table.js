@@ -30,6 +30,11 @@ JFC.AccountTable = (function() {
     // 当前打开菜单所属的表实例
     var activeTable = null;
 
+    // 末尾占位列（不在 columns 里、不参与排序/显隐/菜单）：
+    // 宽度 = 容器剩余宽度 → 表格总宽恒 >= 容器宽，所有真实列都能拖拽调宽，
+    // 且行悬浮/选中的感应区天然覆盖整行（占位单元格属于该行）。
+    var FILLER_COL = '_filler';
+
     // ---- 工具函数 ----
     function escapeHtml(str) {
         if (!str) return '';
@@ -94,6 +99,9 @@ JFC.AccountTable = (function() {
             theadHtml += '<th class="' + cls + '" data-col="' + col.key + '"' + sortable + '>' +
                 inner + '</th>';
         });
+        // 末尾占位列（撑满容器剩余宽度；无表头文字、无 data-col → 不参与显隐/排序/列菜单）
+        colgroupHtml += '<col data-col="' + FILLER_COL + '">';
+        theadHtml += '<th class="manage-col-filler"></th>';
 
         el.innerHTML =
             '<div class="acc-table-titlebar">' +
@@ -125,11 +133,14 @@ JFC.AccountTable = (function() {
         this.titleEl.textContent = this.title;
         // 表内横向 overlay 滚动条（列宽总和 > 表宽时显示，不占位不撑高）
         this._hScrollbar = attachCustomScrollbar(el.querySelector('.acc-table-scroll'), 'x');
-        // 整行高亮层：行悬浮时覆盖列区域 + 右侧空白（行宽=表格宽<容器宽，tr 背景无法覆盖空白）
-        // 背景用 CSS 类（.acc-row-highlight，走 CSS 变量与 tr:hover 同源，颜色统一）
+        // 整行背景层（悬浮 + 选中）：tr 背景只能覆盖列区域，覆盖不到表格右侧空白
+        // 两层都放在表格内容之下（CSS z-index:-1）+ 不透明色，避免半透明叠加与遮挡文字
         this._rowHighlight = document.createElement('div');
         this._rowHighlight.className = 'acc-row-highlight';
         el.querySelector('.acc-table-scroll').appendChild(this._rowHighlight);
+        this._selLayer = document.createElement('div');
+        this._selLayer.className = 'acc-row-selection-layer';
+        el.querySelector('.acc-table-scroll').appendChild(this._selLayer);
         this._hoverRow = null;
     };
 
@@ -138,8 +149,14 @@ JFC.AccountTable = (function() {
         var prefs = null;
         try {
             var cfg = JFC.bridge.getGlobalConfig();
-            if (cfg && cfg.account_columns && cfg.account_columns[this.id]) {
-                prefs = cfg.account_columns[this.id];
+            if (cfg) {
+                if (cfg.account_columns && cfg.account_columns[this.id]) {
+                    prefs = cfg.account_columns[this.id];
+                } else if (cfg['account_columns.' + this.id]) {
+                    // 兼容历史扁平键：旧版本保存时写成了 "account_columns.<表id>"，
+                    // 读取端（嵌套结构）永远读不到。这里迁移一次，下次保存即写回嵌套结构。
+                    prefs = cfg['account_columns.' + this.id];
+                }
             }
         } catch (e) { /* 配置缺失时使用默认值 */ }
         var self = this;
@@ -162,10 +179,18 @@ JFC.AccountTable = (function() {
                 visible[col.key] = !!this.colVisible[col.key];
                 width[col.key] = this.colWidth[col.key];
             }, this);
-            var key = 'account_columns.' + this.id;
-            var patch = {};
-            patch[key] = { visible: visible, width: width };
-            JFC.bridge.saveGlobalConfig(JSON.stringify(patch));
+
+            // 必须写成嵌套的 account_columns.<表id>（与 _loadColumnPrefs 的读取结构一致）。
+            // 曾错写为扁平键 "account_columns.xxx"，读取端永远读不到 → 勾选显示列不生效。
+            // saveGlobalConfig 是顶层浅合并，故先读出现有 account_columns 再合并，避免清掉其它表的配置。
+            var all = {};
+            try {
+                var cfg = JFC.bridge.getGlobalConfig();
+                if (cfg && cfg.account_columns) all = cfg.account_columns;
+            } catch (e) { /* 读不到就从空对象开始 */ }
+            all[this.id] = { visible: visible, width: width };
+
+            JFC.bridge.saveGlobalConfig(JSON.stringify({ account_columns: all }));
         } catch (e) { /* 保存失败不影响使用 */ }
     };
 
@@ -174,9 +199,17 @@ JFC.AccountTable = (function() {
         if (!table) return;
         table.querySelectorAll('colgroup col[data-col]').forEach(function(col) {
             var key = col.getAttribute('data-col');
+            if (key === FILLER_COL) return;   // 占位列宽度由 _updateTableWidth 按容器剩余空间决定
             var def = this.colByKey(key);
+            var visible = !!this.colVisible[key];
+            // 隐藏列：col 宽度必须归零 + 整列隐藏。
+            // 只把 th/td 设 display:none 是不够的——table-layout:fixed 下列宽仍取自 <col>，
+            // 于是"声明的列宽总和"大于表格设定宽度，浏览器会重新分配列宽 →
+            // 表现为"最右可见列拖不动 / 调至合适宽度不生效"，而所有列都显示时一切正常。
+            col.classList.toggle('hidden-col', !visible);
             // 固定列（勾选框/头像）宽度绝对固定（defWidth），不随任何操作/配置改变
-            col.style.width = (def && def.fixed ? def.defWidth : (this.colWidth[key] || 0)) + 'px';
+            col.style.width = !visible ? '0px'
+                : ((def && def.fixed ? def.defWidth : (this.colWidth[key] || 0)) + 'px');
         }, this);
         table.querySelectorAll('th[data-col], td[data-col]').forEach(function(cell) {
             var key = cell.getAttribute('data-col');
@@ -186,10 +219,10 @@ JFC.AccountTable = (function() {
         this._updateTableWidth();
     };
 
-    // 表格宽度恒 = 可见列宽总和：
+    // 表格宽度恒 = 可见列宽总和 + 占位列（容器剩余宽度）：
     //   - 列宽由各 col 固定 px 决定，绝不按比例分配 → 调整某列不影响其它列
-    //   - 总和 > 容器 → 表格扩展 → 容器出现横向滚动条
-    //   - 总和 < 容器 → 表格窄于容器，右侧由容器背景（列头底色）填充
+    //   - 总和 >= 容器 → 占位列宽 0，容器出现横向滚动条
+    //   - 总和 < 容器 → 占位列补足 → 表格总宽 = 容器宽（行背景层/悬浮感应覆盖整行）
     AccountTable.prototype._updateTableWidth = function() {
         var sum = 0;
         for (var i = 0; i < this.columns.length; i++) {
@@ -198,8 +231,22 @@ JFC.AccountTable = (function() {
                 sum += col.fixed ? col.defWidth : (this.colWidth[col.key] || 0);
             }
         }
-        this.tableEl.style.width = sum + 'px';
+        var scrollEl = this.el ? this.el.querySelector('.acc-table-scroll') : null;
+        var avail = scrollEl ? scrollEl.clientWidth : 0;
+        sum = Math.round(sum);
+        // 占位列 = 容器可显示宽 - 可见列宽总和 → 占位列右端恰好落在列表区域右边缘
+        var filler = Math.max(0, avail - sum);
+
+        this.tableEl.style.width = (sum + filler) + 'px';
+        var fillerCol = this.tableEl.querySelector('colgroup col[data-col="' + FILLER_COL + '"]');
+        if (fillerCol) fillerCol.style.width = filler + 'px';
+        // 占位列无剩余空间时（列宽总和已超出容器）隐藏其单元格，避免多余边框
+        this.tableEl.querySelectorAll('.manage-col-filler')
+            .forEach(function(cell) { cell.classList.toggle('hidden-col', filler <= 0); });
+
         if (this._hScrollbar) this._hScrollbar.update();
+        // 表格宽度变了 → 整行背景层宽度同步（选中色/悬浮色要覆盖到容器右边缘）
+        if (this._selLayer) this._updateSelectionLayer();
     };
 
     // ---- 数据 ----
@@ -219,8 +266,10 @@ JFC.AccountTable = (function() {
         var accounts = this._sortAccounts(this.accountData);
 
         if (accounts.length === 0) {
-            tbody.innerHTML = '<tr class="manage-empty-row"><td colspan="' + this.columns.length + '">' +
+            tbody.innerHTML = '<tr class="manage-empty-row"><td colspan="' + (this.columns.length + 1) + '">' +
                 '<div class="manage-empty-state">暂无数据</div></td></tr>';
+            this._updateRowHighlight();
+            this._updateSelectionLayer();
             return;
         }
 
@@ -234,9 +283,10 @@ JFC.AccountTable = (function() {
         this._bindRowEvents();
         this._applyColumnLayout();
         if (this._hScrollbar) this._hScrollbar.update();
-        // 行已重建，清除悬停高亮（旧行元素失效）
+        // 行已重建，清除悬停高亮（旧行元素失效）；选中层按新行重画
         this._hoverRow = null;
         this._updateRowHighlight();
+        this._updateSelectionLayer();
     };
 
     AccountTable.prototype._rowHtml = function(acc) {
@@ -253,6 +303,8 @@ JFC.AccountTable = (function() {
                 hidden: hidden, isSelected: isSelected
             });
         }, this);
+        // 占位列单元格：让本行铺满整行（悬浮/选中感应区覆盖到容器右边缘）
+        html += '<td class="manage-col-filler"></td>';
 
         return '<tr data-acc-id="' + escapeAttr(id) + '" class="' + (isSelected ? 'selected' : '') + '">' +
             html + '</tr>';
@@ -419,7 +471,7 @@ JFC.AccountTable = (function() {
                 self._showRowMenu(e.clientX, e.clientY, tr.getAttribute('data-acc-id'));
                 return;
             }
-            // 列头或空白区域 → 列菜单（无具体列时省略"该列自适应大小"）
+            // 列头或占位列/空白区域 → 列菜单（无具体列时省略"该列调至合适宽度"）
             e.preventDefault();
             var th = e.target.closest('th[data-col]');
             var colKey = th ? th.getAttribute('data-col') : null;
@@ -457,20 +509,50 @@ JFC.AccountTable = (function() {
         window.addEventListener('resize', function() { self._updateTableWidth(); });
     };
 
-    // ---- 整行高亮（hover） ----
+    // ---- 整行背景层（hover / 选中） ----
+    /** 整行宽度 = max(表格宽, 容器可视宽)：表格窄于容器时也要覆盖右侧空白 */
+    AccountTable.prototype._rowBandWidth = function() {
+        var scrollEl = this.el.querySelector('.acc-table-scroll');
+        if (!scrollEl) return 0;
+        return Math.max(this.tableEl.offsetWidth || 0, scrollEl.clientWidth || 0);
+    };
+
     AccountTable.prototype._setHoverRow = function(row) {
         this._hoverRow = row;
         this._updateRowHighlight();
     };
+    /** 悬浮层：仅非选中行显示（选中行保持选中色，不叠加悬浮色） */
     AccountTable.prototype._updateRowHighlight = function() {
         var h = this._rowHighlight;
         var scrollEl = this.el.querySelector('.acc-table-scroll');
         if (!h || !scrollEl) return;
         var row = this._hoverRow;
-        if (!row || !row.isConnected) { h.classList.remove('active'); return; }
+        if (!row || !row.isConnected || row.classList.contains('selected')) {
+            h.classList.remove('active');
+            return;
+        }
         h.style.top = (row.offsetTop - scrollEl.scrollTop) + 'px';
         h.style.height = row.offsetHeight + 'px';
+        h.style.width = this._rowBandWidth() + 'px';
         h.classList.add('active');
+    };
+
+    /** 选中层：每个选中行一个整行色块（覆盖列区域 + 右侧空白） */
+    AccountTable.prototype._updateSelectionLayer = function() {
+        var layer = this._selLayer;
+        if (!layer) return;
+        var rows = this.tbody.querySelectorAll('tr[data-acc-id].selected');
+        if (rows.length === 0) {
+            layer.innerHTML = '';
+            return;
+        }
+        var width = this._rowBandWidth();
+        var html = '';
+        for (var i = 0; i < rows.length; i++) {
+            html += '<div class="acc-row-sel" style="top:' + rows[i].offsetTop + 'px;height:' +
+                rows[i].offsetHeight + 'px;width:' + width + 'px;"></div>';
+        }
+        layer.innerHTML = html;
     };
 
     // ---- 标题行：选中计数与批量按钮 ----
@@ -484,6 +566,8 @@ JFC.AccountTable = (function() {
             this.countEl.style.display = 'none';
             this.batchEl.style.display = 'none';
         }
+        this._updateSelectionLayer();
+        this._updateRowHighlight();
     };
 
     AccountTable.prototype.batchAction = function(action) {
@@ -662,7 +746,8 @@ JFC.AccountTable = (function() {
     AccountTable.prototype._onResizeMove = function(e) {
         var t = activeTable;  // 拖拽中的表（打开菜单时设置，这里直接取当前）
         if (!t || !t.resizeState) return;
-        var w = Math.max(30, t.resizeState.startWidth + (e.clientX - t.resizeState.startX));
+        // 取整：避免小数宽度让"列宽总和 + 占位列"恰好超出容器 1px 而冒出横向滚动条
+        var w = Math.max(30, Math.round(t.resizeState.startWidth + (e.clientX - t.resizeState.startX)));
         t.colWidth[t.resizeState.key] = w;
         t._applyColumnWidth(t.resizeState.key, w);
     };
@@ -700,12 +785,15 @@ JFC.AccountTable = (function() {
                 '</div>';
         }, this);
         html += '<div class="acm-sep"></div>';
-        html += '<div class="acm-item" data-col-fit="all"><span class="acm-label">所有列自适应大小</span></div>';
-        var fitCol = colKey && !this.colByKey(colKey).fixed ? colKey : null;
-        if (colKey && (!fitCol || !this.colVisible[colKey])) {
-            html += '<div class="acm-item disabled" data-col-fit=""><span class="acm-label">该列自适应大小</span></div>';
-        } else if (fitCol) {
-            html += '<div class="acm-item" data-col-fit="' + fitCol + '"><span class="acm-label">该列自适应大小</span></div>';
+        html += '<div class="acm-item" data-col-fit="all"><span class="acm-label">所有列调至合适宽度</span></div>';
+        // 占位列 / 表格外空白：不提供"该列"项（占位列没有宽度概念，宽度由容器剩余空间决定）
+        var clickedCol = colKey ? this.colByKey(colKey) : null;
+        if (clickedCol) {
+            if (!clickedCol.fixed && this.colVisible[clickedCol.key]) {
+                html += '<div class="acm-item" data-col-fit="' + clickedCol.key + '"><span class="acm-label">该列调至合适宽度</span></div>';
+            } else {
+                html += '<div class="acm-item disabled" data-col-fit=""><span class="acm-label">该列调至合适宽度</span></div>';
+            }
         }
         menu.innerHTML = html;
         menu.style.display = 'block';
@@ -762,7 +850,7 @@ JFC.AccountTable = (function() {
         });
     };
 
-    // ---- 列宽自适应 ----
+    // ---- 列宽调至合适宽度 ----
 
     // 展示名列右端悬浮按钮（隐藏/已隐藏+删除）的占位总宽估算：
     // 覆盖最长按钮文字（"已隐藏"3字）+ padding + border + gap
@@ -770,7 +858,7 @@ JFC.AccountTable = (function() {
 
     AccountTable.prototype.fitColumn = function(key) {
         var col = this.colByKey(key);
-        if (!col || col.fixed) return;   // 固定列不参与自适应
+        if (!col || col.fixed) return;   // 固定列不参与
         var table = this.tableEl;
 
         // 1. 内容最大宽度（列头文字 + 全部数据单元格），无上限
@@ -779,10 +867,17 @@ JFC.AccountTable = (function() {
             if (cell.classList.contains('hidden-col')) return;
             var cs = window.getComputedStyle(cell);
             var pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
-            var text = cell.innerText.replace(/\s+/g, ' ').trim() || '';
+            // 名称列：只量名称（.dn-text）+"禁用"小标签，量不到悬浮操作按钮的按钮文字
+            var text = '';
+            cell.querySelectorAll('.dn-text, .manage-disabled-tag').forEach(function(sp) { text += sp.textContent; });
+            if (!text) text = cell.innerText || cell.textContent || '';
+            text = text.replace(/\s+/g, ' ').trim();
             var w = measureTextWidth(text, cs.fontFamily, cs.fontSize, cs.fontWeight) + pad;
             if (w > maxW) maxW = w;
         });
+
+        // 名称列：悬浮按钮常驻占位（仅 visibility 切换）→ 合适宽度 = 名称宽 + 按钮预留宽
+        if (key === 'display_name') maxW += QUICK_ACTIONS_WIDTH;
 
         // 2. 下限：列名宽度 + 余量；展示名列特殊 = 4 字符宽 + 按钮占位总宽 + 余量
         var th = table.querySelector('thead th[data-col="' + key + '"]');

@@ -371,13 +371,25 @@
    Config Page
    ======================================== */
 .config-form .settings-section {
-    margin-bottom: var(--space-xl);
+    margin-bottom: 0;   /* 板块间距交给 .config-divider（避免外边距叠加导致上下不对称） */
 }
 .config-form .settings-section h3 {
     margin-bottom: 4px;
     color: var(--text-primary);
     font-size: var(--font-h2);
     font-weight: var(--weight-bold);
+}
+/* 板块介绍文字（各设置板块统一用这一个类，不再写行内样式） */
+.config-desc {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: var(--space-md);
+}
+/* 板块之间的分割线（配置页三块：代理 / 本地目录 / 远程配置源） */
+.config-divider {
+    border-top: 1px solid var(--divider-solid);
+    margin: var(--space-lg) 0;
 }
 
 /* checkbox label */
@@ -413,7 +425,7 @@
 .config-label {
     width: 80px;
     flex-shrink: 0;
-    font-size: var(--font-h2);
+    font-size: var(--font-h3);
     font-weight: var(--weight-semibold);
     color: var(--text-primary);
     text-align: right;
@@ -510,13 +522,13 @@
 }
 .url-input-line input {
     flex: 1;
-    padding: 5px 8px;
+    padding: 7px 10px;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: var(--border-radius);
     background: var(--bg-sidebar);
     color: var(--text-primary);
-    font-size: 12px;
-    font-family: var(--font-family-mono);
+    font-size: var(--font-sm);
+    font-family: inherit;
     outline: none;
     transition: border-color 0.15s;
     min-width: 0;
@@ -537,21 +549,30 @@
 
 /* hint line below input, reserved height */
 .url-row-hint-line {
-    height: 20px;
-    line-height: 20px;
-    font-size: 11px;
+    height: 22px;
+    line-height: 22px;
+    font-size: var(--font-xs);
     padding-left: 4px;
 }
 .url-row-hint-line.error { color: var(--color-danger); }
 .url-row-hint-line.ok    { color: var(--color-success); }
-.url-list-footer {
+/* 远程配置源：两个列表各自的头部（子标题左、测试全部/添加右） */
+.url-block { margin-bottom: var(--space-md); }
+.url-block-head {
     display: flex;
-    justify-content: flex-end;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-bottom: 6px;
+}
+.url-block-head .config-subtitle { margin-bottom: 0; }
+.url-block-actions {
+    display: flex;
     gap: 6px;
-    margin-top: 6px;
+    flex-shrink: 0;
 }
 .url-row-hint {
-    font-size: 11px;
+    font-size: var(--font-xs);
     margin: 2px 0 4px 48px;
     line-height: 1.3;
 }
@@ -560,7 +581,7 @@
 
 /* inline hint inside row */
 .url-row-hint-inline {
-    font-size: 11px;
+    font-size: var(--font-xs);
     margin-left: 4px;
     white-space: nowrap;
     flex-shrink: 0;
@@ -568,27 +589,29 @@
 .url-row-hint-inline.error { color: var(--color-danger); }
 .url-row-hint-inline.ok    { color: var(--color-success); }
 
-/* preset buttons */
+/* preset buttons —— 设置区域内的次级按钮统一尺寸（浏览/测试/删除/添加/测试全部） */
 .config-presets {
     display: flex;
     gap: 4px;
     flex-shrink: 0;
 }
 .config-preset-btn,
-.config-presets .btn {
-    padding: 4px 10px;
+.config-presets .btn,
+.url-input-line .btn-sm {
+    padding: 6px 12px;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: var(--border-radius);
     background: var(--bg-sidebar);
     color: var(--text-secondary);
     cursor: pointer;
-    font-size: 12px;
+    font-size: var(--font-sm);
     font-family: inherit;
     transition: all 0.12s;
     white-space: nowrap;
 }
 .config-preset-btn:hover,
-.config-presets .btn:hover {
+.config-presets .btn:hover,
+.url-input-line .btn-sm:hover:not(:disabled) {
     border-color: var(--color-primary);
     color: var(--color-primary);
     background: var(--color-primary-light);
@@ -602,6 +625,14 @@
     margin-top: var(--space-lg);
     padding-top: var(--space-md);
     border-top: 1px solid var(--border-color);
+}
+/* 配置页三个板块各自的保存行：靠右、无上边框（板块之间用 .config-divider 分隔） */
+.config-actions-block {
+    justify-content: flex-end;
+    margin-top: var(--space-md);
+    padding-top: 0;
+    border-top: none;
+    min-height: 40px;
 }
 .config-msg {
     font-size: var(--font-sm);
@@ -1442,11 +1473,14 @@
     flex-direction: column;
 }
 
-/* 标题行：标题左端，"已选 N 项"+批量按钮跟随右侧（未选中时隐藏） */
+/* 标题行：标题左端，"已选 N 项"+批量按钮跟随右侧（未选中时隐藏）
+   固定 min-height：批量按钮出现/消失时行高不再变化（此前初始高度不够会被撑大） */
 .acc-table-titlebar {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-height: 46px;
+    box-sizing: border-box;
     padding: 4px var(--space-md);
     border-bottom: 1px solid var(--border-color);
     background: var(--bg-sidebar);
@@ -1481,6 +1515,8 @@
 
 .acc-table-scroll {
     position: relative;             /* 容纳 overlay 自定义滚动条 */
+    z-index: 0;                     /* 形成层叠上下文：整行背景层的 z-index:-1 只在本容器内生效 */
+    isolation: isolate;             /* 同上（双保险，兼容性更稳） */
     min-width: 0;                   /* 允许收缩到账号区域宽（=窗口宽），内容超出时内部横向滚动 */
     overflow-x: auto;               /* 表内横向滚动（列宽总和>表宽时） */
     overflow-y: hidden;             /* 表内不纵向滚动：所有行直接显示，由账号区域纵向滚动查看 */
@@ -1588,12 +1624,18 @@
 /* 隐藏列（th/td 同步加 hidden-col，col 宽度保留不影响） */
 .manage-account-table .hidden-col { display: none; }
 
-/* 列间竖线（列宽拖拽热区） */
+/* 末尾占位列：撑满容器剩余宽度，无内容、无内边距（宽度由 JS 设为 容器宽 - 可见列宽总和） */
+.manage-account-table .manage-col-filler {
+    padding: 0;
+}
+
+/* 列间竖线（列宽拖拽热区）：热区完全落在列内——th 是 overflow:hidden，
+   放到列外（right:-3px）会被裁掉，导致最右一列几乎点不到、无法调整宽度 */
 .col-resizer {
     position: absolute;
     top: 0;
     bottom: 0;
-    right: -3px;
+    right: 0;
     width: 7px;
     cursor: col-resize;
     z-index: 2;
@@ -1603,9 +1645,8 @@
     position: absolute;
     top: 18%;
     bottom: 18%;
-    left: 50%;
+    right: 0;
     width: 1px;
-    transform: translateX(-50%);
     background: var(--border-color);
     transition: background 0.15s;
 }
@@ -1624,15 +1665,14 @@ body.resizing-cols {
     border-bottom: 1px solid rgba(255,255,255,0.03);
     color: var(--text-secondary);
     vertical-align: middle;
+    font-family: var(--font-family-mono);   /* 列表内容统一等宽字体（表头仍用界面字体） */
 }
 .manage-account-table tbody tr {
     cursor: pointer;
-    transition: background 0.15s;
 }
-/* 行悬浮高亮由 JS 高亮层（.acc-row-highlight）统一负责——不再设 tr:hover 背景，避免与高亮层叠加导致列区域/剩余区域颜色不一致 */
-.manage-account-table tbody tr.selected {
-    background: var(--bg-selected);
-}
+/* 行背景（悬浮/选中）统一由 JS 整行背景层负责：
+   .acc-row-highlight（不透明悬浮色，选中行不显示）+ .acc-row-selection-layer（不透明选中色，整行宽）
+   所以这里不再给 tr / tr.selected 设背景，避免只覆盖列区域、也避免与色块叠加 */
 
 .manage-account-table .manage-col-check {
     text-align: center;
@@ -1695,16 +1735,20 @@ body.resizing-cols {
     white-space: nowrap;
 }
 
-/* 展示名列右端的悬浮操作按钮（选中态 = 对应状态；悬浮行时显示，优先于展示名内容） */
+/* 展示名列右端的悬浮操作按钮（选中态 = 对应状态）
+   常驻占位（display:inline-flex + visibility 切换）：若用 display:none 切换，
+   悬浮时按钮才占宽 → .dn-text 被挤压、文字截断/位移。改后布局恒定，只切换可见性。
+   visibility:hidden 的元素不参与命中测试，所以未悬浮时不可点击。 */
 .manage-row-quick-actions {
-    display: none;
+    display: inline-flex;
+    gap: 4px;
+    visibility: hidden;
     margin-left: auto;          /* 贴列空间右端 */
     flex-shrink: 0;
     white-space: nowrap;
 }
 .manage-account-table tbody tr:hover .manage-row-quick-actions {
-    display: inline-flex;
-    gap: 4px;
+    visibility: visible;
 }
 .manage-row-quick-actions .qa-btn {
     border: 1px solid var(--border-color);
@@ -1854,18 +1898,29 @@ body.resizing-cols {
     line-height: 1.6;
 }
 
-/* 整行悬浮高亮层（JS 控制 top/height，背景与 tr:hover 同源 var(--bg-hover)，颜色统一） */
-.acc-row-highlight {
+/* 整行背景层（悬浮 .acc-row-highlight / 选中 .acc-row-selection-layer）
+   位于表格内容之下（z-index:-1）+ 不透明色：色块覆盖整个容器宽度（含表格右侧空白），
+   不与单元格内容叠加、也不受半透明叠加影响；JS 控制每块的 top/height/width。
+   需要 .acc-table-scroll 形成层叠上下文（isolation），否则负 z-index 会跑到容器背景之下 */
+.acc-row-highlight,
+.acc-row-selection-layer {
     position: absolute;
     left: 0;
-    right: 0;
     top: 0;
+    pointer-events: none;
+    z-index: -1;
+}
+.acc-row-highlight {
+    width: 0;
     height: 0;
     display: none;
-    pointer-events: none;
-    z-index: 2;
-    background: var(--bg-hover);
+    background: var(--bg-row-hover);
 }
-.acc-row-highlight.active {
-    display: block;
+.acc-row-highlight.active { display: block; }
+/* 选中层是 0×0 容器，色块由子元素按行定位（父容器 overflow 可见） */
+.acc-row-selection-layer { width: 0; height: 0; }
+.acc-row-sel {
+    position: absolute;
+    left: 0;
+    background: var(--bg-row-selected);
 }

@@ -144,7 +144,7 @@
                         <div id="settings-section-update" class="settings-section-content">
                             <div class="update-page">
                                 <h3 style="margin-bottom: 4px;">软件更新</h3>
-                                <p style="color:var(--text-secondary);margin-bottom:16px;font-size:var(--font-size-sm);">
+                                <p class="config-desc">
                                     检查远程更新并管理自动下载
                                 </p>
 
@@ -195,7 +195,7 @@
                         <div id="settings-section-appearance" class="settings-section-content" style="display:none;">
                             <div class="settings-section">
                                 <h3>主题</h3>
-                                <p style="color:var(--text-secondary);margin-bottom:12px;">选择应用程序的颜色主题</p>
+                                <p class="config-desc">选择应用程序的颜色主题</p>
                                 <div class="theme-segmented" id="theme-segmented">
                                     <button class="theme-seg-btn" data-theme="light">浅色</button>
                                     <button class="theme-seg-btn" data-theme="dark">深色</button>
@@ -210,11 +210,11 @@
                                 <!-- 代理设置 -->
                                 <div class="settings-section">
                                     <h3>代理</h3>
-                                    <p style="color:var(--text-secondary);margin-bottom:12px;">通过代理访问远程配置与更新服务（勾选或修改后立即生效）</p>
+                                    <p class="config-desc">通过代理访问远程配置与更新服务（保存后立即生效）</p>
                                     <label class="config-checkbox">
                                         <input type="checkbox" id="cfg-use-proxy"> 使用代理
                                     </label>
-                                    <div id="cfg-proxy-detail" class="config-group" style="display:none;">
+                                    <div id="cfg-proxy-detail" class="config-group">
                                         <div class="config-row">
                                             <label class="config-label">代理地址</label>
                                             <div class="config-input-row">
@@ -230,46 +230,65 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="config-actions config-actions-block">
+                                        <span id="cfg-proxy-msg" class="config-msg" style="display:none;"></span>
+                                        <button id="cfg-proxy-save" class="btn btn-primary">保存</button>
+                                    </div>
                                 </div>
+
+                                <div class="config-divider"></div>
 
                                 <!-- 本地目录 -->
                                 <div class="settings-section">
                                     <h3>本地目录</h3>
-                                    <p style="color:var(--text-secondary);margin-bottom:12px;">用户数据存储路径，修改后将自动迁移已有数据</p>
+                                    <p class="config-desc">用户数据存储路径，修改后将自动迁移已有数据</p>
                                     <p class="config-subtitle">数据目录</p>
                                     <div class="config-input-row">
                                         <input type="text" id="cfg-user-dir" class="config-input" placeholder="（默认）自动">
                                         <button id="cfg-user-dir-browse" class="btn config-preset-btn">浏览</button>
                                     </div>
                                     <p id="cfg-user-dir-hint" class="config-hint" style="display:none;"></p>
+                                    <div class="config-actions config-actions-block">
+                                        <span id="cfg-dir-msg" class="config-msg" style="display:none;"></span>
+                                        <button id="cfg-dir-save" class="btn btn-primary" disabled>保存</button>
+                                    </div>
                                 </div>
+
+                                <div class="config-divider"></div>
 
                                 <!-- 远程配置源 -->
                                 <div class="settings-section">
                                     <h3>远程配置源</h3>
-                                    <p style="color:var(--text-secondary);margin-bottom:12px;">用于下载平台适配补丁与全局设置的远程地址</p>
+                                    <p class="config-desc">用于下载平台适配补丁与全局设置的远程地址</p>
 
                                     <!-- 远程平台 -->
-                                    <p class="config-subtitle">远程平台 (remote_sw)</p>
-                                    <div id="cfg-sw-list" class="url-list"></div>
-                                    <div class="url-list-footer">
-                                        <button id="cfg-sw-test-all" class="btn config-preset-btn">测试全部</button>
-                                        <button id="cfg-sw-add" class="btn config-preset-btn">添加</button>
+                                    <div class="url-block">
+                                        <div class="url-block-head">
+                                            <p class="config-subtitle">远程平台 (remote_sw)</p>
+                                            <div class="url-block-actions">
+                                                <button id="cfg-sw-test-all" class="btn config-preset-btn">测试全部</button>
+                                                <button id="cfg-sw-add" class="btn config-preset-btn">添加</button>
+                                            </div>
+                                        </div>
+                                        <div id="cfg-sw-list" class="url-list"></div>
                                     </div>
 
                                     <!-- 远程全局 -->
-                                    <p class="config-subtitle" style="margin-top:16px;">远程全局 (remote_global)</p>
-                                    <div id="cfg-global-list" class="url-list"></div>
-                                    <div class="url-list-footer">
-                                        <button id="cfg-global-test-all" class="btn config-preset-btn">测试全部</button>
-                                        <button id="cfg-global-add" class="btn config-preset-btn">添加</button>
+                                    <div class="url-block">
+                                        <div class="url-block-head">
+                                            <p class="config-subtitle">远程全局 (remote_global)</p>
+                                            <div class="url-block-actions">
+                                                <button id="cfg-global-test-all" class="btn config-preset-btn">测试全部</button>
+                                                <button id="cfg-global-add" class="btn config-preset-btn">添加</button>
+                                            </div>
+                                        </div>
+                                        <div id="cfg-global-list" class="url-list"></div>
                                     </div>
-                                </div>
 
-                                <!-- 操作按钮 -->
-                                <div class="config-actions">
-                                    <button id="cfg-btn-save" class="btn btn-primary">保存配置</button>
-                                    <span id="cfg-save-msg" class="config-msg" style="display:none;"></span>
+                                    <div class="config-actions config-actions-block">
+                                        <span id="cfg-urls-msg" class="config-msg" style="display:none;"></span>
+                                        <button id="cfg-urls-save" class="btn btn-primary" disabled>保存</button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -279,10 +298,10 @@
                             <div class="config-form">
                                 <div class="settings-section">
                                     <h3>日志</h3>
-                                    <p style="color:var(--text-secondary);margin-bottom:12px;">管理本地日志文件</p>
+                                    <p class="config-desc">管理本地日志文件</p>
                                     <div class="config-row">
                                         <label class="config-label">日志目录</label>
-                                        <span id="log-dir-path" style="color:var(--text-secondary);font-size:var(--font-size-sm);word-break:break-all;"></span>
+                                        <span id="log-dir-path" style="color:var(--text-secondary);font-size:var(--font-sm);word-break:break-all;"></span>
                                     </div>
                                     <div class="config-actions">
                                         <button id="log-btn-open" class="btn btn-primary">打开日志目录</button>

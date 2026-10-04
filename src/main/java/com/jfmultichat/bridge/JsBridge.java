@@ -712,12 +712,23 @@ public class JsBridge {
             }
             cm.saveAll();
 
-            AppCore.ProxyState state = AppCore.applyProxySetting();
+            // 持久化成功后再尝试运行期应用；若应用本身失败，设置已落盘，需重启生效
+            boolean requiresRestart = false;
+            AppCore.ProxyState state;
+            try {
+                state = AppCore.applyProxySetting();
+            } catch (Exception applyError) {
+                LOG.warn("Proxy setting saved but could not be applied at runtime", applyError);
+                state = new AppCore.ProxyState(false, rc.getProxyIp(), rc.getProxyPort(),
+                        "设置已保存，但运行时应用失败，需要重启应用才能生效: " + applyError.getMessage());
+                requiresRestart = true;
+            }
 
             ObjectNode result = MAPPER.createObjectNode();
             result.put("success", true);
             result.put("useProxy", rc.isUseProxy());
             result.put("applied", state.applied());
+            result.put("requiresRestart", requiresRestart);
             result.put("proxyIp", state.host());
             result.put("proxyPort", state.port());
             result.put("message", state.message());
@@ -1403,7 +1414,9 @@ public class JsBridge {
     public String getSwExistedAccounts(String swId, String only) {
         try {
             SwConfigAccessor accessor = SwConfigProvider.newAccessor();
-            SwInfoFuncCore core = new SwInfoFuncCore(accessor, null, null, null);
+            // accountOps 必须传入：共存扫描会调用 ensureCoexistAccFormatted 写 SwAccData，传 null 会 NPE
+            SwInfoFuncCore core = new SwInfoFuncCore(accessor, null, null,
+                    new com.jfmultichat.acccore.AccOpsProvider().toSwProvider());
             List<String> existed = core.getSwAllAccountsExisted(swId,
                     only == null || only.isEmpty() ? null : only);
             // 自动补充 SwAccData 缺失账号节点（确保本地数据包含已加载账号）
@@ -1429,8 +1442,26 @@ public class JsBridge {
             try {
                 // 先从截图缓存恢复本地头像文件（参考 getAvatarFromCache）
                 AccInfoFuncCore.getAvatarFromCache(swId, java.util.List.of(accountId));
-                // 解析头像 data URL（本地文件 → URL下载 → SVG 回退）
-                String dataUrl = AccInfoFuncCore.getAccAvatarFromFile(swId, accountId);
+
+                // 共存账号（SwAccData 带 linked_acc）：自身本地头像 > 链接账号本地头像 > 链接账号头像地址 > 默认头像
+                java.util.Map<String, com.fasterxml.jackson.databind.node.ObjectNode> accMap =
+                        ConfigManager.getInstance().getAccountMap(swId);
+                com.fasterxml.jackson.databind.node.ObjectNode selfNode = accMap.get(accountId);
+                String linkedAcc = (selfNode != null && selfNode.hasNonNull("linked_acc"))
+                        ? selfNode.get("linked_acc").asText("") : "";
+
+                String dataUrl;
+                if (!linkedAcc.isBlank() && !linkedAcc.equals(accountId)) {
+                    AccInfoFuncCore.getAvatarFromCache(swId, java.util.List.of(linkedAcc));
+                    com.fasterxml.jackson.databind.node.ObjectNode linkedNode = accMap.get(linkedAcc);
+                    String linkedAvatarUrl = (linkedNode != null && linkedNode.hasNonNull("avatar_url"))
+                            ? linkedNode.get("avatar_url").asText("") : "";
+                    dataUrl = com.jfmultichat.utils.AvatarUtils
+                            .getCoexistAvatarDataUrl(swId, accountId, linkedAcc, linkedAvatarUrl);
+                } else {
+                    // 解析头像 data URL（本地文件 → URL下载 → SVG 回退）
+                    dataUrl = AccInfoFuncCore.getAccAvatarFromFile(swId, accountId);
+                }
                 if (dataUrl == null) dataUrl = "";
                 String payload = MAPPER.writeValueAsString(Map.of(
                         "swId", swId, "accountId", accountId, "dataUrl", dataUrl));

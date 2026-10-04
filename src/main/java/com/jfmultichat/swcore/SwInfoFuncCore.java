@@ -220,7 +220,8 @@ public final class SwInfoFuncCore {
         String dataDir = accessor.tryGetPathOf(sw, SwCoreConstants.LocalSettingKey.DATA_DIR);
         String instPath = accessor.tryGetPathOf(sw, SwCoreConstants.LocalSettingKey.INST_PATH);
         List<String> excludedDirs = accessor.getRemoteSwAsList(sw, "excluded_dirs", Collections.emptyList());
-        List<String> exeWildcards = accessor.getRemoteSwAsList(sw, "exe_wcs", Collections.emptyList());
+        List<String> exeWildcards = accessor.getRemoteSwAsList(
+                sw, SwCoreConstants.RemoteSwKey.EXECUTABLE_WILDCARDS, Collections.emptyList());
 
         return SwAccountOps.getSwAllAccountsExisted(
                 sw, dataDir, excludedDirs, instPath, exeWildcards,

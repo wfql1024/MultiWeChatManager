@@ -58,6 +58,9 @@
     --bg-card: #252525;
     --bg-hover: rgba(255, 255, 255, 0.06);
     --bg-selected: rgba(255, 255, 255, 0.1);
+    /* 账号列表整行背景（悬浮/选中）的不透明等效色：色块在单元格之下，必须不透明 */
+    --bg-row-hover: #282828;
+    --bg-row-selected: #313131;
 
     --border-color: rgba(255, 255, 255, 0.08);
     /* 分割线/把手的不透明等效色（背景+半透明混合后的实色，避免重叠区域两次叠加变深） */
@@ -81,6 +84,9 @@
     --bg-card: #ffffff;
     --bg-hover: rgba(0, 0, 0, 0.05);
     --bg-selected: rgba(0, 0, 0, 0.08);
+    /* 账号列表整行背景（悬浮/选中）的不透明等效色：色块在单元格之下，必须不透明 */
+    --bg-row-hover: #dfdfdf;
+    --bg-row-selected: #d8d8d8;
 
     --border-color: rgba(0, 0, 0, 0.10);
     /* 分割线/把手的不透明等效色（背景+半透明混合后的实色，避免重叠区域两次叠加变深） */
@@ -107,6 +113,9 @@
         --bg-card: #ffffff;
         --bg-hover: rgba(0, 0, 0, 0.05);
         --bg-selected: rgba(0, 0, 0, 0.08);
+        /* 账号列表整行背景（悬浮/选中）的不透明等效色：色块在单元格之下，必须不透明 */
+        --bg-row-hover: #dfdfdf;
+        --bg-row-selected: #d8d8d8;
 
         --border-color: rgba(0, 0, 0, 0.10);
 

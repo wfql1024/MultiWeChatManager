@@ -412,3 +412,55 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **备注**: 曾短暂实现"未勾选时跟随系统代理"（`config/SystemProxy`），按用户要求已移除
 - **远程配置候选 URL 兜底**: `JsBridge.mergeUrls()`（用户 URL 优先 + 内置追加 + 去重）—— 修复「用户清空远程配置源后候选 0 个、远程配置永远下载失败」；测试 `JsBridgeUrlTest`（4 例）
 - **代理地址归一化**: `AppCore.splitHostPort()` 剥协议前缀/拆端口（用户填 `http://127.0.0.1` + 端口 `7890` 曾导致 `URISyntaxException: ... proxy.https://[http://127.0.0.1]:7890/`）；界面 placeholder 已改为 `127.0.0.1`；勾选/修改后立即生效
+
+## 共存账号数据接入（2026-10-04）
+
+- **表数据**: `coexist_acc` 接 `getSwExistedAccounts(swId,'coexist')`；与原生账号共用 `buildAccountRows()` 合并 SwAccData 详情，头像按表路由更新
+- **Java 修复（3 处）**: ①`SwInfoFuncCore` 读错键 `exe_wcs`（应为 `executable_wildcards`）→ 共存扫描恒 0；②`JsBridge.getSwExistedAccounts` 的 `SwInfoFuncCore` 第 4 参 accountOps 传 null → 共存分支 NPE；③`SwAccountOps` 一律取 `inst_path` 父目录，而 WeChat/DouYinIM 存的是目录 → 新增 `resolveInstDir()`
+- **本机实测**: WeChat 2（WeCha1/WeCha2）、WXWork 1（WXWor1），其余平台目录内无匹配 exe
+- **待用户修正**: TIM 的 `inst_path` 当前指向 QQNT（数据问题）
+- **测试**: `SwAccountOpsTest`(3)
+
+## 共存账号列 + 列配置持久化 + 侧栏展开（2026-10-04）
+
+- **新增列**: 共存账号表增加「最后登录账号」= `linked_acc`（非必选、默认显示，`TABLE_COLUMNS.coexist`）
+- **列显隐/列宽不持久化（bug 修复）**: `_saveColumnPrefs` 写扁平键 `account_columns.<表id>`，读取端用嵌套 `account_columns[表id]` → 勾选丢失；改为嵌套写 + 先读后合并（saveGlobalConfig 是顶层浅合并）+ 读取端兼容历史扁平键
+- **最左栏展开**: `nav-sidebar.js` 改为「鼠标在区域内静止 2 秒」才展开（`EXPAND_DELAY=2000`，`MOVE_THRESHOLD=6px` 微动不重新计时），移出即收起
+
+## 设置页配置三块独立保存（2026-10-04）
+
+- **结构**: 代理 / 本地目录 / 远程配置源 三块 + 两个分割线，各块右下角独立"保存"；后端 `saveConfigData` 逐字段合并，天然支持部分提交（不再一处失败全盘阻塞）
+- **代理**: 明细常驻显示；保存后能立即应用→"保存成功"，`requiresRestart=true`（运行期应用异常）→弹窗提示重启，地址非法（勾选但 applied=false）→红字并按直连
+- **本地目录**: 保存按钮默认禁用，绿框（input-ok）才启用
+- **远程配置源**: 测试全部/添加 移到列表标题右侧；保存按钮需 sw/global 至少一个地址本次会话测试通过；不再预置绿框
+- **风格统一**: `.config-desc` 统一板块介绍；`.config-label`→font-h3；输入框 padding/字号/圆角/字体统一；次级按钮统一 6px 12px/--font-sm；提示统一 --font-xs；`.config-form .settings-section` margin 交给 `.config-divider`
+- **清理**: 移除 `#cfg-btn-save`/`#cfg-save-msg`/`updateSaveButton`；`showMsg(id,msg,isErr)`
+
+## 账号列表细节打磨 + 共存账号属性来源（2026-10-04）
+
+- **共存账号**: 名称/昵称/平台内ID/头像一律取 `linked_acc` 指向的账号（自身只认 remark）；名称链 remark > 链接nickname > 链接alias > 链接id > 自身id；头像链 自身本地 > 链接本地 > 链接头像地址 > 默认（`AvatarUtils.getCoexistAvatarDataUrl`，`getAccAvatarAsync` 自动识别 linked_acc）
+- **整行背景层**: 悬浮/选中色统一用 `z-index:-1` 的绝对定位层（容器 `z-index:0`+`isolation:isolate`），宽度 = max(表格宽, 容器可视宽)，不透明色 `--bg-row-hover`/`--bg-row-selected`；选中行不显示悬浮色；移除 `tr.selected` 背景
+- **列宽热区**: `.col-resizer` 从 `right:-3px`（被 th overflow 裁剪）改为 `right:0; width:7px`，最右列也能拖
+- **表头行**: `.acc-table-titlebar` `min-height:38px`，批量按钮出现不再撑高
+- **最左栏**: 静止悬停 2s → 1s
+- **远程配置源**: 保存条件改为 sw 与 global 都有绿框（AND）
+
+## 账号表末尾占位列（2026-10-04）
+
+- 表格末尾内部列 `_filler`（不在 columns，无 data-col，不参与排序/显隐/列菜单）；宽度 = 容器可视宽 - 可见列宽总和（>=0）
+- 作用：所有真实列右侧都有邻居（拖拽热区不再压在表格边界）；占位单元格属于该行 → 行悬浮/选中感应覆盖整行
+- 菜单文案：所有列/该列"调至合适宽度"；占位列不提供"该列"项
+- 表头行 `.acc-table-titlebar` min-height 38px → 46px
+
+## 列宽不生效根因：隐藏列 col 宽度（2026-10-04）
+
+- 现象：隐藏部分列后最右可见列拖不动、自适应也无效；所有列都显示时正常
+- 根因：table-layout:fixed 列宽取自 <col>，隐藏列时只给 th/td 加 display:none，<col> 宽度仍是原值 → 声明列宽总和 > 表格宽度 → 浏览器重新分配列宽，声明值被吃掉
+- 修复：`_applyColumnLayout` 中隐藏列的 <col> 同时归零+隐藏（`hidden-col` + `width:0`，真实宽度留在 colWidth）；拖拽/总宽取整避免 1px 溢出
+- 占位列宽度 = 容器 clientWidth - 可见列宽总和（≥0），右端恰在列表区域右边缘
+
+## 名称列宽度 + 悬浮按钮占位 + 等宽字体（2026-10-04）
+
+- 名称列"调至合适宽度" = 名称宽 + 悬浮按钮预留宽(QUICK_ACTIONS_WIDTH=96)；量取时只取 .dn-text/.manage-disabled-tag，排除按钮文字
+- 悬浮按钮改 visibility 常驻占位（原 display 切换会在悬浮瞬间挤压 .dn-text → 文字截断/位移）
+- 列表内容（td）统一等宽字体 var(--font-family-mono)，表头仍用界面字体
