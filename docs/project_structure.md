@@ -276,3 +276,31 @@ JS 调用 void Java 方法 → 立刻返回
 - 登录态维护管线（流A）: `AccInfoFuncCore.resolvePidAccountMap` → `associateCoexistAccounts` → `updateAccLoginData`（原 `getSwAccountsLoginStatus` god-method 拆分）
 
 ---
+
+---
+
+# 打包流程（JavaFX + Gradle + jpackage，自全局 AGENTS.md 迁入，2026-10-05）
+
+### 适用技术栈
+- **语言**: Java 17
+- **UI 框架**: JavaFX 17（TRANSPARENT 透明窗口 + WebView）
+- **构建工具**: Gradle（本机现为 9.8.0）
+- **打包工具**: jpackage（WiX Toolset v3.14）
+- **输出**: Windows 安装包 (.exe) + 便携版 (app-image)
+
+### 两步打包流程
+
+**第一步：依赖分析** (`scripts/analyze.bat`)：`installDist → jdeps 提取模块依赖 → 写入 build/deps-jlink.txt`
+
+**第二步：打包 EXE** (`scripts/package-exe.bat`)：`检查 deps-jlink.txt → installDist → jlink 构建精简运行时 → jpackage 打 exe/app-image`
+
+输出：
+- `build\exe\JhiFengMultiChat-{version}.exe`（安装版）
+- `build\portable\JhiFengMultiChat\`（便携版）
+
+### 关键依赖与注意事项
+- **WiX Toolset v3.14**: `C:\Program Files (x86)\WiX Toolset v3.14\bin`
+- **JavaFX JAR**: Gradle 缓存 `C:\Users\25359\.gradle\caches\modules-2\files-2.1\org.openjfx`
+- **Logo**: `logo.ico`（项目根目录）；便携版需手动拷贝到输出目录
+- 打包脚本硬编码 `JAVA_HOME` / `GRADLE_HOME` → 搬迁后必须同步为 `D:\SpaceDev\Env\Infrastructure\runtime\...`
+- jpackage 需要 `--java-options "--add-exports javafx.web/..."`（以及本项目的 `java.desktop/sun.awt.shell`）才能访问内部 API
