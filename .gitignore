@@ -23,3 +23,6 @@
 /storage/
 /.test/@AutomationLog.txt
 /@AutomationLog.txt
+
+# === 临时文件（测试脚本/临时产物，可随时删） ===
+/tmp/

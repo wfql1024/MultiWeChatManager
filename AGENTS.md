@@ -158,6 +158,7 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - 交互/渲染类改动用**离屏 WebView 探针**验证：真实 `index.html` + 桩桥（`StubBridge` 记录调用）+ 驱动脚本断言；需要时做**离屏像素统计**（ASCII 位图 / 颜色分类 / 形状轮廓比对）
 - Java 侧逻辑用直连探针跑真实代码（如 `AccFilesProbe`）
 - 边界：离屏环境**拿不到 DOM 选区**（`window.getSelection()` 恒空）→ 光标/输入法这类交互必须真机验证，别在探针里下结论
+- **临时文件放项目根的 `tmp/`**（已 gitignore，可随时删）；**不要放 `build/`** —— 它是构建产物目录，`gradle clean` 会整个清空
 
 ### 文档纪律
 
