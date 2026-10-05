@@ -113,6 +113,36 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;      /* 页面进度条（#page-progress）的定位基准 */
+}
+
+/* 页面进度条：内容区顶部 2px 主题色小横条（不定长滑动；显隐由 JFC.progress 控制） */
+.page-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s linear;
+    z-index: 40;
+}
+.page-progress.active { opacity: 1; }
+.page-progress.active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 35%;
+    background: var(--color-primary);
+    border-radius: 1px;
+    animation: page-progress-slide 1.1s ease-in-out infinite;
+}
+@keyframes page-progress-slide {
+    0%   { left: -35%; }
+    100% { left: 100%; }
 }
 
 /* Page Container */
@@ -1506,18 +1536,21 @@ body.curtain-collapsed .manage-curtain-handle #handle-drag-right {
     margin-left: auto;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 8px;                 /* "已选 x 项" / 取消 / 批量组 三者等距 */
 }
 .acc-table-count {
     color: var(--text-secondary);
-    font-size: var(--font-xs);
+    font-size: var(--fs-table);   /* 统一 14px */
 }
 .acc-table-batch {
     display: inline-flex;
     gap: 4px;
 }
-.acc-table-batch .btn-sm {
-    font-size: var(--font-xs);
+/* 批量按钮与"取消"统一收紧横向内边距：默认 .btn-sm 的 12px 让三个按钮看起来离得过远 */
+.acc-table-meta .btn-sm {
+    padding: 3px 8px;
+    font-family: var(--font-family-base);   /* 【字体已定】界面字体 */
+    font-size: var(--fs-table);             /* 统一 14px */
 }
 .acc-table-batch .batch-danger {
     color: var(--color-danger);
@@ -1607,6 +1640,11 @@ body.curtain-collapsed .manage-curtain-handle #handle-drag-right {
     cursor: pointer;
     user-select: none;
 }
+/* 表格列头：界面字体（中文=微软雅黑），字号统一 14px */
+.manage-account-table th {
+    font-family: var(--font-family-base);
+    font-size: var(--fs-table);
+}
 .manage-account-table th[data-sort]:hover {
     color: var(--text-primary);
 }
@@ -1673,12 +1711,36 @@ body.resizing-cols {
 .manage-account-table td {
     padding: 6px 12px;
     border-bottom: 1px solid rgba(255,255,255,0.03);
-    color: var(--text-secondary);
+    color: var(--text-level2);                    /* 普通行的"其它列" = 2 级 */
     vertical-align: middle;
-    font-family: var(--font-family-mono);   /* 列表内容统一等宽字体（表头仍用界面字体） */
+    font-family: var(--font-family-mono);   /* 默认等宽（ID/版本/路径等英文列）；含中文的列在下面单独覆盖 */
+    font-size: var(--fs-table);                   /* 统一 14px */
 }
 .manage-account-table tbody tr {
+    cursor: default;        /* 整行服务于"选中"：普通箭头（可编辑的列在下面单独覆盖） */
+}
+/* 所有单元格显式取普通箭头（cursor 是继承属性，这里写死避免受其它规则影响）；
+   可编辑列在下面用更高优先级覆盖为输入样式，按钮/勾选框各自保持手型 */
+.manage-account-table tbody td {
+    cursor: default;
+}
+/* 可点击进入编辑的列（名称 / 快捷键）→ 输入样式光标；按钮仍是手型（见 .qa-btn） */
+.manage-account-table tbody td.manage-nickname-cell,
+.manage-account-table tbody td.manage-hotkey-cell {
+    cursor: text;
+}
+/* 头像列可点击（弹头像预览）→ 手型 */
+.manage-account-table tbody td.manage-col-avatar {
     cursor: pointer;
+}
+/* 名称前缀标签本身不可点（点它不进编辑）→ 保持普通箭头 */
+.manage-account-table .manage-name-tag {
+    cursor: default;
+}
+/* 名称状态标签：界面字体，字号统一 14px */
+.manage-account-table .manage-name-tag {
+    font-family: var(--font-family-base);
+    font-size: var(--fs-table);
 }
 /* 数据行行高统一（32px 头像 + td 上下 padding）——原生程序表的行与账号表一致；
    tr 上的 height 在表格布局里是最小高度，内容更高时仍会自动撑开 */
@@ -1693,21 +1755,78 @@ body.resizing-cols {
     text-align: center;
     padding-left: 8px;
 }
-.manage-account-table input[type="checkbox"] {
+/* 勾选框：**自绘**（原生控件在 JavaFX WebView 里会先画一帧纯方形、随后才变圆角 → 闪烁）.
+   input 只当状态载体（透明但可点），可见的圆角方块由 .acc-check-box 画。 */
+.manage-account-table .acc-check {
+    position: relative;
+    display: inline-block;
     width: 16px;
     height: 16px;
+    vertical-align: middle;
+}
+.manage-account-table .acc-check input[type="checkbox"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    opacity: 0;                 /* 视觉全交给 .acc-check-box */
     cursor: pointer;
     accent-color: var(--color-primary);
 }
-/* 行内勾选框：不常显，仅行悬浮/选中时短暂显示 */
-.manage-account-table tbody tr .manage-col-check input[type="checkbox"] {
+.manage-account-table .acc-check-box {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color);
+    /* 空框：16px 边长（含 1px 边框）+ 4px 圆角。勾选态**不改变尺寸/圆角**，
+       而是把边框设为透明、由 background 独占整块填充（见下面的 :checked 规则）。 */
+    border-radius: 4px;
+    background: var(--bg-card);
+    pointer-events: none;       /* 点击落到透明 input / label 上 */
+}
+.manage-account-table .acc-check input:checked + .acc-check-box {
+    /* 勾选态 = **一整块填充**，不再是"内填充 + 外边框"两层几何
+       （两层即使同色，圆角处也可能露出内层/外层的缝 → 用户看到的"镂空/黑点"就是这个）。
+       border-color: transparent 让边框**完全不参与画面**，由 background 独占整块形状；
+       尺寸/圆角沿用基类的 16px（含 1px 边框，box-sizing: border-box）+ 4px 圆角
+       → 填充的外形与空框**外沿完全相同**。background-clip 默认就是 border-box，这里显式写出以免被其它规则改动。 */
+    background: var(--color-primary);
+    background-clip: border-box;
+    border-color: transparent;
+}
+/* 勾：translate(-50%,-50%) 居中 + 1.25px 上移补偿.
+   （几何居中后实测"墨迹中心"仍偏下 1.25px —— 旋转 45° 后的 L 形墨迹视觉重心比几何中心低，
+     所以按测量值补偿；补偿值来自离屏像素实测，不是拍脑袋） */
+.manage-account-table .acc-check input:checked + .acc-check-box::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 5px;
+    height: 9px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: translate(-50%, calc(-50% - 1.25px)) rotate(45deg);
+}
+/* 行内勾选框：不常显，仅行悬浮/选中时显示（透明 input 此时才可点） */
+.manage-account-table tbody tr .acc-check-box {
     opacity: 0;
-    pointer-events: none;
     transition: opacity 0.15s;
 }
-.manage-account-table tbody tr:hover .manage-col-check input[type="checkbox"],
-.manage-account-table tbody tr.selected .manage-col-check input[type="checkbox"] {
+.manage-account-table tbody tr .acc-check input[type="checkbox"] {
+    pointer-events: none;
+}
+.manage-account-table tbody tr:hover .acc-check-box,
+.manage-account-table tbody tr.selected .acc-check-box {
     opacity: 1;
+}
+.manage-account-table tbody tr:hover .acc-check input[type="checkbox"],
+.manage-account-table tbody tr.selected .acc-check input[type="checkbox"] {
     pointer-events: auto;
 }
 
@@ -1730,7 +1849,7 @@ body.resizing-cols {
 }
 .manage-account-avatar .manage-avatar-placeholder {
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--text-level2);       /* 头像兜底文字 = 2 级（与"其它列"一致） */
     font-weight: var(--weight-bold);
 }
 
@@ -1738,8 +1857,10 @@ body.resizing-cols {
    浏览器会插入匿名 cell，td 自己的 padding/border 便画在里面 → 名称列会多出一条"下划线"）。
    flex 放在内层 .manage-nickname-inner 上。 */
 .manage-account-table .manage-nickname-cell {
+    font-family: var(--font-family-base);   /* 名称列：中文=雅黑（英文段由 .lat-run 单独指定等宽） */
     font-weight: var(--weight-semibold);
-    color: var(--text-primary);
+    color: var(--text-level1);              /* 普通行名称列 = 1 级（最重） */
+    font-size: var(--fs-name);              /* 比其他列大 1 号 */
 }
 .manage-nickname-cell .manage-nickname-inner {
     display: flex;
@@ -1777,7 +1898,8 @@ body.resizing-cols {
     color: var(--text-secondary);
     border-radius: 4px;
     padding: 1px 7px;
-    font-size: 11px;
+    font-family: var(--font-family-base);   /* 【字体已定】界面字体 */
+    font-size: var(--fs-table);             /* 统一 14px */
     line-height: 1.6;
     cursor: pointer;
     transition: color 0.15s, border-color 0.15s, background 0.15s;
@@ -1814,34 +1936,41 @@ body.resizing-cols {
     background: rgba(230, 69, 83, 0.15);
     color: var(--color-danger);
 }
-/* 失效标签（无效账号：SwAccData 有记录但磁盘不存在）——灰色 */
+/* 失效标签（无效账号：SwAccData 有记录但磁盘不存在）——3 级灰 */
 .manage-invalid-tag {
     background: var(--bg-hover);
-    color: var(--text-muted);
+    color: var(--text-level3);
 }
-/* 隐藏标签（一眼看出哪些号被隐藏） */
+/* 隐藏标签（一眼看出哪些号被隐藏）——2 级灰 */
 .manage-hidden-tag {
     background: var(--bg-hover);
-    color: var(--text-secondary);
+    color: var(--text-level2);
 }
-/* 失效账号整行灰字（名称列本身用 text-primary，需一并压灰） */
+/* 隐藏行：名称列也降到 2 级 → 整行统一 2 级（与普通行的"其它列"同级，视觉上退到次要） */
+.manage-account-table tbody tr.hidden-row .manage-nickname-cell,
+.manage-account-table tbody tr.hidden-row .manage-nickname-cell .dn-text {
+    color: var(--text-level2);
+}
+/* 失效账号整行 3 级（名称列/头像兜底文字本身有自己的颜色，需一并压到 3 级）。
+   注意顺序：必须排在 hidden-row 之后 —— 同一行既隐藏又失效时，失效（更次要）优先。 */
 .manage-account-table tbody tr.invalid-row td,
 .manage-account-table tbody tr.invalid-row .manage-nickname-cell,
-.manage-account-table tbody tr.invalid-row .manage-nickname-cell .dn-text {
-    color: var(--text-muted);
+.manage-account-table tbody tr.invalid-row .manage-nickname-cell .dn-text,
+.manage-account-table tbody tr.invalid-row .manage-avatar-placeholder {
+    color: var(--text-level3);
 }
 
-/* 快捷键列：可点击激活输入框 */
+/* 快捷键列：可点击激活输入框（输入样式光标） */
 .manage-hotkey-cell {
-    cursor: pointer;
-    color: var(--text-secondary);
+    cursor: text;
+    color: var(--text-level2);       /* 其它列 = 2 级 */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     user-select: none;
 }
 .manage-hotkey-cell .hotkey-placeholder {
-    color: var(--text-muted);
+    color: var(--text-level3);       /* 空值占位" — " = 3 级 */
 }
 .manage-hotkey-cell input.hotkey-input {
     width: 100%;
@@ -1856,19 +1985,131 @@ body.resizing-cols {
     outline: none;
 }
 
+/* 名称列就地编辑框（`<input>`，与快捷键列同款交互）：预填 remark，留空时灰字显示"将会显示的名称".
+   为什么不用 contenteditable 实现"中英两种字体"：实测 JavaFX WebView 里 contenteditable **没法正常输入/修改**（用户实测），
+   所以编辑态统一用**等宽**一种字体；**显示态**仍按中英分段（.cjk-run/.lat-run）。 */
+.manage-nickname-cell .name-input {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 2px 6px;
+    font-family: var(--font-family-mono);
+    font-size: var(--fs-name);
+    font-weight: inherit;
+    line-height: 1.4;
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border: 1px solid var(--color-primary);
+    border-radius: 4px;
+    outline: none;
+}
+.manage-nickname-cell .name-input::placeholder {
+    color: var(--text-muted);        /* 灰字 = 不填会显示的名称 */
+    font-weight: normal;
+}
+
+/* ========================================
+   确认弹窗（JFC.modal）
+   为什么不用 window.confirm：JavaFX WebView 里没有 confirm handler 时它**恒返回 false**，
+   且不显示任何界面 —— 用它做删除确认等于永远取消
+   ======================================== */
+.modal-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.45);
+}
+.modal-card {
+    min-width: 320px;
+    max-width: 460px;
+    padding: 18px 20px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+}
+.modal-title {
+    font-size: var(--font-h3);
+    font-weight: var(--weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: 8px;
+}
+.modal-message {
+    font-size: var(--font-sm);
+    color: var(--text-secondary);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px;
+}
+/* 居中版弹窗（头像预览）：标题与按钮都居中 */
+.modal-card.center .modal-title { text-align: center; }
+.modal-card.center .modal-actions { justify-content: center; }
+.modal-actions.center { justify-content: center; }
+.modal-action.danger {
+    color: var(--color-danger);
+    border-color: var(--color-danger);
+}
+.modal-action.danger:hover { background: var(--color-danger); color: #fff; }
+
+/* 头像预览弹窗（点击列表头像打开） */
+.avatar-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 0 2px;
+}
+.avatar-preview-img {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    border-radius: 10px;
+    background: var(--bg-hover);
+}
+.avatar-preview-empty {
+    color: var(--text-muted);
+    font-size: var(--font-sm);
+    padding: 60px 0;
+}
+.modal-actions .modal-ok.danger {
+    background: var(--color-danger);
+    border-color: var(--color-danger);
+    color: #fff;
+}
+.modal-actions .modal-ok.danger:hover {
+    filter: brightness(1.1);
+}
+
 .manage-account-table .manage-text-cell,
 .manage-account-table .manage-alias-cell,
 .manage-account-table .manage-nickname-data-cell {
-    color: var(--text-secondary);
+    color: var(--text-level2);   /* 其它列 = 2 级 */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+/* 昵称列可能含中文 → 整列雅黑。
+   ⚠️ 必须**单独**写这条：之前和上面三条共用一个选择器组，结果把程序表的
+   `.manage-text-cell`（名称/版本/路径）也一起变成雅黑了 —— 那几列应当保持等宽。 */
+.manage-account-table .manage-nickname-data-cell {
+    font-family: var(--font-family-base);
+}
+
+/* 三张表的名称列都是 `.manage-nickname-cell`（key='display_name'）→ 样式与交互完全统一。
+   （历史上程序表名称列是 `td[data-col="name"]` 的普通文本列，已废弃删除。） */
+
 .manage-account-table .manage-id-cell {
-    font-family: var(--font-family-mono);
-    font-size: var(--font-xs);
-    color: var(--text-secondary);
+    font-family: var(--font-family-mono);   /* ID 列全是英文 → 等宽（用户 2026-10-05 定） */
+    font-size: var(--fs-table);
+    color: var(--text-level2);               /* 其它列 = 2 级 */
     max-width: 160px;
     overflow: hidden;
     text-overflow: ellipsis;

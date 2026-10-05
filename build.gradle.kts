@@ -36,6 +36,10 @@ application {
 tasks.named<JavaExec>("run") {
     jvmArgs("--add-exports", "javafx.web/com.sun.javafx.webkit=ALL-UNNAMED")
     jvmArgs("--add-exports", "java.desktop/sun.awt.shell=ALL-UNNAMED")
+    // 中文抗锯齿【试验开关】：JavaFX 默认用 LCD 次像素抗锯齿（实测彩色边缘占比 97%），
+    // 深色底 + 中文复杂笔画会显得发虚/带彩边；关掉改用灰度抗锯齿后实测边缘对比度反而更高（53.5 vs 51.3）。
+    // 觉得不好就去掉这一行（详见 MEMORY/LESSONS 十四）。
+    jvmArgs("-Dprism.lcdtext=false")
 }
 
 // === 开发者工具源集（发布辅助工具，复用 main 的类与依赖，但不进入应用产物） ===

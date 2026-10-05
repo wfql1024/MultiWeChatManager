@@ -54,6 +54,11 @@
     -fx-background-color: rgba(0, 0, 0, 0.07);
 }
 
+/* 标题栏图标按钮的 SVG 图标（浅色主题取与文字同色） */
+.title-bar-icon {
+    -fx-stroke: #666666;
+}
+
 .close-btn:hover {
     -fx-background-color: #e64553;
     -fx-text-fill: white;

@@ -11,7 +11,7 @@
 > | 待推进事项 | `MEMORY/TODOS.MD` |
 > | 架构与目录细节 | `docs/project_structure.md` |
 >
-> 记忆系统索引: `MEMORY/MEMORY.md` ｜ 最后更新: 2026-10-05
+> 记忆系统索引: `MEMORY/MEMORY.md` ｜ 最后更新: 2026-10-06
 
 ---
 
@@ -77,6 +77,9 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 .\scripts\encrypt-configs.bat              # 远程配置加密（encryptRemoteConfigs 的包装）
 ```
 
+> `run` 任务目前带一个**试验开关** `-Dprism.lcdtext=false`（关掉 LCD 次像素抗锯齿，中文观感更干净：
+> 实测边缘对比度 51.3→53.5、彩色边缘占比 97%→0%）。保留与否待定，见 `MEMORY/TODOS.MD`。
+
 ### 远程配置维护（日常两大工作之一）
 
 - **源文件**：`scripts/original_remote_global_<vN>.json`、`scripts/original_remote_sw_<vN>.json`
@@ -121,6 +124,40 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - 表格：`table-layout: fixed` + colgroup 决定列宽；**隐藏列的 `<col>` 必须同时归零**；表格宽度 = 可见列宽总和 + 占位列
 - 单元格不要设 `display:flex`（会破坏 table-cell）；需要 flex 就在内层加元素
 - 行悬浮/选中着色用绝对定位色块层 + **不透明等效色**，靠 `isolation: isolate` 控制层叠
+
+### 表格（三张表共用 `JFC.AccountTable`）
+
+- **名称列三表统一**：都用 `key='display_name'` → 复用 `.manage-nickname-cell`（可点击就地编辑 remark / 1 级色 / 15px / 字重 600 / 中英分段）。
+  程序表用 `showRowActions:false` 关掉"隐藏/重置/删除"悬浮按钮（那是账号语义）
+- **字体**：中文 = 微软雅黑（`--font-family-base`）、英文 = 等宽（`--font-family-mono`）；字号 `--fs-table:14px`、名称列 `--fs-name:15px`
+  - **本 WebKit 做不到"一个元素里中文雅黑 + 英文等宽"**：等宽族缺中文会走系统 CJK 回退、`@font-face + unicode-range` 也不生效
+    → 必须由 JS 拆段（`scriptSplitHtml()` → `.cjk-run` / `.lat-run`）。编辑框是 `<input>`，只能统一一种字体（等宽）
+- **文字三级色** `--text-level1/2/3`（深色 纯白/浅灰/深灰；浅色 纯黑/深灰/浅灰）：
+  普通行名称列 1 级、其它列 2 级；隐藏行（`tr.hidden-row`）整行 2 级；失效行（`tr.invalid-row`）整行 3 级
+- 自绘勾选框：`.acc-check`（透明 input 只当状态载体）+ `.acc-check-box`；勾选态是**一整块填充**（`border-color: transparent`，不要用同色 border 凑）
+
+### 账号数据约定
+
+- **失效账号**由 `main.js` 推导：`SwAccData` 里有记录、但**不在 `getSwExistedAccounts` 列表里** → 并入对应表置底 + 3 级灰 + "失效"标签
+- **`origin_exe` 不是账号**：它是 `SwAccData.<sw>.origin_exe` 里"原生程序自己的备注"节点，**所有遍历账号的地方都必须排除它**
+  （`JsBridge.getSwDetailData` / `getAccountList`、`AccConfigAccessor.getAllAccounts`、两处"取第一个账号"的退化路径）
+- **名称链**：账号 = `remark > nickname > alias > id`；原生程序 = `origin_exe.remark > 平台名称`；平台名称 = 本地 `remark` > 远程 `alias` > `swId`
+- **删除 vs 重置**：删除 = 节点整体移除；重置 = 清空节点内容但**保留空节点**。两者都要 `AccInfoFuncCore.deleteAccountAvatarFiles()` 清 `{userData}/{sw}/{acc}/` 下的头像文件
+  （只清图片、保留非图片、只删空目录）；平台图标 `{userData}/{sw}/{sw}.png` 不受影响
+- **批量删除只对失效账号生效**：确认框照常弹、文案说明"正常账号无法删除/将被跳过"，**执行层**才过滤（按钮点了没反应比弹窗说明更糟）
+- 行右键菜单三项齐全（隐藏/重置/删除），不能做的**显示为禁用**（禁用项仍要带 `data-row-action`）
+
+### 交互组件
+
+- 弹窗一律用 `JFC.modal.confirm` / `JFC.modal.custom`（`window.confirm` 在本 WebView 里恒返回 false、`alert` 是空操作）
+- 快捷键录入：松手即确认；只有修饰键或普通键多于一个 → 回退原值；Backspace 清空、Esc 放弃、**Enter 忽略**、Tab 可录
+- 就地编辑：单元格 HTML 只由 `nameCellInnerHtml()` 产出；提交后**延后一拍**再保存 + 整表重排（避免 mousedown 阶段重建 tbody 让点击落空）
+
+### 离线验证（`build/_probe`）
+
+- 交互/渲染类改动用**离屏 WebView 探针**验证：真实 `index.html` + 桩桥（`StubBridge` 记录调用）+ 驱动脚本断言；需要时做**离屏像素统计**（ASCII 位图 / 颜色分类 / 形状轮廓比对）
+- Java 侧逻辑用直连探针跑真实代码（如 `AccFilesProbe`）
+- 边界：离屏环境**拿不到 DOM 选区**（`window.getSelection()` 恒空）→ 光标/输入法这类交互必须真机验证，别在探针里下结论
 
 ### 文档纪律
 

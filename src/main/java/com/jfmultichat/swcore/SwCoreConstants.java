@@ -96,6 +96,12 @@ public final class SwCoreConstants {
         public static final String DLL_DIR = "dll_dir";
         public static final String INST_DIR = "inst_dir";
         public static final String REMARK = "remark";
+        /**
+         * 平台**主程序**的快捷键（原生程序表"快捷键"列）.
+         * 注意与账号快捷键区分：账号快捷键存在 SwAccData 的账号节点里（AccKey.HOTKEY）；
+         * 平台主程序不是账号、没有 SwAccData 节点，所以它的快捷键存在 LocalSwConfig 的平台节点上。
+         */
+        public static final String HOTKEY = "hotkey";
         public static final String COEXIST_MODE = "coexist_mode";
         public static final String REST_MULTIRUN_MODE = "rest_multirun_mode";
         public static final String GLOBAL_SECTION = "global";

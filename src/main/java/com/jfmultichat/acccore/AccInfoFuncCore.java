@@ -89,6 +89,43 @@ public final class AccInfoFuncCore {
     }
 
     /**
+     * 清除账号在数据目录里的头像文件：`{userData}/{sw}/{acc}/` 下的图片，随后删掉空目录.
+     *
+     * <p>读取端只认 {@code {acc}.jpg}，但目录里可能残留历史的 png/gif → 按扩展名扫掉**所有图片**，
+     * 再在目录为空时删掉目录本身（**只删空目录，绝不递归删其它文件**）。
+     *
+     * <p>只清文件、**不动配置** —— 供"重置/删除账号"复用（重置的配置清空由 ConfigManager 负责）。
+     *
+     * @return 有文件或目录被删除时 true；目录本来就不存在时 false
+     */
+    public static boolean deleteAccountAvatarFiles(String sw, String acc) {
+        try {
+            String userDir = AppCore.getUserDir();
+            File dir = new File(userDir + "/" + sw + "/" + acc);
+            if (!dir.isDirectory()) return false;
+            boolean deleted = false;
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    String n = f.getName().toLowerCase();
+                    if (f.isFile() && (n.endsWith(".jpg") || n.endsWith(".jpeg") || n.endsWith(".png")
+                            || n.endsWith(".bmp") || n.endsWith(".gif"))) {
+                        if (f.delete()) deleted = true;
+                        else LOG.warn("[头像] 删除失败: {}", f);
+                    }
+                }
+            }
+            File[] left = dir.listFiles();
+            if (left != null && left.length == 0 && dir.delete()) deleted = true;
+            if (deleted) LOG.info("[头像] 已清除账号头像文件: {}/{}", sw, acc);
+            return deleted;
+        } catch (Exception e) {
+            LOG.warn("[头像] 清除头像文件失败: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * 删除账号头像
      * 对应 Python: delete_avatar_for_acc (L1009-L1015)
      */
@@ -96,16 +133,60 @@ public final class AccInfoFuncCore {
         try {
             String userDir = AppCore.getUserDir();
             String path = userDir + "/" + sw + "/" + acc + "/" + acc + ".jpg";
-            File f = new File(path);
-            if (f.exists()) {
-                f.delete();
-            }
-            updateSwAccData(sw, acc, Map.of("avatar_url", null));
+            deleteAccountAvatarFiles(sw, acc);
+            // 注意：这里**不能**用 Map.of —— Map.of 不接受 null 值，会抛 NPE 被下面的 catch 吞掉，
+            // 结果是"文件删了但方法返回 false、avatar_url 也没清掉"（真实踩过）
+            updateSwAccData(sw, acc, java.util.Collections.singletonMap("avatar_url", null));
             LOG.info("[头像] 已删除: {}", path);
             return true;
         } catch (Exception e) {
             LOG.warn("[头像] 删除失败: {}", e.getMessage());
             return false;
+        }
+    }
+
+    /**
+     * 手动导入头像：把用户选中的图片写成该账号的本地头像文件.
+     *
+     * <p>目标路径与 {@link AvatarUtils} 的读取路径一致（{@code {userData}/{sw}/{acc}/{acc}.jpg}），
+     * 源图可能是 png/bmp/gif，统一转成 JPEG 再写（读取端固定按 jpg 编 data URL）。
+     * 同时清掉 {@code avatar_url}：手动选的头像不应被网络头像覆盖（与旧版 Python 语义一致）。
+     *
+     * @param src 用户选中的图片文件
+     * @return 新头像的 data URL；失败返回 null
+     */
+    public static String importAvatarForAcc(String sw, String acc, File src) {
+        try {
+            if (src == null || !src.isFile()) return null;
+            java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(src);
+            if (img == null) return null;   // 不是可识别的图片格式
+
+            String userDir = AppCore.getUserDir();
+            File dest = new File(userDir + "/" + sw + "/" + acc + "/" + acc + ".jpg");
+            File parent = dest.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                LOG.warn("[头像] 无法创建目录: {}", parent);
+                return null;
+            }
+            // JPEG 不支持透明通道：先铺白底再转 TYPE_INT_RGB
+            java.awt.image.BufferedImage rgb = img;
+            if (img.getType() != java.awt.image.BufferedImage.TYPE_INT_RGB) {
+                rgb = new java.awt.image.BufferedImage(img.getWidth(), img.getHeight(),
+                        java.awt.image.BufferedImage.TYPE_INT_RGB);
+                java.awt.Graphics2D g = rgb.createGraphics();
+                g.drawImage(img, 0, 0, java.awt.Color.WHITE, null);
+                g.dispose();
+            }
+            if (!javax.imageio.ImageIO.write(rgb, "jpg", dest)) {
+                LOG.warn("[头像] 写文件失败: {}", dest);
+                return null;
+            }
+            updateSwAccData(sw, acc, java.util.Collections.singletonMap("avatar_url", null));
+            LOG.info("[头像] 手动导入: {} -> {}", src, dest);
+            return AvatarUtils.getLocalAvatarDataUrl(sw, acc);
+        } catch (Exception e) {
+            LOG.warn("[头像] 手动导入失败: {}", e.getMessage());
+            return null;
         }
     }
 
@@ -117,9 +198,11 @@ public final class AccInfoFuncCore {
      */
     public static String getAccAvatarFromFile(String sw, String acc) {
         try {
+            // 文字兜底用的名称 = 账号展示名（备注 > 昵称 > 平台内ID > ID）；取名称末尾 4 个字符宽
             return AvatarUtils.getAvatarDataUrl(sw, acc,
                     getSwAccData(sw, acc, "avatar_url") != null
-                            ? getSwAccData(sw, acc, "avatar_url").asText(null) : null);
+                            ? getSwAccData(sw, acc, "avatar_url").asText(null) : null,
+                    getAccOriginDisplayName(sw, acc));
         } catch (Exception e) {
             LOG.warn("[头像] 获取失败: {}", e.getMessage());
             return null;
@@ -731,7 +814,8 @@ public final class AccInfoFuncCore {
      * 解除账号与窗口的绑定
      */
     public static void unlinkHwndOfAccount(String sw, String account) {
-        updateSwAccData(sw, account, Map.of("main_hwnd", null));
+        // 不能用 Map.of（不接受 null 值 → NPE）
+        updateSwAccData(sw, account, java.util.Collections.singletonMap("main_hwnd", null));
         LOG.info("[窗口] 已解绑账号: {}", account);
     }
 

@@ -42,6 +42,17 @@ public final class AvatarUtils {
      * @return data:image/jpeg;base64,... 或 data:image/svg+xml,...；若失败则返回空字符串
      */
     public static String getAvatarDataUrl(String sw, String acc, String avatarUrl) {
+        return getAvatarDataUrl(sw, acc, avatarUrl, null);
+    }
+
+    /**
+     * 获取账号头像（可指定"文字兜底"用哪个名称）.
+     *
+     * @param fallbackName 文字头像兜底用的**名称**（通常是账号展示名：备注 &gt; 昵称 &gt; 平台内ID &gt; ID）；
+     *                     为空则退回账号 ID。取名称**末尾 4 个字符宽**（中文一个字算 2 宽）
+     */
+    public static String getAvatarDataUrl(String sw, String acc, String avatarUrl, String fallbackName) {
+        String labelSource = (fallbackName != null && !fallbackName.isBlank()) ? fallbackName : acc;
         if (sw == null || sw.isBlank() || acc == null || acc.isBlank()) {
             LOG.info("[头像] 空 sw 或 acc, 返回文字头像: sw={}, acc={}", sw, acc);
             return generateTextAvatarSvgFallback("?");
@@ -94,9 +105,9 @@ public final class AvatarUtils {
             }
 
             // 3. 回退：生成文字头像（SVG 格式，样式同左栏平台图标）
-            String displayName = generateDisplayName(acc, avatarUrl);
-            LOG.info("[头像] 生成文字头像替代方案: displayName=\"{}\"", displayName);
-            return generateTextAvatarSvg(displayName);
+            String label = textAvatarLabel(labelSource);
+            LOG.info("[头像] 生成文字头像替代方案: label=\"{}\" (来源: {})", label, labelSource);
+            return generateTextAvatarSvg(label);
 
         } catch (Exception e) {
             LOG.error("[头像] 获取头像时发生异常: {}", e.getMessage(), e);
@@ -143,6 +154,16 @@ public final class AvatarUtils {
      */
     public static String getCoexistAvatarDataUrl(String sw, String coexistAcc,
                                                  String linkedAcc, String linkedAvatarUrl) {
+        return getCoexistAvatarDataUrl(sw, coexistAcc, linkedAcc, linkedAvatarUrl, null);
+    }
+
+    /**
+     * 同上，但可指定"文字兜底用哪个名称"（共存行显示的名称）。
+     */
+    public static String getCoexistAvatarDataUrl(String sw, String coexistAcc,
+                                                 String linkedAcc, String linkedAvatarUrl,
+                                                 String fallbackName) {
+        String labelSource = (fallbackName != null && !fallbackName.isBlank()) ? fallbackName : coexistAcc;
         // 1. 自身本地头像文件
         String own = getLocalAvatarDataUrl(sw, coexistAcc);
         if (own != null) {
@@ -152,11 +173,11 @@ public final class AvatarUtils {
         // 2 & 3. 链接账号：本地文件 → 头像地址下载（getAvatarDataUrl 内部已按此顺序）
         if (linkedAcc != null && !linkedAcc.isBlank()) {
             LOG.info("[头像] 共存账号回退到链接账号头像: {} -> {}", coexistAcc, linkedAcc);
-            return getAvatarDataUrl(sw, linkedAcc, linkedAvatarUrl);
+            return getAvatarDataUrl(sw, linkedAcc, linkedAvatarUrl, labelSource);
         }
-        // 4. 无链接账号 → 默认文字头像（generateTextAvatarSvgFallback 自行取首字符）
-        LOG.info("[头像] 共存账号无链接账号, 使用默认文字头像: {}", coexistAcc);
-        return generateTextAvatarSvgFallback(coexistAcc);
+        // 4. 无链接账号 → 文字头像（取名称末尾 4 个字符宽）
+        LOG.info("[头像] 共存账号无链接账号, 使用文字头像: {} / {}", coexistAcc, labelSource);
+        return generateTextAvatarSvgFallback(labelSource);
     }
 
     private static boolean downloadImage(String urlStr, String filePath) {
@@ -206,14 +227,69 @@ public final class AvatarUtils {
     }
 
     /**
-     * 生成文字头像的 SVG 格式（直接作为 img src），包含圆角矩形背景和首字母.
+     * 文字头像的取字规则：**名称末尾 4 个字符宽**（中文/全角一个字算 2 个字符宽）.
+     *
+     * <p>用户要求（2026-10-05）：头像兜底文字从"首字符"改成"名称末尾 4 个字符宽"——
+     * 例如「极峰多聊测试」→「测试」（2 个汉字 = 4 宽）、「wxid_ab12cd」→「12cd」（末尾 4 个拉丁）、
+     * 「张三wx」→「三wx」（2+2=4 宽）。
+     * 只影响**账号**头像兜底；平台/程序图标兜底（前端 `getDefaultPlatformIcon`、程序表占位）仍是首字符。
+     */
+    public static String textAvatarLabel(String name) {
+        if (name == null || name.isBlank()) return "?";
+        int units = 0;
+        int i = name.length();
+        while (i > 0) {
+            int cp = name.codePointBefore(i);
+            int w = isWideCodePoint(cp) ? 2 : 1;
+            if (units + w > 4) break;
+            units += w;
+            i -= Character.charCount(cp);
+        }
+        return name.substring(i);
+    }
+
+    /** 视觉宽度：宽字符（CJK/假名/谚文/全角）算 2，其它算 1 */
+    public static int visualUnits(String s) {
+        if (s == null) return 0;
+        int units = 0;
+        for (int i = 0; i < s.length(); ) {
+            int cp = s.codePointAt(i);
+            units += isWideCodePoint(cp) ? 2 : 1;
+            i += Character.charCount(cp);
+        }
+        return units;
+    }
+
+    private static boolean isWideCodePoint(int cp) {
+        return (cp >= 0x1100 && cp <= 0x115F)      // 谚文字母
+                || (cp >= 0x2E80 && cp <= 0xA4CF)  // CJK 部首/汉字/假名/注音
+                || (cp >= 0xAC00 && cp <= 0xD7A3)  // 谚文音节
+                || (cp >= 0xF900 && cp <= 0xFAFF)  // CJK 兼容汉字
+                || (cp >= 0xFE30 && cp <= 0xFE6F)  // CJK 兼容形式
+                || (cp >= 0xFF00 && cp <= 0xFF60)  // 全角字符
+                || (cp >= 0xFFE0 && cp <= 0xFFE6)  // 全角符号
+                || (cp >= 0x20000 && cp <= 0x3FFFD);// CJK 扩展 B+
+    }
+
+    /** 文字头像字号：4 个字符宽（如 2 个汉字）时缩到 8，否则 10（viewBox 24、方块 18 宽） */
+    private static int textAvatarFontSize(String label) {
+        return visualUnits(label) >= 4 ? 8 : 10;
+    }
+
+    /** 文字头像基线（viewBox 24、中心 12） */
+    private static int textAvatarBaseline(int fontSize) {
+        return 12 + (int) Math.round(fontSize * 0.36);
+    }
+
+    /**
+     * 生成文字头像的 SVG 格式（直接作为 img src），包含圆角矩形背景和名称末尾几字.
      * 样式完全匹配左栏平台图标，但使用硬编码颜色以便在 img 中可见.
      */
-    private static String generateTextAvatarSvg(String text) {
+    private static String generateTextAvatarSvg(String name) {
         try {
-            // 取首字符作为头像文字（参考左栏平台图标逻辑）
-            String displayChar = text != null && text.length() > 0
-                ? text.substring(0, 1).toUpperCase() : "?";
+            String label = textAvatarLabel(name);
+            int fontSize = textAvatarFontSize(label);
+            int baseline = textAvatarBaseline(fontSize);
 
             // 生成 SVG，使用硬编码颜色确保在 img 中可见
             // 深灰色背景 + 白色文字，与留白风格一致
@@ -222,24 +298,26 @@ public final class AvatarUtils {
             sb.append("<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' ")
               .append("fill='#555' stroke='#aaa' stroke-width='2'>");
             sb.append("<rect x='3' y='3' width='18' height='18' rx='4' ry='4'/>");
-            sb.append("<text x='12' y='16' text-anchor='middle' font-size='10' fill='white' stroke='none'>")
-              .append(escapeSvg(displayChar)).append("</text></svg>");
+            sb.append("<text x='12' y='").append(baseline).append("' text-anchor='middle' font-size='")
+              .append(fontSize).append("' fill='white' stroke='none'>")
+              .append(escapeSvg(label)).append("</text></svg>");
             return sb.toString();
         } catch (Exception e) {
             LOG.warn("[头像] 生成标准 SVG 头像失败: " + e.getMessage());
-            return generateTextAvatarSvgFallback(text);
+            return generateTextAvatarSvgFallback(name);
         }
     }
 
-    private static String generateTextAvatarSvgFallback(String text) {
+    private static String generateTextAvatarSvgFallback(String name) {
         try {
-            String displayChar = text != null && text.length() > 0
-                ? text.substring(0, 1).toUpperCase() : "?";
+            String label = textAvatarLabel(name);
+            int fontSize = textAvatarFontSize(label);
+            int baseline = textAvatarBaseline(fontSize);
             return "data:image/svg+xml," +
                 "<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24'>" +
                 "<rect x='3' y='3' width='18' height='18' rx='4' ry='4' fill='#555' stroke='#aaa'/>" +
-                "<text x='12' y='16' text-anchor='middle' font-size='10' fill='white' stroke='none'>" +
-                escapeSvg(displayChar) + "</text></svg>";
+                "<text x='12' y='" + baseline + "' text-anchor='middle' font-size='" + fontSize +
+                "' fill='white' stroke='none'>" + escapeSvg(label) + "</text></svg>";
         } catch (Exception e) {
             LOG.warn("[头像] 回退生成也失败", e);
             return "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><rect width='100%25' height='100%25' fill='%23888' rx='4'/><text x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='white' font-size='16'>?</text></svg>";

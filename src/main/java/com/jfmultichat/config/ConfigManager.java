@@ -52,9 +52,13 @@ public class ConfigManager {
         if (instance == null) {
             synchronized (ConfigManager.class) {
                 if (instance == null) {
-                    ConfigManager mgr = new ConfigManager();
-                    mgr.init(false);
-                    instance = mgr;
+                    // 走同一个初始化路径。**注意**：这里以前写的是
+                    //   ConfigManager mgr = new ConfigManager(); mgr.init(false); instance = mgr;
+                    // 而 mgr.init(false) 调到的是**静态** init → 它自己 new 并初始化了另一个实例赋给 instance，
+                    // 紧接着又被这个**未初始化**的 mgr 覆盖 → 当 getInstance() 是首个入口时
+                    // （应用正常启动不会，Launcher 先显式 init 过；独立工具/探针会），
+                    // 拿到的实例 userDataPath 为 null，getUserDir() 直接 NPE（实测踩到）。
+                    init(false);
                 }
             }
         }
@@ -364,6 +368,28 @@ public class ConfigManager {
             try { swAccDataStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
         }
         return removed;
+    }
+
+    /**
+     * 重置一个账号：把 SwAccData 里该账号的节点**清空**（保留空节点本身）.
+     *
+     * <p>语义 = "把记录里这个账号的个性化数据全部抹掉"：备注 / 快捷键 / 隐藏状态 / 关联账号 / 登录态
+     * 都不再保留，名称与头像回到按磁盘与名称链重新推导的默认值。
+     *
+     * <p>与 {@link #deleteAccount} 的区别：那个是**移除节点**（失效账号随之从列表消失）；
+     * 这个是**清空节点**（记录仍在 → 失效账号仍作为一条记录出现，只是没有任何自定义数据）。
+     * 非失效账号不能删除（下次加载磁盘扫描还会出现），所以它们只提供重置。
+     *
+     * @return true=节点存在且已清空；false=原本就没有该节点
+     */
+    public boolean resetAccount(String swId, String accountId) {
+        JsonNode swNode = swAccDataStore.getData().get(swId);
+        if (swNode == null || !swNode.isObject()) return false;
+        JsonNode accNode = swNode.get(accountId);
+        if (accNode == null || !accNode.isObject()) return false;
+        ((ObjectNode) accNode).removeAll();
+        try { swAccDataStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
+        return true;
     }
 
     // ==================== Sw 缓存 ====================

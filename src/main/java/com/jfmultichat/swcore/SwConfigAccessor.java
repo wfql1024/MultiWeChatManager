@@ -185,7 +185,8 @@ public final class SwConfigAccessor {
      * 获取本地设置的字符串值（便捷方法）
      */
     public String getSwSettingAsString(String sw, String key, String defaultValue) {
-        JsonNode node = provider.getSwSetting(sw, Map.of(key, null));
+        // 不能用 Map.of（不接受 null 值 → 每次调用都 NPE；这里 null 只是"没有默认值"的意思）
+        JsonNode node = provider.getSwSetting(sw, java.util.Collections.singletonMap(key, null));
         if (node != null && node.isTextual()) return node.asText();
         return defaultValue;
     }

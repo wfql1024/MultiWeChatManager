@@ -595,7 +595,11 @@ public final class SwHexUtils {
                         "marked_addr", startAddr + bangIndex
                 ));
             } else {
-                results.add(Map.of("original", null, "marked_addr", null));
+                // 不能用 Map.of（不接受 null 值 → NPE，这里要的是"空结果"占位）
+                java.util.Map<String, Object> empty = new java.util.HashMap<>();
+                empty.put("original", null);
+                empty.put("marked_addr", null);
+                results.add(empty);
             }
         }
         return results;

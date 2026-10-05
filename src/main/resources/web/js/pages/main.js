@@ -27,19 +27,22 @@ JFC.pages.main = (function() {
             { key: 'check',        label: '勾选框',   mandatory: true,  defVisible: true,  defWidth: 40,  fixed: true  },
             { key: 'avatar',       label: '',         mandatory: true,  defVisible: true,  defWidth: 56,  fixed: true  },
             { key: 'display_name', label: '名称',      mandatory: true,  sortable: true, defVisible: true,  defWidth: 200 },
-            { key: 'hotkey',       label: '快捷键',   mandatory: true,  defVisible: true,  defWidth: 110 },
+            // 快捷键列改为**非必显**（可被列头菜单隐藏），默认显示
+            { key: 'hotkey',       label: '快捷键',   mandatory: false, defVisible: true,  defWidth: 110 },
             { key: 'id',           label: 'ID',       mandatory: false, sortable: true, defVisible: true,  defWidth: 150, cellClass: 'manage-id-cell' },
             { key: 'alias',        label: '平台内ID', mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-alias-cell' },
             { key: 'nickname',     label: '昵称',     mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-nickname-data-cell' }
         ],
-        // 程序类表（原生程序）：头像(程序图标) / 名称 / 版本（必显）/ 路径（默认隐藏）
+        // 程序类表（原生程序）：头像(程序图标) / 名称 / 版本 / 快捷键 / 路径（默认隐藏）
         // 头像列与账号表同款，保证行高一致（32px 头像 + 内边距）
+        // **名称列与账号表完全统一**（同一 key = display_name → 复用可编辑名称单元格：1 级色 / 字号+1 / 加粗 / 中英分段）
         program: [
-            { key: 'check',   label: '勾选框', mandatory: true,  defVisible: true,  defWidth: 40, fixed: true },
-            { key: 'avatar',  label: '',       mandatory: true,  defVisible: true,  defWidth: 56, fixed: true },
-            { key: 'name',    label: '名称',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 220 },
-            { key: 'version', label: '版本',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 120 },
-            { key: 'path',    label: '路径',   mandatory: false, sortable: true, defVisible: false, defWidth: 360 }
+            { key: 'check',        label: '勾选框', mandatory: true,  defVisible: true,  defWidth: 40, fixed: true },
+            { key: 'avatar',       label: '',       mandatory: true,  defVisible: true,  defWidth: 56, fixed: true },
+            { key: 'display_name', label: '名称',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 220 },
+            { key: 'version',      label: '版本',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 120 },
+            { key: 'hotkey',       label: '快捷键', mandatory: false, defVisible: true,  defWidth: 110 },
+            { key: 'path',         label: '路径',   mandatory: false, sortable: true, defVisible: false, defWidth: 360 }
         ]
     };
     // 共存账号 = 账号列 + 「最后登录账号」（linked_acc：该共存 exe 当前关联/最后登录的原生账号）；非必选、默认显示
@@ -172,7 +175,8 @@ JFC.pages.main = (function() {
     // 无效账号（SwAccData 有记录但磁盘不存在）不再单独成表，而是并入原生/共存表，置底 + 灰字 + "失效"标签
     function initAccountTables() {
         var defs = [
-            { key: 'origin_prog', title: '原生程序', columns: TABLE_COLUMNS.program, enableHotkey: false, defaultSortField: 'name' },
+            // 原生程序表也要能录快捷键（列已加入 TABLE_COLUMNS.program），故 enableHotkey: true
+            { key: 'origin_prog', title: '原生程序', columns: TABLE_COLUMNS.program, enableHotkey: true,  defaultSortField: 'display_name' },
             { key: 'origin_acc',  title: '原生账号', columns: TABLE_COLUMNS.account, enableHotkey: true,  defaultSortField: 'display_name' },
             { key: 'coexist_acc', title: '共存账号', columns: TABLE_COLUMNS.coexist, enableHotkey: true,  defaultSortField: 'display_name' }
         ];
@@ -182,6 +186,7 @@ JFC.pages.main = (function() {
             coexist_acc: 'acc-table-coexist-acc'
         };
         defs.forEach(function(def) {
+            var isProgram = def.key === 'origin_prog';
             accountTables[def.key] = new JFC.AccountTable({
                 id: def.key,
                 title: def.title,
@@ -189,7 +194,17 @@ JFC.pages.main = (function() {
                 columns: def.columns,
                 enableHotkey: def.enableHotkey,
                 defaultSortField: def.defaultSortField,
-                getSwId: function() { return currentSwId; }
+                getSwId: function() { return currentSwId; },
+                // 重置账号后整表重载（备注/快捷键/隐藏/关联账号一起变，靠字段推送会留下半套真相）
+                reloadAccounts: function() { if (currentSwId) loadAccountData(currentSwId); },
+                // 原生程序表 = 平台自身：快捷键存 LocalSwConfig
+                // （它不是账号，往 SwAccData 写会留下一条"路径键"节点、被当成失效账号）
+                saveHotkey: isProgram ? savePlatformHotkey : null,
+                // 账号表的头像文字兜底取"名称末尾 4 个字符宽"；程序表仍是首字符
+                avatarFallbackTail: !isProgram,
+                // 名称列的悬浮操作按钮（隐藏/重置/删除）是账号语义 → 程序表不显示
+                // （名称列本身仍与账号表统一：可编辑 / 1 级色 / 字号+1 / 加粗 / 中英分段）
+                showRowActions: !isProgram
             });
         });
 
@@ -424,15 +439,18 @@ JFC.pages.main = (function() {
 
     // ---- 加载平台列表 ----
     function loadPlatformList() {
+        if (JFC.progress) JFC.progress.show();
         // 兜底检查：远程配置缺失则异步下载，失败则跳转设置页
         var ready = JFC.bridge.checkRemoteConfigReady();
         if (!ready || !ready.ready) {
             JFC.ensureRemoteConfigs(function() {
                 loadPlatformListInternal();
+                if (JFC.progress) JFC.progress.hide();
             });
             return;
         }
         loadPlatformListInternal();
+        if (JFC.progress) JFC.progress.hide();
     }
 
     function loadPlatformListInternal() {
@@ -530,17 +548,21 @@ JFC.pages.main = (function() {
         // 绑定点击
         if (container) {
             container.querySelectorAll('.nav-item[data-swid]').forEach(function(item) {
-                item.addEventListener('click', function() {
+                item.addEventListener('click', function(e) {
                     var swId = this.getAttribute('data-swid');
-                    if (swId) selectPlatform(swId);
+                    if (swId) onPlatformItemClick(swId, e);
                 });
             });
         }
         if (navContainer) {
             navContainer.querySelectorAll('.nav-item[data-swid]').forEach(function(item) {
-                item.addEventListener('click', function() {
+                item.addEventListener('click', function(e) {
                     var swId = this.getAttribute('data-swid');
-                    if (swId) { JFC.router.navigate('main'); selectPlatform(swId); }
+                    if (!swId) return;
+                    // 只在"真的不在平台页"时才导航：否则每点一下都会重跑一次平台列表加载，
+                    // 双击/多击时就会莫名闪出顶部进度条（用户实测反馈）
+                    if (JFC.router.current() !== 'main') JFC.router.navigate('main');
+                    onPlatformItemClick(swId, e);
                 });
             });
         }
@@ -577,19 +599,93 @@ JFC.pages.main = (function() {
             '</text></svg>';
     }
 
+    // ---- 平台项点击策略 ----
+    // 用户裁定（2026-10-05）：点别的平台 = 立即切换；点当前平台 = 单击刷新；
+    // 当前平台的双击/多击一律不响应（路径预留，将来放别的功能）
+
+    /** 双击判定窗口：单击刷新要等这么久，确认没有后续点击才执行（Windows 双击间隔量级） */
+    var MULTI_CLICK_GUARD_MS = 250;
+    /** 挂起的"再点当前平台 → 刷新"定时器 */
+    var pendingRefreshTimer = null;
+
+    /**
+     * 平台项点击入口（最左栏与平台页侧栏共用）.
+     *
+     * <p>· 别的平台 → **立即切换**（不等，切平台不能有延迟手感）<br>
+     * · 当前平台 + 单击 → 等 {@link MULTI_CLICK_GUARD_MS} 确认无后续点击后**刷新该平台页**<br>
+     * · 当前平台 + 双击/多击 → **不响应**（连击计数取浏览器 click 事件的 {@code detail}）
+     */
+    function onPlatformItemClick(swId, e) {
+        if (currentSwId !== swId) {
+            cancelPendingRefresh();          // 切平台：撤销可能挂着的"当前平台刷新"，避免切完又白刷一次
+            selectPlatform(swId);
+            return;
+        }
+        if (e && e.detail > 1) {             // 双击/多击：撤销单击的刷新，且不做任何事
+            cancelPendingRefresh();
+            onPlatformMultiClick(swId);
+            return;
+        }
+        cancelPendingRefresh();
+        pendingRefreshTimer = setTimeout(function() {
+            pendingRefreshTimer = null;
+            JFC.router.refresh();            // 统一刷新入口（2 秒不应期也在那里）
+        }, MULTI_CLICK_GUARD_MS);
+    }
+
+    function cancelPendingRefresh() {
+        if (pendingRefreshTimer) {
+            clearTimeout(pendingRefreshTimer);
+            pendingRefreshTimer = null;
+        }
+    }
+
+    /**
+     * 双击/多击当前平台的入口 —— **路径预留，目前不做任何反应**.
+     * 将来若给双击安排功能，加在这里即可，不必再动上面的点击判定逻辑.
+     */
+    function onPlatformMultiClick(swId) {
+        // 预留：暂无行为
+    }
+
     // ---- 选择平台 ----
     function selectPlatform(swId) {
-        if (currentSwId === swId) return;  // 避免重复加载
+        if (currentSwId === swId) {   // 兜底：已是当前平台 → 走统一刷新入口（2 秒不应期也在那里）
+            JFC.router.refresh();
+            return;
+        }
+        loadPlatform(swId);
+    }
 
+    /** 进入平台（含远程配置就绪兜底检查） */
+    function loadPlatform(swId) {
+        if (JFC.progress) JFC.progress.show();
         // 兜底检查远程配置
         var ready = JFC.bridge.checkRemoteConfigReady();
         if (!ready || !ready.ready) {
             JFC.ensureRemoteConfigs(function() {
                 selectPlatformInternal(swId);
+                if (JFC.progress) JFC.progress.hide();
             });
             return;
         }
         selectPlatformInternal(swId);
+        if (JFC.progress) JFC.progress.hide();
+    }
+
+    /**
+     * 重新加载当前页（平台页）.
+     * **统一入口是 {@code JFC.router.refresh()}**（2 秒防连点不应期在那里，按钮与"再点当前平台"共用）；
+     * 本函数只负责"重新走一遍加载链"：已进入平台 → 配置 + 账号数据 + 图标 + 滚动条，
+     * 并重新触发 Java 侧后台数据维护；还停在"全部平台"占位页 → 只重载平台列表.
+     */
+    function refresh() {
+        if (!isInitialized) { init(); return; }
+        if (currentSwId) {
+            loadPlatform(currentSwId);
+        } else {
+            loadPlatformList();
+        }
     }
 
     /** 切换前记录上一个平台的高度，供切换动画使用 */
@@ -652,11 +748,17 @@ JFC.pages.main = (function() {
         var remoteInfo = getRemotePlatformInfo(swId);
 
         // 标题显示: remark > alias > swId
-        var displayName = config.remark || (remoteInfo && remoteInfo.alias) || swId;
-        swConfigData[swId]._alias = remoteInfo ? remoteInfo.alias : null;
+        // fallbackName = "备注留空时会显示什么"（alias 或 swId）→ 标题输入框的灰字提示
+        var fallbackName = (remoteInfo && remoteInfo.alias) || swId;
+        var displayName = config.remark || fallbackName;
+        // 清理历史遗留：早期把"远程别称"缓存成 config._alias 并**一起写进了本地配置**（本该只在内存里）。
+        // 远程别称随时能从远程配置取（getRemotePlatformInfo），不需要持久化 → 这里删掉，
+        // 之后的 saveSwConfig 就会把本地文件里那条 _alias 一并清掉。
+        if (Object.prototype.hasOwnProperty.call(config, '_alias')) delete config._alias;
+        delete swConfigData[swId]._alias;
 
-        // 更新标题
-        setTitleDisplay(displayName);
+        // 更新标题（灰字提示 = 不填备注时会显示的名称）
+        setTitleDisplay(displayName, fallbackName);
 
         // 渲染设置表单
         renderSettingsPanel(config);
@@ -696,22 +798,32 @@ JFC.pages.main = (function() {
         return null;
     }
 
-    /** 设置标题展示（h2），并绑定点击编辑 */
-    function setTitleDisplay(name) {
+    /**
+     * 设置标题展示（h2），并绑定点击编辑.
+     *
+     * @param {string} name         当前显示名（remark > alias > swId）
+     * @param {string} fallbackName 备注留空时会显示的名称（alias > swId）→ 输入框的灰色 placeholder，
+     *                              让用户"清空回车前"就能看到会变成什么（用户 2026-10-05 要求）
+     */
+    function setTitleDisplay(name, fallbackName) {
         var titleEl = getEl('manage-detail-title');
         var inputEl = getEl('manage-detail-title-input');
         if (!titleEl) return;
 
         titleEl.textContent = name;
         titleEl.style.display = '';
-        if (inputEl) inputEl.style.display = 'none';
+        if (inputEl) {
+            inputEl.style.display = 'none';
+            if (fallbackName) inputEl.placeholder = fallbackName;
+        }
 
         // 点击 h2 → 进入编辑模式
         titleEl.onclick = function() {
             if (!currentSwId) return;
             titleEl.style.display = 'none';
             if (inputEl) {
-                inputEl.value = name;
+                inputEl.value = swConfigData[currentSwId] && swConfigData[currentSwId].remark
+                    ? swConfigData[currentSwId].remark : '';
                 inputEl.style.display = '';
                 inputEl.focus();
                 inputEl.select();
@@ -723,7 +835,9 @@ JFC.pages.main = (function() {
     function saveRemark(value) {
         if (!currentSwId) return;
         var trimmed = value.trim();
-        var displayName = trimmed || swConfigData[currentSwId]._alias || currentSwId;
+        // 备注留空时的显示名 = 远程别称 > 平台 id（远程别称按需取，不再依赖持久化的 _alias）
+        var remoteAlias = (getRemotePlatformInfo(currentSwId) || {}).alias;
+        var displayName = trimmed || remoteAlias || currentSwId;
 
         if (!swConfigData[currentSwId]) swConfigData[currentSwId] = {};
         swConfigData[currentSwId].remark = trimmed;
@@ -741,6 +855,21 @@ JFC.pages.main = (function() {
     function refreshSidebarLabel(swId, name) {
         var item = document.querySelector('.nav-item[data-swid="' + swId + '"] .nav-label');
         if (item) item.textContent = name;
+    }
+
+    /**
+     * 保存"平台主程序"的快捷键（原生程序表的快捷键列）.
+     *
+     * <p>存 `LocalSwConfig.<sw>.hotkey`，**不**进 SwAccData：原生程序不是账号（没有账号节点），
+     * 往 SwAccData 里按 exe 路径建节点会让它在账号表里被判定成"失效账号"。
+     */
+    function savePlatformHotkey(accountId, value) {
+        if (!currentSwId) return;
+        if (!swConfigData[currentSwId]) swConfigData[currentSwId] = {};
+        swConfigData[currentSwId].hotkey = value;
+        try {
+            JFC.bridge.saveSwConfig(currentSwId, JSON.stringify(swConfigData[currentSwId]));
+        } catch (e) { /* 保存失败不影响本次显示 */ }
     }
 
     function renderSettingsPanel(config) {
@@ -1471,17 +1600,27 @@ JFC.pages.main = (function() {
         accountTables.origin_acc.setData(originRows);
         accountTables.coexist_acc.setData(coexistRows);
 
-        // 原生程序表：软件路径对应的那个程序（图标/名称/版本/路径）
+        // 原生程序表：软件路径对应的那个程序（图标/名称/版本/路径/快捷键）
+        // 名称链（用户 2026-10-05 定）：**原生账号(origin_exe)的 remark > 平台名称**
+        //   平台名称自身 = 本地 remark > 远程 alias > 平台 id（getPlatformDisplayName）
+        //   origin_exe 不是磁盘上的账号，只是 SwAccData 里一条"程序自己的备注"记录 → 不会出现在账号表（Java 侧已过滤）
         var prog = JFC.bridge.getSwProgramData(swId);
         var progRows = [];
         if (prog && (prog.name || prog.path)) {
+            var remoteInfo = getRemotePlatformInfo(swId) || {};
+            var platformName = getPlatformDisplayName(swId, remoteInfo.alias);
+            var progRemark = prog.remark || '';
             progRows.push({
-                id: prog.path || prog.name,
-                display_name: prog.name || '',      // 无图标时的文字头像取首字母
+                id: 'origin_exe',                       // 固定 id：remark 存 SwAccData.<sw>.origin_exe.remark
+                name: prog.name || '',                  // exe 文件名（保留字段）
+                display_name: progRemark || platformName,
+                display_name_auto: platformName,        // 备注留空时显示的名称 → 名称列编辑框的灰字提示
+                remark: progRemark,
                 avatar_data: programIcon(swId),
-                name: prog.name || '',
                 version: prog.version || '',
-                path: prog.path || ''
+                path: prog.path || '',
+                // 平台自身的快捷键（存 LocalSwConfig，见 savePlatformHotkey）
+                hotkey: (swConfigData[swId] && swConfigData[swId].hotkey) || ''
             });
         }
         accountTables.origin_prog.setData(progRows);
@@ -1529,9 +1668,14 @@ JFC.pages.main = (function() {
             var linkedAccId = followLinkedAcc ? (acc.linked_acc || '') : '';
             var linked = (linkedAccId && detailMap[linkedAccId]) ? detailMap[linkedAccId] : null;
             var src = linked || {};   // 共存账号的昵称/平台内ID/头像来源
+            // 名称回退链（**不含 remark**）：备注为空时该显示什么 —— 供名称列编辑框的灰字提示用。
+            // 必须与下面的 name 用同一份输入，所以在这里一起算，避免"提示一套、提交后另一套"。
+            var autoName = followLinkedAcc
+                ? (src.nickname || src.alias || linkedAccId || id)
+                : (acc.nickname || acc.alias || id);
             var name = followLinkedAcc
-                ? (acc.remark || src.nickname || src.alias || linkedAccId || id)
-                : (acc.display_name || '');
+                ? (acc.remark || autoName)
+                : (acc.display_name || autoName);
             // 标准化字段类型；未记录的新账号显示为空白详情
             return {
                 id: id,
@@ -1539,6 +1683,7 @@ JFC.pages.main = (function() {
                 alias: followLinkedAcc ? (src.alias || '') : (acc.alias || ''),
                 hotkey: acc.hotkey || '',
                 display_name: name,
+                display_name_auto: autoName,   // 备注留空时将会显示的名称（名称列编辑框灰字 = 这个）
                 avatar_url: followLinkedAcc ? (src.avatar_url || '') : (acc.avatar_url || ''),
                 hidden: acc.hidden === true || acc.hidden === 'true',
                 disabled: acc.disabled === true || acc.disabled === 'true',
@@ -1574,6 +1719,14 @@ JFC.pages.main = (function() {
         });
     }
 
+    /** 重新拉取某账号的头像（移除本地头像文件后用：清缓存 → 异步取 → 就地刷新那一格） */
+    function refreshAvatar(swId, acc, table) {
+        if (!acc) return;
+        acc.avatar_data = '';
+        acc._avatarFetching = false;
+        requestAccountAvatar(swId, acc, table || accountTables.origin_acc);
+    }
+
     // ---- Java Scene 捕获的组合键 → 路由到正在编辑快捷键的表 ----
     function onHotkeyCapture(combo) {
         Object.keys(accountTables).forEach(function(k) {
@@ -1605,14 +1758,17 @@ JFC.pages.main = (function() {
         }
 
         // 标题输入框 — Enter 保存，Esc 取消
+        // 注意：JavaFX WebView 的 keydown 里 event.key 为空串（见 app.js JFC.keys 注释），
+        // 所以一律按 keyCode 判断（27=Esc、13=Enter），否则这两个键在这个 WebView 里根本不生效
         bind('manage-detail-title-input', 'keydown', function(e) {
-            if (e.key === 'Enter') {
+            var code = JFC.keys.keyCodeOf(e);
+            if (code === 13) {
                 saveRemark(this.value);
-            } else if (e.key === 'Escape') {
+            } else if (code === 27) {
                 // 取消编辑
-                var displayName = (swConfigData[currentSwId] && swConfigData[currentSwId].remark)
-                    || (swConfigData[currentSwId] && swConfigData[currentSwId]._alias) || currentSwId;
-                setTitleDisplay(displayName);
+                var cfg = swConfigData[currentSwId] || {};
+                var fallbackName = (getRemotePlatformInfo(currentSwId) || {}).alias || currentSwId;
+                setTitleDisplay(cfg.remark || fallbackName, fallbackName);
             }
         });
         bind('manage-detail-title-input', 'blur', function() {
@@ -1643,15 +1799,16 @@ JFC.pages.main = (function() {
             }
         });
 
-        // Esc 关闭右键菜单 / 取消快捷键编辑
+        // Esc 关闭右键菜单 / 取消正在进行的单元格编辑（keyCode 判断，同上）
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
+            if (JFC.keys.keyCodeOf(e) === 27) {
                 JFC.AccountTable.closeMenus();
                 Object.keys(accountTables).forEach(function(k) { accountTables[k].cancelHotkeyEdit(); });
             }
         });
     }
 
-    return { init: init, onAccountChanged: onAccountChanged, onHotkeyCapture: onHotkeyCapture };
+    return { init: init, refresh: refresh, refreshAvatar: refreshAvatar,
+             onAccountChanged: onAccountChanged, onHotkeyCapture: onHotkeyCapture };
 })();
 

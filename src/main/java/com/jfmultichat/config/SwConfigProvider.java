@@ -108,7 +108,12 @@ public final class SwConfigProvider implements SwConfigAccessor.Provider {
         String accId = f != null && !f.isEmpty() ? f.values().iterator().next() : null;
         if (accId != null) ConfigManager.getInstance().updateAccount(sw, accId, updates);
         else { Map<String, ObjectNode> accMap = ConfigManager.getInstance().getAccountMap(sw);
-            if (!accMap.isEmpty()) ConfigManager.getInstance().updateAccount(sw, accMap.keySet().iterator().next(), updates); }
+            // 取第一个**真正的账号**（跳过 origin_exe：那是原生程序自己的备注节点，不是账号）
+            String firstAcc = null;
+            for (String accKey : accMap.keySet()) {
+                if (!com.jfmultichat.acccore.AccCoreConstants.ORIGIN_EXE_ID.equals(accKey)) { firstAcc = accKey; break; }
+            }
+            if (firstAcc != null) ConfigManager.getInstance().updateAccount(sw, firstAcc, updates); }
     }
     @Override public void clearSwAccData(String sw, String... addr) {
         if (addr.length == 0) return;

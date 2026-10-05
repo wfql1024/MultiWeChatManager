@@ -949,3 +949,149 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **消除闪烁**: 进入平台时**先同步跑一遍三个路径的绿框检查**（`checkPath` 是同步桥调用），让"是否启用"在渲染前就确定，避免"先按记录收起渲染、200ms 后检查回来又强制展开"
 - **平台由未启用变为启用**: `setPathGreen` 里清掉该平台的 `forcedLocalState` → 此后完全跟随全局记录（不再有历史残影）
 - 顺带删除：旧的 `applyCurtainState()`（及其手写展开/收起动画）与 `toggleSettingsPanel()` 里那套独立动画，全并到 `applyCurtainRender()` + `animatePanelHeight()`
+
+---
+
+## 三十、彻底移除"借标题当提示条"（flashTitle）（2026-10-05）
+
+- **背景**: 平台标题区 `#manage-detail-title` 被当成"通知条"用：`flashTitle()` 临时把标题文字换成"已隐藏 / 已显示 / 已删除 / 尺寸已获取"之类的提示，过一会儿再换回平台名 → 一个控件承担了两种语义，且 `main.js` 与 `account-table.js` **各自实现了一份** `flashTitle()`
+- **先排查写入点（再动手删，避免漏删/多删）**:
+  - `main.js setTitleDisplay()`：平台进入 / 保存备注 / 标题输入框回车 → **唯一正当写入**，保留
+  - `main.js flashTitle()`：仅用于"获取登录窗口尺寸"的成败提示
+  - `account-table.js flashTitle()`：批量隐藏/显示、批量删除、单行删除成功/失败
+- **改动**: 删掉两份 `flashTitle()` 实现 + **全部 8 处调用**（`account-table.js` 5 处：单行显示/隐藏、批量隐藏/显示、批量删除、单行删除成功、单行删除失败；`main.js` 3 处：取尺寸的三种结果）；`#manage-detail-title` 之后只剩 `setTitleDisplay()` 与标题输入框的 keydown/blur 绑定会写它
+- **为什么这么做（用户裁定）**: 状态变化优先靠**就地可见的变化**表达 —— 按钮文案（隐藏/显示）、行内标签（失效/禁用/隐藏）、行置底、行消失；真要提示也应放在**该功能所属区域内部**，不要跨区域"借用"别的控件
+- **副作用（明确接受）**: 删除失败、取尺寸失败等错误路径**不再有任何提示**（行消失 / 字段保持空白即为结果）；将来若需要反馈，另建非标题的提示渠道（"toast 通道"目前仍在 `TODOS.MD` 的待办里）
+
+---
+
+## 三十一、刷新入口 + 页面进度条 + 平台图标 SVG 化 + 当前平台单击刷新策略（2026-10-05 晚）
+
+- **标题栏刷新按钮（Java 侧自绘 SVG）**: `MainWindow.makeSvgTitleBtn(extraClass, pathData...)` —— 用 SVG `Path` 拼图标，`TITLE_ICON_PX = 16`、`scale = TITLE_ICON_PX / 24.0`（按 24×24 设计稿缩放）；刷新图标取 **Lucide `rotate-cw`**（MIT，stroke-width 2、圆头圆角），由 `btnRefresh` 持有
+- **冷却（防连点）**: `MainWindow.REFRESH_COOLDOWN_MS = 2000`，点击后 `btnRefresh.setDisable(true)` + `PauseTransition(Duration.millis(REFRESH_COOLDOWN_MS))` 置灰 2 秒；`refreshCurrentPage()` 里 `executeScript` 求值 `(JFC.router && JFC.router.refresh) ? JFC.router.refresh() : false`
+- **真正的冷却门在前端**: `app.js` 的 `JFC.router.refresh()` 内判 `if (now - lastRefreshAt < REFRESH_COOLDOWN_MS) return false;` —— 返回 `true/false` 表示"这次刷新是否真的执行了"；**Java 侧那个 2 秒只管按钮置灰**，两边同一语义、互不依赖（Java 不认识前端的执行结果，也不该认识）
+- **`JFC.router`（单页路由，本轮定稿）**: `navigate(page)` / `refresh()` / `current()` / `detectActivePage()` / `init()`；`detectActivePage()` 从 DOM 里实际可见的页面反推当前页（不靠自己记的变量，避免与实际显示漂移），`init()` 时以它为准
+- **页面进度条**: `.page-progress`（`app.js` 的 `JFC.progress`）—— 页面"开始加载数据"时 `show()`、装载完 `hide()`；为避免一闪而过设 `MIN_MS = 400`，收起前 `wait = Math.max(0, MIN_MS - (Date.now() - shownAt))`
+- **平台图标 PNG → SVG**: 默认平台图标从"PNG 位图"改为**内联 SVG**（`getDefaultPlatformIcon(swId)`：`<rect x=3 y=3 width=18 height=18 rx=4>` + `<text>` 首字母，`viewBox="0 0 24 24"`）→ 任意缩放下不糊，也不依赖缓存文件是否存在
+- **当前平台的点击策略（用户裁定）**: 点**别的**平台 = 立即切换；点**当前**平台 = 单击刷新；当前平台的双击/多击一律不响应（路径预留）。实现用 `MULTI_CLICK_GUARD_MS = 250`：单击刷新要等 250ms 确认没有后续点击才执行（Windows 双击间隔量级）
+- **验证**: `build/_probe/RouterProbe.java`（路由跳转 / 冷却门 / `current()` / `detectActivePage()`）、`ClickPolicyProbe.java`（单击与双击的时序判定）、`IconProbe.java`（SVG 图标渲染）
+
+---
+
+## 三十二、账号管理功能（行内/批量操作 + 就地编辑 + 快捷键录入定稿）（2026-10-05 晚）
+
+- **一个必须先解决的前提（离屏实测）**: JavaFX WebView 里 **`window.confirm()` 恒返回 `false`**（没装 confirm handler 时既不弹窗也不返回 true）、`alert()` 是空操作 → 之前所有"删除账号"的确认**永远静默取消**，用户连提示都看不到 ✗
+- **自建弹窗 `JFC.modal`**（`app.js`）: `confirm({title, message, okText, danger}, onResult)` 与 `custom({title, bodyHtml, center, actions:[{text, cls, onClick}]})`；键盘也必须走 `JFC.keys.keyCodeOf()`（本 WebView 的 `event.key` 为空串），Esc/Enter 在里面处理
+- **行内 + 批量按钮**: 名称列右端悬浮按钮「隐藏/显示」「重置」（**失效行**再加「删除」）；表格标题栏批量按钮「隐藏」「重置」「删除」+「取消」（`data-batch="toggle-hidden|reset|delete|cancel"`）；批量栏在无选中项时由 `toggle-hidden` 类整体隐藏
+- **名称列就地编辑（remark）**: 点名称 → 该格换成 `<input class="name-input">`，预填 `acc.remark`；**留空时用灰字 placeholder 显示"不填会显示什么"** = `display_name_auto`（= 名称回退链去掉 remark 的结果，与提交后真正显示的名称**同一份输入推导**，不是另写一套规则）；Enter / 点格外提交，Esc 取消；空白提交 = 清空备注 → 名称回退到自动识别结果
+- **平台标题输入框**: `setTitleDisplay(name, fallbackName)` 同时设"值"与"灰字提示"（fallback = 远程 alias 或 swId）→ 备注留空时也能看到会显示成什么
+- **快捷键录入定稿（用户逐条裁定）**: **松手即确认**（所有键松开的那一刻提交并退出输入框，此前是"点别处才提交"，点别处若顺手选中行会触发重渲染 → 未提交的录入随 DOM 一起丢）；**无效即回退**（只有修饰键如 Alt+Shift、或普通键多于一个如 Alt+A+B → 恢复原键值，**不保存也不清空**）；**Backspace = 清空并退出**；Esc = 放弃；**Enter = 忽略**（不当热键，避免"回车确认"的习惯把热键改成 Enter）；**Tab 算普通键**（可录成 Tab）；预览 = 已按下的普通键 + 当时修饰键拼装（松键顺序不影响结果）
+- **验证**: `build/_probe/RoundProbe.java` —— 真实 `index.html` + 桩桥 `StubBridge`（记录桥调用次数与最近一次 JSON）+ 逐 step 断言；覆盖"删除确认走自建弹窗""名称预填 / 灰字=回退名 / 空白提交已保存 / Esc 未保存""快捷键松手提交 / 无效回退 / Backspace 清空"等（62 条）
+
+---
+
+## 三十三、交互修复（编辑态卡住 / 点击落空）+ 自绘勾选框（2026-10-05 晚）
+
+- **"点框外不退出编辑"的根因**: `if (ev.target.closest(cell)) return;` —— `closest()` **只接受选择器字符串**，传元素会抛 `SyntaxError`；而监听器里的异常不中断别的代码，只让**这一个处理器的第一行静默死掉** → "点击框外结束编辑"的逻辑**从来没生效过**。修法：`cell.contains(ev.target)`
+- **"编辑后第一次点击落空"的根因**: 提交若在 document 的 `mousedown` 阶段直接 `render()`，用户这一下点击所在的元素会被换掉 → 后续 `click` 落空（表现为"点别处要按两次才生效"）。修法：同步只还原本格，**保存与整表重排延后一拍**（`setTimeout(…, 0)`）
+- **"第二次点同一格没反应"的根因**: 单元格若"只重建本格内容"就一直存活，挂在它上面的 `stopPropagation` click 监听会**逐次累积** → 第 N 次进入编辑后，这个格子自己的点击被自己挡住（tbody 的委托收不到）。修法：不在单元格上挂这类监听，委托里判 `e.target.tagName === 'INPUT'` 就够了
+- **切换编辑目标**: `this._editFinish = cancelEdit`（对外统一入口）—— 进入新编辑前先收尾上一个格子，且**收尾一律"取消并还原"**，绝不留输入框在页面上（此前会出现"编辑态卡住、改不动也退不出"）
+- **自绘勾选框**: 现象 —— 勾选框会**先出现纯方形、随后才变圆角/主题色**（用户看到的"渲染异步"）；根因 —— 原生 `input[type=checkbox]` 在 JavaFX WebView 里**先画一帧原生外观再套 CSS**；修法 —— 别让原生控件承担视觉：`<label class="acc-check">` + **透明 input（只当状态载体，`opacity:0`）** + 自绘 `<span class="acc-check-box">`（边框/圆角/勾全自己画），从第一帧就是最终样子
+- **验证**: `RoundProbe` 覆盖以上四条（点框外退编辑 / 点别处一次生效 / 同格二次点击 / 编辑态唯一）+ `CheckboxProbe.java`（离屏像素统计确认自绘外观与点击命中）
+
+---
+
+## 三十四、程序表快捷键列 + 头像弹窗 + 版本号自动获取（2026-10-05 晚）
+
+- **三张表的"快捷键"列**改为**非必显**（列头菜单可隐藏、默认显示），`TABLE_COLUMNS.program` **新增该列**（`defWidth: 110`）+ `initAccountTables` 里 `enableHotkey: true`
+  - 账号表：快捷键存 `SwAccData.<sw>.<acc>.hotkey`
+  - **原生程序表 = 平台自身**（没有账号节点）→ 存 `LocalSwConfig.<sw>.hotkey`（新增 `SwCoreConstants.LocalSettingKey.HOTKEY = "hotkey"`）；组件新增 `saveHotkey` 选项，由 `main.js savePlatformHotkey()` 注入
+  - **为什么不能按 exe 路径往 SwAccData 建节点**: 那会留下一条"路径键"记录，且它不在 `getSwExistedAccounts` 列表里 → 被 `main.js` 判成**失效账号**，账号表里凭空多一行
+- **头像弹窗**: 点列表头像 → `JFC.modal.custom()` 弹窗显示**原图**（`.avatar-preview-img` 180px）+「✎ 编辑」+「✕ 移除」
+  - 编辑：`JsBridge.pickAccAvatar` → `FileChooser`（图片扩展名过滤器）→ 统一转 JPEG（白底 + `TYPE_INT_RGB`）写入 `{userData}/{sw}/{acc}/{acc}.jpg` 并清 `avatar_url` → 返回新 data URL，前端**就地刷新那一格**（不整表重渲染）
+  - 移除：`JsBridge.removeAccAvatar` → 删本地头像文件 + 清 `avatar_url` → 前端重新拉取（回退到链接账号 / 网络头像 / 文字头像）
+  - 版式：`JFC.modal.custom({center:true})` + CSS `.modal-card.center`（标题与按钮都居中）；顺带全局 `*:focus { outline: none; }`（用户要求"本项目不要浏览器默认的聚焦虚线框"，代价是 Tab 切换看不到焦点位置，已明确接受）
+- **版本号：从"文件名正则"改为读 Windows 文件版本资源**
+  - 现象：版本列长期空白
+  - 根因：**迁移漏了旧行为** —— 老实现只从文件名抠版本（`WeChat_8.0.47.61.exe` 能抠、`WeChat.exe` 抠不到），而旧版 Python 一直用 `win32api.GetFileVersionInfo` 读**文件版本资源**
+  - 改动：`SwVersionHelper.getFileVersion()` 先走 `getWindowsFileVersion()`（JNA `VersionUtil.getFileVersionInfo` 的固定信息 `dwFileVersionMS` / `dwFileVersionLS`，经 `formatFixedVersion(ms, ls)` 拼成四段）；**退化值**（形如 `x.0.0.0` 且 x ≥ 1000，由 `isPlausibleVersion()` 判定）时改用 `dwProductVersion`；都取不到再回退文件名解析
+  - **实测 7 个真实 exe**: Weixin `4.1.15.13`、WXWork `5.0.2.6022`、WeChat `3.9.12.55`、QQ `9.7.25.29415`、TIM `3.5.1.22172`、QQNT `9.9.23.42086`、抖音聊天 fileVersion `29622.0.0.0`（垃圾值）→ **productVersion `1.1.32.0`**（正是退化值分支救回来的）
+  - 验证：`VersionProbe.java`（直连 `getFileVersion` 对 7 个真实路径）+ `VersionPathProbe.java`（走平台路径链路的版本解析）
+- **顺带**: 本轮把 `Map.of(…, null)` 的 **8 处必然 NPE** 扫掉（`Map.of` 不接受 null 值，外面套着 `try/catch` → 症状是"某些逻辑从来没生效"）：`AccOpsProvider.ensureCoexistAccFormatted`(×3)、`AccOperatorCore`（清 pid + has_mutex）、`AccInfoFuncCore.unlinkHwndOfAccount`、`AccInfoFuncCore.deleteAvatarForAcc`、`SwConfigAccessor.getSwSettingAsString`（`SwInfoFuncCore` / `SwOperatorCore` 两个调用方都受害）、`SwHexUtils`（空结果占位）
+
+---
+
+## 三十五、账号头像文字兜底改"名称末尾 4 个字符宽" + 中文字体/抗锯齿实测（2026-10-05 深夜）
+
+- **需求**: 账号头像的兜底文字原来只取**首字符** → 改为取**名称末尾 4 个字符宽**（中文/全角一个字算 2 宽）
+  - Java：`AvatarUtils.textAvatarLabel(name)` + `AvatarUtils.visualUnits(s)`；前端同规则 `JFC.text.tailUnits()` / `JFC.text.isWide()`（**同一规则两处实现，改一处必须同步另一处**）
+  - 实测（`AvatarLabelProbe.java` 直连 Java 代码）：「极峰多聊测试」→「测试」、「张三wx」→「三wx」、「wxid_ab12cd」→「12cd」、「WeCha1」→「Cha1」、空 / null →「?」
+  - 兜底用的**名称**：原生账号 = `getAccOriginDisplayName`（备注 > 昵称 > 平台内ID > ID）；共存账号 = 链接账号展示名
+  - **只影响账号头像**：程序表 / 左栏平台图标的兜底仍取首字符（由 `avatarFallbackTail: !isProgram` 控制）
+  - 4 个字符宽时 SVG 字号自动由 10 缩到 8（`textAvatarFontSize`），保证塞得进 18×18 方块
+- **中文字体对照（用户要求"在不同处先用不同字体看看"）**: 表格列头 = 宋体 SimSun ｜ 表格内容 = 英文等宽 + 中文微软雅黑 ｜ 按钮 = 本机默认 `sans-serif` ｜ 其余区域 = 基线（微软雅黑优先）
+- **结论（离屏像素实测，不是"我觉得"）**: **换字体解决不了"发虚"** —— 四个字体分区的**边缘对比度完全相同**（SimSun 51.3 / 等宽+雅黑 51.3 / 本机默认 51.3 / 雅黑基线 50.2），只有墨量（字重/字形）差异
+  | 配置 | 边缘对比度 | 彩色边缘占比（LCD 特征） |
+  |---|---|---|
+  | 默认 | 51.3 | **97.0%** |
+  | `-Dprism.lcdtext=true` | 51.3 | 97.0%（= 默认值，等于没改） |
+  | **`-Dprism.lcdtext=false`** | **53.5** | **0.0%** |
+  | `-Dprism.text=t2k` | 51.3 | 97.0% |
+  → JavaFX（含 WebView 内文本）**默认就是 LCD 次像素抗锯齿**：深色底 + 中文复杂笔画会出现彩色条纹、观感"发糊"；`build.gradle.kts` 的 `run` 任务已加 **`-Dprism.lcdtext=false`** 作为试验开关（保留与否待用户比对后定）
+- **可复用的排查手法**: `FontProbe.java`（5 个字体分区 × 4 种 JVM 开关的像素统计）；`FontIdProbe.java`（**字体身份鉴定**：离屏渲染同一个字比"**墨块数**" —— 同字号字重下 雅黑 175 / 宋体 146 / 等宽回退 131，差异足够大；像素指纹逐像素比对对字重、字号、亚像素位置过于敏感，容易得出"全不相同"的假结论）
+
+---
+
+## 三十六、勾选框"填满"真修 + 字号统一 14px（2026-10-05 深夜）
+
+- **现象（用户三次描述、逐次逼近）**: "填充色没有填满，四个角还有小黑点" → 我先按"圆角太大"把 `border-radius` 从 4px → 2px → 0px 试了一遍，用户仍能看出问题
+- **真正的根因（用户指出）**: 勾选态被写成了**两层几何** —— `background` 填 padding box（内圆角）+ `border` 当外圈（外圆角），**即使同色，圆角处也会露出两者之间的缝** → 看起来就是"中间的填充 + 周围的边框"，四角发黑
+- **修复**: 勾选态改成**一整块填充** —— `background: var(--color-primary)` + `background-clip: border-box` + **`border-color: transparent`**（边框完全不参与画面）；尺寸/圆角沿用基类 = **16px（含 1px 边框，`box-sizing: border-box`）+ 4px 圆角**，与空框外沿完全一致
+- **实测证据（`CheckboxProbe.java`）**: 填充 16px / 空框 16px、两者中心重合；**内部镂空 = 0**（形状内部"既非填充色也非勾色"的像素数）；轮廓与空框只差 **15/999** 像素（全是边缘抗锯齿）→ 确认"缝"没了
+- **勾的位置**: `transform: translate(-50%, calc(-50% - 1.25px)) rotate(45deg)` —— 先用 `left/top:50%` + `translate(-50%,-50%)` 几何居中，实测"墨迹中心"仍偏下 **1.25px**（旋转 45° 的 L 形视觉重心低于几何中心），按实测值补偿，最终偏移 -0.25px
+- **字号统一（用户定）**: `--fs-table: 14px` 用于 列头 / 表内 / 状态标签 / 悬浮按钮 / 批量按钮 /「已选 x 项」；**名称列 15px**（`--fs-name`，比其他列大 1 号）
+- **⚠️ 本轮的重要教训（用户批评）**: 用户的 TOP 指令是"**如果**你没办法调试好，就当前状态让填充框边长 +1"—— 这是**条件兜底**，我却跳过"先真修"直接执行了兜底（把填充改成 17px + 左/上各外扩 0.5px），被指出"**说好的逐字呢？"如果"被你吃了吗**"。正确顺序：**先按指令里的目标做真正的修复 → 确实做不到才启用兜底 → 并在回复里说明"兜底未启用 / 为何启用"**。该兜底已在真修后撤销
+
+---
+
+## 三十七、三表名称列统一 + 原生程序名称链（2026-10-06 凌晨）
+
+- **用户两个问题（先查代码再动手）**:
+  1. "三张表不是有复用代码吗，为什么程序表名称列没和账号表统一？" → 查出来：组件层**本来就是同一个** `JFC.AccountTable`，是**列 key 不同**走了不同分支 —— 账号表 `key='display_name'` 落到专用名称单元格 `.manage-nickname-cell`；程序表 `key='name'` 落到"通用文本列"`.manage-text-cell`（不可编辑 / 2 级色 / 14px / 不加粗）
+  2. "`_alias` 是干嘛的？不是能从远程配置获取吗？" → 查出来：它是**远程别称的内存缓存**（`swConfigData[sw]._alias = 远程 alias`），却被 `saveSwConfig(swId, JSON.stringify(swConfigData[swId]))` **一起写进了 `LocalSwConfig.json`**（用户正是在本地配置里看到它的）；用途只剩 2 处"备注留空时显示什么"的兜底，完全可以从远程配置现取
+- **改动 1：三表名称列统一** —— 三张表都用 `key='display_name'` → 复用同一个 `.manage-nickname-cell`（可点击就地编辑 remark / **1 级色** / **15px** / **字重 600** / 中文雅黑 + 英文等宽分段）；程序表用 `showRowActions:false` 关掉账号语义的悬浮按钮（隐藏/重置/删除），`defaultSortField` 同步为 `display_name`；废弃的 `td[data-col="name"]` 样式与列定义一并删除（避免留下会误伤其它表的选择器）
+- **改动 2：原生程序名称链** = `SwAccData.<sw>.origin_exe.remark`（原生账号 remark）**>** 平台名称；平台名称自身 = 本地 `remark` > 远程 `alias` > `swId`（`getPlatformDisplayName`）。程序表行 id 从 **exe 路径**改成固定 **`origin_exe`**（`AccCoreConstants.ORIGIN_EXE_ID`）
+  - `origin_exe` 只是"程序自己的备注"节点、**不是账号** → **所有遍历账号的地方都必须排除它**：`JsBridge.getSwDetailData`、`JsBridge.getAccountList`、`AccConfigAccessor.getAllAccounts`，以及 `JsBridge` / `SwConfigProvider` 里两处"无 accountId 时取第一个账号"的退化路径（否则账号表会凭空冒出"失效账号 origin_exe"，或把备注写到别的账号身上）
+  - 程序表名称列编辑 → `saveAccount(swId, 'origin_exe', {remark})`（与账号表**同一条保存链路**）；快捷键仍存 `LocalSwConfig`
+  - `_alias` 清理：不再写入该字段，并在加载配置时 `delete config._alias`（下次保存时本地文件里那条就没了）
+- **改动 3：中英分字体的落地（有实测结论，别再走弯路）** —— 本 WebKit **做不到**"一个元素里中文雅黑 + 英文等宽"：
+  ① `font-family` 列表里雅黑排在等宽**之后**不生效（等宽族缺中文时走**系统 CJK 回退**，实测中文墨块 131，雅黑应为 175）；
+  ② `@font-face + unicode-range` 在这个版本**不生效**（把中文专用字体放列表最前，英文会被它一起吃掉，实测英文墨块 124 = 雅黑，等宽应为 118）
+  → 只能**显式分段**：`account-table.js scriptSplitHtml()` 把中文段套 `.cjk-run`、非中文段套 `.lat-run`，各自 `font-family`（定义在 `theme.css`）
+  → 编辑态曾改用 `contenteditable` div 想也做两段字体（配按字符偏移恢复光标、组字期间不动 DOM、纯文本粘贴），**用户实测"都没法修改了"** → 回退为 `<input>` + 统一等宽（教训：别为了"样式上的小收益"替换成熟的原生控件）
+  - ⚠️ 期间还踩了一个"共用选择器组"的坑：把"昵称列用雅黑"写进 `.manage-text-cell, .manage-alias-cell, .manage-nickname-data-cell` 组里 → 程序表的名称/版本/路径（同属 `.manage-text-cell`）一起变雅黑（用户肉眼发现"原生程序的内容字体你忘记改了"）→ 改为单独写一条规则
+- **验证**: `Round2Probe.java` 91 条断言（程序表名称列 = 15px / 字重 600 / 1 级纯白 / 可进入编辑 / 保存到 `origin_exe.remark` / 空备注时显示平台名 / 无悬浮按钮 / 中英分段各自字体）
+
+---
+
+## 三十八、表格文字三级色 + 删除/重置语义 + 批量删除规则（2026-10-06 凌晨）
+
+- **表格文字三级色**（用户定；明暗两套是"反"的）: 令牌 `--text-level1/2/3` 定义在 `theme.css` 三处（dark `:root` / light / auto+light），**只作用于表格内容**（其它 UI 的 `--text-primary/secondary/muted` 不动）
+
+  | | 1 级 | 2 级 | 3 级 |
+  |---|---|---|---|
+  | 深色 | `#ffffff` 纯白 | `#c0c0c0` 浅灰 | `#6c6c6c` 深灰 |
+  | 浅色 | `#000000` 纯黑 | `#4a4a4a` 深灰 | `#999999` 浅灰 |
+
+  - 规则：**普通行** 名称列 1 级、其它列 2 级；**隐藏行**（本轮新增行状态类 `tr.hidden-row`）整行 2 级；**失效行**（`tr.invalid-row`）整行 3 级 —— CSS 里失效规则排在隐藏之后，**同时满足时失效优先**
+  - 名称列 `.dn-text`、头像兜底文字 `.manage-avatar-placeholder`、隐藏/失效标签都自带 `color`，必须在 hidden/invalid 规则里一并覆盖（否则它们不跟随）
+  - 实测（`Round2Probe` 逐项断言 computed 值）：深色 普通名称 `rgb(255,255,255)` / 普通其它 `rgb(192,192,192)` / 隐藏整行 `rgb(192,192,192)` / 失效整行 `rgb(108,108,108)`；浅色 `rgb(0,0,0)` / `rgb(74,74,74)` / `rgb(74,74,74)` / `rgb(153,153,153)`
+  - 排查插曲：首次实测得到"名称列是 2 级、隐藏行是 3 级"，先怀疑 CSS；改成**先打印真实 DOM**（行 class + computed 值）后才发现是**测试数据造错** —— 一个账号在前面的步骤里被点了隐藏按钮（真的变隐藏行），另一个账号被 `main.js` 按"不在 `getSwExistedAccounts` 里"判成了失效 → **CSS 一直是对的**
+- **删除 / 重置的语义（用户明确）**: **删除** = 整个节点移除；**重置** = 清空节点内容但**保留空节点**（列表仍能正常加载，初始化流程会重新填属性）
+  - 两者都新增"**清除数据目录里的头像文件**"：`AccInfoFuncCore.deleteAccountAvatarFiles(sw, acc)` —— 清掉 `{userData}/{sw}/{acc}/` 下**所有图片**（jpg/jpeg/png/bmp/gif；读取端只认 `{acc}.jpg`，但目录里可能残留历史 png），**非图片文件保留**，目录空了才删目录（**绝不递归删其它文件**）；`deleteAvatarForAcc` 改为复用它；`JsBridge.resetAccount` / `JsBridge.deleteAccount` 各接一次
+  - **平台图标 `{userData}/{sw}/{sw}.png` 不受影响**
+  - 验证：`AccFilesProbe.java` 直连真实代码 **8/8**（jpg 删 / png 删 / `keep.txt` 保留 / 非空目录保留 / 空目录删除 / 目录本来不存在返回 false 不算失败）
+- **批量删除只对失效账号生效**: 最初写成"一个可删的都没有就静默 `return`" → **用户指出"这样用户会疑惑为啥点不了"** → 改为：**确认框照常弹**，文案按选中情况分三种（全正常 → "选中的 N 个账号都是正常账号…无法删除；点击删除不会有任何改动"；混合 → "…有 N 个是正常账号…**将被跳过**；实际只会删除其中 M 条失效账号记录…"；全失效 → 常规文案），用户仍可确认，**执行层才过滤**（只对 `invalidIds` 调 `JFC.bridge.deleteAccount`）
+- **行右键菜单三项齐全**（隐藏/重置/删除）: 不能做的**显示为禁用（不隐藏）** —— 正常账号的"删除"是禁用项 + 悬停提示"正常账号（磁盘上仍然存在）无法删除"。踩坑：禁用项一开始**漏写 `data-row-action="delete"`** → 选择器查不到、事件绑定也覆盖不到（探针先报"菜单只有两项"才发现）；修法：**禁用项照样带动作标识**，只在点击处理里 `if (classList.contains('disabled')) return;`
+- **顺带修掉一个真 bug**: `ConfigManager.getInstance()` 里 `ConfigManager mgr = new ConfigManager(); mgr.init(false); instance = mgr;` —— `mgr.init(false)` 调到的是**静态** `init`（它自己 new 并初始化了另一个实例赋给 `instance`），紧接着又被这个**未初始化**的 `mgr` 覆盖 → 只要 `getInstance()` 是首个入口（应用正常启动不会，Launcher 先显式 `init` 过；**独立探针 / 工具会**），拿到的实例 `userDataPath == null`，`getUserDir()` 直接 NPE。改为单一路径 `init(false)`；**是写 `AccFilesProbe` 时的 NPE 把它挖出来的**
+- **验证**: `Round2Probe` 111 条断言（三级色三态 × 明暗 + 右键菜单三项/禁用/点禁用无反应 + 批量删除三种文案与执行层过滤）、`RoundProbe` 回归 63 条、`gradle test` 57 例 0 失败

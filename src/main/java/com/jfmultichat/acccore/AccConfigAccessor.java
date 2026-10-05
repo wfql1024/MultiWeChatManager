@@ -91,12 +91,15 @@ public final class AccConfigAccessor {
     }
 
     /**
-     * 获取所有账号列表
+     * 获取所有账号列表（**排除 origin_exe**：它是"程序自己的备注"节点，不是账号）
      */
     public List<String> getAllAccounts(String sw) {
         List<String> result = new ArrayList<>();
         Map<String, ObjectNode> accMap = CM.getAccountMap(sw);
-        result.addAll(accMap.keySet());
+        for (String id : accMap.keySet()) {
+            if (AccCoreConstants.ORIGIN_EXE_ID.equals(id)) continue;
+            result.add(id);
+        }
         return result;
     }
 }

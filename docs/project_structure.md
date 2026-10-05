@@ -219,11 +219,12 @@ JS 调用 void Java 方法 → 立刻返回
 
 | 文档 | 内容描述 |
 |------|----------|
-| `CLAUDE.md` | 项目总览 + 关键技术教训 (44条) |
+| `AGENTS.md` | 项目当前状态的全局视图（身份/技术栈/结构指针/运行命令/关键约定/指针） |
 | `MEMORY/MEMORY.md` | 各记忆文档索引摘要 |
-| `MEMORY/DECISIONS.MD` | 关键决策记录 (page-main/头像重构等) |
-| `MEMORY/DEV_LOGS.MD` | 开发过程笔记 (页架构迁移细节/经验教训) |
-| `MEMORY/FACTS.MD` | 当前阶段事实汇总 |
+| `MEMORY/DECISIONS.MD` | 关键决策记录（page-main/头像重构/…/2026-10-05 晚~06 的 D-10~D-28） |
+| `MEMORY/DEV_LOGS.MD` | 开发过程笔记（逐次变更记录，含页架构迁移细节） |
+| `MEMORY/LESSONS.MD` | 技术教训与经验结晶（含旧 `AGENTS.md` 第十一节 50 条） |
+| `MEMORY/FACTS.MD` | 当前事实汇总（含文末"当前事实速查"快照） |
 | `MEMORY/TODOS.MD` | 待办任务清单 |
 | `HANDOFF.md` | 交接文档 |
 | `remote_sw_structure.md` | 远程结构定义 |

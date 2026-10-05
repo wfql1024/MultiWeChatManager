@@ -157,9 +157,15 @@ JFC.bridge = (function() {
         getAccAvatarAsync: function(swId, accountId, fn) {
             callWithArgs('getAccAvatarAsync', swId, accountId, String(registerAsync(fn)));
         },
+        // 手动指定头像（弹文件选择器，Java 侧转 JPEG 写入本地头像文件）；返回 {success, dataUrl?}
+        pickAccAvatar: function(swId, accountId) { return callJsonWithArgs('pickAccAvatar', swId, accountId); },
+        // 移除本地头像文件（同时清 avatar_url）；返回 {success}
+        removeAccAvatar: function(swId, accountId) { return callJsonWithArgs('removeAccAvatar', swId, accountId); },
         updateSwField: function(swId, field, value) { return callJsonWithArgs('updateSwField', swId, field, value); },
         saveAccount: function(swId, accountId, fieldsJson) { return callJsonWithArgs('saveAccount', swId, accountId, fieldsJson); },
         deleteAccount: function(swId, accountId) { return callJsonWithArgs('deleteAccount', swId, accountId); },
+        // 重置账号：清空 SwAccData 里该账号的节点（保留空节点）；前端重置成功后自行重载数据
+        resetAccount: function(swId, accountId) { return callJsonWithArgs('resetAccount', swId, accountId); },
         extractExeIcon: function(exePath) { return callJsonWithArgs('extractExeIcon', exePath); },
         getGlobalConfig: function() { return callJson('getGlobalConfig'); },
         saveGlobalConfig: function(json) { callWithArgs('saveGlobalConfig', json); },

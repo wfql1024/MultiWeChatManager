@@ -44,9 +44,10 @@ public final class AccOpsProvider {
             node = ACC_ACCESSOR.getSwAccData(sw, coexistExe);
         }
         var obj = (com.fasterxml.jackson.databind.node.ObjectNode) node;
-        if (!obj.has("linked_acc")) ACC_ACCESSOR.updateSwAccData(sw, coexistExe, Map.of("linked_acc", null));
-        if (!obj.has("channel")) ACC_ACCESSOR.updateSwAccData(sw, coexistExe, Map.of("channel", null));
-        if (!obj.has("ordinals")) ACC_ACCESSOR.updateSwAccData(sw, coexistExe, Map.of("ordinals", null));
+        // 注意：这里不能用 Map.of —— Map.of 不接受 null 值，会抛 NPE（这条路径因此从来没真正执行过）
+        if (!obj.has("linked_acc")) ACC_ACCESSOR.updateSwAccData(sw, coexistExe, Collections.singletonMap("linked_acc", null));
+        if (!obj.has("channel")) ACC_ACCESSOR.updateSwAccData(sw, coexistExe, Collections.singletonMap("channel", null));
+        if (!obj.has("ordinals")) ACC_ACCESSOR.updateSwAccData(sw, coexistExe, Collections.singletonMap("ordinals", null));
     }
 
     /**

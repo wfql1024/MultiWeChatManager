@@ -174,8 +174,11 @@ public final class AccOperatorCore {
 
             if (killed.get()) {
                 quited.add(account);
-                ACC_ACCESSOR.updateSwAccData(sw, account,
-                        Map.of("pid", null, "has_mutex", false));
+                // 不能用 Map.of（不接受 null 值 → NPE，清 pid 这一步会一直抛异常）
+                java.util.Map<String, Object> cleared = new java.util.HashMap<>();
+                cleared.put("pid", null);
+                cleared.put("has_mutex", false);
+                ACC_ACCESSOR.updateSwAccData(sw, account, cleared);
             }
         }
         return quited;

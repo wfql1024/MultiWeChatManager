@@ -758,6 +758,34 @@ JFC.pages.settings = (function() {
         }
     }
 
+    // ==================== 刷新 ====================
+
+    /**
+     * 刷新当前页（标题栏"刷新"按钮）.
+     * 只"重新读盘 / 重新拉取 + 重新渲染"当前子页，不重复绑定事件
+     * （各子页的 *Inited 守卫是防重复绑定的，这里不动有绑定的那两个）。
+     */
+    function refresh() {
+        if (JM()) {
+            var t = JFC.bridge.call('getTheme');
+            if (t === 'dark' || t === 'light' || t === 'auto') {
+                currentTheme = t;
+                document.documentElement.setAttribute('data-theme', t);
+            }
+        }
+        // 纯异步加载的子页：放开守卫即可重新拉取
+        if (currentSection === 'thanks') thanksInited = false;
+        if (currentSection === 'about')  aboutInited = false;
+        // 日志子页带事件绑定：只重读目录，不重跑 initLogSection
+        if (currentSection === 'log' && JM()) {
+            var p = JFC.bridge.call('getLogDir');
+            if (p) setText('log-dir-path', p);
+        }
+        if (JFC.progress) JFC.progress.show();
+        showSection(currentSection);   // 配置子页会重新读盘（loadConfigData）
+        if (JFC.progress) JFC.progress.hide();
+    }
+
     // ==================== 导航 ====================
 
     function showSection(name) {
@@ -802,5 +830,5 @@ JFC.pages.settings = (function() {
     function setVal(id, val) { var e = el(id); if (e) e.value = val; }
     function setText(id, text) { var e = el(id); if (e) e.textContent = text; }
 
-    return { init: init, showSection: showSection, setTheme: setTheme };
+    return { init: init, refresh: refresh, showSection: showSection, setTheme: setTheme };
 })();

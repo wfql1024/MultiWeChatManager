@@ -3,6 +3,7 @@ package com.jfmultichat.bridge;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.jfmultichat.acccore.AccCoreConstants;
 import com.jfmultichat.acccore.AccInfoFuncCore;
 import com.jfmultichat.appcore.AppCore;
 import com.jfmultichat.config.AppPaths;
@@ -441,6 +442,8 @@ public class JsBridge {
             // 构建精简的账号列表 — 每个账号仅返回 id + nickname + avatar_url
             List<ObjectNode> list = new java.util.ArrayList<>();
             accounts.forEach((id, fields) -> {
+                // origin_exe（程序自己的备注节点）不是账号 → 不进账号列表
+                if (AccCoreConstants.ORIGIN_EXE_ID.equals(id)) return;
                 ObjectNode item = MAPPER.createObjectNode();
                 item.put("id", id);
                 item.put("nickname", fields.has("nickname") ? fields.get("nickname").asText() : "");
@@ -1385,6 +1388,8 @@ public class JsBridge {
             var arr = result.putArray("accounts");
 
             accounts.forEach((id, fields) -> {
+                // origin_exe 是"程序自己的备注"节点（原生程序表名称链第一级），不是账号 → 不进账号列表
+                if (AccCoreConstants.ORIGIN_EXE_ID.equals(id)) return;
                 ObjectNode item = MAPPER.createObjectNode();
                 item.put("id", id);
                 // 展示名：remark → nickname → alias，回退账号 ID
@@ -1457,11 +1462,16 @@ public class JsBridge {
             result.put("name", name);
             result.put("path", instPath);
             result.put("version", version == null ? "" : version);
+            // 程序备注（原生程序表名称链第一级）：SwAccData.<swId>.origin_exe.remark
+            JsonNode progRemark = AccInfoFuncCore.getSwAccData(swId, AccCoreConstants.ORIGIN_EXE_ID,
+                    AccCoreConstants.AccKey.REMARK);
+            result.put("remark", progRemark != null && progRemark.isTextual() ? progRemark.asText() : "");
         } catch (Exception e) {
             LOG.error("Failed to get program data for swId={}", swId, e);
             result.put("name", "");
             result.put("path", "");
             result.put("version", "");
+            result.put("remark", "");
         }
         return result.toString();
     }
@@ -1495,7 +1505,9 @@ public class JsBridge {
                     String linkedAvatarUrl = (linkedNode != null && linkedNode.hasNonNull("avatar_url"))
                             ? linkedNode.get("avatar_url").asText("") : "";
                     dataUrl = com.jfmultichat.utils.AvatarUtils
-                            .getCoexistAvatarDataUrl(swId, accountId, linkedAcc, linkedAvatarUrl);
+                            .getCoexistAvatarDataUrl(swId, accountId, linkedAcc, linkedAvatarUrl,
+                                    // 文字兜底用的名称：链接账号的展示名（无链接则用自身展示名）
+                                    AccInfoFuncCore.getAccOriginDisplayName(swId, linkedAcc));
                 } else {
                     // 解析头像 data URL（本地文件 → URL下载 → SVG 回退）
                     dataUrl = AccInfoFuncCore.getAccAvatarFromFile(swId, accountId);
@@ -1584,9 +1596,78 @@ public class JsBridge {
     public String deleteAccount(String swId, String accountId) {
         try {
             boolean removed = ConfigManager.getInstance().deleteAccount(swId, accountId);
+            // 删除 = 配置节点整个不要 + 数据目录里的头像文件一并清除（用户 2026-10-05 定）
+            AccInfoFuncCore.deleteAccountAvatarFiles(swId, accountId);
             return "{\"success\":true,\"removed\":" + removed + "}";
         } catch (Exception e) {
             LOG.error("Failed to delete account for swId={}", swId, e);
+            return "{\"success\":false,\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}";
+        }
+    }
+
+    /**
+     * JS 调用：弹出文件选择器，让用户手动指定账号头像.
+     *
+     * <p>选中的图片会被转成 JPEG 写入 `{userData}/{sw}/{acc}/{acc}.jpg`（与头像读取路径一致），
+     * 并清掉 `avatar_url`；返回新的 data URL 供前端就地刷新那一格。用户取消时 `cancelled=true`。
+     *
+     * @return JSON: {success:true, dataUrl:"..."} 或 {success:false, cancelled:true} 或 {success:false, error:"..."}
+     */
+    public String pickAccAvatar(String swId, String accountId) {
+        try {
+            javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
+            chooser.setTitle("选择头像图片");
+            chooser.getExtensionFilters().addAll(
+                    new javafx.stage.FileChooser.ExtensionFilter("图片", "*.png", "*.jpg", "*.jpeg", "*.bmp", "*.gif"),
+                    new javafx.stage.FileChooser.ExtensionFilter("所有文件", "*.*"));
+            java.io.File selected = chooser.showOpenDialog(null);
+            if (selected == null) return "{\"success\":false,\"cancelled\":true}";
+
+            String dataUrl = AccInfoFuncCore.importAvatarForAcc(swId, accountId, selected);
+            if (dataUrl == null || dataUrl.isEmpty()) {
+                return "{\"success\":false,\"error\":\"图片无法读取或写入\"}";
+            }
+            return "{\"success\":true,\"dataUrl\":" + MAPPER.writeValueAsString(dataUrl) + "}";
+        } catch (Exception e) {
+            LOG.error("Failed to pick avatar for swId={}", swId, e);
+            return "{\"success\":false,\"error\":\"" + String.valueOf(e.getMessage()).replace("\"", "'") + "\"}";
+        }
+    }
+
+    /**
+     * JS 调用：移除账号的本地头像文件（同时清掉 avatar_url，避免又被网络头像覆盖）.
+     *
+     * @return JSON: {success: true/false}
+     */
+    public String removeAccAvatar(String swId, String accountId) {
+        try {
+            boolean ok = AccInfoFuncCore.deleteAvatarForAcc(swId, accountId);
+            return "{\"success\":" + ok + "}";
+        } catch (Exception e) {
+            LOG.error("Failed to remove avatar for swId={}", swId, e);
+            return "{\"success\":false,\"error\":\"" + String.valueOf(e.getMessage()).replace("\"", "'") + "\"}";
+        }
+    }
+
+    /**
+     * 重置一个账号：清空 SwAccData 里该账号的节点（保留空节点）.
+     *
+     * <p>刻意**不**推送字段变更事件：重置会同时改掉备注/快捷键/隐藏/关联账号等一批字段，
+     * 前端在重置成功后直接整表重载数据（走既有的 loadAccountData 链路），
+     * 免得"半套字段靠推送、半套靠重载"出现两份真相。
+     *
+     * @param swId      Sw ID
+     * @param accountId 账号 ID
+     * @return JSON: {success: true/false, error: "..."}
+     */
+    public String resetAccount(String swId, String accountId) {
+        try {
+            boolean ok = ConfigManager.getInstance().resetAccount(swId, accountId);
+            // 重置 = 节点内容清空（保留空节点）+ 数据目录里的头像文件一并清除（用户 2026-10-05 定）
+            AccInfoFuncCore.deleteAccountAvatarFiles(swId, accountId);
+            return "{\"success\":" + ok + "}";
+        } catch (Exception e) {
+            LOG.error("Failed to reset account for swId={}", swId, e);
             return "{\"success\":false,\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}";
         }
     }
@@ -2259,10 +2340,13 @@ public class JsBridge {
                     ConfigManager.getInstance().updateAccount(sw, accId, updates);
                 } else {
                     // 无 accountId，直接更新整个账号字典
-                    // 简化处理：写入第一个账号或创建
+                    // 简化处理：写入第一个**真正的账号**（跳过 origin_exe：那是程序自己的备注节点）
                     Map<String, ObjectNode> accMap = ConfigManager.getInstance().getAccountMap(sw);
-                    if (!accMap.isEmpty()) {
-                        String firstAcc = accMap.keySet().iterator().next();
+                    String firstAcc = null;
+                    for (String k : accMap.keySet()) {
+                        if (!AccCoreConstants.ORIGIN_EXE_ID.equals(k)) { firstAcc = k; break; }
+                    }
+                    if (firstAcc != null) {
                         ConfigManager.getInstance().updateAccount(sw, firstAcc, updates);
                     }
                 }

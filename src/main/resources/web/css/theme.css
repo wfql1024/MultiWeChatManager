@@ -11,8 +11,24 @@
     --icon-left: 21px;
 
     /* === 统一字体字号规范 === */
+    /* 中文字体【已定】= 微软雅黑（用户比对"已选 x 项"后选定）：
+       状态标签 / 悬浮按钮 / 批量按钮 / 表格列头 / 表内中文 / ID 列 都用它；表内**英文**仍走等宽。 */
     --font-family-base: "Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui, sans-serif;
     --font-family-mono: "Cascadia Code", "Consolas", "Sarasa Gothic SC", monospace;
+    /* 表内字体策略（2026-10-05 实测后定）：
+       本 WebKit **做不到**"一个元素里中文雅黑 + 英文等宽"（font-family 列表的回退会走系统 CJK 回退；
+       @font-face + unicode-range 在此版本不生效：把中文专用字体放最前会把英文也吃掉）。
+       所以：**列级指定** —— 含中文的列（名称/昵称）整列用雅黑；
+       英文列（ID/版本/路径/平台内ID）整列等宽；
+       名称列再额外用 JS 把"中文段/英文段"拆成两个 span，分别指定字体（见 account-table.js scriptSplitHtml）。*/
+    --font-family-base: "Microsoft YaHei", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+    --font-family-mono: "Cascadia Code", "Consolas", "Sarasa Gothic SC", monospace;
+
+    /* 表格/列表区统一字号（用户 2026-10-05 定 14px）：
+       列头 / 表内 / 状态标签 / 悬浮按钮 / 批量按钮(含取消) / "已选 x 项" 全部用它 */
+    --fs-table: 14px;
+    /* 名称列比其他列大 1 号（用户 2026-10-05 要求） */
+    --fs-name: 15px;
 
     /* 一级标题 — 区块标题 */
     --font-h1: 20px;
@@ -71,6 +87,13 @@
     --text-secondary: #9a9a9a;
     --text-muted: #6c6c6c;
 
+    /* 表格文字【三级】（用户 2026-10-05 定）：1 级最重、3 级最轻。
+       明暗两套是"反"的 —— 深色模式下：纯白 > 浅灰 > 深灰。
+       用途：普通行名称列=1级、其它列=2级；隐藏行整行=2级；失效行整行=3级。 */
+    --text-level1: #ffffff;   /* 纯白 */
+    --text-level2: #c0c0c0;   /* 浅灰 */
+    --text-level3: #6c6c6c;   /* 深灰 */
+
     --color-primary: #4a9eff;
     --color-primary-light: rgba(74, 158, 255, 0.15);
     --color-danger: #e64553;
@@ -98,6 +121,11 @@
     --text-secondary: #666666;
     --text-muted: #999999;
 
+    /* 表格文字三级（浅色模式）：纯黑 > 深灰 > 浅灰 */
+    --text-level1: #000000;   /* 纯黑 */
+    --text-level2: #4a4a4a;   /* 深灰 */
+    --text-level3: #999999;   /* 浅灰 */
+
     --color-primary: #0066cc;
     --color-primary-light: rgba(0, 102, 204, 0.12);
     --color-danger: #d32f2f;
@@ -106,6 +134,13 @@
 
     --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.10);
 }
+
+/* ========== 中文段 / 英文段 分别指定字体 ==========
+   WebKit 的 font-family 回退不可靠（见上面注释），所以名称列由 JS 拆段：
+   中文段用界面字体（雅黑），非中文段用等宽。仅**显示态**走这套；
+   编辑态是 `<input>`，浏览器限制下只能统一等宽（见 main.css 的 .name-input）。 */
+.manage-account-table .cjk-run { font-family: var(--font-family-base); }
+.manage-account-table .lat-run { font-family: var(--font-family-mono); }
 
 /* ========== Auto: follow system preference ========== */
 @media (prefers-color-scheme: light) {
@@ -127,6 +162,11 @@
         --text-primary: #2c2c2c;
         --text-secondary: #666666;
         --text-muted: #999999;
+
+        /* 表格文字三级（跟随系统浅色时同 light） */
+        --text-level1: #000000;
+        --text-level2: #4a4a4a;
+        --text-level3: #999999;
 
         --color-primary: #0066cc;
         --color-primary-light: rgba(0, 102, 204, 0.12);
@@ -192,3 +232,16 @@ a:hover { text-decoration: underline; }
 }
 .btn-sm:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
 .btn-sm:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* 【字体已定】按钮文字统一用界面字体（微软雅黑）；字号见 --fs-batch/--fs-qa 对照 */
+.btn, .btn-sm,
+.manage-row-quick-actions .qa-btn,
+.acc-table-batch .btn-sm {
+    font-family: var(--font-family-base);
+}
+
+/* 【用户要求】本项目不要浏览器默认的聚焦虚线框（Tab 切换时那圈黑虚线）.
+   注意：去掉后键盘 Tab 时看不到焦点位置，这是用户明确接受的取舍。
+   写成两条独立规则：万一这个 WebKit 不认 :focus-visible，也不会把整条规则一起丢掉。 */
+*:focus { outline: none; }
+*:focus-visible { outline: none; }

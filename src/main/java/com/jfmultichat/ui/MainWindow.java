@@ -2,6 +2,7 @@ package com.jfmultichat.ui;
 
 import com.jfmultichat.MainApp;
 import com.jfmultichat.bridge.JsBridge;
+import javafx.animation.PauseTransition;
 import javafx.concurrent.Worker;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -10,14 +11,19 @@ import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.effect.DropShadow;
+import javafx.scene.Group;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.SVGPath;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
+import javafx.util.Duration;
 import netscape.javascript.JSObject;
 
 import org.slf4j.Logger;
@@ -56,6 +62,7 @@ public class MainWindow {
 
     // 窗口按钮引用（用于更新图标）
     private Button btnMax;
+    private Button btnRefresh;
 
     // 最大化状态
     private boolean maximized = false;
@@ -357,6 +364,11 @@ public class MainWindow {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
+        // 刷新当前页：由前端 JFC.router 自行识别"现在显示的是哪个页面"
+        // 图标 = Lucide rotate-cw（MIT，24×24 设计稿、stroke-width 2、圆头圆角）
+        btnRefresh = makeSvgTitleBtn(null,
+                "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8",
+                "M21 3v5h-5");
         Button btnSidebar = makeTitleBtn("☰", null);
         btnSidebar.setOnAction(e -> app.toggleSidebar());
 
@@ -364,11 +376,12 @@ public class MainWindow {
         btnMax = makeTitleBtn("☐", null);
         Button btnClose = makeTitleBtn("✕", "close-btn");
 
+        btnRefresh.setOnAction(e -> refreshCurrentPage());
         btnMin.setOnAction(e -> stage.setIconified(true));
         btnMax.setOnAction(e -> toggleMaximize());
         btnClose.setOnAction(e -> app.exit());
 
-        bar.getChildren().addAll(logoView, spacer, btnSidebar, btnMin, btnMax, btnClose);
+        bar.getChildren().addAll(logoView, spacer, btnRefresh, btnSidebar, btnMin, btnMax, btnClose);
         bar.setPadding(new Insets(0, 8, 0, 8));
 
         // 标题栏双击 → 最大化/恢复
@@ -387,6 +400,71 @@ public class MainWindow {
         btn.getStyleClass().add("title-bar-btn");
         if (extraClass != null) btn.getStyleClass().add(extraClass);
         return btn;
+    }
+
+    /** 标题栏图标按钮的图标像素尺寸（24 设计稿等比缩放到此值，与 14px 字形按钮观感相当） */
+    private static final double TITLE_ICON_PX = 16;
+
+    /** 刷新不应期（毫秒）：与前端 JFC.router 的 REFRESH_COOLDOWN_MS 同一语义（此值只管按钮置灰） */
+    private static final long REFRESH_COOLDOWN_MS = 2000;
+
+    /**
+     * 图标版标题栏按钮：用 SVG path 画，不用字体字形.
+     *
+     * <p>字号字形在 JavaFX 里的观感取决于系统字体回退，既不可控也不好看；SVG path 是矢量，
+     * 描边粗细/圆头都可控，颜色交给 CSS（{@code .title-bar-icon { -fx-stroke: … }}）跟随深浅主题.
+     *
+     * @param extraClass 额外样式类（可为 null）
+     * @param pathData   一条或多条 SVG path 数据（24×24 设计稿，stroke-width 2）
+     */
+    private Button makeSvgTitleBtn(String extraClass, String... pathData) {
+        Group icon = new Group();
+        for (String d : pathData) {
+            SVGPath p = new SVGPath();
+            p.setContent(d);
+            p.setFill(null);
+            p.setStrokeWidth(2);
+            p.setStrokeLineCap(StrokeLineCap.ROUND);
+            p.setStrokeLineJoin(StrokeLineJoin.ROUND);
+            p.getStyleClass().add("title-bar-icon");
+            icon.getChildren().add(p);
+        }
+        // 整体缩放（必须放在 Group 上：逐条缩放会各自围绕自身中心，破坏两条 path 的相对位置）
+        double scale = TITLE_ICON_PX / 24.0;
+        icon.setScaleX(scale);
+        icon.setScaleY(scale);
+
+        Button btn = new Button();
+        btn.setGraphic(icon);
+        btn.getStyleClass().add("title-bar-btn");
+        if (extraClass != null) btn.getStyleClass().add(extraClass);
+        return btn;
+    }
+
+    /**
+     * 刷新按钮：让前端"刷新当前页".
+     * 前端 {@code JFC.router.refresh()} 自行识别当前显示的是哪个页面（平台页 / 设置页），
+     * 与"最左栏再次点击当前平台"走同一条前端路径；**2 秒防连点不应期也在前端那一个入口里**，
+     * 这样按钮与"再点当前平台"两条路共用同一道闸，不会出现两个各管一半的计数器.
+     *
+     * <p>前端返回 {@code true} 表示真的刷新了 → 按钮进入 2 秒不应期并**置灰**（可见反馈）；
+     * 返回 {@code false}（被不应期挡下）则什么也不做，避免"没刷新却灰了"的假反馈.
+     */
+    private void refreshCurrentPage() {
+        if (webEngine == null || btnRefresh == null || btnRefresh.isDisabled()) return;
+        boolean refreshed = false;
+        try {
+            Object r = webEngine.executeScript(
+                    "(JFC.router&&JFC.router.refresh)?JFC.router.refresh():false");
+            refreshed = Boolean.TRUE.equals(r);
+        } catch (Exception e) {
+            LOG.warn("Failed to refresh current page", e);
+        }
+        if (!refreshed) return;
+        btnRefresh.setDisable(true);
+        PauseTransition cooldown = new PauseTransition(Duration.millis(REFRESH_COOLDOWN_MS));
+        cooldown.setOnFinished(e -> btnRefresh.setDisable(false));
+        cooldown.play();
     }
 
     // ==================== 最大化/恢复 ====================

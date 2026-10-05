@@ -7,6 +7,13 @@ public final class AccCoreConstants {
 
     private AccCoreConstants() {}
 
+    /**
+     * 原生程序（平台自身）在 SwAccData 里使用的固定账号 ID：<b>不是账号</b>，只承载"程序自己的备注"
+     * （{@code SwAccData.<swId>.origin_exe.remark}），用于原生程序表名称链的第一级。
+     * 凡是"遍历账号"的地方都必须把它排除（见 {@code JsBridge.getSwDetailData}）。
+     */
+    public static final String ORIGIN_EXE_ID = "origin_exe";
+
     // ==================== 账号数据键 ====================
 
     public static final class AccKey {
