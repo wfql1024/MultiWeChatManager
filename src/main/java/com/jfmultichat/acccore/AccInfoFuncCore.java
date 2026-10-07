@@ -309,11 +309,12 @@ public final class AccInfoFuncCore {
         String today = sdf.format(new java.util.Date());
 
         for (String acc : accList) {
-            JsonNode pidNode = getSwAccData(sw, acc, "pid");
+            // pid 改从**内存**运行时存储取（旧版从配置读，值是过时的）
+            Integer pidVal = AccRuntimeStore.getPid(sw, acc);
             String avatarPath = userDir + "/" + sw + "/" + acc + "/" + acc + ".jpg";
             if (new File(avatarPath).exists()) continue;
-            if (pidNode == null || !pidNode.isNumber()) continue;
-            int pid = pidNode.asInt();
+            if (pidVal == null) continue;
+            int pid = pidVal;
             String captDir = tempDir + "/" + cacheSuffix + "/" + pid + "_" + today;
             File dir = new File(captDir);
             if (!dir.exists() || !dir.isDirectory()) continue;
@@ -645,10 +646,11 @@ public final class AccInfoFuncCore {
                     break;
                 }
             }
-            // 用 HashMap：pid 可能为 null（未运行的账号），Map.of 不允许 null 值会抛 NPE
-            // updateAccount 对 null 值会移除该键，未运行账号不存 pid
+            // PID 改存**内存**（用户 2026-10-06 定：pid/hwnd 写文件下次读出来就是过时的）；
+            // 配置里历史遗留的 pid 顺手清掉（写 null = 删除该键），避免以后再被读成"实时值"
+            AccRuntimeStore.setPid(sw, acc, pid);
             Map<String, Object> accData = new HashMap<>();
-            accData.put(AccCoreConstants.AccKey.PID, pid);
+            accData.put(AccCoreConstants.AccKey.PID, null);
             accData.put(AccCoreConstants.AccKey.HAS_MUTEX, false);
             updateSwAccData(sw, acc, accData);
         }
@@ -659,9 +661,8 @@ public final class AccInfoFuncCore {
             JsonNode pidMutexNode = relayNode.get("pid_mutex");
             if (pidMutexNode != null && pidMutexNode.isObject()) {
                 for (String acc : allAccs) {
-                    JsonNode accNode = getSwAccData(sw, acc);
-                    if (accNode != null && accNode.isObject() && accNode.has("pid")) {
-                        int accPid = accNode.get("pid").asInt();
+                    Integer accPid = AccRuntimeStore.getPid(sw, acc);      // pid 来自内存运行时存储
+                    if (accPid != null) {
                         // pid 可能不在 pid_mutex 映射中，需判空再取（缺省视为 false）
                         JsonNode pmNode = pidMutexNode.get(String.valueOf(accPid));
                         boolean pm = pmNode != null && pmNode.asBoolean(false);
@@ -726,8 +727,8 @@ public final class AccInfoFuncCore {
         // 配置状态
         String configStatus = coexist ? account : getSwAccLoginCfgStatus(sw, account);
 
-        // pid, has_mutex 等
-        JsonNode pidNode = getSwAccData(sw, account, "pid");
+        // pid 来自内存运行时存储（不再读配置文件）
+        Integer pidVal = AccRuntimeStore.getPid(sw, account);
         JsonNode hasMutexNode = getSwAccData(sw, account, "has_mutex");
         JsonNode hotkeyNode = getSwAccData(sw, account, "hotkey");
         JsonNode hiddenNode = getSwAccData(sw, account, "hidden");
@@ -736,7 +737,7 @@ public final class AccInfoFuncCore {
         details.put(AccCoreConstants.AccKey.IID, sw + "/" + account);
         details.put(AccCoreConstants.AccKey.DISPLAY, displayName);
         details.put(AccCoreConstants.AccKey.CONFIG_STATUS, configStatus);
-        details.put(AccCoreConstants.AccKey.PID, pidNode != null ? pidNode.asInt() : null);
+        details.put(AccCoreConstants.AccKey.PID, pidVal);
         details.put(AccCoreConstants.AccKey.HAS_MUTEX,
                 hasMutexNode != null ? hasMutexNode.asBoolean() : false);
         details.put(AccCoreConstants.AccKey.HOTKEY,
@@ -803,7 +804,9 @@ public final class AccInfoFuncCore {
      * 记录窗口句柄并设置标题
      */
     private static void recordHwndAndSetTitle(String sw, String acc, int hwnd) {
-        updateSwAccData(sw, acc, Map.of("main_hwnd", hwnd));
+        // HWND 改存**内存**（用户 2026-10-06 定）；配置里历史遗留的 main_hwnd 顺手清掉
+        AccRuntimeStore.setHwnd(sw, acc, (long) hwnd);
+        updateSwAccData(sw, acc, java.util.Collections.singletonMap("main_hwnd", null));
         String swDisplay = com.jfmultichat.swcore.SwAccountOps.getSwOriginDisplayName(sw,
                 com.jfmultichat.config.SwConfigProvider.newAccessor());
         String accDisplay = getAccOriginDisplayName(sw, acc);
@@ -814,7 +817,8 @@ public final class AccInfoFuncCore {
      * 解除账号与窗口的绑定
      */
     public static void unlinkHwndOfAccount(String sw, String account) {
-        // 不能用 Map.of（不接受 null 值 → NPE）
+        AccRuntimeStore.setHwnd(sw, account, null);                        // 内存里解绑
+        // 配置里历史遗留的 main_hwnd 一并清掉（写 null = 删除该键）
         updateSwAccData(sw, account, java.util.Collections.singletonMap("main_hwnd", null));
         LOG.info("[窗口] 已解绑账号: {}", account);
     }

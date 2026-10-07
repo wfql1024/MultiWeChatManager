@@ -156,9 +156,10 @@ public final class AccOperatorCore {
                 Collections.emptyList());
 
         for (String account : accounts) {
-            JsonNode pidNode = ACC_ACCESSOR.getSwAccData(sw, account, "pid");
-            if (pidNode == null || !pidNode.isNumber()) continue;
-            int pid = pidNode.asInt();
+            // pid 来自**内存**运行时存储（pid/hwnd 不再写配置文件）
+            Integer pidVal = AccRuntimeStore.getPid(sw, account);
+            if (pidVal == null) continue;
+            int pid = pidVal;
 
             final java.util.concurrent.atomic.AtomicBoolean killed = new java.util.concurrent.atomic.AtomicBoolean(false);
             try {
@@ -174,7 +175,8 @@ public final class AccOperatorCore {
 
             if (killed.get()) {
                 quited.add(account);
-                // 不能用 Map.of（不接受 null 值 → NPE，清 pid 这一步会一直抛异常）
+                // pid 从内存存储清除；配置里历史遗留的 pid 一并清掉（写 null = 删除该键）
+                AccRuntimeStore.clearPid(sw, account);
                 java.util.Map<String, Object> cleared = new java.util.HashMap<>();
                 cleared.put("pid", null);
                 cleared.put("has_mutex", false);
@@ -189,9 +191,10 @@ public final class AccOperatorCore {
      * 对应 Python: switch_to_sw_account_wnd (L524-L540)
      */
     public static void switchToSwAccountWnd(String sw, String acc) {
-        JsonNode hwndNode = ACC_ACCESSOR.getSwAccData(sw, acc, "main_hwnd");
-        if (hwndNode == null || !hwndNode.isNumber()) return;
-        int hwnd = hwndNode.asInt();
+        // HWND 来自内存运行时存储
+        Long hwndVal = AccRuntimeStore.getHwnd(sw, acc);
+        if (hwndVal == null) return;
+        long hwnd = hwndVal;
         // TODO: JNA SetForegroundWindow / ShowWindow
         LOG.debug("[窗口] switchToSwAccountWnd: sw={}, acc={}, hwnd={}", sw, acc, hwnd);
     }
@@ -203,9 +206,10 @@ public final class AccOperatorCore {
      * 对应 Python: kill_mutex_of_acc (L848-L866)
      */
     public static boolean killMutexOfAcc(String sw, String acc) {
-        JsonNode pidNode = ACC_ACCESSOR.getSwAccData(sw, acc, "pid");
-        if (pidNode == null || !pidNode.isNumber()) return false;
-        int pid = pidNode.asInt();
+        // pid 来自**内存**运行时存储
+        Integer pidVal = AccRuntimeStore.getPid(sw, acc);
+        if (pidVal == null) return false;
+        int pid = pidVal;
 
         SwConfigAccessor accessor = com.jfmultichat.config.SwConfigProvider.newAccessor();
         List<String> wildcards = accessor.getRemoteSwAsList(sw,

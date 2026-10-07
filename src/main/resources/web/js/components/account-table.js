@@ -76,33 +76,66 @@ JFC.AccountTable = (function() {
     }
 
     /**
+     * **行操作描述表 —— 三张表共用的唯一来源**（用户 2026-10-06 要求"把共用特征抽象出来"）.
+     *
+     * <p>三张表（原生程序 / 共存账号 / 原生账号）的差异只有"行操作"这一项，其余（名称列可编辑、
+     * 头像、字号/颜色、自适应宽度、排序、换序、列显隐）全部共用。所以这里用一个**行种类 kind**
+     * 把差异收口，别的代码不再关心"这是哪张表"：
+     *
+     * <ul>
+     *   <li>{@code kind='acc'}（账号行）：管理态给 隐藏/显示 + 重置 [+ 失效时删除]；登录态给 登录</li>
+     *   <li>{@code kind='prog'}（原生程序行）：**管理态无操作**（隐藏/重置/删除是账号语义）；
+     *       登录态同样给"登录" —— 原生程序本身也是能登录的</li>
+     * </ul>
+     *
+     * @returns {Array<{action:string,label:string,cls:string,title:string}>} 空数组 = 该行没有悬浮按钮
+     */
+    function rowActionsOf(kind, mode, ctx) {
+        ctx = ctx || {};
+        if (mode === 'login') {
+            return [{
+                action: 'login', label: '登录', cls: '',
+                title: kind === 'prog' ? '启动 / 登录原生程序' : '登录该账号'
+            }];
+        }
+        if (kind === 'prog') return [];
+        var list = [
+            { action: 'toggle-hidden', label: ctx.hidden ? '显示' : '隐藏', cls: ctx.hidden ? 'on' : '',
+              title: ctx.hidden ? '显示账号' : '隐藏账号' },
+            { action: 'reset', label: '重置', cls: '',
+              title: '重置账号记录（清空备注/快捷键/隐藏等）' }
+        ];
+        if (ctx.invalid) {
+            list.push({ action: 'delete', label: '删除', cls: 'danger', title: '删除失效账号记录' });
+        }
+        return list;
+    }
+
+    /**
      * 名称单元格内部 HTML（状态标签 + 名称 + 悬浮操作按钮）.
      * 渲染时与"编辑结束后回填单元格"共用同一份，避免两处结构漂移。
      *
+     * <p>按钮清单由 {@link rowActionsOf} 传入（行种类 + 模式决定），本函数只管画。
+     *
      * <p>按钮分档（用户 2026-10-05 裁定）：非失效账号只给"隐藏/显示"+"重置"；
      * 失效账号再加"删除"（记录节点移除 → 该行消失）。非失效账号删不掉（磁盘上还在，下次加载照样出现）。
-     *
-     * <p>{@code showActions=false} 时**不渲染悬浮按钮**：原生程序表复用同一套名称列（可编辑、1 级色、字号+1、加粗），
-     * 但"隐藏/重置/删除"是**账号**语义，对程序行没有意义。
      */
-    function nameCellInnerHtml(acc, displayName, invalid, showActions) {
+    function nameCellInnerHtml(acc, displayName, actions) {
         var id = acc.id;
-        var hidden = !!acc.hidden;
-        var actions = '';
-        if (showActions !== false) {
-            actions = '<span class="manage-row-quick-actions">' +
-                '<button class="qa-btn' + (hidden ? ' on' : '') + '" data-action="toggle-hidden" data-id="' + escapeAttr(id) + '"' +
-                ' title="' + (hidden ? '显示账号' : '隐藏账号') + '">' + (hidden ? '显示' : '隐藏') + '</button>' +
-                '<button class="qa-btn" data-action="reset" data-id="' + escapeAttr(id) + '" title="重置账号记录（清空备注/快捷键/隐藏等）">重置</button>' +
-                (invalid
-                    ? '<button class="qa-btn danger" data-action="delete" data-id="' + escapeAttr(id) + '" title="删除失效账号记录">删除</button>'
-                    : '') +
-                '</span>';
+        var actionsHtml = '';
+        if (actions && actions.length) {
+            actionsHtml = '<span class="manage-row-quick-actions">';
+            actions.forEach(function(a) {
+                actionsHtml += '<button class="qa-btn' + (a.cls ? ' ' + a.cls : '') + '"' +
+                    ' data-action="' + escapeAttr(a.action) + '" data-id="' + escapeAttr(id) + '"' +
+                    ' title="' + escapeAttr(a.title || '') + '">' + escapeHtml(a.label) + '</button>';
+            });
+            actionsHtml += '</span>';
         }
         return '<div class="manage-nickname-inner">' +
             renderNameTags(acc) +
             '<span class="dn-text" title="点击编辑备注">' + scriptSplitHtml(displayName) + '</span>' +
-            actions +
+            actionsHtml +
             '</div>';
     }
 
@@ -121,6 +154,12 @@ JFC.AccountTable = (function() {
         this.id = opts.id;
         this.title = opts.title || '';
         this.columns = opts.columns || [];
+        // 列属性**默认值**（"基类默认"）：几乎每列都可排序 → 默认就开，只有明确不合适的列
+        // 在列定义里写 `sortable: false`（当前是勾选框 / 头像）。这样新加一列不用重复写属性，
+        // 也不会再出现"某列忘了写 sortable 所以不能排序"这类漏项（用户 2026-10-06 指出）。
+        this.columns.forEach(function(col) {
+            if (col.sortable === undefined) col.sortable = true;
+        });
         this.container = opts.container;
         this.getSwId = opts.getSwId || function() { return null; };
         // 重置账号后需要"整表重载数据"（备注/快捷键/隐藏/关联账号一起变，光靠字段推送会留下半套真相）
@@ -130,8 +169,10 @@ JFC.AccountTable = (function() {
         this.saveHotkey = opts.saveHotkey || null;
         // 头像文字兜底取"名称末尾 4 个字符宽"（账号表）；默认取首字符（程序图标等）
         this.avatarFallbackTail = !!opts.avatarFallbackTail;
-        // 名称列的悬浮操作按钮（隐藏/重置/删除）—— 账号语义；原生程序表传 false（只保留"可编辑 + 同名样式"）
-        this.showRowActions = opts.showRowActions !== false;
+        // 行种类（'acc' 账号行 / 'prog' 原生程序行）—— 三表差异的唯一开关（见 rowActionsOf）
+        this.rowKind = opts.rowKind === 'prog' ? 'prog' : 'acc';
+        // 'manage'（管理态，默认）| 'login'（登录态：只显示可登录的账号，按钮只留"登录/批量登录"）
+        this.mode = opts.mode === 'login' ? 'login' : 'manage';
         this.enableHotkey = !!opts.enableHotkey;
         this.accountData = [];
         this.selectedIds = new Set();
@@ -165,42 +206,67 @@ JFC.AccountTable = (function() {
     };
 
     // ---- DOM 构建 ----
+    /**
+     * 生成列头两段 HTML（colgroup + thead），**按个性化列顺序**.
+     * 建表与"换序后重建列头"共用同一份，避免两处结构漂移（用户 2026-10-06 发现的"松手后列头没换"就是这个原因：
+     * 当时 thead 只在建表时生成一次，换序只重建了 tbody）。
+     */
+    AccountTable.prototype._headHtml = function() {
+        var self = this;
+        var colgroup = '', thead = '';
+        this._orderedColumns().forEach(function(col) {
+            colgroup += '<col data-col="' + col.key + '">';
+            var cls = 'manage-col-' + col.key;
+            var inner;
+            if (col.key === 'check') {
+                inner = '';      // 全选框在表格标题行（表名左侧），列头此格留空
+            } else {
+                inner = '<span class="acc-col-label">' + escapeHtml(col.label || '') + '</span>';
+            }
+            var sortAttr = col.sortable ? ' data-sort="' + col.key + '"' : '';
+            thead += '<th class="' + cls + '" data-col="' + col.key + '"' + sortAttr + '>' + inner + '</th>';
+        });
+        // 末尾占位列（撑满容器剩余宽度；无表头文字、无 data-col → 不参与显隐/排序/列菜单）
+        colgroup += '<col data-col="' + FILLER_COL + '">';
+        thead += '<th class="manage-col-filler"></th>';
+        return { colgroup: colgroup, thead: thead };
+    };
+
+    /** 换序落位后重建列头（colgroup + thead），并重新绑定列头交互 + 刷新排序三角 */
+    AccountTable.prototype._rebuildHead = function() {
+        var table = this.tableEl;
+        if (!table) return;
+        var head = this._headHtml();
+        table.querySelector('colgroup').innerHTML = head.colgroup;
+        table.querySelector('thead').innerHTML = '<tr>' + head.thead + '</tr>';
+        this._bindHeaderInteractions();
+        this._updateSortIndicators();
+    };
+
     AccountTable.prototype._buildDom = function() {
         var self = this;
         var el = document.createElement('div');
         el.className = 'acc-table';
         el.setAttribute('data-table', this.id);
 
-        var colgroupHtml = '';
-        var theadHtml = '';
-        this.columns.forEach(function(col) {
-            colgroupHtml += '<col data-col="' + col.key + '">';
-            var sortable = col.sortable ? ' data-sort="' + col.key + '"' : '';
-            var cls = 'manage-col-' + col.key;
-            var inner = (col.key === 'check')
-                ? '<label class="acc-check"><input type="checkbox" class="acc-select-all">' +
-                  '<span class="acc-check-box"></span></label>'
-                : (col.label || '');
-            theadHtml += '<th class="' + cls + '" data-col="' + col.key + '"' + sortable + '>' +
-                inner + '</th>';
-        });
-        // 末尾占位列（撑满容器剩余宽度；无表头文字、无 data-col → 不参与显隐/排序/列菜单）
-        colgroupHtml += '<col data-col="' + FILLER_COL + '">';
-        theadHtml += '<th class="manage-col-filler"></th>';
+        var head = this._headHtml();
+        el.className = 'acc-table' +
+            ((this.mode === 'login' && this.hideColNamesInLogin) ? ' hide-col-names' : '');
+        el.setAttribute('data-table', this.id);
+        var colgroupHtml = head.colgroup;
+        var theadHtml = head.thead;
 
         el.innerHTML =
             '<div class="acc-table-titlebar">' +
+                // 全选框统一放在**表名左侧**（登录态可整行隐藏列头，复选框不能跟着消失，用户 2026-10-06 定）
+                '<label class="acc-check acc-check-all"><input type="checkbox" class="acc-select-all">' +
+                '<span class="acc-check-box"></span></label>' +
                 '<span class="acc-table-title"></span>' +
                 '<span class="acc-table-meta">' +
                     '<span class="acc-table-count" style="display:none;">已选 0 项</span>' +
                     // 取消多选：夹在"已选 x 项"与批量按钮之间（用户要求）
                     '<button class="btn btn-sm acc-table-cancel" data-batch="cancel" style="display:none;">取消</button>' +
-                    '<span class="acc-table-batch" style="display:none;">' +
-                        // 隐藏/显示合并成一个按钮：文案按"选中项是否全为隐藏"变（全隐藏→"显示"，否则→"隐藏"）
-                        '<button class="btn btn-sm" data-batch="toggle-hidden">隐藏</button>' +
-                        '<button class="btn btn-sm" data-batch="reset">重置</button>' +
-                        '<button class="btn btn-sm batch-danger" data-batch="delete">删除</button>' +
-                    '</span>' +
+                    '<span class="acc-table-batch" style="display:none;">' + this._batchButtonsHtml() + '</span>' +
                 '</span>' +
             '</div>' +
             '<div class="acc-table-scroll">' +
@@ -253,24 +319,73 @@ JFC.AccountTable = (function() {
         }
         var self = this;
         this.columns.forEach(function(col) {
-            self.colVisible[col.key] = col.mandatory ? true :
-                (prefs && prefs.visible && prefs.visible[col.key] !== undefined
-                    ? !!prefs.visible[col.key] : col.defVisible);
+            // 登录态专列（PID/HWND）：**默认显示但可被用户隐藏** —— 有存过的偏好就听用户的，
+            // 没有才按"登录态默认显示"（用户 2026-10-06：给用户最高的自由）
+            self.colVisible[col.key] = col.loginOnly
+                ? ((prefs && prefs.visible && prefs.visible[col.key] !== undefined)
+                    ? !!prefs.visible[col.key] : (self.mode === 'login'))
+                : (col.mandatory ? true :
+                    (prefs && prefs.visible && prefs.visible[col.key] !== undefined
+                        ? !!prefs.visible[col.key] : col.defVisible));
             // 固定列（勾选框/头像）宽度绝对固定，不读取持久化配置
             self.colWidth[col.key] = col.fixed ? col.defWidth :
                 ((prefs && prefs.width && prefs.width[col.key] && typeof prefs.width[col.key] === 'number')
                     ? prefs.width[col.key] : col.defWidth);
         });
+        // 列顺序（个性化）：按记录的 key 顺序排列；缺失的新列追加末尾；已删除的键忽略
+        this.hideColNamesInLogin = !!(prefs && prefs.hideColNamesInLogin);
+        var savedOrder = (prefs && prefs.order && prefs.order.length) ? prefs.order : [];
+        var byKey = {};
+        this.columns.forEach(function(c) { byKey[c.key] = c; });
+        var ordered = [];
+        savedOrder.forEach(function(k) { if (byKey[k] && ordered.indexOf(byKey[k]) === -1) ordered.push(byKey[k]); });
+        this.columns.forEach(function(c) { if (ordered.indexOf(c) === -1) ordered.push(c); });
+        this.colOrder = ordered;
+        this._applyPinOrder();          // 固定列（勾选框/头像/名称）恒在最左
         this._applyColumnLayout();
+    };
+
+    // ---- 列顺序（个性化：拖动列头换序） ----
+
+    /** 当前**渲染顺序**下的列（已应用个性化顺序与固定列约束） */
+    AccountTable.prototype._orderedColumns = function() {
+        return (this.colOrder && this.colOrder.length) ? this.colOrder : this.columns;
+    };
+
+    /** 固定列（pinned：勾选框/头像/名称）恒在最左，且不可移动、不可被插入到其前面 */
+    AccountTable.prototype._applyPinOrder = function() {
+        var pinned = this.columns.filter(function(c) { return c.pinned; });
+        var rest = (this.colOrder || []).filter(function(c) { return !c.pinned; });
+        this.colOrder = pinned.concat(rest);
+    };
+
+    /** 固定列个数（换序时允许的最小落点索引） */
+    AccountTable.prototype._pinnedCount = function() {
+        return this.columns.filter(function(c) { return c.pinned; }).length;
+    };
+
+    /**
+     * 某列在当前模式下**是否显示**（用户 2026-10-06 定）：
+     *  · 登录态专列（pid/hwnd）：只在登录态显示
+     *  · 管理模式：显示所有列（除登录态专列）—— 管理模式不常用，进去设置好就出来了
+     *  · 登录态：按个性化勾选（`colVisible`，写进配置文件）
+     */
+    AccountTable.prototype._isColVisible = function(col) {
+        if (!col) return false;
+        if (col.loginOnly) return this.mode === 'login';
+        if (this.mode === 'manage') return true;
+        return !!this.colVisible[col.key];
     };
 
     AccountTable.prototype._saveColumnPrefs = function() {
         try {
             var visible = {}, width = {};
             this.columns.forEach(function(col) {
+                // 列显隐/列宽/列顺序/列名隐藏开关都属**个性化设置**，进配置文件
                 visible[col.key] = !!this.colVisible[col.key];
                 width[col.key] = this.colWidth[col.key];
             }, this);
+            var order = this._orderedColumns().map(function(c) { return c.key; });
 
             // 写嵌套的 account_columns.<表id>（唯一读取结构）。
             // saveGlobalConfig 是顶层浅合并，故先读出现有 account_columns 再合并，避免清掉其它表的配置；
@@ -285,7 +400,8 @@ JFC.AccountTable = (function() {
                     });
                 }
             } catch (e) { /* 读不到就从空对象开始 */ }
-            all[this.id] = { visible: visible, width: width };
+            all[this.id] = { visible: visible, width: width, order: order,
+                             hideColNamesInLogin: !!this.hideColNamesInLogin };
 
             JFC.bridge.saveGlobalConfig(JSON.stringify({ account_columns: all }));
         } catch (e) { /* 保存失败不影响使用 */ }
@@ -298,7 +414,7 @@ JFC.AccountTable = (function() {
             var key = col.getAttribute('data-col');
             if (key === FILLER_COL) return;   // 占位列宽度由 _updateTableWidth 按容器剩余空间决定
             var def = this.colByKey(key);
-            var visible = !!this.colVisible[key];
+            var visible = def ? this._isColVisible(def) : !!this.colVisible[key];
             // 隐藏列：col 宽度必须归零 + 整列隐藏。
             // 只把 th/td 设 display:none 是不够的——table-layout:fixed 下列宽仍取自 <col>，
             // 于是"声明的列宽总和"大于表格设定宽度，浏览器会重新分配列宽 →
@@ -310,7 +426,8 @@ JFC.AccountTable = (function() {
         }, this);
         table.querySelectorAll('th[data-col], td[data-col]').forEach(function(cell) {
             var key = cell.getAttribute('data-col');
-            cell.classList.toggle('hidden-col', !this.colVisible[key]);
+            var cellCol = this.colByKey(key);
+            cell.classList.toggle('hidden-col', cellCol ? !this._isColVisible(cellCol) : !this.colVisible[key]);
         }, this);
         this._initColResizers(table);
         this._updateTableWidth();
@@ -324,7 +441,7 @@ JFC.AccountTable = (function() {
         var sum = 0;
         for (var i = 0; i < this.columns.length; i++) {
             var col = this.columns[i];
-            if (this.colVisible[col.key]) {
+            if (this._isColVisible(col)) {
                 sum += col.fixed ? col.defWidth : (this.colWidth[col.key] || 0);
             }
         }
@@ -358,13 +475,54 @@ JFC.AccountTable = (function() {
     };
 
     // ---- 渲染 ----
+    /**
+     * 批量按钮（按当前模式）.
+     * 管理态：隐藏/重置/删除（隐藏与显示合并成一个按钮，文案按选中项是否全为隐藏变）；
+     * 登录态：只留"批量登录"。
+     */
+    AccountTable.prototype._batchButtonsHtml = function() {
+        if (this.mode === 'login') {
+            return '<button class="btn btn-sm" data-batch="login">批量登录</button>';
+        }
+        // 管理模式：原生程序行没有账号语义的批量操作（隐藏/重置/删除）→ 不渲染
+        if (!rowActionsOf(this.rowKind, 'manage').length) return '';
+        return '<button class="btn btn-sm" data-batch="toggle-hidden">隐藏</button>' +
+               '<button class="btn btn-sm" data-batch="reset">重置</button>' +
+               '<button class="btn btn-sm batch-danger" data-batch="delete">删除</button>';
+    };
+
+    /**
+     * 切换表格模式（管理态 / 登录态）—— 重画批量按钮 + 重新渲染行（登录态过滤失效/隐藏账号）.
+     * 由 main.js 的模式渲染统一调用（单一写入点）。
+     */
+    AccountTable.prototype.setMode = function(mode) {
+        var next = mode === 'login' ? 'login' : 'manage';
+        if (this.mode === next) return;
+        this.mode = next;
+        // 登录态专列（PID/HWND）的显隐**不在这里强制**：它由 `_isColVisible()` 按模式门控
+        // （登录态才可能出现），而"显示/隐藏"本身是用户的偏好（可被列菜单改、会持久化）
+        var batch = this.titleEl ? this.titleEl.parentNode.querySelector('.acc-table-batch') : null;
+        if (batch) batch.innerHTML = this._batchButtonsHtml();
+        // 列名隐藏只作用于登录态：切模式时同步类名
+        if (this.el) this.el.classList.toggle('hide-col-names', next === 'login' && !!this.hideColNamesInLogin);
+        this.selectedIds.clear();       // 模式切换后旧选中项可能已不可见
+        this.render();
+        this._applyColumnLayout();
+        this._updateSelectionUI();
+    };
+
     AccountTable.prototype.render = function() {
         var tbody = this.tbody;
-        var accounts = this._sortAccounts(this.accountData);
+        // 登录态：**失效账号与隐藏账号不显示**（只留可登录的账号）；管理态显示全部
+        var source = this.mode === 'login'
+            ? this.accountData.filter(function(a) { return !a.hidden && !a.invalid; })
+            : this.accountData;
+        var accounts = this._sortAccounts(source);
 
+        // 空表不显示整张表（用户 2026-10-06 定）：登录态过滤后为空、或平台本来就没有账号，都不占位
+        if (this.el) this.el.style.display = accounts.length ? '' : 'none';
         if (accounts.length === 0) {
-            tbody.innerHTML = '<tr class="manage-empty-row"><td colspan="' + (this.columns.length + 1) + '">' +
-                '<div class="manage-empty-state">暂无数据</div></td></tr>';
+            tbody.innerHTML = '';
             this._updateRowHighlight();
             this._updateSelectionLayer();
             return;
@@ -384,6 +542,7 @@ JFC.AccountTable = (function() {
         this._hoverRow = null;
         this._updateRowHighlight();
         this._updateSelectionLayer();
+        this._updateSortIndicators();      // 排序三角跟随当前排序字段/升降序
     };
 
     AccountTable.prototype._rowHtml = function(acc) {
@@ -394,7 +553,8 @@ JFC.AccountTable = (function() {
         var isSelected = this.selectedIds.has(id);
         var html = '';
 
-        this.columns.forEach(function(col) {
+        // 单元格顺序必须与表头/colgroup 一致（同用个性化顺序）
+        this._orderedColumns().forEach(function(col) {
             html += this._cellHtml(acc, col, {
                 id: id, displayName: displayName, avatarUrl: avatarUrl,
                 hidden: hidden, isSelected: isSelected, invalid: !!acc.invalid
@@ -442,7 +602,8 @@ JFC.AccountTable = (function() {
             // 所以 flex 放在内层 div（.manage-nickname-inner）上。
             // 点击名称文字 → 就地编辑备注（与快捷键列同款交互）
             return '<td data-col="display_name" class="manage-nickname-cell">' +
-                nameCellInnerHtml(acc, ctx.displayName, ctx.invalid, this.showRowActions) +
+                nameCellInnerHtml(acc, ctx.displayName,
+                    rowActionsOf(this.rowKind, this.mode, { hidden: ctx.hidden, invalid: ctx.invalid })) +
                 '</td>';
         }
         if (key === 'hotkey' && this.enableHotkey) {
@@ -464,15 +625,26 @@ JFC.AccountTable = (function() {
     // ---- 排序 ----
     // 排序：先按排序字段，再做"置底分组"——隐藏账号次置底、失效账号永远置底
     // （Array#sort 在现代浏览器是稳定排序，同组内保持上面的排序结果）
+    // 比较方式由**列定义**的通用属性 `sortType` 决定（'string' 默认 / 'number'），
+    // 不在代码里为某些列写特例 —— 要改某列排序语义就改列定义。
     AccountTable.prototype._sortAccounts = function(accounts) {
         var field = this.sortField;
         var asc = this.sortAsc;
         var list = accounts.slice();
+        var col = field ? this.colByKey(field) : null;
+        var sortType = (col && col.sortType) || 'string';
         if (field) {
             list.sort(function(a, b) {
                 var va = a[field], vb = b[field];
                 if (va == null) va = '';
                 if (vb == null) vb = '';
+                if (sortType === 'number') {
+                    var na = parseFloat(va), nb = parseFloat(vb);
+                    var aNum = !isNaN(na), bNum = !isNaN(nb);
+                    if (aNum && bNum) return asc ? (na - nb) : (nb - na);
+                    if (aNum !== bNum) return aNum ? -1 : 1;   // 有值的排在没值的前面
+                    return 0;
+                }
                 if (typeof va === 'boolean') va = va ? '1' : '0';
                 if (typeof vb === 'boolean') vb = vb ? '1' : '0';
                 if (typeof va === 'string' && typeof vb === 'string') {
@@ -534,22 +706,257 @@ JFC.AccountTable = (function() {
         // 悬浮操作按钮：改为**容器委托**（见 _bindDelegatedEvents）——
         // 名称单元格编辑结束会就地重建按钮，逐行绑定的话重建后就点不动了
 
-        // 表头排序（当前排序列高亮，无箭头字符）
+        // 表头交互（排序 / 换序 / 调宽由 _initColResizers 负责）—— 抽成方法：换序重建列头后要重新绑定
+        this._bindHeaderInteractions();
+    };
+
+    /**
+     * 绑定列头的交互：**短按=排序（仅可排序列）、长按或移动>4px=拖动换序（所有非固定列）**.
+     *
+     * <p>绑定范围是**所有非固定列**（不是 `th[data-sort]`）：快捷键之类没有 `sortable` 的列也要能拖动换序。
+     * 区分靠"有没有移动"：按下后移动 >4px = 换序拖动；没移动就抬手 = 排序（仅可排序列）。
+     * （早先用"按住 260ms"当拖动触发条件，结果**正常点击只要按得稍慢就被判成拖动**、排序被吞掉 —— 用户实测：
+     * "调整列顺序后按列排序功能丢失"。现在改为纯位移判定，长按不动再拖也照样能触发。）
+     *
+     * <p>为什么 `mousedown` 里 `preventDefault()`：否则 WebView 可能把按住拖动当成原生选择/元素拖动接管，
+     * 之后不再派发 `mousemove` → 表现就是"拖着完全不动"。
+     *
+     * <p>每次调用都会克隆列头单元格再绑（避免重复绑定），`_initColResizers` 会在布局时补回调宽热区。
+     */
+    AccountTable.prototype._bindHeaderInteractions = function() {
+        var self = this;
         var table = this.tableEl;
-        table.querySelectorAll('th[data-sort]').forEach(function(th) {
+        if (!table) return;
+        table.querySelectorAll('th[data-col]').forEach(function(th) {
+            var colKey = th.getAttribute('data-col');
+            var col = self.colByKey(colKey);
+            if (!col) return;
+            // 固定列（勾选框/头像/名称）**照样可以排序**，只是不允许被拖动换序（用户 2026-10-06 指出
+            // "名称列无法排序、连三角都没有"就是我把 pinned 和"不参与"混为一谈了）
+            var draggable = !col.pinned;
+            var sortable = !!col.sortable;
             var newTh = th.cloneNode(true);
             th.parentNode.replaceChild(newTh, th);
-            newTh.addEventListener('click', function(e) {
-                if (e.target.closest('.col-resizer')) return;
-                var field = this.getAttribute('data-sort');
-                if (self.sortField === field) self.sortAsc = !self.sortAsc;
-                else { self.sortField = field; self.sortAsc = true; }
-                self.render();
+            newTh.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return;
+                if (e.target.closest && e.target.closest('.col-resizer')) return;   // 右边缘 = 调宽
+                e.preventDefault();
+                var startX = e.clientX;
+                var started = false;                     // 是否已进入换序拖动
+                var moveHandler = function(me) {
+                    if (started || !draggable) return;
+                    if (Math.abs(me.clientX - startX) > 4) {   // 按下后移动超过阈值 → 换序拖动
+                        started = true;
+                        self._startColDrag(colKey, startX);
+                    }
+                };
+                var upHandler = function() {
+                    document.removeEventListener('mousemove', moveHandler);
+                    document.removeEventListener('mouseup', upHandler);
+                    if (started) self._endColDrag();          // 拖动结束 → 落位
+                    else if (sortable) self._sortBy(colKey);  // 没移动 = 短按 → 排序
+                };
+                document.addEventListener('mousemove', moveHandler);
+                document.addEventListener('mouseup', upHandler);
             });
         });
-        table.querySelectorAll('th[data-sort]').forEach(function(th) {
-            th.classList.toggle('sorted', th.getAttribute('data-sort') === self.sortField);
+        this._updateSortIndicators();
+    };
+
+    /**
+     * 刷新列头的排序指示：**紧贴列名的 ▲/▼ 小三角**（升序 ▲、降序 ▼），颜色与列名一致（不着色）.
+     *
+     * <p>注意：列头 DOM 只在 `_buildDom()` 建一次（`render()` 只重建 tbody），
+     * 所以三角必须在每次排序/渲染后单独刷新 —— 否则三角永远停在建表那一刻的初始状态。
+     */
+    AccountTable.prototype._updateSortIndicators = function() {
+        if (!this.el) return;
+        var self = this;
+        this.el.querySelectorAll('th[data-sort]').forEach(function(th) {
+            var key = th.getAttribute('data-sort');
+            var isSorted = (key === self.sortField);
+            th.classList.toggle('sorted', isSorted);
+            var arrow = th.querySelector('.acc-sort-arrow');
+            if (!isSorted) {
+                if (arrow) arrow.parentNode.removeChild(arrow);
+                return;
+            }
+            if (!arrow) {
+                arrow = document.createElement('span');
+                arrow.className = 'acc-sort-arrow';
+                th.appendChild(arrow);
+            }
+            arrow.textContent = self.sortAsc ? '▲' : '▼';
         });
+    };
+
+    /** 按列排序（短按列头）：同列再按则切换升降序，否则升序 */
+    AccountTable.prototype._sortBy = function(field) {
+        if (this.sortField === field) this.sortAsc = !this.sortAsc;
+        else { this.sortField = field; this.sortAsc = true; }
+        this.render();
+    };
+
+    // ==================== 列换序（用户 2026-10-06 定的两阶段模型） ====================
+    //
+    // 阶段一（拖动中，**只做列头那一行的效果**）：
+    //   · 位置**不做任何测量**：每列的 x = 排在它前面的列宽之和（纯数学，宽度只有两个来源：
+    //     fixed 列的 defWidth / 其余列的 colWidth，都是渲染时用的同一份数据）
+    //   · 列头暂时脱离表格流（thead tr 相对定位 + 各 th 绝对定位 + 显式 left/width），
+    //     于是单元格可以自由移动而不留洞、不和表格布局打架
+    //   · **被拖列直接跟鼠标位移**：left = 拖动开始时的 left + (clientX - 按下时的 clientX)
+    //     —— 不依赖任何 rect/居中计算，天然跟手
+    //   · 其余列按实时顺序 liveOrder 重算 left 并带过渡滑过去（列表一变立刻重算）
+    //   · **tbody 一个单元格都不碰**（内容不动）
+    // 阶段二（松手）：liveOrder 写回顺序 → 持久化 → 退出拖动模式 → 整表重刷
+    //
+    // 交互保护：列头 mousedown 里 preventDefault()（否则 WebView 可能把后续 mousemove 当成
+    // 原生选择/拖动行为吞掉，表现就是"拖着完全不动"）；监听挂在 window 上，离开表头也不断。
+
+    /** 阶段一入口：建实时顺序 + 把列头切到"可自由位移"状态（left/width 显式写死，切换瞬间不跳位） */
+    AccountTable.prototype._startColDrag = function(key, startX) {
+        var cols = this._orderedColumns();
+        var idx = -1;
+        for (var i = 0; i < cols.length; i++) if (cols[i].key === key) { idx = i; break; }
+        if (idx < 0) return;
+        if (cols[idx].pinned) return;              // 固定列不可拖
+        activeTable = this;
+
+        var table = this.tableEl;
+        var thead = table.querySelector('thead');
+        var tr = thead ? thead.querySelector('tr') : null;
+        if (!thead || !tr) return;
+
+        // 宽度/高度：只量一次（offsetWidth/Height = 实际渲染尺寸），之后位置全部由累积求和得出。
+        // 行高取**被拖列头自己的高度**（所有列头等高，不必取最大值）；拖动时的填充块与列头严格等大。
+        // 同时记录**初始槽位**（每个下标占的区间）—— 落点判定只认这份初始坐标，不认实时布局。
+        var w0 = {}, left0 = {}, slots = [], acc = 0, rowH = 0;
+        cols.forEach(function(col, i) {
+            var th = table.querySelector('th[data-col="' + col.key + '"]');
+            if (!th) return;
+            var w = th.offsetWidth || 0;
+            w0[col.key] = w;
+            left0[col.key] = acc;
+            slots[i] = { left: acc, width: w };
+            acc += w;
+            if (col.key === key) rowH = th.offsetHeight;
+        });
+        if (!w0[key]) return;
+
+        this.colDrag = {
+            key: key, fromIndex: idx,
+            liveOrder: cols.map(function(c) { return c.key; }),
+            w0: w0, left0: left0, slots: slots,
+            width: w0[key],
+            startClientX: startX,
+            startLeft: left0[key],
+            rowH: Math.round(rowH) || 34
+        };
+
+        // 列头脱离表格流：先写死当前 left/width/height（视觉零跳变），再加类（类里才有 position:absolute）
+        var self = this;
+        var rowH = this.colDrag.rowH;
+        this.el.classList.add('col-dragging');
+        tr.style.position = 'relative';
+        tr.style.height = rowH + 'px';
+        cols.forEach(function(col) {
+            var th = table.querySelector('th[data-col="' + col.key + '"]');
+            if (!th || !w0[col.key]) return;
+            th.style.width = w0[col.key] + 'px';
+            // 显式像素高：绝对定位后列头不会被行高撑开，也不能用 100%（百分比会按更大的包含块算 → 列头被拉成整表高）
+            th.style.height = rowH + 'px';
+            th.style.left = left0[col.key] + 'px';
+            if (col.key === key) th.classList.add('col-dragging');
+        });
+        document.body.classList.add('dragging-col');
+        window.addEventListener('mousemove', this._onColDragMove);
+        window.addEventListener('mouseup', this._onColDragUp);
+    };
+
+    /** 阶段一：实时顺序维护（**按初始槽位**定向插入；列表一变立刻重算其余列位置） */
+    AccountTable.prototype._onColDragMove = function(e) {
+        var t = activeTable;
+        if (!t || !t.colDrag) return;
+        var d = t.colDrag;
+        // 被拖列跟手：纯客户端位移，不做任何测量
+        var pointerLeft = d.startLeft + (e.clientX - d.startClientX);
+        var center = pointerLeft + d.width / 2;
+
+        // 落点 = 指针中心落在**哪一个初始槽位**里（初始坐标不随拖动变化 → 不会反复横跳）
+        // 宽度悬殊时也不会抽搐：A(10) 拖过 B(90) 后，指针只要还在 B 的初始区间内，落点就恒为 1
+        var target = d.fromIndex;
+        var slots = d.slots;
+        if (center <= slots[0].left) target = 0;
+        else {
+            var last = slots.length - 1;
+            for (var i = 0; i < slots.length; i++) {
+                var s = slots[i];
+                if (s.width > 0 && center >= s.left && center < s.left + s.width) { target = i; break; }
+                if (i === last) target = last;                 // 拖到最右之外 → 落在最后一列
+            }
+        }
+        var minIdx = t._pinnedCount();                          // 固定列之后才是可落点区间
+        if (target < minIdx) target = minIdx;
+
+        // 定向插入（一次到位，而不是反复相邻交换）
+        var order = d.liveOrder;
+        var cur = order.indexOf(d.key);
+        if (cur >= 0 && cur !== target) {
+            order.splice(cur, 1);
+            order.splice(target, 0, d.key);
+        }
+        t._paintColDrag(pointerLeft);
+    };
+
+    /**
+     * 阶段一渲染（**只动列头**）：被拖列用跟手位置（无过渡），其余列用实时顺序的累积宽度（带过渡滑过去）。
+     */
+    AccountTable.prototype._paintColDrag = function(pointerLeft) {
+        var d = this.colDrag;
+        if (!d) return;
+        var table = this.tableEl;
+        var order = d.liveOrder;
+        var acc = 0;
+        order.forEach(function(k) {
+            var th = table.querySelector('th[data-col="' + k + '"]');
+            if (!th || !d.w0[k]) return;
+            th.style.left = (k === d.key ? Math.max(0, pointerLeft) : acc) + 'px';
+            acc += d.w0[k];
+        });
+    };
+
+    /** 阶段二：松手落位 —— 写回顺序 → 持久化 → 退出拖动模式 → 整表重刷 */
+    AccountTable.prototype._endColDrag = function() {
+        window.removeEventListener('mousemove', this._onColDragMove);
+        window.removeEventListener('mouseup', this._onColDragUp);
+        document.body.classList.remove('dragging-col');
+        var d = this.colDrag;
+        this.colDrag = null;
+        var table = this.tableEl;
+        if (this.el) this.el.classList.remove('col-dragging');
+        var tr = table.querySelector('thead tr');
+        if (tr) { tr.style.position = ''; tr.style.height = ''; }
+        table.querySelectorAll('thead th').forEach(function(th) {
+            th.style.left = '';
+            th.style.width = '';
+            th.style.height = '';
+            th.classList.remove('col-dragging');
+        });
+        if (!d) return;
+
+        var byKey = {};
+        this.columns.forEach(function(c) { byKey[c.key] = c; });
+        this.colOrder = d.liveOrder.map(function(k) { return byKey[k]; }).filter(Boolean);
+        this._applyPinOrder();
+        this._saveColumnPrefs();
+        this._rebuildHead();               // 列头也要按新顺序重建（render 只重建 tbody）
+        this.render();                     // 阶段二：整表按新顺序重刷（内容）
+        this._applyColumnLayout();
+    };
+
+    /** 鼠标抬起（window 级监听；activeTable 由 _startColDrag 设置） */
+    AccountTable.prototype._onColDragUp = function() {
+        if (activeTable && activeTable.colDrag) activeTable._endColDrag();
     };
 
     // ---- 事件绑定（一次性：标题行/表格容器委托） ----
@@ -745,6 +1152,10 @@ JFC.AccountTable = (function() {
         var self = this;
         var ids = Array.from(this.selectedIds);
 
+        if (action === 'login') {
+            this._loginAccounts(ids);
+            return;
+        }
         if (action === 'toggle-hidden') {
             // 全是隐藏 → 显示；否则 → 隐藏（与按钮文案同一判据，不会各说各话）
             var target = !this._allSelectedHidden();
@@ -808,12 +1219,41 @@ JFC.AccountTable = (function() {
         }
     };
 
+    /**
+     * 登录账号（行内"登录"按钮 / 批量登录共用）.
+     *
+     * <p><b>当前为占位</b>：Java 侧还没有"启动并登录账号"的桥方法（`SwOperatorCore.openSwAndReturnHwnd` 仍是 Stub），
+     * 所以这里如实提示"登录流程待实现"，等登录机制接入后把提示换成真实调用即可（**唯一改动点就是这里**）。
+     */
+    AccountTable.prototype._loginAccounts = function(ids) {
+        var swId = this.getSwId();
+        if (!swId || !ids || !ids.length) return;
+        var names = [];
+        var self = this;
+        ids.forEach(function(id) {
+            var acc = self.accountData.find(function(a) { return a.id === id; });
+            names.push(acc ? (acc.display_name || acc.nickname || id) : id);
+        });
+        JFC.modal.custom({
+            title: '登录',
+            bodyHtml: '<div style="line-height:1.9;">将登录 ' + ids.length + ' 个账号：<br>' +
+                names.map(function(n) { return '· ' + escapeHtml(n); }).join('<br>') +
+                '<br><span style="color:var(--text-muted);">登录流程尚未接入（Java 侧启动/登录能力待实现），当前不会真的登录。</span></div>',
+            actions: [{ text: '知道了', cls: 'modal-ok' }]
+        });
+    };
+
     // ---- 行操作（悬浮按钮/行右键菜单共用） ----
     AccountTable.prototype.handleAction = function(action, accountId) {
         var swId = this.getSwId();
         if (!swId) return;
         var self = this;
         var acc = this.accountData.find(function(a) { return a.id === accountId; });
+
+        if (action === 'login') {
+            this._loginAccounts([accountId]);
+            return;
+        }
 
         if (action === 'toggle-hidden') {
             if (acc) {
@@ -973,7 +1413,7 @@ JFC.AccountTable = (function() {
         // 所有可见的非固定列都注入竖线（含最右列，可调整其宽度）
         for (var i = 0; i < ths.length; i++) {
             var col = this.colByKey(ths[i].getAttribute('data-col'));
-            if (!col || col.fixed || !this.colVisible[col.key]) continue;
+            if (!col || col.fixed || !this._isColVisible(col)) continue;
             var th = ths[i];
             var rz = document.createElement('div');
             rz.className = 'col-resizer';
@@ -1028,22 +1468,35 @@ JFC.AccountTable = (function() {
         if (!menu) return;
         activeTable = this;
 
-        var html = '<div class="acm-title">显示列</div>';
-        this.columns.forEach(function(col) {
-            var checked = this.colVisible[col.key] ? ' checked' : '';
-            var locked = col.mandatory ? ' disabled' : '';
-            // 固定列（勾选框/头像）虽必显，但可让用户自行理解；仅 mandatory 锁定
-            html += '<div class="acm-item' + locked + '" data-col-toggle="' + col.key + '">' +
-                '<input type="checkbox" class="acm-checkbox"' + checked + locked + '>' +
-                '<span class="acm-label">' + escapeHtml(col.label) + '</span>' +
+        var html = '';
+        // 列显隐（"定义显示哪些列"）只在**登录态**提供；管理模式不常用、进去设置好就出来了（用户 2026-10-06 定）
+        if (this.mode === 'login') {
+            html += '<div class="acm-title">显示列</div>';
+            this._orderedColumns().forEach(function(col) {
+                // loginOnly 列（PID/HWND）只在登录态存在（本来就只在登录态进得来）
+                var checked = this.colVisible[col.key] ? ' checked' : '';
+                var locked = col.mandatory ? ' disabled' : '';
+                // 固定列（勾选框/头像）虽必显，但可让用户自行理解；仅 mandatory 锁定
+                html += '<div class="acm-item' + locked + '" data-col-toggle="' + col.key + '">' +
+                    '<input type="checkbox" class="acm-checkbox"' + checked + locked + '>' +
+                    '<span class="acm-label">' + escapeHtml(col.label) + '</span>' +
+                    '</div>';
+            }, this);
+            html += '<div class="acm-sep"></div>';
+        } else {
+            // 管理模式：提供"登录模式下隐藏列名"（个性化，进配置文件；效果只作用于登录态）
+            var hdChecked = this.hideColNamesInLogin ? ' checked' : '';
+            html += '<div class="acm-item" data-col-hide-names>' +
+                '<input type="checkbox" class="acm-checkbox"' + hdChecked + '>' +
+                '<span class="acm-label">登录模式下隐藏列名</span>' +
                 '</div>';
-        }, this);
-        html += '<div class="acm-sep"></div>';
+            html += '<div class="acm-sep"></div>';
+        }
         html += '<div class="acm-item" data-col-fit="all"><span class="acm-label">所有列调至合适宽度</span></div>';
         // 占位列 / 表格外空白：不提供"该列"项（占位列没有宽度概念，宽度由容器剩余空间决定）
         var clickedCol = colKey ? this.colByKey(colKey) : null;
         if (clickedCol) {
-            if (!clickedCol.fixed && this.colVisible[clickedCol.key]) {
+            if (!clickedCol.fixed && this._isColVisible(clickedCol)) {
                 html += '<div class="acm-item" data-col-fit="' + clickedCol.key + '"><span class="acm-label">该列调至合适宽度</span></div>';
             } else {
                 html += '<div class="acm-item disabled" data-col-fit=""><span class="acm-label">该列调至合适宽度</span></div>';
@@ -1071,6 +1524,20 @@ JFC.AccountTable = (function() {
                 }
             }.bind(this));
         }, this);
+        // "登录模式下隐藏列名"（仅管理模式菜单里出现）：切换后立即生效于登录态并持久化
+        var hideNames = menu.querySelector('.acm-item[data-col-hide-names]');
+        if (hideNames) {
+            var hcb = hideNames.querySelector('input');
+            var applyHideNames = function(on) {
+                this.hideColNamesInLogin = on;
+                if (this.el) this.el.classList.toggle('hide-col-names', this.mode === 'login' && on);
+                this._saveColumnPrefs();
+            }.bind(this);
+            hcb.addEventListener('change', function() { applyHideNames(hcb.checked); });
+            hideNames.addEventListener('click', function(e) {
+                if (e.target !== hcb) { hcb.checked = !hcb.checked; applyHideNames(hcb.checked); }
+            });
+        }
         menu.querySelectorAll('.acm-item[data-col-fit]').forEach(function(item) {
             item.addEventListener('click', function() {
                 var target = item.getAttribute('data-col-fit');   // this 被 bind 为表实例，从 item 取属性
@@ -1091,6 +1558,26 @@ JFC.AccountTable = (function() {
         // 三项齐全（隐藏 / 重置 / 删除）；**不能做的操作显示为禁用**而不是隐藏。
         // 规则：删除只对失效账号可用（正常账号磁盘上还在，删了也会重新出现）；隐藏/重置对所有账号都可用。
         var canDelete = !!(acc && acc.invalid);
+        // 管理模式下的原生程序行：没有账号语义的行操作 → 不弹菜单
+        if (this.mode !== 'login' && !rowActionsOf(this.rowKind, 'manage').length) {
+            closeRowMenu();
+            return;
+        }
+        // 登录态：行菜单也只给"登录"（与管理操作隔离）
+        if (this.mode === 'login') {
+            var loginHtml = '<div class="acm-title">' + escapeHtml(accountId) + '</div>' +
+                '<div class="acm-item" data-row-action="login">登录</div>';
+            menu.innerHTML = loginHtml;
+            menu.style.display = 'block';
+            positionMenu(menu, x, y);
+            menu.querySelectorAll('.acm-item[data-row-action]').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    closeRowMenu();
+                    activeTable.handleAction('login', accountId);
+                });
+            });
+            return;
+        }
         var html = '<div class="acm-title">' + escapeHtml(accountId) + '</div>' +
             '<div class="acm-item" data-row-action="toggle-hidden">' + (hidden ? '显示' : '隐藏') + '</div>' +
             '<div class="acm-item" data-row-action="reset">重置</div>' +
@@ -1113,11 +1600,10 @@ JFC.AccountTable = (function() {
 
     // ---- 列宽调至合适宽度 ----
 
-    // 展示名列右端悬浮按钮（隐藏/显示 + 重置 [+ 删除]）的占位总宽估算：
-    // 3 个按钮（失效账号行：隐藏/显示 + 重置 + 删除）时的总宽，各按钮 2 字 + padding + border + gap
-    var QUICK_ACTIONS_WIDTH = 144;
+    // 展示名列右端悬浮按钮的占位宽度已改为**实测**（见 _quickActionsWidth）：
+    // 按钮数量/文字由"行种类 + 模式"决定，估算常量在某些组合下必然算错
 
-    AccountTable.prototype.fitColumn = function(key) {
+    AccountTable.prototype.fitColumn = function(key, skipSave) {
         var col = this.colByKey(key);
         if (!col || col.fixed) return;   // 固定列不参与
         var table = this.tableEl;
@@ -1137,9 +1623,14 @@ JFC.AccountTable = (function() {
             if (w > maxW) maxW = w;
         });
 
-        // 名称列：悬浮按钮常驻占位（仅 visibility 切换）→ 合适宽度 = 名称宽 + 按钮预留宽
-        // （原生程序表没有悬浮按钮 → 不预留）
-        if (key === 'display_name' && this.showRowActions) maxW += QUICK_ACTIONS_WIDTH;
+        // 名称列：悬浮按钮常驻占位（仅 visibility 切换）→ 合适宽度 = 名称宽 + **按钮实际占位宽**
+        // 关键：占位宽是**实测**出来的（见 _quickActionsWidth），三张表一视同仁；
+        // 行种类/模式决定有没有按钮、有几个按钮，量出来自然不一样（原生程序表登录态也有"登录"按钮）
+        var qw = 0;
+        if (key === 'display_name') {
+            qw = this._quickActionsWidth();
+            maxW += qw;
+        }
 
         // 2. 下限：列名宽度 + 余量；展示名列特殊 = 4 字符宽 + 按钮占位总宽 + 余量
         var th = table.querySelector('thead th[data-col="' + key + '"]');
@@ -1148,7 +1639,7 @@ JFC.AccountTable = (function() {
             var thCs = window.getComputedStyle(th);
             if (key === 'display_name') {
                 var fourChars = measureTextWidth('四字姓名', thCs.fontFamily, thCs.fontSize, thCs.fontWeight);
-                minW = fourChars + (this.showRowActions ? QUICK_ACTIONS_WIDTH : 0) + 8;
+                minW = fourChars + qw + 8;
             } else {
                 var thText = th.innerText.replace(/\s+/g, ' ').trim() || '';
                 var thPad = (parseFloat(thCs.paddingLeft) || 0) + (parseFloat(thCs.paddingRight) || 0);
@@ -1159,14 +1650,53 @@ JFC.AccountTable = (function() {
         var w = Math.max(Math.round(maxW) + 4, Math.round(minW));
         this.colWidth[key] = w;
         this._applyColumnWidth(key, w);
-        this._saveColumnPrefs();
+        if (!skipSave) this._saveColumnPrefs();
     };
 
+    /**
+     * 行内悬浮操作按钮的**实际占位宽度**（名称列自适应宽度时用）.
+     *
+     * <p>为什么实测而不是用常量估算：按钮清单由"行种类 + 模式"决定，数量与文字都不同
+     * （管理态账号行是 隐藏/显示 + 重置 [+ 删除]，登录态任何行都只有一个"登录"），
+     * 估算常量必然在某个组合下算错 —— 那正是"原生程序表没把按钮空间算进去"的原因。
+     *
+     * <p>关键坑（用户 2026-10-06 实测：名称列自适应"忘了加按钮宽度"）：按钮组默认
+     * `display: none`（只在行 hover 时才 `inline-flex`）→ 直接量 `offsetWidth` 恒为 0。
+     * 所以这里**临时**把它设成 `position: absolute; display: inline-flex` 量一次再还原：
+     * 绝对定位使它不参与布局（不会挤动那一行），同一帧内还原 → 不会有可见闪烁。
+     *
+     * @returns {number} 按钮组占位宽 + 与名称之间的间距；该行没有按钮时返回 0
+     */
+    AccountTable.prototype._quickActionsWidth = function() {
+        var span = this.tbody ? this.tbody.querySelector('.manage-row-quick-actions') : null;
+        if (!span) return 0;
+        var prevDisplay = span.style.display, prevPos = span.style.position;
+        span.style.position = 'absolute';
+        span.style.display = 'inline-flex';
+        var w = span.offsetWidth;
+        span.style.display = prevDisplay;
+        span.style.position = prevPos;
+        return w ? Math.round(w + 8) : 0;      // +8 = 按钮组与名称之间的间距（与 CSS gap 对齐）
+    };
+
+    /**
+     * "所有列调至合适宽度".
+     *
+     * <p>逐列**隔离**执行：单列失败不再中断后续列（用户实测"只有名称列被调整"最可能就是循环里
+     * 某一列抛异常、把后面的全带走了 —— 名称列正好是第一个非固定列）。
+     * 另外配置**只在最后写一次**（原来是每列写一次 → N 次 Java 桥调用 + N 次文件读写）。
+     */
     AccountTable.prototype.fitAllColumns = function() {
         var self = this;
         this.columns.forEach(function(col) {
-            if (self.colVisible[col.key] && !col.fixed) self.fitColumn(col.key);
+            if (!self._isColVisible(col) || col.fixed) return;
+            try {
+                self.fitColumn(col.key, true);      // true = 先不写配置
+            } catch (e) {
+                console.error('[AccountTable] 调至合适宽度失败: ' + col.key, e);
+            }
         });
+        this._saveColumnPrefs();
     };
 
     // ---- 快捷键列：点击激活输入框（按下预览，**松手即确认**） ----
@@ -1403,7 +1933,8 @@ JFC.AccountTable = (function() {
 
     AccountTable.prototype._renderNameCell = function(cell, accountId, acc) {
         if (!cell || !acc) return;
-        cell.innerHTML = nameCellInnerHtml(acc, acc.display_name || acc.nickname || accountId, !!acc.invalid, this.showRowActions);
+        cell.innerHTML = nameCellInnerHtml(acc, acc.display_name || acc.nickname || accountId,
+            rowActionsOf(this.rowKind, this.mode, { hidden: !!acc.hidden, invalid: !!acc.invalid }));
     };
 
     /**

@@ -210,6 +210,8 @@ JavaFX WebView 与 Chromium 的布局细节不同，"看起来是 X"往往不是
     `background-clip: border-box` + **`border-color: transparent`**（由背景独占整块形状），
     而不是把 border 也设成同色 —— 后者是"内填充（padding box 内圆角）+ 外边框（外圆角）"两层，
     圆角处会看到缝/黑点。**验证办法**：数"形状内部既非填充色也非勾色"的像素（`CheckboxProbe` 的"内部镂空检查"），一整块填充应为 0。
+    ⚠️ **2026-10-06 又在按钮上犯了一次**（`background: primary` + `border-color: primary`），用户："填充用整块填充，不要还搞边框+内部，每次都能看到中间有空隙"。
+    → **凡是"要填满"的元素（勾选框、按钮、滑块、色块…），一律：border 要么不加、要么透明；绝不用同色 border 去凑形状。**
 12. **给"选择器组"加样式前，先逐条确认组里每个选择器都该改**：我把"昵称列用雅黑"写进了
     `.manage-text-cell, .manage-alias-cell, .manage-nickname-data-cell` 共用组 →
     程序表的名称/版本/路径（同属 `.manage-text-cell`）也一起变雅黑，属于用户肉眼发现、我探针没覆盖的回归。
@@ -288,7 +290,11 @@ JavaFX WebView 与 Chromium 的布局细节不同，"看起来是 X"往往不是
 11. **配置实时读取** → `JsonConfigStore.getData()` 每次自动 `reload()` 从磁盘解析；读写锁保证并发安全；`reloadInternal()` 不持锁供 `getData()` 调用
 12. **内存映射查询** → 用 `VirtualQueryEx` + `GetMappedFileNameW`（通过 `Kernel32Ext` 扩展接口）遍历进程所有物理内存区域，等价于 Python `psutil.Process(pid).memory_maps()`；`GetMappedFileNameW` 返回 NT 路径需经 `convertNtPathToWin()` 转盘符路径
 13. **SwNativeOps 日志标签** → 模块列表用 `[路径内存映射-MEMMAP]`，匹配用 `[路径内存映射-MATCHED]`，DEBUG 级别不输出
-14. **构建脚本** → `run.bat` 仅运行（不触发编译）；`build-run.bat` 先 `compileJava compileTestJava` 再 `run`，适合开发快速迭代
+14. **构建脚本** → 两个都是**走 Gradle**（2026-10-06 实测源码更正）：
+    `run.bat` = `gradle run --no-daemon`；`build-run.bat` = 先 `gradle compileJava compileTestJava`（**编译失败就直接中止、不进入运行**）再 `gradle run`。
+    所以 `run.bat` 同样会编译/复制资源 —— Gradle 的任务链 `run → classes → compileJava + processResources` 自动决定做哪些；
+    区别只在 `build-run.bat` 把编译**显式提前**、失败即止（更稳），`run.bat` 交给 Gradle 一把梭。
+    （旧记录写的"`run.bat` 仅运行、不触发编译"是**错的** —— 前端改动之所以重启就能生效，正是因为 Gradle 的 `processResources` 自动把 `src/main/resources/**` 复制进 `build/resources/main`，而页面是走类路径 `getResource("/web/index.html")` 加载的。）
 15. **Java varargs 与 JS bridge 不兼容** → JavaFX WebView 的 Netscape JSObject 桥无法将 JS 参数映射到 Java `String...` varargs（JVM 方法描述符多一个 `[String` 槽位导致反射匹配失败）。必须用固定参数，pathKeys 用 JSON 字符串传递
 16. **路径中的反斜杠导致 JS JSON.parse 静默失败** → Windows `File.getParent()` 返回 `\` 路径 → Jackson 序列化为 `\\` → 嵌入 JS 单引号字符串时 `\\` 被解析为 `\` → JSON 中出现非法转义 → `JSON.parse` 抛 SyntaxError 被空 catch 吞掉。修复：所有路径在存入 PathEntry 前统一经 `normalizePath()` 处理
 17. **路径规范化统一** → `SwPathDetective.normalizePath()` 统一处理：去引号、`\`→`/`、盘符大写、去末尾分隔符。所有 PathEntry 构造点必须调用

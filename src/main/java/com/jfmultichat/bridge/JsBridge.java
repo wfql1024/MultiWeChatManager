@@ -1606,6 +1606,34 @@ public class JsBridge {
     }
 
     /**
+     * JS 调用：取某平台的**运行时**数据（PID / HWND）—— 纯内存，不读也不写配置文件.
+     *
+     * <p>pid/hwnd 讲究实际性，写文件下次读出来就是过时的；前端每次进入平台/刷新时**重新调用本方法**取最新值，
+     * 存进前端自己的内存 Map 用于渲染（见 `main.js` 的 `accRuntimeMap`）。
+     *
+     * @return JSON: {success:true, swId:"...", accounts:{ {accId}: {pid, hwnd} }}
+     */
+    public String getAccRuntimeMap(String swId) {
+        ObjectNode result = MAPPER.createObjectNode();
+        try {
+            result.put("swId", swId);
+            ObjectNode accounts = result.putObject("accounts");
+            com.jfmultichat.acccore.AccRuntimeStore.snapshot(swId).forEach((accId, item) -> {
+                ObjectNode one = accounts.putObject(accId);
+                Object pid = item.get("pid");
+                Object hwnd = item.get("hwnd");
+                if (pid == null) one.putNull("pid"); else one.put("pid", ((Number) pid).longValue());
+                if (hwnd == null) one.putNull("hwnd"); else one.put("hwnd", ((Number) hwnd).longValue());
+            });
+            result.put("success", true);
+        } catch (Exception e) {
+            LOG.error("Failed to get runtime map for swId={}", swId, e);
+            result.put("success", false);
+        }
+        return result.toString();
+    }
+
+    /**
      * JS 调用：弹出文件选择器，让用户手动指定账号头像.
      *
      * <p>选中的图片会被转成 JPEG 写入 `{userData}/{sw}/{acc}/{acc}.jpg`（与头像读取路径一致），

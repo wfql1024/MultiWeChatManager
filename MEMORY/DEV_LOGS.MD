@@ -1095,3 +1095,24 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **行右键菜单三项齐全**（隐藏/重置/删除）: 不能做的**显示为禁用（不隐藏）** —— 正常账号的"删除"是禁用项 + 悬停提示"正常账号（磁盘上仍然存在）无法删除"。踩坑：禁用项一开始**漏写 `data-row-action="delete"`** → 选择器查不到、事件绑定也覆盖不到（探针先报"菜单只有两项"才发现）；修法：**禁用项照样带动作标识**，只在点击处理里 `if (classList.contains('disabled')) return;`
 - **顺带修掉一个真 bug**: `ConfigManager.getInstance()` 里 `ConfigManager mgr = new ConfigManager(); mgr.init(false); instance = mgr;` —— `mgr.init(false)` 调到的是**静态** `init`（它自己 new 并初始化了另一个实例赋给 `instance`），紧接着又被这个**未初始化**的 `mgr` 覆盖 → 只要 `getInstance()` 是首个入口（应用正常启动不会，Launcher 先显式 `init` 过；**独立探针 / 工具会**），拿到的实例 `userDataPath == null`，`getUserDir()` 直接 NPE。改为单一路径 `init(false)`；**是写 `AccFilesProbe` 时的 NPE 把它挖出来的**
 - **验证**: `Round2Probe` 111 条断言（三级色三态 × 明暗 + 右键菜单三项/禁用/点禁用无反应 + 批量删除三种文案与执行层过滤）、`RoundProbe` 回归 63 条、`gradle test` 57 例 0 失败
+
+## 三十九、登录态（平台页两种形态）+ 列系统重构（2026-10-06 ~ 10-07）
+
+> 本轮跨多天、多轮返工，按"最终落地状态 + 期间修掉的坑"记录。
+
+- **平台页形态**（用户定）: `'login'`（**默认**）/ `'manage'`，由**右上角二元滑块按钮**切换；`pageMode` 只是会话内变量，**不写配置、不按平台记忆**，切换平台不改变模式
+- **滑块按钮**（用户多轮改设计后定稿）: 外框圆角矩形 70×36、滑块圆角矩形 48×26 且四周内边距 4px（滑块 : 空白 = 4:1）；**文字在滑块上**（默认显示当前态"登录/管理"，悬停整个按钮时变成"`>` 管理 / `<` 登录"）；登录态滑块在左**不着色**、管理态在右**主题色**；**登录态下按钮默认隐藏、鼠标移到标题行才出现**，管理态常驻
+- **登录态行为**: ① 设置区域（窗帘容器 + 面板）隐藏，且**不动 `settings_height`/`settings_expanded` 记录**，切回管理态按记录恢复并放动画 ② **失效账号 + 隐藏账号不显示** ③ 行内/批量/右键只留"登录 / 批量登录" ④ 原生程序表**不隐藏**（原生程序也能登录；`rowKind='prog'` 在登录态同样给"登录"按钮）
+- **未设置完备的平台 → 强制管理态**: 判定必须放在 `enforceCurtainForCompleteness()`（路径检查结果回来后）—— 放进"进入平台"处无效，因为那时 `swPathGreen` 还没该平台记录，`isSwSettingsComplete()` 会**误判为完备**；且登录态下 `applyCurtainRender()` 早退会把强制展开一起压掉
+- **`_lastRender` 不许伪造**: 切模式时曾写死"已收起"，而界面可能仍展开 → 之后点把手/滚轮收起被判"状态没变化"直接 return（实测：从未完备平台切到正常平台后，把手与滚轮收起在其它平台全部失灵）。改为 `syncLastRenderFromDom()` **以真实 DOM 为准**
+- **列系统抽象**（用户要求"抽象出共性"）: 列定义属性 = `key/label/mandatory/pinned/sortable/sortType/loginOnly/defVisible/defWidth/fixed/cellClass`；构造时补默认值 —— **`sortable` 默认 true**（只有勾选框/头像显式 `false`，改动前"快捷键列不能排序"就是漏写属性）；三表差异收口为 `rowKind`（`'acc'`/`'prog'`）+ `rowActionsOf(kind, mode, ctx)`（名称单元格 / 右键菜单 / 批量按钮共用同一来源）
+- **列换序（两阶段，用户设计）**: 阶段一只动列头那一行（列头临时绝对定位 + 显式 `left/width/height` 像素值），被拖列**纯客户端位移跟手**、其余列按实时顺序滑过去，**tbody 一个单元格不碰**；阶段二松手写回 `colOrder` + 持久化 + **重建列头**（`_rebuildHead()`）+ `render()` 整表重刷
+  - 落点判定用**初始槽位**（拖动开始时的累积区间），绝不用实时布局 —— 否则宽度悬殊时（10 vs 90）会"交换后指针又落在新区间"→ **无限横跳**（用户实测并给出方案）
+  - 拖动触发 = 按下后**移动 >4px**（早先用"按住 260ms"→ 正常点击按得稍慢就被判成拖动、**排序被吞**）
+  - 固定列（勾选框/头像/名称）**不可拖**但**照样可排序**（曾把 `pinned` 与"不参与交互"混为一谈 → 名称列点不动、也没三角）
+  - 拖动填充块 = 列头四边内缩 4px 的圆角块（`::after`），**不用描边/外阴影**（会在行外多画一圈、看着像表头被撑高）
+- **列头其它**: 排序指示 = 紧贴列名的 **▲/▼**（与列名同色，取代原"着色+加粗"；列头 DOM 只建一次，故 `render()` 后必须 `_updateSortIndicators()` 刷新）；管理模式**列全显示**（除登录态专列）且菜单里没有"显示列"，只有"**登录模式下隐藏列名**"（= 整行列头隐藏，个性化持久化）；**全选框统一挪到表名左侧**；**空表整表不显示**；共存账号表移到原生账号表之上（滚动区顺序：程序 / 共存 / 原生）
+- **PID / HWND 改纯内存**（用户：写文件下次读出来就是过时的，实时性靠每次重取）: 新增 `AccRuntimeStore`（`swId → accId → {pid, hwnd}` 静态并发 Map）；`AccInfoFuncCore`（`updateAccLoginData` / `recordHwndAndSetTitle` / `unlinkHwndOfAccount` / 头像缓存恢复 / 详情 payload / pid_mutex 判定）与 `AccOperatorCore`（quit / switch / killMutex）全部改读写内存，并顺手把配置里历史遗留的 `pid`/`main_hwnd` 清掉（写 null = 删键）；`JsBridge.getAccRuntimeMap(sw)` 供前端取，`PlatformEventBootstrap` 维护完成后**推送** pid/main_hwnd；前端 `accRuntimeMap`（内存）+ `setAccRuntime()` 定向刷新；两列**只在登录态出现**且**非必显**（默认显示、可自由隐藏、持久化）
+- **"所有列调至合适宽度"只影响名称列**: 逐行核对后判定为**循环里某列抛异常带走后面所有列**（名称列恰是第一个非固定列）→ 改为**逐列 try/catch 隔离** + 配置**只写一次**（原来每列写一次 = N 次桥调用 + N 次文件读写）
+- **名称列自适应宽度漏算按钮宽度**: `_quickActionsWidth()` 原来直接量 `offsetWidth`，而按钮组默认 `display: none`（仅行 hover 时 `inline-flex`）→ **恒为 0**；改为量之前临时 `position:absolute; display:inline-flex`、量完还原（同帧还原，不参与布局、不闪）
+- **验证**: `gradle compileJava` 通过、`gradle test` 57 例 0 失败；本轮**没有**跑离屏探针 —— `build/_probe/` 已被 `gradle clean` 清空（旧探针源码不在版本控制里），列系统交互全部由用户真机实测驱动

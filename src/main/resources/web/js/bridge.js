@@ -154,6 +154,8 @@ JFC.bridge = (function() {
         notifyPlatformEntered: function(swId) { callWithArgs('notifyPlatformEntered', swId); },
         // 快捷键录入捕获开关（Java Scene 级 EventFilter 兜底）
         notifyHotkeyCapture: function(active) { callWithArgs('notifyHotkeyCapture', !!active); },
+        // 运行时数据（PID/HWND）：纯内存，每次进入平台/刷新时重新取（不落配置文件）
+        getAccRuntimeMap: function(swId) { return callJsonWithArgs('getAccRuntimeMap', swId); },
         getAccAvatarAsync: function(swId, accountId, fn) {
             callWithArgs('getAccAvatarAsync', swId, accountId, String(registerAsync(fn)));
         },

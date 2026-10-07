@@ -1426,6 +1426,80 @@
 .manage-curtain-container {
     position: relative;
 }
+
+/* ===== 平台页右上角二元滑块按钮（登录态 ⇄ 管理态，2026-10-06 用户设计） =====
+   外框 = 圆角矩形框（比滑块高 2px：上下各 1px）；滑块 = 圆角矩形，**滑块 : 空白区 = 4 : 1**。
+   文字**在滑块上**：默认显示**当前态**（登录 / 管理）；鼠标移到整个按钮范围时换成"{箭头}{目标态}"（> 管理 / < 登录）。
+   登录态：滑块在左、不着色；管理态：滑块在右、主题色。
+   可见性：**登录态下默认隐藏，鼠标移到标题行才出现**；管理态常驻（用户 2026-10-06 定）。
+   ⚠️ 滑块的填充是**一整块**（background 独占，**不设边框**）—— 同色 border + background 是两层几何，
+      圆角处必然露缝（勾选框踩过一次，2026-10-06 又在按钮上踩了一次）。 */
+.manage-mode-toggle {
+    position: relative;
+    flex: 0 0 auto;
+    margin-left: auto;              /* 靠右（用户：是右上角） */
+    width: 70px;                    /* 内宽 68 = 内边距 4 + 滑块 48 + 空白区 12 + 内边距 4 */
+    height: 36px;                   /* 内高 34 = 内边距 4 + 滑块 26 + 内边距 4 */
+    box-sizing: border-box;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: transparent;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.18s;
+}
+.mmt-knob {
+    position: absolute;
+    top: 4px;                       /* 四周留 4px 内边距（用户：外框再大一两圈，别让滑块显得那么大） */
+    left: 4px;
+    width: 48px;
+    height: 26px;
+    border-radius: 8px;
+    background: var(--bg-hover);    /* 登录态（左）**不着色**：中性底色，且无边框 */
+    transition: transform 0.22s ease, background-color 0.22s ease;
+}
+.manage-mode-toggle.is-manage .mmt-knob {
+    transform: translateX(12px);    /* 滑到右侧（位移 = 空白区宽度 12） */
+    background: var(--color-primary);
+}
+/* 滑块上的文字：两个 span 叠放，默认显示当前态，悬停整个按钮时换成目标态（含箭头）。
+   用 top/left 50% + translate(-50%,-50%) **精确居中**（早先用静态位置，实测偏下）。 */
+.mmt-cur, .mmt-next {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 13px;
+    line-height: 1;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    transition: opacity 0.15s;
+    pointer-events: none;
+}
+.mmt-next { opacity: 0; }
+.manage-mode-toggle.is-manage .mmt-cur, .manage-mode-toggle.is-manage .mmt-next { color: #fff; }
+.manage-mode-toggle:hover .mmt-cur { opacity: 0; }
+.manage-mode-toggle:hover .mmt-next { opacity: 1; }
+
+/* 可见性：登录态默认隐藏（鼠标移到标题行才出现），管理态常驻 */
+#page-main.login-mode .manage-mode-toggle { opacity: 0; pointer-events: none; }
+#page-main.login-mode .manage-detail-header:hover .manage-mode-toggle { opacity: 1; pointer-events: auto; }
+
+/* ===== 登录态：#page-main 上加 .login-mode =====
+   设置区域整体隐藏 —— visibility 而非 display，让进入/退出的收起/展开动画照常播放。
+   **关键**：面板在登录态下**强制 0 高度**（`!important` 压过内联 max-height）——
+   否则"隐藏但仍占位"会留出一大块空白（用户实测：记录为展开态时启动软件就会看到）。
+   注意：只是视觉隐藏与零高度，**不动 `settings_height`/`settings_expanded` 记录** → 切回管理态按记录恢复。 */
+#page-main.login-mode .manage-curtain-container {
+    visibility: hidden;
+    /* 延迟到收起动画（面板 max-height 0.3s）播完再隐藏，否则收起动画会被立刻吃掉；
+       退出登录态时类名去掉 → 立刻恢复可见 → 展开动画正常播放 */
+    transition: visibility 0s linear 0.3s;
+}
+#page-main.login-mode .manage-settings-panel {
+    max-height: 0 !important;
+}
 .manage-settings-panel {
     overflow: hidden;
     transition: max-height 0.3s ease;
@@ -1648,9 +1722,63 @@ body.curtain-collapsed .manage-curtain-handle #handle-drag-right {
 .manage-account-table th[data-sort]:hover {
     color: var(--text-primary);
 }
+/* 排序列：**只用紧贴列名的小三角表示升降序**，三角与列名同色、不做任何着色/加粗（用户 2026-10-06 定） */
 .manage-account-table th.sorted {
-    color: var(--color-primary);
-    font-weight: var(--weight-bold);
+    color: inherit;
+}
+.acc-sort-arrow {
+    display: inline-block;
+    margin-left: 2px;               /* 紧贴列名 */
+    font-size: 10px;
+    line-height: 1;
+    color: inherit;                 /* 与列名颜色一致 */
+    vertical-align: 1px;
+}
+/* "登录模式下隐藏列名"：**整行列头一起隐藏**（全选框已挪到表名左侧，不受影响） */
+.acc-table.hide-col-names thead {
+    display: none;
+}
+/* 表格标题行里的全选框（位于表名左侧） */
+.acc-table-titlebar .acc-check-all {
+    flex: 0 0 auto;
+}
+/* 拖动列换序（阶段一：**只动列头那一行**，tbody 一个单元格都不碰）
+   列头先脱离表格流（tr 相对定位、th 绝对定位；left/width 由 JS 用累积列宽写死），
+   于是列头可以自由滑动而不留洞、不和表格布局打架。 */
+body.dragging-col { cursor: grabbing; user-select: none; }
+.acc-table.col-dragging .manage-account-table thead tr { position: relative; }
+.acc-table.col-dragging .manage-account-table thead th[data-col] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+    /* 高度由 JS 按行高写成**显式像素**（不能用 100%：绝对定位下百分比会按更大的包含块算，
+       实测会把列头拉成整表高度）。这里是兜底，正常走 JS 写的那份。 */
+    box-sizing: border-box;
+    border-bottom: none;            /* 拖动期间不要下边框（正常显示本来也没有多出来的线） */
+}
+/* 只有"让位"的列需要过渡；被拖列不做过渡，直接跟手 */
+.acc-table.col-dragging .manage-account-table thead th[data-col] {
+    transition: left 0.12s ease;
+}
+.acc-table.col-dragging .manage-account-table thead th.col-dragging {
+    transition: none;
+    z-index: 3;
+    background: var(--bg-sidebar);     /* 与表头同色：遮住下面让位的列，视觉上不留空 */
+    cursor: grabbing;
+}
+/* 拖动中的"填充块"：比列头四周各内缩 4px + 圆角（用户 2026-10-06 定的尺寸） */
+.acc-table.col-dragging .manage-account-table thead th.col-dragging::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    bottom: 4px;
+    left: 4px;
+    border-radius: 4px;
+    background: var(--bg-hover);
+    pointer-events: none;
+    z-index: -1;                       /* 在列头底色之上、文字之下 */
 }
 .manage-account-table th.manage-col-check {
     text-align: center;

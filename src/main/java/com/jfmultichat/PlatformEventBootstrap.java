@@ -39,6 +39,14 @@ public final class PlatformEventBootstrap {
                         pidAccMap = AccInfoFuncCore.associateCoexistAccounts(sw, pidAccMap);
                         List<String> allAccs = AccInfoFuncCore.getSwAllAccountsExisted(sw, null);
                         AccInfoFuncCore.updateAccLoginData(sw, pidAccMap, allAccs);
+                        // 维护完成后把**运行时数据**（PID/HWND）推给前端：这两个值只在内存里，
+                        // 前端进入平台时会先取一次（那时维护可能还没跑完），这里补一次推送让两列立刻有值。
+                        for (String acc : allAccs) {
+                            Map<String, Object> rt = new java.util.LinkedHashMap<>();
+                            rt.put("pid", com.jfmultichat.acccore.AccRuntimeStore.getPid(sw, acc));
+                            rt.put("main_hwnd", com.jfmultichat.acccore.AccRuntimeStore.getHwnd(sw, acc));
+                            bridge.pushAccountDataChanged(sw, acc, rt);
+                        }
                         LOG.info("[PlatformMaintenance] 平台 {} 登录态数据维护完成, 账号数={}", sw, allAccs.size());
                     } catch (Exception ex) {
                         LOG.warn("[PlatformMaintenance] 维护失败: {}", e.swId(), ex);

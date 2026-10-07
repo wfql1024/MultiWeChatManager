@@ -469,13 +469,20 @@
 
 ---
 
-# 当前事实速查（2026-10-06 快照）
+# 当前事实速查（2026-10-07 快照）
+- **平台页形态**：`pageMode = 'login'`（**默认**）/ `'manage'` —— 右上角二元滑块按钮切换；**会话内变量**（不写配置、不按平台记忆、切平台不改）；未设置完备平台会被强制管理态并写进该变量；登录态下设置区隐藏但**记录不动**、失效/隐藏账号不显示、按钮只剩"登录/批量登录"
+- **表顺序**：程序 / **共存** / 原生（共存是主推）；**空表整表不显示**
+- **列定义属性**：`key/label/mandatory/pinned/sortable/sortType/loginOnly/defVisible/defWidth/fixed/cellClass`；**`sortable` 默认 true**（勾选框/头像显式 false）；`pinned`（勾选框/头像/名称）= 固定最左且不可拖、但可排序；`loginOnly`（pid/hwnd）= 只在登录态出现
+- **三表差异收口**：`rowKind`（`'acc'` / `'prog'`）+ `rowActionsOf(kind, mode, ctx)` 一处来源（名称列按钮 / 右键菜单 / 批量按钮）；`'prog'` 管理态无行操作、登录态给"登录"
+- **列交互**：短按列头 = 排序（▲/▼ 紧贴列名、与列名同色）；按下后移动 >4px = 拖动换序（**两阶段**：只动列头 → 松手重建列头 + 整表重刷；落点只认**初始槽位**）；右边缘 = 调宽
+- **全选框**：统一在**表格标题行、表名左侧**（列头可整行隐藏）
+- **PID / HWND**：**只存内存**（Java `AccRuntimeStore` + 前端 `accRuntimeMap`），不落配置文件；进平台时取一次 + 维护完成后推送
 - **表结构**：3 张表 —— 原生程序（勾选框/图标/名称/版本/路径）、原生账号（7 列）、共存账号（7 列 + 最后登录账号）；无效账号已并入后两张（置底 + 3 级灰 + "失效"标签）
-- **名称列三表统一**：都用 `key='display_name'` → `.manage-nickname-cell`（可编辑 remark / 1 级色 / 15px / 字重 600 / 中英分段）；程序表 `showRowActions:false`
+- **名称列三表统一**：都用 `key='display_name'` → `.manage-nickname-cell`（可编辑 remark / 1 级色 / 15px / 字重 600 / 中英分段）；行内按钮由 `rowActionsOf(rowKind, mode)` 决定（程序表管理态无按钮）
 - **字体**：中文微软雅黑 + 英文等宽（JS 拆段 `.cjk-run`/`.lat-run`）；字号 表内 14px、名称列 15px；编辑框统一等宽（`<input>` 限制）
 - **文字三级色**：`--text-level1/2/3`（深色 纯白/浅灰/深灰；浅色 纯黑/深灰/浅灰）；普通行 名称 1 级+其它 2 级、隐藏行整行 2 级、失效行整行 3 级
 - **勾选框自绘**：`.acc-check`（透明 input）+ `.acc-check-box`；勾选态 = 一整块填充（`border-color: transparent`）+ 4px 圆角，与空框同外沿
-- **列配置**：`LocalGlobalConfig.json` → `account_columns.<表id>`（嵌套；`saveGlobalConfig` 顶层浅合并，写入前先读出再合并）
+- **列个性化**：`LocalGlobalConfig.json` → `account_columns.<表id>` = `visible` / `width` / **`order`**（列顺序）/ **`hideColNamesInLogin`**（登录模式下隐藏列名 = 整行列头隐藏）
 - **设置区窗帘**：`settings_height` / `settings_expanded`（全局一份）；未启用平台（三路径非全绿）每次渲染强制展开且不写记录；唯一渲染入口 `applyCurtainRender()`
 - **路径绿框**：由 `validatePathInput` → `JFC.bridge.checkPath` 判定，写 `input-ok/warn/error` 类 + `swPathGreen[swId][key]`；窗帘只读
 - **平台图标**：缓存 `{用户数据目录}/{swId}/{swId}.png`（64×64），来源路径记在 `LocalSwConfig.<sw>.icon_src_path`；**账号头像**在 `{用户数据目录}/{swId}/{accId}/{accId}.jpg`
@@ -488,4 +495,4 @@
 - **删除/重置**：删除 = 节点整体移除；重置 = 清空内容保留空节点；**两者都清该账号的头像文件**（只清图片、保留非图片、只删空目录）；批量删除只对失效账号生效（确认框照常弹）
 - **弹窗**：一律 `JFC.modal.confirm/custom`（`window.confirm` 在 WebView 里恒 false、`alert` 空操作）；头像弹窗为居中版式
 - **抗锯齿（试验）**：`run` 任务带 `-Dprism.lcdtext=false`（灰度 AA），保留与否待定 → 见 [`TODOS.MD`](TODOS.MD)
-- **文档**：`AGENTS.md`（全局视图）｜`MEMORY/{DEV_LOGS,LESSONS,FACTS,DECISIONS,TODOS,MEMORY}.MD`｜`docs/project_structure.md`｜离线探针在 `build/_probe/`（**未纳入版本控制**，属可重建的开发工具）
+- **文档**：`AGENTS.md`（全局视图）｜`MEMORY/{DEV_LOGS,LESSONS,FACTS,DECISIONS,TODOS,MEMORY}.MD`｜`docs/project_structure.md`｜离线探针原先在 `build/_probe/`（**未纳入版本控制，已被 `gradle clean` 清空**）

@@ -1,5 +1,15 @@
 # 待办
 
+## 登录动作本身还没接（2026-10-07，**下一步的主题**）
+- 登录态的 UI 已全部就绪（形态切换 / 行过滤 / 登录按钮 / 批量登录 / PID·HWND 两列 / 内存 Map），但**点"登录"只弹提示**：Java 侧还没有"启动并登录账号"的桥方法（`SwOperatorCore.openSwAndReturnHwnd` 仍是 Stub）
+- 前端唯一改动点：`account-table.js` 的 `_loginAccounts()`
+- 旧版 Python 参考：`legacy_python/func_core/acc_func_core.py`（`_login_accounts` / `start_login_accounts_thread`）、`sw_func_core.py`（`_manual_login_origin` / `_manual_login_coexist`）
+- 待与用户确认的细节：登录流程（启动 → 等登录窗 → 选账号 → 等主窗）、多开是否先清互斥体、失败/超时如何反馈、hwnd 何时写回
+
+## 登录态下的"列菜单入口"（2026-10-07）
+- "登录模式下隐藏列名"会把整行列头隐藏 → 登录态就再也右键不到列头（列显隐菜单、调宽、换序、排序都在列头上）
+- 待定：要不要在表名右侧给一个小的菜单入口（用户尚未表态）
+
 ## 登录页面
 - 占位状态，未实现
 

@@ -21,14 +21,20 @@ JFC.pages.main = (function() {
     // ---- 四个可复用表实例（原生程序/原生账号/共存账号/无效账号） ----
     // 列定义: {key,label,mandatory,sortable,defVisible,defWidth,fixed}
     //   mandatory = 必选列（列头右键菜单锁定）; fixed = 固定宽度（不可拖拽/自适应）
+    //   loginOnly = **只在登录态出现**的列（PID / HWND）：登录态必显、管理态整列不显示，
+    //               且它的显隐**不写进** account_columns 配置（纯会话状态）
     var TABLE_COLUMNS = {
         // 账号类表（原生/共存）
         account: [
-            { key: 'check',        label: '勾选框',   mandatory: true,  defVisible: true,  defWidth: 40,  fixed: true  },
-            { key: 'avatar',       label: '',         mandatory: true,  defVisible: true,  defWidth: 56,  fixed: true  },
-            { key: 'display_name', label: '名称',      mandatory: true,  sortable: true, defVisible: true,  defWidth: 200 },
-            // 快捷键列改为**非必显**（可被列头菜单隐藏），默认显示
-            { key: 'hotkey',       label: '快捷键',   mandatory: false, defVisible: true,  defWidth: 110 },
+            { key: 'check',        label: '勾选框',   mandatory: true,  pinned: true, sortable: false, defVisible: true,  defWidth: 40,  fixed: true  },
+            { key: 'avatar',       label: '',         mandatory: true,  pinned: true, sortable: false, defVisible: true,  defWidth: 56,  fixed: true  },
+            { key: 'display_name', label: '名称',      mandatory: true,  pinned: true, sortable: true, defVisible: true,  defWidth: 200 },
+            // ↓ 登录态专列：紧挨名称列右侧（用户 2026-10-06 定）。
+            //   **非必显**（用户后来要求"给用户最高自由"）：默认显示，但可在登录态的列菜单里自行隐藏
+            { key: 'pid',          label: 'PID',      mandatory: false, sortable: true, sortType: 'number', loginOnly: true, defVisible: true, defWidth: 90 },
+            { key: 'hwnd',         label: 'HWND',     mandatory: false, sortable: true, sortType: 'number', loginOnly: true, defVisible: true, defWidth: 100 },
+            // 快捷键列改为**非必显**（可被列头菜单隐藏），默认显示；可排序（与其他列一视同仁，无特殊对待）
+            { key: 'hotkey',       label: '快捷键',   mandatory: false, sortable: true, defVisible: true,  defWidth: 110 },
             { key: 'id',           label: 'ID',       mandatory: false, sortable: true, defVisible: true,  defWidth: 150, cellClass: 'manage-id-cell' },
             { key: 'alias',        label: '平台内ID', mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-alias-cell' },
             { key: 'nickname',     label: '昵称',     mandatory: false, sortable: true, defVisible: false, defWidth: 140, cellClass: 'manage-nickname-data-cell' }
@@ -37,11 +43,13 @@ JFC.pages.main = (function() {
         // 头像列与账号表同款，保证行高一致（32px 头像 + 内边距）
         // **名称列与账号表完全统一**（同一 key = display_name → 复用可编辑名称单元格：1 级色 / 字号+1 / 加粗 / 中英分段）
         program: [
-            { key: 'check',        label: '勾选框', mandatory: true,  defVisible: true,  defWidth: 40, fixed: true },
-            { key: 'avatar',       label: '',       mandatory: true,  defVisible: true,  defWidth: 56, fixed: true },
-            { key: 'display_name', label: '名称',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 220 },
+            { key: 'check',        label: '勾选框', mandatory: true,  pinned: true, sortable: false, defVisible: true,  defWidth: 40, fixed: true },
+            { key: 'avatar',       label: '',       mandatory: true,  pinned: true, sortable: false, defVisible: true,  defWidth: 56, fixed: true },
+            { key: 'display_name', label: '名称',   mandatory: true,  pinned: true, sortable: true, defVisible: true,  defWidth: 220 },
+            { key: 'pid',          label: 'PID',    mandatory: false, sortable: true, sortType: 'number', loginOnly: true, defVisible: true, defWidth: 90 },
+            { key: 'hwnd',         label: 'HWND',   mandatory: false, sortable: true, sortType: 'number', loginOnly: true, defVisible: true, defWidth: 100 },
             { key: 'version',      label: '版本',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 120 },
-            { key: 'hotkey',       label: '快捷键', mandatory: false, defVisible: true,  defWidth: 110 },
+            { key: 'hotkey',       label: '快捷键', mandatory: false, sortable: true, defVisible: true,  defWidth: 110 },
             { key: 'path',         label: '路径',   mandatory: false, sortable: true, defVisible: false, defWidth: 360 }
         ]
     };
@@ -50,6 +58,78 @@ JFC.pages.main = (function() {
         { key: 'linked_acc', label: '最后登录账号', mandatory: false, sortable: true, defVisible: true, defWidth: 170, cellClass: 'manage-linked-acc-cell' }
     ]);
     var accountTables = {};
+    /**
+     * 平台页形态（用户 2026-10-06 定）：'login'（登录态，**每次进入软件默认**）| 'manage'（管理态）。
+     * 同一页两种形态，由右上角二元滑块按钮切换；**会话内全局、不写配置**（设置区的展开记录不受影响）。
+     */
+    var pageMode = 'login';
+
+    /**
+     * **运行时账号数据**（PID / HWND）—— 只存内存，**不写任何配置文件**，生命周期随程序（用户 2026-10-06 定）.
+     *
+     * <p>结构：`{ swId: { accId: { pid, hwnd } } }`。渲染时注入到行数据（`pid` / `hwnd` 两列，仅登录态显示）；
+     * 更新统一走 {@link setAccRuntime}（唯一写入点 → 写入后定向刷新那两格）。
+     * 由登录流程 / 登录状态刷新调用（登录机制接入后即可充满）。
+     */
+    var accRuntimeMap = {};
+
+    /** 取某平台某账号的运行时数据（无则返回空对象，永不返回 null） */
+    function getAccRuntime(swId, accId) {
+        var bySw = accRuntimeMap[swId];
+        return (bySw && bySw[accId]) || {};
+    }
+
+    /**
+     * 写入/更新某账号的运行时数据并**定向刷新**界面（唯一写入点）.
+     *
+     * @param {string} swId  平台
+     * @param {string} accId 账号
+     * @param {Object} patch {pid?, hwnd?}（只覆盖传入的字段）
+     */
+    function setAccRuntime(swId, accId, patch) {
+        if (!swId || !accId || !patch) return;
+        if (!accRuntimeMap[swId]) accRuntimeMap[swId] = {};
+        var cur = accRuntimeMap[swId][accId] || {};
+        var changed = {};
+        ['pid', 'hwnd'].forEach(function(k) {
+            if (patch[k] === undefined) return;
+            var v = patch[k] === null ? '' : String(patch[k]);
+            if (cur[k] !== v) { cur[k] = v; changed[k] = v; }
+        });
+        accRuntimeMap[swId][accId] = cur;
+        if (!Object.keys(changed).length) return;
+        // 定向刷新：三张表里对应的那一行的 pid/hwnd 两格（组件已支持任意字段的就地更新）
+        Object.keys(accountTables).forEach(function(k) {
+            accountTables[k].onAccountChanged({ accountId: accId, changed: changed });
+        });
+    }
+
+    /** 清掉某平台的运行时数据（例如平台切换时重置；仅内存） */
+    function clearAccRuntime(swId) {
+        if (swId) delete accRuntimeMap[swId];
+        else accRuntimeMap = {};
+    }
+
+    /**
+     * 从 Java 侧**重新拉取**某平台的运行时数据（PID/HWND）并写入内存 Map.
+     *
+     * <p>为什么每次重取：pid/hwnd 讲究实时性，写文件读出来就是过时的（用户 2026-10-06 定）。
+     * 进入平台、手动刷新时各调一次；Java 侧推送（`onAccountChanged` 带 pid/main_hwnd）也会就地更新。
+     */
+    function fetchAccRuntime(swId) {
+        if (!swId || !window.JFC || !JFC.bridge) return;
+        var res = null;
+        try { res = JFC.bridge.getAccRuntimeMap(swId); } catch (e) { return; }
+        if (!res || !res.accounts) return;
+        if (!accRuntimeMap[swId]) accRuntimeMap[swId] = {};
+        Object.keys(res.accounts).forEach(function(accId) {
+            var item = res.accounts[accId] || {};
+            accRuntimeMap[swId][accId] = {
+                pid: (item.pid === null || item.pid === undefined) ? '' : String(item.pid),
+                hwnd: (item.hwnd === null || item.hwnd === undefined) ? '' : String(item.hwnd)
+            };
+        });
+    }
     var sectionScrollbar = null;   // 账号区域纵向 overlay 滚动条（attachScrollbar 返回）
     var settingsScrollbar = null;  // 设置区域纵向 overlay 滚动条
 
@@ -100,6 +180,7 @@ JFC.pages.main = (function() {
 
         // 初始化三个可复用表实例（原生程序/原生账号/共存账号）
         initAccountTables();
+        applyPageMode(pageMode);     // 应用当前页面形态（管理态/登录态）到界面与各表
         cleanLegacyGlobalConfig();   // 清理 LocalGlobalConfig 中已废弃的冗余节点（需在表实例就绪后跑）
         initManageSidebar();
         initAccountWheelCollapse();
@@ -204,7 +285,8 @@ JFC.pages.main = (function() {
                 avatarFallbackTail: !isProgram,
                 // 名称列的悬浮操作按钮（隐藏/重置/删除）是账号语义 → 程序表不显示
                 // （名称列本身仍与账号表统一：可编辑 / 1 级色 / 字号+1 / 加粗 / 中英分段）
-                showRowActions: !isProgram
+                // 行种类：'prog' = 原生程序行（管理态没有账号语义的行操作；登录态同样有"登录"）
+                rowKind: isProgram ? 'prog' : 'acc'
             });
         });
 
@@ -377,6 +459,9 @@ JFC.pages.main = (function() {
     /** 按"期望状态"渲染（唯一的 DOM 写入点；状态没变化时直接返回，不重放动画）
      *  @param overrideExpanded 仅本次渲染生效的展开态（未启用平台允许用户在本次访问里临时收起） */
     function applyCurtainRender(overrideExpanded) {
+        // 登录态下设置区域整体隐藏（CSS），这里不再做高度/动画计算：
+        // 隐藏元素的 scrollHeight 恒为 0（LESSONS 第 30 条踩过），算了也不对；记录一律不动。
+        if (pageMode === 'login') return;
         var panel = getEl('manage-settings-panel');
         if (!panel || !currentSwId) return;
         var st = desiredCurtainState(currentSwId);
@@ -412,6 +497,74 @@ JFC.pages.main = (function() {
         _lastRender = { shown: true, expanded: true, byRecord: !st.forced, height: st.height };
     }
 
+    /**
+     * 用**真实 DOM** 同步"上一帧"缓存 `_lastRender`.
+     *
+     * <p>为什么需要：`applyCurtainRender()` 靠 `_lastRender` 判断"状态是否变化"来决定要不要渲染。
+     * 如果这里**伪造**一个状态（比如写死"已收起"），而界面其实还是展开的，两者就脱节了 ——
+     * 之后点把手 / 滚轮收起时会被判成"状态没变化"→ 直接 return → **毫无反应**
+     * （实测症状：从未完备平台切到正常平台后，把手与滚轮收起在其它平台全部失灵，回到未完备平台才恢复）。
+     */
+    function syncLastRenderFromDom() {
+        var panel = getEl('manage-settings-panel');
+        if (!panel) {
+            _lastRender = { shown: false, expanded: false, byRecord: false, height: 0 };
+            return;
+        }
+        var collapsed = panel.classList.contains('collapsed');
+        var h = parseFloat(panel.style.maxHeight);
+        _lastRender = { shown: true, expanded: !collapsed, byRecord: true, height: isNaN(h) ? 0 : h };
+    }
+
+    /**
+     * 应用平台页形态（管理态 / 登录态）—— **唯一 DOM 写入点**（用户 2026-10-06 定）.
+     *
+     * <p>登录态：① 设置区域整体隐藏（CSS 隐藏容器，**不动 `settings_height`/`settings_expanded` 记录**）
+     * ② 账号表只显示可登录的账号（失效/隐藏账号不显示）③ 行内/批量按钮只剩"登录 / 批量登录"
+     * ④ 原生程序表隐藏（它不是账号，登录态没它的事）.
+     *
+     * <p>切回管理态：清掉登录态类 + 重置窗帘的"上一帧"缓存后重新按**记录**渲染设置区（记录从未被改过）。
+     */
+    function applyPageMode(mode) {
+        pageMode = (mode === 'login') ? 'login' : 'manage';
+        var login = pageMode === 'login';
+
+        var mainEl = document.getElementById('page-main');
+        if (mainEl) mainEl.classList.toggle('login-mode', login);
+
+        // 滑块按钮：只切类名（滑块位置/颜色由 CSS 按类驱动）；
+        // 文字在滑块上（默认显示**当前态**），鼠标移到整个按钮范围时换成"{箭头}{目标态}"
+        var btn = getEl('manage-mode-toggle');
+        if (btn) {
+            btn.classList.toggle('is-manage', !login);
+            btn.title = login ? '点击切换到管理态' : '点击切换到登录态';
+            var cur = btn.querySelector('.mmt-cur');
+            var next = btn.querySelector('.mmt-next');
+            if (cur) cur.textContent = login ? '登录' : '管理';
+            if (next) next.textContent = login ? '> 管理' : '< 登录';
+        }
+
+        // 设置区域：进入登录态 → **播放收起动画**后隐藏（不写记录）；切回管理态 → 从 0 播放展开动画到记录高度
+        // （_lastRender 的 byRecord 必须为 true：这样退出登录态时 applyCurtainRender 会判定"需要动画"并给出来源高度 0）
+        if (login) {
+            // 无条件收起（不受 currentSwId 影响 —— 启动时还没有选中平台也要收，
+            // 否则面板保持内容高度、隐藏后仍占位，就是用户看到的那块空白；
+            // CSS 里还有 `#page-main.login-mode .manage-settings-panel { max-height: 0 !important }` 兜底）
+            applyCollapsedCurtain();
+            // 上面刚把它收起了 → 这里写"已收起"是**与真实 DOM 一致**的
+            _lastRender = { shown: true, expanded: false, byRecord: true, height: 0 };
+        } else if (currentSwId) {
+            // 以真实 DOM 为准同步缓存，再按记录渲染（需要时从 0 播放展开动画）
+            syncLastRenderFromDom();
+            applyCurtainRender();
+        }
+
+        // 表格：三张表都跟随形态（原生程序也能登录，所以不特殊处理）
+        ['origin_prog', 'origin_acc', 'coexist_acc'].forEach(function(k) {
+            if (accountTables[k]) accountTables[k].setMode(pageMode);
+        });
+    }
+
     /** 切换展开/收起：启用平台先写记录再渲染；未启用平台只"这一次渲染"生效（不写任何持久状态） */
     function setCurtainExpanded(expand) {
         if (!currentSwId) return;
@@ -434,6 +587,14 @@ JFC.pages.main = (function() {
     /** 路径检查结果更新后调用：完备性可能变了 → 按期望状态重渲染（幂等） */
     function enforceCurtainForCompleteness() {
         if (_suppressCurtainEnforce) return;
+        // 未设置完备的平台：设置区会被**强制展开** → 模式也必须**强制为管理态**（用户 2026-10-06 定）。
+        // 为什么放在这里而不是"进入平台时"：进入平台的那一刻三个路径还没检查（swPathGreen 里没有该平台记录），
+        // `isSwSettingsComplete()` 会把未完备平台误判为完备 → 强制逻辑不会触发；
+        // 而本函数是在路径检查结果回来后调用的（setPathGreen / 首次同步检查），此时判定才可信。
+        if (currentSwId && !isSwSettingsComplete(currentSwId) && pageMode !== 'manage') {
+            applyPageMode('manage');    // 内部会按记录渲染设置区（未完备 → 强制展开）
+            return;
+        }
         applyCurtainRender();
     }
 
@@ -568,8 +729,7 @@ JFC.pages.main = (function() {
         }
     }
 
-    /** 获取平台显示名称: remark（本地） > alias（远程） > swId（标识） */
-    function getPlatformDisplayName(swId, remoteAlias) {
+    /** 获取平台显示名称: remark（本地） > alias（远程） > swId（标识） */    function getPlatformDisplayName(swId, remoteAlias) {
         // 1. 检查内存中的 remark
         if (swConfigData[swId] && swConfigData[swId].remark) {
             return swConfigData[swId].remark;
@@ -694,6 +854,13 @@ JFC.pages.main = (function() {
         // 通知 Java：进入平台页 → 自动触发数据维护（登录态/PID/互斥体等，后台执行）
         JFC.bridge.notifyPlatformEntered(swId);
         currentSwId = swId;
+        // 运行时数据（PID/HWND）**每次进平台重新取**（内存 Map，不落文件）
+        fetchAccRuntime(swId);
+        // 未设置完备的平台：设置区会被强制展开 → 因此也**强制进入管理态**（用户 2026-10-06 定）。
+        // 注意：这个强制会写进"会话内的模式"，所以之后切到正常平台仍保持管理模式；
+        // 而**正常的平台切换本身不改变模式**（模式是会话级单一变量，不按平台记忆、也不写配置）。
+        if (!isSwSettingsComplete(swId)) applyPageMode('manage');
+        else applyPageMode(pageMode);   // 只是把当前模式重新套到新平台的三张表上
         // 记住最后显示的平台（下次启动直接进入该平台页）
         try { JFC.bridge.saveGlobalConfig(JSON.stringify({ last_sw_id: swId })); } catch (e) { /* 忽略 */ }
         // 清空所有表的选中状态
@@ -1610,12 +1777,15 @@ JFC.pages.main = (function() {
             var remoteInfo = getRemotePlatformInfo(swId) || {};
             var platformName = getPlatformDisplayName(swId, remoteInfo.alias);
             var progRemark = prog.remark || '';
+            var progRt = getAccRuntime(swId, 'origin_exe');       // 程序自身的 PID/HWND（同样是内存数据）
             progRows.push({
                 id: 'origin_exe',                       // 固定 id：remark 存 SwAccData.<sw>.origin_exe.remark
                 name: prog.name || '',                  // exe 文件名（保留字段）
                 display_name: progRemark || platformName,
                 display_name_auto: platformName,        // 备注留空时显示的名称 → 名称列编辑框的灰字提示
                 remark: progRemark,
+                pid: progRt.pid || '',
+                hwnd: progRt.hwnd || '',
                 avatar_data: programIcon(swId),
                 version: prog.version || '',
                 path: prog.path || '',
@@ -1676,12 +1846,16 @@ JFC.pages.main = (function() {
             var name = followLinkedAcc
                 ? (acc.remark || autoName)
                 : (acc.display_name || autoName);
+            // 运行时数据（PID/HWND）：来自内存 Map（不落任何配置文件）
+            var rt = getAccRuntime(currentSwId, id);
             // 标准化字段类型；未记录的新账号显示为空白详情
             return {
                 id: id,
                 nickname: followLinkedAcc ? (src.nickname || '') : (acc.nickname || ''),
                 alias: followLinkedAcc ? (src.alias || '') : (acc.alias || ''),
                 hotkey: acc.hotkey || '',
+                pid: rt.pid || '',
+                hwnd: rt.hwnd || '',
                 display_name: name,
                 display_name_auto: autoName,   // 备注留空时将会显示的名称（名称列编辑框灰字 = 这个）
                 avatar_url: followLinkedAcc ? (src.avatar_url || '') : (acc.avatar_url || ''),
@@ -1714,6 +1888,14 @@ JFC.pages.main = (function() {
 
     // ---- 事件驱动：Java 推送账号数据变更 → 路由到各表定向刷新（组件内处理） ----
     function onAccountChanged(p) {
+        // Java 侧推送里带 pid / main_hwnd 时，先收进**内存 Map**（PID/HWND 不进配置文件），
+        // 再由 Map 统一渲染（注入行数据）→ 保持"一个数据来源"
+        if (p && p.accountId && p.changed && currentSwId) {
+            var rtPatch = {};
+            if (p.changed.pid !== undefined) rtPatch.pid = p.changed.pid;
+            if (p.changed.main_hwnd !== undefined) rtPatch.hwnd = p.changed.main_hwnd;
+            if (Object.keys(rtPatch).length) setAccRuntime(currentSwId, p.accountId, rtPatch);
+        }
         Object.keys(accountTables).forEach(function(k) {
             accountTables[k].onAccountChanged(p);
         });
@@ -1740,6 +1922,11 @@ JFC.pages.main = (function() {
 
     // ---- 事件绑定 ----
     function bindManageEvents() {
+        // 左上角二元按钮：管理态 ⇄ 登录态
+        bind('manage-mode-toggle', 'click', function() {
+            applyPageMode(pageMode === 'login' ? 'manage' : 'login');
+        });
+
         // "全部"按钮
         var allItem = getEl('manage-all-nav-item');
         if (allItem) {
@@ -1809,6 +1996,8 @@ JFC.pages.main = (function() {
     }
 
     return { init: init, refresh: refresh, refreshAvatar: refreshAvatar,
-             onAccountChanged: onAccountChanged, onHotkeyCapture: onHotkeyCapture };
+             onAccountChanged: onAccountChanged, onHotkeyCapture: onHotkeyCapture,
+             // 运行时数据（PID/HWND）唯一写入点 + 读取器：登录流程接入后由它写入，界面自动定向刷新
+             setAccRuntime: setAccRuntime, getAccRuntime: getAccRuntime, clearAccRuntime: clearAccRuntime };
 })();
 

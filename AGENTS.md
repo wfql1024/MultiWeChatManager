@@ -11,7 +11,7 @@
 > | 待推进事项 | `MEMORY/TODOS.MD` |
 > | 架构与目录细节 | `docs/project_structure.md` |
 >
-> 记忆系统索引: `MEMORY/MEMORY.md` ｜ 最后更新: 2026-10-06
+> 记忆系统索引: `MEMORY/MEMORY.md` ｜ 最后更新: 2026-10-07
 
 ---
 
@@ -127,17 +127,30 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 
 ### 表格（三张表共用 `JFC.AccountTable`）
 
-- **名称列三表统一**：都用 `key='display_name'` → 复用 `.manage-nickname-cell`（可点击就地编辑 remark / 1 级色 / 15px / 字重 600 / 中英分段）。
-  程序表用 `showRowActions:false` 关掉"隐藏/重置/删除"悬浮按钮（那是账号语义）
+- **平台页两种形态**：`pageMode = 'login'`（默认）/ `'manage'`，右上角二元滑块按钮切换；模式是**会话内变量**（不写配置、不按平台记忆），未设置完备的平台会被强制管理态
+- **表顺序**：程序 / 共存账号 / 原生账号（共存是主推）；**空表不显示**
+- **列定义属性**（一切行为由属性驱动，代码不按 key 特判）：
+  `key / label / mandatory / pinned / sortable / sortType / loginOnly / defVisible / defWidth / fixed / cellClass`
+  - **`sortable` 默认 `true`**（构造时补默认值；只有勾选框/头像显式 `false`）
+  - `pinned`（勾选框/头像/名称）= 固定最左、不可拖动换序，**但可以排序**
+  - `loginOnly`（pid/hwnd）= 只在登录态出现；**非必显**，默认显示、用户可自由隐藏（个性化入档）
+- **三表差异收口**：`rowKind`（`'acc'` / `'prog'`）+ `rowActionsOf(kind, mode, ctx)` 一处来源，供名称列按钮 / 右键菜单 / 批量按钮共用
+- **名称列三表统一**：都用 `key='display_name'` → 复用 `.manage-nickname-cell`（可点击就地编辑 remark / 1 级色 / 15px / 字重 600 / 中英分段）
+- **列交互**：短按列头 = 排序（▲/▼ 紧贴列名、与列名同色，不做着色加粗）；按下后移动 >4px = **拖动换序**（两阶段：阶段一只动列头那一行、阶段二松手重建列头 + 整表重刷；落点只认**初始槽位**，不能用实时布局）；右边缘 = 调宽
+- **列个性化（写 `account_columns.<表id>`）**：`visible` / `width` / `order`（列顺序）/ `hideColNamesInLogin`（= 登录模式下整行列头隐藏）
+- **列显隐归属**：管理模式显示全部列（除登录态专列）、菜单里没有"显示列"；"显示列"勾选区只在登录态提供
+- **全选框**：统一在表格标题行、**表名左侧**（列头可整行隐藏，复选框不能跟着消失）
 - **字体**：中文 = 微软雅黑（`--font-family-base`）、英文 = 等宽（`--font-family-mono`）；字号 `--fs-table:14px`、名称列 `--fs-name:15px`
   - **本 WebKit 做不到"一个元素里中文雅黑 + 英文等宽"**：等宽族缺中文会走系统 CJK 回退、`@font-face + unicode-range` 也不生效
     → 必须由 JS 拆段（`scriptSplitHtml()` → `.cjk-run` / `.lat-run`）。编辑框是 `<input>`，只能统一一种字体（等宽）
 - **文字三级色** `--text-level1/2/3`（深色 纯白/浅灰/深灰；浅色 纯黑/深灰/浅灰）：
   普通行名称列 1 级、其它列 2 级；隐藏行（`tr.hidden-row`）整行 2 级；失效行（`tr.invalid-row`）整行 3 级
 - 自绘勾选框：`.acc-check`（透明 input 只当状态载体）+ `.acc-check-box`；勾选态是**一整块填充**（`border-color: transparent`，不要用同色 border 凑）
+  → 推广到所有"要填满"的元素（按钮/滑块/色块）：**border 要么不加、要么透明**
 
 ### 账号数据约定
 
+- **PID / HWND 只存内存**（不落配置文件）：Java `AccRuntimeStore`（`swId → accId → {pid, hwnd}`）+ 前端 `accRuntimeMap`；进平台时经 `JFC.bridge.getAccRuntimeMap` 取一次，Java 维护完成后由 `PlatformEventBootstrap` 推送（`pid` / `main_hwnd` 字段）；配置里历史遗留的 `pid`/`main_hwnd` 会被写 null 清掉。两列只在登录态出现、非必显
 - **失效账号**由 `main.js` 推导：`SwAccData` 里有记录、但**不在 `getSwExistedAccounts` 列表里** → 并入对应表置底 + 3 级灰 + "失效"标签
 - **`origin_exe` 不是账号**：它是 `SwAccData.<sw>.origin_exe` 里"原生程序自己的备注"节点，**所有遍历账号的地方都必须排除它**
   （`JsBridge.getSwDetailData` / `getAccountList`、`AccConfigAccessor.getAllAccounts`、两处"取第一个账号"的退化路径）
@@ -153,12 +166,12 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - 快捷键录入：松手即确认；只有修饰键或普通键多于一个 → 回退原值；Backspace 清空、Esc 放弃、**Enter 忽略**、Tab 可录
 - 就地编辑：单元格 HTML 只由 `nameCellInnerHtml()` 产出；提交后**延后一拍**再保存 + 整表重排（避免 mousedown 阶段重建 tbody 让点击落空）
 
-### 离线验证（`build/_probe`）
+### 离线验证（`build/_probe` —— ⚠️ 现已被 `gradle clean` 清空）
 
 - 交互/渲染类改动用**离屏 WebView 探针**验证：真实 `index.html` + 桩桥（`StubBridge` 记录调用）+ 驱动脚本断言；需要时做**离屏像素统计**（ASCII 位图 / 颜色分类 / 形状轮廓比对）
 - Java 侧逻辑用直连探针跑真实代码（如 `AccFilesProbe`）
 - 边界：离屏环境**拿不到 DOM 选区**（`window.getSelection()` 恒空）→ 光标/输入法这类交互必须真机验证，别在探针里下结论
-- **临时文件放项目根的 `tmp/`**（已 gitignore，可随时删）；**不要放 `build/`** —— 它是构建产物目录，`gradle clean` 会整个清空
+- **临时文件放项目根的 `tmp/`**（已 gitignore，可随时删）；**不要放 `build/`** —— 它是构建产物目录，`gradle clean` 会整个清空（**探针源码就是这么丢的**：原先都在 `build/_probe/`，且未纳入版本控制 → 重建探针请放 `tmp/`）
 
 ### 文档纪律
 

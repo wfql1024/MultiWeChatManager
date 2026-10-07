@@ -82,6 +82,16 @@
                                     <h2 id="manage-detail-title" class="manage-detail-title" title="点击编辑平台名称">平台名称</h2>
                                     <input type="text" id="manage-detail-title-input" class="manage-detail-title-input" placeholder="" style="display:none;">
                                 </div>
+                                <!-- 右上角二元滑块按钮：登录态 ⇄ 管理态（2026-10-06）
+                                     外框（圆角矩形） + 滑块（圆角矩形，登录态在左且不着色、管理态在右且主题色）；
+                                     文字**在滑块上**：默认显示当前态，悬停整个按钮时换成"{箭头}{目标态}"。
+                                     登录态下按钮默认隐藏，鼠标移到本标题行才出现；管理态常驻。 -->
+                                <button id="manage-mode-toggle" class="manage-mode-toggle" title="点击切换 登录态 / 管理态">
+                                    <span class="mmt-knob">
+                                        <span class="mmt-cur">登录</span>
+                                        <span class="mmt-next">&gt; 管理</span>
+                                    </span>
+                                </button>
                             </div>
                             <div id="manage-curtain-container" class="manage-curtain-container">
                                 <div id="manage-settings-panel" class="manage-settings-panel">
@@ -102,10 +112,11 @@
                             <div class="manage-account-section" id="manage-account-section">
                                 <!-- 与设置区域同构的滚动容器（max-height + overflow-y auto + 原生滚动条） -->
                                 <div class="account-area-inner">
-                                    <!-- 四个可复用表：原生程序 / 原生账号 / 共存账号 / 无效账号 -->
+                                    <!-- 三个可复用表：原生程序 / **共存账号** / 原生账号
+                                         （共存是主推 → 共存账号表排在原生账号表之上；表数据为空时整表不显示） -->
                                     <div id="acc-table-native-prog" class="acc-table-slot"></div>
-                                    <div id="acc-table-native-acc" class="acc-table-slot"></div>
                                     <div id="acc-table-coexist-acc" class="acc-table-slot"></div>
+                                    <div id="acc-table-native-acc" class="acc-table-slot"></div>
                                 </div>
                             </div>
                         </div>
