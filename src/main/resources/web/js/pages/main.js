@@ -42,13 +42,12 @@ JFC.pages.main = (function() {
         // 程序类表（原生程序）：头像(程序图标) / 名称 / 版本 / 快捷键 / 路径（默认隐藏）
         // 头像列与账号表同款，保证行高一致（32px 头像 + 内边距）
         // **名称列与账号表完全统一**（同一 key = display_name → 复用可编辑名称单元格：1 级色 / 字号+1 / 加粗 / 中英分段）
+        // **没有 PID/HWND 列**（用户 2026-10-07：程序只是个启动器，不算具体账号）
         program: [
             { key: 'check',        label: '勾选框', mandatory: true,  pinned: true, sortable: false, defVisible: true,  defWidth: 40, fixed: true },
             { key: 'avatar',       label: '',       mandatory: true,  pinned: true, sortable: false, defVisible: true,  defWidth: 56, fixed: true },
             { key: 'display_name', label: '名称',   mandatory: true,  pinned: true, sortable: true, defVisible: true,  defWidth: 220 },
-            { key: 'pid',          label: 'PID',    mandatory: false, sortable: true, sortType: 'number', loginOnly: true, defVisible: true, defWidth: 90 },
-            { key: 'hwnd',         label: 'HWND',   mandatory: false, sortable: true, sortType: 'number', loginOnly: true, defVisible: true, defWidth: 100 },
-            { key: 'version',      label: '版本',   mandatory: true,  sortable: true, defVisible: true,  defWidth: 120 },
+            { key: 'version',      label: '版本',   mandatory: false, sortable: true, defVisible: true,  defWidth: 120 },
             { key: 'hotkey',       label: '快捷键', mandatory: false, sortable: true, defVisible: true,  defWidth: 110 },
             { key: 'path',         label: '路径',   mandatory: false, sortable: true, defVisible: false, defWidth: 360 }
         ]
@@ -760,37 +759,103 @@ JFC.pages.main = (function() {
     }
 
     // ---- 平台项点击策略 ----
-    // 用户裁定（2026-10-05）：点别的平台 = 立即切换；点当前平台 = 单击刷新；
-    // 当前平台的双击/多击一律不响应（路径预留，将来放别的功能）
+    // 用户裁定（2026-10-05）：点别的平台 = 立即切换；点当前平台 = 单击刷新。
+    // 用户补充（2026-10-07）：**双击（无论哪个平台）＝ 启动该平台程序**（= 程序表主程序点"登录"）。
 
-    /** 双击判定窗口：单击刷新要等这么久，确认没有后续点击才执行（Windows 双击间隔量级） */
-    var MULTI_CLICK_GUARD_MS = 250;
+    /** 统一的点击判定窗口（单击刷新 / 单击切平台 / 双击识别 / 双击启动，全部用它；用户 2026-10-07 定：250ms） */
+    var CLICK_WINDOW_MS = 250;
     /** 挂起的"再点当前平台 → 刷新"定时器 */
     var pendingRefreshTimer = null;
+    /**
+     * 上一次点击的平台与时刻.
+     *
+     * <p>为什么要自己记而不用 {@code e.detail}：第一次点击"别的平台"会**立即切换平台**，
+     * 而切换会重建侧栏 DOM → 第二次点击落在**新元素**上，浏览器给它的 {@code detail} 又从 1 开始
+     * → 于是"在 A 平台双击 B 平台"根本不会被识别成双击（实测就表现为"只切了平台"）。
+     * 记在自己模块里就与 DOM 是否重建无关了。
+     */
+    var lastPlatformClick = { swId: null, time: 0 };
+    /** 挂起的"切到别的平台"定时器（双击时会被撤销 → 双击不切平台） */
+    var pendingSwitchTimer = null;
+    /** 挂起的"双击 → 启动该平台程序"定时器（三击要能撤销它） */
+    var pendingLaunchTimer = null;
+    /** 本轮连击计数：1=单击、2=双击、≥3=三击及以上（取消双击效果） */
+    var clickStreak = 0;
 
     /**
      * 平台项点击入口（最左栏与平台页侧栏共用）.
      *
-     * <p>· 别的平台 → **立即切换**（不等，切平台不能有延迟手感）<br>
-     * · 当前平台 + 单击 → 等 {@link MULTI_CLICK_GUARD_MS} 确认无后续点击后**刷新该平台页**<br>
-     * · 当前平台 + 双击/多击 → **不响应**（连击计数取浏览器 click 事件的 {@code detail}）
+     * <p>· **双击** → **启动该平台程序**，且**不切换平台**（撤销挂起的切换）；动作**再延迟一个窗口**执行，
+     * 这样紧接着的第三击能把它撤销<br>
+     * · **三击及以上** → 取消双击效果（什么都不做）<br>
+     * · 单击别的平台 → 等窗口过去再切换；单击当前平台 → 等窗口过去再刷新
      */
     function onPlatformItemClick(swId, e) {
-        if (currentSwId !== swId) {
-            cancelPendingRefresh();          // 切平台：撤销可能挂着的"当前平台刷新"，避免切完又白刷一次
-            selectPlatform(swId);
+        var now = Date.now();
+        var sameStreak = (lastPlatformClick.swId === swId) && (now - lastPlatformClick.time < CLICK_WINDOW_MS);
+        var isBrowserDouble = !!(e && e.detail > 1);
+        lastPlatformClick = { swId: swId, time: now };
+        clickStreak = sameStreak ? clickStreak + 1 : 1;
+
+        if (clickStreak >= 3 || (isBrowserDouble && clickStreak >= 3)) {
+            // 三击及以上：取消双击效果（连挂着的启动也撤销）
+            cancelPendingRefresh();
+            cancelPendingSwitch();
+            cancelPendingLaunch();
+            resetClickStreak();
             return;
         }
-        if (e && e.detail > 1) {             // 双击/多击：撤销单击的刷新，且不做任何事
+
+        if (clickStreak === 2 || isBrowserDouble) {
+            // 双击：撤销单击效果（切平台 / 刷新），改为"启动该平台程序"，且再延迟一个窗口以便被三击撤销
             cancelPendingRefresh();
-            onPlatformMultiClick(swId);
+            cancelPendingSwitch();
+            cancelPendingLaunch();
+            pendingLaunchTimer = setTimeout(function() {
+                pendingLaunchTimer = null;
+                resetClickStreak();
+                onPlatformMultiClick(swId);
+            }, CLICK_WINDOW_MS);
+            return;
+        }
+
+        if (currentSwId !== swId) {
+            cancelPendingRefresh();          // 切平台：撤销可能挂着的"当前平台刷新"，避免切完又白刷一次
+            cancelPendingSwitch();
+            pendingSwitchTimer = setTimeout(function() {
+                pendingSwitchTimer = null;
+                resetClickStreak();
+                selectPlatform(swId);
+            }, CLICK_WINDOW_MS);
             return;
         }
         cancelPendingRefresh();
         pendingRefreshTimer = setTimeout(function() {
             pendingRefreshTimer = null;
+            resetClickStreak();
             JFC.router.refresh();            // 统一刷新入口（2 秒不应期也在那里）
-        }, MULTI_CLICK_GUARD_MS);
+        }, CLICK_WINDOW_MS);
+    }
+
+    function resetClickStreak() {
+        clickStreak = 0;
+        lastPlatformClick = { swId: null, time: 0 };
+    }
+
+    /** 撤销挂起的"切到别的平台"（双击该平台时用） */
+    function cancelPendingSwitch() {
+        if (pendingSwitchTimer) {
+            clearTimeout(pendingSwitchTimer);
+            pendingSwitchTimer = null;
+        }
+    }
+
+    /** 撤销挂起的"双击启动"（三击及以上时用） */
+    function cancelPendingLaunch() {
+        if (pendingLaunchTimer) {
+            clearTimeout(pendingLaunchTimer);
+            pendingLaunchTimer = null;
+        }
     }
 
     function cancelPendingRefresh() {
@@ -801,11 +866,50 @@ JFC.pages.main = (function() {
     }
 
     /**
-     * 双击/多击当前平台的入口 —— **路径预留，目前不做任何反应**.
-     * 将来若给双击安排功能，加在这里即可，不必再动上面的点击判定逻辑.
+     * 双击/多击当前平台的入口 —— **启动平台程序**（= 程序表"登录"按钮同一件事）.
+     *
+     * <p>用户 2026-10-07 定：最左栏程序图标双击 = 平台页程序表的主程序点"登录"
+     * （查杀该平台全部互斥体 + 降权启动 → 每次都能新开一个登录窗口）。
      */
     function onPlatformMultiClick(swId) {
-        // 预留：暂无行为
+        launchPlatformProgram(swId);
+    }
+
+    /**
+     * 启动平台程序 —— **程序表"登录"按钮**与**最左栏程序图标双击**共用同一实现（单一来源）.
+     *
+     * <p>成功走右下角 toast（自动淡出，不打扰用户）；失败才弹窗（需要用户注意）。
+     */
+    function launchPlatformProgram(swId, count) {
+        var id = swId || currentSwId;
+        if (!id) return;
+        var n = parseInt(count, 10);
+        if (!n || n < 1) n = 1;
+        var res = null;
+        try {
+            res = JFC.bridge.launchPlatformProgram(id, n);
+        } catch (e) {
+            res = null;
+        }
+        var mutexMsg = (res && res.mutexMessage) ? escapeHtml(res.mutexMessage) : '';
+        if (res && res.success) {
+            var pids = (res.pids && res.pids.length) ? res.pids.join(', ') : '';
+            var detail = res.viaExplorer
+                ? '（经资源管理器代启，未取到 PID）'
+                : (pids ? '（PID ' + escapeHtml(pids) + '）' : '');
+            JFC.toastSuccess('已以<b>普通用户权限</b>启动 <b>' + (res.count || n) + '</b> 个实例' + detail +
+                (mutexMsg ? '<br><span style="opacity:.85">' + mutexMsg + '</span>' : ''), 4000);
+            return;
+        }
+        JFC.modal.custom({
+            title: '启动失败',
+            bodyHtml: '<div style="line-height:1.9;">' +
+                escapeHtml(res && res.error ? res.error : '启动失败') +
+                (res && res.launched ? '<br>已成功启动 ' + res.launched + ' 个。' : '') + '<br>' +
+                (mutexMsg ? '<span style="color:var(--text-muted);">' + mutexMsg + '</span>' : '') +
+                '</div>',
+            actions: [{ text: '知道了', cls: 'modal-ok' }]
+        });
     }
 
     // ---- 选择平台 ----
@@ -1777,15 +1881,13 @@ JFC.pages.main = (function() {
             var remoteInfo = getRemotePlatformInfo(swId) || {};
             var platformName = getPlatformDisplayName(swId, remoteInfo.alias);
             var progRemark = prog.remark || '';
-            var progRt = getAccRuntime(swId, 'origin_exe');       // 程序自身的 PID/HWND（同样是内存数据）
+            // 注意：程序行**不带 pid/hwnd**（用户 2026-10-07：程序只是启动器，不算具体账号 → 程序表没有这两列）
             progRows.push({
                 id: 'origin_exe',                       // 固定 id：remark 存 SwAccData.<sw>.origin_exe.remark
                 name: prog.name || '',                  // exe 文件名（保留字段）
                 display_name: progRemark || platformName,
                 display_name_auto: platformName,        // 备注留空时显示的名称 → 名称列编辑框的灰字提示
                 remark: progRemark,
-                pid: progRt.pid || '',
-                hwnd: progRt.hwnd || '',
                 avatar_data: programIcon(swId),
                 version: prog.version || '',
                 path: prog.path || '',
@@ -1997,6 +2099,8 @@ JFC.pages.main = (function() {
 
     return { init: init, refresh: refresh, refreshAvatar: refreshAvatar,
              onAccountChanged: onAccountChanged, onHotkeyCapture: onHotkeyCapture,
+             // 启动平台程序（程序表"登录"按钮 / 最左栏图标双击共用）
+             launchPlatformProgram: launchPlatformProgram,
              // 运行时数据（PID/HWND）唯一写入点 + 读取器：登录流程接入后由它写入，界面自动定向刷新
              setAccRuntime: setAccRuntime, getAccRuntime: getAccRuntime, clearAccRuntime: clearAccRuntime };
 })();

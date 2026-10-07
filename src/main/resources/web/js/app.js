@@ -160,37 +160,39 @@ function getToastContainer() {
 }
 
 /**
- * 右下角红色错误提示.
- * @param {string} msg 消息文本
+ * 右下角红色错误提示（自动淡出，**不带 × 关闭按钮** —— 用户 2026-10-07 定：这类通知不该要人手动关）.
+ * @param {string} msg 消息文本（可含简单 HTML）
  * @param {number} duration 显示毫秒数，默认 4000
  */
 JFC.toastError = function(msg, duration) {
-    var container = getToastContainer();
-    var toast = document.createElement('div');
-    toast.className = 'toast toast-error';
-    toast.innerHTML = '<span>' + msg + '</span>' +
-        '<button class="toast-close" onclick="this.parentElement.remove()">✕</button>';
-    container.appendChild(toast);
-    var t = duration || 4000;
-    setTimeout(function() {
-        if (toast.parentElement) toast.remove();
-    }, t);
+    showToast(msg, 'toast-error', duration || 4000);
 };
 
 /**
- * 右下角绿色成功提示.
+ * 右下角绿色成功提示（同样自动淡出、无关闭按钮）.
  */
 JFC.toastSuccess = function(msg, duration) {
+    showToast(msg, 'toast-success', duration || 3000);
+};
+
+/**
+ * 右下角提示的统一实现：进场 0.25s、停留 duration、退场 0.3s **渐变消失**后自行移除.
+ * 全程不需要用户操作（与"必须点 × 才消失"的那种提示区分开）。
+ */
+function showToast(msg, cls, duration) {
     var container = getToastContainer();
     var toast = document.createElement('div');
-    toast.className = 'toast toast-success';
-    toast.innerHTML = '<span>' + msg + '</span>' +
-        '<button class="toast-close" onclick="this.parentElement.remove()">✕</button>';
+    toast.className = 'toast ' + cls;
+    toast.innerHTML = '<span>' + msg + '</span>';
     container.appendChild(toast);
     setTimeout(function() {
-        if (toast.parentElement) toast.remove();
-    }, duration || 3000);
-};
+        if (!toast.parentElement) return;
+        toast.classList.add('toast-out');                 // 渐隐（CSS 动画）
+        setTimeout(function() {
+            if (toast.parentElement) toast.remove();
+        }, 320);
+    }, duration);
+}
 
 // ---- 页面进度条（内容区顶部主题色小横条） ----
 

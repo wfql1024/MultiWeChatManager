@@ -125,6 +125,21 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - 单元格不要设 `display:flex`（会破坏 table-cell）；需要 flex 就在内层加元素
 - 行悬浮/选中着色用绝对定位色块层 + **不透明等效色**，靠 `isolation: isolate` 控制层叠
 
+### 启动与多开（互斥体 + 降权）
+
+- **一句话**：点程序表"登录"（或**双击最左栏平台图标**）= **查杀该平台全部互斥体/文件锁 → 以普通用户权限启动平台程序** → 每次点击都新开一个登录窗口
+- **互斥体查杀**：`WinHandleOps`（纯 JNA，不依赖外部 handle.exe）—— `NtQuerySystemInformation(SystemExtendedHandleInformation)` 枚举系统句柄 → 只挑目标 PID → `DuplicateHandle(SAME_ACCESS, 目标=当前进程)` + `NtQueryObject` 取名字/类型 → 名字按 Python 规则匹配（`fnmatch(name,wc) || fnmatch(name,"*"+wc+"*")`）→ `DuplicateHandle(..., DUPLICATE_CLOSE_SOURCE)` 在目标进程里关闭；**先全部找完再统一关闭**
+  - 入口：`SwOperatorCore.killAllMutexesNow` / `tryKillMutexIfNeededAndReturnRemainedPids` / `AccOperatorCore.killMutexOfAcc`
+  - **"已查杀 PID"全局缓存**（`KILLED_PID_AT`，10s TTL）→ 刚清干净的 PID 不再进枚举（实测 931ms → 0ms）
+- **降权启动**：`SwNativeOps.createProcessWithoutAdmin` —— **先判断自己是否管理员**：非管理员 → 直接 `CreateProcess`（子进程天然普通权限）；管理员 → 借 explorer 令牌（`GetShellWindow` → `OpenProcessToken(TOKEN_DUPLICATE)` → `DuplicateTokenEx` → `CreateProcessWithTokenW`）；令牌法失败 → 兜底 `explorer.exe` 代启（返回 `-1` = 已启动但 PID 未知）
+  - ⚠️ 路径要转成反斜杠再喂给 `CreateProcess*`（项目内部路径是 `/`）
+- **桥 / 前端**：`JsBridge.launchPlatformProgram(swId, count)`（循环 count 次「查杀 → 启动」）；`main.js` 的 `launchPlatformProgram` 是**唯一来源**，程序表按钮与图标双击都走它
+
+### 交互约定（点击 / 通知）
+
+- **平台项点击**：统一窗口 `CLICK_WINDOW_MS = 250`。单击当前平台 = 刷新；单击别的平台 = **等窗口后切换**（让双击来得及撤销）；**双击 = 启动该平台程序且不切换**；**三击及以上 = 取消双击效果**。连击计数记在**模块变量**里 —— 不能用 `e.detail`（切平台会重建侧栏 DOM，第二次点击 `detail` 从 1 重来）
+- **通知**：成功→ `JFC.toastSuccess`（右下角、**无关闭按钮**、`toast-out` 渐隐后自动移除）；失败→ `JFC.modal`（需要用户注意）
+
 ### 表格（三张表共用 `JFC.AccountTable`）
 
 - **平台页两种形态**：`pageMode = 'login'`（默认）/ `'manage'`，右上角二元滑块按钮切换；模式是**会话内变量**（不写配置、不按平台记忆），未设置完备的平台会被强制管理态
@@ -139,7 +154,8 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - **列交互**：短按列头 = 排序（▲/▼ 紧贴列名、与列名同色，不做着色加粗）；按下后移动 >4px = **拖动换序**（两阶段：阶段一**列头与列内容一起**用 `transform` 位移滑动、元素全留在表格流里、**零布局影响**；阶段二松手写回顺序 + 重建列头 + 整表重刷；落点只认**初始槽位**，不能用实时布局）；右边缘 = 调宽
 - **列个性化（写 `account_columns.<表id>`）**：`visible` / `width` / `order`（列顺序）/ `hideColNamesInLogin`（= 登录模式下整行列头隐藏）
 - **列显隐归属**：管理模式显示全部列（除登录态专列）、菜单里没有"显示列"；"显示列"勾选区只在登录态提供
-- **全选框**：统一在表格标题行、**表名左侧**（列头可整行隐藏，复选框不能跟着消失）
+- **程序表**：**没有 PID/HWND 列**（程序只是启动器，不算具体账号）；`version` 非必显；"登录"左边有 `× __` 实例数量输入框（`×` 是静态前缀删不掉，1 位、留空 = 1、空白灰显 `1`、样式与相邻按钮同字号同行高）
+- **全选框**：统一在表格标题行、**表名左侧**，与数据行勾选框**同款**（`.acc-check` 基类不再限定表格作用域）且水平位置由 `_syncSelectAllPosition()` **运行时实测对齐**（不靠算术）
 - **字体**：中文 = 微软雅黑（`--font-family-base`）、英文 = 等宽（`--font-family-mono`）；字号 `--fs-table:14px`、名称列 `--fs-name:15px`
   - **本 WebKit 做不到"一个元素里中文雅黑 + 英文等宽"**：等宽族缺中文会走系统 CJK 回退、`@font-face + unicode-range` 也不生效
     → 必须由 JS 拆段（`scriptSplitHtml()` → `.cjk-run` / `.lat-run`）。编辑框是 `<input>`，只能统一一种字体（等宽）

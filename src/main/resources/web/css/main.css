@@ -956,6 +956,14 @@
     from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+/* 退场：**渐变消失**（不需要用户点关闭，用户 2026-10-07 定） */
+.toast.toast-out {
+    animation: toast-out 0.3s ease forwards;
+}
+@keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(8px); }
+}
 
 /* ========================================
    Config Missing Overlay (保留样式，但不再霸屏)
@@ -1738,9 +1746,16 @@ body.curtain-collapsed .manage-curtain-handle #handle-drag-right {
 .acc-table.hide-col-names thead {
     display: none;
 }
-/* 表格标题行里的全选框（位于表名左侧） */
+/* 表格标题行里的全选框（位于表名左侧）：与行内勾选框**同款**（共用上面那套 .acc-check 基类），
+   并让它占据与"勾选框列"相同的 40px 槽位、居中。
+   最终的水平位置由 JS `_syncSelectAllPosition()` **实测**行内勾选框后写入 margin-left（这里的值只是初始占位）。 */
 .acc-table-titlebar .acc-check-all {
-    flex: 0 0 auto;
+    flex: 0 0 40px;
+    width: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: calc(-1 * var(--space-md));
 }
 /* 拖动列换序（阶段一：**只动列头那一行**，tbody 一个单元格都不碰）
    ⚠️ 关键：列头**始终留在表格流里**，只靠 `transform: translateX()` 位移。
@@ -1881,15 +1896,17 @@ body.resizing-cols {
     padding-left: 8px;
 }
 /* 勾选框：**自绘**（原生控件在 JavaFX WebView 里会先画一帧纯方形、随后才变圆角 → 闪烁）.
-   input 只当状态载体（透明但可点），可见的圆角方块由 .acc-check-box 画。 */
-.manage-account-table .acc-check {
+   input 只当状态载体（透明但可点），可见的圆角方块由 .acc-check-box 画。
+   ⚠️ 这里的基类**不加表格作用域**：表格行内的勾选框和"表格标题行（表名左侧）的全选框"共用同一套样式，
+   否则全选框会掉回原生外观、跟行内不同款（用户 2026-10-07 实测发现）。 */
+.acc-check {
     position: relative;
     display: inline-block;
     width: 16px;
     height: 16px;
     vertical-align: middle;
 }
-.manage-account-table .acc-check input[type="checkbox"] {
+.acc-check input[type="checkbox"] {
     position: absolute;
     left: 0;
     top: 0;
@@ -1900,7 +1917,7 @@ body.resizing-cols {
     cursor: pointer;
     accent-color: var(--color-primary);
 }
-.manage-account-table .acc-check-box {
+.acc-check-box {
     position: absolute;
     left: 0;
     top: 0;
@@ -1914,7 +1931,7 @@ body.resizing-cols {
     background: var(--bg-card);
     pointer-events: none;       /* 点击落到透明 input / label 上 */
 }
-.manage-account-table .acc-check input:checked + .acc-check-box {
+.acc-check input:checked + .acc-check-box {
     /* 勾选态 = **一整块填充**，不再是"内填充 + 外边框"两层几何
        （两层即使同色，圆角处也可能露出内层/外层的缝 → 用户看到的"镂空/黑点"就是这个）。
        border-color: transparent 让边框**完全不参与画面**，由 background 独占整块形状；
@@ -1927,7 +1944,7 @@ body.resizing-cols {
 /* 勾：translate(-50%,-50%) 居中 + 1.25px 上移补偿.
    （几何居中后实测"墨迹中心"仍偏下 1.25px —— 旋转 45° 后的 L 形墨迹视觉重心比几何中心低，
      所以按测量值补偿；补偿值来自离屏像素实测，不是拍脑袋） */
-.manage-account-table .acc-check input:checked + .acc-check-box::after {
+.acc-check input:checked + .acc-check-box::after {
     content: '';
     position: absolute;
     left: 50%;
@@ -2017,8 +2034,7 @@ body.resizing-cols {
 .manage-account-table tbody tr:hover .manage-row-quick-actions {
     display: inline-flex;
 }
-.manage-row-quick-actions .qa-btn {
-    border: 1px solid var(--border-color);
+.manage-row-quick-actions .qa-btn {    border: 1px solid var(--border-color);
     background: var(--bg-card);          /* 不透明底色：悬浮按钮不半透明 */
     color: var(--text-secondary);
     border-radius: 4px;
@@ -2041,6 +2057,50 @@ body.resizing-cols {
 .manage-row-quick-actions .qa-btn.danger:hover {
     color: var(--color-danger);
     border-color: var(--color-danger);
+}
+
+/* 程序表"登录"左边的"× __"实例数量输入框：
+   × 是**静态前缀元素**（不在 input 里，所以删不掉），后面才是可输入的数字（1 位：1~9）；
+   留空 = 登录 1 个，填 N = 一次启动 N 个实例（用户 2026-10-07 定）。
+   尺寸与旁边的 .qa-btn **完全同高**：同字号/同行高/同 padding，不写死高度。 */
+.login-count-wrap {
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 1px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-family: var(--font-family-base);
+    font-size: var(--fs-table);        /* 与 .qa-btn 同为 14px */
+    line-height: 1.6;                  /* 与 .qa-btn 同 → 高度自然一致 */
+}
+.login-count-x {
+    line-height: inherit;
+    opacity: 0.7;
+    pointer-events: none;              /* 前缀不可点、不可选 */
+}
+.login-count-input {
+    width: 11px;                       /* 1 位数字（等宽）；占位也只有一个字符"1" */
+    border: none;
+    outline: none;
+    background: transparent;
+    color: inherit;
+    font-family: var(--font-family-mono);
+    font-size: inherit;
+    line-height: inherit;
+    text-align: center;
+    padding: 0;
+    cursor: text;
+}
+/* 空白时灰显"1"（默认就是开一个），与其他输入框的空白默认值一致。
+   字号/字体与实际输入**完全一样**（继承输入的等宽 14px），只靠颜色变淡来区分。 */
+.login-count-input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+    font-family: inherit;
+    font-size: inherit;
 }
 
 /* 名称前缀状态标签（失效/禁用/隐藏）：只是视觉前缀，不参与排序.

@@ -1606,6 +1606,61 @@ public class JsBridge {
     }
 
     /**
+     * JS 调用：点"登录"（平台程序那一行）→ **查杀该平台全部互斥体/文件锁 + 降权启动平台程序**.
+     *
+     * <p>这正是"多开"的本质：程序启动时若发现互斥体已存在就只激活老窗口，所以先把互斥体关掉，
+     * 再以**普通用户权限**（借用 explorer 的令牌）启动 → 每次调用都应新开一个登录窗口。
+     *
+     * @return JSON: {success, pid?, mutexMessage, error?}
+     */
+    public String launchPlatformProgram(String swId, String countStr) {
+        ObjectNode result = MAPPER.createObjectNode();
+        int count = 1;
+        try {
+            if (countStr != null && !countStr.isBlank()) count = Integer.parseInt(countStr.trim());
+        } catch (Exception ignore) {
+            // 非数字 → 按 1 个处理
+        }
+        if (count < 1) count = 1;
+        if (count > 20) count = 20;                 // 上限保护，避免误输入把机器打爆
+        try {
+            com.jfmultichat.swcore.SwConfigAccessor accessor =
+                    com.jfmultichat.config.SwConfigProvider.newAccessor();
+            com.fasterxml.jackson.databind.node.ArrayNode pids = result.putArray("pids");
+            String mutexMsg = "";
+            // 逐个实例：**先查杀互斥体再启动**（每个新进程都会建自己的互斥体，所以下一个要再杀一次）；
+            // 不 sleep：每次启动前互斥体都是"不存在"的状态就够了，这样整段很快、不占用 JavaFX 线程
+            for (int i = 0; i < count; i++) {
+                String[] kill = com.jfmultichat.swcore.SwOperatorCore.killAllMutexesNow(
+                        swId, accessor, com.jfmultichat.swcore.SwNativeOps.INSTANCE);
+                if (kill[1] != null) mutexMsg = kill[1];
+
+                String[] open = com.jfmultichat.swcore.SwOperatorCore.openSw(swId, null, accessor);
+                if (open[0] == null) {
+                    result.put("success", false);
+                    result.put("error", open[1] != null ? open[1] : "启动失败");
+                    result.put("launched", pids.size());
+                    result.put("mutexMessage", mutexMsg);
+                    return result.toString();
+                }
+                if ("-1".equals(open[0])) {
+                    result.put("viaExplorer", true);   // 经 explorer 代启，拿不到 PID
+                } else {
+                    pids.add(open[0]);
+                }
+            }
+            result.put("success", true);
+            result.put("count", pids.size());
+            result.put("mutexMessage", mutexMsg);
+        } catch (Exception e) {
+            LOG.error("launchPlatformProgram 失败: swId={}, count={}", swId, count, e);
+            result.put("success", false);
+            result.put("error", String.valueOf(e.getMessage()));
+        }
+        return result.toString();
+    }
+
+    /**
      * JS 调用：取某平台的**运行时**数据（PID / HWND）—— 纯内存，不读也不写配置文件.
      *
      * <p>pid/hwnd 讲究实际性，写文件下次读出来就是过时的；前端每次进入平台/刷新时**重新调用本方法**取最新值，

@@ -1135,3 +1135,25 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **几何自洽**：交换相邻两列时两列宽度集合不变 → 交换后两列各占对方起点、其余列位置不变 → 不会重叠也不会留洞
 - **自查**：拖动路径里**没有任何** `style.width/height/left/position` 写入（全文只有 2 处 `style.transform`：一处写、一处清）
 - **提交**：`9dc47df`（登录态 + 列系统重构）→ `74ec7a9`（列为纯 transform 位移）→ 本条为"内容也跟动"
+
+## 四十、互斥体查杀 + 降权启动 + 启动入口（2026-10-07）
+
+> 目标（用户）：程序表那句"登录" = **查杀该平台全部互斥体 → 以普通权限启动平台程序** → 每次点击都新开一个登录窗口。
+
+- **登录态识别先补了两个 Stub**（`SwNativeOps`）：`removeChildPids`（一次 Toolhelp32 快照建父子表 + BFS 展开后代，比逐个查子进程快）与 `removePidsNotInPath`（`QueryFullProcessImageName` + 关键词包含，路径统一正斜杠小写比较）；`resolvePidAccountMap` 的 mmap 扫描改为 **8 线程并发**（对齐 Python 的 `ThreadPoolExecutor(max_workers=8)`），单 pid 失败不影响其它
+- **真机验证识别链路**（探针 `tmp/probe/MmapProbe.java`，用正在运行的 QQNT）：8 个 QQ 进程 → 去子进程剩 **1** 个主进程 → 307 条内存映射 → 前缀匹配 + 目录截取得到账号 **2535912997** ✓
+- **新增 `WinHandleOps`**（纯 JNA，不依赖外部 handle.exe）：`NtQuerySystemInformation(SystemExtendedHandleInformation)` 枚举系统句柄 → 只挑目标 PID → `DuplicateHandle(SAME_ACCESS, 目标=当前进程)` + `NtQueryObject` 问名字/类型 → 名字按 Python 规则匹配（`fnmatch(name,wc) || fnmatch(name,"*"+wc+"*")`，支持 `?`/`*`、大小写不敏感）→ `DuplicateHandle(源进程, 句柄, NULL, NULL, 0, false, DUPLICATE_CLOSE_SOURCE)` **在目标进程里关掉它**；**先全部找完再统一关闭**（边找边关会让后续枚举失效）
+  - 三个入口全部落地：`SwOperatorCore.killAllMutexesNow`（mutex + config 两类通配词）/ `tryKillMutexIfNeededAndReturnRemainedPids` / `AccOperatorCore.killMutexOfAcc`（关到至少一个才置 `has_mutex=false`，不再假成功）
+  - **"已查杀 PID"全局缓存**（用户提的方案）：`KILLED_PID_AT`（`ConcurrentHashMap<pid, 时刻>`，10s TTL）→ 刚清干净的 PID 不进句柄枚举。实测 5 个各持互斥体的子进程：**第 1 次 931ms → 第 2 次 0ms**（对照「清缓存后」254ms）
+- **降权启动**（`SwNativeOps.createProcessWithoutAdmin`，对齐 Python `process_utils.create_process_with_re_token_default`）：`GetShellWindow` → explorer PID → `OpenProcess(PROCESS_QUERY_INFORMATION)` → `OpenProcessToken(TOKEN_DUPLICATE)` → `DuplicateTokenEx(SecurityImpersonation, TokenPrimary)` → `CreateProcessWithTokenW`
+  - **按自身是否管理员分三条路**（用户实测 err=1314 后定稿）：**非管理员 → 直接 `CreateProcess`**（子进程天然普通权限；此时用 explorer 令牌反而 1314，因为没有 `SeImpersonatePrivilege`）；管理员 → 令牌法；令牌法失败 → 兜底 `explorer.exe` 代启（返回 -1 = 已启动但 PID 未知，界面显示"经资源管理器代启"）
+  - 真机验证：父进程 **High** / 子进程 **Medium** ✓；非管理员场景（令牌法先降出一个中完整性探针再启动）同样 Medium 且微信成功启动 ✓
+- **启动入口接通**：`JsBridge.launchPlatformProgram(swId, count)` → 循环 count 次「查杀互斥体 → 降权启动」（每个新进程都会建自己的互斥体，所以下一个必须再杀一次；不 sleep，整段很快）；`SwOperatorCore.openSw` 里原来的 `// TODO: 查杀互斥体` 也补上了（builtin 多开模式先杀再启动）
+- **交互层**：
+  - 程序表"登录"按钮 + **最左栏程序图标双击**共用 `main.js` 的 `launchPlatformProgram`（单一来源）；`onPlatformMultiClick` 不再是空预留
+  - **点击策略**（用户定）：`CLICK_WINDOW_MS = 250` 统一窗口；单击当前平台→刷新、单击别的平台→**等窗口后切换**（这样双击来得及撤销它）、**双击→启动该平台程序且不切换**、**三击及以上→取消双击效果**（连挂起的启动一起撤销）；连击计数记在模块里（不靠 `e.detail`，因为切平台会重建侧栏 DOM 让它从 1 重来）
+  - **toast**：`JFC.toastSuccess/Error` 去掉 × 按钮、加 `toast-out` 渐隐动画（0.3s 后自动移除）→ 启动成功走右下角 toast，**失败才弹窗**
+  - 程序表"登录"左边的 **`× __` 数量输入框**：`×` 是独立静态前缀（删不掉），`placeholder="1"` 灰显（字体字号与实际输入一致、只淡在颜色），`maxlength=1`、只允许 1~9；留空 = 1 个；样式与 `.qa-btn` 同字号/同行高/同 padding → 高度自然一致；点它不触发行选中、也不进名称编辑
+- **列/表相关同期修正**：`version`（程序表）改非必显；**程序表去掉 PID/HWND 列**（程序只是启动器，不算账号）；表头与内容错位（构造函数里 `_buildDom()` 跑在 `_loadColumnPrefs()` **之前** → 表头用默认顺序、内容用配置顺序）→ 改为**先读配置再建 DOM**；全选框与数据行勾选框**同款样式**（基类不再限定在表格作用域内）+ **运行时实测对齐**（`_syncSelectAllPosition()`，不再靠算术）
+- **期间踩的坑（都已写进代码注释/LESSONS）**：`DuplicateHandle(SAME_ACCESS)` 的目标进程必须是当前进程（传 null 直接失败）；**不能用 `ObjectBasicInformation` 预探名字长度**（本机恒返回 `STATUS_INFO_LENGTH_MISMATCH`，据此提前 return 会"扫 30 万条命中 0"）；`CreateProcess*` 的 `lpApplicationName` **不能带正斜杠**（项目内部路径统一是 `/`，实测直接失败）；超长且内嵌引号的命令行会让 `CreateProcessWithTokenW` 报 `E_INVALIDARG(0x80070057)`；`findHandles` 曾把"**空列表**"和 `null` 一样当成"不限制进程"→ 缓存全命中时去扫全部 30 万句柄、卡死几分钟（探针抓到的）
+- **验证**：`gradle compileJava` ✓；`gradle test` **57 例 0 失败**；互斥体探针（`MutexProbe`：命中 1 → 关闭 1 → 复查 0 → **同名互斥体可重新创建** = 真释放 ✓）；降权探针（`LaunchProbe`/`PlainProbe`）；缓存探针（`CacheProbe`）

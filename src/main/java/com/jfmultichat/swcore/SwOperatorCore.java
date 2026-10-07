@@ -53,9 +53,20 @@ public final class SwOperatorCore {
             return new String[]{null, "未查询到" + sw + "的互斥体列表和配置文件列表!"};
         }
 
-        // TODO: 获取所有 PID + JNA 查杀
-        LOG.info("[互斥体] killAllMutexesNow: wildcards={} (Stub)", allWildcards);
-        return new String[]{null, "需要 JNA 实现互斥体查杀"};
+        List<Integer> pids = allExePidsOf(sw, accessor, nativeOps);
+        if (pids.isEmpty()) {
+            return new String[]{Boolean.TRUE.toString(), sw + "已经不含互斥体和文件锁!（无进程）"};
+        }
+        List<WinHandleOps.HandleRef> found = WinHandleOps.findHandles(pids, allWildcards);
+        if (found.isEmpty()) {
+            return new String[]{Boolean.TRUE.toString(), sw + "已经不含互斥体和文件锁!"};
+        }
+        int closed = WinHandleOps.closeHandles(found);
+        if (closed > 0) {
+            return new String[]{Boolean.TRUE.toString(),
+                    sw + "已关闭互斥体和解锁文件!（命中 " + found.size() + " 个，关闭 " + closed + " 个）"};
+        }
+        return new String[]{Boolean.FALSE.toString(), sw + "关闭互斥体和解锁文件失败!"};
     }
 
     /**
@@ -69,13 +80,38 @@ public final class SwOperatorCore {
                 sw, SwCoreConstants.RemoteSwKey.MUTEX_HANDLE_WILDCARDS, Collections.emptyList());
 
         if (mutantWildcards.isEmpty()) {
-            LOG.info("[互斥体] 未获取到互斥体通配词");
+            LOG.info("[互斥体] 未获取到互斥体通配词，跳过查找");
             return Collections.emptyList();
         }
 
-        // TODO: JNA 查杀
-        LOG.debug("[互斥体] tryKillMutexIfNeeded: wildcards={} (Stub)", mutantWildcards);
-        return Collections.emptyList();
+        List<Integer> pids = allExePidsOf(sw, accessor, nativeOps);
+        List<WinHandleOps.HandleRef> before = WinHandleOps.findHandles(pids, mutantWildcards);
+        if (Boolean.TRUE.equals(kill) && !before.isEmpty()) {
+            WinHandleOps.closeHandles(before);
+            before = WinHandleOps.findHandles(pids, mutantWildcards);      // 关完再查一遍（与 Python 一致）
+        }
+        List<Integer> pidsWithMutex = new ArrayList<>();
+        for (WinHandleOps.HandleRef h : before) {
+            if (!pidsWithMutex.contains(h.pid)) pidsWithMutex.add(h.pid);
+        }
+        LOG.info("[互斥体] tryKillMutexIfNeeded: kill={}, 仍有互斥体的 pid={}", kill, pidsWithMutex);
+        return pidsWithMutex;
+    }
+
+    /** 该平台"自己安装目录下"的全部进程 PID（通配符找 → 去子进程 → 去不在安装目录的） */
+    private static List<Integer> allExePidsOf(String sw, SwConfigAccessor accessor, SwNativeOps nativeOps) {
+        List<String> exeWildcards = accessor.getRemoteSwAsList(
+                sw, SwCoreConstants.RemoteSwKey.EXECUTABLE_WILDCARDS, Collections.emptyList());
+        if (exeWildcards.isEmpty()) return Collections.emptyList();
+        List<Integer> pids = new ArrayList<>();
+        nativeOps.getPidsByWildcardsAndGroup(exeWildcards).values().forEach(pids::addAll);
+        pids = SwNativeOps.removeChildPids(pids);
+        String instPath = accessor.tryGetPathOf(sw, "inst_path");
+        if (instPath != null) {
+            java.io.File parent = new java.io.File(instPath).getParentFile();
+            if (parent != null) pids = SwNativeOps.removePidsNotInPath(pids, parent.getPath());
+        }
+        return pids;
     }
 
     // ==================== DLL 切换 ====================
@@ -684,18 +720,21 @@ public final class SwOperatorCore {
             swPath = instDir + "/" + exe;
         }
 
-        if (SwCoreConstants.MultirunMode.FREELY_MULTIRUN.equals(multirunMode)) {
-            // 全局多开 — 直接创建进程
-            Process proc = SwNativeOps.createProcessWithoutAdmin(swPath, null, 0);
-            return new String[]{proc != null ? String.valueOf(proc.pid()) : null, null};
-        } else if (SwCoreConstants.MultirunMode.BUILTIN.equals(multirunMode)) {
-            // Builtin 模式 — 先查杀互斥体
-            // TODO: 查杀互斥体逻辑
-            Process proc = SwNativeOps.createProcessWithoutAdmin(swPath, null, 0);
-            return new String[]{proc != null ? String.valueOf(proc.pid()) : null, null};
+        if (SwCoreConstants.MultirunMode.BUILTIN.equals(multirunMode)) {
+            // Builtin 模式：先查杀互斥体/文件锁，再降权启动（用户 2026-10-07 要的"每次点登录都新开一个登录窗口"）
+            String[] killed = killAllMutexesNow(sw, accessor, SwNativeOps.INSTANCE);
+            LOG.info("[登录] builtin 多开模式：先查杀互斥体 → {}", killed[1]);
+        } else if (!SwCoreConstants.MultirunMode.FREELY_MULTIRUN.equals(multirunMode)) {
+            return new String[]{null, "未知多开模式: " + multirunMode};
         }
 
-        return new String[]{null, "未知多开模式: " + multirunMode};
+        // 降权启动：即使本程序是管理员，也让平台程序以普通用户身份运行
+        int pid = SwNativeOps.createProcessWithoutAdmin(swPath, null, 0);
+        if (pid == 0) {
+            return new String[]{null, "启动失败: " + swPath};
+        }
+        // pid == -1：已通过 explorer.exe 代启（父进程是 explorer，拿不到目标 PID，但确实是启动了）
+        return new String[]{String.valueOf(pid), null};
     }
 
     // ==================== 工具方法 ====================

@@ -205,6 +205,14 @@ public final class AccOperatorCore {
      * 关闭指定账号的互斥体句柄
      * 对应 Python: kill_mutex_of_acc (L848-L866)
      */
+    /**
+     * 关闭指定账号的互斥体句柄
+     * 对应 Python: kill_mutex_of_acc (L848-L866)
+     *
+     * <p>实现（Python 用 `pywinhandle_find_handles_by_pids_and_handle_name_wildcards` + `pywinhandle_close_handles`）：
+     * 拿该账号进程的 pid → 按平台的 `mutex_handle_wildcards` 在该进程里查句柄名 → 命中就关闭；
+     * 关到至少一个才把 `has_mutex` 置 false（不再"假成功"）。
+     */
     public static boolean killMutexOfAcc(String sw, String acc) {
         // pid 来自**内存**运行时存储
         Integer pidVal = AccRuntimeStore.getPid(sw, acc);
@@ -214,12 +222,19 @@ public final class AccOperatorCore {
         SwConfigAccessor accessor = com.jfmultichat.config.SwConfigProvider.newAccessor();
         List<String> wildcards = accessor.getRemoteSwAsList(sw,
                 "mutex_handle_wildcards", Collections.emptyList());
-        if (wildcards.isEmpty()) return true;
-
-        // TODO: JNA FindFirstHide和NtClose实现
-        LOG.debug("[互斥体] killMutexOfAcc: sw={}, acc={}, pid={} (Stub)", sw, acc, pid);
-        ACC_ACCESSOR.updateSwAccData(sw, acc, Map.of("has_mutex", false));
-        return true;
+        if (wildcards.isEmpty()) {
+            LOG.info("[互斥体] {} 未配置 mutex_handle_wildcards，无需查杀（acc={}）", sw, acc);
+            return false;
+        }
+        int closed = com.jfmultichat.swcore.WinHandleOps.killHandlesByName(
+                Collections.singletonList(pid), wildcards);
+        if (closed > 0) {
+            ACC_ACCESSOR.updateSwAccData(sw, acc, Map.of("has_mutex", false));
+            LOG.info("[互斥体] 已关闭 {} 个句柄: sw={}, acc={}, pid={}", closed, sw, acc, pid);
+            return true;
+        }
+        LOG.info("[互斥体] 未命中可关闭的句柄: sw={}, acc={}, pid={}", sw, acc, pid);
+        return false;
     }
 
     // ==================== 目录工具方法 ====================

@@ -23,6 +23,9 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * JNA 原生操作实现 — Windows API 调用的封装
@@ -841,35 +844,272 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
      * 移除子进程 PID（只保留根进程）
      * 对应 Python: process_utils.remove_child_pids
      */
+    /**
+     * 从 pids 中剔除**所有子进程**（含递归后代）.
+     * 对应 Python: `process_utils.remove_child_pids`（那里用 `psutil.Process(pid).children(recursive=True)`）.
+     *
+     * <p>实现：只取**一次** Toolhelp32 进程快照，建"父 PID → 子 PID 列表"，再对给定 PID 做 BFS 展开所有后代；
+     * 比"逐个 pid 查子进程"快得多，也避免快照期间进程变化导致的不一致。返回时**保持输入顺序**（与 Python 一致）。
+     *
+     * <p>为什么必须过滤：一个账号可能同时有主进程和辅助/子进程，它们映射同一份账号数据文件 →
+     * 不过滤的话子进程的 PID 会抢先认领账号，界面上的 PID 就不是主进程了。
+     */
     public static List<Integer> removeChildPids(List<Integer> pids) {
-        // TODO: JNA 实现
-        LOG.debug("[JNA] removeChildPids: {} pids (Stub)", pids.size());
-        return new ArrayList<>(pids);
-    }
-
-    /**
-     * 移除不在指定路径下的进程 PID
-     * 对应 Python: process_utils.remove_pids_not_in_path
-     */
-    public static List<Integer> removePidsNotInPath(List<Integer> pids, String instDir) {
-        // TODO: JNA 实现
-        LOG.debug("[JNA] removePidsNotInPath: {} pids, dir={} (Stub)", pids.size(), instDir);
-        return new ArrayList<>(pids);
-    }
-
-    /**
-     * 以非管理员身份创建进程
-     */
-    public static Process createProcessWithoutAdmin(String executable, String args, int creationFlags) {
+        if (pids == null || pids.isEmpty()) return new ArrayList<>();
+        Map<Integer, List<Integer>> children = new HashMap<>();
+        Tlhelp32.PROCESSENTRY32.ByReference pe32 = new Tlhelp32.PROCESSENTRY32.ByReference();
+        HANDLE hSnapshot = Kernel32.INSTANCE.CreateToolhelp32Snapshot(
+                Tlhelp32.TH32CS_SNAPPROCESS, new WinDef.DWORD(0));
         try {
-            ProcessBuilder pb = new ProcessBuilder(executable);
-            if (args != null && !args.isBlank()) {
-                pb.command().addAll(List.of(args.split("\\s+")));
+            if (Kernel32.INSTANCE.Process32First(hSnapshot, pe32)) {
+                do {
+                    int pid = pe32.th32ProcessID.intValue();
+                    int ppid = pe32.th32ParentProcessID.intValue();
+                    if (pid > 0) children.computeIfAbsent(ppid, k -> new ArrayList<>()).add(pid);
+                } while (Kernel32.INSTANCE.Process32Next(hSnapshot, pe32));
             }
-            return pb.start();
+        } finally {
+            Kernel32.INSTANCE.CloseHandle(hSnapshot);
+        }
+        Set<Integer> removed = new HashSet<>();
+        Deque<Integer> queue = new ArrayDeque<>(pids);
+        while (!queue.isEmpty()) {
+            List<Integer> kids = children.get(queue.poll());
+            if (kids == null) continue;
+            for (Integer kid : kids) {
+                if (removed.add(kid)) queue.add(kid);      // 已进过队列的不再重复展开（防环）
+            }
+        }
+        List<Integer> kept = new ArrayList<>();
+        for (Integer pid : pids) if (!removed.contains(pid)) kept.add(pid);
+        LOG.debug("[JNA] removeChildPids: {} → {} pids", pids.size(), kept.size());
+        return kept;
+    }
+
+    /**
+     * 移除不在指定路径下的进程 PID.
+     * 对应 Python: `process_utils.remove_pids_not_in_path`（`path_keyword in proc.exe().lower()`）.
+     *
+     * <p>路径统一成"正斜杠 + 小写"比较（{@link #getProcessImagePath(int)} 返回的就是正斜杠形式）；
+     * 取不到可执行路径的进程（无权限/已退出）按 Python 的语义**排除**；关键词为空则全部保留。
+     */
+    public static List<Integer> removePidsNotInPath(List<Integer> pids, String pathKeyword) {
+        List<Integer> kept = new ArrayList<>();
+        if (pids == null || pids.isEmpty()) return kept;
+        if (pathKeyword == null || pathKeyword.isBlank()) return new ArrayList<>(pids);
+        String needle = pathKeyword.replace('\\', '/').toLowerCase();
+        for (Integer pid : pids) {
+            String exe = INSTANCE.getProcessImagePath(pid);
+            if (exe == null || exe.isEmpty()) continue;
+            if (exe.replace('\\', '/').toLowerCase().contains(needle)) kept.add(pid);
+        }
+        LOG.debug("[JNA] removePidsNotInPath: {} → {} pids, keyword={}", pids.size(), kept.size(), needle);
+        return kept;
+    }
+
+    // ==================== 降权启动（用 Explorer 的令牌） ====================
+
+    /** user32：拿 shell 窗口 → 它的进程就是 explorer（普通权限） */
+    private interface User32Ext extends com.sun.jna.Library {
+        User32Ext INSTANCE = Native.load("user32", User32Ext.class);
+
+        WinNT.HANDLE GetShellWindow();
+
+        int GetWindowThreadProcessId(WinNT.HANDLE hWnd, IntByReference pid);
+    }
+
+    /** advapi32：拿 explorer 的令牌 → 复制一份 → 用它创建进程 */
+    private interface Advapi32Ext extends com.sun.jna.Library {
+        Advapi32Ext INSTANCE = Native.load("advapi32", Advapi32Ext.class);
+
+        boolean OpenProcessToken(WinNT.HANDLE process, int desiredAccess, WinNT.HANDLEByReference token);
+
+        boolean GetTokenInformation(WinNT.HANDLE token, int informationClass, Pointer buffer,
+                                    int bufferLength, IntByReference returnLength);
+
+        boolean DuplicateTokenEx(WinNT.HANDLE existingToken, int desiredAccess,
+                                 WinBase.SECURITY_ATTRIBUTES attrs, int impersonationLevel, int tokenType,
+                                 WinNT.HANDLEByReference newToken);
+
+        boolean CreateProcessWithTokenW(WinNT.HANDLE token, int logonFlags, com.sun.jna.WString applicationName,
+                                        com.sun.jna.WString commandLine, int creationFlags,
+                                        com.sun.jna.Pointer environment, com.sun.jna.WString currentDirectory,
+                                        WinBase.STARTUPINFO startupInfo, WinBase.PROCESS_INFORMATION processInfo);
+    }
+
+    private static final int PROCESS_QUERY_INFORMATION = 0x0400;
+    private static final int TOKEN_QUERY = 0x0008;
+    private static final int TOKEN_DUPLICATE = 0x0002;
+    private static final int TOKEN_ALL_ACCESS = 0x000F01FF;
+    private static final int TOKEN_ELEVATION_CLASS = 20;      // TOKEN_INFORMATION_CLASS.TokenElevation
+    private static final int SECURITY_IMPERSONATION = 2;      // SECURITY_IMPERSONATION_LEVEL
+    private static final int TOKEN_PRIMARY = 1;               // TOKEN_TYPE
+
+    /** 本进程是否**以管理员身份**运行（结果缓存，进程内不会变） */
+    private static Boolean currentProcessElevated = null;
+
+    public static boolean isCurrentProcessElevated() {
+        if (currentProcessElevated != null) return currentProcessElevated;
+        boolean elevated = false;
+        WinNT.HANDLEByReference tokenRef = new WinNT.HANDLEByReference();
+        try {
+            if (Advapi32Ext.INSTANCE.OpenProcessToken(Kernel32.INSTANCE.GetCurrentProcess(),
+                    TOKEN_QUERY, tokenRef)) {
+                WinNT.HANDLE token = tokenRef.getValue();
+                Memory buf = new Memory(4);                 // TOKEN_ELEVATION { DWORD TokenIsElevated; }
+                IntByReference ret = new IntByReference();
+                if (Advapi32Ext.INSTANCE.GetTokenInformation(token, TOKEN_ELEVATION_CLASS, buf, 4, ret)) {
+                    elevated = buf.getInt(0) != 0;
+                }
+                Kernel32.INSTANCE.CloseHandle(token);
+            }
+        } catch (Throwable t) {
+            LOG.debug("[降权] 判断自身是否管理员失败: {}", t.getMessage());
+        }
+        currentProcessElevated = elevated;
+        LOG.info("[降权] 本进程是否管理员: {}", elevated);
+        return elevated;
+    }
+
+    /** 直接创建进程（不换令牌）—— 本进程不是管理员时用，子进程自然就是普通用户 */
+    private static int startProcessPlain(String exePath, String args, int creationFlags) {
+        WinBase.STARTUPINFO si = new WinBase.STARTUPINFO();
+        si.cb = new WinDef.DWORD(si.size());
+        WinBase.PROCESS_INFORMATION pi = new WinBase.PROCESS_INFORMATION();
+        String cmdLine = (args == null || args.isBlank())
+                ? "\"" + exePath + "\""
+                : "\"" + exePath + "\" " + args;
+        boolean ok = Kernel32.INSTANCE.CreateProcess(exePath, cmdLine, null, null, false,
+                new WinDef.DWORD(creationFlags), null, null, si, pi);
+        if (!ok) {
+            int err = Native.getLastError();
+            LOG.warn("[启动] CreateProcess 失败: exe={}, err={} ({})", exePath, err, describeWin32Error(err));
+            return 0;
+        }
+        int pid = pi.dwProcessId.intValue();
+        Kernel32.INSTANCE.CloseHandle(pi.hProcess);
+        Kernel32.INSTANCE.CloseHandle(pi.hThread);
+        return pid;
+    }
+
+    /** 兜底：让 **explorer.exe 代启**（explorer 是普通权限，它启动的程序自然也是普通权限） */
+    private static int startViaExplorer(String exePath) {
+        try {
+            Process p = new ProcessBuilder("explorer.exe", exePath).start();
+            LOG.info("[降权] 已改为经 explorer.exe 代启: {} (explorer pid={})", exePath, p.pid());
+            return -1;                                  // -1 = 已启动但拿不到目标进程 PID（父进程是 explorer）
         } catch (Exception e) {
-            LOG.warn("[JNA] createProcessWithoutAdmin failed: {}", e.getMessage());
-            return null;
+            LOG.warn("[降权] explorer 代启也失败: {}", e.getMessage());
+            return 0;
+        }
+    }
+
+    /**
+     * **降权启动**：保证目标程序以**普通用户身份**运行.
+     *
+     * <p>分三种情况（用户 2026-10-07 实测遇到 err=1314 后定稿）：
+     * <ol>
+     *   <li><b>本进程本来就是普通权限</b>（非管理员）→ **直接启动即可**：子进程继承我们的中完整性令牌，天然就是普通用户。
+     *       此时<b>不能</b>去用 explorer 令牌 —— `CreateProcessWithTokenW` 需要 `SeImpersonatePrivilege`，
+     *       而普通权限进程没有该特权 → 直接 `ERROR_PRIVILEGE_NOT_HELD(1314)`</li>
+     *   <li><b>本进程是管理员</b> → 借用 explorer 的令牌（`GetShellWindow` → explorer PID →
+     *       `OpenProcessToken` → `DuplicateTokenEx` → `CreateProcessWithTokenW`）→ 子进程是中完整性</li>
+     *   <li>令牌法失败（比如特权被策略禁用）→ 兜底用 **`explorer.exe 代启`**，同样得到普通权限子进程</li>
+     * </ol>
+     *
+     * @return 子进程 PID；{@code -1} = 已启动但 PID 未知（explorer 代启）；{@code 0} = 失败
+     */
+    public static int createProcessWithoutAdmin(String executable, String args, int creationFlags) {
+        // 路径分隔符统一成反斜杠：本项目内部路径都规范化成 `/`，而 CreateProcess* 对 `lpApplicationName`
+        // 里的正斜杠并不可靠（实测直接失败）→ 这里转回 Windows 原生形式
+        String exePath = executable == null ? null : executable.replace('/', '\\');
+        if (exePath == null || exePath.isBlank()) return 0;
+
+        if (!isCurrentProcessElevated()) {
+            int pid = startProcessPlain(exePath, args, creationFlags);
+            if (pid > 0) LOG.info("[启动] 本进程非管理员，直接启动（子进程同为普通权限）: {} → pid={}", exePath, pid);
+            return pid;
+        }
+
+        WinNT.HANDLE explorer = null, token = null, primary = null;
+        int lastErr = 0;
+        try {
+            WinNT.HANDLE shellWnd = User32Ext.INSTANCE.GetShellWindow();
+            if (shellWnd == null) {
+                lastErr = Native.getLastError();
+                LOG.warn("[降权] GetShellWindow 失败, err={}", lastErr);
+                return startViaExplorer(exePath);
+            }
+            IntByReference explorerPid = new IntByReference();
+            User32Ext.INSTANCE.GetWindowThreadProcessId(shellWnd, explorerPid);
+            if (explorerPid.getValue() <= 0) {
+                LOG.warn("[降权] 取 explorer PID 失败");
+                return startViaExplorer(exePath);
+            }
+            explorer = Kernel32.INSTANCE.OpenProcess(PROCESS_QUERY_INFORMATION, false, explorerPid.getValue());
+            if (explorer == null) {
+                lastErr = Native.getLastError();
+                LOG.warn("[降权] 打开 explorer 进程失败, pid={}, err={}", explorerPid.getValue(), lastErr);
+                return startViaExplorer(exePath);
+            }
+            WinNT.HANDLEByReference tokenRef = new WinNT.HANDLEByReference();
+            if (!Advapi32Ext.INSTANCE.OpenProcessToken(explorer, TOKEN_DUPLICATE, tokenRef)) {
+                lastErr = Native.getLastError();
+                LOG.warn("[降权] OpenProcessToken 失败, err={}", lastErr);
+                return startViaExplorer(exePath);
+            }
+            token = tokenRef.getValue();
+            WinNT.HANDLEByReference primaryRef = new WinNT.HANDLEByReference();
+            if (!Advapi32Ext.INSTANCE.DuplicateTokenEx(token, TOKEN_ALL_ACCESS, null,
+                    SECURITY_IMPERSONATION, TOKEN_PRIMARY, primaryRef)) {
+                lastErr = Native.getLastError();
+                LOG.warn("[降权] DuplicateTokenEx 失败, err={}", lastErr);
+                return startViaExplorer(exePath);
+            }
+            primary = primaryRef.getValue();
+
+            WinBase.STARTUPINFO si = new WinBase.STARTUPINFO();
+            si.cb = new WinDef.DWORD(si.size());
+            WinBase.PROCESS_INFORMATION pi = new WinBase.PROCESS_INFORMATION();
+            String cmdLine = (args == null || args.isBlank())
+                    ? "\"" + exePath + "\""
+                    : "\"" + exePath + "\" " + args;
+            boolean ok = Advapi32Ext.INSTANCE.CreateProcessWithTokenW(primary, 0,
+                    new com.sun.jna.WString(exePath), new com.sun.jna.WString(cmdLine),
+                    creationFlags, null, null, si, pi);
+            if (!ok) {
+                lastErr = Native.getLastError();
+                LOG.warn("[降权] CreateProcessWithTokenW 失败: exe={}, err={} ({}), 改用 explorer 代启",
+                        exePath, lastErr, describeWin32Error(lastErr));
+                return startViaExplorer(exePath);
+            }
+            int pid = pi.dwProcessId.intValue();
+            Kernel32.INSTANCE.CloseHandle(pi.hProcess);
+            Kernel32.INSTANCE.CloseHandle(pi.hThread);
+            LOG.info("[降权] 已以普通权限启动: {} → pid={}", exePath, pid);
+            return pid;
+        } catch (Throwable t) {
+            LOG.warn("[降权] 启动异常: {}，改用 explorer 代启", t.getMessage());
+            return startViaExplorer(exePath);
+        } finally {
+            if (primary != null) Kernel32.INSTANCE.CloseHandle(primary);
+            if (token != null) Kernel32.INSTANCE.CloseHandle(token);
+            if (explorer != null) Kernel32.INSTANCE.CloseHandle(explorer);
+        }
+    }
+
+    /** Win32 错误码 → 人话（诊断降权启动失败用；只列常见的几个） */
+    private static String describeWin32Error(int err) {
+        switch (err) {
+            case 2: return "ERROR_FILE_NOT_FOUND 找不到文件（路径不对？）";
+            case 3: return "ERROR_PATH_NOT_FOUND 路径不存在";
+            case 5: return "ERROR_ACCESS_DENIED 拒绝访问";
+            case 87: return "ERROR_INVALID_PARAMETER 参数无效（STARTUPINFO.cb / 命令行格式？）";
+            case 740: return "ERROR_ELEVATION_REQUIRED 需要提升（令牌是受限令牌？）";
+            case 1200: return "ERROR_BAD_ENVIRONMENT 环境块无效";
+            case 1314: return "ERROR_PRIVILEGE_NOT_HELD 缺少 SeImpersonatePrivilege";
+            case 1326: return "ERROR_LOGON_FAILURE 用户名或密码错误";
+            default: return "见 Win32 错误码表";
         }
     }
 

@@ -342,3 +342,32 @@ JavaFX WebView 与 Chromium 的布局细节不同，"看起来是 X"往往不是
 50. **`Map.of` 不允许 null 键/值** → 写账号数据回写时 `Map.of(PID, pid, ...)` 因未运行账号 pid 为 null 直接 NPE（`ImmutableCollections$MapN` 构造器 `Objects.requireNonNull`）。必须用 `HashMap`；`ConfigManager.updateAccount` 对 null 值会移除该键（未运行账号不存 pid，语义正确）。同理对 `JsonNode.get(key)` 结果先判空再 `.asBoolean`
 
 ---
+
+## 十八、Windows 句柄 / 进程 API 的坑（2026-10-07 实测，互斥体查杀与降权启动）
+
+1. **`DuplicateHandle(DUPLICATE_SAME_ACCESS)` 必须给"目标进程"**：复制到本进程要传 `GetCurrentProcess()`；
+   传 `null` 只在 `DUPLICATE_CLOSE_SOURCE`（关闭源句柄）时才合法 → 传错就是"扫了 30 万条、命中 0 条"。
+   关闭**别的进程**的句柄，标准技巧正是 `DuplicateHandle(源进程, 句柄, NULL, NULL, 0, false, DUPLICATE_CLOSE_SOURCE)`。
+2. **不要用 `NtQueryObject(ObjectBasicInformation)` 预探名字长度**：本机（Win11 26340 / JDK 17）这条调用
+   **恒返回 `STATUS_INFO_LENGTH_MISMATCH(0xC0000004)`**，据此提前 `return null` 会把**每个**句柄都当失败跳过。
+   正确做法：直接给足缓冲查 `ObjectNameInformation` / `ObjectTypeInformation`，真不匹配时按返回长度扩容重试。
+3. **`NtQueryObject` 对某些对象类型会阻塞**（管道/同步对象）→ 枚举句柄这条链路**别轻易上多线程**：
+   一旦某次调用卡住，整批都被拖住。更划算的是"减少要枚举的 PID"（见 4）。
+4. **性能：别重复扫描已知干净的 PID**。多开 N 个实例后，同平台 PID 会累积（每个实例自带几百个句柄），
+   逐个复制+查名的成本线性膨胀（实测 5 个 java 子进程 ≈ 931ms）。用一个**全局共享的"已查杀 PID"容器**
+   （`ConcurrentHashMap<pid, 时刻>` + TTL）跳过它们 → 同样的调用降到 **0ms**。TTL 是为了防"程序之后又重建互斥体"时漏杀。
+5. **`CreateProcess*` 的 `lpApplicationName` 不要用正斜杠**：本项目内部路径统一规范化成 `/`，直接喂进去**实测失败**；
+   调用前 `replace('/', '\\')`。
+6. **降权启动：先判断自己是不是管理员**
+   - 管理员 → 借 explorer 令牌（`GetShellWindow` → `GetWindowThreadProcessId` → `OpenProcessToken(TOKEN_DUPLICATE)`
+     → `DuplicateTokenEx(SecurityImpersonation, TokenPrimary)` → `CreateProcessWithTokenW`）→ 子进程中完整性；
+   - **非管理员 → 直接 `CreateProcess`**（子进程继承中完整性令牌，本来就是普通权限）；
+     此时去用 explorer 令牌会 **`ERROR_PRIVILEGE_NOT_HELD(1314)`**，因为普通进程没有 `SeImpersonatePrivilege`；
+   - 令牌法失败兜底：`explorer.exe <exe>` 代启（explorer 是普通权限）；
+   - 判定手段：`OpenProcessToken(GetCurrentProcess())` + `GetTokenInformation(TokenElevation)`；
+     验证手段：让子进程跑 `whoami /groups`，看 "Mandatory Label"（父 High / 子 Medium）。
+7. **`CreateProcessWithTokenW` 对"超长 + 内嵌引号"的命令行会报 `E_INVALIDARG(0x80070057)`**：
+   把复杂命令写进 `.bat` 再 `cmd /c <bat>` 更稳（应用自身只传 exe 路径，不受影响）。
+8. **"空集合"与 `null` 的语义必须分开**：`findHandles(pids=[])` 若和 `null` 一样被当成"不限制进程"，
+   就会去扫**全部**系统句柄（30 万条、几分钟）—— 这是缓存全部命中（候选为空）时踩到的真事故。
+   约定：**空集合 = 没有目标（立刻返回）；`null` = 不限制**。

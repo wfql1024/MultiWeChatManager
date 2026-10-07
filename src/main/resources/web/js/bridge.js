@@ -154,6 +154,8 @@ JFC.bridge = (function() {
         notifyPlatformEntered: function(swId) { callWithArgs('notifyPlatformEntered', swId); },
         // 快捷键录入捕获开关（Java Scene 级 EventFilter 兜底）
         notifyHotkeyCapture: function(active) { callWithArgs('notifyHotkeyCapture', !!active); },
+        // 点"登录"（程序行）→ 查杀该平台全部互斥体 + 降权启动平台程序（count = 启动几个实例，空/非数字=1）
+        launchPlatformProgram: function(swId, count) { return callJsonWithArgs('launchPlatformProgram', swId, String(count == null ? '' : count)); },
         // 运行时数据（PID/HWND）：纯内存，每次进入平台/刷新时重新取（不落配置文件）
         getAccRuntimeMap: function(swId) { return callJsonWithArgs('getAccRuntimeMap', swId); },
         getAccAvatarAsync: function(swId, accountId, fn) {

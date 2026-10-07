@@ -95,7 +95,9 @@ JFC.AccountTable = (function() {
         if (mode === 'login') {
             return [{
                 action: 'login', label: '登录', cls: '',
-                title: kind === 'prog' ? '启动 / 登录原生程序' : '登录该账号'
+                // 程序行：登录左边带一个"× __"数量输入框（留空 = 登录 1 个，输入数字 = 批量启动几个实例）
+                countInput: kind === 'prog',
+                title: kind === 'prog' ? '启动 / 登录原生程序（左边可填要开几个）' : '登录该账号'
             }];
         }
         if (kind === 'prog') return [];
@@ -120,11 +122,22 @@ JFC.AccountTable = (function() {
      * <p>按钮分档（用户 2026-10-05 裁定）：非失效账号只给"隐藏/显示"+"重置"；
      * 失效账号再加"删除"（记录节点移除 → 该行消失）。非失效账号删不掉（磁盘上还在，下次加载照样出现）。
      */
-    function nameCellInnerHtml(acc, displayName, actions) {
+    function nameCellInnerHtml(acc, displayName, actions, loginCount) {
         var id = acc.id;
         var actionsHtml = '';
         if (actions && actions.length) {
+            var wantsCount = false;
+            actions.forEach(function(a) { if (a.countInput) wantsCount = true; });
             actionsHtml = '<span class="manage-row-quick-actions">';
+            if (wantsCount) {
+                // "× __"：× 是**静态前缀**（不是输入框内容，删不掉），后面才是可输入的数字
+                // 留空 = 登录 1 个；填 N = 一次启动 N 个实例（用户 2026-10-07 定）
+                actionsHtml += '<span class="login-count-wrap" title="要启动几个实例（留空 = 1，只能填 1 位：1~9）">' +
+                    '<span class="login-count-x">×</span>' +
+                    '<input class="login-count-input" type="text" inputmode="numeric" maxlength="1"' +
+                    ' placeholder="1" spellcheck="false"' +
+                    ' value="' + escapeAttr(loginCount || '') + '"></span>';
+            }
             actions.forEach(function(a) {
                 actionsHtml += '<button class="qa-btn' + (a.cls ? ' ' + a.cls : '') + '"' +
                     ' data-action="' + escapeAttr(a.action) + '" data-id="' + escapeAttr(id) + '"' +
@@ -171,6 +184,11 @@ JFC.AccountTable = (function() {
         this.avatarFallbackTail = !!opts.avatarFallbackTail;
         // 行种类（'acc' 账号行 / 'prog' 原生程序行）—— 三表差异的唯一开关（见 rowActionsOf）
         this.rowKind = opts.rowKind === 'prog' ? 'prog' : 'acc';
+        /**
+         * 程序表"× __"里填的**实例数量**（空 = 1）.
+         * 记在表实例上：整表重渲染后输入框仍恢复这个值，不会被刷掉（仅是内存，不落配置）。
+         */
+        this.loginCount = '';
         // 'manage'（管理态，默认）| 'login'（登录态：只显示可登录的账号，按钮只留"登录/批量登录"）
         this.mode = opts.mode === 'login' ? 'login' : 'manage';
         this.enableHotkey = !!opts.enableHotkey;
@@ -188,8 +206,14 @@ JFC.AccountTable = (function() {
         this._suppressSelectOnce = false;
         this._suppressSelectTimer = null;
 
-        this._buildDom();
+        // 顺序很重要：**先读个性化配置（列顺序/显隐/列宽），再建 DOM**。
+        // 反过来的话，表头与 colgroup 会用"还没读配置"的默认顺序建出来，
+        // 而 render() 用的是读配置后的顺序 → 表头与内容错位（用户 2026-10-07 实测"刚进入时列头与内容对不上"）。
+        // 注：_loadColumnPrefs() 末尾那次 _applyColumnLayout() 此时还没有 tableEl，会安全早退，
+        //     所以建完 DOM 后再补一次布局。
         this._loadColumnPrefs();
+        this._buildDom();
+        this._applyColumnLayout();
         this._bindDelegatedEvents();
     }
 
@@ -543,6 +567,28 @@ JFC.AccountTable = (function() {
         this._updateRowHighlight();
         this._updateSelectionLayer();
         this._updateSortIndicators();      // 排序三角跟随当前排序字段/升降序
+        this._syncSelectAllPosition();     // 全选框与行内勾选框水平对齐（实测，不靠算术）
+    };
+
+    /**
+     * 让标题行的**全选框**与数据行的**勾选框**水平对齐.
+     *
+     * <p>为什么实测而不是算：行内方块的位置由"列宽 + td 内边距 + text-align 居中 + 固定列宽"共同决定，
+     * 只要其中任何一条改动，算术值就偏（用户 2026-10-07 实测："全选框太偏左了"）。
+     * 这里直接量两者的 `getBoundingClientRect().left`，把差值写进标题行槽位的 `margin-left` —— 永远对齐。
+     */
+    AccountTable.prototype._syncSelectAllPosition = function() {
+        var label = this.el ? this.el.querySelector('.acc-check-all') : null;
+        if (!label) return;
+        var rowBox = this.tbody ? this.tbody.querySelector('.acc-check-box') : null;
+        var labelBox = label.querySelector('.acc-check-box');
+        if (!rowBox || !labelBox) return;                     // 没有数据行 → 保持 CSS 默认
+        var cardLeft = this.el.getBoundingClientRect().left;
+        var target = rowBox.getBoundingClientRect().left - cardLeft;     // 行内方块相对卡片左边的位置
+        label.style.marginLeft = '0px';                                  // 先归零再量当前槽位
+        var slotBoxLeft = labelBox.getBoundingClientRect().left - cardLeft;
+        var delta = Math.round(target - slotBoxLeft);
+        label.style.marginLeft = (delta === 0 ? '0px' : delta + 'px');
     };
 
     AccountTable.prototype._rowHtml = function(acc) {
@@ -603,7 +649,8 @@ JFC.AccountTable = (function() {
             // 点击名称文字 → 就地编辑备注（与快捷键列同款交互）
             return '<td data-col="display_name" class="manage-nickname-cell">' +
                 nameCellInnerHtml(acc, ctx.displayName,
-                    rowActionsOf(this.rowKind, this.mode, { hidden: ctx.hidden, invalid: ctx.invalid })) +
+                    rowActionsOf(this.rowKind, this.mode, { hidden: ctx.hidden, invalid: ctx.invalid }),
+                    this.loginCount) +
                 '</td>';
         }
         if (key === 'hotkey' && this.enableHotkey) {
@@ -1014,7 +1061,8 @@ JFC.AccountTable = (function() {
             var cell = e.target.closest('.manage-nickname-cell');
             if (!cell) return;
             if (e.target.tagName === 'INPUT') return;
-            if (e.target.closest('.qa-btn') || e.target.closest('.manage-name-tag')) return;
+            if (e.target.closest('.qa-btn') || e.target.closest('.manage-name-tag') ||
+                e.target.closest('.login-count-wrap') || e.target.tagName === 'INPUT') return;   // 输入框不触发编辑
             e.stopPropagation();
             var tr = cell.closest('tr[data-acc-id]');
             if (!tr) return;
@@ -1038,6 +1086,19 @@ JFC.AccountTable = (function() {
             if (!btn) return;
             e.stopPropagation();
             self.handleAction(btn.getAttribute('data-action'), btn.getAttribute('data-id'));
+        });
+
+        // "× __"数量输入框：只允许数字（× 是静态前缀，删不掉）；值记在表实例上，重渲染后仍保留
+        this.tbody.addEventListener('input', function(e) {
+            var input = e.target.closest ? e.target.closest('.login-count-input') : null;
+            if (!input) return;
+            var digits = String(input.value || '').replace(/\D/g, '').slice(0, 1);   // 只允许 1 位（1~9）
+            if (input.value !== digits) input.value = digits;
+            self.loginCount = digits;
+        });
+        this.tbody.addEventListener('mousedown', function(e) {
+            // 点输入框不要被当成"进名称编辑"或"选中行"
+            if (e.target.closest && e.target.closest('.login-count-wrap')) e.stopPropagation();
         });
 
         // 行悬浮整行高亮（JS 层覆盖列区域+右侧空白；mousemove 委托，匹配数据行与空表的空行）
@@ -1217,12 +1278,20 @@ JFC.AccountTable = (function() {
     /**
      * 登录账号（行内"登录"按钮 / 批量登录共用）.
      *
-     * <p><b>当前为占位</b>：Java 侧还没有"启动并登录账号"的桥方法（`SwOperatorCore.openSwAndReturnHwnd` 仍是 Stub），
-     * 所以这里如实提示"登录流程待实现"，等登录机制接入后把提示换成真实调用即可（**唯一改动点就是这里**）。
+     * <p>分两种目标：
+     * <ul>
+     *   <li><b>程序行（origin_exe）</b>：启动平台程序本身 —— 已接通真实实现：查杀该平台全部互斥体/文件锁
+     *       + **降权启动**（借用 explorer 的普通权限令牌）→ 每次点击都应新开一个登录窗口 ✓</li>
+     *   <li><b>账号行</b>：需要"等登录窗 → 选账号 → 等主窗"那套 UI 自动化，**尚未接入**，如实提示</li>
+     * </ul>
      */
     AccountTable.prototype._loginAccounts = function(ids) {
         var swId = this.getSwId();
         if (!swId || !ids || !ids.length) return;
+        if (ids.length === 1 && ids[0] === 'origin_exe') {
+            this._launchPlatformProgram(swId, this._readLoginCount());
+            return;
+        }
         var names = [];
         var self = this;
         ids.forEach(function(id) {
@@ -1233,9 +1302,38 @@ JFC.AccountTable = (function() {
             title: '登录',
             bodyHtml: '<div style="line-height:1.9;">将登录 ' + ids.length + ' 个账号：<br>' +
                 names.map(function(n) { return '· ' + escapeHtml(n); }).join('<br>') +
-                '<br><span style="color:var(--text-muted);">登录流程尚未接入（Java 侧启动/登录能力待实现），当前不会真的登录。</span></div>',
+                '<br><span style="color:var(--text-muted);">账号登录（等登录窗 → 选账号 → 等主窗）尚未接入；' +
+                '目前可用程序表那一行的"登录"来多开平台程序。</span></div>',
             actions: [{ text: '知道了', cls: 'modal-ok' }]
         });
+    };
+
+    /**
+     * 启动平台程序（程序行的"登录"）：**委托给页面层同一实现**
+     * （`JFC.pages.main.launchPlatformProgram` —— 最左栏程序图标双击也走它，保证单一来源）。
+     */
+    AccountTable.prototype._launchPlatformProgram = function(swId, count) {
+        if (JFC.pages && JFC.pages.main && JFC.pages.main.launchPlatformProgram) {
+            JFC.pages.main.launchPlatformProgram(swId, count);
+            return;
+        }
+        // 兜底（页面模块异常时也要能用）：与页面层同样的行为，成功 toast、失败弹窗
+        var res = null;
+        try {
+            res = JFC.bridge.launchPlatformProgram(swId, count);
+        } catch (e) {
+            res = null;
+        }
+        if (res && res.success) {
+            JFC.toastSuccess('已以<b>普通用户权限</b>启动 <b>' + (res.count || count || 1) + '</b> 个实例' +
+                (res.viaExplorer ? '（经资源管理器代启）' : ''), 4000);
+        } else {
+            JFC.modal.custom({
+                title: '启动失败',
+                bodyHtml: escapeHtml(res && res.error ? res.error : '启动失败'),
+                actions: [{ text: '知道了', cls: 'modal-ok' }]
+            });
+        }
     };
 
     // ---- 行操作（悬浮按钮/行右键菜单共用） ----
@@ -1642,7 +1740,9 @@ JFC.AccountTable = (function() {
             }
         }
 
-        var w = Math.max(Math.round(maxW) + 4, Math.round(minW));
+        // 宽余量：原来只 +4px，实测"微信4.x"这种中英混排 + 分段字体（.cjk-run/.lat-run）会比测量值再宽一点，
+        // 于是被省略成"微信4…" → 加到 +10px（用户 2026-10-07 反馈）
+        var w = Math.max(Math.round(maxW) + 10, Math.round(minW));
         this.colWidth[key] = w;
         this._applyColumnWidth(key, w);
         if (!skipSave) this._saveColumnPrefs();
@@ -1929,7 +2029,16 @@ JFC.AccountTable = (function() {
     AccountTable.prototype._renderNameCell = function(cell, accountId, acc) {
         if (!cell || !acc) return;
         cell.innerHTML = nameCellInnerHtml(acc, acc.display_name || acc.nickname || accountId,
-            rowActionsOf(this.rowKind, this.mode, { hidden: !!acc.hidden, invalid: !!acc.invalid }));
+            rowActionsOf(this.rowKind, this.mode, { hidden: !!acc.hidden, invalid: !!acc.invalid }),
+            this.loginCount);
+    };
+
+    /** 读该表当前"要启动几个实例"的输入值（空/非法 → 1；界面只允许 1 位，这里再夹一次 1~9） */
+    AccountTable.prototype._readLoginCount = function() {
+        var input = this.el ? this.el.querySelector('.login-count-input') : null;
+        var raw = input ? input.value : (this.loginCount || '');
+        var n = parseInt(raw, 10);
+        return (!n || n < 1) ? 1 : Math.min(n, 9);
     };
 
     /**

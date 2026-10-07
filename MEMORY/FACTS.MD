@@ -495,4 +495,10 @@
 - **删除/重置**：删除 = 节点整体移除；重置 = 清空内容保留空节点；**两者都清该账号的头像文件**（只清图片、保留非图片、只删空目录）；批量删除只对失效账号生效（确认框照常弹）
 - **弹窗**：一律 `JFC.modal.confirm/custom`（`window.confirm` 在 WebView 里恒 false、`alert` 空操作）；头像弹窗为居中版式
 - **抗锯齿（试验）**：`run` 任务带 `-Dprism.lcdtext=false`（灰度 AA），保留与否待定 → 见 [`TODOS.MD`](TODOS.MD)
-- **文档**：`AGENTS.md`（全局视图）｜`MEMORY/{DEV_LOGS,LESSONS,FACTS,DECISIONS,TODOS,MEMORY}.MD`｜`docs/project_structure.md`｜离线探针原先在 `build/_probe/`（**未纳入版本控制，已被 `gradle clean` 清空**）
+- **启动 / 多开**：点程序表"登录"（或**双击最左栏平台图标**）= 查杀该平台全部互斥体+文件锁 → **降权启动**平台程序；`JsBridge.launchPlatformProgram(swId, count)` 可一次开多个；非管理员直接启动、管理员借 explorer 令牌、失败兜底 `explorer.exe` 代启；启动成功走右下角 toast、失败弹窗
+- **互斥体查杀**：`WinHandleOps`（JNA 枚举系统句柄 → 复制+问名 → `DUPLICATE_CLOSE_SOURCE` 关闭）；三个入口 `killAllMutexesNow` / `tryKillMutexIfNeededAndReturnRemainedPids` / `killMutexOfAcc`；带**"已查杀 PID"全局缓存**（10s TTL，命中即跳过枚举）
+- **平台项点击策略**：统一窗口 **250ms** —— 单击当前平台=刷新、单击别的平台=**等窗口后切换**、**双击=启动该平台程序（不切平台）**、**三击及以上=取消双击效果**
+- **通知**：成功用 `JFC.toastSuccess`（右下角，**无 ×**，`toast-out` 渐隐后自动移除）；失败才用 `JFC.modal`
+- **程序表**：**没有 PID/HWND 列**（程序只是启动器）；`version` 非必显；"登录"左边有 `× __` 数量输入框（1 位、留空=1、空白灰显 `1`）
+- **全选框**：在表格标题行、表名左侧，与数据行勾选框**同款**（基类不再限定表格作用域）且**运行时实测对齐**（`_syncSelectAllPosition()`）
+- **文档**：`AGENTS.md`（全局视图）｜`MEMORY/{DEV_LOGS,LESSONS,FACTS,DECISIONS,TODOS,MEMORY}.MD`｜`docs/project_structure.md`｜离线探针原先在 `build/_probe/`（**未纳入版本控制，已被 `gradle clean` 清空**；新探针放 `tmp/probe/`）

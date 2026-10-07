@@ -564,32 +564,67 @@ public final class AccInfoFuncCore {
         allPids = com.jfmultichat.swcore.SwNativeOps.removePidsNotInPath(
                 allPids, new File(swAccessor.tryGetPathOf(sw, "inst_path")).getParent());
 
-        // 匹配进程到账号（内存映射）
-        Map<Integer, String> pidAccMap = new HashMap<>();
-        for (int pid : allPids) {
-            List<String> memPaths = com.jfmultichat.swcore.SwNativeOps.INSTANCE
-                    .enumerateByVirtualQueryEx(pid);
-            for (String path : memPaths) {
-                if (path.startsWith(dataDir.replace('\\', '/'))) {
-                    String[] parts = path.replace('\\', '/').split("/");
-                    int dataDirIdx = -1;
-                    for (int i = 0; i < parts.length; i++) {
-                        if (parts[i].equals(new File(dataDir).getName())) {
-                            dataDirIdx = i;
-                            break;
-                        }
-                    }
-                    if (dataDirIdx >= 0 && dataDirIdx + 1 < parts.length) {
-                        String acc = parts[dataDirIdx + 1];
-                        if (!excludedDirs.contains(acc)) {
-                            pidAccMap.put(pid, acc);
-                            break;
-                        }
+        // 匹配进程到账号（内存映射）—— **并发**扫描：每个 pid 要遍历整个地址空间，串行会明显偏慢
+        // （Python 版用 ThreadPoolExecutor(max_workers=8)，这里对齐）
+        Map<Integer, String> pidAccMap = new java.util.concurrent.ConcurrentHashMap<>();
+        if (!allPids.isEmpty()) {
+            int threads = Math.max(1, Math.min(8, allPids.size()));
+            java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(threads);
+            try {
+                List<java.util.concurrent.Future<?>> tasks = new ArrayList<>();
+                for (int pid : allPids) {
+                    tasks.add(pool.submit(() -> {
+                        String acc = matchAccountByMmap(pid, dataDir, excludedDirs);
+                        if (acc != null) pidAccMap.put(pid, acc);
+                    }));
+                }
+                for (java.util.concurrent.Future<?> t : tasks) {
+                    try {
+                        t.get();
+                    } catch (Exception ignore) {
+                        // 单个 pid 扫描失败不影响其它 pid（进程可能刚好退出）
                     }
                 }
+            } finally {
+                pool.shutdown();
             }
         }
         return pidAccMap;
+    }
+
+    /**
+     * 单个 pid：遍历它的内存映射，找出"属于本平台数据目录下某个账号文件夹"的那条路径，返回账号 ID.
+     *
+     * <p>对应 Python: `_update_acc_list_by_pid` 里的 `identify_by_file`：
+     * 路径以 data_dir 开头 → 按分隔符切段 → 找到等于 data_dir 目录名的那段 → **取它后面一段 = 账号 ID**；
+     * 命中 `excluded_dirs` 的段跳过；同一 pid 取**第一条**命中的（与 Python 首次成功即返回一致）。
+     *
+     * @return 账号 ID；没匹配到返回 null
+     */
+    static String matchAccountByMmap(int pid, String dataDir, List<String> excludedDirs) {
+        String normalizedDataDir = dataDir.replace('\\', '/');
+        String dataDirName = new File(dataDir).getName();
+        for (String path : com.jfmultichat.swcore.SwNativeOps.INSTANCE
+                .enumerateByVirtualQueryEx(pid)) {
+            if (path == null) continue;
+            String normalized = path.replace('\\', '/');
+            if (!normalized.startsWith(normalizedDataDir)) continue;
+            String[] parts = normalized.split("/");
+            int dataDirIdx = -1;
+            for (int i = 0; i < parts.length; i++) {
+                if (parts[i].equals(dataDirName)) {
+                    dataDirIdx = i;
+                    break;
+                }
+            }
+            if (dataDirIdx >= 0 && dataDirIdx + 1 < parts.length) {
+                String acc = parts[dataDirIdx + 1];
+                if (!excludedDirs.contains(acc)) {
+                    return acc;
+                }
+            }
+        }
+        return null;
     }
 
     /**
