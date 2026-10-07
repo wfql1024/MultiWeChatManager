@@ -1748,13 +1748,21 @@ body.curtain-collapsed .manage-curtain-handle #handle-drag-right {
    （早先改成"脱离流 + 绝对定位 + 写死 left/width/height"，就必须用测量值硬撑行高，
      还会扰动折叠边框 → 实测列头行被撑大几像素。这是本文件最容易踩的坑之一。） */
 body.dragging-col { cursor: grabbing; user-select: none; }
-/* 让位的列带过渡；被拖列不做过渡，直接跟手 */
-.acc-table.col-dragging .manage-account-table thead th[data-col] {
+/* 让位的列带过渡（列头 + 列内容一起滑）；被拖列不做过渡，直接跟手 */
+.acc-table.col-dragging .manage-account-table thead th[data-col],
+.acc-table.col-dragging .manage-account-table tbody td[data-col] {
     transition: transform 0.12s ease;
 }
-.acc-table.col-dragging .manage-account-table thead th.col-dragging {
+.acc-table.col-dragging .manage-account-table thead th.col-dragging,
+.acc-table.col-dragging .manage-account-table tbody td.col-dragging {
     transition: none;
+}
+.acc-table.col-dragging .manage-account-table thead th.col-dragging {
     cursor: grabbing;
+}
+/* 被拖列的内容整体抬起一层（覆盖在让位列之上） */
+.acc-table.col-dragging .manage-account-table tbody td.col-dragging {
+    position: relative;
 }
 /* 拖动中的"填充块"：比列头四周各内缩 4px + 圆角（用户 2026-10-06 定的尺寸） */
 .acc-table.col-dragging .manage-account-table thead th.col-dragging::after {

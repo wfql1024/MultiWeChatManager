@@ -163,7 +163,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，"看起来是 X"往往不是
 
 ---
 
-## 十四、JavaFX WebView 与前端交互的十六个坑（2026-10-05 实测）
+## 十四、JavaFX WebView 与前端交互的十七个坑（2026-10-05 起实测）
 > 结论都来自离屏 WebView 实测（`build/_probe/`），不是查文档猜的。做前端交互前先按这几条对照一遍。
 
 1. **`window.confirm()` 恒返回 `false`**（`alert()` 也什么都不做）——JavaFX 没装 confirm handler 时既不弹窗也不返回 true。
@@ -297,6 +297,15 @@ JavaFX WebView 与 Chromium 的布局细节不同，"看起来是 X"往往不是
     （旧记录写的"`run.bat` 仅运行、不触发编译"是**错的** —— 前端改动之所以重启就能生效，正是因为 Gradle 的 `processResources` 自动把 `src/main/resources/**` 复制进 `build/resources/main`，而页面是走类路径 `getResource("/web/index.html")` 加载的。）
 15. **Java varargs 与 JS bridge 不兼容** → JavaFX WebView 的 Netscape JSObject 桥无法将 JS 参数映射到 Java `String...` varargs（JVM 方法描述符多一个 `[String` 槽位导致反射匹配失败）。必须用固定参数，pathKeys 用 JSON 字符串传递
 16. **路径中的反斜杠导致 JS JSON.parse 静默失败** → Windows `File.getParent()` 返回 `\` 路径 → Jackson 序列化为 `\\` → 嵌入 JS 单引号字符串时 `\\` 被解析为 `\` → JSON 中出现非法转义 → `JSON.parse` 抛 SyntaxError 被空 catch 吞掉。修复：所有路径在存入 PathEntry 前统一经 `normalizePath()` 处理
+17. **"纯视觉效果"一律用 `transform`，绝不让元素脱离文档流**（2026-10-07 血泪三次）
+    - 想做"拖动预览/滑动让位"这类**只改观感、不改结构**的效果，就用 `transform: translateX()`：它是**绘制阶段的位移**，
+      **不参与布局** → 行高、列宽、`border-collapse` 折叠边框、单元格 `vertical-align` 全都不受影响。
+    - 反面做法（我连踩三次）：把元素改成 `position: absolute` "脱离流好自由移动" ✗ ——
+      ① 表格里 `border-collapse: collapse` 的边框是**相邻单元格共享**的，动一个边框会让折叠边框重新分配、行高跟着变；
+      ② 脱离流后行高只能靠**测量值**硬撑，而表格单元格的 `height` 只是**最小高度** → 必然差几像素；
+      ③ 绝对定位还会让 `vertical-align` 失效、文字基线跑偏；`height: 100%` 更会按更大的包含块算（列头被拉成整表高）。
+    - 判断标准一句话：**"我要的效果会不会让浏览器重新排版？"** 会 → 想办法改成 transform/opacity 之类的合成属性；
+      真需要改流，就在**松手后一次性重排**（本项目列换序的两阶段模型就是这么分工的）。
 17. **路径规范化统一** → `SwPathDetective.normalizePath()` 统一处理：去引号、`\`→`/`、盘符大写、去末尾分隔符。所有 PathEntry 构造点必须调用
 18. **ConcurrentHashMap 不允许 null 值** → 多线程合并结果时用 `Collections.synchronizedMap(new LinkedHashMap<>())`
 19. **overflow:hidden 裁剪绝对定位子元素** → 下拉面板在 `position:absolute` 时被父容器 `overflow:hidden` 裁剪。解决方案：面板用 `position:fixed` 挂在 body 层，通过 `getBoundingClientRect()` 定位

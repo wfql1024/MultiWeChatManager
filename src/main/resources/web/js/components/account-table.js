@@ -826,8 +826,9 @@ JFC.AccountTable = (function() {
         var thead = table.querySelector('thead');
         if (!thead) return;
 
-        // 宽度只量一次（offsetWidth = 实际渲染宽度），初始 left 由累积求和得出；之后全部是纯数学
-        var w0 = {}, left0 = {}, slots = [], acc = 0;
+        // 宽度只量一次（offsetWidth = 实际渲染宽度），初始 left 由累积求和得出；之后全部是纯数学。
+        // 同时把**该列的全部单元格**（表头 + 每行 td）收集起来 —— 阶段一要让列内容跟着列头一起位移
+        var w0 = {}, left0 = {}, slots = [], cells = {}, acc = 0;
         cols.forEach(function(col, i) {
             var th = table.querySelector('th[data-col="' + col.key + '"]');
             if (!th) return;
@@ -836,22 +837,29 @@ JFC.AccountTable = (function() {
             left0[col.key] = acc;
             slots[i] = { left: acc, width: w };
             acc += w;
+            var list = [th];
+            table.querySelectorAll('tbody td[data-col="' + col.key + '"]').forEach(function(td) { list.push(td); });
+            cells[col.key] = list;
         });
         if (!w0[key]) return;
 
         this.colDrag = {
             key: key, fromIndex: idx,
             liveOrder: cols.map(function(c) { return c.key; }),
-            w0: w0, left0: left0, slots: slots,
+            w0: w0, left0: left0, slots: slots, cells: cells,
             width: w0[key],
             startClientX: startX,
             startLeft: left0[key]
         };
 
         this.el.classList.add('col-dragging');
-        // 被拖列抬高一层（其余列仍留在流里，各自按实时顺序位移）
+        // 被拖列整列（表头 + 内容）抬高一层；其余列仍留在流里，各自按实时顺序位移
         var th = table.querySelector('th[data-col="' + key + '"]');
         if (th) { th.classList.add('col-dragging'); th.style.zIndex = '3'; }
+        (cells[key] || []).forEach(function(cell) {
+            cell.classList.add('col-dragging');        // 内容同样"跟手不拖尾"（该类的 transition: none）
+            if (cell.tagName === 'TD') cell.style.zIndex = '3';
+        });
         document.body.classList.add('dragging-col');
         window.addEventListener('mousemove', this._onColDragMove);
         window.addEventListener('mouseup', this._onColDragUp);
@@ -893,8 +901,9 @@ JFC.AccountTable = (function() {
     };
 
     /**
-     * 阶段一渲染（**只动列头**）：全部用 `transform: translateX()` 位移 ——
-     * 元素留在表格流里，所以对布局、行高、折叠边框**零影响**；被拖列跟手（无过渡），其余列带过渡滑过去。
+     * 阶段一渲染（**列头 + 列内容一起动**）：全部用 `transform: translateX()` 位移 ——
+     * 所有单元格都留在表格流里，所以对布局、行高、列宽、折叠边框**零影响**；
+     * 被拖列整列跟手（无过渡），其余列整列带过渡滑过去。
      */
     AccountTable.prototype._paintColDrag = function(pointerLeft) {
         var d = this.colDrag;
@@ -903,11 +912,13 @@ JFC.AccountTable = (function() {
         var order = d.liveOrder;
         var acc = 0;
         order.forEach(function(k) {
-            var th = table.querySelector('th[data-col="' + k + '"]');
-            if (!th || !d.w0[k]) return;
+            if (!d.w0[k]) return;
             var target = (k === d.key) ? Math.max(0, pointerLeft) : acc;
             var dx = Math.round(target - (d.left0[k] || 0));
-            th.style.transform = dx ? 'translateX(' + dx + 'px)' : '';
+            var tf = dx ? 'translateX(' + dx + 'px)' : '';
+            (d.cells[k] || []).forEach(function(cell) {
+                if (cell.style.transform !== tf) cell.style.transform = tf;
+            });
             acc += d.w0[k];
         });
     };
@@ -921,10 +932,10 @@ JFC.AccountTable = (function() {
         this.colDrag = null;
         var table = this.tableEl;
         if (this.el) this.el.classList.remove('col-dragging');
-        table.querySelectorAll('thead th').forEach(function(th) {
-            th.style.transform = '';
-            th.style.zIndex = '';
-            th.classList.remove('col-dragging');
+        table.querySelectorAll('thead th, tbody td').forEach(function(cell) {
+            cell.style.transform = '';
+            cell.style.zIndex = '';
+            cell.classList.remove('col-dragging');
         });
         if (!d) return;
 
