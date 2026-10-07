@@ -800,20 +800,20 @@ JFC.AccountTable = (function() {
     // ==================== 列换序（用户 2026-10-06 定的两阶段模型） ====================
     //
     // 阶段一（拖动中，**只做列头那一行的效果**）：
-    //   · 位置**不做任何测量**：每列的 x = 排在它前面的列宽之和（纯数学，宽度只有两个来源：
+    //   · 列头**始终留在表格流里**，只用 `transform: translateX()` 位移 —— 位移是纯视觉、零布局影响，
+    //     所以行高、边框、`border-collapse` 折叠规则全都不变（早先改成绝对定位脱离流，就得用测量值
+    //     硬撑行高、还会扰动折叠边框 → 实测"列头行被撑大几像素"，见 DEV_LOGS 三十九）
+    //   · 位置**不做任何测量**：每列的 x = 排在它前面的列宽之和（宽度只有两个来源：
     //     fixed 列的 defWidth / 其余列的 colWidth，都是渲染时用的同一份数据）
-    //   · 列头暂时脱离表格流（thead tr 相对定位 + 各 th 绝对定位 + 显式 left/width），
-    //     于是单元格可以自由移动而不留洞、不和表格布局打架
-    //   · **被拖列直接跟鼠标位移**：left = 拖动开始时的 left + (clientX - 按下时的 clientX)
-    //     —— 不依赖任何 rect/居中计算，天然跟手
-    //   · 其余列按实时顺序 liveOrder 重算 left 并带过渡滑过去（列表一变立刻重算）
+    //   · **被拖列直接跟鼠标位移**：dx = clientX - 按下时的 clientX —— 不依赖任何 rect/居中计算，天然跟手
+    //   · 其余列按实时顺序 liveOrder 重算 x 并带过渡滑过去（列表一变立刻重算）
     //   · **tbody 一个单元格都不碰**（内容不动）
-    // 阶段二（松手）：liveOrder 写回顺序 → 持久化 → 退出拖动模式 → 整表重刷
+    // 阶段二（松手）：liveOrder 写回顺序 → 持久化 → 重建列头 → 整表重刷
     //
     // 交互保护：列头 mousedown 里 preventDefault()（否则 WebView 可能把后续 mousemove 当成
     // 原生选择/拖动行为吞掉，表现就是"拖着完全不动"）；监听挂在 window 上，离开表头也不断。
 
-    /** 阶段一入口：建实时顺序 + 把列头切到"可自由位移"状态（left/width 显式写死，切换瞬间不跳位） */
+    /** 阶段一入口：建实时顺序 + 记录初始位置（元素仍留在流里，只等 transform 位移） */
     AccountTable.prototype._startColDrag = function(key, startX) {
         var cols = this._orderedColumns();
         var idx = -1;
@@ -824,13 +824,10 @@ JFC.AccountTable = (function() {
 
         var table = this.tableEl;
         var thead = table.querySelector('thead');
-        var tr = thead ? thead.querySelector('tr') : null;
-        if (!thead || !tr) return;
+        if (!thead) return;
 
-        // 宽度/高度：只量一次（offsetWidth/Height = 实际渲染尺寸），之后位置全部由累积求和得出。
-        // 行高取**被拖列头自己的高度**（所有列头等高，不必取最大值）；拖动时的填充块与列头严格等大。
-        // 同时记录**初始槽位**（每个下标占的区间）—— 落点判定只认这份初始坐标，不认实时布局。
-        var w0 = {}, left0 = {}, slots = [], acc = 0, rowH = 0;
+        // 宽度只量一次（offsetWidth = 实际渲染宽度），初始 left 由累积求和得出；之后全部是纯数学
+        var w0 = {}, left0 = {}, slots = [], acc = 0;
         cols.forEach(function(col, i) {
             var th = table.querySelector('th[data-col="' + col.key + '"]');
             if (!th) return;
@@ -839,7 +836,6 @@ JFC.AccountTable = (function() {
             left0[col.key] = acc;
             slots[i] = { left: acc, width: w };
             acc += w;
-            if (col.key === key) rowH = th.offsetHeight;
         });
         if (!w0[key]) return;
 
@@ -849,25 +845,13 @@ JFC.AccountTable = (function() {
             w0: w0, left0: left0, slots: slots,
             width: w0[key],
             startClientX: startX,
-            startLeft: left0[key],
-            rowH: Math.round(rowH) || 34
+            startLeft: left0[key]
         };
 
-        // 列头脱离表格流：先写死当前 left/width/height（视觉零跳变），再加类（类里才有 position:absolute）
-        var self = this;
-        var rowH = this.colDrag.rowH;
         this.el.classList.add('col-dragging');
-        tr.style.position = 'relative';
-        tr.style.height = rowH + 'px';
-        cols.forEach(function(col) {
-            var th = table.querySelector('th[data-col="' + col.key + '"]');
-            if (!th || !w0[col.key]) return;
-            th.style.width = w0[col.key] + 'px';
-            // 显式像素高：绝对定位后列头不会被行高撑开，也不能用 100%（百分比会按更大的包含块算 → 列头被拉成整表高）
-            th.style.height = rowH + 'px';
-            th.style.left = left0[col.key] + 'px';
-            if (col.key === key) th.classList.add('col-dragging');
-        });
+        // 被拖列抬高一层（其余列仍留在流里，各自按实时顺序位移）
+        var th = table.querySelector('th[data-col="' + key + '"]');
+        if (th) { th.classList.add('col-dragging'); th.style.zIndex = '3'; }
         document.body.classList.add('dragging-col');
         window.addEventListener('mousemove', this._onColDragMove);
         window.addEventListener('mouseup', this._onColDragUp);
@@ -909,7 +893,8 @@ JFC.AccountTable = (function() {
     };
 
     /**
-     * 阶段一渲染（**只动列头**）：被拖列用跟手位置（无过渡），其余列用实时顺序的累积宽度（带过渡滑过去）。
+     * 阶段一渲染（**只动列头**）：全部用 `transform: translateX()` 位移 ——
+     * 元素留在表格流里，所以对布局、行高、折叠边框**零影响**；被拖列跟手（无过渡），其余列带过渡滑过去。
      */
     AccountTable.prototype._paintColDrag = function(pointerLeft) {
         var d = this.colDrag;
@@ -920,12 +905,14 @@ JFC.AccountTable = (function() {
         order.forEach(function(k) {
             var th = table.querySelector('th[data-col="' + k + '"]');
             if (!th || !d.w0[k]) return;
-            th.style.left = (k === d.key ? Math.max(0, pointerLeft) : acc) + 'px';
+            var target = (k === d.key) ? Math.max(0, pointerLeft) : acc;
+            var dx = Math.round(target - (d.left0[k] || 0));
+            th.style.transform = dx ? 'translateX(' + dx + 'px)' : '';
             acc += d.w0[k];
         });
     };
 
-    /** 阶段二：松手落位 —— 写回顺序 → 持久化 → 退出拖动模式 → 整表重刷 */
+    /** 阶段二：松手落位 —— 写回顺序 → 持久化 → 清掉拖动痕迹 → 重建列头 + 整表重刷 */
     AccountTable.prototype._endColDrag = function() {
         window.removeEventListener('mousemove', this._onColDragMove);
         window.removeEventListener('mouseup', this._onColDragUp);
@@ -934,12 +921,9 @@ JFC.AccountTable = (function() {
         this.colDrag = null;
         var table = this.tableEl;
         if (this.el) this.el.classList.remove('col-dragging');
-        var tr = table.querySelector('thead tr');
-        if (tr) { tr.style.position = ''; tr.style.height = ''; }
         table.querySelectorAll('thead th').forEach(function(th) {
-            th.style.left = '';
-            th.style.width = '';
-            th.style.height = '';
+            th.style.transform = '';
+            th.style.zIndex = '';
             th.classList.remove('col-dragging');
         });
         if (!d) return;

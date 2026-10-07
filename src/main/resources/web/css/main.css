@@ -1743,28 +1743,17 @@ body.curtain-collapsed .manage-curtain-handle #handle-drag-right {
     flex: 0 0 auto;
 }
 /* 拖动列换序（阶段一：**只动列头那一行**，tbody 一个单元格都不碰）
-   列头先脱离表格流（tr 相对定位、th 绝对定位；left/width 由 JS 用累积列宽写死），
-   于是列头可以自由滑动而不留洞、不和表格布局打架。 */
+   ⚠️ 关键：列头**始终留在表格流里**，只靠 `transform: translateX()` 位移。
+   transform 是纯视觉、零布局影响 → 行高 / 边框 / `border-collapse` 折叠规则全都不动。
+   （早先改成"脱离流 + 绝对定位 + 写死 left/width/height"，就必须用测量值硬撑行高，
+     还会扰动折叠边框 → 实测列头行被撑大几像素。这是本文件最容易踩的坑之一。） */
 body.dragging-col { cursor: grabbing; user-select: none; }
-.acc-table.col-dragging .manage-account-table thead tr { position: relative; }
+/* 让位的列带过渡；被拖列不做过渡，直接跟手 */
 .acc-table.col-dragging .manage-account-table thead th[data-col] {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    /* 高度由 JS 按行高写成**显式像素**（不能用 100%：绝对定位下百分比会按更大的包含块算，
-       实测会把列头拉成整表高度）。这里是兜底，正常走 JS 写的那份。 */
-    box-sizing: border-box;
-    border-bottom: none;            /* 拖动期间不要下边框（正常显示本来也没有多出来的线） */
-}
-/* 只有"让位"的列需要过渡；被拖列不做过渡，直接跟手 */
-.acc-table.col-dragging .manage-account-table thead th[data-col] {
-    transition: left 0.12s ease;
+    transition: transform 0.12s ease;
 }
 .acc-table.col-dragging .manage-account-table thead th.col-dragging {
     transition: none;
-    z-index: 3;
-    background: var(--bg-sidebar);     /* 与表头同色：遮住下面让位的列，视觉上不留空 */
     cursor: grabbing;
 }
 /* 拖动中的"填充块"：比列头四周各内缩 4px + 圆角（用户 2026-10-06 定的尺寸） */
@@ -1778,7 +1767,7 @@ body.dragging-col { cursor: grabbing; user-select: none; }
     border-radius: 4px;
     background: var(--bg-hover);
     pointer-events: none;
-    z-index: -1;                       /* 在列头底色之上、文字之下 */
+    z-index: -1;                       /* 在文字之下（th 自身背景透明，靠下一层看过去就是表头底色） */
 }
 .manage-account-table th.manage-col-check {
     text-align: center;
