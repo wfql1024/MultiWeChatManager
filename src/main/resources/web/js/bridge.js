@@ -154,6 +154,10 @@ JFC.bridge = (function() {
         notifyPlatformEntered: function(swId) { callWithArgs('notifyPlatformEntered', swId); },
         // 快捷键录入捕获开关（Java Scene 级 EventFilter 兜底）
         notifyHotkeyCapture: function(active) { callWithArgs('notifyHotkeyCapture', !!active); },
+        // 账号级登录（原生账号，异步）：每个账号开一个登录窗 + 自动点"登录" + 等窗口关闭
+        loginAccountsAsync: function(swId, accIds, fn) {
+            callWithArgs('loginAccountsAsync', swId, JSON.stringify(accIds || []), String(registerAsync(fn)));
+        },
         // 获取登录窗口尺寸（读当前真实的登录窗口，格式 "宽*高"）；返回 {success, size?, error?}
         fetchLoginSize: function(swId) { return callJsonWithArgs('fetchLoginSize', swId); },
         // 点"登录"（程序行）→ 查杀该平台全部互斥体 + 降权启动平台程序（count = 启动几个实例，空/非数字=1）

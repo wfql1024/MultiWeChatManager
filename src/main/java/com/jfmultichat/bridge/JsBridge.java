@@ -1394,6 +1394,11 @@ public class JsBridge {
                 item.put("id", id);
                 // 展示名：remark → nickname → alias，回退账号 ID
                 item.put("display_name", AccInfoFuncCore.getAccOriginDisplayName(swId, id));
+                // 配置状态（**账号级**，实时按文件判断，不写进 SwAccData —— 它是"事实"不是"数据"）：
+                //   原生账号 → {account}_{平台配置文件名} 的存在与修改时间（无 → "no_cfg"）
+                //   共存账号 → 不查配置（共存账号 ID 本身就是 exe 名），与 getAccDetails 同语义
+                item.put("config_status", AccInfoFuncCore.isAccCoexist(swId, id)
+                        ? id : AccInfoFuncCore.getSwAccLoginCfgStatus(swId, id));
                 // 复制所有字段
                 fields.fieldNames().forEachRemaining(key -> {
                     JsonNode node = fields.get(key);
@@ -1614,6 +1619,56 @@ public class JsBridge {
      * @return JSON: {success, pid?, mutexMessage, error?}
      */
     /**
+     * JS 调用（**异步**）：**账号级登录**（原生账号）—— 每个账号开一个登录窗，自动点"登录"，等窗口关闭.
+     *
+     * <p>为什么异步：每个账号要"启动 + 等登录窗出现（最多 20s）+ 点击 + 等窗口关闭"，
+     * 同步跑必然卡死界面（与批量启动同一个道理）。
+     *
+     * @param accIdsJson 账号 ID 数组的 JSON，如 {@code ["wxid_a","wxid_b"]}
+     * @param cbId       JS 回调 ID，完成后推 {@code JFC.bridge._handleAsync('login', cbId, json)}
+     */
+    public void loginAccountsAsync(String swId, String accIdsJson, String cbId) {
+        THREAD_POOL.submit(() -> {
+            ObjectNode result = MAPPER.createObjectNode();
+            try {
+                List<String> accIds = new java.util.ArrayList<>();
+                com.fasterxml.jackson.databind.JsonNode arr = MAPPER.readTree(
+                        accIdsJson == null || accIdsJson.isBlank() ? "[]" : accIdsJson);
+                if (arr.isArray()) arr.forEach(n -> accIds.add(n.asText()));
+
+                List<String[]> rows = com.jfmultichat.acccore.AccOperatorCore.loginOrigin(swId, accIds);
+                com.fasterxml.jackson.databind.node.ArrayNode items = result.putArray("accounts");
+                int ok = 0;
+                for (String[] r : rows) {
+                    ObjectNode item = items.addObject();
+                    item.put("accId", r[0]);
+                    item.put("hwnd", r[1]);
+                    item.put("pid", r[2]);
+                    item.put("error", r[3] == null ? "" : r[3]);
+                    if (r[3] == null || r[3].isEmpty()) ok++;
+                }
+                result.put("success", ok > 0);
+                result.put("count", ok);
+                result.put("total", accIds.size());
+                if (ok < accIds.size()) {
+                    result.put("error", "成功 " + ok + " / " + accIds.size() + " 个账号");
+                }
+                LOG.info("[登录] 账号级登录结束: sw={}, 成功 {}/{}", swId, ok, accIds.size());
+            } catch (Exception e) {
+                LOG.error("loginAccountsAsync 失败: swId={}", swId, e);
+                result.put("success", false);
+                result.put("error", String.valueOf(e.getMessage()));
+            }
+            try {
+                pushToJs("JFC.bridge._handleAsync('login'," + cbId
+                        + "," + MAPPER.writeValueAsString(result.toString()) + ")");
+            } catch (Exception e) {
+                LOG.error("推送账号登录结果失败", e);
+            }
+        });
+    }
+
+    /**
      * JS 调用：**获取平台登录窗口尺寸**（格式 {@code 宽*高}，如 {@code 347*471}）.
      *
      * <p>对应旧版 `SwOperatorCore.get_login_size`：找登录窗口 → 量宽高。
@@ -1737,17 +1792,17 @@ public class JsBridge {
             LOG.info("[登录] ===== 第 {}/{} 轮：已有 {} 个，还需 {} 个 =====",
                     round, MAX_BATCH_ROUNDS, newPids.size(), remaining);
 
-            // ② 查杀现有互斥体/文件锁
+            // ② 查杀现有互斥体/文件锁（**这一轮只杀一次**）
             String[] kill = com.jfmultichat.swcore.SwOperatorCore.killAllMutexesNow(
                     swId, accessor, nativeOps);
             if (kill[1] != null) mutexMsg = kill[1];
             LOG.info("[登录] 第 {} 轮查杀结果: {}", round, kill[1]);
 
-            // ③ 一次性唤起剩余数量（每个实例都走核心方法：查杀 + 降权启动）
+            // ③ 一次性唤起剩余数量：**skipKill=true**（刚刚已经杀过，N 次启动不再各自重扫一遍）
             lastLaunched = 0;
             for (int i = 0; i < remaining; i++) {
                 String[] one = com.jfmultichat.swcore.SwOperatorCore.launchOneInstance(
-                        swId, null, accessor, nativeOps);
+                        swId, null, accessor, nativeOps, true);      // true = 本轮刚杀过，跳过内部查杀
                 if (one[0] == null) {
                     LOG.warn("[登录] 第 {} 轮第 {} 次启动失败: {}", round, i + 1, one[1]);
                     break;                       // 启动本身失败（路径/权限问题）→ 本轮不再硬试

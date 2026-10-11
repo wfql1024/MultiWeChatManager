@@ -98,29 +98,52 @@ public final class WinHandleOps {
     }
 
     /**
-     * **已经查杀过互斥体的 PID 缓存（全局共享）**：pid → 查杀时刻.
+     * **"已知无互斥体"的 PID 集合（全局共享，软件生命周期内一直存在）**：pid → 登记时刻.
      *
-     * <p>为什么需要（用户 2026-10-07 提的方案）：批量多开时，随着已打开实例增多，枚举到的同平台
-     * PID 也越来越多，每个 PID 都要复制句柄 + 查名字（`NtQueryObject`）→ 时间线性膨胀。
-     * 而**一个 PID 的互斥体被关掉后基本不会再出现**，所以下一次枚举时可以整段跳过这些 PID。
+     * <p>用户 2026-10-07 的方案：只要能**新开出一个窗口**，就说明启动前那些同位程序进程此刻
+     * **都没有互斥体**了 → 把它们记进来；下一轮查杀先按这个集合精简 pid 列表。
+     * 这样检索量从"所有实例的句柄总和"降到"只有新实例"——
+     * 否则每多开一个实例就多几百上千个句柄要逐个查名字，实测正是它导致
+     * "第一个账号很快、后面越来越慢"。
      *
-     * <p>为什么带 TTL（10 秒）而不是永久：万一某个程序之后又**重建**了互斥体（不常见），
-     * 永久跳过就会漏杀 → 表现为"点了登录却没开新窗口"。10 秒足够覆盖一次批量多开的循环，
-     * 又不会把陈旧结论一直用下去。TTL 内命中缓存的 PID 直接跳过，不进句柄枚举。
+     * <p>**不设 TTL**（用户明确要"一直存在"），前提是这些平台不会重建互斥体；
+     * 万一遇到会重建的，{@link #clearKilledPidCache()} 可作总开关。
      */
-    private static final long KILLED_TTL_MS = 10_000;
     private static final Map<Integer, Long> KILLED_PID_AT = new java.util.concurrent.ConcurrentHashMap<>();
 
-    /** 清空"已查杀 PID"缓存（探针/排查用；正常流程不需要） */
+    /** 清空"已知无互斥体"缓存（排查用；遇到会重建互斥体的平台时可当总开关） */
     public static void clearKilledPidCache() {
         KILLED_PID_AT.clear();
     }
 
-    /** 缓存里仍然"有效"的已查杀 PID 数（日志/排查用） */
+    /** 缓存规模（日志/排查用） */
     public static int killedPidCacheSize() {
-        long now = System.currentTimeMillis();
-        KILLED_PID_AT.entrySet().removeIf(e -> now - e.getValue() > KILLED_TTL_MS);
         return KILLED_PID_AT.size();
+    }
+
+    /**
+     * 把一批 pid 记为"已知无互斥体".
+     *
+     * <p>调用时机（用户 2026-10-07 的方案）：**成功开出一个新窗口之后**，把"启动前枚举到的 pid"
+     * 全部记进来 —— 新窗口都能开出来，说明这些进程此刻确实都不含互斥体了。
+     * 下一轮查杀先按这个集合精简，检索量就从"所有实例的句柄总和"降到"只有新实例"。
+     */
+    public static void markPidsClean(Collection<Integer> pids) {
+        if (pids == null || pids.isEmpty()) return;
+        long stamp = System.currentTimeMillis();
+        for (Integer pid : pids) {
+            if (pid != null) KILLED_PID_AT.put(pid, stamp);
+        }
+    }
+
+    /** 从候选里剔除"已知无互斥体"的 pid，返回**还需要扫描**的那些 */
+    public static List<Integer> filterCleanedPids(Collection<Integer> pids) {
+        List<Integer> out = new ArrayList<>();
+        if (pids == null) return out;
+        for (Integer pid : pids) {
+            if (pid != null && !KILLED_PID_AT.containsKey(pid)) out.add(pid);
+        }
+        return out;
     }
 
     // ==================== 对外入口 ====================
@@ -223,42 +246,25 @@ public final class WinHandleOps {
      */
     public static int killHandlesByName(Collection<Integer> pids, List<String> nameWildcards) {
         if (pids == null || pids.isEmpty()) return 0;
-        long now = System.currentTimeMillis();
-        List<Integer> candidates = new ArrayList<>();
-        int skipped = 0;
-        for (Integer pid : pids) {
-            if (pid == null) continue;
-            Long at = KILLED_PID_AT.get(pid);
-            if (at != null && now - at <= KILLED_TTL_MS) {
-                skipped++;
-                continue;                       // 刚查杀过 → 跳过句柄枚举
-            }
-            candidates.add(pid);
-        }
+        List<Integer> candidates = filterCleanedPids(pids);      // 跳过"已知无互斥体"的
+        int skipped = pids.size() - candidates.size();
         if (skipped > 0) {
-            LOG.info("[句柄] 跳过 {} 个刚查杀过的 pid（缓存命中），本次只扫 {} 个", skipped, candidates.size());
+            LOG.info("[句柄] 跳过 {} 个已知无互斥体的 pid（长期缓存），本次只扫 {} 个", skipped, candidates.size());
         }
-        if (candidates.isEmpty()) return 0;          // 全都刚查杀过 → 无需扫描
+        if (candidates.isEmpty()) return 0;          // 全都在缓存里 → 无需扫描
         List<HandleRef> found = findHandles(candidates, nameWildcards);
         for (HandleRef h : found) LOG.info("[句柄] 命中互斥体: {}", h);
         int closed = closeHandles(found);
-        // 记录"本进程里确实关掉过句柄"的 PID：它们此刻已不含这些互斥体
+        // 关掉过句柄的 PID：此刻已不含这些互斥体 → 记入长期缓存
         Set<Integer> cleaned = new HashSet<>();
         for (HandleRef h : found) cleaned.add(h.pid);
-        long stamp = System.currentTimeMillis();
-        for (Integer pid : cleaned) KILLED_PID_AT.put(pid, stamp);
+        markPidsClean(cleaned);
         return closed;
     }
 
-    /** 判断某 pid 是否在"刚查杀过"的缓存里（排查用） */
+    /** 判断某 pid 是否在"已知无互斥体"缓存里（排查用） */
     public static boolean isRecentlyCleaned(int pid) {
-        Long at = KILLED_PID_AT.get(pid);
-        return at != null && System.currentTimeMillis() - at <= KILLED_TTL_MS;
-    }
-
-    /** 把一个"刚被清干净"的 pid 记入 TTL 缓存（供 SwOperatorCore 那条不走缓存的查杀路径复用） */
-    public static void markPidCleaned(int pid) {
-        KILLED_PID_AT.put(pid, System.currentTimeMillis());
+        return KILLED_PID_AT.containsKey(pid);
     }
 
     // ==================== 内部实现 ====================
@@ -296,11 +302,49 @@ public final class WinHandleOps {
         if (!ok || dupRef.getValue() == null) return null;
         HANDLE dup = new HANDLE(dupRef.getValue());
         try {
-            String name = queryUnicodeStringObject(dup, OBJECT_NAME_INFORMATION);
+            // 类型先问（OBJECT_TYPE_INFORMATION 不会阻塞）
             String type = queryUnicodeStringObject(dup, OBJECT_TYPE_INFORMATION);
+            // 名字**必须带超时**：NtQueryObject(ObjectNameInformation) 在**命名管道**等句柄上会一直阻塞 ——
+            // 用户 2026-10-07 实测某轮 1200 个候选句柄里有一个卡住，整轮查杀从 120ms 变成 **13425ms**
+            String name = queryNameWithTimeout(dup, NAME_QUERY_TIMEOUT_MS);
             return new String[]{name, type};
         } finally {
             Kernel32Lib.INSTANCE.CloseHandle(dup);
+        }
+    }
+
+    /** 句柄名查询超时（毫秒）—— 正常句柄是微秒级；会阻塞的（命名管道）直接放弃这一个 */
+    private static final long NAME_QUERY_TIMEOUT_MS = 300;
+
+    /**
+     * 句柄名查询用的线程池：**cached** 池在"线程被卡住"时会自动再开新线程，
+     * 所以个别句柄阻塞不会拖住整轮扫描（卡住的线程用完即弃，数量受阻塞句柄数限制）。
+     */
+    private static final java.util.concurrent.ExecutorService NAME_QUERY_POOL =
+            java.util.concurrent.Executors.newCachedThreadPool(r -> {
+                Thread t = new Thread(r, "handle-name-query");
+                t.setDaemon(true);
+                return t;
+            });
+
+    /**
+     * 带超时地问句柄名：超时/异常都返回 null（= 跳过这一个句柄，不影响整轮；也不影响其它句柄）。
+     */
+    private static String queryNameWithTimeout(HANDLE dup, long timeoutMs) {
+        java.util.concurrent.Future<String> f;
+        try {
+            f = NAME_QUERY_POOL.submit(() -> queryUnicodeStringObject(dup, OBJECT_NAME_INFORMATION));
+        } catch (Exception e) {
+            return null;
+        }
+        try {
+            return f.get(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS);
+        } catch (java.util.concurrent.TimeoutException te) {
+            LOG.warn("[句柄] 查句柄名超时 {}ms，跳过该句柄（NtQueryObject 在命名管道上会阻塞）", timeoutMs);
+            f.cancel(true);
+            return null;
+        } catch (Exception e) {
+            return null;
         }
     }
 

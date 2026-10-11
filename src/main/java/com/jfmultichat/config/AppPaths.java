@@ -56,9 +56,42 @@ public final class AppPaths {
         return getVersionDir().resolve(dirName);
     }
 
-    /** 日志目录 */
+    /** 日志目录（**默认位置**；实际用哪个见 {@link #resolveLogsDirEarly()}） */
     public static Path getLogsDir() {
         return getDefaultUserDataDir().resolve("logs");
+    }
+
+    /**
+     * **尽早解析出真正要用的日志目录**（用户 2026-10-11）.
+     *
+     * <p>为什么需要它：用户可以在 {@code RootConfig.user_data_path} 里把数据目录放到**项目里**
+     *（这样 IDE 能直接看数据与日志 ✓）；日志应当**跟随**这个目录 ✓。
+     * <p>而 `ConfigManager.initInternal()` 里虽然也设置了 `jfmultichat.logdir` ✗，
+     * 但那时 logback 早被初始化过了 ✗ —— 因为 **`ConfigManager` 类加载时**它的
+     * `private static final Logger LOG` 就会触发 logback 初始化 ✓，属性已经定死 ✓
+     *（实测：日志一直落在 APPDATA ✗，怎么改都不动 ✓）。
+     *
+     * <p>所以这里只做"**读 RootConfig + 取 user_data_path**"这点**不需要日志**的活 ✓，
+     * 在入口的第一行调用 ✓：有合法自定义目录 → 用它下面的 `logs/` ✓；否则 → {@link #getLogsDir()} 兜底 ✓。
+     *
+     * @return 日志目录（绝不返回 null ✓）
+     */
+    public static Path resolveLogsDirEarly() {
+        try {
+            Path cfg = getRootConfigPath();
+            if (cfg != null && java.nio.file.Files.isRegularFile(cfg)) {
+                com.fasterxml.jackson.databind.JsonNode node =
+                        new com.fasterxml.jackson.databind.ObjectMapper().readTree(
+                                java.nio.file.Files.readString(cfg, java.nio.charset.StandardCharsets.UTF_8));
+                String custom = node.path("user_data_path").asText("");
+                if (!custom.isBlank()) {
+                    return Path.of(custom).resolve("logs");
+                }
+            }
+        } catch (Throwable t) {
+            // 读不出来就兜底（绝不能因为日志目录把启动搞挂）
+        }
+        return getLogsDir();
     }
 
     // ---- 用户数据目录下的配置文件（双驼峰 PascalCase） ----

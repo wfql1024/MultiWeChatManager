@@ -265,6 +265,8 @@ public class ConfigManager {
         swCacheStore            = new JsonConfigStore(AppPaths.getSwCachePath(dataPath));
         remoteGlobalConfigStore = new JsonConfigStore(AppPaths.getRemoteGlobalConfigPath(dataPath));
         remoteSwConfigStore     = new JsonConfigStore(AppPaths.getRemoteSwConfigPath(dataPath));
+        // 换了数据目录 → 远程配置缓存必须丢掉（否则会一直用旧目录那份）
+        invalidateRemoteCache();
     }
 
     public void setUserDataPath(String newPath) {
@@ -402,18 +404,57 @@ public class ConfigManager {
     }
 
     // ==================== 远程配置缓存 ====================
+    //
+    // **长期缓存**（用户 2026-10-11 提的方案）：远程配置下载并解密后就是**只读**的
+    //（除非配置源更新 → 见 setRemoteGlobal/setRemoteSw，那时会顺手刷新缓存），
+    // 而读取它散布在几十个调用点（SwConfigProvider / AppConfigAccessor / JsBridge 的 provider 全走这里）——
+    // 单点缓存没有意义，所以在**这一层**缓存整份。
+    //
+    // 之前 `getRemoteSw()` 每次都 `store.getData()` → **重新读盘 + Jackson 解析**（配置越大越贵），
+    // 多号登录一轮要读几十次 → 单账号就多花几百毫秒（实测日志里每账号刷 5~6 行 [远程配置] 就是它）。
+    // 缓存后这些读取都变成取一个引用（纳秒级）。
 
-    public ObjectNode getRemoteGlobal() { return remoteGlobalConfigStore.getData(); }
+    /** 远程全局配置缓存 */
+    private volatile ObjectNode remoteGlobalCache;
+    /** 远程平台配置缓存（各平台定义、窗口规则、互斥体通配词…都在这份里） */
+    private volatile ObjectNode remoteSwCache;
 
-    public ObjectNode getRemoteSw() { return remoteSwConfigStore.getData(); }
+    public ObjectNode getRemoteGlobal() {
+        ObjectNode c = remoteGlobalCache;
+        if (c == null) {
+            c = remoteGlobalConfigStore.getData();
+            remoteGlobalCache = c;
+        }
+        return c;
+    }
+
+    public ObjectNode getRemoteSw() {
+        ObjectNode c = remoteSwCache;
+        if (c == null) {
+            c = remoteSwConfigStore.getData();
+            remoteSwCache = c;
+        }
+        return c;
+    }
+
+    /** 丢弃远程配置缓存（配置源更新、切换用户数据目录、显式刷新时调用） */
+    public synchronized void invalidateRemoteCache() {
+        remoteGlobalCache = null;
+        remoteSwCache = null;
+        LOG.info("[远程配置] 缓存已失效（下次读取会重新加载）");
+    }
 
     public void setRemoteGlobal(ObjectNode data) {
-        remoteGlobalConfigStore.setData(data != null ? data : MAPPER.createObjectNode());
+        ObjectNode node = data != null ? data : MAPPER.createObjectNode();
+        remoteGlobalCache = node;                 // 写入即刷新缓存（不再让旧缓存压着新数据）
+        remoteGlobalConfigStore.setData(node);
         try { remoteGlobalConfigStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 
     public void setRemoteSw(ObjectNode data) {
-        remoteSwConfigStore.setData(data != null ? data : MAPPER.createObjectNode());
+        ObjectNode node = data != null ? data : MAPPER.createObjectNode();
+        remoteSwCache = node;                     // 同上
+        remoteSwConfigStore.setData(node);
         try { remoteSwConfigStore.save(); } catch (IOException e) { LOG.error("save failed", e); }
     }
 

@@ -359,29 +359,43 @@ public final class AccInfoFuncCore {
     /**
      * 获取账号登录配置状态
      * 对应 Python: get_sw_acc_login_cfg_status (L1068-L1104)
+     *
+     * <p>修（2026-10-07）：原来路径解析是假的 —— `originCfgPath` 被直接赋成平台 id（注释还写着
+     * "简化处理，实际需要 SwPathResolver.resolveSwPath"），拼出来的 `{account}_{配置文件名}`
+     * 永远不存在 → **所有账号一律 no_cfg**。现在按旧版用 SwPathResolver 解析每个 config_address，
+     * 并**同时认旧命名**（`{account}.{ext}`，旧版会把它复制成新命名；这里只读不写，不污染平台目录）。
+     *
+     * @return 配置文件的修改时间 "yy/MM/dd HH:mm"；没有则 {@link AccCoreConstants.CfgStatus#NO_CFG}
      */
     public static String getSwAccLoginCfgStatus(String sw, String account) {
         try {
-            SwConfigAccessor swConfigAccessor = com.jfmultichat.config.SwConfigProvider.newAccessor();
-            JsonNode configAddresses = swConfigAccessor.getRemoteSw(sw, "config_addresses");
+            com.jfmultichat.swcore.SwConfigAccessor accessor =
+                    com.jfmultichat.config.SwConfigProvider.newAccessor();
+            JsonNode configAddresses = accessor.getRemoteSw(sw, "config_addresses");
             if (configAddresses == null || !configAddresses.isArray() || configAddresses.isEmpty()) {
                 return "无法获取登录配置文件地址";
             }
-            String originCfgPath = com.jfmultichat.appcore.AppCore.readRemoteCfgInRules("RemoteSw") != null
-                    ? sw : ""; // 简化处理，实际需要 SwPathResolver.resolveSwPath
-            // 直接使用 resolved path
-            String originCfgBasename = new File(originCfgPath).getName();
-            String oldFileSuffix = originCfgBasename.contains(".")
-                    ? originCfgBasename.substring(originCfgBasename.lastIndexOf('.') + 1) : "dat";
-            String oldAccCfgBasename = account + "." + oldFileSuffix;
-            String newAccCfgBasename = account + "_" + originCfgBasename;
-            String oneAccCfgPath = new File(originCfgPath).getParent() + "/" + newAccCfgBasename;
-            File accCfgFile = new File(oneAccCfgPath.replace('\\', '/'));
-            if (accCfgFile.exists()) {
-                long modTime = accCfgFile.lastModified();
-                java.util.Date date = new java.util.Date(modTime);
-                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yy/MM/dd HH:mm");
-                return sdf.format(date);
+            long bestTime = -1;
+            for (JsonNode addrNode : configAddresses) {
+                if (addrNode == null || !addrNode.isTextual()) continue;
+                String originCfgPath = com.jfmultichat.swcore.SwPathResolver
+                        .resolveSwPath(sw, addrNode.asText(), accessor);
+                if (originCfgPath == null || originCfgPath.isBlank()) continue;
+                File originCfgFile = new File(originCfgPath);
+                String dir = originCfgFile.getParent();
+                String base = originCfgFile.getName();
+                if (dir == null || base.isEmpty()) continue;
+                String suffix = base.contains(".")
+                        ? base.substring(base.lastIndexOf('.') + 1) : "dat";
+                // 新命名：{account}_{配置文件名}（旧版主用）；旧命名：{account}.{ext}（兼容）
+                File newCfg = new File(dir, account + "_" + base);
+                File oldCfg = new File(dir, account + "." + suffix);
+                if (newCfg.exists()) bestTime = Math.max(bestTime, newCfg.lastModified());
+                else if (oldCfg.exists()) bestTime = Math.max(bestTime, oldCfg.lastModified());
+            }
+            if (bestTime > 0) {
+                return new java.text.SimpleDateFormat("yy/MM/dd HH:mm")
+                        .format(new java.util.Date(bestTime));
             }
             return AccCoreConstants.CfgStatus.NO_CFG;
         } catch (Exception e) {
@@ -449,6 +463,10 @@ public final class AccInfoFuncCore {
 
     /**
      * 获取共存账号使用的方案
+     *
+     * <p>修（2026-10-07）：原来遍历远程配置时**只把命中的 channel 写进了配置**，
+     * 返回值却用的是循环**之前**读到的缓存 → 首次调用必然返回 null（然后连带
+     * {@link #getCoexistAccChannelAndOrdinal} 一起拿到 {null,null}）。现在直接返回命中值。
      */
     public static String getCoexistAccChannel(String sw, String acc) {
         String exeName = getCoexistAccExe(sw, acc);
@@ -456,18 +474,21 @@ public final class AccInfoFuncCore {
         if (cachedChannel != null && cachedChannel.isTextual()) {
             return cachedChannel.asText();
         }
-        // 遍历远程配置寻找匹配
         SwConfigAccessor accessor = com.jfmultichat.config.SwConfigProvider.newAccessor();
         JsonNode channelsDict = accessor.getRemoteSw(sw, "coexist", "channels");
         if (channelsDict == null || !channelsDict.isObject()) return null;
-        channelsDict.fields().forEachRemaining(chEntry -> {
-            String channel = chEntry.getKey();
+        String matched = null;
+        java.util.Iterator<Map.Entry<String, JsonNode>> it = channelsDict.fields();
+        while (it.hasNext()) {
+            Map.Entry<String, JsonNode> chEntry = it.next();
             JsonNode wc = chEntry.getValue().get("exe_wildcard");
             if (wc != null && wc.isTextual() && wildcardMatch(exeName, wc.asText())) {
-                updateSwAccData(sw, acc, Map.of("channel", channel));
+                matched = chEntry.getKey();
+                break;
             }
-        });
-        return cachedChannel != null && cachedChannel.isTextual() ? cachedChannel.asText() : null;
+        }
+        if (matched != null) updateSwAccData(sw, acc, Map.of("channel", matched));
+        return matched;
     }
 
     /**

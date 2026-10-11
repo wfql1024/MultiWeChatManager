@@ -2048,9 +2048,25 @@ body.resizing-cols {
     font-size: var(--fs-table);             /* 统一 14px */
     line-height: 1.6;
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;}
+/* 禁用态按钮（如"无配置"账号的登录按钮）：灰掉、**连 hover 变色也一起去掉**、光标不变手型.
+   用 :not([disabled]) 直接把禁用项排除在 hover 规则之外（比事后覆盖更稳，不会因顺序变化失效） */
+.manage-row-quick-actions .qa-btn:disabled,
+.manage-row-quick-actions .qa-btn.qa-btn-disabled {
+    color: var(--text-level3);
+    border-color: var(--border-color);
+    background: var(--bg-card);
+    cursor: not-allowed;
+    opacity: 0.55;
 }
-.manage-row-quick-actions .qa-btn:hover {
+/* "配置"列：字体逻辑照名称列（中文雅黑 + 英文等宽由 .cjk-run/.lat-run 分段），
+   但**不加粗、字号与其他列一致**（不随名称列 +1） */
+.manage-config-cell {
+    font-family: var(--font-family-base);
+    font-size: var(--fs-table);
+    font-weight: normal;
+}
+.manage-row-quick-actions .qa-btn:not([disabled]):not(.qa-btn-disabled):hover {
     color: var(--color-primary);
     border-color: var(--color-primary);
 }
@@ -2155,6 +2171,22 @@ body.resizing-cols {
 .manage-account-table tbody tr.invalid-row .manage-nickname-cell .dn-text,
 .manage-account-table tbody tr.invalid-row .manage-avatar-placeholder {
     color: var(--text-level3);
+}
+/* "无配置"账号（config_status = no_cfg）：**整行三级灰**（用户 2026-10-11 ——
+   不再只给"配置"列上色，而是整行退到最次要；登录态下该行不可勾选，见 JS）。
+   与失效行同一档色，但语义不同：账号还在磁盘上，只是本机没有它的登录配置文件。 */
+.manage-account-table tbody tr.no-cfg-row td,
+.manage-account-table tbody tr.no-cfg-row .manage-nickname-cell,
+.manage-account-table tbody tr.no-cfg-row .manage-nickname-cell .dn-text,
+.manage-account-table tbody tr.no-cfg-row .manage-avatar-placeholder {
+    color: var(--text-level3);
+}
+/* 无配置行的勾选框：禁用态（与整行三级灰一致） */
+.manage-account-table tbody tr.no-cfg-row .acc-check input[disabled] + .acc-check-box {
+    opacity: 0.4;
+}
+.manage-account-table tbody tr.no-cfg-row .acc-check {
+    cursor: not-allowed;
 }
 
 /* 快捷键列：可点击激活输入框（输入样式光标） */

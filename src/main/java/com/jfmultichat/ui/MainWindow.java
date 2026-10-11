@@ -240,6 +240,10 @@ public class MainWindow {
 
     private void setupWebView() {
         webView = new WebView();
+        // 关掉 WebView 自带的右键菜单（用户 2026-10-07）：里面那个"重新加载页"会整页重载，
+        // 而现在已经有了专门的刷新按钮 —— 留着只会误触。页面内的自定义右键菜单不受影响
+        //（列头菜单/行菜单都是页面自己画的 HTML，不走 WebView 默认菜单）
+        webView.setContextMenuEnabled(false);
         webEngine = webView.getEngine();
         webEngine.setJavaScriptEnabled(true);
         webView.setStyle("-fx-background-color: transparent;");

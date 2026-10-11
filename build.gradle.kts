@@ -13,6 +13,13 @@ java {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+    // 测试不经过 Launcher → jfmultichat.logdir 属性为空 → 主 logback.xml 的
+    // ${jfmultichat.logdir:-logs} 会回退成**相对路径 logs/**，写进**项目根**
+    //（用户 2026-10-11 发现项目根冒出日志，首行是 [Test worker] 就是它）。
+    // 这里显式指到 build/test-logs：测试日志永远不会污染项目根；
+    // src/test/resources/logback-test.xml 则让测试默认只打控制台、不落盘。
+    systemProperty("jfmultichat.logdir",
+        layout.buildDirectory.dir("test-logs").get().asFile.absolutePath)
 }
 
 tasks.withType<JavaCompile> {
@@ -29,7 +36,15 @@ application {
     // sun.awt.shell：取 Windows 原生大图标（32x32）提取 exe 图标用（FileSystemView 只有 16x16，放大后模糊）
     applicationDefaultJvmArgs = listOf(
         "--add-exports", "javafx.web/com.sun.javafx.webkit=ALL-UNNAMED",
-        "--add-exports", "java.desktop/sun.awt.shell=ALL-UNNAMED"
+        "--add-exports", "java.desktop/sun.awt.shell=ALL-UNNAMED",
+        // 控制台/文件编码统一 UTF-8（用户 2026-10-11）：
+        //   · file.encoding        → 读写文本文件（配置/JSON）默认 UTF-8
+        //   · sun.stdout/stderr.encoding → JDK 17 上 System.out/err 的输出编码（JDK 18+ 改名为 stdout.encoding）
+        // 注意：JVM 发 UTF-8 字节只是**一半**，终端也得按 UTF-8 解码，否则一样乱码 ——
+        // 终端侧见 AGENTS/DEV_LOGS 里的说明（chcp 65001 或 VS Code 的 UTF-8 终端 profile）。
+        "-Dfile.encoding=UTF-8",
+        "-Dsun.stdout.encoding=UTF-8",
+        "-Dsun.stderr.encoding=UTF-8"
     )
 }
 
@@ -40,6 +55,8 @@ tasks.named<JavaExec>("run") {
     // 深色底 + 中文复杂笔画会显得发虚/带彩边；关掉改用灰度抗锯齿后实测边缘对比度反而更高（53.5 vs 51.3）。
     // 觉得不好就去掉这一行（详见 MEMORY/LESSONS 十四）。
     jvmArgs("-Dprism.lcdtext=false")
+    // 控制台编码（同上，gradle run 走这条路径）
+    jvmArgs("-Dfile.encoding=UTF-8", "-Dsun.stdout.encoding=UTF-8", "-Dsun.stderr.encoding=UTF-8")
 }
 
 // === 开发者工具源集（发布辅助工具，复用 main 的类与依赖，但不进入应用产物） ===

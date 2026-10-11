@@ -850,8 +850,30 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
     public static List<Integer> filterHwndsByMatchingDict(List<Integer> hwnds, Map<String, Object> rules) {
         List<Integer> result = new ArrayList<>();
         if (hwnds == null || rules == null || rules.isEmpty()) return result;
+        long t0 = System.currentTimeMillis();
+        // 第一趟：**只用 Win32 类名**（便宜）—— 绝大多数平台这一趟就命中了
         for (Integer hwnd : hwnds) {
-            if (hwnd != null && matchesRules(hwnd, rules)) result.add(hwnd);
+            if (hwnd != null && matchesRules(hwnd, rules, false)) result.add(hwnd);
+        }
+        long t1 = System.currentTimeMillis();
+        // 第二趟：整条规则一个都没命中时，才改用 **UIA 类名**重扫一遍。
+        // 为什么这样分（用户 2026-10-07 的观察 + 实测推理）：UIA 每次要走 COM
+        //（CoCreateInstance + ElementFromHandle + 取属性），对**每个窗口**都试一遍的话，
+        // 窗口一多（8~9 个实例 ≈ 100+ 个顶层窗口）就是几秒 —— 而"第一个账号很快、后面很慢"
+        // 正是窗口数在涨。分两趟后：Win32 能匹配的平台**完全不碰 UIA**，
+        // 只有真正需要 UIA 的平台才付这一次代价。
+        if (result.isEmpty() && hasClassNameRule(rules)) {
+            for (Integer hwnd : hwnds) {
+                if (hwnd != null && matchesRules(hwnd, rules, true)) result.add(hwnd);
+            }
+            if (!result.isEmpty()) {
+                LOG.info("[窗口] Win32 类名无命中，改用 UIA 类名命中 {} 个（共 {} 个候选窗口）",
+                        result.size(), hwnds.size());
+            }
+        }
+        if (hwnds.size() > 20 || System.currentTimeMillis() - t0 > 200) {
+            LOG.info("[窗口] 规则匹配 {} 个候选：Win32 趟 {}ms，命中 {} 个；总计 {}ms",
+                    hwnds.size(), t1 - t0, result.size(), System.currentTimeMillis() - t0);
         }
         // 尾筛：初筛不唯一时，用 FinalSelect 的方法集合逐个试，取到唯一为止
         Object finalSelect = rules.get("FinalSelect");
@@ -927,7 +949,28 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
         return w * h;
     }
 
+    /** 规则里有没有涉及类名的条件（决定要不要为它跑第二趟 UIA） */
+    private static boolean hasClassNameRule(Map<String, Object> rules) {
+        for (String key : rules.keySet()) {
+            if (key == null) continue;
+            String k = key.startsWith("!") ? key.substring(1) : key;
+            if (k.equalsIgnoreCase("ClassNameWildcards") || k.equalsIgnoreCase("ClassNames")
+                    || k.startsWith("OR")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean matchesRules(int hwnd, Map<String, Object> rules) {
+        return matchesRules(hwnd, rules, true);
+    }
+
+    /**
+     * @param useUia 是否允许在 Win32 类名不中时改用 **UIA 类名**兜底。
+     *               分两趟调用时：第一趟 false（快），第二趟 true（慢但能救回 Win32 报不准类名的平台）。
+     */
+    private static boolean matchesRules(int hwnd, Map<String, Object> rules, boolean useUia) {
         Map<String, Object> details = getHwndDetails(hwnd);
         String cls = String.valueOf(details.getOrDefault("class", ""));
         String title = String.valueOf(details.getOrDefault("title", ""));
@@ -950,9 +993,10 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
                 }
             } else if (k.equalsIgnoreCase("ClassNameWildcards") || k.equalsIgnoreCase("ClassNames")) {
                 matched = matchAnyWildcard(cls, entry.getValue());
-                if (!matched) {
+                if (!matched && useUia) {
                     // Win32 类名对不上 → 再试 **UIA 报的类名**（旧版就是靠它匹配到部分平台的窗口；
-                    // 例如 Weixin 4.0 的 mmui::LoginWindow，Win32 GetClassName 拿不到那个名字）
+                    // 例如 Weixin 4.0 的 mmui::LoginWindow，Win32 GetClassName 拿不到那个名字）。
+                    // 只有"第二趟"才允许走到这里（用户 2026-10-07：UIA 对每个窗口都调太慢）
                     String uiaCls = UiaOps.getClassName(hwnd);
                     if (uiaCls != null && !uiaCls.equals(cls)) {
                         matched = matchAnyWildcard(uiaCls, entry.getValue());
@@ -1027,6 +1071,83 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
         }
         if (cls != null) regex.append(java.util.regex.Pattern.quote("["));
         return text.matches("(?is)" + regex);
+    }
+
+    /**
+     * **在窗口内指定位置点击**（后台点击：发消息，不移动真实鼠标）.
+     * 对应 Python: {@code hwnd_utils.do_click_in_wnd(hwnd, cx, cy)}
+     *
+     * <p>账号级登录就靠它点"登录"按钮（见 {@code AccOperatorCore.loginOrigin}）：
+     * 坐标是**客户区**坐标（相对窗口左上角），按窗口宽高乘配置的比例算出来。
+     *
+     * @param hwnd 目标窗口
+     * @param cx   客户区横坐标
+     * @param cy   客户区纵坐标
+     */
+    public static boolean clickInWindow(int hwnd, int cx, int cy) {
+        if (hwnd == 0) return false;
+        com.sun.jna.platform.win32.User32 user32 = com.sun.jna.platform.win32.User32.INSTANCE;
+        WinDef.HWND h = intToHwnd(hwnd);
+        if (!user32.IsWindow(h)) return false;
+        // LPARAM = (y << 16) | x（客户区坐标）
+        WinDef.LPARAM lParam = new WinDef.LPARAM(((long) (cy & 0xFFFF) << 16) | (cx & 0xFFFF));
+        WinDef.WPARAM wParam = new WinDef.WPARAM(1);      // MK_LBUTTON
+        user32.PostMessage(h, 0x0201 /* WM_LBUTTONDOWN */, wParam, lParam);
+        try {
+            Thread.sleep(30);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        user32.PostMessage(h, 0x0202 /* WM_LBUTTONUP */, new WinDef.WPARAM(0), lParam);
+        LOG.info("[窗口] 已点击 hwnd=0x{} 位置 ({}, {})", Integer.toHexString(hwnd), cx, cy);
+        return true;
+    }
+
+    /** 主屏尺寸（宽, 高）—— 摆位用（GetSystemMetrics: 0=宽, 1=高） */
+    public static int[] getScreenSize() {
+        try {
+            int w = com.sun.jna.platform.win32.User32.INSTANCE.GetSystemMetrics(0);
+            int h = com.sun.jna.platform.win32.User32.INSTANCE.GetSystemMetrics(1);
+            return new int[]{w > 0 ? w : 1920, h > 0 ? h : 1080};
+        } catch (Throwable t) {
+            return new int[]{1920, 1080};
+        }
+    }
+
+    /**
+     * 把窗口移动到指定位置（**只移动、不改尺寸**）.
+     * 对应 Python: {@code win32gui.SetWindowPos(hwnd, HWND_TOP, x, y, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW)}
+     */
+    public static boolean moveWindow(int hwnd, int x, int y) {
+        if (hwnd == 0) return false;
+        final int SWP_NOSIZE = 0x0001, SWP_SHOWWINDOW = 0x0040;
+        return com.sun.jna.platform.win32.User32.INSTANCE.SetWindowPos(
+                intToHwnd(hwnd), intToHwnd(0) /* HWND_TOP */, x, y, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW);
+    }
+
+    /**
+     * **计算多个登录窗口在屏幕上的摆位**（纯函数，便于验证）.
+     * 对应 Python: {@code hwnd_utils.layout_wnd_positions} —— 每行放得下几个就横排几个，
+     * 行与行之间按 0.618 的错位量下移（旧版就是这个观感，用户 2026-10-07：就是为了好看）。
+     *
+     * @return 每个窗口的左上角 {x, y} 列表（长度 = wndCnt）
+     */
+    public static List<int[]> layoutWndPositions(int wndCnt, int wndW, int wndH, int screenW, int screenH) {
+        List<int[]> positions = new ArrayList<>();
+        if (wndCnt <= 0 || wndW <= 0 || wndH <= 0) return positions;
+        int maxColumn = Math.max(1, screenW / wndW);
+        int cntInRow = Math.min(wndCnt, maxColumn);
+        int actualGap = Math.max(0, (screenW - cntInRow * wndW) / (cntInRow + 1));
+        int allWidth = cntInRow * wndW + (cntInRow - 1) * actualGap;
+        int startX = (screenW - allWidth) / 2;
+        int startY = (screenH - wndH) / 2 - 25;
+        for (int i = 0; i < wndCnt; i++) {
+            positions.add(new int[]{
+                    startX + (i % cntInRow) * (wndW + actualGap),
+                    startY + (int) ((i / cntInRow - 0.618) * wndW)
+            });
+        }
+        return positions;
     }
 
     /**

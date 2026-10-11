@@ -293,7 +293,12 @@ public final class SwConfigAccessor {
         Map<String, Object> kwargs = new LinkedHashMap<>();
         kwargs.put(key, null);
         JsonNode node = provider.getRemoteSw(sw, kwargs);
-        LOG.info("[远程配置] sw={}, key={}, node={}", sw, key, node);
+        // 按用户 2026-10-11 的日志分级原则：
+        //   · 正在研究/排查的功能点 → 用 **DEBUG**（好找：把对应包或这个 logger 调到 DEBUG 就能集中看）
+        //   · 功能成熟（或对成熟功能的噪音）→ 用 INFO，并尽量合并条数
+        // 这条"每读一个 key 打一行"属于**高频噪音**（多号登录一轮就刷十几行 ✗），
+        // 所以留在 DEBUG；真要看远程配置读取，把 com.jfmultichat.swcore 的级别调到 DEBUG 即可。
+        LOG.debug("[远程配置] sw={}, key={}, node={}", sw, key, node);
         if (node == null) return defaultValue;
         if (node.isArray()) {
             List<String> result = new ArrayList<>();

@@ -11,7 +11,7 @@
 > | 待推进事项 | `MEMORY/TODOS.MD` |
 > | 架构与目录细节 | `docs/project_structure.md` |
 >
-> 记忆系统索引: `MEMORY/MEMORY.md` ｜ 最后更新: 2026-10-07
+> 记忆系统索引: `MEMORY/MEMORY.md` ｜ 最后更新: 2026-10-11
 
 ---
 
@@ -116,7 +116,54 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - 桥方法用**固定参数**（JavaFX 桥不支持 varargs）；路径等复杂参数用 JSON 字符串传递
 - 耗时操作必须后台线程 + `Platform.runLater` → `executeScript`；Java 主动推送用 `pushToJs`
 - 推送对象必须**双编码**为 JS 字符串字面量（`_handleAsync` 只解析字符串），布尔值前端用 `=== true` 严格比较
+- ⚠️ **异步回调签名是 `function(type, data)`**（`bridge.js` 里是 `fn(type, data)`）——
+  写成单参数会把 `type` 字符串当结果，表现为"活干完了却提示失败"
 - 页面元素查询走 `getEl(id)`（`#page-main` 作用域优先，再回退全局）
+- **右键**：Java 侧关掉了 WebView 自带菜单（`setContextMenuEnabled(false)`，为去掉"重新加载页"）——
+  代价是 **DOM 的 `contextmenu` 事件也不再派发** → `app.js` 里用 `mousedown(button===2)` **合成**一个 `contextmenu` 补上（页面里原有监听一行不用改）
+
+### 日志系统（2026-10-11 定）
+
+- **编码**：`logback.xml` 两个 appender 显式 `<charset>UTF-8</charset>`（文件不带 BOM）；测试用 `src/test/resources/logback-test.xml`（**只打控制台**）
+- **目录**：**跟随 `RootConfig.user_data_path`**（数据目录放进项目 → 日志跟着去，IDE 随时看），读不出回落 APPDATA；
+  ⚠️ 必须在**任何 logger 之前**解析（`AppPaths.resolveLogsDirEarly()`，在 `Launcher` 首行；logback 在类加载时就锁定文件，之后再改属性无效）
+- **绝不在项目根产生日志**：`gradle test` 没有入口 → 所有 Test 任务带 `jfmultichat.logdir=build/test-logs`
+- **JUL 必须装桥**：JavaFX/JDK 走 `java.util.logging`，不装 `SLF4JBridgeHandler` 就按系统编码自己写（控制台头几行乱码）
+- **控制台编码两边都要**：JVM `-Dfile.encoding/-Dsun.stdout.encoding/-Dsun.stderr.encoding=UTF-8` + 终端 UTF-8（`chcp 65001` + `[Console]::OutputEncoding`）
+- **级别原则**：**研究/排查中的功能点用 DEBUG**（把对应包调 DEBUG 即可集中看）；**成熟功能 INFO 且尽量合并条数**
+
+### 启动与多开（互斥体 + 降权）
+
+- **一句话**：点程序表"登录"（或**双击最左栏平台图标**）= **查杀该平台全部互斥体/文件锁 → 以普通用户权限启动平台程序** → 每次点击都新开一个登录窗口
+- **互斥体查杀**：`WinHandleOps`（纯 JNA，不依赖外部 handle.exe）—— `NtQuerySystemInformation(SystemExtendedHandleInformation)` 枚举系统句柄 → 只挑目标 PID → `DuplicateHandle(SAME_ACCESS, 目标=当前进程)` + `NtQueryObject` 取名字/类型 → 名字按 Python 规则匹配（`fnmatch(name,wc) || fnmatch(name,"*"+wc+"*")`）→ `DuplicateHandle(..., DUPLICATE_CLOSE_SOURCE)` 在目标进程里关闭；**先全部找完再统一关闭**
+  - 入口：`SwOperatorCore.killAllMutexesNow` / `tryKillMutexIfNeededAndReturnRemainedPids` / `AccOperatorCore.killMutexOfAcc`
+  - **句柄名查询带 300ms 超时**（`NtQueryObject(ObjectNameInformation)` 在**命名管道**上会阻塞，实测卡过 13 秒）
+  - **"已知无互斥体 PID"长期缓存**（软件生命周期，成功开出新窗口即登记"启动前那些 pid"；**读取侧必须真过滤**）
+- **降权启动**：`SwNativeOps.createProcessWithoutAdmin` —— **先判断自己是否管理员**：非管理员 → 直接 `CreateProcess`（子进程天然普通权限）；管理员 → 借 explorer 令牌（`GetShellWindow` → `OpenProcessToken(TOKEN_DUPLICATE)` → `DuplicateTokenEx` → `CreateProcessWithTokenW`）；令牌法失败 → 兜底 `explorer.exe` 代启（返回 `-1` = 已启动但 PID 未知）
+  - ⚠️ 路径要转成反斜杠再喂给 `CreateProcess*`（项目内部路径是 `/`）
+- **单个实例启动**：`SwOperatorCore.launchOneInstance(sw, exe, accessor, ops[, skipKill])` —— **默认内化查杀**（创建实例就免不了要查杀）；
+  `skipKill=true` 给"先杀一次、再连开 N 个"（批量启动即此）；`openSw` 已收口到它
+- **桥 / 前端**：`JsBridge.launchPlatformProgramAsync(swId, count, cbId)`（后台线程 + 回调；避免"先杀一个再开一个"的竞态：**同时唤起**）；
+  `main.js` 的 `launchPlatformProgram` 是**唯一来源**，程序表按钮与图标双击都走它
+
+### 账号级登录（原生账号，2026-10-11 接通）
+
+- **入口**：账号行"登录"/批量登录 → `main.js.loginAccounts` → `JsBridge.loginAccountsAsync`（后台线程）→ `AccOperatorCore.loginOrigin`
+- **流程**：**替换该账号的登录配置**（`operateAccConfig("use")` = 账号配置 → 平台配置）→ 开登录窗（含查杀互斥体）→
+  **预摆位**（开窗前按账号总数算好格子；窗口一出现立刻挪到位，**失败/超时的格子空着、不重排**）→
+  **全部打开并摆位后**才统一点击"登录"按钮（后台 `PostMessage`；比例取远程 `auto_click.login_btn.location`，默认 0.5/0.75）→ 等所有登录窗关闭
+- **铁律**：**任何单个账号失败都不中断整批**（替换配置失败/开窗超时/点击失败都只记录）
+- **前端只做 2 秒防连点**（任务本身在后台线程，不锁长窗口）
+- **登录窗口尺寸**：`SwOperatorCore.getLoginSize`（`宽*高`）；没有登录窗会**自动开一个**、量完 `WM_CLOSE` 关掉；
+  设置区"获取"按钮 → `JsBridge.fetchLoginSize` → 存**本平台本地配置** `login_size`（不是远程配置）
+
+### 取句柄 / 窗口匹配（登录与窗口校验共用）
+
+- **核心**：`SwInfoFuncCore.getHwndsOfSwByWndType(sw, 类型)` = 平台 pid → 各 pid 顶层窗口 → 按 `wnd_class.<类型>.matching` 规则筛选（**唯一命中**才算）
+- 规则键：`ClassNameWildcards`（`fnmatch`：`* ? [seq]`）、`Name/Title`、`ProcessId/PID`、`OR*` 子规则、`!` 取反；
+  **`FinalSelect` 尾筛**（`Size/Width/Height` × `Extreme|End(max/min)/Equals/Greater/Less`）—— 多命中时靠它选出唯一
+- **两趟匹配**：Win32 类名先扫（快）；**整条规则一个都没命中**时才用 **UIA 类名**兜底（`UiaOps`：纯 JNA COM 调 `UIAutomationCore.dll`，实例 ThreadLocal 复用）
+- **等窗口**：`waitHwndExclusivelyForPid` **只对"新出现"的窗口**做规则匹配（每窗口只匹配一次）
 
 ### 前端渲染原则
 
@@ -124,16 +171,6 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - 表格：`table-layout: fixed` + colgroup 决定列宽；**隐藏列的 `<col>` 必须同时归零**；表格宽度 = 可见列宽总和 + 占位列
 - 单元格不要设 `display:flex`（会破坏 table-cell）；需要 flex 就在内层加元素
 - 行悬浮/选中着色用绝对定位色块层 + **不透明等效色**，靠 `isolation: isolate` 控制层叠
-
-### 启动与多开（互斥体 + 降权）
-
-- **一句话**：点程序表"登录"（或**双击最左栏平台图标**）= **查杀该平台全部互斥体/文件锁 → 以普通用户权限启动平台程序** → 每次点击都新开一个登录窗口
-- **互斥体查杀**：`WinHandleOps`（纯 JNA，不依赖外部 handle.exe）—— `NtQuerySystemInformation(SystemExtendedHandleInformation)` 枚举系统句柄 → 只挑目标 PID → `DuplicateHandle(SAME_ACCESS, 目标=当前进程)` + `NtQueryObject` 取名字/类型 → 名字按 Python 规则匹配（`fnmatch(name,wc) || fnmatch(name,"*"+wc+"*")`）→ `DuplicateHandle(..., DUPLICATE_CLOSE_SOURCE)` 在目标进程里关闭；**先全部找完再统一关闭**
-  - 入口：`SwOperatorCore.killAllMutexesNow` / `tryKillMutexIfNeededAndReturnRemainedPids` / `AccOperatorCore.killMutexOfAcc`
-  - **"已查杀 PID"全局缓存**（`KILLED_PID_AT`，10s TTL）→ 刚清干净的 PID 不再进枚举（实测 931ms → 0ms）
-- **降权启动**：`SwNativeOps.createProcessWithoutAdmin` —— **先判断自己是否管理员**：非管理员 → 直接 `CreateProcess`（子进程天然普通权限）；管理员 → 借 explorer 令牌（`GetShellWindow` → `OpenProcessToken(TOKEN_DUPLICATE)` → `DuplicateTokenEx` → `CreateProcessWithTokenW`）；令牌法失败 → 兜底 `explorer.exe` 代启（返回 `-1` = 已启动但 PID 未知）
-  - ⚠️ 路径要转成反斜杠再喂给 `CreateProcess*`（项目内部路径是 `/`）
-- **桥 / 前端**：`JsBridge.launchPlatformProgram(swId, count)`（循环 count 次「查杀 → 启动」）；`main.js` 的 `launchPlatformProgram` 是**唯一来源**，程序表按钮与图标双击都走它
 
 ### 交互约定（点击 / 通知）
 
@@ -155,6 +192,10 @@ gradle encryptRemoteConfigs --no-daemon    # 加密远程配置 -> remote_config
 - **列个性化（写 `account_columns.<表id>`）**：`visible` / `width` / `order`（列顺序）/ `hideColNamesInLogin`（= 登录模式下整行列头隐藏）
 - **列显隐归属**：管理模式显示全部列（除登录态专列）、菜单里没有"显示列"；"显示列"勾选区只在登录态提供
 - **程序表**：**没有 PID/HWND 列**（程序只是启动器，不算具体账号）；`version` 非必显；"登录"左边有 `× __` 实例数量输入框（`×` 是静态前缀删不掉，1 位、留空 = 1、空白灰显 `1`、样式与相邻按钮同字号同行高）
+- **原生账号表的"配置"列**（`config_status`，2026-10-11）：`loginOnly`（只在登录态）+ 默认显示 + 非必显；
+  值 = 该账号自己的登录配置文件（`{config_dir}/{account}_{平台配置文件名}`，**同时认旧命名** `{account}.{ext}`）的修改时间，
+  没有 = `no_cfg`（**实时按文件判断、不入 `SwAccData`**）；**共存账号表没有这一列**（`TABLE_COLUMNS.coexist = account.concat([...])`，所以它单独挂在 `origin_acc` 的 columns 上，**不放 account 基表**）
+- **`no_cfg` 行的处理**（登录态）：整行三级灰 + **不渲染勾选框**（平时/悬浮都不显示）+ 行点击不选中 + 全选跳过 + 右键"登录"禁用 + 置底 → **批量登录天然不会带上它们**
 - **全选框**：统一在表格标题行、**表名左侧**，与数据行勾选框**同款**（`.acc-check` 基类不再限定表格作用域）且水平位置由 `_syncSelectAllPosition()` **运行时实测对齐**（不靠算术）
 - **字体**：中文 = 微软雅黑（`--font-family-base`）、英文 = 等宽（`--font-family-mono`）；字号 `--fs-table:14px`、名称列 `--fs-name:15px`
   - **本 WebKit 做不到"一个元素里中文雅黑 + 英文等宽"**：等宽族缺中文会走系统 CJK 回退、`@font-face + unicode-range` 也不生效

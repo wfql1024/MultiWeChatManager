@@ -33,6 +33,9 @@ JFC.pages.main = (function() {
             //   **非必显**（用户后来要求"给用户最高自由"）：默认显示，但可在登录态的列菜单里自行隐藏
             { key: 'pid',          label: 'PID',      mandatory: false, sortable: true, sortType: 'number', loginOnly: true, defVisible: true, defWidth: 90 },
             { key: 'hwnd',         label: 'HWND',     mandatory: false, sortable: true, sortType: 'number', loginOnly: true, defVisible: true, defWidth: 100 },
+            // ⚠️ "配置"列（账号级登录配置状态）**不放这张基表** —— 因为 TABLE_COLUMNS.coexist 是
+            //    account.concat([...])（共存表继承基表所有列），而共存账号没有"配置"语义。
+            //    它单独挂在原生账号表上，见下方 origin_acc 的 columns。
             // 快捷键列改为**非必显**（可被列头菜单隐藏），默认显示；可排序（与其他列一视同仁，无特殊对待）
             { key: 'hotkey',       label: '快捷键',   mandatory: false, sortable: true, defVisible: true,  defWidth: 110 },
             { key: 'id',           label: 'ID',       mandatory: false, sortable: true, defVisible: true,  defWidth: 150, cellClass: 'manage-id-cell' },
@@ -257,7 +260,13 @@ JFC.pages.main = (function() {
         var defs = [
             // 原生程序表也要能录快捷键（列已加入 TABLE_COLUMNS.program），故 enableHotkey: true
             { key: 'origin_prog', title: '原生程序', columns: TABLE_COLUMNS.program, enableHotkey: true,  defaultSortField: 'display_name' },
-            { key: 'origin_acc',  title: '原生账号', columns: TABLE_COLUMNS.account, enableHotkey: true,  defaultSortField: 'display_name' },
+            { key: 'origin_acc',  title: '原生账号',
+              // "配置"列只给原生账号表（共存账号没有登录配置这个概念）
+              columns: TABLE_COLUMNS.account.concat([
+                  { key: 'config_status', label: '配置', mandatory: false, sortable: true,
+                    loginOnly: true, defVisible: true, defWidth: 130 }
+              ]),
+              enableHotkey: true,  defaultSortField: 'display_name' },
             { key: 'coexist_acc', title: '共存账号', columns: TABLE_COLUMNS.coexist, enableHotkey: true,  defaultSortField: 'display_name' }
         ];
         var containers = {
@@ -911,6 +920,52 @@ JFC.pages.main = (function() {
 
     /** 是否有一批启动正在进行（防重复触发） */
     var launchInFlight = false;
+
+    /**
+     * **账号级登录**（原生账号；程序表那一行的启动走 {@link launchPlatformProgram}）.
+     *
+     * <p>流程（Java 侧 `AccOperatorCore.loginOrigin`，照旧版 `_login_accounts`）：
+     * 每个账号开一个登录窗 → 按窗口比例点"登录"按钮 → 平台用该账号自己的登录配置文件登进去 → 等窗口关闭。
+     * 全程在后台线程（要等窗口出现/关闭，最多几十秒），所以先给个"正在登录"toast，完成后换结果。
+     */
+    function loginAccounts(swId, ids) {
+        var id = swId || currentSwId;
+        if (!id || !ids || !ids.length) return;
+        // 防连点：只挡 **2 秒**（用户 2026-10-07：不要"已有任务进行中"那种长锁 ——
+        // 任务本身在 Java 后台线程跑，2 秒过后允许再开新任务，不管前一个结果如何）
+        var now = Date.now();
+        if (now < loginDebounceUntil) {
+            JFC.toastSuccess('刚刚已经发起过登录，请稍候 2 秒…', 1200);
+            return;
+        }
+        loginDebounceUntil = now + 2000;
+        JFC.toastSuccess('正在登录 <b>' + ids.length + '</b> 个账号…（每个账号会开一个登录窗口）', 2000);
+        try {
+            JFC.bridge.loginAccountsAsync(id, ids, function(type, data) {
+                var res = data || {};
+                if (res.success) {
+                    JFC.toastSuccess('已登录 <b>' + (res.count || 0) + '</b> 个账号' +
+                        (res.error ? '（' + escapeHtml(res.error) + '）' : ''), 4000);
+                } else {
+                    JFC.modal.custom({
+                        title: '账号登录失败',
+                        bodyHtml: '<div style="line-height:1.9;">' +
+                            escapeHtml(res.error || '登录失败') + '</div>',
+                        actions: [{ text: '知道了', cls: 'modal-ok' }]
+                    });
+                }
+            });
+        } catch (e) {
+            JFC.modal.custom({
+                title: '账号登录失败',
+                bodyHtml: '<div style="line-height:1.9;">' + escapeHtml(String(e)) + '</div>',
+                actions: [{ text: '知道了', cls: 'modal-ok' }]
+            });
+        }
+    }
+
+    /** 登录防连点截止时间戳（只挡 2 秒，不是长锁） */
+    var loginDebounceUntil = 0;
 
     /** 展示批量启动结果：成功 toast、失败弹窗（与原来一致） */
     function showLaunchResult(res, fallbackCount) {
@@ -1999,6 +2054,10 @@ JFC.pages.main = (function() {
                 disabled: acc.disabled === true || acc.disabled === 'true',
                 login_time: acc.login_time || acc.last_login || '',
                 remark: acc.remark || '',
+                // 账号级登录配置状态（Java 侧实时按文件判断，不入 SwAccData）：
+                // 原生账号 = 自己那份登录配置的时间 or 'no_cfg'（无 → 登录按钮禁用）；
+                // 共存账号**不涉及**（它 ID 本身就是 exe 名），也不显示"配置"列 → 给空串
+                config_status: followLinkedAcc ? '' : (acc.config_status || ''),
                 // 共存账号特有：关联/最后登录的原生账号
                 linked_acc: linkedAccId,
                 // 保留原始字段以便后续使用
@@ -2135,6 +2194,8 @@ JFC.pages.main = (function() {
              onAccountChanged: onAccountChanged, onHotkeyCapture: onHotkeyCapture,
              // 启动平台程序（程序表"登录"按钮 / 最左栏图标双击共用）
              launchPlatformProgram: launchPlatformProgram,
+             // 账号级登录（原生账号：开登录窗 + 自动点"登录" + 等窗口关闭）
+             loginAccounts: loginAccounts,
              // 运行时数据（PID/HWND）唯一写入点 + 读取器：登录流程接入后由它写入，界面自动定向刷新
              setAccRuntime: setAccRuntime, getAccRuntime: getAccRuntime, clearAccRuntime: clearAccRuntime };
 })();

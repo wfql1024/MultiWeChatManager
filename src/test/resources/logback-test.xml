@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  测试专用日志配置（用户 2026-10-11）。
+
+  为什么需要它：跑 `gradle test` 时**没有经过 Launcher**，`jfmultichat.logdir` 属性是空的
+  → 主 logback.xml 的 `${jfmultichat.logdir:-logs}` 回退成**相对路径** `logs/`
+  → 日志被写进**进程工作目录 = 项目根**（迁移时那批首行为 `[Test worker]` 的文件就是它 ✗）。
+
+  这里让测试**只打控制台、不落盘**：项目根从此干净，测试日志在 gradle 输出里看即可。
+  需要文件时（排查用）临时把下面注释的 FILE appender 打开，写到 build/ 下（build 会被 clean，
+  不会污染仓库）。
+-->
+<configuration>
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+
+    <!--
+    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
+        <file>build/test-logs/test.log</file>
+        <append>false</append>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <charset>UTF-8</charset>
+        </encoder>
+    </appender>
+    -->
+
+    <logger name="javafx" level="WARN"/>
+    <logger name="com.sun.webkit" level="WARN"/>
+    <logger name="com.sun.javafx" level="WARN"/>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>

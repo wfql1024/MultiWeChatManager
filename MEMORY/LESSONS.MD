@@ -371,3 +371,52 @@ JavaFX WebView 与 Chromium 的布局细节不同，"看起来是 X"往往不是
 8. **"空集合"与 `null` 的语义必须分开**：`findHandles(pids=[])` 若和 `null` 一样被当成"不限制进程"，
    就会去扫**全部**系统句柄（30 万条、几分钟）—— 这是缓存全部命中（候选为空）时踩到的真事故。
    约定：**空集合 = 没有目标（立刻返回）；`null` = 不限制**。
+
+---
+
+## 十九、日志系统（2026-10-11 实测；这三条都是"配置对了但没生效"的典型）
+
+1. **日志文件编码必须显式写 `<charset>UTF-8</charset>`**：logback 不写就用**系统默认**（中文 Windows = GBK）→
+   VSCode 里满屏乱码。文件与控制台两个 encoder 都要写。反过来要读**历史**日志时也别忘：
+   `Get-Content -Encoding Default`（= ANSI/GBK）；用 UTF-8 去匹配中文会**一条都搜不到** ✗
+   （症状极具迷惑性："记事本打开明明有" ✓ —— 用纯 ASCII 的时间戳搜就能绕开这个坑）。
+2. **日志目录属性的设置时机比位置重要**：logback 在**第一次 `LoggerFactory.getLogger()`**
+   （往往是某个类的 `static final Logger` **类加载**时）就把文件**定死**了 ✗ ——
+   之后再 `System.setProperty("jfmultichat.logdir", ...)` 完全无效。
+   → 所以要在**入口第一行**、任何 logger 之前就把最终目录算出来（`AppPaths.resolveLogsDirEarly()`：
+   读 `RootConfig.user_data_path` ✓，读不出来回落 APPDATA ✓）。同理 `--dev` 必须在它**之前**处理
+   （Dev/Prod 是两个 RootConfig，决定读哪个文件）。
+3. **没有入口就没有属性**：`gradle test` 不经过 `Launcher` → 属性为空 → logback 的
+   `${jfmultichat.logdir:-logs}` 回退成**相对路径** → 日志写进**进程工作目录**（= 项目根）✗。
+   两手一起堵：给所有 Test 任务设 `systemProperty("jfmultichat.logdir", ...)` ✓ +
+   `src/test/resources/logback-test.xml`（**只打控制台**）✓。
+4. **JUL 不装桥就不会跟 logback 同编码**：JavaFX / JDK 内部走 `java.util.logging` ✗，它用自己的
+   `SimpleFormatter` + 系统默认编码 → 控制台头几行固定乱码（`10?? 11, 2026 … com.sun.javafx.…`）。
+   项目本来就依赖 `jul-to-slf4j` ✓，只差没装桥 → 在入口最早处
+   `SLF4JBridgeHandler.removeHandlersForRootLogger() + install()` ✓（顺带让 JUL 也受 logback 级别管）。
+5. **控制台乱码要"两边"都对**：JVM 发 UTF-8（`-Dfile.encoding` + `-Dsun.stdout.encoding`/`-Dsun.stderr.encoding`，
+   JDK 18+ 叫 `stdout.encoding`）✓ **且** 终端按 UTF-8 解（`chcp 65001` + `[Console]::OutputEncoding`）✓。
+   只改一边照样乱码。VS Code 里想"覆盖内置 profile"要用**同名**（`"PowerShell": {...}`）——
+   `terminal.integrated.defaultProfile.windows` 只接受**内置名**，自定义名字会报"值不被接受"。
+6. **日志级别的判断标准（用户 2026-10-11）**：**正在研究/排查的功能点用 DEBUG**（好找：把对应包或
+   logger 调 DEBUG 就能集中看）、**成熟功能用 INFO 并尽量合并条数**（高频"每调用一行"是纯噪音）。
+
+---
+
+## 二十、句柄枚举与窗口匹配的性能坑（续 §十八；2026-10-11 用日志时间戳定位）
+
+1. **`NtQueryObject(ObjectNameInformation)` 在命名管道句柄上会阻塞** —— 实测某个 WeChat 进程里
+   1200 个候选句柄中的一个卡了 **13.4 秒** ✗（同一段代码前两轮只要 120ms/250ms，所以"时快时慢"）。
+   → 名字查询必须**带超时**（用 **cached 线程池**：线程被卡住时会自动再开一个，不拖累整轮；
+   超时的那个句柄直接跳过 —— 只少查一个，不影响命中）。类型查询（`ObjectTypeInformation`）不阻塞，可内联。
+2. **COM 的 `CoCreateInstance` 不要放在热路径**：UIA 每次查询都重建 `IUIAutomation` ✗ → 单次 ~235ms ✗；
+   改成 **ThreadLocal 复用**（只释放 element）→ 毫秒级。
+3. **UIA 只能当"兜底"，且要整条规则一起兜**：Win32 类名先扫一遍（1ms 级），
+   **只有整条规则一个都没命中**时才用 UIA 类名重扫 —— 否则每个窗口都要付 UIA 的代价（窗口一多就是几秒）。
+4. **轮询"等窗口出现"时，只对**新出现**的窗口做规则匹配**：否则每轮轮询都要把所有已有窗口重跑一遍规则
+   （含 UIA 兜底）✗ —— 新进程先冒出来的往往是一堆辅助窗口，全都不匹配，纯浪费。
+   记一个 `seen` 集合：匹配过但不匹配的窗口，之后不再重复匹配。
+5. **缓存"登记了"≠"生效了"**：`KILLED_PID_AT` 一开始**只登记不过滤** ✗（读的时候没查它）→
+   看日志才发现每轮仍打印全量 pid、候选句柄随实例数线性膨胀。**加缓存要连着"读取侧过滤"一起验**。
+6. **测量方式**：性能问题别靠猜 ✗ —— 在关键步骤打**耗时日志**（查杀耗时 / 规则匹配 / 扫已存在窗口 /
+   启动 / 等新窗口），配合用户日志里的**精确时间戳**，一次就能定位（本次三个瓶颈都是这么找出来的）。

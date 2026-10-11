@@ -1,12 +1,30 @@
 # 待办
 
-## 账号级登录（UI 自动化）还没接（2026-10-07 更新）
-- **已接通**：程序表"登录" / 最左栏图标双击 = 查杀互斥体 + 降权启动平台程序（可一次开 N 个）✓；登录态识别（mmap → 账号）与 PID/HWND 两列 ✓
-- **还没接**：**账号行**的"登录"（点某账号 → 启动后等登录窗 → 点该账号头像 → 等主窗出现）与**批量登录**
-  - 需要：`SwOperatorCore.openSwAndReturnHwnd` 目前仍是 Stub（返回 {-1,0}）；窗口类名/登录窗查找已有地基（`SwInfoFuncCore.getSwOriginalWndClassName` / `getLoginHwndsOfSw`）
-  - 旧版 Python 参考：`acc_func_core.py`（`_login_accounts` / `start_login_accounts_thread`）、`sw_func_core.py`（`_manual_login_origin` / `_manual_login_coexist`）
-  - 前端唯一改动点：`account-table.js` 的 `_loginAccounts()` 里"账号行"分支
-- HWND 列目前仍可能为空：窗口绑定（`recordHwndAndSetTitle`）与"启动 → 找窗口"这条链还没串起来
+## 账号级登录：原生已完成 ✓，共存与"精确点击"待做（2026-10-11 更新）
+- **已完成** ✓：原生账号登录（`AccOperatorCore.loginOrigin`：替换该账号配置 → 开登录窗 → **预摆位** → 全部开完**统一点击**"登录" → 等窗口关闭；单个失败不中断）；
+  登录窗口尺寸获取（没有登录窗会**自动开一个**、量完 `WM_CLOSE` 关掉）；取句柄核心（`getHwndsOfSwByWndType` / `waitHwndExclusivelyForPid`）
+- **待做**：
+  1. **共存账号登录** —— 比"手动登录共存程序"简单得多：**共存账号 ID 本身就是 exe 名** ✓，
+     直接按它启动即可（**不用**遍历 `ordinals` 找可用的、也不用问是否创建 ✓）。
+     注意 **D-39**：共存账号不做"配置"列、也不按配置禁用
+  2. **按控件名精确点击**（v2）：旧版在"相对位置点击"之后，还会用 **UIA 找控件中心**再点一次
+     （名单 = 远程 `ctrl_names` + 本地 `click_btns`；**轮着找、找到第一个就退出遍历**；
+     `click_btns` = 可用按钮列表，"/" 分隔 —— 用户 2026-10-11 澄清：**优先用坐标判断即可**，它是兜底）
+  3. **登录完成后绑定 pid/hwnd** → `AccRuntimeStore`（现在 `loginOrigin` 只回报 hwnd/pid，还没写内存表）→ HWND 列才有数据
+  4. **批量登录结果提示**：无配置账号已从选择里**结构性排除**（D-39）✓，可在结果里补一句"跳过 N 个无配置账号"
+- 旧版参考：`acc_func_core.py`（`_login_accounts` / `_thread_to_click_all_login_buttons_and_wait_refresh`）、
+  `sw_func_core.py`（`_manual_login_origin` / `_manual_login_coexist_core`）
+
+## freely/builtin 的**补丁状态探测**（2026-10-11）
+- 现状：只按"配置里**显式**写了 `freely_multirun` 才跳过查杀，其余（含没写）按 builtin"——
+  安全但保守（打过补丁的平台会被做无谓查杀；查杀不存在的互斥体是空操作，所以不影响正确性）
+- 正解（旧版 `check_if_sw_can_freely_multirun`）：**扫程序目录里的 DLL 判断是否打过补丁** → 打过就**任何情况都不查杀**
+- 落点：`SwOperatorCore.needsMutexKill`；`SwAdapterChecker` 已有 multi/bin 补丁识别能力，
+  **必须按平台缓存结果**（补丁扫描不便宜）
+
+## 日志目录做成设置项（2026-10-11，可选）
+- 现状：日志**跟随 `RootConfig.user_data_path`**（已满足"把数据目录放进项目、IDE 随时看"）；
+  若还想单独指定日志目录 → 设置里加一项（默认 = 用户文件目录），仍在 `Launcher` **首行**解析（必须在任何 logger 之前）
 
 ## 登录态下的"列菜单入口"（2026-10-07）
 - "登录模式下隐藏列名"会把整行列头隐藏 → 登录态就再也右键不到列头（列显隐菜单、调宽、换序、排序都在列头上）

@@ -351,15 +351,34 @@ public final class SwInfoFuncCore {
     /**
      * 轮询等待"某 pid 上出现唯一的该类型窗口"（对应 Python: uiautomation_wait_hwnd_exclusively_by_pid_and_rules_dicts）.
      *
+     * <p>性能要点（用户 2026-10-11 日志实测）：**只在"出现新窗口"时才做规则匹配** ✓。
+     * 原先每轮轮询都对当前所有窗口跑一遍规则 ✗ —— 而新进程先冒出来的是各种辅助窗口 ✓（不匹配 ✓），
+     * 于是每轮都要走 UIA 兜底 ✗（每个窗口约 143ms ✗）→ "等新窗口"从 ~1s 涨到 2.7~3.9s ✗。
+     * 现在每个窗口**只匹配一次**（不匹配就记进 seen ✓，不再重复 ✓），其余轮询只做便宜的
+     * `EnumWindows` 比对 ✓。
+     *
      * @return hwnd；超时返回 0
      */
     public int waitHwndExclusivelyForPid(String sw, int pid, String wndType, List<Integer> exclude, int timeoutSec) {
         long deadline = System.currentTimeMillis() + Math.max(1, timeoutSec) * 1000L;
+        Set<Integer> seen = new HashSet<>();          // 已"规则匹配过但不匹配"的窗口，不再重复匹配
+        if (exclude != null) seen.addAll(exclude);
+        List<Map<String, Object>> rules = getWndClassMatchingDicts(sw, wndType);
         while (System.currentTimeMillis() < deadline) {
-            List<Integer> matched = getHwndsByPidAndWndType(sw, pid, wndType, exclude);
-            if (matched.size() == 1) {
-                LOG.info("[窗口] pid={} 的 {} 窗口已出现: hwnd={}", pid, wndType, matched.get(0));
-                return matched.get(0);
+            List<Integer> hwnds = nativeOps.getHwndsByPid(pid);
+            List<Integer> fresh = new ArrayList<>();
+            for (Integer h : hwnds) {
+                if (h != null && !seen.contains(h)) fresh.add(h);
+            }
+            if (!fresh.isEmpty()) {
+                for (Map<String, Object> rule : rules) {
+                    List<Integer> matched = SwNativeOps.filterHwndsByMatchingDict(fresh, rule);
+                    if (matched.size() == 1) {
+                        LOG.info("[窗口] pid={} 的 {} 窗口已出现: hwnd={}", pid, wndType, matched.get(0));
+                        return matched.get(0);
+                    }
+                }
+                seen.addAll(fresh);                   // 这一批都不匹配 → 记住，之后不再重复匹配
             }
             try {
                 Thread.sleep(200);

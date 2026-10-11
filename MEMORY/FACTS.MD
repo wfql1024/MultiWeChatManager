@@ -496,7 +496,14 @@
 - **弹窗**：一律 `JFC.modal.confirm/custom`（`window.confirm` 在 WebView 里恒 false、`alert` 空操作）；头像弹窗为居中版式
 - **抗锯齿（试验）**：`run` 任务带 `-Dprism.lcdtext=false`（灰度 AA），保留与否待定 → 见 [`TODOS.MD`](TODOS.MD)
 - **启动 / 多开**：点程序表"登录"（或**双击最左栏平台图标**）= 查杀该平台全部互斥体+文件锁 → **降权启动**平台程序；`JsBridge.launchPlatformProgram(swId, count)` 可一次开多个；非管理员直接启动、管理员借 explorer 令牌、失败兜底 `explorer.exe` 代启；启动成功走右下角 toast、失败弹窗
-- **互斥体查杀**：`WinHandleOps`（JNA 枚举系统句柄 → 复制+问名 → `DUPLICATE_CLOSE_SOURCE` 关闭）；三个入口 `killAllMutexesNow` / `tryKillMutexIfNeededAndReturnRemainedPids` / `killMutexOfAcc`；带**"已查杀 PID"全局缓存**（10s TTL，命中即跳过枚举）
+- **互斥体查杀**：`WinHandleOps`（JNA 枚举系统句柄 → 复制+问名 → `DUPLICATE_CLOSE_SOURCE` 关闭）；三个入口 `killAllMutexesNow` / `tryKillMutexIfNeededAndReturnRemainedPids` / `killMutexOfAcc`；**"已知无互斥体 PID"长期缓存**（软件生命周期，成功开出新窗口即登记启动前的 pid，读取侧真过滤）；句柄名查询**带 300ms 超时**（命名管道上 `NtQueryObject` 会阻塞，实测卡过 13 秒）
+- **单个实例启动**：`SwOperatorCore.launchOneInstance(sw, exe, accessor, ops[, skipKill])` —— **默认内化查杀**；`skipKill=true` 供"先杀一次、再连开 N 个"（批量启动即此）；`openSw` 收口到它
+- **账号级登录（原生账号）**：`AccOperatorCore.loginOrigin` —— 替换该账号配置 → 开登录窗（含查杀）→ **预摆位**（窗口一出现即到位、失败格子空着）→ 全部开完**才统一点击**"登录"按钮（后台 `PostMessage`，比例取远程 `auto_click.login_btn.location`）→ 等窗口关闭；**单个失败不中断**；走异步桥 `loginAccountsAsync`（前端仅 2 秒防连点）
+- **登录窗口尺寸**：`SwOperatorCore.getLoginSize`（格式 `宽*高`）；没有登录窗会**自动开一个**、量完 `WM_CLOSE` 关掉；设置区"获取"按钮 → `JsBridge.fetchLoginSize` → 写入本平台本地配置 `login_size`（**不是**远程配置）
+- **窗口/句柄核心**：`SwInfoFuncCore.getHwndsOfSwByWndType(sw, 类型)`（pid → 顶层窗口 → `wnd_class.<类型>.matching` 规则，唯一命中）；规则匹配两趟（Win32 先扫，无命中才用 **UIA 类名**兜底，`UiaOps` 纯 JNA COM、ThreadLocal 复用实例）；`waitHwndExclusivelyForPid` 只对**新出现**的窗口做匹配
+- **无配置账号**：原生账号表有**"配置"列**（`loginOnly` + 默认显示 + 非必显，值 = 该账号登录配置文件时间或 `no_cfg`，**实时按文件判断、不入 SwAccData**）；`no_cfg` 行：整行三级灰 + **不渲染勾选框** + 行点击不选中 + 全选跳过 + 右键"登录"禁用 + 置底
+- **远程配置**：`ConfigManager` 层**长期缓存** `remoteSw`/`remoteGlobal`（写入口刷新、切数据目录失效）—— 读它散布各处，故只在配置层缓存一次
+- **日志**：`logback.xml` UTF-8（文件不带 BOM）+ 测试 `logback-test.xml` 只打控制台；日志目录**跟随 `RootConfig.user_data_path`**（`AppPaths.resolveLogsDirEarly()`，在 `Launcher` 首行、早于任何 logger；读不出回落 APPDATA）；Test 任务带 `jfmultichat.logdir=build/test-logs`；`Launcher` 最早处装 **JUL→SLF4J 桥**；控制台另需终端侧 UTF-8（`chcp 65001` + `[Console]::OutputEncoding`）
 - **平台项点击策略**：统一窗口 **250ms** —— 单击当前平台=刷新、单击别的平台=**等窗口后切换**、**双击=启动该平台程序（不切平台）**、**三击及以上=取消双击效果**
 - **通知**：成功用 `JFC.toastSuccess`（右下角，**无 ×**，`toast-out` 渐隐后自动移除）；失败才用 `JFC.modal`
 - **程序表**：**没有 PID/HWND 列**（程序只是启动器）；`version` 非必显；"登录"左边有 `× __` 数量输入框（1 位、留空=1、空白灰显 `1`）

@@ -1,6 +1,36 @@
 /**
  * app.js — 应用初始化 + 路由.
  */
+
+/**
+ * **右键事件兜底**（用户 2026-10-07）：
+ *
+ * Java 侧关掉了 WebView 自带右键菜单（`webView.setContextMenuEnabled(false)`，为了去掉里面那个
+ * "重新加载页"），但代价是 —— **本 WebView 连 DOM 的 `contextmenu` 事件都不再派发**，
+ * 于是页面自己画的列头菜单/行菜单全部失效（实测："所有地方点右键都没反应"）。
+ *
+ * 这里用 `mousedown`（右键，button===2）合成一个 `contextmenu` 事件补上：
+ * 页面里原有的 `contextmenu` 监听一行都不用改，默认菜单依旧是关的。
+ * 用捕获阶段监听 + 合成事件 `bubbles: true`，让原有的冒泡监听照常收到。
+ */
+(function installContextMenuFallback() {
+    'use strict';
+    document.addEventListener('mousedown', function(e) {
+        if (e.button !== 2) return;
+        try {
+            var evt = new MouseEvent('contextmenu', {
+                bubbles: true, cancelable: true, view: window,
+                clientX: e.clientX, clientY: e.clientY,
+                screenX: e.screenX, screenY: e.screenY,
+                button: 2, buttons: 2
+            });
+            e.target.dispatchEvent(evt);
+        } catch (err) {
+            console.error('[app] 合成 contextmenu 失败: ' + err);
+        }
+    }, true);
+})();
+
 JFC.router = (function() {
     'use strict';
 

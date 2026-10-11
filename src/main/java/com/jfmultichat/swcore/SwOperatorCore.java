@@ -41,6 +41,7 @@ public final class SwOperatorCore {
      * @return {success, message}
      */
     public static String[] killAllMutexesNow(String sw, SwConfigAccessor accessor, SwNativeOps nativeOps) {
+        long tStart = System.currentTimeMillis();
         List<String> mutantWildcards = accessor.getRemoteSwAsList(
                 sw, SwCoreConstants.RemoteSwKey.MUTEX_HANDLE_WILDCARDS, Collections.emptyList());
         List<String> configWildcards = accessor.getRemoteSwAsList(
@@ -54,18 +55,28 @@ public final class SwOperatorCore {
         }
 
         List<Integer> pids = allExePidsOf(sw, accessor, nativeOps);
-        LOG.info("[互斥体] {} 本轮按 exe 通配符枚举到 pid={}（通配词 {}）", sw, pids, allWildcards);
-        if (pids.isEmpty()) {
-            return new String[]{Boolean.TRUE.toString(), sw + "已经不含互斥体和文件锁!（无进程）"};
+        // **关键优化**（用户 2026-10-07）：先按"已知无互斥体"集合精简候选 ——
+        // 之前只登记不过滤，导致每轮都要把所有实例的句柄逐个查名字，开得越多越慢。
+        List<Integer> candidates = WinHandleOps.filterCleanedPids(pids);
+        if (candidates.size() < pids.size()) {
+            LOG.info("[互斥体] {} 枚举到 {} 个 pid，跳过 {} 个已知无互斥体的（长期缓存），本轮只扫 {} 个",
+                    sw, pids.size(), pids.size() - candidates.size(), candidates);
+        } else {
+            LOG.info("[互斥体] {} 本轮按 exe 通配符枚举到 pid={}（通配词 {}）", sw, candidates, allWildcards);
         }
-        // 走 killHandlesByName：带"已查杀 PID"缓存（TTL 内刚清干净的 pid 不再进句柄枚举）
-        List<WinHandleOps.HandleRef> found = WinHandleOps.findHandles(pids, allWildcards);
+        if (candidates.isEmpty()) {
+            return new String[]{Boolean.TRUE.toString(),
+                    sw + "已经不含互斥体和文件锁!（全部进程都在免扫缓存里）"};
+        }
+        List<WinHandleOps.HandleRef> found = WinHandleOps.findHandles(candidates, allWildcards);
         LOG.info("[互斥体] {} 本轮命中 {} 个：{}", sw, found.size(), found);
         if (found.isEmpty()) {
             return new String[]{Boolean.TRUE.toString(), sw + "已经不含互斥体和文件锁!"};
         }
         int closed = WinHandleOps.closeHandles(found);
-        for (WinHandleOps.HandleRef h : found) WinHandleOps.markPidCleaned(h.pid);   // 记入 TTL 缓存
+        for (WinHandleOps.HandleRef h : found) WinHandleOps.markPidsClean(Collections.singletonList(h.pid));
+        LOG.info("[互斥体] {} 查杀耗时 {}ms（候选 {} 个 pid，命中 {} 个，关闭 {} 个）",
+                sw, System.currentTimeMillis() - tStart, candidates.size(), found.size(), closed);
         if (closed > 0) {
             return new String[]{Boolean.TRUE.toString(),
                     sw + "已关闭互斥体和解锁文件!（命中 " + found.size() + " 个，关闭 " + closed + " 个）"};
@@ -702,17 +713,60 @@ public final class SwOperatorCore {
      */
     public static String[] launchOneInstance(String sw, String exe, SwConfigAccessor accessor,
                                              SwNativeOps nativeOps) {
+        return launchOneInstance(sw, exe, accessor, nativeOps, false);
+    }
+
+    /**
+     * @param skipKill {@code true} = 调用方**刚刚已经查杀过**（如批量"先杀一次、再连开 N 个"），本轮不再重复扫描
+     */
+    public static String[] launchOneInstance(String sw, String exe, SwConfigAccessor accessor,
+                                             SwNativeOps nativeOps, boolean skipKill) {
         String mutexMsg = "";
-        String multirunMode = accessor.getSwSettingAsString(
-                sw, SwCoreConstants.LocalSettingKey.REST_MULTIRUN_MODE,
-                SwCoreConstants.MultirunMode.FREELY_MULTIRUN);
-        if (SwCoreConstants.MultirunMode.BUILTIN.equals(multirunMode)) {
+        // 启动**之前**先记下本平台现有的 pid：新窗口一旦开出来，就说明它们此刻都不含互斥体了
+        // → 记进长期免扫缓存（用户 2026-10-07 的方案，解决"越开越慢"）
+        List<Integer> prePids = allExePidsOf(sw, accessor, nativeOps);
+        if (!skipKill && needsMutexKill(sw, accessor)) {
             String[] killed = killAllMutexesNow(sw, accessor, nativeOps);
             mutexMsg = killed[1] == null ? "" : killed[1];
+        } else if (skipKill) {
+            mutexMsg = "（调用方刚刚已查杀，本轮跳过）";
         }
         String[] launched = launchProcess(sw, exe, accessor);
-        LOG.info("[登录] 单个实例启动: sw={}, pid={}, 查杀={}", sw, launched[0], mutexMsg);
+        if (launched[0] != null && !"-1".equals(launched[0])) {
+            WinHandleOps.markPidsClean(prePids);      // 启动前的进程此刻必然都无互斥体
+            LOG.info("[登录] 单个实例启动: sw={}, pid={}, 查杀={}, 免扫缓存登记 {} 个旧 pid（缓存共 {} 个）",
+                    sw, launched[0], mutexMsg, prePids.size(), WinHandleOps.killedPidCacheSize());
+        } else {
+            LOG.info("[登录] 单个实例启动: sw={}, pid={}, 查杀={}", sw, launched[0], mutexMsg);
+        }
         return new String[]{launched[0], launched[1], mutexMsg};
+    }
+
+    /**
+     * **这个平台要不要查杀互斥体**（= 是不是 builtin 多开）.
+     *
+     * <p>用户 2026-10-11 澄清的真相：{@code freely} 的含义是**程序目录下的 DLL 打过补丁**
+     * （补丁把"创建互斥体"这段去掉了 ✓）→ 此时**任何情况下都不需要查杀** ✓；
+     * 判定方式应当是**探测补丁状态**（旧版 {@code get_sw_multirun_mode} 就是先调
+     * {@code check_if_sw_can_freely_multirun} ✓，只有探测不出来才回落到配置值 ✓）。
+     *
+     * <p>⚠️ 修（2026-10-11）：原来这里直接读 {@code rest_multirun_mode} 配置，而**前端从不写这个 key**
+     * → 默认值 {@code freely_multirun} 永远生效 → **内部查杀一次都没跑过** ✓（日志里
+     * {@code 查杀=,} 为空就是这个原因 ✓）。现在：
+     * <ol>
+     *   <li>配置**显式**写了 {@code freely_multirun} → 尊重它（用户手动选择）</li>
+     *   <li>其它情况（含没写）→ 按 **builtin** 处理（要查杀）—— 与旧版"探测不出就当 builtin"一致，
+     *       且查杀不存在的互斥体是无害空操作，比"漏查杀导致唤起老实例"安全得多</li>
+     * </ol>
+     * TODO（下一步）：接入补丁状态探测（{@code SwAdapterChecker} 里的 multi/bin 补丁识别），
+     * 打过补丁的平台就完全跳过查杀（按平台缓存结果，补丁扫描不便宜）。
+     */
+    private static boolean needsMutexKill(String sw, SwConfigAccessor accessor) {
+        String mode = accessor.getSwSettingAsString(
+                sw, SwCoreConstants.LocalSettingKey.REST_MULTIRUN_MODE, "");
+        boolean freely = SwCoreConstants.MultirunMode.FREELY_MULTIRUN.equals(mode);
+        if (freely) LOG.info("[登录] {} 配置为 freely 多开（已打补丁），跳过互斥体查杀", sw);
+        return !freely;
     }
 
     /** 只负责"降权启动"这一步（不含查杀），供 {@link #launchOneInstance} 与 {@link #openSw} 共用 */
@@ -752,11 +806,15 @@ public final class SwOperatorCore {
             LOG.warn("[登录] {} 没有登录窗口匹配规则（未适配），无法等窗口", sw);
             return new int[]{0, 0};
         }
+        // 分步计时：这三步里最慢的一步就是"多号登录越开越慢"的真凶（用户 2026-10-07 要求查明）
+        long t0 = System.currentTimeMillis();
         List<Integer> excluded = new ArrayList<>(infoCore.getLoginHwndsOfSw(sw));
+        long t1 = System.currentTimeMillis();
         if (!excluded.isEmpty()) {
             LOG.info("[登录] 启动前已存在登录窗口 {}, 将排除它们", excluded);
         }
         String[] one = launchOneInstance(sw, exe, accessor, nativeOps);
+        long t2 = System.currentTimeMillis();
         if (one[0] == null) {
             LOG.warn("[登录] 启动失败: {}", one[1]);
             return new int[]{0, 0};
@@ -769,6 +827,8 @@ public final class SwOperatorCore {
             return new int[]{0, 0};
         }
         int hwnd = infoCore.waitHwndExclusivelyForPid(sw, pid, "login", excluded, 20);
+        LOG.info("[登录] 开窗计时: 扫已存在登录窗 {}ms + 启动 {}ms + 等新窗口 {}ms",
+                t1 - t0, t2 - t1, System.currentTimeMillis() - t2);
         return new int[]{hwnd, pid};
     }
 

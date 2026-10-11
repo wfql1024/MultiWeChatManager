@@ -1157,3 +1157,61 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **列/表相关同期修正**：`version`（程序表）改非必显；**程序表去掉 PID/HWND 列**（程序只是启动器，不算账号）；表头与内容错位（构造函数里 `_buildDom()` 跑在 `_loadColumnPrefs()` **之前** → 表头用默认顺序、内容用配置顺序）→ 改为**先读配置再建 DOM**；全选框与数据行勾选框**同款样式**（基类不再限定在表格作用域内）+ **运行时实测对齐**（`_syncSelectAllPosition()`，不再靠算术）
 - **期间踩的坑（都已写进代码注释/LESSONS）**：`DuplicateHandle(SAME_ACCESS)` 的目标进程必须是当前进程（传 null 直接失败）；**不能用 `ObjectBasicInformation` 预探名字长度**（本机恒返回 `STATUS_INFO_LENGTH_MISMATCH`，据此提前 return 会"扫 30 万条命中 0"）；`CreateProcess*` 的 `lpApplicationName` **不能带正斜杠**（项目内部路径统一是 `/`，实测直接失败）；超长且内嵌引号的命令行会让 `CreateProcessWithTokenW` 报 `E_INVALIDARG(0x80070057)`；`findHandles` 曾把"**空列表**"和 `null` 一样当成"不限制进程"→ 缓存全命中时去扫全部 30 万句柄、卡死几分钟（探针抓到的）
 - **验证**：`gradle compileJava` ✓；`gradle test` **57 例 0 失败**；互斥体探针（`MutexProbe`：命中 1 → 关闭 1 → 复查 0 → **同名互斥体可重新创建** = 真释放 ✓）；降权探针（`LaunchProbe`/`PlainProbe`）；缓存探针（`CacheProbe`）
+
+## 四十一、账号级登录 + 登录窗口尺寸 + 性能三连修 + 日志系统整理（2026-10-11）
+
+> 目标（用户）：账号行点"登录"能真的登进去（原生账号），并把一路冒出来的"慢"与"乱"治干净。
+
+- **登录窗口尺寸获取**（旧版 `get_login_size` 的对应物）：`SwOperatorCore.getLoginSize` = 找登录窗 →
+  `GetWindowRect` → **`宽*高`**（如 `347*471`）；没有登录窗就**自动开一个**、量完 `WM_CLOSE` 关掉（只关自己开的）。
+  配套把三个 Stub 填实：`SwNativeOps.getHwndDetails`（pid/class/title/left/top/width/height/visible）、
+  `tryCloseHwndsAndReturnRemained`/`waitHwndsClose`、`SwOperatorCore.openSwAndReturnHwnd`
+  （取规则 → 记下已有登录窗作排除 → 启动 → 轮询等该 pid 出现唯一登录窗）
+- **取句柄核心**（用户要求抽象）：`SwInfoFuncCore.getHwndsOfSwByWndType(sw, 类型)` ——
+  平台 pid → 各 pid 顶层窗口 → 按 `wnd_class.<类型>.matching` 规则筛选（唯一命中）；
+  `getLoginHwndsOfSw` / `getMainHwndsOfSw` / `getHwndsByPidAndWndType` / `waitHwndExclusivelyForPid` 共用它
+- **匹配语义对齐旧版**（"有的平台识别不到"的根因）：补 `FinalSelect` 尾筛（`Size/Width/Height` ×
+  `Extreme|End(max/min)/Equals/Greater/Less`）、`OR*` 子规则、`ProcessId/PID`、`fnmatch` 的 `[seq]`；
+  并改**两趟**：Win32 类名先扫（快），整条规则无命中才用 **UIA 类名**兜底
+- **UIA 接入**：新增 `UiaOps`（纯 JNA 走 COM vtable 调 `UIAutomationCore.dll`，零新依赖、零附带 DLL）。
+  两个坑：**vtable 调用必须把 `this` 指针当第一个参数**（漏了 → Invalid memory access）；
+  **`get_CurrentClassName` 下标是 30 不是 26**（用 `UiaProbe` 扫出来的）；
+  另外 `CoCreateInstance` **不能每次查询都做**（单次 ~235ms）→ 改 **ThreadLocal 复用**
+- **单个实例启动核心**（用户要求抽象）：`launchOneInstance(sw, exe, accessor, ops[, skipKill])`
+  —— **默认内化查杀**（呼应"所有创建新实例的流程都免不了要查杀"）；`skipKill=true` 给"先杀一次、再连开 N 个"用
+- **账号级登录流程**（`AccOperatorCore.loginOrigin`，照旧版 `_login_accounts`）：
+  ① **替换登录配置**（`operateAccConfig("use")` = 该账号配置 → 平台配置）② 开登录窗
+  ③ **预摆位**（开窗前按账号总数算好格子：`login_size` 优先、兜底屏幕/6 × 屏幕/3；窗口**一出现立刻**挪到自己的格子；
+  失败/超时的**格子空着**、不重排）④ 全部打开并摆位后**才统一点击**"登录"（后台 `PostMessage`，
+  比例取远程 `auto_click.login_btn.location`，默认 0.5/0.75）⑤ 等所有登录窗关闭。**任何单点失败都不中断**
+- **性能三连修**（全部由用户日志的**时间戳**定位，不靠猜）：① **13 秒卡顿** =
+  `NtQueryObject(ObjectNameInformation)` 在**命名管道**句柄上会阻塞 → 名字查询加 **300ms 超时**
+  （cached 线程池：线程卡住就自动再开一个）；② **"等新窗口"2.7~3.9s** = 每轮轮询都对所有窗口跑规则
+  （UIA 每窗口 ~143ms）→ 改成**只在出现新窗口时才匹配**（每窗口只匹配一次）；
+  ③ **候选句柄线性膨胀** = "免扫缓存"（能开出新窗口 ⇒ 启动前那些 pid 都不含互斥体）**只登记不过滤**是个 bug
+  → 真正接上过滤 + 去掉 TTL（软件生命周期内一直有效）
+- **builtin/freely 判定修正**：原来读 `rest_multirun_mode` ✗ —— 而**前端从不写这个 key**、默认值又是 freely
+  → **内部查杀一次都没跑过**（日志 `查杀=,` 为空即此）；现改为"**显式写了 freely 才跳过，其余按 builtin**"
+  （旧版是先探测**补丁状态**、探测不出才看配置；补丁探测待接）
+- **无配置账号（`no_cfg`）交互封死**（用户裁定）：整行三级灰 + **不渲染勾选框**（平时/悬浮都不显示）
+  + 行点击不选中 + 全选跳过 + 右键"登录"禁用 + 置底 → **批量登录天然不会带上它们**
+- **远程配置长期缓存**（用户方案）：远程配置下载解密后**只读**，而读它散布在几十处 →
+  缓存加在**配置层** `ConfigManager`（`remoteSwCache`/`remoteGlobalCache`；写入口 `setRemoteSw/Global`
+  顺手刷新；切数据目录 `invalidateRemoteCache`）→ 一处改动所有调用点受益
+- **日志系统整理**：① `logback.xml` 两个 appender 显式 `<charset>UTF-8</charset>`
+  （原来用系统默认 = GBK → VSCode 乱码）；② 日志目录**跟随 `RootConfig.user_data_path`**
+  （新增 `AppPaths.resolveLogsDirEarly()`，在 `Launcher` 第一行、**早于任何 logger** 设属性；
+  根因：logback 在 `ConfigManager` **类加载**时就锁定了文件，之后再改属性无效）；
+  ③ **测试不再污染项目根**（`gradle test` 没有 Launcher → 属性为空 → `${...:-logs}` 相对路径写进项目根 →
+  给所有 Test 任务设 `jfmultichat.logdir=build/test-logs` + 新增 `src/test/resources/logback-test.xml` 只打控制台；
+  项目根 `logs/` 已删）
+- **控制台中文乱码**：JVM 侧（`-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8`）
+  + **终端侧**（`chcp 65001` 且 `[Console]::OutputEncoding=[Text.Encoding]::UTF8`；VS Code 用"同名覆盖内置 profile"）
+  —— 两边都改才正常；另外 JavaFX/JDK 用 **JUL**，它按系统编码自己写 → 头几行固定乱码 →
+  在 `Launcher` 最前面装 **`SLF4JBridgeHandler`**（依赖本来就有，只是没装桥）
+- **日志级别原则**（用户）：**正在研究的功能点用 DEBUG**（好找：把对应包调 DEBUG 即可），
+  **成熟功能用 INFO 且尽量合并条数** → `[远程配置] sw=…, key=…` 这种高频噪音降为 DEBUG
+- **临时脚本**：`tmp/migrate-logs.ps1` —— 历史日志 GBK→UTF-8 迁移（`FileShare.ReadWrite` 读活文件、
+  目标已存在不覆盖、`-Only <名> -Force` 可重迁单个）；已迁 17 个文件到 `storage/4.0.0.7000/DevUserFiles/logs/`
+- **验证**：`gradle compileJava` ✓；`gradle test` **57 例 0 失败**（多轮）；真机：单号登录 ✓、多号 3/5/11 个 ✓、
+  历史 18 个窗口时仍能开 ✓；探针 `tmp/probe/{HwndProbe,UiaProbe,AllWndProbe}.java` ✓

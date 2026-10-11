@@ -93,11 +93,18 @@ JFC.AccountTable = (function() {
     function rowActionsOf(kind, mode, ctx) {
         ctx = ctx || {};
         if (mode === 'login') {
+            // 账号级"无配置"判定（用户 2026-10-07 定）：原生账号没有自己的登录配置文件
+            // （{config_dir}/{account}_{平台配置文件名}）→ 平台无法直接登录它 → 禁用登录按钮。
+            // 判定值来自行数据 config_status（Java 侧实时按文件算，不入 SwAccData）。
+            var noCfg = (kind === 'acc' && ctx.noCfg === true);
             return [{
                 action: 'login', label: '登录', cls: '',
                 // 程序行：登录左边带一个"× __"数量输入框（留空 = 登录 1 个，输入数字 = 批量启动几个实例）
                 countInput: kind === 'prog',
-                title: kind === 'prog' ? '启动 / 登录原生程序（左边可填要开几个）' : '登录该账号'
+                disabled: noCfg,
+                title: noCfg
+                    ? '该账号无登录配置（本机未用该账号登录过），无法自动登录'
+                    : (kind === 'prog' ? '启动 / 登录原生程序（左边可填要开几个）' : '登录该账号')
             }];
         }
         if (kind === 'prog') return [];
@@ -141,8 +148,13 @@ JFC.AccountTable = (function() {
                     ' value="' + escapeAttr(loginCount || '') + '"></span>';
             }
             actions.forEach(function(a) {
-                actionsHtml += '<button class="qa-btn' + (a.cls ? ' ' + a.cls : '') + '"' +
+                // 禁用态（如"无配置"账号的登录按钮）：仍带 data-action（约定：能不能做由执行层判断），
+                // 但加 disabled + 灰化样式，且不挂 hover 反馈
+                actionsHtml += '<button class="qa-btn' + (a.cls ? ' ' + a.cls : '') +
+                    (a.disabled ? ' qa-btn-disabled' : '') + '"' +
+                    (a.disabled ? ' disabled' : '') +
                     ' data-action="' + escapeAttr(a.action) + '" data-id="' + escapeAttr(id) + '"' +
+                    (a.disabled ? ' data-disabled="1"' : '') +
                     ' title="' + escapeAttr(a.title || '') + '">' + escapeHtml(a.label) + '</button>';
             });
             actionsHtml += '</span>';
@@ -398,7 +410,10 @@ JFC.AccountTable = (function() {
      */
     AccountTable.prototype._isColVisible = function(col) {
         if (!col) return false;
-        if (col.loginOnly) return this.mode === 'login';
+        // 登录态专列（pid/hwnd/配置）只在登录态"存在"；但存在不等于永远显示 ——
+        // 修（2026-10-07）：原来这里对 loginOnly 直接返回 true，**用户的显隐勾选完全无效**
+        // （连 pid/hwnd 也隐藏不了，与"非必显、默认显示、可自由隐藏"的约定矛盾）。
+        if (col.loginOnly && this.mode !== 'login') return false;
         if (this.mode === 'manage') return true;
         return !!this.colVisible[col.key];
     };
@@ -614,9 +629,11 @@ JFC.AccountTable = (function() {
         // 行级状态类（供 CSS 决定文字三级色）：
         //   hidden-row  → 整行 2 级（名称列也从 1 级降到 2 级）
         //   invalid-row → 整行 3 级（CSS 里排在 hidden-row 之后，同时满足时失效优先）
+        //   no-cfg-row  → 该账号没有自己的登录配置文件 → 整行 3 级 + 登录态不可勾选（用户 2026-10-11）
         return '<tr data-acc-id="' + escapeAttr(id) + '" class="' +
             (isSelected ? 'selected' : '') + (acc.hidden ? ' hidden-row' : '') +
-            (acc.invalid ? ' invalid-row' : '') + '">' +
+            (acc.invalid ? ' invalid-row' : '') +
+            (acc.config_status === 'no_cfg' ? ' no-cfg-row' : '') + '">' +
             html + '</tr>';
     };
 
@@ -627,6 +644,13 @@ JFC.AccountTable = (function() {
         if (key === 'check') {
             // 自绘勾选框：原生 input 只当状态载体（透明），可见的圆角方块由 .acc-check-box 画。
             // 原因：原生控件在 JavaFX WebView 里会先画一帧"纯方形"、随后才应用圆角/主题色 → 用户看到闪烁。
+            // 登录态下"无配置"账号：**连勾选框都不渲染**（用户 2026-10-11）——
+            // 登录模式的功能只有登录，它登不了（没有自己的登录配置文件），就不该出现在批量选择里。
+            // 不给 markup（而不是靠 CSS 隐藏）：这样"平时不显示、悬浮也不显示"是结构上成立的，
+            // 不会和"悬浮才显示勾选框"那套样式打架。
+            if (this.mode === 'login' && acc.config_status === 'no_cfg') {
+                return '<td data-col="check" class="manage-col-check"></td>';
+            }
             return '<td data-col="check" class="manage-col-check">' +
                 '<label class="acc-check">' +
                 '<input type="checkbox"' + (ctx.isSelected ? ' checked' : '') +
@@ -651,7 +675,10 @@ JFC.AccountTable = (function() {
             // 点击名称文字 → 就地编辑备注（与快捷键列同款交互）
             return '<td data-col="display_name" class="manage-nickname-cell">' +
                 nameCellInnerHtml(acc, ctx.displayName,
-                    rowActionsOf(this.rowKind, this.mode, { hidden: ctx.hidden, invalid: ctx.invalid }),
+                    rowActionsOf(this.rowKind, this.mode, {
+                        hidden: ctx.hidden, invalid: ctx.invalid,
+                        noCfg: acc.config_status === 'no_cfg'          // 无登录配置 → 禁用登录按钮
+                    }),
                     this.loginCount) +
                 '</td>';
         }
@@ -663,6 +690,16 @@ JFC.AccountTable = (function() {
         }
         // 通用文本列
         var val = acc[key] !== undefined ? acc[key] : '';
+        // "配置"列（账号级登录配置状态）：有配置显示其修改时间；无配置显示"无配置"。
+        // 字体逻辑**照名称列**（scriptSplitHtml → 中文雅黑 / 英文等宽），但用 .manage-config-cell：
+        // 不加粗、字号与其他列一致（名称列是 +1 号、加粗，这里不要）；
+        // 颜色**不区分**有无配置（用户 2026-10-07）—— 无配置的账号靠"置底"来体现
+        if (key === 'config_status') {
+            var noCfg = (val === 'no_cfg' || !val);
+            return '<td data-col="config_status" class="manage-config-cell"' +
+                ' title="' + escapeAttr(noCfg ? '该账号无登录配置（本机未用该账号登录过）' : '登录配置时间：' + val) + '">' +
+                (noCfg ? scriptSplitHtml('无配置') : scriptSplitHtml(String(val))) + '</td>';
+        }
         var textClass = 'manage-text-cell' + (col.cellClass ? ' ' + col.cellClass : '');
         // 程序表的名称列：与账号表名称列一致，按"中文段 / 非中文段"分段给字体
         //（WebKit 的 font-family 回退不可靠，只有显式分段才能做到"中文雅黑 + 英文等宽"）
@@ -703,7 +740,13 @@ JFC.AccountTable = (function() {
                 return 0;
             });
         }
-        var rank = function(a) { return a.invalid ? 2 : (a.hidden ? 1 : 0); };
+        // "置底分组"：失效账号永远最后；**无登录配置的账号（no_cfg）次之**（用户 2026-10-07：
+        // 无配置的账号直接置底，而不是靠颜色区分）；再是隐藏账号。
+        var rank = function(a) {
+            if (a.invalid) return 3;
+            if (a.config_status === 'no_cfg') return 2;
+            return a.hidden ? 1 : 0;
+        };
         list.sort(function(a, b) { return rank(a) - rank(b); });
         return list;
     };
@@ -713,11 +756,14 @@ JFC.AccountTable = (function() {
         var tbody = this.tbody;
         var self = this;
 
-        // 全选框状态同步
+        // 全选框状态同步（只看**可选中**的行：登录态下无配置账号不参与）
         var selectAll = this.el.querySelector('.acc-select-all');
         if (selectAll) {
-            var allIds = this.accountData.map(function(a) { return a.id; });
-            selectAll.checked = allIds.length > 0 && allIds.every(function(id) { return self.selectedIds.has(id); });
+            var selectableIds = this.accountData.filter(function(a) {
+                return !(self.mode === 'login' && a.config_status === 'no_cfg');
+            }).map(function(a) { return a.id; });
+            selectAll.checked = selectableIds.length > 0 &&
+                selectableIds.every(function(id) { return self.selectedIds.has(id); });
         }
 
         // 行点击选中（排除勾选框/按钮/快捷键单元格/名称单元格）
@@ -732,6 +778,11 @@ JFC.AccountTable = (function() {
                     e.target.closest('.manage-col-avatar') || e.target.closest('.acc-check') ||
                     e.target.closest('.manage-nickname-cell')) return;
                 var id = this.getAttribute('data-acc-id');
+                // 登录态下"无配置"账号不参与选择（整行点击也不行 —— 与勾选框禁用保持一致）
+                if (self.mode === 'login') {
+                    var acc = self.accountData.find(function(a) { return a.id === id; });
+                    if (acc && acc.config_status === 'no_cfg') return;
+                }
                 if (self.selectedIds.has(id)) self.selectedIds.delete(id);
                 else self.selectedIds.add(id);
                 self.render();
@@ -1012,7 +1063,11 @@ JFC.AccountTable = (function() {
         if (selectAll) {
             selectAll.addEventListener('change', function() {
                 if (this.checked) {
-                    self.accountData.forEach(function(a) { self.selectedIds.add(a.id); });
+                    self.accountData.forEach(function(a) {
+                        // 全选同样跳过"无配置"账号（登录态）→ 批量登录天然不会带上它们
+                        if (self.mode === 'login' && a.config_status === 'no_cfg') return;
+                        self.selectedIds.add(a.id);
+                    });
                 } else {
                     self.selectedIds.clear();
                 }
@@ -1317,8 +1372,11 @@ JFC.AccountTable = (function() {
      * <ul>
      *   <li><b>程序行（origin_exe）</b>：启动平台程序本身 —— 已接通真实实现：查杀该平台全部互斥体/文件锁
      *       + **降权启动**（借用 explorer 的普通权限令牌）→ 每次点击都应新开一个登录窗口 ✓</li>
-     *   <li><b>账号行</b>：需要"等登录窗 → 选账号 → 等主窗"那套 UI 自动化，**尚未接入**，如实提示</li>
+     *   <li><b>账号行</b>：账号级登录（开登录窗 → 自动点击登录按钮 → 等主窗）—— 由页面层 loginAccounts 实现</li>
      * </ul>
+     *
+     * <p>注意（用户 2026-10-07 定）：**未实现的功能不放"尚未接入"这类占位弹窗** ——
+     * 功能做好了才给用户用；占位提示只会让人以为是坏的。
      */
     AccountTable.prototype._loginAccounts = function(ids) {
         var swId = this.getSwId();
@@ -1327,20 +1385,10 @@ JFC.AccountTable = (function() {
             this._launchPlatformProgram(swId, this._readLoginCount());
             return;
         }
-        var names = [];
-        var self = this;
-        ids.forEach(function(id) {
-            var acc = self.accountData.find(function(a) { return a.id === id; });
-            names.push(acc ? (acc.display_name || acc.nickname || id) : id);
-        });
-        JFC.modal.custom({
-            title: '登录',
-            bodyHtml: '<div style="line-height:1.9;">将登录 ' + ids.length + ' 个账号：<br>' +
-                names.map(function(n) { return '· ' + escapeHtml(n); }).join('<br>') +
-                '<br><span style="color:var(--text-muted);">账号登录（等登录窗 → 选账号 → 等主窗）尚未接入；' +
-                '目前可用程序表那一行的"登录"来多开平台程序。</span></div>',
-            actions: [{ text: '知道了', cls: 'modal-ok' }]
-        });
+        // 账号级登录：交给页面层（与程序启动同一个"单一来源"思路）
+        if (JFC.pages && JFC.pages.main && JFC.pages.main.loginAccounts) {
+            JFC.pages.main.loginAccounts(swId, ids);
+        }
     };
 
     /**
@@ -1691,15 +1739,21 @@ JFC.AccountTable = (function() {
             closeRowMenu();
             return;
         }
-        // 登录态：行菜单也只给"登录"（与管理操作隔离）
+        // 登录态：行菜单也只给"登录"（与管理操作隔离）；
+        // 无配置的账号（config_status = no_cfg）这里同样置灰（与行内按钮同一份判定，别两处漂移）
         if (this.mode === 'login') {
+            var menuAcc = this.accountData.find(function(a) { return a.id === accountId; });
+            var menuNoCfg = (this.rowKind === 'acc' && menuAcc && menuAcc.config_status === 'no_cfg');
             var loginHtml = '<div class="acm-title">' + escapeHtml(accountId) + '</div>' +
-                '<div class="acm-item" data-row-action="login">登录</div>';
+                '<div class="acm-item' + (menuNoCfg ? ' disabled' : '') + '" data-row-action="login"' +
+                (menuNoCfg ? ' title="该账号无登录配置（本机未用该账号登录过），无法自动登录"' : '') +
+                '>登录</div>';
             menu.innerHTML = loginHtml;
             menu.style.display = 'block';
             positionMenu(menu, x, y);
             menu.querySelectorAll('.acm-item[data-row-action]').forEach(function(item) {
                 item.addEventListener('click', function() {
+                    if (this.classList.contains('disabled')) return;   // 禁用项点不动（无配置的登录）
                     closeRowMenu();
                     activeTable.handleAction('login', accountId);
                 });
@@ -2039,7 +2093,10 @@ JFC.AccountTable = (function() {
     AccountTable.prototype._renderNameCell = function(cell, accountId, acc) {
         if (!cell || !acc) return;
         cell.innerHTML = nameCellInnerHtml(acc, acc.display_name || acc.nickname || accountId,
-            rowActionsOf(this.rowKind, this.mode, { hidden: !!acc.hidden, invalid: !!acc.invalid }),
+            rowActionsOf(this.rowKind, this.mode, {
+                hidden: !!acc.hidden, invalid: !!acc.invalid,
+                noCfg: acc.config_status === 'no_cfg'          // 无登录配置 → 禁用登录按钮
+            }),
             this.loginCount);
     };
 

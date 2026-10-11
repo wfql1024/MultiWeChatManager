@@ -46,8 +46,24 @@ public final class UiaOps {
     private static final int VT_GET_CURRENT_AUTOMATION_ID = 24;
     private static final int VT_GET_CURRENT_CLASS_NAME = 30;
 
-    /** hwnd → UIA ClassName（有的平台要反复比对规则，缓存一下；失败也缓存 null 免得反复 COM 调用） */
+    /** hwnd → UIA ClassName（有的平台要反复比对规则，缓存一下；失败也缓存空串免得反复 COM 调用） */
     private static final Map<Integer, String> CLASS_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * **每个线程一个 `IUIAutomation` 实例**（不要每次查询都 `CoCreateInstance`）.
+     *
+     * <p>用户 2026-10-07 实测：原来每次 `getClassName` 都重新 `CoCreateInstance` + `Release` ✗，
+     * 单次约 **235ms** ✗ —— 排查一堆窗口时（每个都试一次 UIA）就是几百毫秒到几秒。
+     * COM 的 `IUIAutomation` 可以长期持有（按线程存 ✓），复用后单次只剩
+     * `ElementFromHandle` + 取属性（毫秒级 ✓）。
+     */
+    private static final ThreadLocal<Pointer> UIA_INSTANCE = ThreadLocal.withInitial(() -> {
+        try {
+            return createUia();
+        } catch (Throwable t) {
+            return null;
+        }
+    });
 
     private UiaOps() {
     }
@@ -61,10 +77,9 @@ public final class UiaOps {
         String cached = CLASS_CACHE.get(hwnd);
         if (cached != null) return cached.isEmpty() ? null : cached;
 
-        Pointer uia = null;
         Pointer element = null;
         try {
-            uia = createUia();
+            Pointer uia = UIA_INSTANCE.get();          // 复用线程内的实例（不每次 CoCreateInstance）
             if (uia == null) return null;
             element = elementFromHandle(uia, hwnd);
             if (element == null) return null;
@@ -76,8 +91,7 @@ public final class UiaOps {
             CLASS_CACHE.put(hwnd, "");
             return null;
         } finally {
-            release(element);
-            release(uia);
+            release(element);                          // 只释放 element；IUIAutomation 留在 ThreadLocal 复用
         }
     }
 
@@ -87,10 +101,9 @@ public final class UiaOps {
      */
     public static Map<String, Object> getProperties(int hwnd) {
         if (hwnd == 0) return null;
-        Pointer uia = null;
         Pointer element = null;
         try {
-            uia = createUia();
+            Pointer uia = UIA_INSTANCE.get();
             if (uia == null) return null;
             element = elementFromHandle(uia, hwnd);
             if (element == null) return null;
@@ -103,7 +116,6 @@ public final class UiaOps {
             return null;
         } finally {
             release(element);
-            release(uia);
         }
     }
 
