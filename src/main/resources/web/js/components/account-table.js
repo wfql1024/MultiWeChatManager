@@ -134,7 +134,9 @@ JFC.AccountTable = (function() {
                 // 留空 = 登录 1 个；填 N = 一次启动 N 个实例（用户 2026-10-07 定）
                 actionsHtml += '<span class="login-count-wrap" title="要启动几个实例（留空 = 1，只能填 1 位：1~9）">' +
                     '<span class="login-count-x">×</span>' +
-                    '<input class="login-count-input" type="text" inputmode="numeric" maxlength="1"' +
+                    // 不设 maxlength：满了就敲不进新数字、input 事件不触发 → 没法"直接替换"。
+                    // 改为在 input 回调里"取最后一位"（新敲的赢），这样小键盘/输入法/任何键盘都通用
+                    '<input class="login-count-input" type="text" inputmode="numeric"' +
                     ' placeholder="1" spellcheck="false"' +
                     ' value="' + escapeAttr(loginCount || '') + '"></span>';
             }
@@ -1088,17 +1090,50 @@ JFC.AccountTable = (function() {
             self.handleAction(btn.getAttribute('data-action'), btn.getAttribute('data-id'));
         });
 
-        // "× __"数量输入框：只允许数字（× 是静态前缀，删不掉）；值记在表实例上，重渲染后仍保留
+        // "× __"数量输入框：只保留 1 位数字，**新敲的直接顶掉旧的**（不设 maxlength，取最后一位）
+        // —— 这样不依赖 keyCode（小键盘/输入法/任何键盘都通）
         this.tbody.addEventListener('input', function(e) {
             var input = e.target.closest ? e.target.closest('.login-count-input') : null;
             if (!input) return;
-            var digits = String(input.value || '').replace(/\D/g, '').slice(0, 1);   // 只允许 1 位（1~9）
+            var digits = String(input.value || '').replace(/\D/g, '').slice(-1);   // 取最后一位 = 替换
             if (input.value !== digits) input.value = digits;
             self.loginCount = digits;
         });
+        // ---- 行内输入框通用行为（把名称列/快捷键列那套抽出来的复用版）----
+        // ① 点"整个框"（含 × 与留白，不只数字那一小块）都能进入输入，光标置末尾 →
+        //    这样接着敲的数字一定追加在末尾 → 上面的"取最后一位"才等于"替换"
+        // ② 聚焦即取消多选（"输入单个"与"批量选择"是两种意图）
+        // ③ 输入期间保持悬浮区可见（tr 上打标记，CSS 有对应规则）
         this.tbody.addEventListener('mousedown', function(e) {
-            // 点输入框不要被当成"进名称编辑"或"选中行"
-            if (e.target.closest && e.target.closest('.login-count-wrap')) e.stopPropagation();
+            var wrap = e.target.closest ? e.target.closest('.login-count-wrap') : null;
+            if (!wrap) return;
+            e.stopPropagation();
+            // ⚠️ 必须 preventDefault：否则浏览器在派发结束后执行 mousedown 的**默认动作**
+            //（目标是外框/×，不可聚焦）→ 把我们刚拿到的焦点又清掉 → 表现为
+            //"点了没反应 / 第一下敲数字没录入、第二下才灵"（用户实测踩过）。
+            e.preventDefault();
+            var input = wrap.querySelector('.login-count-input');
+            if (input) self._focusInlineField(input);
+        });
+        // ② 聚焦即取消多选 + ③ 输入期间保持悬浮区可见 + ④ 点框外只失焦不选行 —— 全部走三处共用的基类
+        this.tbody.addEventListener('focusin', function(e) {
+            var input = e.target.closest ? e.target.closest('.login-count-input') : null;
+            if (!input) return;
+            var wrap = input.closest ? input.closest('.login-count-wrap') : null;
+            var row = input.closest ? input.closest('tr') : null;
+            if (self._countFieldDetach) self._countFieldDetach();
+            self._clearSelectionLight();                 // "输入单个"与"批量选择"是两种意图
+            self._countFieldDetach = self._startInlineField(wrap, input, function() {
+                input.blur();                            // 点框外：这一下只失焦
+            }, { keepVisible: row, select: false, focus: false });
+        });
+        this.tbody.addEventListener('focusout', function(e) {
+            var input = e.target.closest ? e.target.closest('.login-count-input') : null;
+            if (!input) return;
+            if (self._countFieldDetach) {
+                self._countFieldDetach();
+                self._countFieldDetach = null;
+            }
         });
 
         // 行悬浮整行高亮（JS 层覆盖列区域+右侧空白；mousemove 委托，匹配数据行与空表的空行）
@@ -1320,7 +1355,7 @@ JFC.AccountTable = (function() {
         // 兜底（页面模块异常时也要能用）：与页面层同样的行为，成功 toast、失败弹窗
         var res = null;
         try {
-            res = JFC.bridge.launchPlatformProgram(swId, count);
+            res = JFC.bridge.launchPlatformProgram(swId, count);   // 同步版兜底（正常路径走异步）
         } catch (e) {
             res = null;
         }
@@ -1823,8 +1858,8 @@ JFC.AccountTable = (function() {
         cell.innerHTML = '<input type="text" class="hotkey-input" value="' + escapeAttr(current) +
             '" placeholder="按下快捷键…" spellcheck="false">';
         var input = cell.querySelector('input');
-        input.focus();
-        input.select();
+        // 通用生命周期（输入期间保持/点框外只失焦不选行/幂等收尾/同时只一个输入）—— 三处共用，见 _startInlineField
+        var detachField = this._startInlineField(cell, input, cancelEdit, { onFinish: cancelEdit });
 
         var held = {};           // 当前按住的键（keyCode → true）
         var normalCodes = [];    // 本次录入按下的"普通键"（非修饰键，按按下顺序）
@@ -1836,12 +1871,10 @@ JFC.AccountTable = (function() {
         function endEdit() {
             if (done) return;
             done = true;
-            document.removeEventListener('mousedown', docMousedown);
+            detachField();                       // 基类收尾：摘"点框外"监听 + 还原标记
             document.removeEventListener('keyup', onKeyUp, true);
-            if (self._editFinish === cancelEdit) self._editFinish = null;
             if (self.hotkeyEditAccountId === accountId) self.hotkeyEditAccountId = null;
             JFC.bridge.notifyHotkeyCapture(false);
-            cell.removeAttribute('data-editing');
         }
         /**
          * 结束编辑并**还原单元格**——这是对外的统一入口（`_editFinish`）.
@@ -1915,21 +1948,9 @@ JFC.AccountTable = (function() {
             cancelEdit();   // 只有修饰键 / 普通键多于一个 → 无效，恢复原值
         }
 
-        function docMousedown(ev) {
-            // 用 contains 判断"点的是不是编辑格内部"。
-            // **不能用 closest(cell)**：closest 只接受选择器字符串，传元素会抛 SyntaxError，
-            // 整个"点框外结束编辑"的处理会从这一行静默失效（实测踩过）。
-            if (ev.target && cell.contains(ev.target)) return;
-            // 这一下点击只用于"结束编辑"：不要再顺手把行选中（用户要求）
-            self._suppressRowSelectOnce();
-            cancelEdit();
-        }
-
         input.addEventListener('keydown', onKeyDown);
         // keyup 挂在 document 且用捕获：松键哪怕落在输入框外（或输入框已被重建）也一定收得到
         document.addEventListener('keyup', onKeyUp, true);
-        document.addEventListener('mousedown', docMousedown);
-        this._editFinish = cancelEdit;
         // 注意：这里**不要**再给 cell 挂 click-stopPropagation。
         // 单元格元素在"只重建本格"的情况下会一直存活，挂上去的监听会逐次累积，
         // 同一个单元格第二次点击就被自己 stopPropagation 掉（tbody 的委托收不到）→ 表现为"点了没反应"。
@@ -1965,18 +1986,16 @@ JFC.AccountTable = (function() {
         cell.innerHTML = '<input type="text" class="name-input" value="' + escapeAttr(current) + '"' +
             ' placeholder="' + escapeAttr(auto) + '" title="留空则显示：' + escapeAttr(auto) + '" spellcheck="false">';
         var input = cell.querySelector('input');
-        input.focus();
-        input.select();
+        // 通用生命周期（点框外 = 提交；开新编辑时用 cancelEdit 还原本格 DOM）—— 三处共用，见 _startInlineField
+        var detachField = this._startInlineField(cell, input, commit, { onFinish: cancelEdit });
 
         var done = false;
         /** 幂等收尾：只清状态与监听，**不动单元格 DOM** */
         function endEdit() {
             if (done) return;
             done = true;
-            document.removeEventListener('mousedown', docMousedown);
-            if (self._editFinish === cancelEdit) self._editFinish = null;
+            detachField();                       // 基类收尾：摘"点框外"监听 + 还原标记
             if (self.nameEditAccountId === accountId) self.nameEditAccountId = null;
-            cell.removeAttribute('data-editing');
         }
         /** 结束并还原单元格（Esc / 开新编辑时走这里）—— 对外统一入口，绝不留输入框在页面上 */
         function cancelEdit() {
@@ -2006,16 +2025,7 @@ JFC.AccountTable = (function() {
                 self._updateSelectionUI();
             }, 0);
         }
-        // 点击单元格外部 → 提交（mousedown 阶段处理，避免 blur 与 click 的 DOM 竞态）
-        function docMousedown(ev) {
-            // 同快捷键列：必须用 contains，不能用 closest(cell)（传元素会抛 SyntaxError）
-            if (ev.target && cell.contains(ev.target)) return;
-            // 这一下点击只用于"结束编辑"：不要再顺手把行选中（用户要求）
-            self._suppressRowSelectOnce();
-            commit();
-        }
-        document.addEventListener('mousedown', docMousedown);
-        this._editFinish = cancelEdit;
+        // 点击单元格外部 → 提交（由基类 _startInlineField 在 mousedown 阶段处理，避免 blur 与 click 的 DOM 竞态）
 
         input.addEventListener('keydown', function(ev) {
             var code = JFC.keys.keyCodeOf(ev);
@@ -2031,6 +2041,80 @@ JFC.AccountTable = (function() {
         cell.innerHTML = nameCellInnerHtml(acc, acc.display_name || acc.nickname || accountId,
             rowActionsOf(this.rowKind, this.mode, { hidden: !!acc.hidden, invalid: !!acc.invalid }),
             this.loginCount);
+    };
+
+    /**
+     * **行内输入框通用生命周期**（名称列 / 快捷键列 / 数量框三处共用，2026-10-07 抽出）.
+     *
+     * <p>共性（三处一模一样，所以必须只有一份实现）：
+     * <ol>
+     *   <li>输入期间宿主保持可见 —— 可选（数量框在悬浮区里，靠它才不会随鼠标移出而消失；
+     *       名称/快捷键输入框就在单元格里，本来就不随悬浮显隐，不传即可）</li>
+     *   <li>**有焦点时点框外：那一下只用于失焦**，不顺手把行选中（`_suppressRowSelectOnce`）——
+     *       下次点击才生效（用户要求，与名称列一致）</li>
+     *   <li>结束时的收尾是**幂等**的：只摘监听、还原标记，DOM 由调用方按各自语义还原</li>
+     *   <li>登记为"当前唯一的输入框"（`_editFinish`）：开新输入时上一个会被收掉</li>
+     * </ol>
+     *
+     * <p>注意：调用方自己负责"进入前"的 `_clearSelectionLight()` 与 `if (this._editFinish) this._editFinish()`
+     * （两处的先后顺序与 DOM 重建时机有关，不挪动）。
+     *
+     * @param cell       输入框所在单元格/外框（用于标记 + contains 判断）
+     * @param input      输入框元素（可空 → 从 cell 里找）
+     * @param onOutside  点到框外时要做的收尾（名称/快捷键 = cancelEdit；数量框 = blur）
+     * @param opts       { keepVisible: 输入期间保持显示的元素, focus: 是否顺便聚焦(默认是),
+     *                     select: 聚焦后是否全选(默认是；数量框要 false，它靠"光标置末尾+取最后一位") ,
+     *                     onFinish: 登记到 `_editFinish` 的入口（cell 编辑传自己的 cancelEdit 以还原 DOM） }
+     * @returns {function} 幂等收尾函数（摘监听 + 还原标记）
+     */
+    AccountTable.prototype._startInlineField = function(cell, input, onOutside, opts) {
+        var self = this;
+        opts = opts || {};
+        if (cell && cell.setAttribute) cell.setAttribute('data-editing', '1');
+        var host = opts.keepVisible || null;
+        if (host && host.setAttribute) host.setAttribute('data-count-editing', '1');
+        if (!input && cell) input = cell.querySelector('input');
+        if (input && opts.focus !== false) {
+            input.focus();
+            if (opts.select !== false) {
+                try { input.select(); } catch (ignore) { /* 忽略 */ }
+            }
+        }
+        var done = false;
+        function outside(ev) {
+            if (cell && ev.target && cell.contains(ev.target)) return;
+            if (host && ev.target && host.contains(ev.target)) return;
+            self._suppressRowSelectOnce();
+            if (onOutside) onOutside();
+        }
+        document.addEventListener('mousedown', outside);
+        function detach() {
+            if (done) return;
+            done = true;
+            document.removeEventListener('mousedown', outside);
+            if (cell && cell.removeAttribute) cell.removeAttribute('data-editing');
+            if (host && host.removeAttribute) host.removeAttribute('data-count-editing');
+            if (self._editFinish === finish) self._editFinish = null;
+        }
+        var finish = opts.onFinish || detach;
+        this._editFinish = finish;
+        return detach;
+    };
+
+    /**
+     * 行内输入框的聚焦动作（"点整个框都能进输入"）：聚焦 + 光标置末尾.
+     *
+     * <p>光标置末尾很关键：1 位数字框靠"输入回调取最后一位"实现"新数字顶掉旧的"，
+     * 若光标停在开头，敲进来的数字会变成"新+旧"、取最后一位反而取到旧值（错）。
+     * 名称列/快捷键列各自实现过同类逻辑，这里是抽出来的复用版（那两处已验证稳定，暂不动）。
+     */
+    AccountTable.prototype._focusInlineField = function(input) {
+        if (!input) return;
+        input.focus();
+        try {
+            var len = input.value.length;
+            input.setSelectionRange(len, len);
+        } catch (ignore) { /* 某些状态下不支持设选区，忽略即可 */ }
     };
 
     /** 读该表当前"要启动几个实例"的输入值（空/非法 → 1；界面只允许 1 位，这里再夹一次 1~9） */

@@ -878,26 +878,49 @@ JFC.pages.main = (function() {
     /**
      * 启动平台程序 —— **程序表"登录"按钮**与**最左栏程序图标双击**共用同一实现（单一来源）.
      *
-     * <p>成功走右下角 toast（自动淡出，不打扰用户）；失败才弹窗（需要用户注意）。
+     * <p>走**异步桥**：整段"查杀互斥体 + 降权启动"循环在 Java 后台线程跑（同步跑会把 JavaFX 线程占住
+     * 一两秒、界面卡住）。前端先弹一个"正在启动…"toast 立刻反馈，完成后换成结果 toast（失败才弹窗）。
+     *
+     * <p>⚠️ 异步回调签名是 `function(type, data)`（见 bridge.js `_handleAsync` 调 `fn(type, data)`）——
+     * 写成单参数会把 `type` 字符串当成结果，于是"程序都开出来了却提示失败"（踩过）。
      */
     function launchPlatformProgram(swId, count) {
         var id = swId || currentSwId;
         if (!id) return;
+        if (launchInFlight) {                     // 防重复触发：并发两批会互相抢杀互斥体，反而少开
+            JFC.toastSuccess('正在启动中，请稍候…', 1500);
+            return;
+        }
         var n = parseInt(count, 10);
         if (!n || n < 1) n = 1;
-        var res = null;
-        try {
-            res = JFC.bridge.launchPlatformProgram(id, n);
-        } catch (e) {
-            res = null;
+
+        launchInFlight = true;
+        if (JFC.toastSuccess) {
+            JFC.toastSuccess('正在以普通用户权限启动 <b>' + n + '</b> 个实例…', 1500);
         }
+        try {
+            JFC.bridge.launchPlatformProgramAsync(id, n, function(type, data) {
+                launchInFlight = false;
+                showLaunchResult(data, n);
+            });
+        } catch (e) {
+            launchInFlight = false;
+            showLaunchResult(null, n);
+        }
+    }
+
+    /** 是否有一批启动正在进行（防重复触发） */
+    var launchInFlight = false;
+
+    /** 展示批量启动结果：成功 toast、失败弹窗（与原来一致） */
+    function showLaunchResult(res, fallbackCount) {
         var mutexMsg = (res && res.mutexMessage) ? escapeHtml(res.mutexMessage) : '';
         if (res && res.success) {
             var pids = (res.pids && res.pids.length) ? res.pids.join(', ') : '';
             var detail = res.viaExplorer
                 ? '（经资源管理器代启，未取到 PID）'
                 : (pids ? '（PID ' + escapeHtml(pids) + '）' : '');
-            JFC.toastSuccess('已以<b>普通用户权限</b>启动 <b>' + (res.count || n) + '</b> 个实例' + detail +
+            JFC.toastSuccess('已以<b>普通用户权限</b>启动 <b>' + (res.count || fallbackCount) + '</b> 个实例' + detail +
                 (mutexMsg ? '<br><span style="opacity:.85">' + mutexMsg + '</span>' : ''), 4000);
             return;
         }
@@ -1228,23 +1251,34 @@ JFC.pages.main = (function() {
         });
     }
 
-    /** 获取登录窗口尺寸（从远程平台配置读取） */
+    /**
+     * 获取登录窗口尺寸（**读当前真实的登录窗口**，格式 `宽*高`）.
+     *
+     * <p>Java 侧核心：平台 pid 列表 → 顶层窗口 → 按 `wnd_class.login.matching` 规则筛选 →
+     * `GetWindowRect` 量宽高（`SwOperatorCore.getLoginSize`）。
+     * A 版要求登录窗口已存在；没有则提示先打开一个（自动开窗等账号登录流程接入后再做）。
+     */
     function fetchLoginSize() {
         if (!currentSwId) return;
+        var res = null;
         try {
-            var data = JFC.bridge.getRemoteSwList();
-            if (data && data.remoteRaw && data.remoteRaw[currentSwId]) {
-                var remote = data.remoteRaw[currentSwId];
-                if (remote.login_size) {
-                    var size = String(remote.login_size);
-                    var input = getEl('mg-conf-login_size');
-                    if (input) input.value = size;
-                    saveFieldNow('login_size', size);
-                        return;
-                }
-            }
-        } catch(e) {
+            res = JFC.bridge.fetchLoginSize(currentSwId);
+        } catch (e) {
+            res = null;
         }
+        if (res && res.success && res.size) {
+            var input = getEl('mg-conf-login_size');
+            if (input) input.value = res.size;
+            saveFieldNow('login_size', res.size);
+            JFC.toastSuccess('已获取登录窗口尺寸：<b>' + escapeHtml(res.size) + '</b>', 3000);
+            return;
+        }
+        JFC.modal.custom({
+            title: '获取登录窗口尺寸失败',
+            bodyHtml: '<div style="line-height:1.9;">' +
+                escapeHtml(res && res.error ? res.error : '获取失败') + '</div>',
+            actions: [{ text: '知道了', cls: 'modal-ok' }]
+        });
     }
 
     // ---- 路径自动探测（下拉面板） ----

@@ -803,39 +803,317 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
     }
 
     // ==================== 窗口操作 ====================
+    // 这一组是**取句柄**的基础件（用户 2026-10-07 要求抽象成核心能力）：
+    // 登录窗口、主窗口的定位都走同一条链 —— 平台 pid 列表 → 该 pid 的顶层窗口 → 按规则筛选。
+
+    /** Win32 类名上限 */
+    private static final int WND_CLASS_MAX = 256;
+
+    /** HWND → int（项目内句柄一律 int 传递，与既有 IntByReference / JS number 约定一致） */
+    public static int hwndToInt(WinDef.HWND hwnd) {
+        return hwnd == null ? 0 : (int) Pointer.nativeValue(hwnd.getPointer());
+    }
+
+    /** int → HWND */
+    public static WinDef.HWND intToHwnd(int hwnd) {
+        return new WinDef.HWND(Pointer.createConstant(Integer.toUnsignedLong(hwnd)));
+    }
 
     /**
-     * 等待所有窗口关闭
-     * 对应 Python: hwnd_utils.wait_hwnds_close
+     * 枚举某进程的**顶层窗口**句柄.
+     * 对应 Python: {@code Win32HwndGetter.win32_get_hwnds_by_pid_and_class_wildcards(pid)}
+     * <p>EnumWindows 是同步调用（回调在本次调用返回前就用完了），所以匿名回调无需长期持引用。
      */
-    public static boolean waitHwndsClose(List<Integer> hwnds, int timeout) {
-        // TODO: JNA 实现
-        LOG.debug("[JNA] waitHwndsClose: {} windows, {}s timeout (Stub)", hwnds.size(), timeout);
+    public static List<Integer> getHwndsByPid(int pid) {
+        List<Integer> result = new ArrayList<>();
+        if (pid <= 0) return result;
+        com.sun.jna.platform.win32.User32.INSTANCE.EnumWindows((hwnd, data) -> {
+            IntByReference winPid = new IntByReference();
+            com.sun.jna.platform.win32.User32.INSTANCE.GetWindowThreadProcessId(hwnd, winPid);
+            if (winPid.getValue() == pid) result.add(hwndToInt(hwnd));
+            return true;
+        }, null);
+        return result;
+    }
+
+    /**
+     * 按匹配规则筛选窗口句柄.
+     * 对应 Python: {@code uiautomation_filter_hwnds_by_matching_dict} + {@code _final_select_hwnds}
+     *
+     * <p>语义对齐旧版（这是"有的平台识别不到"的关键）：<b>初筛</b>（本方法前半段）用
+     * {@code ClassNameWildcards}（`fnmatch` 语义：`*` `?` `[seq]`）、{@code Name/Title}、
+     * {@code ProcessId/PID}，前缀 {@code !} 取反，{@code OR*} 表示"任一子规则"；
+     * <b>尾筛</b>当命中多于一个且有 {@code FinalSelect} 时按 尺寸/宽/高 的
+     * {@code Extreme|End(max/min)/Equals/Greater/Less} 逐方法挑出唯一一个
+     * —— 旧版就是靠它把"登录窗 + 隐藏的同类窗"区分开的，缺了它就会一个都取不到。
+     */
+    public static List<Integer> filterHwndsByMatchingDict(List<Integer> hwnds, Map<String, Object> rules) {
+        List<Integer> result = new ArrayList<>();
+        if (hwnds == null || rules == null || rules.isEmpty()) return result;
+        for (Integer hwnd : hwnds) {
+            if (hwnd != null && matchesRules(hwnd, rules)) result.add(hwnd);
+        }
+        // 尾筛：初筛不唯一时，用 FinalSelect 的方法集合逐个试，取到唯一为止
+        Object finalSelect = rules.get("FinalSelect");
+        if (result.size() > 1 && finalSelect instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<Object> methods = (List<Object>) finalSelect;
+            for (Object method : methods) {
+                if (!(method instanceof Map)) continue;
+                @SuppressWarnings("unchecked")
+                Map<String, Object> conds = (Map<String, Object>) method;
+                List<Integer> elected = new ArrayList<>(result);
+                for (Map.Entry<String, Object> e : conds.entrySet()) {
+                    elected = finalSelectFilter(elected, e.getKey(), e.getValue());
+                    if (elected.size() <= 1) break;
+                }
+                if (elected.size() == 1) {
+                    LOG.info("[窗口] 尾筛 {} 从 {} 个候选中选出 1 个: {}", conds, result.size(), elected.get(0));
+                    return elected;
+                }
+            }
+            LOG.info("[窗口] 初筛命中 {} 个但尾筛没能选出唯一：{}", result.size(), result);
+        }
+        return result;
+    }
+
+    /** 尾筛单条件：Size/Width/Height × Extreme|End(max|min)/Equals/Greater/Less，支持 `!` 取反 */
+    private static List<Integer> finalSelectFilter(List<Integer> candidates, String key, Object value) {
+        boolean negate = key.startsWith("!");
+        String k = negate ? key.substring(1) : key;
+        boolean extreme = k.endsWith("Extreme") || k.endsWith("End");
+        boolean equals = k.endsWith("Equals");
+        boolean greater = k.endsWith("Greater");
+        boolean less = k.endsWith("Less");
+        String metric = k.replace("Extreme", "").replace("End", "")
+                .replace("Equals", "").replace("Greater", "").replace("Less", "");
+        List<Integer> filtered = new ArrayList<>();
+        if (extreme) {
+            Map<Integer, Long> vals = new LinkedHashMap<>();
+            for (Integer h : candidates) vals.put(h, metricValue(h, metric));
+            if (vals.isEmpty()) return candidates;
+            boolean wantMax = "max".equalsIgnoreCase(String.valueOf(value));
+            long target = wantMax ? Long.MIN_VALUE : Long.MAX_VALUE;
+            for (Long v : vals.values()) {
+                if (wantMax ? v > target : v < target) target = v;
+            }
+            for (Map.Entry<Integer, Long> e : vals.entrySet()) {
+                if (e.getValue() == target) filtered.add(e.getKey());
+            }
+        } else if (equals || greater || less) {
+            long num = value instanceof Number ? ((Number) value).longValue() : -1;
+            for (Integer h : candidates) {
+                long v = metricValue(h, metric);
+                if ((equals && v == num) || (greater && v > num) || (less && v < num)) filtered.add(h);
+            }
+        } else {
+            LOG.warn("[窗口] 尾筛条件不认识，忽略: {}", key);
+            return candidates;
+        }
+        if (!negate) return filtered;
+        List<Integer> rest = new ArrayList<>(candidates);
+        rest.removeAll(filtered);
+        return rest;
+    }
+
+    /** 尾筛用的度量值：Size=面积、Width=宽、Height=高（取自 GetWindowRect） */
+    private static long metricValue(int hwnd, String metric) {
+        Map<String, Object> d = getHwndDetails(hwnd);
+        long w = ((Number) d.getOrDefault("width", 0)).longValue();
+        long h = ((Number) d.getOrDefault("height", 0)).longValue();
+        if (metric.startsWith("Size")) return w * h;
+        if (metric.startsWith("Width")) return w;
+        if (metric.startsWith("Height")) return h;
+        return w * h;
+    }
+
+    private static boolean matchesRules(int hwnd, Map<String, Object> rules) {
+        Map<String, Object> details = getHwndDetails(hwnd);
+        String cls = String.valueOf(details.getOrDefault("class", ""));
+        String title = String.valueOf(details.getOrDefault("title", ""));
+        int pid = ((Number) details.getOrDefault("pid", 0)).intValue();
+        for (Map.Entry<String, Object> entry : rules.entrySet()) {
+            String key = entry.getKey() == null ? "" : entry.getKey();
+            boolean negate = key.startsWith("!");
+            String k = negate ? key.substring(1) : key;
+            boolean matched;
+            if (k.startsWith("OR")) {
+                // OR 块：值是一组子规则，任一命中即可
+                matched = false;
+                if (entry.getValue() instanceof List) {
+                    for (Object sub : (List<?>) entry.getValue()) {
+                        if (sub instanceof Map && matchesRules(hwnd, castMap(sub))) {
+                            matched = true;
+                            break;
+                        }
+                    }
+                }
+            } else if (k.equalsIgnoreCase("ClassNameWildcards") || k.equalsIgnoreCase("ClassNames")) {
+                matched = matchAnyWildcard(cls, entry.getValue());
+                if (!matched) {
+                    // Win32 类名对不上 → 再试 **UIA 报的类名**（旧版就是靠它匹配到部分平台的窗口；
+                    // 例如 Weixin 4.0 的 mmui::LoginWindow，Win32 GetClassName 拿不到那个名字）
+                    String uiaCls = UiaOps.getClassName(hwnd);
+                    if (uiaCls != null && !uiaCls.equals(cls)) {
+                        matched = matchAnyWildcard(uiaCls, entry.getValue());
+                        if (matched) {
+                            LOG.info("[窗口] hwnd=0x{} 由 UIA 类名匹配上: win32=[{}] uia=[{}] 规则={}",
+                                    Integer.toHexString(hwnd), cls, uiaCls, entry.getValue());
+                        }
+                    }
+                }
+            } else if (k.equalsIgnoreCase("Name") || k.equalsIgnoreCase("Title")) {
+                matched = matchAnyWildcard(title, entry.getValue());
+            } else if (k.equalsIgnoreCase("ProcessId") || k.equalsIgnoreCase("PID")) {
+                matched = entry.getValue() instanceof Number && ((Number) entry.getValue()).intValue() == pid;
+            } else if (k.equals("FinalSelect")) {
+                continue;                      // 尾筛，交给 filterHwndsByMatchingDict
+            } else {
+                // 旧版这里查的是 UIAutomation 控件属性；Win32 侧没有对应值 → 记一条日志并按"不限制"处理
+                LOG.warn("[窗口] 匹配规则里的键 {} 在 Win32 侧无法求值，已忽略（该窗口仍可能被选中）", key);
+                continue;
+            }
+            if (negate) matched = !matched;
+            if (!matched) return false;
+        }
+        return true;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> castMap(Object o) {
+        return (Map<String, Object>) o;
+    }
+
+    /** 规则值可能是字符串或字符串列表 → 统一按"任一项通配匹配"处理 */
+    private static boolean matchAnyWildcard(String text, Object patterns) {
+        List<String> list = new ArrayList<>();
+        if (patterns instanceof List) {
+            for (Object o : (List<?>) patterns) if (o != null) list.add(String.valueOf(o));
+        } else if (patterns != null) {
+            list.add(String.valueOf(patterns));
+        }
+        for (String p : list) {
+            if (globMatch(text, p)) return true;
+        }
         return false;
     }
 
     /**
-     * 尝试关闭一组窗口，返回剩余的未关闭窗口
-     * 对应 Python: hwnd_utils.try_close_hwnds_in_set_and_return_remained
+     * 通配匹配：`?` = 任意 1 字符，`*` = 任意串，`[seq]` = 字符集；大小写不敏感.
+     * （语义对齐 Python 的 {@code fnmatch.fnmatch} —— 远程配置里的 ClassNameWildcards 就按它写。）
      */
-    public static List<Integer> tryCloseHwndsAndReturnRemained(Set<Integer> hwnds) {
-        // TODO: JNA 实现
-        LOG.debug("[JNA] tryCloseHwnds: {} windows (Stub)", hwnds.size());
-        return Collections.emptyList();
+    public static boolean globMatch(String text, String pattern) {
+        if (text == null || pattern == null) return false;
+        StringBuilder regex = new StringBuilder();
+        StringBuilder cls = null;
+        for (char c : pattern.toCharArray()) {
+            if (cls != null) {                       // 正在 `[...]` 里
+                cls.append(c);
+                if (c == ']') {
+                    regex.append(cls);
+                    cls = null;
+                }
+                continue;
+            }
+            if (c == '[') {
+                cls = new StringBuilder("[");
+            } else if (c == '*') {
+                regex.append(".*");
+            } else if (c == '?') {
+                regex.append('.');
+            } else {
+                regex.append(java.util.regex.Pattern.quote(String.valueOf(c)));
+            }
+        }
+        if (cls != null) regex.append(java.util.regex.Pattern.quote("["));
+        return text.matches("(?is)" + regex);
     }
 
     /**
-     * 获取窗口详细信息
-     * 对应 Python: hwnd_utils.get_hwnd_details_of_
+     * 取窗口详细信息.
+     * 对应 Python: {@code hwnd_utils.get_hwnd_details_of_}（pid / class / title / left / top / width / height）
      */
     public static Map<String, Object> getHwndDetails(int hwnd) {
-        // TODO: JNA 实现
-        LOG.debug("[JNA] getHwndDetails: hwnd={} (Stub)", hwnd);
         Map<String, Object> details = new LinkedHashMap<>();
         details.put("hwnd", hwnd);
-        details.put("width", 0);
-        details.put("height", 0);
+        if (hwnd == 0) {
+            details.put("width", 0);
+            details.put("height", 0);
+            return details;
+        }
+        WinDef.HWND h = intToHwnd(hwnd);
+        com.sun.jna.platform.win32.User32 user32 = com.sun.jna.platform.win32.User32.INSTANCE;
+        if (!user32.IsWindow(h)) {
+            details.put("width", 0);
+            details.put("height", 0);
+            return details;
+        }
+        IntByReference pid = new IntByReference();
+        user32.GetWindowThreadProcessId(h, pid);
+        char[] cls = new char[WND_CLASS_MAX];
+        user32.GetClassName(h, cls, WND_CLASS_MAX);
+        char[] title = new char[512];
+        user32.GetWindowText(h, title, 512);
+        WinDef.RECT rect = new WinDef.RECT();
+        user32.GetWindowRect(h, rect);
+        details.put("pid", pid.getValue());
+        details.put("class", Native.toString(cls));
+        details.put("title", Native.toString(title));
+        details.put("left", rect.left);
+        details.put("top", rect.top);
+        details.put("width", rect.right - rect.left);
+        details.put("height", rect.bottom - rect.top);
+        details.put("visible", user32.IsWindowVisible(h));
         return details;
+    }
+
+    /**
+     * 尝试关闭一组窗口，返回**仍未关闭**的.
+     * 对应 Python: {@code hwnd_utils.try_close_hwnds_in_set_and_return_remained}（PostMessage(WM_CLOSE)）
+     */
+    public static List<Integer> tryCloseHwndsAndReturnRemained(Set<Integer> hwnds) {
+        List<Integer> remained = new ArrayList<>();
+        if (hwnds == null || hwnds.isEmpty()) return remained;
+        com.sun.jna.platform.win32.User32 user32 = com.sun.jna.platform.win32.User32.INSTANCE;
+        for (Integer hwnd : hwnds) {
+            if (hwnd != null && hwnd != 0) {
+                user32.PostMessage(intToHwnd(hwnd), com.sun.jna.platform.win32.WinUser.WM_CLOSE,
+                        new WinDef.WPARAM(0), new WinDef.LPARAM(0));
+            }
+        }
+        waitHwndsClose(new ArrayList<>(hwnds), 5);
+        for (Integer hwnd : hwnds) {
+            if (hwnd != null && hwnd != 0 && user32.IsWindow(intToHwnd(hwnd))) remained.add(hwnd);
+        }
+        LOG.info("[窗口] 关闭窗口：尝试 {} 个，仍未关闭 {} 个", hwnds.size(), remained.size());
+        return remained;
+    }
+
+    /**
+     * 等待所有窗口关闭
+     * 对应 Python: {@code hwnd_utils.wait_hwnds_close}
+     */
+    public static boolean waitHwndsClose(List<Integer> hwnds, int timeout) {
+        if (hwnds == null || hwnds.isEmpty()) return true;
+        com.sun.jna.platform.win32.User32 user32 = com.sun.jna.platform.win32.User32.INSTANCE;
+        long deadline = System.currentTimeMillis() + Math.max(0, timeout) * 1000L;
+        while (System.currentTimeMillis() < deadline) {
+            boolean allClosed = true;
+            for (Integer hwnd : hwnds) {
+                if (hwnd != null && hwnd != 0 && user32.IsWindow(intToHwnd(hwnd))) {
+                    allClosed = false;
+                    break;
+                }
+            }
+            if (allClosed) return true;
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
     }
 
     // ==================== 进程操作 ====================

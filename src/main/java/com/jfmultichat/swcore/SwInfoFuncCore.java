@@ -239,15 +239,137 @@ public final class SwInfoFuncCore {
     }
 
     /**
+     * **按窗口类型取本平台窗口句柄（取句柄的核心方法，多处复用）**.
+     *
+     * <p>链路（与 Python `get_login_hwnds_of_sw` 一致）：平台 pid 列表 → 每个 pid 的顶层窗口 →
+     * 用 `wnd_class.<wndType>.matching` 的规则筛选 → **唯一命中**才算数（避免把别的窗口误当目标）。
+     * 登录窗口校验、主窗口定位、登录窗口尺寸获取都走它，不再各写一套。
+     *
+     * @param wndType 窗口类型：{@code "login"} / {@code "main"}（见远程配置 wnd_class 的键）
+     */
+    public List<Integer> getHwndsOfSwByWndType(String sw, String wndType) {
+        List<Map<String, Object>> rules = getWndClassMatchingDicts(sw, wndType);
+        if (rules == null || rules.isEmpty()) {
+            LOG.debug("[窗口] {} 的 {} 窗口规则为空，无法取句柄", sw, wndType);
+            return new ArrayList<>();
+        }
+        // 平台 pid 列表（含去子进程 / 去非安装目录，与查杀互斥体同一份口径）
+        List<Integer> pids = new ArrayList<>();
+        Map<String, List<Integer>> grouped = getSwAllExePidsGroupByName(sw);
+        if (grouped != null) {
+            for (List<Integer> list : grouped.values()) {
+                if (list != null) pids.addAll(list);
+            }
+        }
+        List<Integer> result = new ArrayList<>();
+        for (Integer pid : pids) {
+            List<Integer> hwndsOfPid = nativeOps.getHwndsByPid(pid);
+            for (Map<String, Object> rule : rules) {
+                List<Integer> matched = SwNativeOps.filterHwndsByMatchingDict(hwndsOfPid, rule);
+                if (matched.size() == 1) {
+                    result.add(matched.get(0));
+                    break;
+                }
+            }
+        }
+        LOG.info("[窗口] {} 的 {} 窗口命中 {} 个: {}", sw, wndType, result.size(), result);
+        if (result.isEmpty()) {
+            // 取不到就**把证据全打出来**（用户 2026-10-07：有的平台识别不到，需要一眼看出是哪一层断的）：
+            // ① 规则有没有解析出来 ② 过滤后的 pid 列表 ③ **未过滤**的 pid 列表（含子进程/任意目录）
+            // ④ 这些 pid 的每个窗口真实类名/标题/尺寸 —— 好对比"配置里的通配符"和"Win32 报的类名"
+            logWindowDiagnosis(sw, wndType, rules, pids);
+        }
+        return result;
+    }
+
+    /** 取不到窗口时的诊断输出（只在失败时打，避免平时刷日志） */
+    private void logWindowDiagnosis(String sw, String wndType,
+                                    List<Map<String, Object>> rules, List<Integer> filteredPids) {
+        try {
+            String ver = SwVersionHelper.calcSwVer(sw, accessor);
+            LOG.info("[窗口诊断] sw={}, 类型={}, calcSwVer={}, 规则={}", sw, wndType, ver, rules);
+            LOG.info("[窗口诊断] 过滤后的 pid（去子进程/限安装目录）={}", filteredPids);
+
+            List<String> exeWcs = accessor.getRemoteSwAsList(
+                    sw, SwCoreConstants.RemoteSwKey.EXECUTABLE_WILDCARDS, Collections.emptyList());
+            LOG.info("[窗口诊断] exe 通配词={}", exeWcs);
+            Map<String, List<Integer>> rawGrouped = nativeOps.getPidsByWildcardsAndGroup(exeWcs);
+            LOG.info("[窗口诊断] **未过滤**的 pid（按 exe 分组，含子进程/任意目录）={}", rawGrouped);
+
+            List<Integer> allPids = new ArrayList<>(filteredPids);
+            for (List<Integer> list : rawGrouped.values()) {
+                if (list == null) continue;
+                for (Integer pid : list) if (!allPids.contains(pid)) allPids.add(pid);
+            }
+            int printed = 0;
+            for (Integer pid : allPids) {
+                List<Integer> hwnds = nativeOps.getHwndsByPid(pid);
+                for (Integer hwnd : hwnds) {
+                    if (printed++ > 60) return;                       // 上限，别刷爆日志
+                    Map<String, Object> d = SwNativeOps.getHwndDetails(hwnd);
+                    LOG.info("[窗口诊断] pid={} hwnd=0x{} class=[{}] title=[{}] {}x{} visible={}",
+                            pid, Integer.toHexString(hwnd), d.get("class"), d.get("title"),
+                            d.get("width"), d.get("height"), d.get("visible"));
+                }
+            }
+        } catch (Throwable t) {
+            LOG.warn("[窗口诊断] 输出失败: {}", t.getMessage());
+        }
+    }
+
+    /**
      * 获取登录窗口句柄
      * 对应 Python: get_login_hwnds_of_sw (L545-L558)
      */
     public List<Integer> getLoginHwndsOfSw(String sw) {
-        // TODO: 需要 JNA 枚举窗口
-        List<Map<String, Object>> loginRules = getWndClassMatchingDicts(sw, "login");
-        if (loginRules == null) return Collections.emptyList();
-        LOG.debug("[窗口] getLoginHwndsOfSw: sw={}, rules={} (Stub)", sw, loginRules.size());
-        return Collections.emptyList();
+        return getHwndsOfSwByWndType(sw, "login");
+    }
+
+    /**
+     * 获取主窗口句柄（登录完成后"等主窗口出现"用它校验）
+     */
+    public List<Integer> getMainHwndsOfSw(String sw) {
+        return getHwndsOfSwByWndType(sw, "main");
+    }
+
+    /**
+     * 取**某个 pid** 下符合某类型规则的窗口（可排除已知窗口）.
+     * 供"启动平台后等登录窗口出现"使用（那里只能认这一个新 pid，不能全平台扫）。
+     */
+    public List<Integer> getHwndsByPidAndWndType(String sw, int pid, String wndType, List<Integer> exclude) {
+        List<Map<String, Object>> rules = getWndClassMatchingDicts(sw, wndType);
+        if (rules == null || rules.isEmpty() || pid <= 0) return new ArrayList<>();
+        List<Integer> hwnds = nativeOps.getHwndsByPid(pid);
+        if (exclude != null && !exclude.isEmpty()) hwnds.removeAll(exclude);
+        for (Map<String, Object> rule : rules) {
+            List<Integer> matched = SwNativeOps.filterHwndsByMatchingDict(hwnds, rule);
+            if (matched.size() == 1) return matched;
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * 轮询等待"某 pid 上出现唯一的该类型窗口"（对应 Python: uiautomation_wait_hwnd_exclusively_by_pid_and_rules_dicts）.
+     *
+     * @return hwnd；超时返回 0
+     */
+    public int waitHwndExclusivelyForPid(String sw, int pid, String wndType, List<Integer> exclude, int timeoutSec) {
+        long deadline = System.currentTimeMillis() + Math.max(1, timeoutSec) * 1000L;
+        while (System.currentTimeMillis() < deadline) {
+            List<Integer> matched = getHwndsByPidAndWndType(sw, pid, wndType, exclude);
+            if (matched.size() == 1) {
+                LOG.info("[窗口] pid={} 的 {} 窗口已出现: hwnd={}", pid, wndType, matched.get(0));
+                return matched.get(0);
+            }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return 0;
+            }
+        }
+        LOG.warn("[窗口] 等 pid={} 的 {} 窗口超时（{}s）", pid, wndType, timeoutSec);
+        return 0;
     }
 
     // ==================== 路径验证 ====================

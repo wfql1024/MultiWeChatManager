@@ -2034,6 +2034,11 @@ body.resizing-cols {
 .manage-account-table tbody tr:hover .manage-row-quick-actions {
     display: inline-flex;
 }
+/* 数量输入框正在输入时（tr 上打了标记）→ 悬浮操作区**保持显示**，鼠标移出框外也不消失.
+   （名称列输入框不需要这条：它就在名称单元格里，本来就不随悬浮显隐） */
+.manage-account-table tbody tr[data-count-editing="1"] .manage-row-quick-actions {
+    display: inline-flex;
+}
 .manage-row-quick-actions .qa-btn {    border: 1px solid var(--border-color);
     background: var(--bg-card);          /* 不透明底色：悬浮按钮不半透明 */
     color: var(--text-secondary);
@@ -2093,6 +2098,13 @@ body.resizing-cols {
     text-align: center;
     padding: 0;
     cursor: text;
+    /* 隐藏光标（它不是文本框，敲数字由 JS 直接替换上屏）。
+       ⚠️ 这里**绝不能**加 user-select: none —— 本 WebKit 下 input 会因此点不进焦点、彻底没法输入（踩过） */
+    caret-color: transparent;
+}
+/* 聚焦：外框用主题色，一眼看出"正在这里输入" */
+.login-count-wrap:focus-within {
+    border-color: var(--color-primary);
 }
 /* 空白时灰显"1"（默认就是开一个），与其他输入框的空白默认值一致。
    字号/字体与实际输入**完全一样**（继承输入的等宽 14px），只靠颜色变淡来区分。 */

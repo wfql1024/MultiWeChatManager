@@ -54,14 +54,18 @@ public final class SwOperatorCore {
         }
 
         List<Integer> pids = allExePidsOf(sw, accessor, nativeOps);
+        LOG.info("[互斥体] {} 本轮按 exe 通配符枚举到 pid={}（通配词 {}）", sw, pids, allWildcards);
         if (pids.isEmpty()) {
             return new String[]{Boolean.TRUE.toString(), sw + "已经不含互斥体和文件锁!（无进程）"};
         }
+        // 走 killHandlesByName：带"已查杀 PID"缓存（TTL 内刚清干净的 pid 不再进句柄枚举）
         List<WinHandleOps.HandleRef> found = WinHandleOps.findHandles(pids, allWildcards);
+        LOG.info("[互斥体] {} 本轮命中 {} 个：{}", sw, found.size(), found);
         if (found.isEmpty()) {
             return new String[]{Boolean.TRUE.toString(), sw + "已经不含互斥体和文件锁!"};
         }
         int closed = WinHandleOps.closeHandles(found);
+        for (WinHandleOps.HandleRef h : found) WinHandleOps.markPidCleaned(h.pid);   // 记入 TTL 缓存
         if (closed > 0) {
             return new String[]{Boolean.TRUE.toString(),
                     sw + "已关闭互斥体和解锁文件!（命中 " + found.size() + " 个，关闭 " + closed + " 个）"};
@@ -98,8 +102,11 @@ public final class SwOperatorCore {
         return pidsWithMutex;
     }
 
-    /** 该平台"自己安装目录下"的全部进程 PID（通配符找 → 去子进程 → 去不在安装目录的） */
-    private static List<Integer> allExePidsOf(String sw, SwConfigAccessor accessor, SwNativeOps nativeOps) {
+    /**
+     * 该平台"自己安装目录下"的全部进程 PID（通配符找 → 去子进程 → 去不在安装目录的）.
+     * 批量多开要用它做"旧程序 / 现有程序"两次快照的差集。
+     */
+    public static List<Integer> allExePidsOf(String sw, SwConfigAccessor accessor, SwNativeOps nativeOps) {
         List<String> exeWildcards = accessor.getRemoteSwAsList(
                 sw, SwCoreConstants.RemoteSwKey.EXECUTABLE_WILDCARDS, Collections.emptyList());
         if (exeWildcards.isEmpty()) return Collections.emptyList();
@@ -685,33 +692,31 @@ public final class SwOperatorCore {
     // ==================== 登录相关 ====================
 
     /**
-     * 打开 SW 并返回窗口句柄
-     * 对应 Python: SwOperatorCore.open_sw_and_return_hwnd (L2404-L2428)
-     * <p>
-     * 需要 JNA 实现窗口检测和进程创建。
+     * **单个实例的完整启动流程（核心方法，多处复用）**：查杀互斥体/文件锁 → 以普通用户权限启动.
+     *
+     * <p>为什么抽出来：单点"登录"、批量多开的每一轮、（将来）账号登录流程、（将来）取登录窗口尺寸时
+     * 自动开窗 —— 都要这一套，各自写一遍必然走形（之前批量里"先 kill 一次、openSw 内部又 kill 一次"
+     * 就是重复劳动）。统一从这里走。
+     *
+     * @return {pid 字符串 或 null, 错误信息 或 null, 查杀结果说明}
      */
-    public static int[] openSwAndReturnHwnd(String sw, String exe,
-                                             SwConfigAccessor accessor, SwNativeOps nativeOps) {
-        // TODO: 完整实现需要大量 JNA 调用
-        // 1. 获取登录窗口规则
-        // 2. 关闭多余的多开器
-        // 3. 记录 PID 互斥体
-        // 4. 打开 SW
-        // 5. 等待窗口出现
-        LOG.info("[登录] openSwAndReturnHwnd: sw={}, exe={} (Stub)", sw, exe);
-        return new int[]{-1, 0}; // {hwnd, pid}
-    }
-
-    /**
-     * 打开 SW 进程
-     * 对应 Python: SwOperatorCore.open_sw (L2776-L2815)
-     */
-    public static String[] openSw(String sw, String exe, SwConfigAccessor accessor) {
-        // 获取多开模式
+    public static String[] launchOneInstance(String sw, String exe, SwConfigAccessor accessor,
+                                             SwNativeOps nativeOps) {
+        String mutexMsg = "";
         String multirunMode = accessor.getSwSettingAsString(
                 sw, SwCoreConstants.LocalSettingKey.REST_MULTIRUN_MODE,
                 SwCoreConstants.MultirunMode.FREELY_MULTIRUN);
+        if (SwCoreConstants.MultirunMode.BUILTIN.equals(multirunMode)) {
+            String[] killed = killAllMutexesNow(sw, accessor, nativeOps);
+            mutexMsg = killed[1] == null ? "" : killed[1];
+        }
+        String[] launched = launchProcess(sw, exe, accessor);
+        LOG.info("[登录] 单个实例启动: sw={}, pid={}, 查杀={}", sw, launched[0], mutexMsg);
+        return new String[]{launched[0], launched[1], mutexMsg};
+    }
 
+    /** 只负责"降权启动"这一步（不含查杀），供 {@link #launchOneInstance} 与 {@link #openSw} 共用 */
+    private static String[] launchProcess(String sw, String exe, SwConfigAccessor accessor) {
         String swPath = accessor.tryGetPathOf(sw, SwCoreConstants.LocalSettingKey.INST_PATH);
         if (swPath == null) return new String[]{null, null};
 
@@ -719,22 +724,110 @@ public final class SwOperatorCore {
             String instDir = new File(swPath).getParent();
             swPath = instDir + "/" + exe;
         }
-
-        if (SwCoreConstants.MultirunMode.BUILTIN.equals(multirunMode)) {
-            // Builtin 模式：先查杀互斥体/文件锁，再降权启动（用户 2026-10-07 要的"每次点登录都新开一个登录窗口"）
-            String[] killed = killAllMutexesNow(sw, accessor, SwNativeOps.INSTANCE);
-            LOG.info("[登录] builtin 多开模式：先查杀互斥体 → {}", killed[1]);
-        } else if (!SwCoreConstants.MultirunMode.FREELY_MULTIRUN.equals(multirunMode)) {
-            return new String[]{null, "未知多开模式: " + multirunMode};
-        }
-
-        // 降权启动：即使本程序是管理员，也让平台程序以普通用户身份运行
         int pid = SwNativeOps.createProcessWithoutAdmin(swPath, null, 0);
         if (pid == 0) {
             return new String[]{null, "启动失败: " + swPath};
         }
         // pid == -1：已通过 explorer.exe 代启（父进程是 explorer，拿不到目标 PID，但确实是启动了）
         return new String[]{String.valueOf(pid), null};
+    }
+
+    /**
+     * 打开 SW 并返回**登录窗口句柄**
+     * 对应 Python: SwOperatorCore.open_sw_and_return_hwnd (L2404-L2428)
+     *
+     * <p>流程（与旧版一致）：
+     * ① 取登录窗口匹配规则（取不到 → 该平台未适配）
+     * ② 记下**已经存在**的登录窗口（排除表：新窗口不能是它们）
+     * ③ {@link #launchOneInstance}（查杀互斥体 + 降权启动）拿到新 pid
+     * ④ **轮询等这个 pid 上出现唯一的登录窗口**（默认 20s）
+     *
+     * @return {hwnd, pid}；失败返回 {0, pid 或 0}
+     */
+    public static int[] openSwAndReturnHwnd(String sw, String exe,
+                                            SwConfigAccessor accessor, SwNativeOps nativeOps) {
+        SwInfoFuncCore infoCore = new SwInfoFuncCore(accessor, nativeOps, null, null);
+        List<Map<String, Object>> rules = SwAdapterChecker.getWndClassMatchingDicts(sw, "login", accessor);
+        if (rules == null || rules.isEmpty()) {
+            LOG.warn("[登录] {} 没有登录窗口匹配规则（未适配），无法等窗口", sw);
+            return new int[]{0, 0};
+        }
+        List<Integer> excluded = new ArrayList<>(infoCore.getLoginHwndsOfSw(sw));
+        if (!excluded.isEmpty()) {
+            LOG.info("[登录] 启动前已存在登录窗口 {}, 将排除它们", excluded);
+        }
+        String[] one = launchOneInstance(sw, exe, accessor, nativeOps);
+        if (one[0] == null) {
+            LOG.warn("[登录] 启动失败: {}", one[1]);
+            return new int[]{0, 0};
+        }
+        int pid;
+        try {
+            pid = Integer.parseInt(one[0]);
+        } catch (NumberFormatException e) {
+            LOG.warn("[登录] 经 explorer 代启拿不到 PID，无法按 pid 等窗口: {}", one[0]);
+            return new int[]{0, 0};
+        }
+        int hwnd = infoCore.waitHwndExclusivelyForPid(sw, pid, "login", excluded, 20);
+        return new int[]{hwnd, pid};
+    }
+
+    /**
+     * **获取登录窗口尺寸（格式 `宽*高`）**.
+     *
+     * <p>对应 Python: `SwOperatorCore.get_login_size`（sw_func_core.py L2831）：
+     * ① 已经有登录窗口 → 直接量；② 没有 → **自动开一个**，量完把那个窗口关掉（不留垃圾窗口）。
+     *
+     * @return {尺寸字符串 或 null, 错误信息 或 null}
+     */
+    public static String[] getLoginSize(String sw, SwConfigAccessor accessor) {
+        SwInfoFuncCore infoCore = new SwInfoFuncCore(accessor, SwNativeOps.INSTANCE, null, null);
+        List<Integer> loginHwnds = infoCore.getLoginHwndsOfSw(sw);
+        boolean weOpened = false;
+        if (loginHwnds == null || loginHwnds.isEmpty()) {
+            // 没有登录窗口 → 自动开一个（与旧版一致）
+            LOG.info("[登录] 没有登录窗口，自动打开一个来量尺寸");
+            int[] opened = openSwAndReturnHwnd(sw, null, accessor, SwNativeOps.INSTANCE);
+            if (opened[0] == 0) {
+                return new String[]{null, "打开登录窗口失败或超时未检测到窗口（请确认该平台已适配窗口规则）"};
+            }
+            loginHwnds = Collections.singletonList(opened[0]);
+            weOpened = true;
+        }
+        try {
+            Map<String, Object> details = SwNativeOps.getHwndDetails(loginHwnds.get(0));
+            int width = ((Number) details.getOrDefault("width", 0)).intValue();
+            int height = ((Number) details.getOrDefault("height", 0)).intValue();
+            if (width <= 0 || height <= 0) {
+                return new String[]{null, "登录窗口尺寸读取失败（hwnd=" + loginHwnds.get(0) + "）"};
+            }
+            String size = width + "*" + height;
+            LOG.info("[登录] 登录窗口尺寸: sw={}, hwnd={}, size={}", sw, loginHwnds.get(0), size);
+            return new String[]{size, null};
+        } finally {
+            if (weOpened) {
+                // 只关我们自己开出来的那个（用户已开着的登录窗口不动）
+                SwNativeOps.tryCloseHwndsAndReturnRemained(new LinkedHashSet<>(loginHwnds));
+            }
+        }
+    }
+
+    /**
+     * 打开 SW 进程（返回 {pid 字符串 或 null, 错误信息 或 null}）
+     * 对应 Python: SwOperatorCore.open_sw (L2776-L2815)
+     *
+     * <p>实现统一收口到 {@link #launchOneInstance}（查杀互斥体 → 降权启动），避免两处各写一遍走形。
+     */
+    public static String[] openSw(String sw, String exe, SwConfigAccessor accessor) {
+        String multirunMode = accessor.getSwSettingAsString(
+                sw, SwCoreConstants.LocalSettingKey.REST_MULTIRUN_MODE,
+                SwCoreConstants.MultirunMode.FREELY_MULTIRUN);
+        if (!SwCoreConstants.MultirunMode.BUILTIN.equals(multirunMode)
+                && !SwCoreConstants.MultirunMode.FREELY_MULTIRUN.equals(multirunMode)) {
+            return new String[]{null, "未知多开模式: " + multirunMode};
+        }
+        String[] launched = launchOneInstance(sw, exe, accessor, SwNativeOps.INSTANCE);
+        return new String[]{launched[0], launched[1]};
     }
 
     // ==================== 工具方法 ====================

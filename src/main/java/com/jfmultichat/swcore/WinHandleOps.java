@@ -256,6 +256,11 @@ public final class WinHandleOps {
         return at != null && System.currentTimeMillis() - at <= KILLED_TTL_MS;
     }
 
+    /** 把一个"刚被清干净"的 pid 记入 TTL 缓存（供 SwOperatorCore 那条不走缓存的查杀路径复用） */
+    public static void markPidCleaned(int pid) {
+        KILLED_PID_AT.put(pid, System.currentTimeMillis());
+    }
+
     // ==================== 内部实现 ====================
 
     /** 枚举系统句柄表（缓冲不够时按返回长度扩张重试） */

@@ -1613,51 +1613,200 @@ public class JsBridge {
      *
      * @return JSON: {success, pid?, mutexMessage, error?}
      */
-    public String launchPlatformProgram(String swId, String countStr) {
+    /**
+     * JS 调用：**获取平台登录窗口尺寸**（格式 {@code 宽*高}，如 {@code 347*471}）.
+     *
+     * <p>对应旧版 `SwOperatorCore.get_login_size`：找登录窗口 → 量宽高。
+     * 当前 A 版只处理"登录窗口已存在"；没有就返回提示（自动开窗依赖 `openSwAndReturnHwnd`，留给账号登录流程）。
+     *
+     * @return JSON: {success: true, size: "347*471"} 或 {success: false, error: "..."}
+     */
+    public String fetchLoginSize(String swId) {
         ObjectNode result = MAPPER.createObjectNode();
-        int count = 1;
-        try {
-            if (countStr != null && !countStr.isBlank()) count = Integer.parseInt(countStr.trim());
-        } catch (Exception ignore) {
-            // 非数字 → 按 1 个处理
-        }
-        if (count < 1) count = 1;
-        if (count > 20) count = 20;                 // 上限保护，避免误输入把机器打爆
         try {
             com.jfmultichat.swcore.SwConfigAccessor accessor =
                     com.jfmultichat.config.SwConfigProvider.newAccessor();
-            com.fasterxml.jackson.databind.node.ArrayNode pids = result.putArray("pids");
-            String mutexMsg = "";
-            // 逐个实例：**先查杀互斥体再启动**（每个新进程都会建自己的互斥体，所以下一个要再杀一次）；
-            // 不 sleep：每次启动前互斥体都是"不存在"的状态就够了，这样整段很快、不占用 JavaFX 线程
-            for (int i = 0; i < count; i++) {
-                String[] kill = com.jfmultichat.swcore.SwOperatorCore.killAllMutexesNow(
-                        swId, accessor, com.jfmultichat.swcore.SwNativeOps.INSTANCE);
-                if (kill[1] != null) mutexMsg = kill[1];
-
-                String[] open = com.jfmultichat.swcore.SwOperatorCore.openSw(swId, null, accessor);
-                if (open[0] == null) {
-                    result.put("success", false);
-                    result.put("error", open[1] != null ? open[1] : "启动失败");
-                    result.put("launched", pids.size());
-                    result.put("mutexMessage", mutexMsg);
-                    return result.toString();
-                }
-                if ("-1".equals(open[0])) {
-                    result.put("viaExplorer", true);   // 经 explorer 代启，拿不到 PID
-                } else {
-                    pids.add(open[0]);
-                }
+            String[] size = com.jfmultichat.swcore.SwOperatorCore.getLoginSize(swId, accessor);
+            if (size[0] != null) {
+                result.put("success", true);
+                result.put("size", size[0]);
+            } else {
+                result.put("success", false);
+                result.put("error", size[1] != null ? size[1] : "获取登录窗口尺寸失败");
             }
-            result.put("success", true);
-            result.put("count", pids.size());
-            result.put("mutexMessage", mutexMsg);
         } catch (Exception e) {
-            LOG.error("launchPlatformProgram 失败: swId={}, count={}", swId, count, e);
+            LOG.error("fetchLoginSize 失败: swId={}", swId, e);
             result.put("success", false);
             result.put("error", String.valueOf(e.getMessage()));
         }
         return result.toString();
+    }
+
+    /**
+     * JS 调用（**异步**）：批量启动 —— 整个"查杀互斥体 + 降权启动"循环放到**后台线程**跑，完成后回调 JS.
+     *
+     * <p>为什么必须异步：一次启动 N 个实例时，每轮都要枚举并逐个查名几万~几十万个系统句柄
+     * （实测单个 5 实例场景约 0.9s），再乘 N 就是 1~2 秒以上 —— 同步跑会把 JavaFX 线程整段占住、界面卡死。
+     * 前端可以先弹个"正在启动…"的 toast，完成后由回调换成结果 toast。
+     *
+     * @param cbId JS 回调 ID（数字字符串），完成后推 {@code JFC.bridge._handleAsync('launch', cbId, json)}
+     */
+    public void launchPlatformProgramAsync(String swId, String countStr, String cbId) {
+        THREAD_POOL.submit(() -> {
+            String json;
+            try {
+                json = doLaunchPlatformProgram(swId, countStr);
+            } catch (Exception e) {
+                LOG.error("launchPlatformProgramAsync 失败: swId={}", swId, e);
+                ObjectNode err = MAPPER.createObjectNode();
+                err.put("success", false);
+                err.put("error", String.valueOf(e.getMessage()));
+                json = err.toString();
+            }
+            try {
+                pushToJs("JFC.bridge._handleAsync('launch'," + cbId
+                        + "," + MAPPER.writeValueAsString(json) + ")");
+            } catch (Exception e) {
+                LOG.error("推送批量启动结果失败", e);
+            }
+        });
+    }
+
+    /** 批量启动的同步实现（循环「查杀互斥体 → 降权启动」）；异步入口与同步入口共用 */
+    private String doLaunchPlatformProgram(String swId, String countStr) throws Exception {
+        ObjectNode result = MAPPER.createObjectNode();
+        int targetCount = 1;
+        try {
+            if (countStr != null && !countStr.isBlank()) targetCount = Integer.parseInt(countStr.trim());
+        } catch (Exception ignore) {
+            // 非数字 → 按 1 个处理
+        }
+        if (targetCount < 1) targetCount = 1;
+        if (targetCount > 20) targetCount = 20;     // 上限保护，避免误输入把机器打爆
+        com.jfmultichat.swcore.SwConfigAccessor accessor =
+                com.jfmultichat.config.SwConfigProvider.newAccessor();
+        com.fasterxml.jackson.databind.node.ArrayNode pids = result.putArray("pids");
+        String mutexMsg = "";
+        com.jfmultichat.swcore.SwNativeOps nativeOps = com.jfmultichat.swcore.SwNativeOps.INSTANCE;
+
+        // 目标就是 1 个 → 走直通：查杀一次 + 启一个就报结果。
+        // （批量那套"等 5 秒数 pid"对单个实例既没必要、还可能因进程还没注册而误报失败）
+        // 走核心方法 launchOneInstance（查杀 + 启动一次搞定，不再"外面 kill 一次、openSw 里又 kill 一次"）
+        if (targetCount == 1) {
+            String[] one = com.jfmultichat.swcore.SwOperatorCore.launchOneInstance(
+                    swId, null, accessor, nativeOps);
+            mutexMsg = one[2] == null ? "" : one[2];
+            if (one[0] == null) {
+                result.put("success", false);
+                result.put("error", one[1] != null ? one[1] : "启动失败");
+                result.put("mutexMessage", mutexMsg);
+                return result.toString();
+            }
+            if ("-1".equals(one[0])) {
+                result.put("viaExplorer", true);
+            } else {
+                pids.add(one[0]);
+            }
+            result.put("success", true);
+            result.put("count", pids.size());
+            result.put("rounds", 1);
+            result.put("mutexMessage", mutexMsg);
+            LOG.info("[登录] 单个实例已启动: {}", one[0]);
+            return result.toString();
+        }
+
+        // ===== 批量多开算法（用户 2026-10-07 定，取代"查一个开一个"）=====
+        // 为什么这样：顺序"查杀 → 开一个 → 再查杀"时，上一个实例的互斥体往往**还没建出来**
+        // （建它要几百毫秒），那一轮就查不到、也没杀到；等它建好后又会拦住后面的实例。
+        // 而**批量同时唤起**时，所有新进程几乎同时做"单实例检查"，此时互斥体刚被我们清掉 →
+        // 大家一起通过 → 一次就能开出目标数量。
+        //   ① 记下现有同位程序 pid（"旧程序"）
+        //   ② 查杀现有互斥体（走 TTL 缓存，跳过 10s 内刚杀过的 pid）
+        //   ③ **一次性**唤起剩余数量的实例
+        //   ④ 间隔 5s 后数：当前 pid 列表 − 旧程序列表 = 真正开出来的个数
+        //   ⑤ 没到目标数量就重复 ②~④（最多 MAX_ROUNDS 轮，避免无限循环）
+        List<Integer> oldPids = com.jfmultichat.swcore.SwOperatorCore.allExePidsOf(swId, accessor, nativeOps);
+        LOG.info("[登录] 批量启动开始: sw={}, 目标 {} 个, 旧程序 pid={}", swId, targetCount, oldPids);
+
+        int round = 0;
+        List<Integer> newPids = new java.util.ArrayList<>();
+        int lastLaunched = 0;
+        while (newPids.size() < targetCount && round < MAX_BATCH_ROUNDS) {
+            round++;
+            int remaining = targetCount - newPids.size();
+            LOG.info("[登录] ===== 第 {}/{} 轮：已有 {} 个，还需 {} 个 =====",
+                    round, MAX_BATCH_ROUNDS, newPids.size(), remaining);
+
+            // ② 查杀现有互斥体/文件锁
+            String[] kill = com.jfmultichat.swcore.SwOperatorCore.killAllMutexesNow(
+                    swId, accessor, nativeOps);
+            if (kill[1] != null) mutexMsg = kill[1];
+            LOG.info("[登录] 第 {} 轮查杀结果: {}", round, kill[1]);
+
+            // ③ 一次性唤起剩余数量（每个实例都走核心方法：查杀 + 降权启动）
+            lastLaunched = 0;
+            for (int i = 0; i < remaining; i++) {
+                String[] one = com.jfmultichat.swcore.SwOperatorCore.launchOneInstance(
+                        swId, null, accessor, nativeOps);
+                if (one[0] == null) {
+                    LOG.warn("[登录] 第 {} 轮第 {} 次启动失败: {}", round, i + 1, one[1]);
+                    break;                       // 启动本身失败（路径/权限问题）→ 本轮不再硬试
+                }
+                if ("-1".equals(one[0])) {
+                    result.put("viaExplorer", true);     // 经 explorer 代启，拿不到 PID
+                } else {
+                    lastLaunched++;
+                }
+            }
+            LOG.info("[登录] 第 {} 轮已唤起 {} 次（其中拿到 PID 的 {} 个）", round, remaining, lastLaunched);
+            if (lastLaunched == 0 && !result.has("viaExplorer")) {
+                break;                           // 一次都没起来 → 再试也没意义
+            }
+
+            // ④ 间隔 5 秒后数"真正开出来几个"
+            try {
+                Thread.sleep(BATCH_WAIT_MS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            List<Integer> nowPids = com.jfmultichat.swcore.SwOperatorCore.allExePidsOf(swId, accessor, nativeOps);
+            nowPids.removeAll(oldPids);          // 减去"旧程序" = 新开出来的
+            newPids = nowPids;
+            LOG.info("[登录] 第 {} 轮等待后统计: 当前同位程序 pid={}, 其中新开的 {} 个={}",
+                    round, com.jfmultichat.swcore.SwOperatorCore.allExePidsOf(swId, accessor, nativeOps),
+                    newPids.size(), newPids);
+        }
+
+        for (Integer pid : newPids) pids.add(String.valueOf(pid));
+        result.put("success", newPids.size() >= targetCount);
+        result.put("count", newPids.size());
+        result.put("rounds", round);
+        result.put("mutexMessage", mutexMsg);
+        if (newPids.size() < targetCount) {
+            result.put("error", "只开出了 " + newPids.size() + " 个（目标 " + targetCount + " 个，已试 "
+                    + round + " 轮）");
+        }
+        LOG.info("[登录] 批量启动结束: sw={}, 目标 {} 个, 实际 {} 个, 轮数 {}",
+                swId, targetCount, newPids.size(), round);
+        return result.toString();
+    }
+
+    /** 每轮"批量唤起"之后，等平台把窗口/进程稳定下来再数数（用户定：5 秒） */
+    private static final long BATCH_WAIT_MS = 5000;
+    /** 最多几轮（每轮 5 秒；防止目标数开不出来时无限循环） */
+    private static final int MAX_BATCH_ROUNDS = 4;
+
+    public String launchPlatformProgram(String swId, String countStr) {
+        try {
+            return doLaunchPlatformProgram(swId, countStr);
+        } catch (Exception e) {
+            LOG.error("launchPlatformProgram 失败: swId={}", swId, e);
+            ObjectNode result = MAPPER.createObjectNode();
+            result.put("success", false);
+            result.put("error", String.valueOf(e.getMessage()));
+            return result.toString();
+        }
     }
 
     /**
