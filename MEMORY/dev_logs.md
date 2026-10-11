@@ -1,93 +1,14 @@
-# DEV_LOGS — 开发过程记录
+# dev_logs — 开发过程记录
 
-> 本文件用于记录临时性、易变性的开发决策、实验过程和调试信息。项目骨架类事实请放入 FACTS.MD。
+> **用途**：过程与证据 —— 每次改了什么、为什么这么改、**验证了什么**（含探针/日志/真机结论）。
+> **不写什么**：不写"现在是什么样"（去 `facts.md`）、不写为什么这么定（去 `decisions.md`）、不写通用教训（去 `lessons.md`）。
+> **更新方式**：追加（按次/按天，新的一节放最上面或最下面都行，保持日期可读）。
 
 ---
 
-## 开发过程架构笔记
+# DEV_LOGS — 开发过程记录
 
-> 以下为项目核心架构设计记录，涉及系统交互模式和通信机制。
-
-### JS↔Java异步架构
-
-**绝对不能阻塞 UI 线程！** 所有网络操作必须后台线程执行。
-
-```
-JS 调用 void Java 方法 → 立刻返回
-                   ↓
-       ThreadPool 后台线程
-       · HTTP 下载  · AES 解密  · JSON 解析
-                   ↓
-       Platform.runLater → scriptExecutor
-       → JFC.bridge._handleAsync(type, cbId, jsonStr)
-                   ↓
-       JS 回调更新 DOM
-```
-
-**关键方法**：
-- 同步: `getSwConfig()`, `getSwDetailData()`, `getSwExistedAccounts()`, `saveSwConfig()`, `extractExeIcon()`, `getLogDir()`
-- 异步: `testRemoteUrlAsync(url, cbId)`, `fetchUpdateDataAsync(cbId)`, `tryEnsureRemoteConfigsAsync(cbId)`, `detectPathsAsync(swId, cbId, pathKeysJson)`, `getAccAvatarAsync(swId, accountId, cbId)`
-- **detectPathsAsync 注意**: 第三个参数是 JSON 字符串 `'["inst_path","data_dir"]'`（非 varargs！JavaFX JS 桥不支持 varargs），为空时默认全三项
-
-### 远程配置兜底机制
-
-任何需要读取远程配置的操作，都必须先检查 → 缺失则异步下载 → 失败则 toast 提醒 + 强制跳转设置页。
-
-```
-JFC.ensureRemoteConfigs(onReady)
-  ├── checkRemoteConfigReady() — 同步快速检查
-  ├── 已就绪 → onReady()
-  └── 缺失 → tryEnsureRemoteConfigsAsync() — 后台下载
-        ├── 成功 → onReady()
-        └── 失败 → JFC.toastError(msg) + forceGotoSettings()
-```
-
-调用点：`app.js` 启动检查、`manage.js` loadPlatformList / selectPlatform
-
-### Toast通知系统
-
-```javascript
-JFC.toastError('消息', duration);    // 右下角红色，默认 4 秒
-JFC.toastSuccess('消息', duration);  // 右下角绿色，默认 3 秒
-```
-
-动态创建容器 `#toast-container`，带 ✕ 手动关闭。CSS: `main.css` `.toast-container` / `.toast`。
-
-### 页面架构
-
-### 全局侧栏 (`#nav-sidebar`)
-平台列表（动态渲染）+ 底部统计/设置入口。平台列表由 `main.js` 渲染，进入软件即加载（`MainWindow.injectJsBridge()` 触发）。
-
-### 主页面 (`#page-main`)
-唯一主内容区，无内嵌左栏。`main.js` 中 `getEl` 作用域隔离: `querySelector('#page-main #' + id) || document.getElementById(id)`。跨页面元素（`#nav-platform-list`）直接用 `document.getElementById`。
-
-### 详情区
-路径输入框（内嵌 ▼ 下拉面板，body 层 `position:fixed`，z-index:40）、设置面板（窗帘折叠 + 高度拖动）、账号表格（多选 + 排序 + 批量操作）。自动填充优先级: 存在 > 进程 > 内存映射 > DLL遍历 > 注册表 > 猜测/其他SW > 来源数量。
-
-### 设置页各页面状态
-
-| 页面 | 数据来源 | 加载方式 | 关键方法 |
-|------|---------|---------|----------|
-| 外观 | LocalGlobalConfig.json | 同步 | `getTheme()` / `saveTheme()` |
-| 配置 | RootConfig.json | 同步 + 异步测试 | `getConfigData()` / `saveConfigData()` / `testUrlAsync()` |
-| 日志 | 本地日志目录 `AppPaths.getLogsDir()` | 同步 | `openLogDir()` / `getLogDir()` |
-| 更新 | RemoteGlobalConfig (network) | **异步** | `fetchUpdateDataAsync()` + "更新远程配置"按钮 |
-| 鸣谢 | RemoteGlobalConfig (network) | **异步** | `fetchThanksDataAsync()` |
-| 关于 | RemoteGlobalConfig (network) | **异步** | `fetchAboutDataAsync()` |
-
-### 加密协议
-
-远程配置文件加密格式（对应 Python `CryptoUtils.decrypt_response`）：
-
-```
-HTTP 响应文本 = base64(IV[16] + ciphertext) + " " + key
-解密: Base64解码 → IV=前16字节, key=key.ljust(16)[:16].encode()
-     → AES/CBC/PKCS5Padding 解密 → UTF-8 JSON
-```
-
-Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日志。
-
-**下载/解密日志关键词**: `[下载]` 和 `[解密]`，搜这两个 tag 即可追踪完整流程。
+> 本文件用于记录临时性、易变性的开发决策、实验过程和调试信息。项目骨架类事实请放入 FACTS.MD。
 
 ---
 
@@ -162,20 +83,20 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 
 ## 账号列表来源 + 头像显示 + 日志设置页（2026-07-31）
 
-### 一、账号列表来源接入磁盘扫描
+### 账号列表来源接入磁盘扫描
 - 背景: 列表仅读 SwAccData.json 持久化记录；磁盘真实存在的账号目录/共存 exe 未记录时不显示
 - 实现:
   - `JsBridge.getSwExistedAccounts(swId)` → `SwConfigProvider.newAccessor()` + `SwInfoFuncCore.getSwAllAccountsExisted(swId, null)`（返回 `List<String>` 账号 ID）
   - `main.js loadAccountData` 以磁盘结果为准，按账号 ID 与 `getSwDetailData` 详情合并；未记录新账号显示空白详情，磁盘已删残留记录不再显示
 - 关键: `SwInfoFuncCore` 构造传 `(accessor, null, null, null)`；accountOps 为 null 在共存分支安全（`AccInfoFuncCore` 静态方法同模式）
 
-### 二、头像显示接入
+### 头像显示接入
 - 背景: 直接渲染 avatar_url 不显示；AvatarUtils 未接入桥
 - 实现: `getAccAvatarAsync` 后台线程：`AccInfoFuncCore.getAvatarFromCache`（截图缓存恢复本地文件）→ `getAccAvatarFromFile`（AvatarUtils 三路：本地文件 → URL 下载(`/0` 结尾) → SVG 回退）→ `_handleAsync('avatar', cbId, json)` 推送
 - 前端: 头像优先级 `avatar_data > avatar_url > 占位符`；`requestAccountAvatar` 异步加载（`_avatarFetching` 防重）+ `updateAccountAvatarCell` 逐行更新（SVG 回退不降级替换已有真实图片）
 - **大坑**: `_handleAsync` 第三参若传对象字面量则 JS 侧 `data`=null（不触发 `JSON.parse`）。必须双编码：`MAPPER.writeValueAsString(payload)` 包一层 → JS 收到字符串 → parse 成功（SVG data URL 内单引号也安全）
 
-### 三、日志目录修复
+### 日志目录修复
 - 现象: 根目录出现 `jfmultichat.logdir_IS_UNDEFINED/`（Logback 对未定义属性 `${name}_IS_UNDEFINED` 的替换产物），内容为 7/14-18 历史遗留
 - 修复:
   - logback.xml: `<file>` 与 `<fileNamePattern>` 两处改 `${jfmultichat.logdir:-logs}`（属性缺失回退相对 logs，永不再出现 _IS_UNDEFINED）
@@ -183,14 +104,14 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
   - 删除遗留目录 `jfmultichat.logdir_IS_UNDEFINED/`
 - 验证: 运行后日志写入 `%APPDATA%\JhiFengMultiChat\4.0.0.7000\DevUserFiles\logs`，根目录无新 _IS_UNDEFINED
 
-### 四、设置页"日志"子项
+### 设置页"日志"子项
 - 导航: `#settings-nav` 加 `<li data-setting="log">日志</li>`（与"外观""配置"同级）
 - 区块: `#settings-section-log`（`config-form` 结构）：日志目录路径显示（`#log-dir-path`）+ "打开日志目录"（btn-primary）+ "上传日志"（占位，点击 toast「上传功能待实现」）
 - JS: `settings.js` `logInited` 标志 + `initLogSection()` + `showSection` 分发 `if (name === 'log')`
 - Bridge: `openLogDir()`（`Desktop.getDesktop().open`，目录不存在先创建）+ `getLogDir()`
 - **路径决策**: 固定 `AppPaths.getLogsDir()`（`%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`，`AppEnv.isDev()` 决定 Dev/Prod），**不随用户自定义数据目录**；与 logback 实际写入一致
 
-### 五、仓库卫生
+### 仓库卫生
 - commit `5216773`: 纳入 acccore/appcore/SwConfigProvider + docs/project_structure.md + 账号列表/头像两功能
 - legacy_python 保持忽略（用户确认）；.old 暂不动
 - 后续提交 `e7e348c`: 日志修复 + 设置页"日志"子项 + 文档（6 文件）
@@ -200,18 +121,18 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 
 ## 展示名 + SwAccData 自动填充 + EventBus 事件机制（2026-08-01）
 
-### 一、账号展示名显示
+### 账号展示名显示
 - 背景: "昵称"列头名不副实，应显示 remark 优先的展示名
 - 实现:
   - `JsBridge.getSwDetailData` 每账号注入 `display_name` = `AccInfoFuncCore.getAccOriginDisplayName(sw, id)`（remark→nickname→alias→账号 ID）
   - index.html 表头 "昵称 ↕" → " ↕"（去文字留排序箭头），`data-sort="nickname"` → `"display_name"`
   - main.js: `sortField` 默认改 `display_name`；渲染用 `acc.display_name || nickname || id`；头像首字符同步用展示名
 
-### 二、SwAccData 账号自动填充
+### SwAccData 账号自动填充
 - 背景: 磁盘扫描出账号但 SwAccData 无节点，详情无法挂载
 - 实现: `AccInfoFuncCore.syncSwAccAccounts(sw, accountIds)` 遍历 `getSwAccData(sw, acc)` 检查，缺失 `updateSwAccData(sw, acc, emptyMap)` 补空节点；`JsBridge.getSwExistedAccounts` 取得列表后调用
 
-### 三、EventBus 事件机制（核心）
+### EventBus 事件机制（核心）
 - **动机/痛点**: 数据更新只能在每个更新方法里触发整表重渲染，刷新带动系列加载；`getSwAccountsLoginStatus` 为 god-method（配置/pid/写库/状态计算耦合）
 - **选型讨论**: ① 自建 EventBus（选定：订阅方零依赖 JsBridge、可扩展）；② JsBridge 多槽 Consumer（订阅方须持 JsBridge 引用）；③ JavaFX Property（FX 线程约束）。用户选定①
 - **新增**:
@@ -228,13 +149,13 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
   - toggle-hidden 迁移: 去掉 `renderAccountTable(accountData)`，事件推送定向更新徽章（"返回后仅更新这一块"）
 - **线程模型**: publish 同步（调用方线程）；耗时订阅者 `runInBackground`；UI 推送 `pushToJs`（内部 Platform.runLater）
 
-### 四、NPE 修复（Map.of null 值）
+### NPE 修复（Map.of null 值）
 - 现象: 切换平台约 3 秒后 `[PlatformMaintenance] 维护失败` NPE @ `updateAccLoginData:565`
 - 根因: `Map.of(AccKey.PID, pid, ...)` 中未运行账号 pid=null → `ImmutableCollections$MapN` 构造器 `Objects.requireNonNull` 抛 NPE（原 god-method 未接线从未触发，接入后暴露潜伏 bug）
 - 修复: 改 `HashMap`（`ConfigManager.updateAccount` 对 null 值移除键 → 未运行账号不存 pid）；relay 读回 `pidMutexNode.get(pid)` 先判空再 `.asBoolean`（缺省 false）
 - 教训 #50
 
-### 五、仓库卫生
+### 仓库卫生
 - commit `c2561a4`: 展示名 + 自动填充（4 文件）
 - 本次提交: EventBus 全套（MainApp/AccInfoFuncCore/JsBridge/bridge.js/main.js + 新增 core/ + PlatformEventBootstrap）+ 文档（CLAUDE.md/MEMORY/project_structure.md），已通过进入平台页与隐藏切换实测、维护日志无报错
 
@@ -242,7 +163,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 
 ## 账号列表列定制与交互升级（2026-08-16）
 
-### 一、新列结构（7 列，从左到右）
+### 新列结构（7 列，从左到右）
 | 列 | 来源 | 说明 |
 |----|------|------|
 | 勾选框 | — | 行内勾选框默认 opacity:0 + pointer-events:none，仅行悬浮/选中时短暂显示；列头全选框保留常显 |
@@ -253,41 +174,41 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 | 平台内ID | SwAccData.alias | 默认不显示 |
 | 昵称 | SwAccData.nickname | 默认不显示 |
 
-### 二、列头右键菜单（Windows 资源管理器风格）
+### 列头右键菜单（Windows 资源管理器风格）
 - thead contextmenu → `#account-col-menu`（body 层 fixed，z-index:500，视口边界翻转定位）
 - 勾选显示列：4 个必选列（勾选框/头像/展示名/快捷键）锁定不可取消；ID 默认显示；平台内ID/昵称默认隐藏
 - "所有列自适应大小" / "该列自适应大小"：临时 span 测量（复制 fontFamily/fontSize/fontWeight）+ padding，头像列按内容物宽度
 - 配置持久化：`LocalGlobalConfig.json.account_columns = {visible: {...}, width: {...}}`（getGlobalConfig/saveGlobalConfig）
 
-### 三、列间竖线拖拽调列宽
+### 列间竖线拖拽调列宽
 - `table-layout: fixed` + colgroup，列宽由 `<col data-col>` 控制（JS 覆盖 width）
 - 每个可见列 th 右侧注入 `.col-resizer`（absolute，7px 热区 + ::after 1px 竖线），mousedown→mousemove→mouseup 拖拽，最小 30px
 - 拖拽时 `body.resizing-cols` 禁文本选择；松开保存宽度
 - 最后一个可见列不加竖线；可见列变化后重建（applyColumnLayout → initColResizers）
 
-### 四、状态/操作列移除（用户决策）
+### 状态/操作列移除（用户决策）
 - 移除"状态"徽章列与"操作"按钮列
 - 行内操作改为展示名列右端小按钮：`隐藏`（选中态 .on = 已隐藏，高亮）/`删除`（红），仅行悬浮显示
 - 行右键菜单：隐藏/显示、删除（与按钮同走 `handleAccountAction`）
 - 禁用状态保留为展示名旁 `.manage-disabled-tag` 小标签（数据态，无切换入口）
 - 状态推送：saveAccount → AccountDataChangedEvent → `onAccountChanged` → `updateRowQuickActions` 定向更新按钮选中态/标签（原 stateBadgeHtml/updateRowStateBadge 删除）
 
-### 五、排序标识
+### 排序标识
 - 去掉列头 " ↕" 字符（index.html thead 清理）
 - 保留点击排序，当前排序列 th 加 `.sorted`（主题色 + 加粗）标识
 
-### 六、onAccountChanged 扩展
+### onAccountChanged 扩展
 - 新增处理字段：hotkey（更新快捷键单元格，data-editing 期间跳过）/alias（平台内ID格）/nickname（昵称格）
 - display_name 更新定位 `.manage-nickname-cell .dn-text`（展示名现在包 span）
 
-### 七、关键实现要点
+### 关键实现要点
 - **事件委托防重复绑定**：thead contextmenu / tbody contextmenu / tbody click（快捷键激活）绑在 bindManageEvents（一次性，容器元素不变），不在每次 render 的 bindAccountEvents 里重复 addEventListener（否则监听器累积）
 - **隐藏列**：th/td 同步加 `hidden-col`（display:none），col 宽度保留不影响；7 列始终渲染保证表头与数据对齐
 - **快捷键编辑**：`data-editing` 标记防 EventBus 推送覆盖输入框；blur commit 与 Enter commit 用 done 标志防双触发
 - **行点击选中排除** hotkey cell / qa-btn / input
 - 空行 colspan 6→7
 
-### 八、验证状态
+### 验证状态
 - node --check 通过；gradle compileJava 通过
 - 应用实例正在运行锁定 build 目录 → processResources 清理失败，GUI 实测待应用重启后进行
 
@@ -295,14 +216,14 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 
 ## 账号列表四表架构与交互优化（2026-08-16 第二轮）
 
-### 一、可复用列表组件 `js/components/account-table.js`（核心架构）
+### 可复用列表组件 `js/components/account-table.js`（核心架构）
 - 新增 `JFC.AccountTable` 组件类：列定义驱动渲染（任意列组合）、标题行、批量操作、列头右键菜单、列宽拖拽/自适应、行右键菜单、快捷键列编辑、EventBus 流B 定向刷新
 - 构造参数：`{id, title, container, columns, enableHotkey, defaultSortField, getSwId}`
 - 列定义：`{key, label, mandatory, sortable, defVisible, defWidth, fixed, cellClass}`（mandatory=必选锁定；fixed=固定宽不可拖拽/自适应；cellClass=td 附加类）
 - 列配置按表独立持久化：`LocalGlobalConfig.json.account_columns.<tableId> = {visible, width}`
 - 全局右键菜单 `#account-col-menu`/`#account-row-menu` 多表共用，`activeTable` 记录当前操作的表；`JFC.AccountTable.closeMenus()` 供外部关闭
 
-### 二、四个表（平台页从上到下）
+### 四个表（平台页从上到下）
 | 表 | 列定义 | 数据 |
 |----|--------|------|
 | 原生程序 | 勾选框/名称/路径/状态 | 暂无数据 |
@@ -312,19 +233,19 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 
 - `JsBridge.getSwExistedAccounts(swId, only)` 新增 only 参数（"origin"/"coexist"/空=全部），对应 `SwAccountOps.getSwAllAccountsExisted` 的 only 过滤
 
-### 三、标题行（替代原浮动工具行）
+### 标题行（替代原浮动工具行）
 - 每表标题行常显：标题左端，"已选 N 项" + 批量按钮（批量隐藏/显示/删除）跟随右侧，未选中时隐藏
 - 批量操作在组件内独立管理（每表自己的 selectedIds）
 
-### 四、固定列与竖线
+### 固定列与竖线
 - 勾选框列（40px）/头像列（56px）`fixed: true`：固定宽度、不可拖拽、不参与自适应
 - 固定列之间及固定列右侧不注入 `.col-resizer` 竖线（头像左右两侧均无竖线）
 - 头像 `border-radius: 50%` → `6px`（圆角矩形）
 
-### 五、列头右键菜单
+### 列头右键菜单
 - 去掉"必选"字样（disabled checkbox 已表达）；固定列"该列自适应大小"显示为禁用
 
-### 六、快捷键录入大修改（修复假死）
+### 快捷键录入大修改（修复假死）
 - **根因分析**：旧实现 `blur` 时同步 `commit`（替换单元格 DOM）与 `click` 事件竞态 → 点击其他位置后 DOM 已变，click 目标丢失 → "点击无反应"；被 OS 全局热键占用的组合键在 WebView 收不到 → 表现为录入中断
 - **修复**：
   - 提交改为 `document mousedown`（点击编辑格外时提交），移除 blur 同步提交，消除竞态
@@ -334,10 +255,10 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
   - 输入框支持退格/方向键编辑、Enter 提交、Esc 取消
 - **已知边界**：OS 级全局热键（其他软件 RegisterHotKey）在系统层拦截，JavaFX/WebView 均收不到——该组合无法录入，属桌面应用通例
 
-### 七、NPE 修复（顺带）
+### NPE 修复（顺带）
 - `AccInfoFuncCore.getSwAllAccountsExisted` 未传 accountOps（null）→ 流A 维护在共存分支 NPE（`ensureCoexistAccFormatted`），WeChat 平台实测触发；改为 `new AccOpsProvider().toSwProvider()`
 
-### 八、验证状态
+### 验证状态
 - node --check 全部通过；gradle compileJava 通过
 - 应用重启实测：进入 Weixin 平台，6 账号原生表渲染、头像异步加载、平台维护完成，无 JS 错误无 NPE
 - 列宽自适应逻辑待与用户探讨（见上方提问）；GUI 交互实测待用户反馈
@@ -346,7 +267,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 
 ## 账号列表交互打磨与滚动条体系（2026-08-16 晚间）
 
-### 一、滚动条问题全排查（核心难点，多轮迭代）
+### 滚动条问题全排查（核心难点，多轮迭代）
 - **现象演变**: ①横向滚动条不出现（列宽总和>容器时无条）；②纵向滚动条不出现；③设置区域滚动条需手动调整高度才触发；④滚动条被内容带着滚（absolute 子元素是滚动内容的一部分）；⑤滚动条不随主题、带箭头
 - **根因链**:
   1. **列宽联动/无横向滚动**: `table-layout:fixed` + 表格宽=容器宽时多余空间**按比例分配列**（拖宽一列全部变、永不超宽）→ 修：表格宽度恒=可见列宽总和（px）
@@ -364,7 +285,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **三处统一**: 表内横向（组件 _buildDom attach）/账号区域纵向（main.js `.account-area-inner` + MutationObserver）/设置区域纵向（main.js `.manage-settings-content`）
 - **教训**: JavaFX WebView 的 scroll 事件、transitionend、内联样式 CSS 变量（`style="background:var(--x)"`）均不可靠——用 rAF 轮询、setTimeout 兜底、CSS 类而非内联变量
 
-### 二、布局与交互细节
+### 布局与交互细节
 - **高度链**: 见上根因 2/3；页面 `#page-main .manage-layout` 最终用 **flex column**（block 破坏纵向、grid 有覆盖陷阱）
 - **列宽**: 表格宽=列宽总和；固定列（勾选框 40/头像 56）`_loadColumnPrefs` 强制 defWidth 不读持久化（防旧配置污染）；自适应下限=列名宽+8px（展示名列=4字符+按钮占位 96px），无上限；fitColumn 只用本列
 - **整行悬浮高亮**: JS 高亮层 `.acc-row-highlight`（CSS 类背景与 tr:hover 同源 `--bg-hover`）；mousemove 委托匹配**任意 tr**（含空表空行，`closest('tr')` + parentNode 校验）；**移除 `tr:hover` 背景**（叠加导致列区域/剩余区域颜色不一致——用户截图分析出 48/44/64 三色）；render 后清 hover
@@ -374,7 +295,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **NPE 修复**: ①`AccOpsProvider.toSwProvider().updateSwAccData` 从 map 取 **value**（空串）→ 改取 **key**（共存分支写错账号导致读回 null）；②`SwAccountOps.ensureCoexistAccFormatted` 的 `Map.of("linked_acc", null)`（Map.of 禁 null，教训 #50）→ HashMap
 - **验证**: headless Edge 实测（滚动条不随内容滚动/显示条件/高度链列不拉伸）、node --check、gradle compileJava、运行日志无 JS 错误无维护失败
 
-### 三、规则文件
+### 规则文件
 - 项目 `CLAUDE.md` → `AGENTS.md`（git mv，DSH 与 Claude Code 通用约定）
 - 全局规则 → `~/.dsh/AGENTS.md`（DSH 全局仅认此名；从 `~/.claude/CLAUDE.md` 拷贝，含提交先行/SDK 路径/打包流程/时间戳规则）
 - DSH 规则机制: 项目级候选 `["AGENTS.md","CLAUDE.md"]`、本地级 `AGENTS.local.md`/`CLAUDE.local.md`、全局 `$DSH_HOME/AGENTS.md`；`dsh-agent-instructions` 插件实时 watch 注入
@@ -384,279 +305,28 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 
 ## 远程配置加密发布工具（2026-10-04）
 
-### 一、需求与参照
+### 需求与参照
 - 参照 `legacy_python/scripts/encrypt_data.py`（注释掉的 v3~v9 旧版本未移植），用 Java 重写；加密 `scripts/original_remote_global_v2.json`、`original_remote_sw_v10.json` → `remote_configs/`
 - 算法: `key.ljust(16)[:16]` → AES/CBC/PKCS5Padding + 随机 16 字节 IV → `base64(IV + ciphertext) + " " + key`
 
-### 二、结构决策（用户提出"脚本区不入 classpath 怪怪的"）
+### 结构决策（用户提出"脚本区不入 classpath 怪怪的"）
 - 采纳 `src/tools` 独立源集 + `JavaExec` 任务：工具复用 `CryptoUtils`（消除加密逻辑双份这一真实风险），且不进应用产物
 - 已删除最初的 `scripts/EncryptData.java` 单文件版（正是"双份实现"要避免的形态）
 
-### 三、兼容性验证（关键证据）
+### 兼容性验证（关键证据）
 - 用 Java 解密 `legacy_python/remote_configs/remote_global_v1`、`remote_sw_v9`（Python 产出）→ LF 归一化后与源 JSON 逐字符一致
 - Java 加密产物字节数 = Python 版（48,657 / 170,429）
 - 发现 v2/v10 与 v1/v9 **内容完全相同**（MD5 一致），本次发布实为版本号提升
 
-### 四、踩坑
+### 踩坑
 - 测试里用"补齐后的 key（尾部带空格）"构造密文会失败：格式按**最后一个空格**切分，key 不能带尾随空格（线上 key 为 15 随机字符 + `=`，天然满足）
 - `Path.of(".").toAbsolutePath()` 不会规范化 `.`，`getParent()` 会返回自身 → 输出目录跑到 `scripts/` 下；需 `.normalize()`
 
-## 代理设置（2026-10-04）
-
-- **设计原则**: 代理**只由界面"使用代理"复选框控制**（用户要求：不要默认开、不要自动探测）；未勾选一律直连
-- **`AppCore.applyProxySetting()`** → 返回 `ProxyState(applied, host, port, message)`；设置/清除 `http(s).proxyHost/Port` 与 `http.nonProxyHosts`；**运行期修改立即生效**（HttpClient 默认 ProxySelector 每次请求读取系统属性）
-- **地址归一化** `AppCore.splitHostPort()` / `isValidPort()` — 兼容 `http://127.0.0.1:7890`、`127.0.0.1:7890`、`127.0.0.1`+端口分开填、`[::1]:7890`；端口非法则按直连并提示
-- **立即生效链路**: `settings.js` 勾选/change → `JFC.bridge.applyProxyConfig` → `JsBridge.applyProxyConfig`（只持久化代理 3 字段 + 应用 + 回传归一化结果回填）；`saveConfigData()` 保存时、`Launcher` 启动时各调用一次
-- **修复的报错**: `URISyntaxException: Expected closing bracket for IPv6 address ... proxy.https://[http://127.0.0.1]:7890/`（用户把 `http://127.0.0.1` 填进地址框；界面 placeholder 已改为 `127.0.0.1`）
-- **测试**: `AppCoreProxyTest`（3 例：协议/端口拆分、IPv6、端口校验）
-- **备注**: 曾短暂实现"未勾选时跟随系统代理"（`config/SystemProxy`），按用户要求已移除
-- **远程配置候选 URL 兜底**: `JsBridge.mergeUrls()`（用户 URL 优先 + 内置追加 + 去重）—— 修复「用户清空远程配置源后候选 0 个、远程配置永远下载失败」；测试 `JsBridgeUrlTest`（4 例）
-- **代理地址归一化**: `AppCore.splitHostPort()` 剥协议前缀/拆端口（用户填 `http://127.0.0.1` + 端口 `7890` 曾导致 `URISyntaxException: ... proxy.https://[http://127.0.0.1]:7890/`）；界面 placeholder 已改为 `127.0.0.1`；勾选/修改后立即生效
-
-## 共存账号数据接入（2026-10-04）
-
-- **表数据**: `coexist_acc` 接 `getSwExistedAccounts(swId,'coexist')`；与原生账号共用 `buildAccountRows()` 合并 SwAccData 详情，头像按表路由更新
-- **Java 修复（3 处）**: ①`SwInfoFuncCore` 读错键 `exe_wcs`（应为 `executable_wildcards`）→ 共存扫描恒 0；②`JsBridge.getSwExistedAccounts` 的 `SwInfoFuncCore` 第 4 参 accountOps 传 null → 共存分支 NPE；③`SwAccountOps` 一律取 `inst_path` 父目录，而 WeChat/DouYinIM 存的是目录 → 新增 `resolveInstDir()`
-- **本机实测**: WeChat 2（WeCha1/WeCha2）、WXWork 1（WXWor1），其余平台目录内无匹配 exe
-- **待用户修正**: TIM 的 `inst_path` 当前指向 QQNT（数据问题）
-- **测试**: `SwAccountOpsTest`(3)
-
-## 共存账号列 + 列配置持久化 + 侧栏展开（2026-10-04）
-
-- **新增列**: 共存账号表增加「最后登录账号」= `linked_acc`（非必选、默认显示，`TABLE_COLUMNS.coexist`）
-- **列显隐/列宽不持久化（bug 修复）**: `_saveColumnPrefs` 写扁平键 `account_columns.<表id>`，读取端用嵌套 `account_columns[表id]` → 勾选丢失；改为嵌套写 + 先读后合并（saveGlobalConfig 是顶层浅合并）+ 读取端兼容历史扁平键
-- **最左栏展开**: `nav-sidebar.js` 改为「鼠标在区域内静止 2 秒」才展开（`EXPAND_DELAY=2000`，`MOVE_THRESHOLD=6px` 微动不重新计时），移出即收起
-
-## 设置页配置三块独立保存（2026-10-04）
-
-- **结构**: 代理 / 本地目录 / 远程配置源 三块 + 两个分割线，各块右下角独立"保存"；后端 `saveConfigData` 逐字段合并，天然支持部分提交（不再一处失败全盘阻塞）
-- **代理**: 明细常驻显示；保存后能立即应用→"保存成功"，`requiresRestart=true`（运行期应用异常）→弹窗提示重启，地址非法（勾选但 applied=false）→红字并按直连
-- **本地目录**: 保存按钮默认禁用，绿框（input-ok）才启用
-- **远程配置源**: 测试全部/添加 移到列表标题右侧；保存按钮需 sw/global 至少一个地址本次会话测试通过；不再预置绿框
-- **风格统一**: `.config-desc` 统一板块介绍；`.config-label`→font-h3；输入框 padding/字号/圆角/字体统一；次级按钮统一 6px 12px/--font-sm；提示统一 --font-xs；`.config-form .settings-section` margin 交给 `.config-divider`
-- **清理**: 移除 `#cfg-btn-save`/`#cfg-save-msg`/`updateSaveButton`；`showMsg(id,msg,isErr)`
-
-## 账号列表细节打磨 + 共存账号属性来源（2026-10-04）
-
-- **共存账号**: 名称/昵称/平台内ID/头像一律取 `linked_acc` 指向的账号（自身只认 remark）；名称链 remark > 链接nickname > 链接alias > 链接id > 自身id；头像链 自身本地 > 链接本地 > 链接头像地址 > 默认（`AvatarUtils.getCoexistAvatarDataUrl`，`getAccAvatarAsync` 自动识别 linked_acc）
-- **整行背景层**: 悬浮/选中色统一用 `z-index:-1` 的绝对定位层（容器 `z-index:0`+`isolation:isolate`），宽度 = max(表格宽, 容器可视宽)，不透明色 `--bg-row-hover`/`--bg-row-selected`；选中行不显示悬浮色；移除 `tr.selected` 背景
-- **列宽热区**: `.col-resizer` 从 `right:-3px`（被 th overflow 裁剪）改为 `right:0; width:7px`，最右列也能拖
-- **表头行**: `.acc-table-titlebar` `min-height:38px`，批量按钮出现不再撑高
-- **最左栏**: 静止悬停 2s → 1s
-- **远程配置源**: 保存条件改为 sw 与 global 都有绿框（AND）
-
-## 账号表末尾占位列（2026-10-04）
-
-- 表格末尾内部列 `_filler`（不在 columns，无 data-col，不参与排序/显隐/列菜单）；宽度 = 容器可视宽 - 可见列宽总和（>=0）
-- 作用：所有真实列右侧都有邻居（拖拽热区不再压在表格边界）；占位单元格属于该行 → 行悬浮/选中感应覆盖整行
-- 菜单文案：所有列/该列"调至合适宽度"；占位列不提供"该列"项
-- 表头行 `.acc-table-titlebar` min-height 38px → 46px
-
-## 列宽不生效根因：隐藏列 col 宽度（2026-10-04）
-
-- 现象：隐藏部分列后最右可见列拖不动、自适应也无效；所有列都显示时正常
-- 根因：table-layout:fixed 列宽取自 <col>，隐藏列时只给 th/td 加 display:none，<col> 宽度仍是原值 → 声明列宽总和 > 表格宽度 → 浏览器重新分配列宽，声明值被吃掉
-- 修复：`_applyColumnLayout` 中隐藏列的 <col> 同时归零+隐藏（`hidden-col` + `width:0`，真实宽度留在 colWidth）；拖拽/总宽取整避免 1px 溢出
-- 占位列宽度 = 容器 clientWidth - 可见列宽总和（≥0），右端恰在列表区域右边缘
-
-## 名称列宽度 + 悬浮按钮占位 + 等宽字体（2026-10-04）
-
-- 名称列"调至合适宽度" = 名称宽 + 悬浮按钮预留宽(QUICK_ACTIONS_WIDTH=96)；量取时只取 .dn-text/.manage-disabled-tag，排除按钮文字
-- 悬浮按钮改 visibility 常驻占位（原 display 切换会在悬浮瞬间挤压 .dn-text → 文字截断/位移）
-- 列表内容（td）统一等宽字体 var(--font-family-mono)，表头仍用界面字体
-
-## 无效账号并入 + 原生程序表 + 名称清洗（2026-10-04）
-
-- 名称列下划线 = 账号 ID 里的 `_`（无 remark/nickname/alias 时名称回退成 ID），非 CSS；新增 cleanDisplayName：名称等于 ID 时去下划线（仅显示层，ID 列不变）
-- 无效账号 = SwAccData − 原生 − 共存，按类型并入两表：invalid=true → 灰字 + "失效"标签 + 永远置底；删除无效账号表/容器/列定义（四表→三表）
-- 置底分组：_sortAccounts 稳定排序按 rank（invalid 2 / hidden 1 / 其他 0）分组
-- 原生程序表：数据源 = inst_path 的 exe；列 名称(必选)/版本(必选)/路径(默认隐藏)，状态列删除；新增桥方法 getSwProgramData(swId) → {name,path,version}（版本取 exe 文件版本）
-- 旧列配置作废：持久化配置含已不存在的列名时整份回默认（修复 origin_prog 沿用旧 path 显示/58px 列宽）
-- 悬浮按钮文案 已隐藏/隐藏 → 显示/隐藏；名称右侧新增"隐藏"标签；切换后整表重渲染以落到次置底
-
-## 名称列横线根因 + 程序表头像 + 标签前缀（2026-10-05）
-
-- 名称列横线根因：td 自身 display:flex → 不再是 table-cell，浏览器插入匿名 cell，td 的 padding/border 画在内层盒子 → 名称格底边比同行其它列错位（JavaFX WebView 实测：旧 nameTd bottom=116.0 vs idTd bottom=126.5；新写法两格一致 239.5）
-- 修法：td 保持 table-cell，flex 移到 .manage-nickname-inner
-- 悬浮按钮改 position:absolute + 悬浮 display（不占位、不挤压）；自适应宽度仍额外加 QUICK_ACTIONS_WIDTH
-- 状态标签改名称前缀 .manage-name-tag（失效→禁用→隐藏），排序仍按 display_name
-- 原生程序表加头像列（程序图标，复用 iconCache/extractExeIcon）；行高与账号表一致
-- 新技巧：用项目同款 JavaFX WebView 离屏渲染（stage 移到 -4000,-4000 + executeScript 读几何）验证 WebView 真实布局；javac 需 -encoding UTF-8，module-path 需含 javafx.media
-
-## 高清图标 + 悬浮按钮边框 + 把手宽度 + 收起禁拖（2026-10-05）
-
-- 图标模糊根因：FileSystemView 只给 16x16；32x32 需 sun.awt.shell（未 add-exports + 惰性图片 getWidth=-1 双重拦截）。修复：extractIconFromFile 三方案取最大（pickBiggerIcon/iconSide 用 ImageIcon 触发加载），PNG 上限 64→256；build.gradle.kts 与 package-exe.bat 补 --add-exports java.desktop/sun.awt.shell；实测取到 32px
-- 悬浮按钮上下边框消失：.manage-nickname-inner 的 overflow:hidden 裁掉了超出文字行高的绝对定位按钮 → 去掉 overflow + min-height:22px
-- 把手被拉伸：SVG width:100% + preserveAspectRatio=none，viewBox 必须随窗口宽度同步；此前 resize 未调 initHandleSvg → 补 resize 监听 + 每次重算 path d
-- 收起状态禁止拖动底部分割线（拖动会跳到最小高度与鼠标脱节）：onDown 判 collapsed 直接返回 + 光标 syncHandleDragCursor（收起 default / 展开 ns-resize）
-
-## 平台图标 64x64 + PNG 缓存 + 侧栏/标签/记住平台（2026-10-05）
-
-- FileSystemView.getSystemIcon(file,w,h) 支持任意尺寸（实测 48/64/128/256）→ 用它取 64x64，无需 add-exports
-- 新增 JsBridge.getSwIcon(swId)：缓存 {userData}/{sw}/{sw}.png；有图且 inst_path 未变直接用；缺图或路径变（比对 LocalSwConfig.icon_src_path）才重提取 64x64 覆盖；失败保留原图
-- 左栏与原生程序表共用该缓存；实测 64x64/300+颜色/PNG 2-3KB
-- 悬浮按钮改回文档流内（挤压名称 + …截断），背景不透明（--bg-card / --qa-on-bg）
-- 状态标签字号 13px（正文-1）+ padding 1px 8px + 圆角 6px + line-height 1.4
-- 最左栏收不起兜底：文档级 mousemove + 400ms elementFromPoint 定时校验；统一 collapse()
-- 移除左栏"统计"按钮（页面与图标资源保留）
-- 记住最后平台：LocalGlobalConfig.last_sw_id，启动直接进入
-
-## 设置区域高度/展开态全局统一 + 图标程序校验 + 光标 + 撤销下划线清洗（2026-10-05）
-
-- 窗帘高度/展开态由 per-platform 改全局（LocalGlobalConfig.settings_height/settings_expanded）；未启用平台（三路径未填全）强制展开且不写全局记录；高度拖动始终全局；旧版按平台记录仅作一次性迁移
-- 跨平台丝滑动画保留：animatePanelHeight(targetH, null, _prevHeight)，全局收起→切到未启用平台时从 0 平滑展开
-- 改造前代码与经验结晶存档：MEMORY/ARCHIVE_settings_curtain_animation.md（AGENTS 第二十四节引用）
-- getSwIcon 增加"必须是程序"校验（isFile && .exe；目录则拼远程 executable，拼不到跳过），避免把文件夹图标当程序图标
-- 分割线光标改 CSS 驱动（body.curtain-collapsed）+ MutationObserver 同步（原内联 cursor + 改类前调用导致错位）
-- 删除 cleanDisplayName（用户澄清是口误：要的是去分割线，不是去下划线）
-
-## 单一职责修正 + 高度漂移根治（2026-10-05）
-
-- getSwIcon 只判断"软件路径是不是程序"（isFile && .exe），删掉目录+executable 拼接（那是路径探测流程的活）
-- 未启用判定改为只读绿框：validatePathInput 写 input-ok/warn/error 类 + swPathGreen[swId][key]；isSwSettingsComplete 只读三项是否都绿；检查结果晚到用 enforceCurtainForCompleteness() 补强制展开
-- 高度漂移根因：拖动 content.maxHeight = 面板高-20、动画收尾却用 面板高（+手动展开清空 maxHeight）→ 两套算法；修复为唯一入口 applyPanelHeight(H)（成对设置），_prevHeight 改取语义高度
-
-## 设置区域切换"闪一下"根因：写死的 20px（2026-10-05）
-
-- 现象：跨平台切换 100->100 无动画却闪到 ~120 再回 100；100->300 动画到 ~320 再弹回 300
-- 离屏 WebView 逐 25ms 采样四方案高度轨迹：V0(现状 -20)=100->80 闪 / V1(border-box 无内容上限)=滚动条失效 / V2(实测chrome=0)=不丝滑 / V3(面板与内容同值+动画期间内容解除上限)=精确稳定且滚动条正常
-- 根因：内容区 max-height 写死 面板高-20，动画期间却 none → 动画到 H、停下回落 H-20，两套高度语义
-- 修复：applyPanelHeight(h) 面板与内容区同值，去掉一切偏移数字；教训：父子同高度约束必须同值
-
-## LocalGlobalConfig 冗余清理 + 账号区滚动自动收起（2026-10-05）
-
-- 清理前 11 个顶层节点 → 后 5 个（theme/account_columns/last_sw_id/settings_height/settings_expanded）
-- 删除：manage_settings_collapsed（连未引用常量一起删）、manage_settings_height、account_columns.<表id> 扁平键、account_columns.visible/width、account_columns.invalid_acc、account_columns.origin_prog（含已删列 status）
-- 新增语义：JsBridge.saveGlobalConfig 中 JSON null = 删除该字段；main.js cleanLegacyGlobalConfig() 启动跑一次；account-table.js 去掉扁平键兼容读取 + 保存时剔除 visible/width
-- 两份实际配置文件已就地清理并备份 .bak-20261005
-- 账号区滚轮"有效滚动"（scrollTop 真变化）→ 自动收起设置区域；无滚动条/到边界算无效；收起统一走 toggleSettingsPanel(false)，未启用平台不记录
-
-## "刚进平台从 0 涨上来"根因与修复（2026-10-05）
-
-- 离屏采样三场景：A 首次(起点180)=16->180->200 / B 稳定=200 无动画 / C 起点0=0->20->65->...->200（与用户描述一致）
-- 根因：未启用平台的本地收起不写全局记录，但面板 inline 高度已是 0；切平台时全局=展开→shouldExpand=true，动画起点取面板当前高度=0 → 走了 0→目标 的假动画
-- 每个平台点开一遍后消失：首次访问自动探测路径→平台变启用→不再有本地收起残影
-- 修复：首次进入直接落位；本地收起+全局展开直接落位；其余照常动画（全局收起→强制展开仍从 0 涨，保留 4.3 效果）；新增 _prevWasCollapsed/_panelShownOnce
-
-## 设置区域单一渲染依据重构（2026-10-05）
-
-- 现象：记录收起时重启 → 记录收起但渲染展开；切换平台时两套规则拉扯几天才统一（多条写入路径读不同状态）
-- 重构：desiredCurtainState() 唯一推导（全局记录 + 未启用平台强制展开）；applyCurtainRender() 唯一 DOM 写入；setCurtainExpanded/setCurtainHeight 先改事实来源再渲染；enforceCurtainForCompleteness 只重调渲染；_lastRender 取代 _prevHeight/_prevWasCollapsed/_panelShownOnce
-- 进平台先同步跑绿框检查（避免 200ms 后强制展开造成闪烁）；setPathGreen 在变启用时清 forcedLocalState
-- 删除旧 applyCurtainState 与 toggleSettingsPanel 内的独立动画，统一走 animatePanelHeight
-
-## 未启用平台改为"每次渲染强制展开"（2026-10-05）
-
-- 回归问题：单一渲染依据重构后，未启用平台变成了"遵从上次本地状态"，不再强制展开
-- 修正：desiredCurtainState 对未启用平台恒返回 expanded=true（每次渲染都无视记录强制展开）；用户本次访问里的临时收起只通过 applyCurtainRender(override) 生效一次，不写记录、不留本地状态（删除 forcedLocalState）
-- setPathGreen 只在"启用↔未启用"真正变化时触发重渲染（swEnabledKnown），避免每次失焦检查都把面板重新撑开
+---
 
 ---
 
-# 开发日志（自 AGENTS.md 迁入：原第九节 + 第十二~二十九节，2026-10-05）
-
-## 九、近期重大变更
-
-### page-main 复制迁移（2026-07-04~05）
-
-- **决策**: 从 page-manage 完整复制 DOM+JS 到 page-main 页面，`main.js` 复制自 `manage.js` 后做少量作用域修正
-- **原因**: 逐段理解和改写容易出错，完整复制再逐步调试更可靠；且保持功能一致性
-- **关键修改**:
-  - `getEl(id)` 函数改为优先在 `#page-main` 内查找，后备到全局 `document.getElementById`
-  - 移除了原管理页的"登录"和"管理"按钮，侧栏精简为平台列表 + 统计 + 设置入口
-  - `manage.js` → `.old/manage.js` 归档保留历史
-  - HTML 中删除了旧 `#page-manage` 区块
-
-### 头像显示功能重构（2026-07-30）
-
-- **背景**: 账号列表头像不显示，需将 Java 版本调整至与旧版 Python 一致的行为，同时适配用户可设置的自定义数据目录
-- **新增**: `AvatarUtils.java` — 核心逻辑封装，获取顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字头像回退
-- **路径使用**: `ConfigManager.getInstance().getUserDataPath()` 支持用户设置的数据目录
-- **JsBridge** 中 `getAccountGroupData()` 改单行调用 `AvatarUtils.getAvatarDataUrl()`
-- **CSS 调整**: `.manage-account-avatar` `border-radius` 从 `50%` → `6px`（圆角矩形）
-- **SVG 文字头像**: 深灰背景 `#555` + 白色首字母，圆角矩形 `rx=6`
-
-详细迁移过程及经验教训见 `MEMORY/DEV_LOGS.MD`。
-
-### 账号列表来源接入磁盘扫描（2026-07-31）
-
-- **背景**: 账号列表仅读 `SwAccData.json` 持久化记录，磁盘真实存在的账号目录/共存 exe 未记录时不显示
-- **新增**: `JsBridge.getSwExistedAccounts(swId)` — 用 `SwConfigProvider.newAccessor()` 构建 `SwInfoFuncCore`，调用 `getSwAllAccountsExisted(swId, null)`（磁盘扫描：数据目录子目录 − 排除目录 + 共存 exe）
-- **main.js** `loadAccountData` 改为：以磁盘扫描结果为账号来源，按账号 ID 与 `getSwDetailData`（SwAccData.json）详情合并；磁盘已删的残留记录不再显示
-- **bridge.js** 新增 `getSwExistedAccounts` 包装
-
-### 头像显示接入（2026-07-31）
-
-- **背景**: 账户列表直接渲染原始 `avatar_url`，未走 AvatarUtils 管道，头像常不显示
-- **新增**: `JsBridge.getAccAvatarAsync(swId, accountId, cbId)` — 后台线程先调 `AccInfoFuncCore.getAvatarFromCache`（截图缓存恢复），再用 `getAccAvatarFromFile`（→ `AvatarUtils.getAvatarDataUrl`：本地文件 → URL 下载(`/0` 结尾) → SVG 回退）
-- **main.js**: 头像优先级 `avatar_data > avatar_url > 占位符`；`requestAccountAvatar` 异步加载 + `updateAccountAvatarCell` 逐行更新（SVG 回退不降级替换已有真实图片）
-- **坑**: `_handleAsync` 第三参必须为字符串，推送 JSON 需双编码（见教训 #45）
-
-### 日志目录修复与"日志"设置项（2026-07-31）
-
-- **logback.xml**: `${jfmultichat.logdir:-logs}` 加默认回退，消除 `jfmultichat.logdir_IS_UNDEFINED` 目录
-- **Launcher.java**: `jfmultichat.logdir` 设为 main 首行语句（任何 Logger 前）
-- **设置页新增"日志"子项**: 打开日志目录 + 预留"上传日志"按钮；日志目录固定 `AppPaths.getLogsDir()`（`%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`，按 Dev/Prod 模式自动切换，不随用户配置）
-
-### 账号展示名显示（2026-08-01，commit `c2561a4`）
-
-- 账号列表"昵称"列头改为空白（讨论中用"展示名"列代表），`data-sort` 改 `display_name`
-- `JsBridge.getSwDetailData` 每账号注入 `display_name` = `AccInfoFuncCore.getAccOriginDisplayName`（remark → nickname → alias → 账号 ID）
-- `main.js`：展示名列/头像首字符/排序均改用展示名（前端兜底 `nickname`/`id`）
-
-### SwAccData 账号自动填充（2026-08-01，commit `c2561a4`）
-
-- `AccInfoFuncCore.syncSwAccAccounts(sw, accountIds)` — 遍历磁盘扫描账号列表，SwAccData 缺失节点自动补空
-- `JsBridge.getSwExistedAccounts` 取得列表后调用（进入平台页即触发）
-
-### EventBus 事件机制（2026-08-01）
-
-- **新增 `core` 包**: `EventBus` 单例（subscribe/publish）+ `event/PlatformEnteredEvent`、`event/AccountDataChangedEvent`
-- **流A 平台进入自动维护**: `selectPlatformInternal` 顶部 → `notifyPlatformEntered(swId)` → `PlatformEnteredEvent` → 后台执行登录态维护（`AccInfoFuncCore.resolvePidAccountMap` → `associateCoexistAccounts` → `updateAccLoginData`，拆分自原 god-method `getSwAccountsLoginStatus`，原方法保留为门面）
-- **流B 数据更新定向刷新**: `saveAccount` 更新 SwAccData 后发布 `AccountDataChangedEvent` → UI 订阅者 `pushAccountDataChanged` → `JFC.bridge._onAccChanged` → `main.js onAccountChanged` 仅更新对应行/格（隐藏/禁用→徽章、展示名、头像），不再整表重渲染；`toggle-hidden` 已迁移为事件驱动
-- **装配**: `PlatformEventBootstrap.install(bridge)`（MainApp.start 调用）
-- **NPE 修复**: `updateAccLoginData` 的 `Map.of(PID, pid, ...)` 因 pid 为 null 抛 NPE → 改 `HashMap`（`updateAccount` 对 null 移除键）；relay 读回 `pidMutexNode.get(pid)` 判空
-
-### 账号列表列定制与交互升级（2026-08-16）
-
-- **7 列结构**: 勾选框（行悬浮才短暂显示，`opacity:0`+`pointer-events:none`）/头像/展示名（右端悬浮操作按钮：隐藏选中态+删除，禁用小标签）/快捷键（点击激活输入框，keydown 捕获组合键，存 SwAccData.hotkey）/ID/平台内ID（`alias`）/昵称（`nickname`）；移除原"状态"/"操作"两列
-- **列头右键菜单**（Windows 资源管理器风格）: 勾选显示列（勾选框/头像/展示名/快捷键 4 列必选锁定；ID 默认显示；alias/nickname 默认隐藏）+ "所有列自适应大小"/"该列自适应大小"（临时 span 测量文本宽度）
-- **列间竖线拖拽**: `table-layout: fixed` + colgroup，每个可见列 th 右侧注入 `.col-resizer`（7px 热区 + ::after 竖线），拖拽调宽最小 30px，最后可见列不加
-- **行右键菜单**: 隐藏/显示、删除（与悬浮按钮同走 `handleAccountAction`）
-- **排序标识**: 去掉 " ↕" 字符，当前排序列 th 加 `.sorted`（主题色+加粗）
-- **持久化**: 列显示/宽度存 `LocalGlobalConfig.json.account_columns = {visible, width}`（`getGlobalConfig`/`saveGlobalConfig`）
-- **onAccountChanged 扩展**: 新增 `hotkey`/`alias`/`nickname` 字段定向更新；状态变化走 `updateRowQuickActions`（按钮选中态/禁用标签，原 stateBadgeHtml 删除）
-- **事件委托防重复绑定**: thead/tbody 的 contextmenu、tbody click（快捷键激活）绑在 `bindManageEvents`（一次性），不在每次 render 的 `bindAccountEvents` 里重复 addEventListener
-
-### 四表架构与可复用组件（2026-08-16 第二轮）
-
-- **可复用组件 `JFC.AccountTable`**（`js/components/account-table.js`）: 列定义驱动渲染（任意列组合），含标题行/批量操作/列头右键菜单/列宽拖拽/自适应/行右键菜单/快捷键列编辑/流B 定向刷新；构造参数 `{id, title, container, columns, enableHotkey, defaultSortField, getSwId}`；列配置按表独立持久化 `account_columns.<tableId>`
-- **四个表**: 原生程序（勾选框/名称/路径/状态，空）/原生账号（7 列，`getSwExistedAccounts(swId,'origin')`）/共存账号（7 列，空）/无效账号（勾选框/展示名/ID/无效原因，空）
-- **标题行**: 常显，标题左端 + "已选 N 项"/批量按钮右侧（未选中隐藏）
-- **固定列**: 勾选框/头像 `fixed: true`（不可拖拽/自适应），其间与右侧竖线移除；头像圆角矩形 6px
-- **快捷键录入修复**: `document mousedown` 提交替代 blur 同步提交（消除 DOM 竞态假死）；**Java Scene 级 EventFilter 兜底**（`JsBridge.notifyHotkeyCapture` → `JFC.bridge._onHotkeyCapture`，WebView 收不到的带修饰组合键由 Java 捕获；OS 级全局热键占用仍无法拦截）
-- **NPE 修复**: `AccInfoFuncCore.getSwAllAccountsExisted` 传 `AccOpsProvider.toSwProvider()`（原 null 导致流A 共存分支 NPE）
-- **列宽自适应**: 下限 = 列名宽 + 余量（展示名列 = 4 字符 + 按钮占位），无上限；表格宽度恒 = 可见列宽总和（列宽独立、超宽横向滚动）；固定列（勾选框/头像）绝对固定
-
-### 账号列表交互打磨与滚动条体系（2026-08-16 晚间）
-
-- **滚动条体系（核心难点）**: JavaFX WebView 原生滚动条不可靠——overlay 风格（鼠标悬停才显示）、纵向需手动触发才出现、带上下箭头、不随深浅主题 → 统一改用**自定义 overlay 滚动条**（DOM 元素 `attachCustomScrollbar`）：
-  - 不占位不撑高（absolute 定位）、5px 胶囊圆角、无箭头、深浅色适配（`--divider-solid` 同源半透明灰）
-  - 显示条件 = **内容溢出** + 鼠标在内容区或滚动条上；移出 600ms 隐藏；在滚动条上不隐藏；滚动/拖拽时显示
-  - **挂在滚动容器父级**（absolute 子元素是滚动内容的一部分，挂容器内会被内容带着滚走）；rAF 逐帧检测位置（JavaFX scroll 事件不可靠）+ 拖拽即时刷新
-  - 三处统一：表内横向 / 账号区域纵向 / 设置区域纵向
-- **高度链锁定（关键）**: 内容撑宽/撑高导致无滚动条、列宽联动、设置区域被拉宽——根因是 flex/grid 交叉轴 `min-width:auto` 与主轴 `min-height:auto`。最终方案：`#page-main .manage-layout` 用 **flex column** + `.manage-detail-area` `flex:1; min-height:0; min-width:0; overflow:hidden` + 表容器链 `min-width:0`；走过弯路：grid `1fr` 被 `#page-main` 高特异性规则覆盖、block 布局破坏纵向
-- **设置区域滚动条根因**: `animatePanelHeight` 动画期间 `content.style.maxHeight='none'`（让面板能撑高）但动画后未恢复 → content 高度=内容高永不溢出。修复：动画结束（setTimeout 400ms 兜底，JavaFX transitionend 不可靠）恢复 `content.maxHeight = targetHeight`
-- **列宽**: 表格宽度 = 可见列宽总和（px，绝不填充容器，否则 fixed layout 按比例拉伸列）；固定列 `_loadColumnPrefs` 强制 defWidth（不读持久化）；"该列自适应"只改本列
-- **整行悬浮高亮**: JS 高亮层 `.acc-row-highlight`（mousemove 委托匹配任意 tr，含空表空行）；**移除 `tr:hover` 背景**避免与高亮层叠加导致列区域/剩余区域颜色不一致
-- **分割线**: 设置/账号区域分界线 + 窗帘把手统一用 `--divider-solid`（背景+半透明混合的**不透明等效色**，深 `#2c2c2c`/浅 `#d4d4d4`），避免半透明叠加区两次变深
-- **细节**: 空表行高 ≤ 数据行（删旧 `.manage-empty-row td` padding 覆盖）、"暂无数据"居左（不同表合并列宽不同，居中位置不一致）；头像列不显示列名、展示名列改名"名称"；右键菜单扩展覆盖滚动容器空白区域（无"该列自适应"项）
-- **NPE 修复**: `AccOpsProvider.toSwProvider().updateSwAccData` 误取 map value（空串）→ 改取 key（共存分支写错账号）；`SwAccountOps.ensureCoexistAccFormatted` 的 `Map.of("linked_acc", null)`（Map.of 禁 null）→ HashMap
-- **规则文件**: 项目 `CLAUDE.md` → `AGENTS.md`（DSH/CC 通用约定，DSH 默认候选 `["AGENTS.md","CLAUDE.md"]`）；全局规则在 `~/.dsh/AGENTS.md`（DSH 全局仅认 AGENTS.md，不读 `~/.claude/CLAUDE.md`）
-
----
-
-## 十二、代理与网络（2026-10-04）
+## 代理与网络（2026-10-04）
 
 - **原则**: 代理**只由界面"使用代理"复选框控制**，不做任何自动探测、不默认开启；未勾选一律直连
 - **历史现象**: 直连 `raw.githubusercontent.com` 报 `javax.net.ssl.SSLHandshakeException: Remote host terminated the handshake` —— 根因是 Java **默认不使用 Windows 系统代理**（`java.net.useSystemProxies` 默认 false）；在界面勾选"使用代理"并填好地址端口即可
@@ -668,9 +338,10 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **教训**: 代理地址不能原样塞进 `https.proxyHost` —— 含 `:` 的"主机"会被 JDK 当成 IPv6 加方括号，报 `java.net.URISyntaxException: Expected closing bracket for IPv6 address at index 20: proxy.https://[http://127.0.0.1]:7890/`。必须剥掉协议前缀并拆出端口
 - **远程配置下载**: `JsBridge.downloadRemoteConfigs()` 的候选 URL = **用户配置 + 内置兜底**（`JsBridge.mergeUrls()`）。此前只取用户列表，用户把「远程配置源」清空后日志出现 `候选URL: 0个`、远程配置永远下载失败 —— 已修复
 - **gitee 现状**: gitee 对 `remote_configs/remote_*` 判定违规返回 451（与网络无关）；候选列表里 gitee 失败会自动继续尝试 GitHub
+- **测试**: `AppCoreProxyTest`（3 例：协议+端口拆分 / IPv6 / 端口校验）、`JsBridgeUrlTest`（4 例：候选 URL 合并与去重）
 ---
 
-## 十三、共存账号数据接入（2026-10-04）
+## 共存账号数据接入（2026-10-04）
 
 - **前端**: `main.js` 的 `loadAccountData(swId)` 现在同时拉取原生与共存两路数据，抽公共的 `buildAccountRows(ids, detailMap)` 生成行；`origin_acc` / `coexist_acc` 各自 `setData`；头像按表路由（`requestAccountAvatar(swId, acc, table)`，此前写死更新原生表）
 - **共存账号来源**: `JsBridge.getSwExistedAccounts(swId, 'coexist')` → `SwAccountOps.getSwAllAccountsExisted(..., only='coexist')` → 安装目录中匹配 `executable_wildcards` 的 exe（排除原生 exe），并 `ensureCoexistAccFormatted` 写入 SwAccData
@@ -683,7 +354,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **测试**: 新增 `SwAccountOpsTest`（3 例，覆盖 exe 路径/目录/null 三种 inst_path）
 ---
 
-## 十四、共存账号列 + 列配置持久化 + 侧栏展开（2026-10-04）
+## 共存账号列 + 列配置持久化 + 侧栏展开（2026-10-04）
 
 - **共存账号新增列「最后登录账号」**: `TABLE_COLUMNS.coexist = TABLE_COLUMNS.account.concat([{key:'linked_acc', ...}])`（非必选、默认显示、宽 170）；值来自 SwAccData 的 `linked_acc`（该共存 exe 当前关联/最后登录的原生账号），行数据在 `buildAccountRows()` 里已带出
 - **列显隐/列宽不持久化（已修）**: `AccountTable._saveColumnPrefs` 写的是**扁平键** `"account_columns.<表id>"`，而 `_loadColumnPrefs` 读的是**嵌套** `account_columns[表id]` → 右键勾选的显示列下次启动就丢
@@ -694,7 +365,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **测试**: JS 侧 `node --check` 通过（无 JS 单测框架）；Java 侧未改动逻辑
 ---
 
-## 十五、设置页"配置"三块独立保存（2026-10-04）
+## 设置页"配置"三块独立保存（2026-10-04）
 
 - **背景**: 原来只有一个"保存配置"按钮，同时校验本地目录 + 要求"平台/全局各自至少一个地址测试通过"，于是"只想改本地目录"也会被"远程配置源测试失败"挡住
 - **结构**: 代理 / 本地目录 / 远程配置源 三块，用两个 `.config-divider` 分隔，每块右下角一个"保存"（`.config-actions config-actions-block`：靠右、无上边框）
@@ -708,7 +379,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **清理**: 删除旧的全局 `#cfg-btn-save`/`#cfg-save-msg`；`showMsg` 签名改为 `showMsg(元素id, msg, isErr)`；`updateSaveButton` → `updateBlockButtons`（按块判定）
 ---
 
-## 十六、账号列表细节打磨 + 共存账号属性来源（2026-10-04）
+## 账号列表细节打磨 + 共存账号属性来源（2026-10-04）
 
 - **共存账号属性一律参考 linked_acc**（自身只认 remark）: `main.js` 的 `buildAccountRows(ids, detailMap, followLinkedAcc)` —— 共存表传 `true`
   - 名称链：自身 `remark` > 链接账号 `nickname` > 链接账号 `alias` > 链接账号 id（`linked_acc`）> 共存账号自身 id
@@ -727,7 +398,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **远程配置源保存条件**: 平台(remote_sw) 与 全局(remote_global) **都**要有绿框（AND），`updateBlockButtons`/`saveUrlConfig` 同步改
 ---
 
-## 十七、账号表末尾占位列 + 菜单文案（2026-10-04）
+## 账号表末尾占位列 + 菜单文案（2026-10-04）
 
 - **末尾占位列（filler column）**: 表格末尾多一个内部列 `_filler`（`FILLER_COL`），**不在 `columns` 里**，因此不参与排序/显隐勾选/列菜单
   - 宽度 = `容器可视宽 - 可见列宽总和`（下限 0）；`_updateTableWidth()` 里一并算出：`table.style.width = 可见列宽总和 + filler`
@@ -739,7 +410,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **表头行更高**: `.acc-table-titlebar` `min-height` 38px → **46px**（选中后出现批量按钮时高度完全不变）
 ---
 
-## 十八、列宽不生效的真正根因：隐藏列的 col 宽度（2026-10-04）
+## 列宽不生效的真正根因：隐藏列的 col 宽度（2026-10-04）
 
 - **现象**（用户实测）: 隐藏了部分列之后，**最右可见列**既拖不动也"调至合适宽度"无效；**只有所有列都显示时列宽才正常**
 - **根因**: `table-layout: fixed` 下**列宽取自 `<col>`**。原实现隐藏列时只给该列的 `th/td` 加了 `.hidden-col { display: none }`，**`<col>` 的宽度仍是原值** →
@@ -751,7 +422,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **占位列宽度**: `filler = 容器可显示宽(clientWidth) - 可见列宽总和`（≥0）→ 占位列右端**恰好落在列表区域右边缘**；可见列总宽超过容器时 filler = 0、横向滚动条出现
 ---
 
-## 十九、名称列宽度/悬浮按钮占位/等宽字体（2026-10-04）
+## 名称列宽度 / 悬浮按钮占位 / 等宽字体（2026-10-04）
 
 - **名称列"调至合适宽度"要含按钮预留宽**: `fitColumn` 里名称列的量取改为**只量名称**（`.dn-text` + `.manage-disabled-tag`，用 `querySelectorAll(...).textContent` 拼接，避免把按钮文字"隐藏/删除"算进去），然后 `maxW += QUICK_ACTIONS_WIDTH`（96，两个按钮最宽态"已隐藏"+"删除" + gap + padding + border 的估算）；下限仍是 `4 字宽 + QUICK_ACTIONS_WIDTH + 8`
 - **悬浮按钮常驻占位（修复悬浮时文字位移/截断）**: `.manage-row-quick-actions` 从 `display:none ↔ inline-flex` 切换改为 **`display:inline-flex` + `visibility:hidden ↔ visible`**
@@ -761,7 +432,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **列表内容统一等宽字体**: `.manage-account-table td { font-family: var(--font-family-mono) }`（Cascadia Code / Consolas / Sarasa Gothic SC，中文有 Sarasa 兜底）；**表头 th 仍用界面字体**（次级色 + 半粗，作为"标题"与内容区分）
 ---
 
-## 二十、无效账号并入 + 原生程序表 + 名称清洗（2026-10-04）
+## 无效账号并入 + 原生程序表 + 名称清洗（2026-10-04）
 
 - **名称列"下划线"根因**: 不是 CSS，而是**账号 ID 里的下划线字符**——SwAccData 里这些账号没有 remark/nickname/alias，名称直接回退成账号 ID（`wxid_5daddxikoccs22`、`wxid_h5m0aq1uvr2f22_32ac`）；换成等宽字体后 `_` 又宽又靠下，看起来就像给名字加了下划线
   - 修复（仅显示层）: `main.js` 新增 `cleanDisplayName(name, idCandidates)`——**当名称恰好等于账号 ID 时去掉下划线**；ID 列仍显示原始 ID，用户自己填的备注/昵称/平台内ID 不动；`AccountTable.onAccountChanged` 里的 `display_name` 定向更新也做同样处理
@@ -777,7 +448,7 @@ Java 实现: `CryptoUtils.decryptResponse(String)`，每步有 `[INFO]` 级日�
 - **隐藏状态可见化**: 悬浮按钮文案 `已隐藏/隐藏` → **`显示/隐藏`**（title 同步为 `显示账号/隐藏账号`），并在名称右边紧挨位置加"隐藏"标签；点按钮后整表重渲染，让隐藏行立即落到"次置底"位置
 ---
 
-## 二十一、名称列横线真正根因 + 程序表头像 + 标签前缀（2026-10-05）
+## 名称列横线真正根因 + 程序表头像 + 标签前缀（2026-10-05）
 
 - **名称列"下划线/分割线"真正根因**: `td` 自身被设成 `display: flex` → 它**不再是 table-cell**，浏览器插入匿名 table-cell 包住它，于是 `td` 自己的 `padding`/`border-bottom` 变成画在**内层盒子**上 → 名称列的底边与其它列错位，看起来就是名称内容下面多了一条横线（其它列是普通 td，所以只有名称列有）
   - **实测证据**（项目同款 JavaFX WebView 17.0.2，见下方验证技巧）:
@@ -804,7 +475,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 4. 校验完删除临时文件（放在 `build/` 下，gitignore 已覆盖）
 ---
 
-## 二十二、高清图标 + 悬浮按钮边框 + 把手宽度 + 收起禁拖（2026-10-05）
+## 高清图标 + 悬浮按钮边框 + 把手宽度 + 收起禁拖（2026-10-05）
 
 - **程序图标/左栏图标模糊的根因**: `FileSystemView.getSystemIcon()` 在 Windows 上只给 **16x16** 小图标，渲染到 22px（左栏）/32px（列表）被放大 → 模糊
   - 真正的 32x32 大图标要经 `sun.awt.shell.ShellFolder.getIcon(true)`，但有两道坎：
@@ -818,7 +489,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **收起状态禁止拖动底部分割线**: 收起时面板高度为 0，拖动会瞬间跳到最小高度、与鼠标脱节。修复：`onDown` 里若 `panel.classList.contains('collapsed')` 直接返回；并用 `syncHandleDragCursor()` 把两个拖动区的光标切成 `default`（展开时 `ns-resize`），在 `applyCurtainState` 与初始化时同步
 ---
 
-## 二十三、平台图标 64x64 + PNG 缓存 + 侧栏/标签/记住平台（2026-10-05）
+## 平台图标 64x64 + PNG 缓存 + 侧栏/标签/记住平台（2026-10-05）
 
 - **图标升级到 64x64（关键发现）**: `FileSystemView.getSystemIcon(File, int w, int h)` 在 Windows 上**支持任意尺寸**（实测 48/64/128/256 全部可用），是公开 API、不需要 `--add-exports` —— 比之前"取系统大图标 32x32"更容易也更清晰
 - **新增桥方法 `JsBridge.getSwIcon(swId)`**: 图标缓存到 **`{用户数据目录}/{swId}/{swId}.png`**（如 `Weixin/Weixin.png`，与老 `SwAccountOps.getSwLogo` 的路径约定一致）
@@ -836,7 +507,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **记住最后显示的平台**: 切换平台时 `saveGlobalConfig({last_sw_id})`（存 `LocalGlobalConfig.json`）；启动时 `loadPlatformListInternal` 读到该字段且平台仍存在 → 直接 `selectPlatform(lastSwId)`，不再停在"点击平台"占位页
 ---
 
-## 二十四、设置区域高度/展开态全局统一 + 若干修正（2026-10-05）
+## 设置区域高度 / 展开态全局统一 + 若干修正（2026-10-05）
 
 ### 设置区域"窗帘"：由 per-platform 改为全局统一（"违背祖宗"的决定）
 
@@ -858,7 +529,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **撤销名称下划线清洗**: 用户澄清当初要的是"去掉分割线"，"下划线"是口误 → 删除 `cleanDisplayName`（`main.js` + `account-table.js` 的定向更新），名称恢复原样显示
 ---
 
-## 二十五、单一职责修正：图标只认程序、未启用只读绿框、高度漂移根治（2026-10-05）
+## 单一职责修正：图标只认程序 / 未启用只读绿框 / 高度漂移根治（2026-10-05）
 
 - **图标提取（单一职责）**: `getSwIcon` 只做一件事——看"软件路径"存的值**是不是程序**（`isFile() && .exe`）；不是就什么都不做。**删掉了**上一轮加的"目录 + 远程 executable 拼接"逻辑——"目录里该是哪个 exe"属于**路径探测流程**的职责，不该由图标提取越界处理
 - **"未启用"判定改为只读绿框（单一职责）**: 不再自己判断"三个路径填没填全"，而是**读取三个路径项的绿框状态**
@@ -871,7 +542,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
   - **修复**: 新增 `applyPanelHeight(panelH)` 作为唯一入口（面板 `max-height = H` 且 `content.max-height = H - 20`，成对设置），拖动、动画收尾、手动展开、`applyCurtainState(true)` 全部改走它；另外 `_prevHeight` 改取**语义高度**（`parseInt(panel.style.maxHeight)`）而不是含 padding/border 的渲染高度，作为动画起点不再多算一截
 ---
 
-## 二十六、设置区域切换时"闪一下"的真正根因：写死的 20px 偏移（2026-10-05）
+## 设置区域切换时"闪一下"的真正根因：写死的 20px 偏移（2026-10-05）
 
 - **现象**（用户描述）: 跨平台切换时，高度不变（100→100）会"没动画但闪到 ~120 再跳回 100"；高度变化（100→300）会"动画到 ~320 再闪回 300"
 - **排查方式**: 用项目同款 JavaFX WebView 离屏渲染一个**复刻面板结构 + 真实 CSS** 的页面，逐 25ms 采样面板渲染高度，对比四种方案的"高度轨迹"：
@@ -888,9 +559,9 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **教训**: 面板与内容区这类"父子都被同一高度约束"的场景，**必须同值**；任何 `- N` 的预留都会在"动画/静态"两条路径上产生不一致。要补偿也应实测（V2 的 chrome 实测值是 0，说明当初那个 20 纯属臆测）
 ---
 
-## 二十七、LocalGlobalConfig 冗余节点清理 + 账号区滚动自动收起（2026-10-05）
+## LocalGlobalConfig 冗余节点清理 + 账号区滚动自动收起（2026-10-05）
 
-### 一、配置节点审计（实测 storage/4.0.0.7000/DevUserFiles/LocalGlobalConfig.json）
+### 配置节点审计（实测 storage/4.0.0.7000/DevUserFiles/LocalGlobalConfig.json）
 
 清理前 11 个顶层节点 → 清理后 **5 个**：`theme` / `account_columns` / `last_sw_id` / `settings_height` / `settings_expanded`
 
@@ -908,14 +579,14 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **代码清理**: `SwCoreConstants.MANAGE_SETTINGS_COLLAPSED` 删除；`account-table.js` 去掉扁平键兼容读取；保存时剔除 `account_columns` 下的 `visible`/`width`
 - **数据清理**: 两份实际文件（`D:\SpaceDev\MyProj\JhiFengMultiChat\storage\...` 与项目内 `storage\...`）已就地清理，备份为 `LocalGlobalConfig.json.bak-20261005`
 
-### 二、账号区域"有效滚动"→ 自动收起设置区域
+### 账号区域"有效滚动"→ 自动收起设置区域
 
 - **触发**: 在账号区域（`.account-area-inner`）滚动滚轮，且**确实滚动了内容** → 自动收起设置区域
 - **"有效"判定**: 滚轮事件里记下 `scrollTop`，下一轮事件循环比对是否变化 —— 没有纵向滚动条、或已滚到边界（`scrollTop` 不变）都算**无效滚动**，不收起
 - **记录规则**: 收起统一走 `toggleSettingsPanel(false)` → 已**启用**平台会写全局记录（所有平台一起收起）；**未启用**（设置不完备）平台只本地收起、**不记录**（复用第二十五节的绿框 gating，无需新分支）
 ---
 
-## 二十八、"刚进平台时莫名从 0 涨上来"的根因：本地收起残影被当成动画起点（2026-10-05）
+## "刚进平台时莫名从 0 涨上来"的根因：本地收起残影被当成动画起点（2026-10-05）
 
 - **现象**（偶发、只在启动初期）：记录为展开、跨平台高度相同时，进入平台会看到面板"从 0（但不完全是从 0）涨到目标高度"；每个平台都点开过一遍后就不再出现
 - **实测（复刻面板 + 真实 CSS 的离屏 WebView 采样，三种起点）**:
@@ -935,7 +606,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
   - 新增状态: `_prevWasCollapsed`（切换前那个平台是否收起）、`_panelShownOnce`（是否已按平台显示过一次）
 ---
 
-## 二十九、设置区域"单一渲染依据"重构（2026-10-05）
+## 设置区域"单一渲染依据"重构（2026-10-05）
 
 - **背景（用户实测）**: 记录为"收起"时关闭程序 → 重启后**记录是收起、渲染却是展开**；切换平台时两种规则互相拉扯，切几个平台后才统一。
   根因：面板的高度/类名有**多条写入路径**（切换平台、点把手、拖动、完备性回调、强制展开…），各自读不同的状态，导致"记录"与"渲染"长期不一致
@@ -952,7 +623,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十、彻底移除"借标题当提示条"（flashTitle）（2026-10-05）
+## 彻底移除"借标题当提示条"（flashTitle）（2026-10-05）
 
 - **背景**: 平台标题区 `#manage-detail-title` 被当成"通知条"用：`flashTitle()` 临时把标题文字换成"已隐藏 / 已显示 / 已删除 / 尺寸已获取"之类的提示，过一会儿再换回平台名 → 一个控件承担了两种语义，且 `main.js` 与 `account-table.js` **各自实现了一份** `flashTitle()`
 - **先排查写入点（再动手删，避免漏删/多删）**:
@@ -965,7 +636,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十一、刷新入口 + 页面进度条 + 平台图标 SVG 化 + 当前平台单击刷新策略（2026-10-05 晚）
+## 刷新入口 + 页面进度条 + 平台图标 SVG 化 + 当前平台单击刷新策略（2026-10-05 晚）
 
 - **标题栏刷新按钮（Java 侧自绘 SVG）**: `MainWindow.makeSvgTitleBtn(extraClass, pathData...)` —— 用 SVG `Path` 拼图标，`TITLE_ICON_PX = 16`、`scale = TITLE_ICON_PX / 24.0`（按 24×24 设计稿缩放）；刷新图标取 **Lucide `rotate-cw`**（MIT，stroke-width 2、圆头圆角），由 `btnRefresh` 持有
 - **冷却（防连点）**: `MainWindow.REFRESH_COOLDOWN_MS = 2000`，点击后 `btnRefresh.setDisable(true)` + `PauseTransition(Duration.millis(REFRESH_COOLDOWN_MS))` 置灰 2 秒；`refreshCurrentPage()` 里 `executeScript` 求值 `(JFC.router && JFC.router.refresh) ? JFC.router.refresh() : false`
@@ -978,7 +649,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十二、账号管理功能（行内/批量操作 + 就地编辑 + 快捷键录入定稿）（2026-10-05 晚）
+## 账号管理功能（行内/批量操作 + 就地编辑 + 快捷键录入定稿）（2026-10-05 晚）
 
 - **一个必须先解决的前提（离屏实测）**: JavaFX WebView 里 **`window.confirm()` 恒返回 `false`**（没装 confirm handler 时既不弹窗也不返回 true）、`alert()` 是空操作 → 之前所有"删除账号"的确认**永远静默取消**，用户连提示都看不到 ✗
 - **自建弹窗 `JFC.modal`**（`app.js`）: `confirm({title, message, okText, danger}, onResult)` 与 `custom({title, bodyHtml, center, actions:[{text, cls, onClick}]})`；键盘也必须走 `JFC.keys.keyCodeOf()`（本 WebView 的 `event.key` 为空串），Esc/Enter 在里面处理
@@ -990,7 +661,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十三、交互修复（编辑态卡住 / 点击落空）+ 自绘勾选框（2026-10-05 晚）
+## 交互修复（编辑态卡住 / 点击落空）+ 自绘勾选框（2026-10-05 晚）
 
 - **"点框外不退出编辑"的根因**: `if (ev.target.closest(cell)) return;` —— `closest()` **只接受选择器字符串**，传元素会抛 `SyntaxError`；而监听器里的异常不中断别的代码，只让**这一个处理器的第一行静默死掉** → "点击框外结束编辑"的逻辑**从来没生效过**。修法：`cell.contains(ev.target)`
 - **"编辑后第一次点击落空"的根因**: 提交若在 document 的 `mousedown` 阶段直接 `render()`，用户这一下点击所在的元素会被换掉 → 后续 `click` 落空（表现为"点别处要按两次才生效"）。修法：同步只还原本格，**保存与整表重排延后一拍**（`setTimeout(…, 0)`）
@@ -1001,7 +672,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十四、程序表快捷键列 + 头像弹窗 + 版本号自动获取（2026-10-05 晚）
+## 程序表快捷键列 + 头像弹窗 + 版本号自动获取（2026-10-05 晚）
 
 - **三张表的"快捷键"列**改为**非必显**（列头菜单可隐藏、默认显示），`TABLE_COLUMNS.program` **新增该列**（`defWidth: 110`）+ `initAccountTables` 里 `enableHotkey: true`
   - 账号表：快捷键存 `SwAccData.<sw>.<acc>.hotkey`
@@ -1021,7 +692,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十五、账号头像文字兜底改"名称末尾 4 个字符宽" + 中文字体/抗锯齿实测（2026-10-05 深夜）
+## 账号头像文字兜底改"名称末尾 4 个字符宽" + 中文字体/抗锯齿实测（2026-10-05 深夜）
 
 - **需求**: 账号头像的兜底文字原来只取**首字符** → 改为取**名称末尾 4 个字符宽**（中文/全角一个字算 2 宽）
   - Java：`AvatarUtils.textAvatarLabel(name)` + `AvatarUtils.visualUnits(s)`；前端同规则 `JFC.text.tailUnits()` / `JFC.text.isWide()`（**同一规则两处实现，改一处必须同步另一处**）
@@ -1042,7 +713,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十六、勾选框"填满"真修 + 字号统一 14px（2026-10-05 深夜）
+## 勾选框"填满"真修 + 字号统一 14px（2026-10-05 深夜）
 
 - **现象（用户三次描述、逐次逼近）**: "填充色没有填满，四个角还有小黑点" → 我先按"圆角太大"把 `border-radius` 从 4px → 2px → 0px 试了一遍，用户仍能看出问题
 - **真正的根因（用户指出）**: 勾选态被写成了**两层几何** —— `background` 填 padding box（内圆角）+ `border` 当外圈（外圆角），**即使同色，圆角处也会露出两者之间的缝** → 看起来就是"中间的填充 + 周围的边框"，四角发黑
@@ -1054,7 +725,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十七、三表名称列统一 + 原生程序名称链（2026-10-06 凌晨）
+## 三表名称列统一 + 原生程序名称链（2026-10-06 凌晨）
 
 - **用户两个问题（先查代码再动手）**:
   1. "三张表不是有复用代码吗，为什么程序表名称列没和账号表统一？" → 查出来：组件层**本来就是同一个** `JFC.AccountTable`，是**列 key 不同**走了不同分支 —— 账号表 `key='display_name'` 落到专用名称单元格 `.manage-nickname-cell`；程序表 `key='name'` 落到"通用文本列"`.manage-text-cell`（不可编辑 / 2 级色 / 14px / 不加粗）
@@ -1074,7 +745,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 
 ---
 
-## 三十八、表格文字三级色 + 删除/重置语义 + 批量删除规则（2026-10-06 凌晨）
+## 表格文字三级色 + 删除/重置语义 + 批量删除规则（2026-10-06 凌晨）
 
 - **表格文字三级色**（用户定；明暗两套是"反"的）: 令牌 `--text-level1/2/3` 定义在 `theme.css` 三处（dark `:root` / light / auto+light），**只作用于表格内容**（其它 UI 的 `--text-primary/secondary/muted` 不动）
 
@@ -1096,7 +767,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **顺带修掉一个真 bug**: `ConfigManager.getInstance()` 里 `ConfigManager mgr = new ConfigManager(); mgr.init(false); instance = mgr;` —— `mgr.init(false)` 调到的是**静态** `init`（它自己 new 并初始化了另一个实例赋给 `instance`），紧接着又被这个**未初始化**的 `mgr` 覆盖 → 只要 `getInstance()` 是首个入口（应用正常启动不会，Launcher 先显式 `init` 过；**独立探针 / 工具会**），拿到的实例 `userDataPath == null`，`getUserDir()` 直接 NPE。改为单一路径 `init(false)`；**是写 `AccFilesProbe` 时的 NPE 把它挖出来的**
 - **验证**: `Round2Probe` 111 条断言（三级色三态 × 明暗 + 右键菜单三项/禁用/点禁用无反应 + 批量删除三种文案与执行层过滤）、`RoundProbe` 回归 63 条、`gradle test` 57 例 0 失败
 
-## 三十九、登录态（平台页两种形态）+ 列系统重构（2026-10-06 ~ 10-07）
+## 登录态（平台页两种形态）+ 列系统重构（2026-10-06 ~ 10-07）
 
 > 本轮跨多天、多轮返工，按"最终落地状态 + 期间修掉的坑"记录。
 
@@ -1136,7 +807,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **自查**：拖动路径里**没有任何** `style.width/height/left/position` 写入（全文只有 2 处 `style.transform`：一处写、一处清）
 - **提交**：`9dc47df`（登录态 + 列系统重构）→ `74ec7a9`（列为纯 transform 位移）→ 本条为"内容也跟动"
 
-## 四十、互斥体查杀 + 降权启动 + 启动入口（2026-10-07）
+## 互斥体查杀 + 降权启动 + 启动入口（2026-10-07）
 
 > 目标（用户）：程序表那句"登录" = **查杀该平台全部互斥体 → 以普通权限启动平台程序** → 每次点击都新开一个登录窗口。
 
@@ -1158,7 +829,7 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
 - **期间踩的坑（都已写进代码注释/LESSONS）**：`DuplicateHandle(SAME_ACCESS)` 的目标进程必须是当前进程（传 null 直接失败）；**不能用 `ObjectBasicInformation` 预探名字长度**（本机恒返回 `STATUS_INFO_LENGTH_MISMATCH`，据此提前 return 会"扫 30 万条命中 0"）；`CreateProcess*` 的 `lpApplicationName` **不能带正斜杠**（项目内部路径统一是 `/`，实测直接失败）；超长且内嵌引号的命令行会让 `CreateProcessWithTokenW` 报 `E_INVALIDARG(0x80070057)`；`findHandles` 曾把"**空列表**"和 `null` 一样当成"不限制进程"→ 缓存全命中时去扫全部 30 万句柄、卡死几分钟（探针抓到的）
 - **验证**：`gradle compileJava` ✓；`gradle test` **57 例 0 失败**；互斥体探针（`MutexProbe`：命中 1 → 关闭 1 → 复查 0 → **同名互斥体可重新创建** = 真释放 ✓）；降权探针（`LaunchProbe`/`PlainProbe`）；缓存探针（`CacheProbe`）
 
-## 四十一、账号级登录 + 登录窗口尺寸 + 性能三连修 + 日志系统整理（2026-10-11）
+## 账号级登录 + 登录窗口尺寸 + 性能三连修 + 日志系统整理（2026-10-11）
 
 > 目标（用户）：账号行点"登录"能真的登进去（原生账号），并把一路冒出来的"慢"与"乱"治干净。
 
@@ -1215,3 +886,31 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
   目标已存在不覆盖、`-Only <名> -Force` 可重迁单个）；已迁 17 个文件到 `storage/4.0.0.7000/DevUserFiles/logs/`
 - **验证**：`gradle compileJava` ✓；`gradle test` **57 例 0 失败**（多轮）；真机：单号登录 ✓、多号 3/5/11 个 ✓、
   历史 18 个窗口时仍能开 ✓；探针 `tmp/probe/{HwndProbe,UiaProbe,AllWndProbe}.java` ✓
+
+---
+
+## 记忆体系重订 + 全文件查重（2026-10-12）
+
+- **背景**（用户）：翻看 `AGENTS.md` / `MEMORY/` 觉得乱 —— `facts`/`todos`/`AGENTS` 界限模糊、重复严重、`MEMORY.md` 索引停在 10-07；
+  提出"关于记忆，又要搞个大工程"，并给了方向：文档要分清"现在是什么样"与"曾经发生了什么"
+- **架构重订**（详见 `decisions.md` **D-44**）：
+  - **三层记忆**：热记忆（项目 `AGENTS.md`，只放"每次动手都必须遵守/使用"的）／情节记忆（`MEMORY/`，按需读）／
+    **程序性记忆 = `scripts/` 下的脚本**（用户裁定：不用 skill，"skills 通常像是在线版"）
+  - **文件职责**：`facts.md` = 现在是什么样（功能手册，**就地重写**）；`decisions.md` = 为什么（含 `状态: 待定`）；
+    `lessons.md` = 坑与瓶颈；`dev_logs.md` = 过程与证据；`index.md` = **台账**（不放章节链接）；`tmp/{日期}.md` = 素材库
+  - **归置判据表** + **素材流**（每轮末尾追加卡片：`## HH:MM:SS — 主题` + 做了什么 + 为什么/证据 + 候选去向 + 状态；
+    只追加、不改过往、只放素材不放规矩）→ **写进全局 `~/.dsh/AGENTS.md`** ✓
+- **落地**：记忆文件全小写改名（**两次 `git mv`** ✓ 字节数核对零丢失 ✓）；`facts.md` 重写为功能手册（511 → 221 行）；
+  `AGENTS.md` 230 → **78 行**；`todos.md` / `memory.md` / 旧窗帘存档 → `.old/`；日志迁移脚本 → `scripts/.old/`；
+  新增 `scripts/verify.bat`、`scripts/probe-run.bat`；新建 `index.md` 台账
+- **单文件查重查冗余**（用户要求"只在本文件内诊断，不跨文件参考"）：
+  `lessons.md` 440 → **324 行**（双头部、1~50 编号与各章大面积重复、编号 17 重复两次、两处过期建议）；
+  `decisions.md` 加文件头 + 删两处"迁入式"分组标题 + 三处过期标注（日志目录固定→D-42、D-09→D-44、D-36/37 更正）；
+  `facts.md` 回填从 `dev_logs` 架构笔记里捞出的**真事实**（远程配置加密格式 / `ensureRemoteConfigs` 兜底 / 路径探测优先级）
+- **dev_logs 大扫除**（1225 → **888 行**，约 -27%）：
+  - 删顶部 87 行"开发过程架构笔记"（内容属"现在"→ 归入 `facts.md`/`lessons.md`）
+  - 31 处中文数字二级标题 + 35 处三级标题 → "主题 + 日期"式；删掉"自 AGENTS.md 迁入"式标题
+  - **逐对核对后删掉 19 条无编号重复条目**（18 对全部确认"详版为严格超集"，仅 2 处独有→先回填）
+  - 删掉 `## 近期重大变更` 整节摘要（通读两边后判定顶层 `##` 条目为超集：根因链、commit 号、行号、选型讨论等都只在顶层）
+- **验证**：每次删除都由编辑工具的**精确文本匹配**兜底（不匹配即报错、绝不误删 ✓）；全仓校验无残留中文数字标题 ✓、
+  无重复主题 ✓；`facts.md` 未被搬空（抽查正文完好 ✓）

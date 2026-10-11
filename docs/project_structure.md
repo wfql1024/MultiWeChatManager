@@ -4,7 +4,7 @@
 
 ---
 
-## 一、根目录概述
+## 1. 根目录概述
 
 ```
 JhiFengMultiChat/
@@ -14,12 +14,14 @@ JhiFengMultiChat/
 ├── logo.ico                      # 应用图标 (ICO 格式)
 ├── logo.png                      # 应用图标 (PNG 格式)
 ├── AGENTS.md                      # 项目主文档（规则文件）
-├── MEMORY/                       # 记忆系统文档目录
-│   ├── MEMORY.md                 # 索引与摘要
-│   ├── DECISIONS.MD              # 决策记录
-│   ├── DEV_LOGS.MD               # 开发过程日志
-│   ├── FACTS.MD                  # 事实摘要
-│   └── TODOS.MD                  # 待办列表
+├── MEMORY/                       # 记忆系统（情节记忆，按需读；规范见顶级 ~/.dsh/AGENTS.md）
+│   ├── index.md                  # 台账（文件分工 + 每次整理到哪天）
+│   ├── facts.md                  # 现在是什么样（代码结构地图 + 功能手册）
+│   ├── decisions.md              # 决策记录（含 状态: 待定）
+│   ├── lessons.md                # 技术教训 / 瓶颈 / 未解决的已知问题
+│   ├── dev_logs.md               # 开发过程与证据
+│   ├── tmp/{YYYY-MM-DD}.md       # 素材库（每轮追加，只追加不改过往）
+│   └── .old/                     # 废弃归档（todos.md / memory.md / 旧窗帘存档）
 ├── .old/                         # 废弃代码归档
 │   └── manage.js                 # 原管理页 JS
 ├── src/                           # 源码目录（main / test / tools 三个源集）
@@ -37,7 +39,7 @@ JhiFengMultiChat/
 
 ---
 
-## 二、Java 源码结构 (`src/main/java/com/jfmultichat/`)
+## 2. Java 源码结构 (`src/main/java/com/jfmultichat/`)
 
 ```
 com/jfmultichat/
@@ -127,7 +129,7 @@ com/jfmultichat/tools/
 
 ---
 
-## 三、资源文件结构 (`src/main/resources/`)
+## 3. 资源文件结构 (`src/main/resources/`)
 
 ```
 resources/
@@ -159,7 +161,7 @@ resources/
 
 ---
 
-## 四、用户数据存储路径
+## 4. 用户数据存储路径
 
 ```
 %APPDATA%/JhiFengMultiChat/{version}/
@@ -177,7 +179,7 @@ resources/
 
 ---
 
-## 五、关键架构特性
+## 5. 关键架构特性
 
 ### 1. 配置层架构 (三层抽象)
 ```
@@ -215,17 +217,17 @@ JS 调用 void Java 方法 → 立刻返回
 
 ---
 
-## 六、相关文档索引
+## 6. 相关文档索引
 
 | 文档 | 内容描述 |
 |------|----------|
-| `AGENTS.md` | 项目当前状态的全局视图（身份/技术栈/结构指针/运行命令/关键约定/指针） |
-| `MEMORY/MEMORY.md` | 各记忆文档索引摘要 |
-| `MEMORY/DECISIONS.MD` | 关键决策记录（page-main/头像重构/…/2026-10-05 晚~06 的 D-10~D-28） |
-| `MEMORY/DEV_LOGS.MD` | 开发过程笔记（逐次变更记录，含页架构迁移细节） |
-| `MEMORY/LESSONS.MD` | 技术教训与经验结晶（含旧 `AGENTS.md` 第十一节 50 条） |
-| `MEMORY/FACTS.MD` | 当前事实汇总（含文末"当前事实速查"快照） |
-| `MEMORY/TODOS.MD` | 待办任务清单 |
+| `AGENTS.md` | **热记忆**：只写每次动手必须遵守的（命令 / 边界 / 硬约束 / 验证纪律 / 指针） |
+| `MEMORY/index.md` | 台账：记忆文件分工 + 每次整理到哪天（不放章节链接） |
+| `MEMORY/facts.md` | **现在是什么样**：代码结构地图 + 功能手册（要改 X 去哪） |
+| `MEMORY/decisions.md` | 决策记录（背景/选项/选择/理由；未定标 `状态: 待定`） |
+| `MEMORY/lessons.md` | 技术教训 / 多轮瓶颈 / 未解决的已知问题 |
+| `MEMORY/dev_logs.md` | 开发过程与证据（逐次变更记录、验证结论） |
+| `MEMORY/tmp/{YYYY-MM-DD}.md` | 素材库（每轮对话末尾追加，整理后仍保留） |
 | `HANDOFF.md` | 交接文档 |
 | `remote_sw_structure.md` | 远程结构定义 |
 | `logic_filter_rules.md` | 逻辑过滤规则 |
@@ -235,10 +237,10 @@ JS 调用 void Java 方法 → 立刻返回
 
 # 关键技术参考（自 AGENTS.md 第十节迁入，2026-10-05）
 
-## 十、关键技术参考
+## 7. 关键技术参考
 
 ### Avatar 头像获取流程（自 2026-07-30）
-顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字回退。支持用户自定义数据目录，通过 `ConfigManager.getInstance().getUserDataPath()` 获取。2026-07-31 起账号列表由 `JsBridge.getAccAvatarAsync` 异步接入（先 `getAvatarFromCache` 恢复缓存）。详见 `MEMORY/DEV_LOGS.MD` 和 `MEMORY/FACTS.MD`。
+顺序：本地文件 `{userDir}/{sw}/{acc}/{acc}.jpg` → URL 下载（以 `/0` 结尾）→ SVG 文字回退。支持用户自定义数据目录，通过 `ConfigManager.getInstance().getUserDataPath()` 获取。2026-07-31 起账号列表由 `JsBridge.getAccAvatarAsync` 异步接入（先 `getAvatarFromCache` 恢复缓存）。详见 `MEMORY/dev_logs.md` 和 `MEMORY/facts.md`。
 
 ### 账号列表来源（自 2026-07-31）
 磁盘扫描：`SwInfoFuncCore.getSwAllAccountsExisted(sw, null)`（数据目录子目录 − 排除目录 + 共存 exe）。由 `JsBridge.getSwExistedAccounts(swId)` 暴露，main.js `loadAccountData` 以它为来源并与 SwAccData 详情合并。
@@ -247,7 +249,7 @@ JS 调用 void Java 方法 → 立刻返回
 固定 `AppPaths.getLogsDir()` = `%APPDATA%\JhiFengMultiChat\{ver}\{Dev?}UserFiles\logs`（`AppEnv.isDev()` 决定 Dev/Prod，不随用户配置）。logback 属性 `${jfmultichat.logdir:-logs}` 有默认回退。
 
 ### JS↔Java 异步架构
-所有网络操作必须后台线程执行，避免阻塞 UI 线程。调用栈：JS void Java 方法 → 立刻返回 → ExecutorService 后台任务 → Platform.runLater → executeScript → JS 回调更新 DOM。详见 `MEMORY/DEV_LOGS.MD`。
+所有网络操作必须后台线程执行，避免阻塞 UI 线程。调用栈：JS void Java 方法 → 立刻返回 → ExecutorService 后台任务 → Platform.runLater → executeScript → JS 回调更新 DOM。详见 `MEMORY/dev_logs.md`。
 
 ### 六级路径探测策略
 内存映射正则 > 注册表 > 猜测 > 进程 > 其他SW > DLL遍历。由 `SwPathDetective.detectAll()` 并发执行，支持超时保护。`swcore` 包内部详细说明。
