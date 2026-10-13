@@ -168,6 +168,15 @@ JFC.bridge = (function() {
         },
         // 运行时数据（PID/HWND）：纯内存，每次进入平台/刷新时重新取（不落配置文件）
         getAccRuntimeMap: function(swId) { return callJsonWithArgs('getAccRuntimeMap', swId); },
+        // ===== 任务中心（右上角）：长耗时流程的可见性 + 取消 =====
+        // 返回 JSON 数组字符串（任务列表）；由 task-center.js 解析渲染
+        getTaskList: function() { return call('getTaskList'); },
+        // 协作式取消：返回 {ok:true} 只代表"请求已受理"，任务跑到下一个安全检查点才停
+        cancelTask: function(taskId) { return callJsonWithArgs('cancelTask', String(taskId == null ? '' : taskId)); },
+        cancelAllTasks: function() { return callJsonWithArgs('cancelAllTasks'); },
+        // 任务统计（按流程聚合 + 最近明细）——「任务与统计」页用
+        getTaskStats: function() { return call('getTaskStats'); },
+        // 注：标题栏角标**不从这里更新** —— 它由 Java 侧 MainWindow 直接订阅 TaskRegistry（单一写入点）
         getAccAvatarAsync: function(swId, accountId, fn) {
             callWithArgs('getAccAvatarAsync', swId, accountId, String(registerAsync(fn)));
         },

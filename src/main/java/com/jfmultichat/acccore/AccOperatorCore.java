@@ -304,6 +304,7 @@ public final class AccOperatorCore {
         List<String[]> results = new ArrayList<>();
         if (accIds == null || accIds.isEmpty()) return results;
         SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+        com.jfmultichat.core.task.TaskContext.phase("准备（预摆位）", "准备");
 
         // 点击比例：远程配置 auto_click.login_btn.location = [fx, fy]
         double fx = 0.5, fy = 0.75;
@@ -346,8 +347,22 @@ public final class AccOperatorCore {
         // 任何一个失败都只记录、绝不中断（旧版：无论前面出现啥情况都要把配置替换完、窗口全开出来）
         List<String> okAccIds = new ArrayList<>();
         List<Integer> okHwnds = new ArrayList<>();
+        // 统计口径（用户 2026-10-12 定，取代旧版"总时长÷应开窗数"）：
+        //   · **轮次** = 开窗循环进行到第几个（成功、失败、超时都算一轮）——中途取消也照样算已进行的轮次 ✓
+        //   · **时长** = 从开始到"**最后一次成功开窗**"的用时（覆盖式记录 → 取消也保留 ✓）
+        //   · 单窗平均 = 时长 ÷ 轮次；三轮指标（末次/最短/最长）与总平均（Σ时长 ÷ Σ轮次）由统计层算
+        long openStartMs = System.currentTimeMillis();
+        int rounds = 0;
         for (int idx = 0; idx < accIds.size(); idx++) {
             String accId = accIds.get(idx);
+            // ★ 安全点：任务中心可以在"账号之间"取消（取消 → 抛出并弹回任务边界，不再开下一个）
+            com.jfmultichat.core.task.TaskContext.checkpoint();
+            // 轮次计数：**本轮已计入**（无论后面成功/失败/取消）→ 覆盖式写入，取消也能留下 ✓
+            rounds++;
+            com.jfmultichat.core.task.TaskContext.metricSet("开窗轮次", rounds);
+            // 阶段文字**带序号**（精确到第几个账号）；统计键**不带序号**（同类阶段合并成一条）
+            com.jfmultichat.core.task.TaskContext.phase(
+                    "账号 " + (idx + 1) + "/" + accIds.size() + "：开窗", "开窗");
             // ① 查杀互斥体交给 launchOneInstance **内化**（用户 2026-10-11 定的方向：
             //    "所有创建新实例的流程都免不了要查杀" → 内化后调用方就不可能漏做；
             //    这里不再自己杀，避免"外杀一次 + 内杀一次"的重复扫描）
@@ -387,11 +402,20 @@ public final class AccOperatorCore {
             okAccIds.add(accId);
             okHwnds.add(opened[0]);
             results.add(new String[]{accId, String.valueOf(opened[0]), String.valueOf(opened[1]), ""});
+            // 覆盖式记录"到最后一次成功开窗为止"的用时（取消时保留最后一次成功值 ✓）
+            com.jfmultichat.core.task.TaskContext.metricSet(
+                    "开窗时长ms", System.currentTimeMillis() - openStartMs);
         }
 
         // ===== 阶段二：**全部打开并摆位之后**，才统一逐个点击"登录"按钮（同样允许失败） =====
+        // 只补一个信息性指标（成功开窗数）；时长/轮次已在循环里覆盖式记录 ✓
+        com.jfmultichat.core.task.TaskContext.metric("成功开窗数", okHwnds.size());
         for (int i = 0; i < okHwnds.size(); i++) {
             int hwnd = okHwnds.get(i);
+            // ★ 安全点：点击阶段也能取消（每点一个之前检查）
+            com.jfmultichat.core.task.TaskContext.checkpoint();
+            com.jfmultichat.core.task.TaskContext.phase(
+                    "点击登录 " + (i + 1) + "/" + okHwnds.size(), "点击登录");
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
@@ -409,8 +433,13 @@ public final class AccOperatorCore {
         }
 
         // ===== 阶段三：等所有登录窗关闭（= 登录完成）；超时也继续（窗口可能已经变成主窗） =====
+        // 60s → 20s：这一步只是"收尾观察"，不该让任务中心长时间停在"进行中"（用户 2026-10-12 探讨定）；
+        // 它现在是**可取消**的（waitHwndsClose 内部有检查点）。
         if (!okHwnds.isEmpty()) {
-            boolean allClosed = com.jfmultichat.swcore.SwNativeOps.waitHwndsClose(okHwnds, 60);
+            // 阶段文字去掉"可取消"字样（旁边有取消按钮 = 当然可取消，用户 2026-10-12 指出）
+            com.jfmultichat.core.task.TaskContext.phase("等待窗口关闭", "等待窗口关闭");
+            com.jfmultichat.core.task.TaskContext.progress(okHwnds.size(), okHwnds.size());
+            boolean allClosed = com.jfmultichat.swcore.SwNativeOps.waitHwndsClose(okHwnds, 20);
             LOG.info("[登录] {} 个账号：登录窗口{}", okHwnds.size(), allClosed ? "已全部关闭" : "超时仍未全关");
         }
         return results;

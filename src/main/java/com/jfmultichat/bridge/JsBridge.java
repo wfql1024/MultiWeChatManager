@@ -198,6 +198,74 @@ public class JsBridge {
         }
     }
 
+    // ==================== 任务中心（右上角） ====================
+    //
+    // 见 core/task/*：所有长耗时流程（登录 / 批量多开 …）都登记到这里，可看进度、可取消。
+    // 取消是**协作式**的（Java 没有安全的强制杀线程）——流程跑到下一个 TaskContext.checkpoint() 才停。
+
+    private volatile boolean taskListenerInstalled = false;
+
+    /** 任务中心：全部任务（JSON 数组的字符串；前端自己 JSON.parse） */
+    public String getTaskList() {
+        ensureTaskListener();
+        try {
+            return MAPPER.writeValueAsString(com.jfmultichat.core.task.TaskRegistry.get().list());
+        } catch (Exception e) {
+            LOG.warn("[任务] 序列化任务列表失败: {}", e.getMessage());
+            return "[]";
+        }
+    }
+
+    /** 取消一个任务（协作式：返回 true 只代表"请求已受理"，它会跑到安全点才停） */
+    public String cancelTask(String taskId) {
+        boolean ok = com.jfmultichat.core.task.TaskRegistry.get().cancel(taskId);
+        ObjectNode r = MAPPER.createObjectNode();
+        r.put("ok", ok);
+        return r.toString();
+    }
+
+    /** 取消全部进行中的任务 */
+    public String cancelAllTasks() {
+        int n = com.jfmultichat.core.task.TaskRegistry.get().cancelAll();
+        ObjectNode r = MAPPER.createObjectNode();
+        r.put("ok", true);
+        r.put("count", n);
+        return r.toString();
+    }
+
+    /**
+     * 任务统计（给将来的"统计"页面）.
+     * <p>因为**统计与任务中心同源**（见 core/task/TaskStats），这里不需要任何额外埋点 ——
+     * 任务跑完就自动有了：{@code {"summary":[{kind,count,success,failed,cancelled,avgMs,maxMs}…],"recent":[…]}}。
+     */
+    public String getTaskStats() {
+        ObjectNode r = MAPPER.createObjectNode();
+        try {
+            com.jfmultichat.core.task.TaskStats s = com.jfmultichat.core.task.TaskStats.get();
+            r.set("summary", MAPPER.valueToTree(s.summary()));
+            r.set("recent", MAPPER.valueToTree(s.recent()));
+        } catch (Exception e) {
+            LOG.warn("[统计] 取任务统计失败: {}", e.getMessage());
+        }
+        return r.toString();
+    }
+
+    /** 订阅任务变化 → 主动推给前端（只在页面定义了 JFC.taskCenter 时生效；幂等） */
+    private void ensureTaskListener() {
+        if (taskListenerInstalled) return;
+        taskListenerInstalled = true;
+        com.jfmultichat.core.task.TaskRegistry.get().addListener(snap -> {
+            try {
+                // 按项目约定：JSON 再编码成 JS 字符串字面量，前端 JSON.parse
+                pushToJs("if(window.JFC&&JFC.taskCenter&&JFC.taskCenter.onTasks){JFC.taskCenter.onTasks("
+                        + MAPPER.writeValueAsString(MAPPER.writeValueAsString(snap)) + ")}");
+            } catch (Exception e) {
+                LOG.warn("[任务] 推送任务列表失败: {}", e.getMessage());
+            }
+        });
+        com.jfmultichat.core.task.TaskRegistry.get().fireChanged();   // 页面一打开就有数据
+    }
+
     // ========== 异步操作方法（后台线程 + JS回调） ==========
 
     /**
@@ -1628,44 +1696,55 @@ public class JsBridge {
      * @param cbId       JS 回调 ID，完成后推 {@code JFC.bridge._handleAsync('login', cbId, json)}
      */
     public void loginAccountsAsync(String swId, String accIdsJson, String cbId) {
-        THREAD_POOL.submit(() -> {
-            ObjectNode result = MAPPER.createObjectNode();
-            try {
-                List<String> accIds = new java.util.ArrayList<>();
-                com.fasterxml.jackson.databind.JsonNode arr = MAPPER.readTree(
-                        accIdsJson == null || accIdsJson.isBlank() ? "[]" : accIdsJson);
-                if (arr.isArray()) arr.forEach(n -> accIds.add(n.asText()));
-
-                List<String[]> rows = com.jfmultichat.acccore.AccOperatorCore.loginOrigin(swId, accIds);
-                com.fasterxml.jackson.databind.node.ArrayNode items = result.putArray("accounts");
-                int ok = 0;
-                for (String[] r : rows) {
-                    ObjectNode item = items.addObject();
-                    item.put("accId", r[0]);
-                    item.put("hwnd", r[1]);
-                    item.put("pid", r[2]);
-                    item.put("error", r[3] == null ? "" : r[3]);
-                    if (r[3] == null || r[3].isEmpty()) ok++;
-                }
-                result.put("success", ok > 0);
-                result.put("count", ok);
-                result.put("total", accIds.size());
-                if (ok < accIds.size()) {
-                    result.put("error", "成功 " + ok + " / " + accIds.size() + " 个账号");
-                }
-                LOG.info("[登录] 账号级登录结束: sw={}, 成功 {}/{}", swId, ok, accIds.size());
-            } catch (Exception e) {
-                LOG.error("loginAccountsAsync 失败: swId={}", swId, e);
-                result.put("success", false);
-                result.put("error", String.valueOf(e.getMessage()));
-            }
-            try {
-                pushToJs("JFC.bridge._handleAsync('login'," + cbId
-                        + "," + MAPPER.writeValueAsString(result.toString()) + ")");
-            } catch (Exception e) {
-                LOG.error("推送账号登录结果失败", e);
-            }
-        });
+        // 账号级登录是**长耗时流程** → 走任务中心（右上角可见 + 可取消）；用户 2026-10-12 定
+        List<String> accIds = new java.util.ArrayList<>();
+        try {
+            com.fasterxml.jackson.databind.JsonNode arr = MAPPER.readTree(
+                    accIdsJson == null || accIdsJson.isBlank() ? "[]" : accIdsJson);
+            if (arr.isArray()) arr.forEach(n -> accIds.add(n.asText()));
+        } catch (Exception e) {
+            LOG.warn("[登录] 解析账号列表失败: {}", e.getMessage());
+        }
+        final List<String> ids = accIds;
+        com.jfmultichat.core.task.TaskRegistry.get().submit(
+                "login", "登录 " + ids.size() + " 个账号", swId,
+                () -> {
+                    ObjectNode result = MAPPER.createObjectNode();
+                    try {
+                        List<String[]> rows = com.jfmultichat.acccore.AccOperatorCore.loginOrigin(swId, ids);
+                        com.fasterxml.jackson.databind.node.ArrayNode items = result.putArray("accounts");
+                        int ok = 0;
+                        for (String[] r : rows) {
+                            ObjectNode item = items.addObject();
+                            item.put("accId", r[0]);
+                            item.put("hwnd", r[1]);
+                            item.put("pid", r[2]);
+                            item.put("error", r[3] == null ? "" : r[3]);
+                            if (r[3] == null || r[3].isEmpty()) ok++;
+                        }
+                        result.put("success", ok > 0);
+                        result.put("count", ok);
+                        result.put("total", ids.size());
+                        if (ok < ids.size()) {
+                            result.put("error", "成功 " + ok + " / " + ids.size() + " 个账号");
+                        }
+                        LOG.info("[登录] 账号级登录结束: sw={}, 成功 {}/{}", swId, ok, ids.size());
+                    } catch (com.jfmultichat.core.task.TaskCancelledException ce) {
+                        // 取消是"正常结局"：不动已开的窗口（用户可手动关），只把异常交给任务中心
+                        LOG.info("[登录] 任务被取消：已开的登录窗保留（可手动关闭），后续账号不再开");
+                        throw ce;
+                    } catch (Exception e) {
+                        LOG.error("loginAccountsAsync 失败: swId={}", swId, e);
+                        result.put("success", false);
+                        result.put("error", String.valueOf(e.getMessage()));
+                    }
+                    try {
+                        pushToJs("JFC.bridge._handleAsync('login'," + cbId
+                                + "," + MAPPER.writeValueAsString(result.toString()) + ")");
+                    } catch (Exception e) {
+                        LOG.error("推送账号登录结果失败", e);
+                    }
+                });
     }
 
     /**
@@ -1707,24 +1786,34 @@ public class JsBridge {
      * @param cbId JS 回调 ID（数字字符串），完成后推 {@code JFC.bridge._handleAsync('launch', cbId, json)}
      */
     public void launchPlatformProgramAsync(String swId, String countStr, String cbId) {
-        THREAD_POOL.submit(() -> {
-            String json;
-            try {
-                json = doLaunchPlatformProgram(swId, countStr);
-            } catch (Exception e) {
-                LOG.error("launchPlatformProgramAsync 失败: swId={}", swId, e);
-                ObjectNode err = MAPPER.createObjectNode();
-                err.put("success", false);
-                err.put("error", String.valueOf(e.getMessage()));
-                json = err.toString();
-            }
-            try {
-                pushToJs("JFC.bridge._handleAsync('launch'," + cbId
-                        + "," + MAPPER.writeValueAsString(json) + ")");
-            } catch (Exception e) {
-                LOG.error("推送批量启动结果失败", e);
-            }
-        });
+        // 批量多开同样是长耗时流程（多轮「查杀 → 唤起 → 等 5 秒」）→ 走任务中心
+        int n = 1;
+        try {
+            if (countStr != null && !countStr.isBlank()) n = Integer.parseInt(countStr.trim());
+        } catch (Exception ignore) { /* 非数字按 1 个 */ }
+        com.jfmultichat.core.task.TaskRegistry.get().submit(
+                "multilaunch", "启动 " + Math.max(1, n) + " 个实例", swId,
+                () -> {
+                    String json;
+                    try {
+                        json = doLaunchPlatformProgram(swId, countStr);
+                    } catch (com.jfmultichat.core.task.TaskCancelledException ce) {
+                        LOG.info("[登录] 批量启动任务被取消（已启动的实例保留）");
+                        throw ce;
+                    } catch (Exception e) {
+                        LOG.error("launchPlatformProgramAsync 失败: swId={}", swId, e);
+                        ObjectNode err = MAPPER.createObjectNode();
+                        err.put("success", false);
+                        err.put("error", String.valueOf(e.getMessage()));
+                        json = err.toString();
+                    }
+                    try {
+                        pushToJs("JFC.bridge._handleAsync('launch'," + cbId
+                                + "," + MAPPER.writeValueAsString(json) + ")");
+                    } catch (Exception e) {
+                        LOG.error("推送批量启动结果失败", e);
+                    }
+                });
     }
 
     /** 批量启动的同步实现（循环「查杀互斥体 → 降权启动」）；异步入口与同步入口共用 */
@@ -1743,13 +1832,20 @@ public class JsBridge {
         com.fasterxml.jackson.databind.node.ArrayNode pids = result.putArray("pids");
         String mutexMsg = "";
         com.jfmultichat.swcore.SwNativeOps nativeOps = com.jfmultichat.swcore.SwNativeOps.INSTANCE;
+        // 统计起点（单实例与批量共用）：时长口径 = 到"最后一次成功启动"为止（覆盖式记录）
+        long launchStartMs = System.currentTimeMillis();
 
         // 目标就是 1 个 → 走直通：查杀一次 + 启一个就报结果。
         // （批量那套"等 5 秒数 pid"对单个实例既没必要、还可能因进程还没注册而误报失败）
         // 走核心方法 launchOneInstance（查杀 + 启动一次搞定，不再"外面 kill 一次、openSw 里又 kill 一次"）
         if (targetCount == 1) {
+            com.jfmultichat.core.task.TaskContext.phase("查杀互斥体 + 启动实例", "启动实例");
             String[] one = com.jfmultichat.swcore.SwOperatorCore.launchOneInstance(
                     swId, null, accessor, nativeOps);
+            // 单实例也按同一口径上报统计（轮次 1 + 时长）
+            com.jfmultichat.core.task.TaskContext.metricSet("开实例数", 1);
+            com.jfmultichat.core.task.TaskContext.metricSet("多开时长ms",
+                    System.currentTimeMillis() - launchStartMs);
             mutexMsg = one[2] == null ? "" : one[2];
             if (one[0] == null) {
                 result.put("success", false);
@@ -1784,11 +1880,19 @@ public class JsBridge {
         LOG.info("[登录] 批量启动开始: sw={}, 目标 {} 个, 旧程序 pid={}", swId, targetCount, oldPids);
 
         int round = 0;
+        int launchAttempts = 0;                  // 实际发起启动的次数（统计"轮次"口径，与登录一致）
         List<Integer> newPids = new java.util.ArrayList<>();
         int lastLaunched = 0;
         while (newPids.size() < targetCount && round < MAX_BATCH_ROUNDS) {
             round++;
             int remaining = targetCount - newPids.size();
+            // ★ 安全点：批量多开"每轮"可取消（任务中心）
+            com.jfmultichat.core.task.TaskContext.checkpoint();
+            com.jfmultichat.core.task.TaskContext.phase(
+                    "第 " + round + " 轮：还需 " + remaining + " 个", "多开轮次");
+            com.jfmultichat.core.task.TaskContext.progress(newPids.size(), targetCount);
+            // 业务计数：需要几轮才凑够（轮数 > 1 说明互斥体没杀干净 —— 多开顺畅度的直接指标）
+            com.jfmultichat.core.task.TaskContext.metric("多开轮次", 1);
             LOG.info("[登录] ===== 第 {}/{} 轮：已有 {} 个，还需 {} 个 =====",
                     round, MAX_BATCH_ROUNDS, newPids.size(), remaining);
 
@@ -1801,6 +1905,8 @@ public class JsBridge {
             // ③ 一次性唤起剩余数量：**skipKill=true**（刚刚已经杀过，N 次启动不再各自重扫一遍）
             lastLaunched = 0;
             for (int i = 0; i < remaining; i++) {
+                launchAttempts++;
+                com.jfmultichat.core.task.TaskContext.metricSet("开实例数", launchAttempts);
                 String[] one = com.jfmultichat.swcore.SwOperatorCore.launchOneInstance(
                         swId, null, accessor, nativeOps, true);      // true = 本轮刚杀过，跳过内部查杀
                 if (one[0] == null) {
@@ -1812,6 +1918,9 @@ public class JsBridge {
                 } else {
                     lastLaunched++;
                 }
+                // 覆盖式记录"到最后一个成功启动为止"的用时（中途取消也保留 ✓）
+                com.jfmultichat.core.task.TaskContext.metricSet("多开时长ms",
+                        System.currentTimeMillis() - launchStartMs);
             }
             LOG.info("[登录] 第 {} 轮已唤起 {} 次（其中拿到 PID 的 {} 个）", round, remaining, lastLaunched);
             if (lastLaunched == 0 && !result.has("viaExplorer")) {
@@ -1842,6 +1951,10 @@ public class JsBridge {
             result.put("error", "只开出了 " + newPids.size() + " 个（目标 " + targetCount + " 个，已试 "
                     + round + " 轮）");
         }
+        // 业务指标（统计，与登录同口径）：轮次 = 实际发起启动的次数；时长 = 到最后一个成功实例为止
+        com.jfmultichat.core.task.TaskContext.metricSet("开实例数", launchAttempts);
+        com.jfmultichat.core.task.TaskContext.metricSet("多开时长ms",
+                System.currentTimeMillis() - launchStartMs);
         LOG.info("[登录] 批量启动结束: sw={}, 目标 {} 个, 实际 {} 个, 轮数 {}",
                 swId, targetCount, newPids.size(), round);
         return result.toString();

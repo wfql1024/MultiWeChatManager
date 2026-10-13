@@ -361,10 +361,18 @@ public final class SwInfoFuncCore {
      */
     public int waitHwndExclusivelyForPid(String sw, int pid, String wndType, List<Integer> exclude, int timeoutSec) {
         long deadline = System.currentTimeMillis() + Math.max(1, timeoutSec) * 1000L;
+        long phaseStart = System.currentTimeMillis();
         Set<Integer> seen = new HashSet<>();          // 已"规则匹配过但不匹配"的窗口，不再重复匹配
         if (exclude != null) seen.addAll(exclude);
         List<Map<String, Object>> rules = getWndClassMatchingDicts(sw, wndType);
         while (System.currentTimeMillis() < deadline) {
+            // ★ 安全点：等窗口期间也能被任务中心取消（轮询本就是 200ms 粒度，检查开销可忽略）
+            com.jfmultichat.core.task.TaskContext.checkpoint();
+            // 让"等窗口 x 秒"每秒都在动（只改显示，不动统计键）
+            long waited = System.currentTimeMillis() - phaseStart;
+            if (waited >= 1000) {
+                com.jfmultichat.core.task.TaskContext.phaseSuffix("（等窗口 " + (waited / 1000) + "s）");
+            }
             List<Integer> hwnds = nativeOps.getHwndsByPid(pid);
             List<Integer> fresh = new ArrayList<>();
             for (Integer h : hwnds) {

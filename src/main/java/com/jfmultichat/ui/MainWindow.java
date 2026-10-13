@@ -63,6 +63,9 @@ public class MainWindow {
     // 窗口按钮引用（用于更新图标）
     private Button btnMax;
     private Button btnRefresh;
+    /** 任务中心入口（右上角，与窗口按钮同排）；角标显示进行中任务数 */
+    private Button btnTasks;
+    private javafx.scene.control.Label taskBadge;
 
     // 最大化状态
     private boolean maximized = false;
@@ -305,8 +308,9 @@ public class MainWindow {
                 bridge.setThemeChangeListener(this::applyTitleBarTheme);
                 bridge.setAlignListener(this::alignLogo);
                 LOG.info("JS Bridge injected successfully");
-                // 桥就绪后触发主侧栏平台列表加载
+                // 桥就绪后触发主侧栏平台列表加载 + 任务中心初始化（拉一次列表并装上 Java 推送监听）
                 webEngine.executeScript("if(JFC.pages.main)JFC.pages.main.init()");
+                webEngine.executeScript("if(JFC.taskCenter)JFC.taskCenter.init()");
             }
         } catch (Exception e) {
             LOG.error("Failed to inject JS bridge", e);
@@ -380,12 +384,49 @@ public class MainWindow {
         btnMax = makeTitleBtn("☐", null);
         Button btnClose = makeTitleBtn("✕", "close-btn");
 
+        // 任务中心：图标用 Lucide activity（脉冲线）——角标 = 主题色**实心圆 + 白字数字**，
+        // 像 QQ 未读那样贴在按钮右上角（用户 2026-10-12 明确了样式）。
+        //
+        // 为什么前两次没显示（真正的技术原因）：
+        //   第 1 次：JS 调的 bridge.setTaskBadge 根本不在 JsBridge 上 → 静默失效；
+        //   第 2 次：角标设了 setManaged(false) → **StackPane 不给它做布局 → 它的 width/height 永远是 0** → 画不出来 ✗。
+        //   现在：managed(true)（让 StackPane 正常布局）+ 固定 18×18 + TOP_RIGHT 对齐 + 负边距溢出到角上 ✓
+        btnTasks = makeSvgTitleBtn(null, "M22 12h-4l-3 9L9 3l-3 9H2");
+        taskBadge = new javafx.scene.control.Label();
+        taskBadge.setVisible(false);
+        taskBadge.setManaged(true);
+        taskBadge.setMouseTransparent(true);
+        taskBadge.setMinSize(16, 16);
+        taskBadge.setPrefSize(16, 16);
+        taskBadge.setMaxSize(16, 16);
+        taskBadge.setAlignment(Pos.CENTER);
+        taskBadge.setStyle("-fx-background-color: #4aa3ff; -fx-background-radius: 8;"
+                + " -fx-text-fill: #ffffff; -fx-font-size: 10px; -fx-font-weight: bold;"
+                + " -fx-border-color: transparent; -fx-padding: 0;"
+                + " -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.5), 4, 0, 0, 1);");
+        javafx.scene.layout.StackPane taskBox = new javafx.scene.layout.StackPane(btnTasks, taskBadge);
+        javafx.scene.layout.StackPane.setAlignment(taskBadge, Pos.TOP_RIGHT);
+        // ⚠️ 上边距不能是负的：标题栏就在窗口最顶，负值会把角标顶出窗口边界被截断（用户 2026-10-12 反馈）
+        javafx.scene.layout.StackPane.setMargin(taskBadge, new Insets(0, -3, 0, 0));
+        taskBox.setPickOnBounds(false);
+        btnTasks.setOnAction(e -> toggleTaskCenter());
+
+        // 角标跟随任务状态（单一写入点：只在这里更新；不依赖前端回调）
+        com.jfmultichat.core.task.TaskRegistry.get().addListener(snap -> {
+            int active = 0;
+            for (java.util.Map<String, Object> m : snap) {
+                if (Boolean.TRUE.equals(m.get("active"))) active++;
+            }
+            setTaskBadge(String.valueOf(active));
+        });
+
         btnRefresh.setOnAction(e -> refreshCurrentPage());
         btnMin.setOnAction(e -> stage.setIconified(true));
         btnMax.setOnAction(e -> toggleMaximize());
         btnClose.setOnAction(e -> app.exit());
 
-        bar.getChildren().addAll(logoView, spacer, btnRefresh, btnSidebar, btnMin, btnMax, btnClose);
+        HBox.setMargin(taskBox, new Insets(0, 4, 0, 0));
+        bar.getChildren().addAll(logoView, spacer, btnRefresh, btnSidebar, taskBox, btnMin, btnMax, btnClose);
         bar.setPadding(new Insets(0, 8, 0, 8));
 
         // 标题栏双击 → 最大化/恢复
@@ -469,6 +510,43 @@ public class MainWindow {
         PauseTransition cooldown = new PauseTransition(Duration.millis(REFRESH_COOLDOWN_MS));
         cooldown.setOnFinished(e -> btnRefresh.setDisable(false));
         cooldown.play();
+    }
+
+    // ==================== 任务中心 ====================
+
+    /** 点标题栏任务图标 → 让前端面板开/合（面板本体在 HTML 里，与全局观感一致） */
+    private void toggleTaskCenter() {
+        if (webEngine == null) return;
+        try {
+            webEngine.executeScript("if(window.JFC&&JFC.taskCenter)JFC.taskCenter.toggle()");
+        } catch (Exception e) {
+            LOG.warn("toggleTaskCenter 失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 更新角标（进行中任务数）—— 由前端在每次任务变化时回调 {@code JFC.bridge.setTaskBadge(n)}.
+     * <p>⚠️ 参数用 **String**：本项目 JSObject 桥对固定参数的匹配以 String/boolean 最稳（数字用字符串传）。
+     */
+    public void setTaskBadge(String active) {
+        int n;
+        try {
+            n = Integer.parseInt(active == null ? "0" : active.trim());
+        } catch (Exception e) {
+            n = 0;
+        }
+        final int count = n;
+        javafx.application.Platform.runLater(() -> {
+            if (taskBadge == null) return;
+            if (count <= 0) {
+                taskBadge.setVisible(false);
+                taskBadge.setText("");
+            } else {
+                taskBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+                taskBadge.setVisible(true);
+                taskBadge.toFront();
+            }
+        });
     }
 
     // ==================== 最大化/恢复 ====================

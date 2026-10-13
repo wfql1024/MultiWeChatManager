@@ -914,3 +914,43 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
   - 删掉 `## 近期重大变更` 整节摘要（通读两边后判定顶层 `##` 条目为超集：根因链、commit 号、行号、选型讨论等都只在顶层）
 - **验证**：每次删除都由编辑工具的**精确文本匹配**兜底（不匹配即报错、绝不误删 ✓）；全仓校验无残留中文数字标题 ✓、
   无重复主题 ✓；`facts.md` 未被搬空（抽查正文完好 ✓）
+
+## 任务中心 + 统计（2026-10-12 晚，5 轮迭代）
+
+- **触发**（用户）：多账号登录曾"卡住 → 过一会儿一堆线程同时活过来、窗口停不下来"，要求 ① 右上角与最小化按钮同排加"任务中心"入口，
+  能看到耗时线程、能手动关掉；② "统计"重做，且**不要**在核心过程（如登录方法）里穿插计时与写文件，要**在外部**做（用户提到"切片"）
+- **探讨定案**（详见 `decisions.md` **D-45**）：任务中心与统计**同源**（任务边界 = 计时区间）；
+  取消 = **协作式**（标志 + `interrupt()` + 检查点，已开窗口不回滚）；**不用 AspectJ/Spring**（AOP 也中断不了业务逻辑，
+  还省不掉检查点）；配 **JFR** 做深度下钻（用户："开发中请用上你的 JFR"）
+- **v1 落地**（内核 + 两条长流程收口）：
+  - 新增 `core/task/`：`JfTask`（状态机）、`TaskContext`（**ThreadLocal** → 业务方法签名零改动）、`TaskRegistry`（submit/list/cancel/cancelAll + 订阅）、
+    `TaskCancelledException`、`TaskStats`（内存聚合 + JSONL）
+  - `JsBridge.loginAccountsAsync` / `launchPlatformProgramAsync` 改为 `TaskRegistry.submit(...)`；取消时**重抛** → 标 `CANCELLED` 而非 `FAILED`
+  - 6 处安全点：`loginOrigin` 每账号开头/点击每个窗口前、`waitHwndExclusivelyForPid`、`waitHwndsClose` 轮询内、批量多开每轮、`WinHandleOps.findHandles` 每个候选句柄前
+  - **顺手治两条卡住根因**：① 查杀加**总预算 5s**（超预算停止扫描并如实报告，不再被个别阻塞句柄拖成几十秒）；
+    ② 登录阶段三"等窗口关闭" **60s → 20s** 且可取消
+  - UI：标题栏"活动"图标 + 角标 + 右上角抽屉（`task-center.js` + `task-center.css`）；`bridge.js` 加 4 个方法；Java 注入桥后 `JFC.taskCenter.init()`
+  - **验证**：`gradle test` **57 例 0 失败** ✓、`node --check` ✓
+- **v2 修 4 个瑕疵 + 加"查看更多"**（用户实测反馈）：面板贴紧标题栏（`top:0`，WebView 本身在标题栏之下）、
+  取消按钮改行内（原绝对定位压住耗时）、`finish()` 不再覆盖 phase（"已取消/已取消"重复）、`KEEP_FINISHED` 20 → 300；
+  面板加**三小栏**（进行中/已完成含失败/已取消）；把 `#page-statistics` 占位页做成**「任务与统计」页**（统计卡 + 三小栏 + 明细表），
+  `app.js` 挂 init/refresh
+- **v3 修角标 + 阶段精确化 + 统计加厚 + 侧栏入口**（用户实测）：
+  - 角标根因 ①：前端调 `bridge.setTaskBadge`，而方法加在 `MainWindow`、**`JsBridge` 里没有** ✗ → 改**Java 侧直接订阅 `TaskRegistry`**（单一写入点）
+  - 阶段根因：**子步骤 `killAllMutexesNow` 覆盖了上层阶段** ✗ → 子步骤不设阶段；新增 `phase(显示, 统计键)` 双参数（显示带序号、统计键不带）
+  - 统计页没数据根因：`tasks.js` 调 `bridge.getTaskStats`，而 `bridge.js` **漏了包装** ✗ → 补上
+  - 侧栏底部**加回"统计"入口**（当年只移除了按钮，页面与图标资源一直留着）
+  - 框架加厚：`TaskContext.metric()` 业务指标上报 + `TaskStats` 聚合 `phases`/`metrics` + `TaskJfrEvent` 常驻 `commit()`
+- **v4 角标真因 + 阶段动态 + UIA 阻塞 + 统计口径**（用户实测）：
+  - 角标根因 ②：`taskBadge.setManaged(false)` → **StackPane 不给它布局 → 宽高恒 0** ✗
+  - 阶段不动的根因：只在 `phase()` 被调用时变，等窗口期间无人调用 ✗ → `phaseSuffix()` 每秒写"（等窗口 Ns）" +
+    前端**每秒拉取 + 指纹比对**（变了才重画）
+  - **取消卡很久**：用户怀疑 UIA 阻塞 → **确认** ✓（跨进程 COM 裸跑在流程线程上）→ 独立线程池 + 800ms 超时 + 连续 3 次超时熔断 60s
+  - 统计口径：读旧版 `setting.py::StatisticData`（`最短,次数,平均,最长`；异常样本丢弃）与 `acc_func_core.py:315`（平台平均 = 总时长÷应开窗数）
+- **v5 角标尺寸 + 统计口径定案**（用户实测）：
+  - 角标 18 → 16px；**上边距改非负**（标题栏在窗口最顶，负值会被截断 ✗）
+  - 统计口径按用户定义**重算**：轮次（成功/失败/超时/取消都算）+ 时长（到最后一次成功）+ 单次**末次/最短/最长** + **总平均 = Σ时长 ÷ Σ轮次**；
+    为此新增**覆盖式** `metricSet()`（取消会跳过循环后的代码，必须逐步覆盖记录）
+  - 用户批评"累计 X ÷ N 个"是**摆算式不算** → 页面改为直接显示算好的数
+- **验证**：每轮 `gradle test` **57 例 0 失败** ✓ + 4 个 JS `node --check` ✓；用户真机确认"效果超出预期"
+- **踩坑**：`launchStartMs` 声明位置放错（快速路径之前未声明 → 编译"找不到符号"），上移后又**重复声明**一次 → 删重复 ✓

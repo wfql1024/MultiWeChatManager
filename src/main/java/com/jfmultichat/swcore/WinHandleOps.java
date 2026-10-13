@@ -155,6 +155,23 @@ public final class WinHandleOps {
      * @param nameWildcards 句柄名通配词；空 = 不按名字过滤（会返回该进程全部带名字的句柄）
      */
     public static List<HandleRef> findHandles(Collection<Integer> pids, List<String> nameWildcards) {
+        return findHandles(pids, nameWildcards, 0L);
+    }
+
+    /**
+     * 同 {@link #findHandles(Collection, List)}，但**带总预算**与**取消检查点**（2026-10-12 加）.
+     *
+     * <p>为什么需要预算：单个句柄名查询虽有 300ms 超时，但**整轮没有上限** ——
+     * 1000 个候选句柄里若有几十个会阻塞，最坏就是几十秒/轮；多号登录每账号一轮、累计几分钟，
+     * 表现就是用户说的"登录卡住"（2026-10-11 实测单轮卡过 13.4 秒）。
+     * 现在 `deadlineMs` 一到就**停止扫描并如实报告**（已命中的照常关闭），不再让整轮无限等。
+     *
+     * <p>检查点：每个候选句柄前调一次 {@link com.jfmultichat.core.task.TaskContext#checkpoint()}，
+     * 让"任务中心"的取消能在扫描过程中生效。
+     *
+     * @param deadlineMs 绝对截止时刻（{@code System.currentTimeMillis()} 口径）；≤0 表示不限时
+     */
+    public static List<HandleRef> findHandles(Collection<Integer> pids, List<String> nameWildcards, long deadlineMs) {
         List<HandleRef> result = new ArrayList<>();
         // ⚠️ 显式给了**空列表** = 没有目标进程 → 直接返回。
         //    （踩过：以前把它和 null 一样当成"不限制进程"，于是去扫全部 30 万个句柄 → 卡死几分钟）
@@ -171,8 +188,16 @@ public final class WinHandleOps {
         // 进程句柄缓存：同一个 pid 只开一次
         Map<Integer, HANDLE> procHandles = new HashMap<>();
         int scanned = 0, candidates = 0;
+        boolean budgetExhausted = false;
         try {
             for (long i = 0; i < count; i++) {
+                // 取消检查点（任务中心）：被取消就抛出，弹回任务边界
+                com.jfmultichat.core.task.TaskContext.checkpoint();
+                // 总预算：到点就停，不再无限等（已命中的照常返回并关闭）
+                if (deadlineMs > 0 && System.currentTimeMillis() > deadlineMs) {
+                    budgetExhausted = true;
+                    break;
+                }
                 long off = HANDLE_TABLE_HEADER_SIZE + i * ENTRY_SIZE;
                 int pid = (int) table.getLong(off + 8);
                 long handleValue = table.getLong(off + 16);
@@ -196,7 +221,14 @@ public final class WinHandleOps {
                 if (p != null) Kernel32Lib.INSTANCE.CloseHandle(p);
             }
         }
-        LOG.info("[句柄] 扫描 {} 条（目标进程候选 {} 条），命中 {} 条", count, candidates, result.size());
+        if (budgetExhausted) {
+            // 记一笔"超预算"（统计里能看出"那天卡住"的前兆：这个数一涨就是有句柄在阻塞）
+            com.jfmultichat.core.task.TaskContext.metric("查杀超预算", 1);
+            LOG.warn("[句柄] 本轮**超预算**：已扫 {} 条（候选 {} 条）、已命中 {} 条 → 停止扫描，先拿已命中的结果继续",
+                    scanned, count, result.size());
+        } else {
+            LOG.info("[句柄] 扫描 {} 条（目标进程候选 {} 条），命中 {} 条", count, candidates, result.size());
+        }
         return result;
     }
 

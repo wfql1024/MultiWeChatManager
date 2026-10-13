@@ -115,6 +115,11 @@ JFC.router = (function() {
         if (page === 'main' && JFC.pages.main) {
             JFC.pages.main.init();
         }
+
+        // 进入任务与统计页时初始化（任务中心面板底部"查看更多"落到这里）
+        if (page === 'statistics' && JFC.pages.tasks) {
+            JFC.pages.tasks.init();
+        }
     }
 
     /**
@@ -140,6 +145,10 @@ JFC.router = (function() {
         }
         if (currentPage === 'settings' && JFC.pages.settings && JFC.pages.settings.refresh) {
             JFC.pages.settings.refresh();
+            return true;
+        }
+        if (currentPage === 'statistics' && JFC.pages.tasks && JFC.pages.tasks.refresh) {
+            JFC.pages.tasks.refresh();
             return true;
         }
         navigate(currentPage);

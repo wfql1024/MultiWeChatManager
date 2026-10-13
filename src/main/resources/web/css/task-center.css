@@ -1,0 +1,376 @@
+/* ============================================================================
+ * task-center.css — 任务中心面板（右上角，标题栏"活动"图标打开）+ 统计页标签
+ *
+ * 布局要点（2026-10-12 按用户反馈修）：
+ *   · **贴紧标题栏**：WebView 本身就在标题栏之下，所以面板 top 必须为 0（原来写 40px → 悬空 40px）
+ *   · 「取消」按钮放**行内右侧**（原来绝对定位在右下角 → 与耗时文字重叠）
+ * ==========================================================================*/
+
+.task-center {
+    position: fixed;
+    top: 0;                        /* 贴住标题栏下沿（页面坐标 0 就在标题栏之下） */
+    right: 8px;
+    width: 340px;
+    max-height: 62vh;
+    display: none;
+    flex-direction: column;
+    z-index: 900;
+    background: var(--bg-card, #1e1e1e);
+    border: 1px solid var(--divider-solid, #3a3a3a);
+    border-top: none;              /* 上沿与标题栏融为一体 */
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+    overflow: hidden;
+    font-size: var(--fs-table, 14px);
+}
+
+.task-center[data-open="1"] { display: flex; }
+
+/* ---- 头部 ---- */
+.task-center .tc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+}
+
+.task-center .tc-title {
+    color: var(--text-level1, #fff);
+    font-weight: 600;
+}
+
+.task-center .tc-head-actions { display: inline-flex; gap: 6px; }
+
+/* ---- 三小栏 ---- */
+.task-center .tc-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--divider-solid, #3a3a3a);
+}
+
+.task-center .tc-tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-level2, #bbb);
+    font-family: inherit;
+    font-size: var(--font-xs, 13px);
+    padding: 6px 4px 7px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.task-center .tc-tab:hover { color: var(--text-level1, #fff); }
+
+.task-center .tc-tab.active {
+    color: var(--color-primary, #4aa3ff);
+    border-bottom-color: var(--color-primary, #4aa3ff);
+}
+
+.task-center .tc-tab i {
+    font-style: normal;
+    margin-left: 4px;
+    opacity: 0.75;
+}
+
+/* ---- 列表 ---- */
+.task-center .tc-list {
+    overflow-y: auto;
+    padding: 2px 0;
+}
+
+.task-center .tc-empty {
+    padding: 20px 10px;
+    text-align: center;
+    color: var(--text-level3, #888);
+    font-size: var(--font-xs, 13px);
+}
+
+.task-center .tc-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--divider-solid, #2c2c2c);
+}
+
+.task-center .tc-row:last-child { border-bottom: none; }
+
+.task-center .tc-row-body { flex: 1; min-width: 0; }
+
+.task-center .tc-row-main {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+}
+
+.task-center .tc-name {
+    color: var(--text-level1, #fff);
+    font-weight: 600;
+}
+
+.task-center .tc-target {
+    color: var(--text-level3, #888);
+    font-size: var(--font-xs, 13px);
+}
+
+.task-center .tc-row-sub {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 3px;
+    color: var(--text-level2, #bbb);
+    font-size: var(--font-xs, 13px);
+}
+
+.task-center .tc-phase {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 右侧：耗时 + 取消（行内，不再绝对定位 → 不会与耗时重叠） */
+.task-center .tc-row-right {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+.task-center .tc-elapsed {
+    color: var(--text-level3, #888);
+    font-family: var(--font-family-mono, monospace);
+    font-size: var(--font-xs, 13px);
+}
+
+.task-center .tc-error {
+    margin-top: 3px;
+    color: #e5484d;
+    font-size: var(--font-xs, 13px);
+    word-break: break-all;
+}
+
+/* ---- 状态标签 ---- */
+.task-center .tc-state {
+    flex: 0 0 auto;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 18px;
+}
+
+.task-center .tc-state.running    { background: rgba(45, 145, 255, 0.18); color: #4aa3ff; }
+.task-center .tc-state.cancelling { background: rgba(255, 176, 32, 0.18); color: #ffb020; }
+.task-center .tc-state.done       { background: rgba(46, 204, 113, 0.16); color: #2ecc71; }
+.task-center .tc-state.failed     { background: rgba(229, 72, 77, 0.18);  color: #e5484d; }
+.task-center .tc-state.cancelled  { background: rgba(150, 150, 150, 0.18); color: #9a9a9a; }
+
+/* ---- 底部 ---- */
+.task-center .tc-foot {
+    display: flex;
+    justify-content: flex-end;
+    padding: 6px 10px;
+    border-top: 1px solid var(--divider-solid, #3a3a3a);
+}
+
+/* ---- 按钮 ---- */
+.task-center .tc-btn {
+    border: 1px solid var(--divider-solid, #3a3a3a);
+    background: transparent;
+    color: var(--text-level2, #bbb);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: var(--font-xs, 13px);
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.task-center .tc-btn:hover:not([disabled]) {
+    border-color: var(--color-primary, #4aa3ff);
+    color: var(--color-primary, #4aa3ff);
+}
+
+.task-center .tc-btn[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* ============================================================================
+ * 「任务与统计」页（#page-statistics）—— 任务中心面板"查看更多"落到这里
+ * ==========================================================================*/
+
+.tasks-page {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 18px;
+    height: 100%;
+    box-sizing: border-box;
+    min-height: 0;
+}
+
+.tasks-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.tasks-title {
+    color: var(--text-level1, #fff);
+    font-size: var(--font-h3, 16px);
+    font-weight: 600;
+}
+
+/* ---- 统计卡（按流程聚合，来自 getTaskStats().summary）---- */
+.tasks-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.tasks-summary-empty {
+    color: var(--text-level3, #888);
+    font-size: var(--font-xs, 13px);
+}
+
+.tasks-card {
+    min-width: 190px;
+    padding: 10px 12px;
+    background: var(--bg-card, #1e1e1e);
+    border: 1px solid var(--divider-solid, #3a3a3a);
+    border-radius: 10px;
+}
+
+.tasks-card-kind {
+    color: var(--text-level3, #888);
+    font-size: var(--font-xs, 13px);
+}
+
+.tasks-card-main {
+    margin-top: 4px;
+    color: var(--text-level1, #fff);
+}
+
+.tasks-card-num {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.tasks-card-unit {
+    margin-left: 2px;
+    color: var(--text-level3, #888);
+}
+
+.tasks-card-sub {
+    margin-left: 8px;
+    color: var(--text-level2, #bbb);
+    font-size: var(--font-xs, 13px);
+}
+
+.tasks-card-time {
+    margin-top: 4px;
+    color: var(--text-level2, #bbb);
+    font-size: var(--font-xs, 13px);
+}
+
+.tasks-card-phases,
+.tasks-card-metrics {
+    margin-top: 3px;
+    color: var(--text-level3, #888);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.tasks-card-derived {
+    margin-top: 5px;
+    color: var(--text-level2, #bbb);
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.tasks-card-derived b { color: var(--text-level1, #fff); }
+
+.tasks-card-derived .tasks-card-big {
+    font-size: 15px;
+    color: var(--color-primary, #4aa3ff);
+}
+
+.tasks-card-label {
+    color: var(--text-level3, #888);
+    margin-right: 2px;
+}
+
+.tasks-card-dim { color: var(--text-level3, #888); }
+
+/* ---- 三小栏 ---- */
+.tasks-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--divider-solid, #3a3a3a);
+}
+
+.tasks-tab {
+    border: none;
+    background: transparent;
+    color: var(--text-level2, #bbb);
+    font-family: inherit;
+    font-size: var(--font-sm, 13px);
+    padding: 6px 12px 7px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.tasks-tab:hover { color: var(--text-level1, #fff); }
+
+.tasks-tab.active {
+    color: var(--color-primary, #4aa3ff);
+    border-bottom-color: var(--color-primary, #4aa3ff);
+}
+
+.tasks-tab i { font-style: normal; margin-left: 4px; opacity: 0.75; }
+
+/* ---- 明细表 ---- */
+.tasks-body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    position: relative;
+}
+
+.tasks-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.tasks-table th,
+.tasks-table td {
+    text-align: left;
+    padding: 7px 8px;
+    border-bottom: 1px solid var(--divider-solid, #2c2c2c);
+    color: var(--text-level2, #bbb);
+    font-size: var(--font-xs, 13px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tasks-table th {
+    color: var(--text-level3, #888);
+    font-weight: 500;
+    position: sticky;
+    top: 0;
+    background: var(--bg-page, #181818);
+}
+
+.tasks-table td.tasks-td-name { color: var(--text-level1, #fff); font-weight: 600; }
+.tasks-table td.tasks-td-ms { font-family: var(--font-family-mono, monospace); }
+.tasks-table td.tasks-td-phases { color: var(--text-level3, #888); }
+
+.tasks-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-level3, #888);
+    font-size: var(--font-xs, 13px);
+}

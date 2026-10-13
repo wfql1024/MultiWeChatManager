@@ -1218,7 +1218,14 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
         if (hwnds == null || hwnds.isEmpty()) return true;
         com.sun.jna.platform.win32.User32 user32 = com.sun.jna.platform.win32.User32.INSTANCE;
         long deadline = System.currentTimeMillis() + Math.max(0, timeout) * 1000L;
+        long waitStart = System.currentTimeMillis();
         while (System.currentTimeMillis() < deadline) {
+            // 取消检查点（任务中心）：等窗口关闭期间也能被取消
+            com.jfmultichat.core.task.TaskContext.checkpoint();
+            long waited = System.currentTimeMillis() - waitStart;
+            if (waited >= 1000) {
+                com.jfmultichat.core.task.TaskContext.phaseSuffix("（等关闭 " + (waited / 1000) + "s）");
+            }
             boolean allClosed = true;
             for (Integer hwnd : hwnds) {
                 if (hwnd != null && hwnd != 0 && user32.IsWindow(intToHwnd(hwnd))) {

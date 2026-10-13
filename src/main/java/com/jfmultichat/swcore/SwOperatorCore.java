@@ -40,8 +40,25 @@ public final class SwOperatorCore {
      * @param nativeOps  原生操作器
      * @return {success, message}
      */
+    /** 单轮互斥体查杀的**默认总预算**（毫秒）：到点就停，避免整轮被个别会阻塞的命名管道句柄拖住 */
+    public static final long DEFAULT_KILL_BUDGET_MS = 5000;
+
     public static String[] killAllMutexesNow(String sw, SwConfigAccessor accessor, SwNativeOps nativeOps) {
+        return killAllMutexesNow(sw, accessor, nativeOps, DEFAULT_KILL_BUDGET_MS);
+    }
+
+    /**
+     * @param budgetMs 本轮扫描的**总预算**（毫秒）；≤0 = 不限时。
+     *                 超预算只影响"扫得全不全"，**不影响正确性** —— 查杀不存在的互斥体是空操作，
+     *                 所以到点就停、先拿已命中的结果继续（用户 2026-10-12 探讨后定）。
+     */
+    public static String[] killAllMutexesNow(String sw, SwConfigAccessor accessor, SwNativeOps nativeOps,
+                                             long budgetMs) {
         long tStart = System.currentTimeMillis();
+        // ⚠️ 这里**故意不设任务阶段**：它只是上层流程（账号登录 / 批量多开）里的**一个子步骤**，
+        //    由上层通过 TaskContext.phase("…") 统一负责。早先在这里设了"查杀互斥体"✗，
+        //    结果把上层正在显示的"账号 3/10：开窗"覆盖掉、界面一直卡在"查杀互斥体"（用户 2026-10-12 实测指出）。
+        com.jfmultichat.core.task.TaskContext.checkpoint();
         List<String> mutantWildcards = accessor.getRemoteSwAsList(
                 sw, SwCoreConstants.RemoteSwKey.MUTEX_HANDLE_WILDCARDS, Collections.emptyList());
         List<String> configWildcards = accessor.getRemoteSwAsList(
@@ -68,8 +85,10 @@ public final class SwOperatorCore {
             return new String[]{Boolean.TRUE.toString(),
                     sw + "已经不含互斥体和文件锁!（全部进程都在免扫缓存里）"};
         }
-        List<WinHandleOps.HandleRef> found = WinHandleOps.findHandles(candidates, allWildcards);
-        LOG.info("[互斥体] {} 本轮命中 {} 个：{}", sw, found.size(), found);
+        List<WinHandleOps.HandleRef> found = WinHandleOps.findHandles(candidates, allWildcards,
+                budgetMs > 0 ? System.currentTimeMillis() + budgetMs : 0L);
+        LOG.info("[互斥体] {} 本轮命中 {} 个：{}（预算 {}ms）", sw, found.size(), found,
+                budgetMs > 0 ? budgetMs : -1);
         if (found.isEmpty()) {
             return new String[]{Boolean.TRUE.toString(), sw + "已经不含互斥体和文件锁!"};
         }

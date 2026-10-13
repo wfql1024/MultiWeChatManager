@@ -30,9 +30,15 @@
         <!-- 平台列表 -->
         <ul id="nav-platform-list" class="nav-list"></ul>
 
-        <!-- 底部：设置（"统计"入口已移除，图标资源仍保留在 icons.js 中备用） -->
+        <!-- 底部：统计（任务与统计页）+ 设置 -->
         <div class="nav-spacer"></div>
         <ul class="nav-list">
+            <li class="nav-item" data-page="statistics">
+                <span class="nav-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+                </span>
+                <span class="nav-label">统计</span>
+            </li>
             <li class="nav-item" data-page="settings">
                 <span class="nav-icon">⚙</span>
                 <span class="nav-label">设置</span>
@@ -124,9 +130,34 @@
                 </div>
             </div>
 
-            <!-- 统计页 -->
+            <!-- 任务与统计页（任务中心"查看更多"落到这里） -->
             <div id="page-statistics" class="page">
-                <div class="page-placeholder">统计页面（待实现）</div>
+                <div class="tasks-page">
+                    <div class="tasks-head">
+                        <span class="tasks-title">任务与统计</span>
+                        <span class="tasks-head-right">
+                            <button id="tasks-refresh" class="btn-sm" type="button">刷新</button>
+                        </span>
+                    </div>
+                    <div id="tasks-summary" class="tasks-summary"></div>
+                    <div class="tasks-tabs">
+                        <button class="tasks-tab active" data-tab="running" type="button">进行中<i>0</i></button>
+                        <button class="tasks-tab" data-tab="done" type="button">已完成<i>0</i></button>
+                        <button class="tasks-tab" data-tab="cancelled" type="button">已取消<i>0</i></button>
+                    </div>
+                    <div class="tasks-body">
+                        <table class="tasks-table">
+                            <thead>
+                                <tr>
+                                    <th>任务</th><th>平台</th><th>状态</th>
+                                    <th>最后阶段</th><th>各阶段耗时</th><th>总耗时</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tasks-tbody"></tbody>
+                        </table>
+                        <div id="tasks-empty" class="tasks-empty">暂无任务</div>
+                    </div>
+                </div>
             </div>
 
             <!-- 设置页 -->
@@ -382,12 +413,15 @@
 <div id="account-row-menu" class="account-context-menu" style="display:none;"></div>
 
 <!-- Scripts -->
+<link rel="stylesheet" href="css/task-center.css">
 <script src="js/bridge.js"></script>
 <script src="js/components/account-table.js"></script>
+<script src="js/components/task-center.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/components/nav-sidebar.js"></script>
 <script src="js/pages/settings.js"></script>
 <script src="js/pages/main.js"></script>
+<script src="js/pages/tasks.js"></script>
 <script src="js/app.js"></script>
 
 </body>

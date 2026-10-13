@@ -49,6 +49,10 @@ JDK `D:\SpaceDev\Env\Infrastructure\runtime\Java\jdk-17.0.2`｜Gradle `D:\SpaceD
 ## 硬约束与不变量
 
 - **单一写入点**：一个状态的渲染只允许一个写入点；状态先落事实来源再渲染
+- **长耗时流程必须走任务中心**：`TaskRegistry.submit(...)` 登记 + 流程内 `TaskContext.checkpoint()/phase()/metricSet()`（见 `MEMORY/facts.md` §2.6）；
+  **不许**在核心业务方法里写计时/写盘（统计与任务中心同源，由任务边界统一记账）
+- **新增 JS 桥方法必须两处都做**：`JsBridge` 里加方法 **+** `js/bridge.js` 加同名包装（前端只认 `JsBridge`；
+  漏一处 `bridge.js` 会**静默跳过**、不报错）
 - **弹窗**一律 `JFC.modal.confirm/custom`（`window.confirm` 在本 WebView 恒 false、`alert` 是空操作）
 - **配置**：写嵌套对象必须"先读出来再合并"；JSON `null` = 删除该字段；热路径不要反复直接读配置（远程配置已有配置层缓存）
 - **日志**：文件与控制台 UTF-8；日志目录跟随 `user_data_path`，且必须在**任何 logger 之前**解析；级别原则 = 研究期用 `DEBUG`、成熟功能 `INFO` 并尽量合并条数

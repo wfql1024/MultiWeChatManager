@@ -50,6 +50,28 @@ public final class UiaOps {
     private static final Map<Integer, String> CLASS_CACHE = new ConcurrentHashMap<>();
 
     /**
+     * UIA 调用的**超时保护**（2026-10-12 修"取消后仍卡很久"）.
+     *
+     * <p>为什么必须加：UIA 的 `ElementFromHandle` 是**跨进程 COM 调用** —— 目标进程的 UI 线程若正忙/无响应，
+     * 这个调用会**长时间甚至无限期阻塞** ✗（用户在"平台没有任何历史窗口、首次开窗"时遇到的卡住，怀疑就是它 ✓）。
+     * 之前这个调用运行在流程线程上 ✗ → 一次阻塞就把整个任务（包括取消响应）一起拖死 ✗。
+     *
+     * <p>现在：放到**独立线程池**里跑 + `Future.get(800ms)` 超时 ✗→✓。
+     * 连续 3 次超时就**熔断**（本会话 60 秒内不再用 UIA 兜底），避免每个窗口都白等 800ms。
+     */
+    private static final long UIA_TIMEOUT_MS = 800;
+    private static final java.util.concurrent.ExecutorService UIA_POOL =
+            java.util.concurrent.Executors.newCachedThreadPool(r -> {
+                Thread t = new Thread(r, "uia-query");
+                t.setDaemon(true);
+                return t;
+            });
+    private static final java.util.concurrent.atomic.AtomicInteger UIA_TIMEOUT_STREAK =
+            new java.util.concurrent.atomic.AtomicInteger();
+    /** 熔断截止时刻（毫秒）；> now 时跳过 UIA */
+    private static volatile long uiaDisabledUntil = 0;
+
+    /**
      * **每个线程一个 `IUIAutomation` 实例**（不要每次查询都 `CoCreateInstance`）.
      *
      * <p>用户 2026-10-07 实测：原来每次 `getClassName` 都重新 `CoCreateInstance` + `Release` ✗，
@@ -76,10 +98,38 @@ public final class UiaOps {
         if (hwnd == 0) return null;
         String cached = CLASS_CACHE.get(hwnd);
         if (cached != null) return cached.isEmpty() ? null : cached;
+        // 熔断期内直接跳过（不白等 800ms）
+        if (System.currentTimeMillis() < uiaDisabledUntil) return null;
 
+        // ⚠️ 真正的 COM 调用放到独立线程里带超时执行 —— 它可能被目标进程阻塞（见字段注释）
+        java.util.concurrent.Future<String> f = UIA_POOL.submit(() -> queryClassNameBlocking(hwnd));
+        try {
+            String cls = f.get(UIA_TIMEOUT_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+            UIA_TIMEOUT_STREAK.set(0);
+            return cls;
+        } catch (java.util.concurrent.TimeoutException te) {
+            f.cancel(true);
+            CLASS_CACHE.put(hwnd, "");
+            int streak = UIA_TIMEOUT_STREAK.incrementAndGet();
+            LOG.warn("[UIA] 取类名超时 {}ms（hwnd=0x{}）—— COM 调用被阻塞，本窗口跳过（连续第 {} 次）",
+                    UIA_TIMEOUT_MS, Integer.toHexString(hwnd), streak);
+            if (streak >= 3) {
+                uiaDisabledUntil = System.currentTimeMillis() + 60_000;
+                UIA_TIMEOUT_STREAK.set(0);
+                LOG.warn("[UIA] 连续超时 → **熔断 60 秒**：这段时间窗口匹配只用 Win32 类名（避免每个窗口白等）");
+            }
+            return null;
+        } catch (Exception e) {
+            CLASS_CACHE.put(hwnd, "");
+            return null;
+        }
+    }
+
+    /** 真正干活的那段（跑在 UIA 线程池里，可能被阻塞 —— 所以绝不放在流程线程上） */
+    private static String queryClassNameBlocking(int hwnd) {
         Pointer element = null;
         try {
-            Pointer uia = UIA_INSTANCE.get();          // 复用线程内的实例（不每次 CoCreateInstance）
+            Pointer uia = UIA_INSTANCE.get();          // 复用**本线程**的实例（不每次 CoCreateInstance）
             if (uia == null) return null;
             element = elementFromHandle(uia, hwnd);
             if (element == null) return null;

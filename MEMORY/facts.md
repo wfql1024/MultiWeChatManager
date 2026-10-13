@@ -25,6 +25,7 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
 | `bridge/` | **JS ↔ Java 桥**（`JsBridge` 是所有前端调用的落点；`pushToJs` 反向推送） |
 | `config/` | 配置读写（`ConfigManager` 单例）、路径规范（`AppPaths`）、环境（`AppEnv`）、远程配置抓取与解密（`RemoteConfigFetcher`、`CryptoUtils`）、根配置模型（`RootConfig`） |
 | `core/` | 通用基础设施：自建 **EventBus** + 事件类型 + `PlatformEventBootstrap`（把后端变化推给前端） |
+| `core/task/` | **任务中心内核**（长耗时流程的可见性/取消/统计，见 §2.6）：`JfTask`、`TaskContext`、`TaskRegistry`、`TaskStats`、`TaskJfrEvent`、`TaskCancelledException` |
 | `acccore/` | **账号层**：账号信息/配置状态/头像/登录（`AccInfoFuncCore`、`AccOperatorCore`、`AccConfigAccessor`、`AccRuntimeStore`、`AvatarUtils`） |
 | `appcore/` | **平台/应用层**：平台定义与适配（`AppCore`、`AppConfigAccessor`、`SwAdapterChecker` 适配判断） |
 | `swcore/` | **平台程序操作层**：启动/降权（`SwNativeOps`、`SwOperatorCore`）、窗口与句柄（`SwInfoFuncCore`、`WinHandleOps`、`UiaOps`）、平台配置访问（`SwConfigAccessor`、`SwConfigProvider`）、常量（`SwCoreConstants`） |
@@ -42,7 +43,10 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
 | `js/pages/main.js` | **平台页主逻辑**（渲染三张表、平台/账号操作、设置区域、登录与多开入口） |
 | `js/components/account-table.js` | **三张表共用的表格组件**（列系统、排序、列换序/调宽、行操作、批量、就地编辑、右键菜单） |
 | `js/components/*` | 其他组件（弹窗 `modal`、toast、图标等） |
+| `js/components/task-center.js` | **任务中心面板**（右上角抽屉：三小栏 + 取消 + 「查看更多」，见 §2.6） |
+| `js/pages/tasks.js` | **「任务与统计」页**（`#page-statistics`：统计卡 + 三小栏 + 明细表） |
 | `css/main.css` | 全部样式（含文字三级色、勾选框、表格、窗帘动画） |
+| `css/task-center.css` | 任务中心面板 + 任务与统计页的样式 |
 
 ---
 
@@ -118,8 +122,8 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
   2. 开登录窗（含查杀互斥体）
   3. **预摆位**：开窗前按账号总数算好格子（`login_size` 优先，兜底 屏幕/6 × 屏幕/3），窗口一出现立刻挪到位；**失败/超时的格子空着、不重排**
   4. 全部打开并摆位后**才统一点击**"登录"（后台 `PostMessage`；比例取远程 `auto_click.login_btn.location`，默认 0.5/0.75）
-  5. 等所有登录窗关闭。**任何单个账号失败都不中断整批**
-  - 前端只做 **2 秒防连点**（任务在后台线程）
+  5. 等所有登录窗关闭（**20 秒**上限，收尾观察用；可取消）。**任何单个账号失败都不中断整批**
+  - 前端只做 **2 秒防连点**；整条流程**登记为任务**（kind `login`）→ 右上角任务中心可见/可取消、自动进统计（见 §2.6）
   - **共存账号登录（待实现）**：共存账号 ID **本身就是 exe 名** → 直接按它启动即可（无需遍历 `ordinals`、无需问创建）
 - **登录窗口尺寸**：`SwOperatorCore.getLoginSize`（格式 `宽*高`）；没有登录窗会**自动开一个**、量完 `WM_CLOSE` 关掉；设置区"获取"按钮 → `JsBridge.fetchLoginSize` → 存**本平台本地配置** `login_size`（**不是**远程配置）
 
@@ -149,6 +153,60 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
 ### 2.5 全局设置项（`LocalGlobalConfig.json`）
 
 `theme` / `account_columns` / `last_sw_id` / `settings_height` / `settings_expanded`（历史遗留如 `manage_settings_*`、`_alias` 已在加载时清理）
+
+### 2.6 任务中心与统计（`core/task/` + 前端两处入口）
+
+**定位**：所有**长耗时流程**（账号登录、批量多开…）统一登记，做到"看得见、叫得停、有统计"。核心约定：**统计与任务中心同源** —— 任务的启停边界天然就是计时区间，业务代码里**零计时、零写盘**。
+
+#### 2.6.1 内核
+
+| 类 | 职责 |
+|---|---|
+| `TaskRegistry`（单例） | `submit(kind, title, target, Runnable/Consumer)` 登记并跑在**自己的 daemon 池**；`list()` / `cancel(id)` / `cancelAll()`；`addListener(...)` 变化订阅；已完成保留 **300** 条后淘汰最旧 |
+| `JfTask` | 状态机 `RUNNING → CANCELLING → CANCELLED / DONE / FAILED`（`zh()` 出中文）；字段 id/kind/title/target/startedAt/finishedAt/phase/phaseBase/phaseSuffix/done/total/error/`phaseMs`/`metrics`；`toMap()` 给前端 |
+| `TaskContext` | 挂在 **ThreadLocal** 上 → **业务方法签名一律不用改**；静态入口：`checkpoint()` / `phase(显示[,统计键])` / `phaseSuffix()` / `progress()` / `metric()` / `metricSet()` / `step(name, Runnable)`；不在任务里时全部退化成无操作 |
+| `TaskCancelledException` | 取消时抛出 → 一路弹回任务边界，**只在 `TaskRegistry` 里 catch 一次** → 标 `CANCELLED`（不是 FAILED） |
+| `TaskStats` | 任务结束时记一条 → 内存按 kind 聚合 + `{用户数据目录}/stats/task_stats.jsonl` |
+| `TaskJfrEvent` | JFR 事件 `com.jfmultichat.TaskRun`（kind/sw/result/durationMs/lastPhase），任务结束 `commit()` |
+
+#### 2.6.2 取消语义（协作式）
+
+- Java **没有安全的强制杀线程**：取消 = 置标志 + `interrupt()`，流程跑到**安全检查点**才停
+- **已做的动作不回滚**（已开的窗口保留，用户手动关）；**不再继续**后面的步骤
+- 安全点位置：`loginOrigin` 每账号开头/点击每个窗口前、`waitHwndExclusivelyForPid` 与 `waitHwndsClose` 的轮询内、批量多开每轮、`WinHandleOps.findHandles` 每个候选句柄前
+- native 段无法中断 → 靠各自超时兜（句柄名 300ms、互斥体查杀总预算 `DEFAULT_KILL_BUDGET_MS = 5000`、**UIA 800ms + 连续 3 次超时熔断 60s**）
+
+#### 2.6.3 统计口径（用户 2026-10-12 定，取代"总时长÷应开窗数"）
+
+- 流程上报两个**覆盖式**指标（`metricSet`，取消也保留）：
+  - `login`：`开窗轮次`（开窗循环进行到第几个，成功/失败/超时/中途取消都算一轮）+ `开窗时长ms`（从开始到**最后一次成功开窗**）
+  - `multilaunch`：`开实例数`（实际发起启动次数）+ `多开时长ms`（到最后一次成功启动）
+- `TaskStats` 的 `DERIVED` 表声明 `kind → {时长键, 轮次键}`，据此给出：
+  - **总平均** = Σ时长 ÷ Σ轮次；**单次三项** = 末次 / 最短 / 最长（每次运行的"时长÷轮次"）
+  - `PER_UNIT_CAP_MS` **异常样本上限**：login/multilaunch 60s、refresh 2s，超限的整条丢弃（对齐旧版 `StatisticData`）
+- 每个指标的聚合 = `{sum, count, avg, min, max}`；各**阶段耗时**由 `TaskContext.phase()` 自动结算上一阶段（同阶段名累加，统计键不带序号）
+- JSONL 字段（`schema:1`）：`ts / id / kind / sw / ms / result / phase / title / phases{} / metrics{}` —— 只到**平台级**，不含账号明文；**为将来上传分析设计**
+
+#### 2.6.4 前端两处入口
+
+- **标题栏**：`MainWindow` 的"活动"图标（`btnTasks`）+ **主题色实心圆角标**（`taskBadge`，由 Java 侧直接订阅 `TaskRegistry` 更新 —— 单一写入点）；点击 → `JFC.taskCenter.toggle()`
+- **任务中心面板**（`js/components/task-center.js`）：贴标题栏下沿的抽屉；三小栏 **进行中 / 已完成（含失败）/ 已取消**；行内显示状态标签 + 阶段（带动态后缀）+ 耗时 + 取消；底部「查看更多」→ `JFC.router.navigate('statistics')`
+- **「任务与统计」页**（`#page-statistics`，入口：最左栏底部**统计** + 面板「查看更多」）：统计卡（次数/成功·失败·取消/**总平均**/单次末次·最短·最长/阶段耗时/业务指标）+ 三小栏明细表
+- 面板与页面都**每秒拉取** `getTaskList()`，用**指纹（id\|状态\|阶段\|进度）比对**决定是否重画 → 阶段实时而不闪、不打断点击
+
+#### 2.6.5 新流程接入三件套（照抄即可）
+
+```java
+TaskRegistry.get().submit("detect", "探测 WeChat 路径", swId, () -> {   // ① 登记 → 可见/可取消/统计/角标 全自动
+    TaskContext.step("扫注册表", () -> registryScan(sw));                // ② 分步 → 检查点+阶段+计时 一次搞定
+    for (int i = 0; i < n; i++) {
+        TaskContext.checkpoint();                                       // ③ 循环里加安全点
+        TaskContext.phase("校验 " + (i + 1) + "/" + n, "校验");          //    显示带序号、统计键不带
+        TaskContext.metricSet("已校验", i + 1);                          //    业务指标自己上报
+    }
+});
+```
+桥接入点：`JsBridge`（`getTaskList` / `cancelTask` / `cancelAllTasks` / `getTaskStats`）+ `js/bridge.js` 同名包装。
 
 ---
 
@@ -189,6 +247,7 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
 {userData}/
 ├─ LocalGlobalConfig.json / LocalSwConfig.json / SwAccData.json / SwCache.json
 ├─ RemoteGlobalConfig.json / RemoteSwConfig.json
+├─ stats/task_stats.jsonl       ← 任务统计（一行一条，schema:1；任务中心与统计页的数据源之一）
 ├─ logs/                       ← 日志（跟随 RootConfig.user_data_path）
 └─ {swId}/                     ← 平台图标 {swId}.png、账号头像 {accId}/{accId}.jpg 等
 ```
