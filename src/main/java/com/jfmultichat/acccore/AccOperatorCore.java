@@ -201,16 +201,32 @@ public final class AccOperatorCore {
     }
 
     /**
-     * 切换至账号窗口
+     * 切换至账号窗口（点 HWND 单元格就调它）
      * 对应 Python: switch_to_sw_account_wnd (L524-L540)
+     *
+     * <p>旧版实现：微信特例 —— 窗口可见就 {@code restore_window}；**不可见**（藏到后台）则
+     * "恢复窗口 → 等 0.2 秒 → 在 (8,8) 双击两下"把它激活；其它平台只恢复置前。
+     * 本版逐条照做（见 {@code SwNativeOps.restoreWindowAndActivate}）。
+     *
+     * <p>窗口已经不存在时顺带把内存里的绑定清掉（即时语义：hwnd 失效就该立刻消失，不留死值 ✓）。
+     *
+     * @return true = 已尝试激活；false = 没有绑定 或 窗口已失效
      */
-    public static void switchToSwAccountWnd(String sw, String acc) {
-        // HWND 来自内存运行时存储
+    public static boolean switchToSwAccountWnd(String sw, String acc) {
         Long hwndVal = AccRuntimeStore.getHwnd(sw, acc);
-        if (hwndVal == null) return;
-        long hwnd = hwndVal;
-        // TODO: JNA SetForegroundWindow / ShowWindow
-        LOG.debug("[窗口] switchToSwAccountWnd: sw={}, acc={}, hwnd={}", sw, acc, hwnd);
+        if (hwndVal == null) {
+            LOG.info("[窗口] {} 没有绑定主窗口（可能是原生账号，或该副本程序没在运行）", acc);
+            return false;
+        }
+        int hwnd = hwndVal.intValue();
+        if (!com.jfmultichat.swcore.SwNativeOps.isWindow(hwnd)) {
+            AccRuntimeStore.setHwnd(sw, acc, null);
+            LOG.info("[窗口] {} 的窗口已失效，清除绑定: hwnd={}", acc, hwnd);
+            return false;
+        }
+        boolean ok = com.jfmultichat.swcore.SwNativeOps.restoreWindowAndActivate(sw, hwnd);
+        LOG.info("[窗口] 切换至账号窗口: sw={}, acc={}, hwnd={}, 成功={}", sw, acc, hwnd, ok);
+        return ok;
     }
 
     // ==================== 互斥体操作 ====================

@@ -354,6 +354,24 @@ public final class AccInfoFuncCore {
         return display;
     }
 
+    /**
+     * **表格里真正显示的那个名字**（用户 2026-10-13：窗口标题要用名称，不要用 id）.
+     *
+     * <p>规则与前端名称列一致：自身有备注/昵称/别名就用它；**退化成 id 时改用"链接账号"的名字**
+     * —— 共存账号（id 是副本 exe 名 ✗）正是这种情况，它的名字来自所链接的原生账号 ✓。
+     */
+    public static String getAccDisplayName(String sw, String acc) {
+        if (acc == null) return "";
+        String own = getAccOriginDisplayName(sw, acc);
+        if (!own.equals(acc)) return own;
+        String linked = getRealAcc(sw, acc);
+        if (linked != null && !linked.equals(acc)) {
+            String linkedName = getAccOriginDisplayName(sw, linked);
+            if (!linkedName.equals(linked)) return linkedName;
+        }
+        return own;
+    }
+
     // ==================== 登录配置状态 ====================
 
     /**
@@ -775,10 +793,8 @@ public final class AccInfoFuncCore {
         String avatarDataUrl = AvatarUtils.getAvatarDataUrl(sw, account, avatarUrl);
         details.put(AccCoreConstants.AccKey.AVATAR, avatarDataUrl);
 
-        // 展示名
-        String accDisplayName = getAccOriginDisplayName(sw, account);
-        String linkedDisplayName = getAccOriginDisplayName(sw, linkedAcc);
-        String displayName = accDisplayName.equals(account) ? linkedDisplayName : accDisplayName;
+        // 展示名（与窗口标题共用同一套链：自身备注/昵称/别名 → 退化成 id 时用链接账号的名字）
+        String displayName = getAccDisplayName(sw, account);
 
         // 配置状态
         String configStatus = coexist ? account : getSwAccLoginCfgStatus(sw, account);
@@ -816,33 +832,197 @@ public final class AccInfoFuncCore {
 
     // ==================== 窗口绑定 ====================
 
-    /**
-     * 获取账号主窗口句柄
-     * 对应 Python: get_main_hwnd_of_accounts (L1524-L1547)
-     */
-    public static Map<String, Integer> getMainHwndOfAccounts(String sw, List<String> accList) {
-        Map<String, Integer> result = new LinkedHashMap<>();
-        SwConfigAccessor swAccessor = com.jfmultichat.config.SwConfigProvider.newAccessor();
-        List<Map<String, Object>> wndMatchingDicts = swAccessor.getRemoteSw(sw,
-                "wnd_class", "main", "matching") != null
-                ? swAccessor.getRemoteSw(sw, "wnd_class", "main", "matching")
-                        .has("class_name")
-                        ? Collections.singletonList(
-                                Map.of("class_name", swAccessor.getRemoteSw(sw, "wnd_class", "main", "original")
-                                        .path("class_name").asText()))
-                        : Collections.emptyList()
-                : Collections.emptyList();
+    /** 建 `SwInfoFuncCore` 的标准写法（accountOps 必须传：共存扫描会写 SwAccData，传 null 会 NPE） */
+    private static com.jfmultichat.swcore.SwInfoFuncCore newInfoCore() {
+        SwConfigAccessor accessor = com.jfmultichat.config.SwConfigProvider.newAccessor();
+        return new com.jfmultichat.swcore.SwInfoFuncCore(
+                accessor, com.jfmultichat.swcore.SwNativeOps.INSTANCE, null,
+                new AccOpsProvider().toSwProvider());
+    }
 
+    /**
+     * **账号 → {pid, 主窗口 hwnd}**：全部按 **pid** 找窗口（原生账号与共存账号一视同仁）.
+     *
+     * <p>⚠️ 2026-10-13 用户更正了我的理解：**原生账号同样能映射** ——
+     * 刷新机制（{@link #getSwAccountsLoginStatus} → {@link #resolvePidAccountMap}）通过扫描进程**内存映射**里
+     * "数据目录 / 账号文件夹"的路径，本来就能得到 **pid ↔ 账号** 的绑定 ✓；
+     * 而"不在**登录期**记录 pid/hwnd"只是**单一职责**（登录只管登录 ✓），不是因为拿不到绑定 ✓。
+     *
+     * <p>所以这里的链路是：**pid（来自刷新机制，内存）→ 该 pid 的窗口按主窗规则筛 → 唯一命中才算** ✓。
+     * 与旧版 `get_main_hwnd_of_accounts`（L1524）判据相同；差别只在**数据来源**：
+     * 旧版 pid/main_hwnd 存在配置里 ✗，本版一律**即时取、只进内存**（`AccRuntimeStore`）✓ 不落任何文件 ✓。
+     *
+     * @return {accId → [pid, hwnd]}；没绑定、或窗口不是唯一命中的账号**不出现**在结果里
+     */
+    public static Map<String, int[]> getLiveAccountWindows(String sw, List<String> accList) {
+        Map<String, int[]> result = new LinkedHashMap<>();
+        if (sw == null || accList == null || accList.isEmpty()) return result;
+        com.jfmultichat.swcore.SwInfoFuncCore info = newInfoCore();
         for (String acc : accList) {
-            JsonNode pidNode = getSwAccData(sw, acc, "pid");
-            if (pidNode == null || !pidNode.isNumber()) continue;
-            int pid = pidNode.asInt();
-            for (Map<String, Object> rule : wndMatchingDicts) {
-                // TODO: 需要 JNA 枚举窗口并按规则筛选
-                LOG.debug("[窗口] getMainHwnd: sw={}, acc={}, pid={}, rule={}", sw, acc, pid, rule);
+            Integer pid = AccRuntimeStore.getPid(sw, acc);
+            if (pid == null || pid <= 0) continue;
+            List<Integer> hwnds = info.getHwndsByPidAndWndType(sw, pid, "main", null);
+            if (hwnds != null && hwnds.size() == 1) {              // **唯一命中**才算数（与全局约定一致）
+                result.put(acc, new int[]{pid, hwnds.get(0)});
+                continue;
+            }
+            // 规则没给出唯一解 → 走"主窗兜底"（见 tieBreakMainWindow；QQNT 实测就是这个情况）
+            int picked = tieBreakMainWindow(sw, info, pid);
+            if (picked != 0) {
+                result.put(acc, new int[]{pid, picked});
+            } else {
+                logNoMainWindow(acc, pid, hwnds);
             }
         }
         return result;
+    }
+
+    /**
+     * **主窗兜底**：规则没给出唯一解时，从该 pid 的候选窗口里挑一个最像"主窗"的.
+     *
+     * <p>为什么需要（QQNT 实测，2026-10-13）：QQNT 主窗规则 = {@code Chrome_WidgetWin_1} +
+     * {@code FirstChild{!ClassNameWildcards:[""]}} —— 但 QQNT 的**隐藏辅助窗口**与主窗**类名相同**、
+     * {@code FirstChild} 也满足 ✗（Win32 子窗口几乎都有类名 ✗）→ 4 个候选全中、没有唯一解 ✗。
+     * 旧版靠 **UIA 子控件**区分 ✓（`GetFirstChildControl`：隐藏窗口通常**没有 UIA 子控件** ✓），
+     * 这是 Win32 侧做不到的 ✓ —— 所以这里给一个**只在多命中时生效**的兜底，而不是去改核心匹配规则
+     * （登录等待链路仍然严格"唯一命中"，不受影响 ✓）。
+     *
+     * <p>判据（依次）：① 可见窗口优先；② 面积最大；③ 枚举顺序第一个。**每次都会打日志**，
+     * 方便随时发现"其实是靠兜底选出来的"。
+     */
+    private static int tieBreakMainWindow(String sw, com.jfmultichat.swcore.SwInfoFuncCore info, int pid) {
+        List<Integer> all = com.jfmultichat.swcore.SwNativeOps.getHwndsByPid(pid);
+        List<Integer> candidates = new ArrayList<>();
+        for (Map<String, Object> rule : info.getWndClassMatchingDicts(sw, "main")) {
+            List<Integer> matched = com.jfmultichat.swcore.SwNativeOps.filterHwndsByMatchingDict(all, rule);
+            if (matched.size() == 1) return matched.get(0);        // 某条规则给了唯一解 → 直接用
+            if (matched.size() > 1) candidates = matched;
+        }
+        if (candidates.isEmpty()) return 0;
+        int best = 0;
+        long bestArea = -1;
+        boolean bestVisible = false;
+        for (int h : candidates) {
+            boolean visible = com.jfmultichat.swcore.SwNativeOps.isWindowVisible(h);
+            Map<String, Object> d = com.jfmultichat.swcore.SwNativeOps.getHwndDetails(h);
+            long w = ((Number) d.getOrDefault("width", 0)).longValue();
+            long hh = ((Number) d.getOrDefault("height", 0)).longValue();
+            long area = Math.max(0, w) * Math.max(0, hh);
+            boolean better = best == 0
+                    || (visible && !bestVisible)
+                    || (visible == bestVisible && area > bestArea);
+            if (better) {
+                best = h;
+                bestArea = area;
+                bestVisible = visible;
+            }
+        }
+        LOG.info("[窗口] pid={} 有 {} 个候选主窗、无唯一命中 → **兜底选中** 0x{}（可见={}, 面积={}）；候选={}",
+                pid, candidates.size(), Integer.toHexString(best), bestVisible, bestArea,
+                candidates.stream().map(x -> "0x" + Integer.toHexString(x)).toList());
+        return best;
+    }
+
+    /** 失败诊断（用户 2026-10-13 要求"自己看日志排查"）：把该 pid 的候选窗口类名打出来 */
+    private static void logNoMainWindow(String acc, int pid, List<Integer> matched) {
+        StringBuilder sb = new StringBuilder();
+        for (int h : com.jfmultichat.swcore.SwNativeOps.getHwndsByPid(pid)) {
+            Map<String, Object> d = com.jfmultichat.swcore.SwNativeOps.getHwndDetails(h);
+            sb.append(" 0x").append(Integer.toHexString(h))
+              .append('[').append(d.getOrDefault("class", "")).append(']');
+        }
+        LOG.info("[窗口] {} (pid={}) 没找到主窗：规则唯一命中数={}；该进程候选窗口：{}",
+                acc, pid, matched == null ? 0 : matched.size(), sb);
+    }
+
+    /**
+     * 获取账号主窗口句柄
+     * 对应 Python: get_main_hwnd_of_accounts (L1524-L1547)
+     *
+     * <p>⚠️ 2026-10-13 重写：原实现是**空壳**（只读配置里的 pid + 一句 `TODO: 需要 JNA 枚举窗口`）✗，
+     * 现在改为按时内存里的 pid 即时取窗口（见 {@link #getLiveAccountWindows}）。
+     */
+    public static Map<String, Integer> getMainHwndOfAccounts(String sw, List<String> accList) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        getLiveAccountWindows(sw, accList).forEach((acc, pair) -> result.put(acc, pair[1]));
+        return result;
+    }
+
+    /**
+     * **即时刷新某平台的"账号 → 主窗口"映射**（页面刷新时调用；用户 2026-10-13："那是页面刷新的事情"）.
+     *
+     * <p>两步：
+     * <ol>
+     *   <li>走**既有刷新机制** {@link #getSwAccountsLoginStatus}：扫进程内存映射得到 pid ↔ 账号，
+     *       pid 写进内存表（{@link #updateAccLoginData} 干的活 ✓）—— 原生账号在这里就有了绑定 ✓</li>
+     *   <li>再按 pid 取该进程**唯一**的主窗口 → 写 hwnd；**这一轮没取到的清空**（窗口关了立刻失效 ✓）；
+     *       绑定**发生变化**时顺手把窗口标题改成"平台名 - 账号名"（照旧版 `_record_hwnd_and_set_title`，便于任务栏辨认 ✓）</li>
+     * </ol>
+     *
+     * @return 本次扫描到的 {accId → [pid, hwnd]}
+     */
+    public static Map<String, int[]> refreshLiveWindows(String sw) {
+        return refreshLiveWindows(sw, null);
+    }
+
+    /**
+     * 同上，额外接收**前端表格里的显示名**（{@code accId → 名称}）.
+     *
+     * <p>用户 2026-10-13 定：窗口标题要用**表格名称列的那个名字** —— 直接沿用前端的取法，
+     * 不在 Java 侧再维护一条名字链（否则两套规则迟早不一致 ✗）。前端没给（如首次加载时表格还没数据）
+     * 就退回 Java 自己的链（{@link #getAccDisplayName}）。
+     */
+    public static Map<String, int[]> refreshLiveWindows(String sw, Map<String, String> displayNames) {
+        // ① pid ↔ 账号（含原生与共存）——失败不致命：pid 没刷出来就只是这轮没有 hwnd
+        List<String> allAccs;
+        try {
+            allAccs = newInfoCore().getSwAllAccountsExisted(sw, null);
+            getSwAccountsLoginStatus(sw);          // 内部会 setPid(...)，并把历史遗留的配置 pid 清掉
+        } catch (Throwable t) {
+            LOG.warn("[窗口] 刷新登录状态失败: sw={}, err={}", sw, t.getMessage());
+            return new LinkedHashMap<>();
+        }
+
+        // ② pid → 主窗口（唯一命中优先；多命中走兜底）
+        Map<String, int[]> live = getLiveAccountWindows(sw, allAccs);
+        for (String acc : allAccs) {
+            int[] pair = live.get(acc);
+            if (pair == null) {
+                if (AccRuntimeStore.getHwnd(sw, acc) != null) {
+                    AccRuntimeStore.setHwnd(sw, acc, null);        // 窗口没了 → 立刻解绑
+                    LOG.info("[窗口] {} 的窗口已消失，解绑", acc);
+                }
+                continue;
+            }
+            long hwnd = pair[1];
+            AccRuntimeStore.setHwnd(sw, acc, hwnd);
+            // 标题：**每次都比对当前真实标题**，不同才写（幂等 ✓）
+            //  —— 这样"名字后来才拿到"（前端首次加载晚于本方法）也能在下一轮自动补上 ✓
+            String name = (displayNames != null && displayNames.get(acc) != null
+                    && !displayNames.get(acc).isBlank())
+                    ? displayNames.get(acc) : getAccDisplayName(sw, acc);
+            applyWindowTitle(sw, (int) hwnd, name);
+        }
+        LOG.info("[窗口] 即时刷新: sw={}, 账号 {} 个, 命中主窗口 {} 个（原生+共存）", sw, allAccs.size(), live.size());
+        return live;
+    }
+
+    /**
+     * 把窗口标题写成"平台名 - 账号名"（旧版 `_record_hwnd_and_set_title` 同款；失败只记 WARN）.
+     * <p>幂等：先读**当前真实标题**，一样就不写 —— 所以本方法可以每轮刷新无脑调用 ✓。
+     */
+    private static void applyWindowTitle(String sw, int hwnd, String accName) {
+        try {
+            String swDisplay = com.jfmultichat.swcore.SwAccountOps.getSwOriginDisplayName(sw,
+                    com.jfmultichat.config.SwConfigProvider.newAccessor());
+            String want = swDisplay + " - " + accName;
+            String cur = com.jfmultichat.swcore.SwNativeOps.getWindowTitle(hwnd);
+            if (want.equals(cur)) return;
+            boolean ok = com.jfmultichat.swcore.SwNativeOps.setWindowTitle(hwnd, want);
+            LOG.info("[窗口] 改标题 hwnd={}: 「{}」→「{}」: {}", hwnd, cur, want, ok);
+        } catch (Throwable t) {
+            LOG.warn("[窗口] 改窗口标题失败: hwnd={}, err={}", hwnd, t.getMessage());
+        }
     }
 
     /**

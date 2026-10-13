@@ -1008,6 +1008,8 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
                 }
             } else if (k.equalsIgnoreCase("Name") || k.equalsIgnoreCase("Title")) {
                 matched = matchAnyWildcard(title, entry.getValue());
+            } else if (k.equalsIgnoreCase("FirstChild") || k.equalsIgnoreCase("LastChild")) {
+                matched = matchChildRule(hwnd, k.equalsIgnoreCase("FirstChild"), entry.getValue(), useUia);
             } else if (k.equalsIgnoreCase("ProcessId") || k.equalsIgnoreCase("PID")) {
                 matched = entry.getValue() instanceof Number && ((Number) entry.getValue()).intValue() == pid;
             } else if (k.equals("FinalSelect")) {
@@ -1021,6 +1023,45 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
             if (!matched) return false;
         }
         return true;
+    }
+
+    /**
+     * 规则键 {@code FirstChild} / {@code LastChild}：**子窗口子规则**（2026-10-13 补，原先 Java 完全没实现 ✗）.
+     *
+     * <p>旧版语义（{@code hwnd_utils.py:309-325}）：取第一个/最后一个**子控件**，把子规则**递归**跑在它的 hwnd 上，
+     * 要求"**恰好 1 个命中**"才算（与顶层同一判据）。
+     *
+     * <p>例（QQNT 主窗，远程配置 {@code wnd_class.main.matching.9.9}）：
+     * <pre>{@code {"ClassNameWildcards":["Chrome_WidgetWin_1"], "FirstChild":{"!ClassNameWildcards":[""]}}}</pre>
+     * QQNT 的**登录窗与主窗类名相同**（都是 Electron 的 {@code Chrome_WidgetWin_1}）✗，
+     * 只有主窗"**第一个子窗口的类名非空**" ✓ —— 没有这个键，主窗永远匹配不上（实测症状：账号查得到、窗口 0 个 ✓）。
+     *
+     * <p>与旧版的差别：旧版走 **UIA 控件树**（{@code Control.GetFirstChildControl}）；这里用 **Win32 子窗口**
+     * （{@code GW_CHILD} / {@code GW_HWNDLAST}）—— 同语义但不必付 COM 代价 ✓。
+     * 若将来有平台"子窗口类名只有 UIA 报得出来"，再升级成 UIA 版（届时用 {@code UiaProbe} 校正 vtable 下标）。
+     */
+    private static boolean matchChildRule(int hwnd, boolean first, Object subRule, boolean useUia) {
+        if (!(subRule instanceof Map)) return false;
+        int child = firstOrLastChildHwnd(hwnd, first);
+        if (child == 0) return false;
+        return matchesRules(child, castMap(subRule), useUia);
+    }
+
+    /** 第一个/最后一个**子窗口**句柄（Win32：GW_CHILD + GW_HWNDLAST）；没有子窗口返回 0 */
+    private static int firstOrLastChildHwnd(int hwnd, boolean first) {
+        try {
+            com.sun.jna.platform.win32.User32 u32 = com.sun.jna.platform.win32.User32.INSTANCE;
+            final int GW_CHILD = 5, GW_HWNDLAST = 1;
+            com.sun.jna.platform.win32.WinDef.HWND child =
+                    u32.GetWindow(intToHwnd(hwnd), new com.sun.jna.platform.win32.WinDef.DWORD(GW_CHILD));
+            if (child == null) return 0;
+            if (!first) {
+                child = u32.GetWindow(child, new com.sun.jna.platform.win32.WinDef.DWORD(GW_HWNDLAST));
+            }
+            return child == null ? 0 : hwndToInt(child);
+        } catch (Throwable t) {
+            return 0;
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -1123,6 +1164,105 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
         final int SWP_NOSIZE = 0x0001, SWP_SHOWWINDOW = 0x0040;
         return com.sun.jna.platform.win32.User32.INSTANCE.SetWindowPos(
                 intToHwnd(hwnd), intToHwnd(0) /* HWND_TOP */, x, y, 0, 0, SWP_NOSIZE | SWP_SHOWWINDOW);
+    }
+
+    /**
+     * 取窗口**当前标题**（用于"标题没变就不重复设置"——JNA 的 User32 只暴露了 GetWindowText ✓）
+     */
+    public static String getWindowTitle(int hwnd) {
+        if (hwnd == 0) return "";
+        try {
+            char[] buf = new char[512];
+            int n = com.sun.jna.platform.win32.User32.INSTANCE.GetWindowText(intToHwnd(hwnd), buf, buf.length);
+            return n <= 0 ? "" : new String(buf, 0, n);
+        } catch (Throwable t) {
+            return "";
+        }
+    }
+
+    /**
+     * **设置窗口标题**（旧版 `_record_hwnd_and_set_title` 会把它改成"平台名 - 账号名"，便于任务栏辨认）.
+     * 对应 Python: {@code hwnd_utils.set_window_title}
+     */
+    public static boolean setWindowTitle(int hwnd, String title) {
+        if (hwnd == 0 || title == null) return false;
+        try {
+            return User32Ext.INSTANCE.SetWindowTextW(intToHwnd(hwnd), new com.sun.jna.WString(title));
+        } catch (Throwable t) {
+            LOG.warn("[窗口] 设置标题失败 hwnd={}: {}", hwnd, t.getMessage());
+            return false;
+        }
+    }
+
+    // ==================== 窗口激活 / 可见性（切换窗口用） ====================
+
+    /** 句柄当前是否还是个有效窗口（窗口被关掉后 hwnd 立刻失效 → 前端要跟着清空） */
+    public static boolean isWindow(int hwnd) {
+        if (hwnd == 0) return false;
+        try {
+            return com.sun.jna.platform.win32.User32.INSTANCE.IsWindow(intToHwnd(hwnd));
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** 窗口是否可见（微信被"隐藏到后台"时不可见 → 需要额外点一下把它叫醒，见 restoreWindowAndActivate） */
+    public static boolean isWindowVisible(int hwnd) {
+        if (hwnd == 0) return false;
+        try {
+            return com.sun.jna.platform.win32.User32.INSTANCE.IsWindowVisible(intToHwnd(hwnd));
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /**
+     * **恢复并置前窗口**（点 HWND 打开窗口的核心动作）.
+     * 对应 Python: {@code hwnd_utils.restore_window} = {@code ShowWindow(hwnd, SW_SHOWNORMAL)} + {@code SetForegroundWindow(hwnd)}.
+     *
+     * <p>补一步 {@code BringWindowToTop}：Windows 对 {@code SetForegroundWindow} 有前台权限限制，
+     * 先抬到顶层能把"点了没反应"的概率压低（失败也不影响，返回 false 让上层如实报告）。
+     */
+    public static boolean restoreWindow(int hwnd) {
+        if (hwnd == 0) return false;
+        com.sun.jna.platform.win32.User32 u32 = com.sun.jna.platform.win32.User32.INSTANCE;
+        try {
+            final int SW_SHOWNORMAL = 1;
+            u32.ShowWindow(intToHwnd(hwnd), SW_SHOWNORMAL);      // 最小化的窗口恢复出来
+            u32.BringWindowToTop(intToHwnd(hwnd));
+            boolean ok = u32.SetForegroundWindow(intToHwnd(hwnd));
+            LOG.debug("[窗口] restoreWindow hwnd={}, SetForegroundWindow={}", hwnd, ok);
+            return ok;
+        } catch (Throwable t) {
+            LOG.warn("[窗口] restoreWindow 失败 hwnd={}: {}", hwnd, t.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * **恢复并激活窗口**（照旧版 {@code AccOperatorFuncCore.switch_to_sw_account_wnd}）.
+     *
+     * <p>微信特例：窗口**本来就不可见**（被藏到后台/托盘）时，单靠 ShowWindow 常常叫不出来 ——
+     * 旧版的做法是"恢复窗口 → 等 0.2 秒 → 在窗口 (8,8) 处双击两下"把它激活；
+     * 其它平台只要恢复置前即可。
+     */
+    public static boolean restoreWindowAndActivate(String sw, int hwnd) {
+        if (hwnd == 0) return false;
+        boolean visibleBefore = isWindowVisible(hwnd);
+        boolean ok = restoreWindow(hwnd);
+        boolean wechat = "WeChat".equals(sw) || "Weixin".equals(sw);
+        if (wechat && !visibleBefore) {
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return ok;
+            }
+            clickInWindow(hwnd, 8, 8);
+            clickInWindow(hwnd, 8, 8);
+            LOG.info("[窗口] 微信后台窗口 → 已双击标题区激活: hwnd={}", hwnd);
+        }
+        return ok;
     }
 
     /**
@@ -1322,6 +1462,12 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
         WinNT.HANDLE GetShellWindow();
 
         int GetWindowThreadProcessId(WinNT.HANDLE hWnd, IntByReference pid);
+
+        /**
+         * 改窗口标题（JNA 的 `User32` 只暴露了 GetWindowText ✗，没有 SetWindowText）。
+         * 用 Unicode 版；跨进程 WM_SETTEXT 由系统负责编组，传我们自己的字符串是安全的。
+         */
+        boolean SetWindowTextW(com.sun.jna.platform.win32.WinDef.HWND hWnd, com.sun.jna.WString lpString);
     }
 
     /** advapi32：拿 explorer 的令牌 → 复制一份 → 用它创建进程 */

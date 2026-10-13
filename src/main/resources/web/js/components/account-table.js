@@ -706,6 +706,15 @@ JFC.AccountTable = (function() {
                 ' title="' + escapeAttr(noCfg ? '该账号无登录配置（本机未用该账号登录过）' : '登录配置时间：' + val) + '">' +
                 (noCfg ? scriptSplitHtml('无配置') : scriptSplitHtml(String(val))) + '</td>';
         }
+        // HWND 列（用户 2026-10-13）：**有值才可点** —— 手型光标 + 点击把那个窗口恢复并置前；
+        // 空值（原生账号 / 副本程序没在运行）保持普通文本，不给手型（免"点了没反应"的假象）
+        if (key === 'hwnd') {
+            var hasHwnd = (val !== undefined && val !== null && String(val) !== '');
+            return '<td data-col="hwnd" class="manage-text-cell manage-hwnd-cell' +
+                (hasHwnd ? ' has-hwnd' : '') + '"' +
+                ' title="' + escapeAttr(hasHwnd ? '点击打开并置于前台（HWND ' + val + '）' : '没有可切换的窗口') + '">' +
+                escapeHtml(val) + '</td>';
+        }
         var textClass = 'manage-text-cell' + (col.cellClass ? ' ' + col.cellClass : '');
         // 程序表的名称列：与账号表名称列一致，按"中文段 / 非中文段"分段给字体
         //（WebKit 的 font-family 回退不可靠，只有显式分段才能做到"中文雅黑 + 英文等宽"）
@@ -1142,6 +1151,31 @@ JFC.AccountTable = (function() {
             self.showAvatarDialog(tr.getAttribute('data-acc-id'));
         });
 
+        // HWND 单元格点击：**打开那个账号的窗口**（恢复 + 置前；只有带 has-hwnd 的行才响应）
+        this.tbody.addEventListener('click', function(e) {
+            var cell = e.target.closest('.manage-hwnd-cell.has-hwnd');
+            if (!cell) return;
+            e.stopPropagation();
+            var tr = cell.closest('tr[data-acc-id]');
+            if (!tr) return;
+            var swId = self.getSwId();
+            var accId = tr.getAttribute('data-acc-id');
+            if (!swId || !accId || !JFC.bridge || !JFC.bridge.switchToAccWindow) return;
+            var res = null;
+            try {
+                res = JFC.bridge.switchToAccWindow(swId, accId);
+            } catch (err) {
+                res = null;
+            }
+            // 切不过去（窗口已关等）：提示一句 + 让页面重新拉一次运行时数据（该行 HWND 会立刻变空）
+            if (!res || !res.ok) {
+                JFC.toastSuccess('该行没有可切换的窗口（可能已关闭）', 1500);
+                if (JFC.pages && JFC.pages.main && JFC.pages.main.refreshAccRuntime) {
+                    JFC.pages.main.refreshAccRuntime(swId);
+                }
+            }
+        });
+
         // 行内悬浮操作按钮（容器委托）：名称单元格编辑结束会就地重建按钮，
         // 逐行绑定的话重建后的按钮就没有监听了 —— 所以统一委托到 tbody
         this.tbody.addEventListener('click', function(e) {
@@ -1490,6 +1524,7 @@ JFC.AccountTable = (function() {
     // ---- 事件驱动：Java 推送账号数据变更，定向更新单行/格 ----
     AccountTable.prototype.onAccountChanged = function(p) {
         if (!p || !p.accountId) return;
+        var self = this;                       // ⚠️ 必须有：下面通用字段分支里要用 colByKey/_cellHtml（曾漏写 → self.colByKey is not a function ✗）
         var row = this.tbody.querySelector('tr[data-acc-id="' + p.accountId + '"]');
         if (!row) return;
         var ch = p.changed || {};
@@ -1525,8 +1560,21 @@ JFC.AccountTable = (function() {
                 acc[key] = ch[key] === null || ch[key] === undefined ? '' : ch[key];
                 var cell = row.querySelector('td[data-col="' + key + '"]');
                 if (cell) {
-                    cell.textContent = acc[key];
-                    cell.title = acc[key];
+                    // ⚠️ 必须用**与整表渲染同一份** `_cellHtml` 重建整格，不能只改 textContent ✗ ——
+                    // 只改文字的话，单元格的 class/title 不会跟着变：例如 HWND 由空变有值时，
+                    // `has-hwnd`（手型光标 + 虚线下划线）要等下一次整表重绘才出现（用户 2026-10-13 实测指出 ✓）。
+                    // 事件本身是委托到 tbody 的 ✓，所以重建后自动可用 ✓。
+                    var col = self.colByKey(key);
+                    if (col) {
+                        cell.outerHTML = self._cellHtml(acc, col, {
+                            id: acc.id,
+                            displayName: acc.display_name || acc.nickname || acc.id,
+                            avatarUrl: acc.avatar_data || acc.avatar_url,
+                            hidden: !!acc.hidden,
+                            isSelected: self.selectedIds.has(acc.id),
+                            invalid: !!acc.invalid
+                        });
+                    }
                 }
             }
         });

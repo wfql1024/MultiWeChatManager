@@ -249,6 +249,18 @@
     border-radius: 2px;
 }
 
+/* HWND 列：**有值时**可点（手型光标 + 悬停主题色），点击把该账号窗口恢复并置前（用户 2026-10-13） */
+.manage-hwnd-cell.has-hwnd {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+}
+
+.manage-hwnd-cell.has-hwnd:hover {
+    color: var(--color-primary);
+}
+
 /* ========================================
    About Page
    ======================================== */

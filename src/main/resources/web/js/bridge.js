@@ -172,6 +172,16 @@ JFC.bridge = (function() {
         },
         // 运行时数据（PID/HWND）：纯内存，每次进入平台/刷新时重新取（不落配置文件）
         getAccRuntimeMap: function(swId) { return callJsonWithArgs('getAccRuntimeMap', swId); },
+        // **即时刷新**账号主窗口（HWND）：异步（Java 侧扫完推回，避免卡 UI 线程）；
+        // names = {accId: 表格里的显示名}（Java 用它改窗口标题 ✓ 不在 Java 侧再维护一条名字链）
+        // 回调 fn(type, data) 的 data = {success, swId, accounts:{accId:{pid,hwnd}}}
+        refreshAccWindowsAsync: function(swId, names, fn) {
+            callWithArgs('refreshAccWindowsAsync', swId, JSON.stringify(names || {}), String(registerAsync(fn)));
+        },
+        // 点 HWND 打开窗口（恢复 + 置前；返回 {ok, reason?}）
+        switchToAccWindow: function(swId, accId) {
+            return callJsonWithArgs('switchToAccWindow', swId, String(accId == null ? '' : accId));
+        },
         // ===== 任务中心（右上角）：长耗时流程的可见性 + 取消 =====
         // 返回 JSON 数组字符串（任务列表）；由 task-center.js 解析渲染
         getTaskList: function() { return call('getTaskList'); },

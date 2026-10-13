@@ -2066,6 +2066,73 @@ public class JsBridge {
     }
 
     /**
+     * JS 调用：**即时刷新**某平台的账号主窗口（HWND）—— **异步**，扫完推回前端.
+     *
+     * <p>⚠️ 必须异步：扫描要枚举进程 + 按规则匹配窗口（必要时还会走 UIA 兜底），
+     * 同步桥调用是跑在 **JavaFX UI 线程**上的 ✗ —— 一旦 UIA 卡住界面就冻住 ✗。
+     * 所以这里丢到后台线程，完成后按项目约定 `_handleAsync('accWindows', cbId, json)` 推回 ✓。
+     *
+     * <p>为什么**不**登记成任务中心的任务：它很短、且每次进平台/刷新都会跑 ——
+     * 进任务中心只会刷屏噪声 ✗（任务中心留给用户主动发起的耗时流程）。
+     *
+     * <p>只对**共存账号**能算出值（账号 id 本身就是程序目录下的副本 exe 名 → 按 exe 名找进程 → 取唯一主窗）；
+     * 原生账号的窗口无法确定属于哪个号 → 保持空值（前端不给手型光标）。
+     */
+    public void refreshAccWindowsAsync(String swId, String namesJson, String cbId) {
+        THREAD_POOL.submit(() -> {
+            String json;
+            try {
+                // 前端把**表格里的显示名**一起传过来（{accId: 名称}）→ 窗口标题就用它改 ✓
+                // （用户 2026-10-13：标题要用表格名称列的那个名字，别在 Java 侧再维护一条链）
+                Map<String, String> names = new java.util.LinkedHashMap<>();
+                try {
+                    JsonNode arr = MAPPER.readTree(
+                            namesJson == null || namesJson.isBlank() ? "{}" : namesJson);
+                    if (arr != null && arr.isObject()) {
+                        arr.fields().forEachRemaining(e -> names.put(e.getKey(),
+                                e.getValue() == null || e.getValue().isNull() ? "" : e.getValue().asText("")));
+                    }
+                } catch (Exception e) {
+                    LOG.warn("[窗口] 解析显示名失败（不影响 hwnd 识别）: {}", e.getMessage());
+                }
+                com.jfmultichat.acccore.AccInfoFuncCore.refreshLiveWindows(swId, names);
+                json = getAccRuntimeMap(swId);
+            } catch (Exception e) {
+                LOG.warn("[窗口] 即时刷新失败: sw={}, err={}", swId, e.getMessage());
+                ObjectNode err = MAPPER.createObjectNode();
+                err.put("success", false);
+                err.put("swId", swId);
+                json = err.toString();
+            }
+            try {
+                pushToJs("JFC.bridge._handleAsync('accWindows'," + cbId
+                        + "," + MAPPER.writeValueAsString(json) + ")");
+            } catch (Exception e) {
+                LOG.error("推送窗口映射失败", e);
+            }
+        });
+    }
+
+    /**
+     * JS 调用：**点 HWND 打开该账号的窗口**（恢复 + 置前；微信后台窗口走双击特例）.
+     *
+     * @return JSON: {ok: true} 或 {ok: false, reason: "..."}（无绑定 / 窗口已失效 / 激活失败）
+     */
+    public String switchToAccWindow(String swId, String accId) {
+        ObjectNode r = MAPPER.createObjectNode();
+        try {
+            boolean ok = com.jfmultichat.acccore.AccOperatorCore.switchToSwAccountWnd(swId, accId);
+            r.put("ok", ok);
+            if (!ok) r.put("reason", "该行当前没有可用的窗口（未运行 / 已关闭）");
+        } catch (Exception e) {
+            LOG.warn("[窗口] 切换失败: sw={}, acc={}, err={}", swId, accId, e.getMessage());
+            r.put("ok", false);
+            r.put("reason", String.valueOf(e.getMessage()));
+        }
+        return r.toString();
+    }
+
+    /**
      * JS 调用：弹出文件选择器，让用户手动指定账号头像.
      *
      * <p>选中的图片会被转成 JPEG 写入 `{userData}/{sw}/{acc}/{acc}.jpg`（与头像读取路径一致），

@@ -113,23 +113,51 @@ JFC.pages.main = (function() {
     }
 
     /**
-     * 从 Java 侧**重新拉取**某平台的运行时数据（PID/HWND）并写入内存 Map.
+     * 从 Java 侧**重新拉取**某平台的运行时数据（PID/HWND）.
      *
-     * <p>为什么每次重取：pid/hwnd 讲究实时性，写文件读出来就是过时的（用户 2026-10-06 定）。
-     * 进入平台、手动刷新时各调一次；Java 侧推送（`onAccountChanged` 带 pid/main_hwnd）也会就地更新。
+     * <p>为什么每次重取：pid/hwnd 讲究实时性，写文件读出来就是过时的（用户 2026-10-06 定）；
+     * 用户 2026-10-13 进一步定："**hwnd 一律即时获取**"→ Java 侧每次真的**扫一遍进程与窗口**，
+     * 结果只进内存（`AccRuntimeStore`），**不落任何文件** ✓。
+     *
+     * <p>**异步**（`refreshAccWindowsAsync`）：扫描含原生调用、必要时还有 UIA 兜底，
+     * 同步跑会占住 JavaFX UI 线程 ✗ → 走后台线程，扫完推回（回调里用 `setAccRuntime` 写内存 + 定向刷新 ✓）。
+     *
+     * <p>只对**共存账号**能算出值（账号 id 本身就是程序目录下的副本 exe 名 → 按 exe 名找进程 → 取唯一主窗）；
+     * 原生账号的窗口无法确定属于哪个号（可以用 A 的配置唤起登录窗再切 B 登录）→ 保持空值。
      */
     function fetchAccRuntime(swId) {
         if (!swId || !window.JFC || !JFC.bridge) return;
-        var res = null;
-        try { res = JFC.bridge.getAccRuntimeMap(swId); } catch (e) { return; }
-        if (!res || !res.accounts) return;
-        if (!accRuntimeMap[swId]) accRuntimeMap[swId] = {};
+        // 表格里的显示名一起带给 Java（窗口标题就用它 → 与表格**同名** ✓ 不在 Java 侧再维护一条名字链）
+        var names = {};
+        Object.keys(accountTables).forEach(function(k) {
+            var t = accountTables[k];
+            if (!t || !t.accountData) return;
+            t.accountData.forEach(function(a) {
+                if (a && a.id && a.display_name) names[a.id] = a.display_name;
+            });
+        });
+        try {
+            JFC.bridge.refreshAccWindowsAsync(swId, names, function(type, data) {
+                applyAccRuntimeMap(swId, data);
+            });
+        } catch (e) {
+            // 桥不可用（页面早期）→ 忽略，等下一次刷新
+        }
+    }
+
+    /** 把 Java 推回的运行时映射写进内存并**定向刷新**（唯一写入点 = setAccRuntime ✓） */
+    function applyAccRuntimeMap(swId, res) {
+        if (!swId || !res || !res.accounts) return;
         Object.keys(res.accounts).forEach(function(accId) {
             var item = res.accounts[accId] || {};
-            accRuntimeMap[swId][accId] = {
-                pid: (item.pid === null || item.pid === undefined) ? '' : String(item.pid),
-                hwnd: (item.hwnd === null || item.hwnd === undefined) ? '' : String(item.hwnd)
-            };
+            // 逐条 try/catch：一个账号写失败不该让**同一批**里后面的账号全丢 ✗
+            // （曾因 onAccountChanged 里一个 TypeError 把整批写中断 ✗，症状就是"要再刷新一次才有" ✓）
+            try {
+                // hwnd 为 null → setAccRuntime 会归一成 '' → 单元格立刻失去手型光标 ✓
+                setAccRuntime(swId, accId, { pid: item.pid, hwnd: item.hwnd });
+            } catch (e) {
+                console.log('[窗口] 写入运行时数据失败: ' + accId + ' ' + e);
+            }
         });
     }
     var sectionScrollbar = null;   // 账号区域纵向 overlay 滚动条（attachScrollbar 返回）
@@ -1082,8 +1110,7 @@ JFC.pages.main = (function() {
         // 通知 Java：进入平台页 → 自动触发数据维护（登录态/PID/互斥体等，后台执行）
         JFC.bridge.notifyPlatformEntered(swId);
         currentSwId = swId;
-        // 运行时数据（PID/HWND）**每次进平台重新取**（内存 Map，不落文件）
-        fetchAccRuntime(swId);
+        // 运行时数据（PID/HWND）的拉取挪到 `loadAccountData` 末尾（表格数据就位之后 ✓ 见那里的注释）
         // 未设置完备的平台：设置区会被强制展开 → 因此也**强制进入管理态**（用户 2026-10-06 定）。
         // 注意：这个强制会写进"会话内的模式"，所以之后切到正常平台仍保持管理模式；
         // 而**正常的平台切换本身不改变模式**（模式是会话级单一变量，不按平台记忆、也不写配置）。
@@ -2041,6 +2068,12 @@ JFC.pages.main = (function() {
             sectionScrollbar.update();
             setTimeout(function() { if (sectionScrollbar) sectionScrollbar.update(); }, 60);
         }
+
+        // 运行时数据（PID/HWND）**在表格数据就位之后**再拉 ✓（用户 2026-10-13 实测：
+        // 之前放在"进平台"那一刻 ✗ —— 异步结果回来时行还不存在 → onAccountChanged 找不到行 → 丢失 ✗，
+        // 于是"第一次刷新没有、第二次刷新才有" ✓）。放这里还有一个好处：**表格里的名称已经有了** ✓，
+        // 可以一并传给 Java 去改窗口标题（用户要求：标题用表格名称列的那个名字 ✓）。
+        fetchAccRuntime(swId);
     }
 
     /** 程序图标（原生程序表头像列）：与左栏同源，走 Java 侧的 PNG 缓存（{userData}/{sw}/{sw}.png） */
@@ -2244,6 +2277,8 @@ JFC.pages.main = (function() {
              loginAccounts: loginAccounts,
         loginCoexistAccounts: loginCoexistAccounts,
              // 运行时数据（PID/HWND）唯一写入点 + 读取器：登录流程接入后由它写入，界面自动定向刷新
-             setAccRuntime: setAccRuntime, getAccRuntime: getAccRuntime, clearAccRuntime: clearAccRuntime };
+             setAccRuntime: setAccRuntime, getAccRuntime: getAccRuntime, clearAccRuntime: clearAccRuntime,
+        // 供表组件在"点了 HWND 却发现窗口已关"时立刻重拉一次（该行 HWND 会马上变空）
+        refreshAccRuntime: fetchAccRuntime };
 })();
 
