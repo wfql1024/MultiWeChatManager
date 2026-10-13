@@ -222,6 +222,12 @@ JFC.taskCenter = (function() {
         openFlag = true;
         panel.setAttribute('data-open', '1');
         refresh();
+        // 有任务在进行中 → **优先定位到"进行中"栏**（用户 2026-10-13）：
+        // 打开面板的动机通常就是"看看在跑什么"，此时停在别的栏等于白开
+        if (counts().running > 0) {
+            tab = 'running';
+            paint();
+        }
         if (!ticker) ticker = setInterval(tick, 1000);
     }
 

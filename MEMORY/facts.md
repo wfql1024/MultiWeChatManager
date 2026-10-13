@@ -115,6 +115,8 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
 #### 2.2.5 多开与登录
 
 - **多开**（程序表"登录" / 双击最左栏图标）：`JsBridge.launchPlatformProgramAsync(swId, count, cbId)` —— 后台线程里 **先查杀一次 → 再同时唤起 N 个**（避免"先开一个再杀一个"的竞态）；启动成功 toast、失败弹窗
+  - **toast 不提权限字样**（用户 2026-10-13）：只说"正在启动 N 个实例 / 已启动 N 个实例" ——
+    降权启动是本项目**正常流程**，不给用户额外信息（前端三处已清：`main.js` 启动中/结果 toast、`account-table.js` 同步兜底）
   - **单个实例启动**：`SwOperatorCore.launchOneInstance(sw, exe, accessor, ops[, skipKill])` —— **默认内化查杀**；`skipKill=true` 供"先杀一次、再连开 N 个"
   - **降权启动**：`SwNativeOps.createProcessWithoutAdmin` —— 非管理员直接 `CreateProcess`；管理员借 explorer 令牌（`CreateProcessWithTokenW`）；失败兜底 `explorer.exe` 代启（返回 `-1`）
 - **原生账号登录**：`AccOperatorCore.loginOrigin`（入口：账号行"登录"/批量登录 → `main.js.loginAccounts` → `JsBridge.loginAccountsAsync`）
@@ -124,7 +126,14 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
   4. 全部打开并摆位后**才统一点击**"登录"（后台 `PostMessage`；比例取远程 `auto_click.login_btn.location`，默认 0.5/0.75）
   5. 等所有登录窗关闭（**20 秒**上限，收尾观察用；可取消）。**任何单个账号失败都不中断整批**
   - 前端只做 **2 秒防连点**；整条流程**登记为任务**（kind `login`）→ 右上角任务中心可见/可取消、自动进统计（见 §2.6）
-  - **共存账号登录（待实现）**：共存账号 ID **本身就是 exe 名** → 直接按它启动即可（无需遍历 `ordinals`、无需问创建）
+- **共存账号登录**（已实现）：`AccOperatorCore.loginCoexist`（入口：共存账号表行"登录"/批量/快捷键 → `main.js.loginCoexistAccounts` → `JsBridge.loginCoexistAccountsAsync`）
+  - **与原生登录的唯一实质差异：不替换、也不读登录配置**（没有 `operateAccConfig`）——
+    共存账号 id **本身就是程序目录下的副本 exe 名**，直接 `openSwAndReturnHwnd(sw, accId, …)` 按它启动即可
+    （照旧版 `_open_acc_return_hwnd_and_pid` 的共存分支：`open_sw(sw, exe=acc)`，注释原文"共存账号无需替换配置文件"）
+  - 其余**完全复用**原生那套：预摆位、一出现就挪位、全部开完统一点击、等窗口关闭 20s、取消检查点、同一统计口径
+  - 任务 kind = **`login_coexist`**（统计页单列一张卡，口径与 `login` 相同）
+  - 前端分流开关：表选项 **`accType`**（`'origin'` / `'coexist'`，`main.js` 建表时给共存表传 `'coexist'`）→
+    `account-table._loginAccounts` 按它决定走 `loginAccounts` 还是 `loginCoexistAccounts`（批量/单行/快捷键三条路径共用）
 - **登录窗口尺寸**：`SwOperatorCore.getLoginSize`（格式 `宽*高`）；没有登录窗会**自动开一个**、量完 `WM_CLOSE` 关掉；设置区"获取"按钮 → `JsBridge.fetchLoginSize` → 存**本平台本地配置** `login_size`（**不是**远程配置）
 
 #### 2.2.6 互斥体查杀与窗口/句柄核心
@@ -180,6 +189,7 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
 
 - 流程上报两个**覆盖式**指标（`metricSet`，取消也保留）：
   - `login`：`开窗轮次`（开窗循环进行到第几个，成功/失败/超时/中途取消都算一轮）+ `开窗时长ms`（从开始到**最后一次成功开窗**）
+  - `login_coexist`：同 `login`（共存登录单列一张统计卡）
   - `multilaunch`：`开实例数`（实际发起启动次数）+ `多开时长ms`（到最后一次成功启动）
 - `TaskStats` 的 `DERIVED` 表声明 `kind → {时长键, 轮次键}`，据此给出：
   - **总平均** = Σ时长 ÷ Σ轮次；**单次三项** = 末次 / 最短 / 最长（每次运行的"时长÷轮次"）
@@ -193,6 +203,10 @@ Launcher.main                        ← 应用入口（设日志目录/编码 �
 - **任务中心面板**（`js/components/task-center.js`）：贴标题栏下沿的抽屉；三小栏 **进行中 / 已完成（含失败）/ 已取消**；行内显示状态标签 + 阶段（带动态后缀）+ 耗时 + 取消；底部「查看更多」→ `JFC.router.navigate('statistics')`
 - **「任务与统计」页**（`#page-statistics`，入口：最左栏底部**统计** + 面板「查看更多」）：统计卡（次数/成功·失败·取消/**总平均**/单次末次·最短·最长/阶段耗时/业务指标）+ 三小栏明细表
 - 面板与页面都**每秒拉取** `getTaskList()`，用**指纹（id\|状态\|阶段\|进度）比对**决定是否重画 → 阶段实时而不闪、不打断点击
+- **滚动条**：面板列表（`.tc-list`）与任务页明细（`.tasks-body`）都**复用项目既有设计** —— 同 `.settings-form`：
+  **默认隐藏、悬停才显示 4px 细条**（track 透明、thumb `rgba(255,255,255,0.12)`、圆角 2px）
+- **打开面板时的默认栏**：若有任务在**进行中** → 优先定位「进行中」（否则保留上次停留的栏）——
+  打开面板的动机通常就是"看现在在跑什么"
 
 #### 2.6.5 新流程接入三件套（照抄即可）
 

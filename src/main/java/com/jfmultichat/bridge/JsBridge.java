@@ -1748,6 +1748,66 @@ public class JsBridge {
     }
 
     /**
+     * **共存账号登录**（异步）.
+     *
+     * <p>与 {@link #loginAccountsAsync} 的唯一区别：共存账号**不替换、也不读登录配置** ——
+     * 共存程序的账号 id **本身就是程序目录下的副本 exe 名**，按它启动即可
+     * （见 {@code AccOperatorCore.loginCoexist} 与旧版 `_open_acc_return_hwnd_and_pid` 的共存分支）。
+     *
+     * <p>同样登记为任务（kind `login_coexist`）→ 右上角可见/可取消、自动进统计；
+     * 结果结构与原生登录一致，前端回调仍走 {@code _handleAsync('login', ...)}。
+     */
+    public void loginCoexistAccountsAsync(String swId, String accIdsJson, String cbId) {
+        List<String> accIds = new java.util.ArrayList<>();
+        try {
+            com.fasterxml.jackson.databind.JsonNode arr = MAPPER.readTree(
+                    accIdsJson == null || accIdsJson.isBlank() ? "[]" : accIdsJson);
+            if (arr.isArray()) arr.forEach(n -> accIds.add(n.asText()));
+        } catch (Exception e) {
+            LOG.warn("[共存登录] 解析账号列表失败: {}", e.getMessage());
+        }
+        final List<String> ids = accIds;
+        com.jfmultichat.core.task.TaskRegistry.get().submit(
+                "login_coexist", "登录 " + ids.size() + " 个共存账号", swId,
+                () -> {
+                    ObjectNode result = MAPPER.createObjectNode();
+                    try {
+                        List<String[]> rows = com.jfmultichat.acccore.AccOperatorCore.loginCoexist(swId, ids);
+                        com.fasterxml.jackson.databind.node.ArrayNode items = result.putArray("accounts");
+                        int ok = 0;
+                        for (String[] r : rows) {
+                            ObjectNode item = items.addObject();
+                            item.put("accId", r[0]);
+                            item.put("hwnd", r[1]);
+                            item.put("pid", r[2]);
+                            item.put("error", r[3] == null ? "" : r[3]);
+                            if (r[3] == null || r[3].isEmpty()) ok++;
+                        }
+                        result.put("success", ok > 0);
+                        result.put("count", ok);
+                        result.put("total", ids.size());
+                        if (ok < ids.size()) {
+                            result.put("error", "成功 " + ok + " / " + ids.size() + " 个共存账号");
+                        }
+                        LOG.info("[共存登录] 结束: sw={}, 成功 {}/{}", swId, ok, ids.size());
+                    } catch (com.jfmultichat.core.task.TaskCancelledException ce) {
+                        LOG.info("[共存登录] 任务被取消：已开的登录窗保留（可手动关闭），后续账号不再开");
+                        throw ce;
+                    } catch (Exception e) {
+                        LOG.error("loginCoexistAccountsAsync 失败: swId={}", swId, e);
+                        result.put("success", false);
+                        result.put("error", String.valueOf(e.getMessage()));
+                    }
+                    try {
+                        pushToJs("JFC.bridge._handleAsync('login'," + cbId
+                                + "," + MAPPER.writeValueAsString(result.toString()) + ")");
+                    } catch (Exception e) {
+                        LOG.error("推送共存登录结果失败", e);
+                    }
+                });
+    }
+
+    /**
      * JS 调用：**获取平台登录窗口尺寸**（格式 {@code 宽*高}，如 {@code 347*471}）.
      *
      * <p>对应旧版 `SwOperatorCore.get_login_size`：找登录窗口 → 量宽高。

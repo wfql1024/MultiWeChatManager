@@ -294,7 +294,10 @@ JFC.pages.main = (function() {
                 // 名称列的悬浮操作按钮（隐藏/重置/删除）是账号语义 → 程序表不显示
                 // （名称列本身仍与账号表统一：可编辑 / 1 级色 / 字号+1 / 加粗 / 中英分段）
                 // 行种类：'prog' = 原生程序行（管理态没有账号语义的行操作；登录态同样有"登录"）
-                rowKind: isProgram ? 'prog' : 'acc'
+                rowKind: isProgram ? 'prog' : 'acc',
+                // 账号种类：'coexist' = 共存账号（登录**不替换配置**、按 id 当 exe 名启动）；
+                // 其余按原生账号处理。共存登录走 JFC.pages.main.loginCoexistAccounts（见 account-table._loginAccounts）
+                accType: def.key === 'coexist_acc' ? 'coexist' : 'origin'
             });
         });
 
@@ -905,7 +908,8 @@ JFC.pages.main = (function() {
 
         launchInFlight = true;
         if (JFC.toastSuccess) {
-            JFC.toastSuccess('正在以普通用户权限启动 <b>' + n + '</b> 个实例…', 1500);
+            // 不提权限字样 —— 降权启动是本项目的**正常流程**，不必给用户额外信息（用户 2026-10-13）
+            JFC.toastSuccess('正在启动 <b>' + n + '</b> 个实例…', 1500);
         }
         try {
             JFC.bridge.launchPlatformProgramAsync(id, n, function(type, data) {
@@ -967,6 +971,48 @@ JFC.pages.main = (function() {
     /** 登录防连点截止时间戳（只挡 2 秒，不是长锁） */
     var loginDebounceUntil = 0;
 
+    /**
+     * **共存账号登录**（共存账号表 / 批量登录走这里）.
+     *
+     * <p>与 {@link loginAccounts} 的唯一区别：共存账号**不替换登录配置** ——
+     * 共存程序是程序目录下的一份副本 exe，账号 id **本身就是那个 exe 名**，按它启动即可
+     * （Java 侧 `AccOperatorCore.loginCoexist`，照旧版 `_open_acc_return_hwnd_and_pid` 的共存分支）。
+     * 其余完全一致：任务中心可见/可取消、统计同源、预摆位、开完统一点击、等窗口关闭。
+     */
+    function loginCoexistAccounts(swId, ids) {
+        var id = swId || currentSwId;
+        if (!id || !ids || !ids.length) return;
+        var now = Date.now();
+        if (now < loginDebounceUntil) {
+            JFC.toastSuccess('刚刚已经发起过登录，请稍候 2 秒…', 1200);
+            return;
+        }
+        loginDebounceUntil = now + 2000;
+        JFC.toastSuccess('正在登录 <b>' + ids.length + '</b> 个共存账号…（无需替换配置，直接启动各自的副本程序）', 2000);
+        try {
+            JFC.bridge.loginCoexistAccountsAsync(id, ids, function(type, data) {
+                var res = data || {};
+                if (res.success) {
+                    JFC.toastSuccess('已登录 <b>' + (res.count || 0) + '</b> 个共存账号' +
+                        (res.error ? '（' + escapeHtml(res.error) + '）' : ''), 4000);
+                } else {
+                    JFC.modal.custom({
+                        title: '共存账号登录失败',
+                        bodyHtml: '<div style="line-height:1.9;">' +
+                            escapeHtml(res.error || '登录失败') + '</div>',
+                        actions: [{ text: '知道了', cls: 'modal-ok' }]
+                    });
+                }
+            });
+        } catch (e) {
+            JFC.modal.custom({
+                title: '共存账号登录失败',
+                bodyHtml: '<div style="line-height:1.9;">' + escapeHtml(String(e)) + '</div>',
+                actions: [{ text: '知道了', cls: 'modal-ok' }]
+            });
+        }
+    }
+
     /** 展示批量启动结果：成功 toast、失败弹窗（与原来一致） */
     function showLaunchResult(res, fallbackCount) {
         var mutexMsg = (res && res.mutexMessage) ? escapeHtml(res.mutexMessage) : '';
@@ -975,7 +1021,7 @@ JFC.pages.main = (function() {
             var detail = res.viaExplorer
                 ? '（经资源管理器代启，未取到 PID）'
                 : (pids ? '（PID ' + escapeHtml(pids) + '）' : '');
-            JFC.toastSuccess('已以<b>普通用户权限</b>启动 <b>' + (res.count || fallbackCount) + '</b> 个实例' + detail +
+            JFC.toastSuccess('已启动 <b>' + (res.count || fallbackCount) + '</b> 个实例' + detail +
                 (mutexMsg ? '<br><span style="opacity:.85">' + mutexMsg + '</span>' : ''), 4000);
             return;
         }
@@ -2196,6 +2242,7 @@ JFC.pages.main = (function() {
              launchPlatformProgram: launchPlatformProgram,
              // 账号级登录（原生账号：开登录窗 + 自动点"登录" + 等窗口关闭）
              loginAccounts: loginAccounts,
+        loginCoexistAccounts: loginCoexistAccounts,
              // 运行时数据（PID/HWND）唯一写入点 + 读取器：登录流程接入后由它写入，界面自动定向刷新
              setAccRuntime: setAccRuntime, getAccRuntime: getAccRuntime, clearAccRuntime: clearAccRuntime };
 })();

@@ -199,6 +199,12 @@ JFC.AccountTable = (function() {
         // 行种类（'acc' 账号行 / 'prog' 原生程序行）—— 三表差异的唯一开关（见 rowActionsOf）
         this.rowKind = opts.rowKind === 'prog' ? 'prog' : 'acc';
         /**
+         * 账号种类（'origin' 原生 / 'coexist' 共存）—— **只影响"登录"走哪条链路**：
+         * 共存账号不替换登录配置、账号 id 本身就是程序目录下的副本 exe 名
+         * （Java 侧 `AccOperatorCore.loginCoexist`，照旧版 `_open_acc_return_hwnd_and_pid` 的共存分支）。
+         */
+        this.accType = opts.accType === 'coexist' ? 'coexist' : 'origin';
+        /**
          * 程序表"× __"里填的**实例数量**（空 = 1）.
          * 记在表实例上：整表重渲染后输入框仍恢复这个值，不会被刷掉（仅是内存，不落配置）。
          */
@@ -1385,6 +1391,13 @@ JFC.AccountTable = (function() {
             this._launchPlatformProgram(swId, this._readLoginCount());
             return;
         }
+        // 共存账号：走**不改配置**的共存登录链路（账号 id = 副本 exe 名）
+        if (this.accType === 'coexist') {
+            if (JFC.pages && JFC.pages.main && JFC.pages.main.loginCoexistAccounts) {
+                JFC.pages.main.loginCoexistAccounts(swId, ids);
+            }
+            return;
+        }
         // 账号级登录：交给页面层（与程序启动同一个"单一来源"思路）
         if (JFC.pages && JFC.pages.main && JFC.pages.main.loginAccounts) {
             JFC.pages.main.loginAccounts(swId, ids);
@@ -1408,7 +1421,7 @@ JFC.AccountTable = (function() {
             res = null;
         }
         if (res && res.success) {
-            JFC.toastSuccess('已以<b>普通用户权限</b>启动 <b>' + (res.count || count || 1) + '</b> 个实例' +
+            JFC.toastSuccess('已启动 <b>' + (res.count || count || 1) + '</b> 个实例' +
                 (res.viaExplorer ? '（经资源管理器代启）' : ''), 4000);
         } else {
             JFC.modal.custom({

@@ -158,6 +158,10 @@ JFC.bridge = (function() {
         loginAccountsAsync: function(swId, accIds, fn) {
             callWithArgs('loginAccountsAsync', swId, JSON.stringify(accIds || []), String(registerAsync(fn)));
         },
+        // 共存账号登录（异步）：**不替换登录配置** —— 共存账号 id 本身就是程序目录下的副本 exe 名，按它启动即可
+        loginCoexistAccountsAsync: function(swId, accIds, fn) {
+            callWithArgs('loginCoexistAccountsAsync', swId, JSON.stringify(accIds || []), String(registerAsync(fn)));
+        },
         // 获取登录窗口尺寸（读当前真实的登录窗口，格式 "宽*高"）；返回 {success, size?, error?}
         fetchLoginSize: function(swId) { return callJsonWithArgs('fetchLoginSize', swId); },
         // 点"登录"（程序行）→ 查杀该平台全部互斥体 + 降权启动平台程序（count = 启动几个实例，空/非数字=1）

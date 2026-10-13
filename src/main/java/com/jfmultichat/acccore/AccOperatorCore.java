@@ -444,4 +444,141 @@ public final class AccOperatorCore {
         }
         return results;
     }
+
+    /**
+     * **共存账号登录** —— 与 {@link #loginOrigin} 的**唯一区别：不替换、也不读登录配置**.
+     *
+     * <p>对应旧版 `acc_func_core.py::_open_acc_return_hwnd_and_pid`（L92-L104）的共存分支：
+     * <pre>
+     * if AccInfoFuncCore.is_acc_coexist(sw, acc):
+     *     # 共存程序账号: 尝试查找有无同名打开进程, 有则需要去除互斥体, 共存账号无需替换配置文件
+     *     sw_proc, sub_proc = SwOperatorCore.open_sw(sw, exe=acc)     ← 只按 exe 名启动
+     * else:
+     *     cls.operate_acc_config('use', sw, acc)                      ← 原生才替换配置
+     *     sw_proc, sub_proc = SwOperatorCore.open_sw(sw)
+     * </pre>
+     *
+     * <p>为什么共存不需要配置（用户 2026-10-12 强调）：共存程序是**程序目录下的一份副本 exe**，
+     * 各自带自己的登录态；所以"**账号 id 本身就是 exe 名**"（{@code AccInfoFuncCore.getCoexistAccExe}
+     * 直接返回 acc 本身）→ 按它启动即可，**不必也不能替换平台配置** ——
+     * 这正是共存登录稳定、且被主推的根本原因。
+     *
+     * <p>其余（预摆位、一出现就挪位、全部开完再统一点击、等窗口关闭、统计口径、取消检查点）
+     * 与原生登录**完全一致**，共用同一套 `TaskContext` 约定。
+     *
+     * @return 每个账号一项：{accId, hwnd 或 0, pid 或 0, 说明}
+     */
+    public static List<String[]> loginCoexist(String sw, List<String> accIds) {
+        List<String[]> results = new ArrayList<>();
+        if (accIds == null || accIds.isEmpty()) return results;
+        SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+        com.jfmultichat.core.task.TaskContext.phase("准备（预摆位）", "准备");
+
+        // 点击比例：与原生登录共用同一份远程配置 auto_click.login_btn.location = [fx, fy]
+        double fx = 0.5, fy = 0.75;
+        try {
+            JsonNode loc = accessor.getRemoteSw(sw, "auto_click", "login_btn", "location");
+            if (loc != null && loc.isArray() && loc.size() >= 2) {
+                fx = loc.get(0).asDouble(0.5);
+                fy = loc.get(1).asDouble(0.75);
+            }
+        } catch (Exception e) {
+            LOG.warn("[共存登录] 读 auto_click.login_btn.location 失败，用默认 0.5/0.75: {}", e.getMessage());
+        }
+
+        // 摆位：与原生登录同一套（开窗前按账号总数算好格子；失败/超时的格子留空、不重排）
+        int[] screen = com.jfmultichat.swcore.SwNativeOps.getScreenSize();
+        int wndW = 0, wndH = 0;
+        try {
+            String size = accessor.getSwSettingAsString(sw, "login_size", "");
+            if (size != null && size.contains("*")) {
+                String[] parts = size.split("\\*");
+                wndW = Integer.parseInt(parts[0].trim());
+                wndH = Integer.parseInt(parts[1].trim());
+            }
+        } catch (Exception e) {
+            LOG.warn("[共存登录] 解析 login_size 失败: {}", e.getMessage());
+        }
+        if (wndW <= 0 || wndH <= 0) {
+            wndW = Math.max(1, screen[0] / 6);
+            wndH = Math.max(1, screen[1] / 3);
+        }
+        List<int[]> positions = com.jfmultichat.swcore.SwNativeOps.layoutWndPositions(
+                accIds.size(), wndW, wndH, screen[0], screen[1]);
+        LOG.info("[共存登录] 预摆位 {} 个格子（单窗 {}x{}，屏幕 {}x{}）: {}",
+                positions.size(), wndW, wndH, screen[0], screen[1], positions);
+
+        // ===== 阶段一：逐个「开共存程序 → 立即摆位」（**无配置替换** ✓） =====
+        List<String> okAccIds = new ArrayList<>();
+        List<Integer> okHwnds = new ArrayList<>();
+        // 统计口径与原生登录一致（见 loginOrigin）：轮次 = 进行到第几个；时长 = 到最后一次成功开窗
+        long openStartMs = System.currentTimeMillis();
+        int rounds = 0;
+        for (int idx = 0; idx < accIds.size(); idx++) {
+            String accId = accIds.get(idx);
+            // ★ 安全点：任务中心可以在"账号之间"取消
+            com.jfmultichat.core.task.TaskContext.checkpoint();
+            rounds++;
+            com.jfmultichat.core.task.TaskContext.metricSet("开窗轮次", rounds);
+            com.jfmultichat.core.task.TaskContext.phase(
+                    "共存账号 " + (idx + 1) + "/" + accIds.size() + "：开窗", "开窗");
+            // ★★ 与 loginOrigin 的唯一实质差异：这里**没有** operateAccConfig("use", ...) ★★
+            int[] opened;
+            try {
+                opened = com.jfmultichat.swcore.SwOperatorCore.openSwAndReturnHwnd(
+                        sw, accId, accessor, com.jfmultichat.swcore.SwNativeOps.INSTANCE);
+            } catch (Exception e) {
+                LOG.warn("[共存登录] {} 打开窗口异常: {}", accId, e.getMessage());
+                results.add(new String[]{accId, "0", "0", "打开窗口异常：" + e.getMessage()});
+                continue;
+            }
+            if (opened[0] == 0) {
+                LOG.warn("[共存登录] {} 打开登录窗口失败或超时", accId);
+                results.add(new String[]{accId, "0", "0", "打开登录窗口失败或超时未检测到窗口"});
+                continue;                           // 格子空着，继续下一个
+            }
+            if (idx < positions.size()) {
+                com.jfmultichat.swcore.SwNativeOps.moveWindow(
+                        opened[0], positions.get(idx)[0], positions.get(idx)[1]);
+            }
+            okAccIds.add(accId);
+            okHwnds.add(opened[0]);
+            results.add(new String[]{accId, String.valueOf(opened[0]), String.valueOf(opened[1]), ""});
+            com.jfmultichat.core.task.TaskContext.metricSet(
+                    "开窗时长ms", System.currentTimeMillis() - openStartMs);
+        }
+
+        // ===== 阶段二：全部打开并摆位后，才统一逐个点击"登录" =====
+        // （旧版账号级登录 `_login_accounts` 对**所有**窗口统一点击，共存号也一样；程序表那种"手动登录"不点）
+        com.jfmultichat.core.task.TaskContext.metric("成功开窗数", okHwnds.size());
+        for (int i = 0; i < okHwnds.size(); i++) {
+            int hwnd = okHwnds.get(i);
+            com.jfmultichat.core.task.TaskContext.checkpoint();
+            com.jfmultichat.core.task.TaskContext.phase(
+                    "点击登录 " + (i + 1) + "/" + okHwnds.size(), "点击登录");
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+            Map<String, Object> details = com.jfmultichat.swcore.SwNativeOps.getHwndDetails(hwnd);
+            int w = ((Number) details.getOrDefault("width", 0)).intValue();
+            int h = ((Number) details.getOrDefault("height", 0)).intValue();
+            if (w <= 0 || h <= 0) {
+                LOG.warn("[共存登录] {} 的窗口尺寸为 0，跳过点击", okAccIds.get(i));
+                continue;
+            }
+            com.jfmultichat.swcore.SwNativeOps.clickInWindow(hwnd, (int) (w * fx), (int) (h * fy));
+        }
+
+        // ===== 阶段三：等所有登录窗关闭（20s 上限、可取消） =====
+        if (!okHwnds.isEmpty()) {
+            com.jfmultichat.core.task.TaskContext.phase("等待窗口关闭", "等待窗口关闭");
+            com.jfmultichat.core.task.TaskContext.progress(okHwnds.size(), okHwnds.size());
+            boolean allClosed = com.jfmultichat.swcore.SwNativeOps.waitHwndsClose(okHwnds, 20);
+            LOG.info("[共存登录] {} 个账号：登录窗口{}", okHwnds.size(), allClosed ? "已全部关闭" : "超时仍未全关");
+        }
+        return results;
+    }
 }

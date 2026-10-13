@@ -54,6 +54,7 @@ public final class TaskStats {
     private static final Map<String, String[]> DERIVED = new LinkedHashMap<>();
     static {
         DERIVED.put("login", new String[]{"开窗时长ms", "开窗轮次"});
+        DERIVED.put("login_coexist", new String[]{"开窗时长ms", "开窗轮次"});
         DERIVED.put("multilaunch", new String[]{"多开时长ms", "开实例数"});
     }
 
@@ -61,6 +62,7 @@ public final class TaskStats {
     private static final Map<String, Long> PER_UNIT_CAP_MS = new LinkedHashMap<>();
     static {
         PER_UNIT_CAP_MS.put("login", 60_000L);
+        PER_UNIT_CAP_MS.put("login_coexist", 60_000L);
         PER_UNIT_CAP_MS.put("multilaunch", 60_000L);
         PER_UNIT_CAP_MS.put("refresh", 2_000L);
     }

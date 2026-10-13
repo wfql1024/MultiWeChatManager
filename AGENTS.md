@@ -39,6 +39,8 @@ JDK `D:\SpaceDev\Env\Infrastructure\runtime\Java\jdk-17.0.2`｜Gradle `D:\SpaceD
 
 ### Never（绝不做）
 - **自行提交**（提交必须由用户明确指示）；`force push`；提交密钥/凭据
+- **顺手改记忆文件**（`MEMORY/` 的 `facts/decisions/lessons/dev_logs`）—— 平时**只追加 `MEMORY/tmp/{日期}.md` 素材卡**，
+  整理由用户发起（D-44 约定 7）
 - 删测试、或为了让测试变绿而改测试
 - 把 `build/` 当工作目录（构建产物目录，`gradle clean` 会清空）—— 临时文件放项目根 `tmp/`
 - 在项目根生成日志文件

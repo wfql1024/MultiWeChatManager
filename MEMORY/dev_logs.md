@@ -954,3 +954,33 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
   - 用户批评"累计 X ÷ N 个"是**摆算式不算** → 页面改为直接显示算好的数
 - **验证**：每轮 `gradle test` **57 例 0 失败** ✓ + 4 个 JS `node --check` ✓；用户真机确认"效果超出预期"
 - **踩坑**：`launchStartMs` 声明位置放错（快速路径之前未声明 → 编译"找不到符号"），上移后又**重复声明**一次 → 删重复 ✓
+
+## 共存账号登录 + 三条体验优化（2026-10-13）
+
+- **背景**：任务中心框架完成后，用户定"开始开发常规主功能"，并选定**共存账号登录**为第一项；
+  同时给出四条决策（见下）与三条体验优化
+- **实现（照旧版逻辑，用户要求"参考旧版逻辑"）**：
+  - **先读旧版**：`acc_func_core.py::_open_acc_return_hwnd_and_pid`（L92-L104）区分两条分支 ——
+    共存 `open_sw(sw, exe=acc)`（注释原文"共存账号无需替换配置文件"）；原生才 `operate_acc_config('use', sw, acc)`；
+    `_login_accounts`（L225）→ `_thread_to_click_all_login_buttons_and_wait_refresh`（L140）对**所有**窗口统一点击 + 等全关；
+    `open_sw`（L2777）= `dirname(inst_path) + exe` + 平台互斥体查杀 + 降权启动
+  - **核对现成件**：Java `openSwAndReturnHwnd(sw, exe, …)` / `launchProcess(sw, exe, …)` 与旧版 `open_sw(sw, exe)` **完全等价** →
+    一行新启动逻辑都不用写 ✓
+  - **新增** `AccOperatorCore.loginCoexist`：与 `loginOrigin` 的**唯一实质差异是没有 `operateAccConfig`** ✓，
+    改为 `openSwAndReturnHwnd(sw, accId /* = 副本 exe 名 */, …)`；其余（预摆位、一出现就挪位、全部开完统一点击、
+    等窗口 20s、检查点、统计口径）**完全复用**
+  - **桥/任务**：`JsBridge.loginCoexistAccountsAsync` → `TaskRegistry.submit("login_coexist", …)`（结果结构与原生一致，回调同 `'login'`）；
+    `TaskStats` 的 `DERIVED`/`PER_UNIT_CAP_MS` 增加 `login_coexist`
+  - **前端**：`bridge.js` 加包装（**两处都做**的规矩 ✓）；`main.js` 加 `loginCoexistAccounts` 并导出；
+    `account-table.js` 新增表选项 **`accType`**，`_loginAccounts` 按它分流 —— 批量/单行/快捷键三条路径全覆盖
+    （另核实：无配置闸门 `config_status` 对共存行**本来就不生效** ✓）
+- **用户四条决策**：① 共存登录开工（关键澄清：**不需要配置、不替换也不读配置**）② **否决**"登录后写 pid/hwnd"
+  （hwnd 会从登录窗变主窗、且不知道登录的是哪个号 → 那是页面刷新的事）③ 点击策略**改主次**：UIA 控件名优先、比例兜底
+  ④ 补丁状态探测以后做
+- **验收**：用户 **5/5 全过** ✅，并反馈 **原生多号 / 共存单登 / 共存多登 稳定在 ~3 秒/号** ✅（7 年老机）
+- **三条优化**：① 任务面板与任务页滚动条**复用项目既有设计**（同 `.settings-form`：默认隐藏、悬停 4px）
+  ② 点任务图标时若有任务在进行中 → **优先定位「进行中」栏** ③ **去掉 toast 里的权限字样**（`main.js` 两处 + `account-table.js` 一处，
+  代码里连注释也不再出现该字样）
+- **记忆改法更正（用户）**：不要"顺手改" `facts/decisions/lessons`，平时**只写素材卡**、整理时统一归类 →
+  写入 `decisions.md` D-44 成文约定第 7 条 + `AGENTS.md` Never 一条
+- **验证**：`gradle test` **57 例 0 失败** ✓；JS `node --check` ✓；`普通用户权限` 字样 grep 全仓已清 ✓

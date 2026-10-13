@@ -80,6 +80,34 @@
     padding: 2px 0;
 }
 
+/* 滚动条**复用项目既有设计**（同设置区域 `.settings-form`）：默认隐藏、悬停才显示 4px 细条 */
+.task-center .tc-list,
+.tasks-body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.task-center .tc-list::-webkit-scrollbar,
+.tasks-body::-webkit-scrollbar { width: 0; }
+
+.task-center .tc-list:hover,
+.tasks-body:hover {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.task-center .tc-list:hover::-webkit-scrollbar,
+.tasks-body:hover::-webkit-scrollbar { width: 4px; }
+
+.task-center .tc-list:hover::-webkit-scrollbar-track,
+.tasks-body:hover::-webkit-scrollbar-track { background: transparent; }
+
+.task-center .tc-list:hover::-webkit-scrollbar-thumb,
+.tasks-body:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+}
+
 .task-center .tc-empty {
     padding: 20px 10px;
     text-align: center;
