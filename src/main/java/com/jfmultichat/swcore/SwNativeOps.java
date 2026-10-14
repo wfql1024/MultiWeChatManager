@@ -1216,6 +1216,199 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
         }
     }
 
+    /** dwmapi：取"视觉边界"（JNA 未暴露 DwmGetWindowAttribute，自己声明一个最小的） */
+    private interface DwmapiExt extends com.sun.jna.Library {
+        DwmapiExt INSTANCE = Native.load("dwmapi", DwmapiExt.class);
+
+        int DwmGetWindowAttribute(com.sun.jna.platform.win32.WinDef.HWND hwnd, int attr,
+                                  com.sun.jna.platform.win32.WinDef.RECT rect, int size);
+    }
+
+    /** DWMWA_EXTENDED_FRAME_BOUNDS：窗口**视觉**边界（不含 Win10 那圈隐形边框/阴影） */
+    private static final int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+
+    /** 窗口是否最小化（JNA 的 User32 没暴露 IsIconic → 用 GetWindowPlacement 的 showCmd 判断） */
+    public static boolean isMinimized(int hwnd) {
+        return showCmd(hwnd) == com.sun.jna.platform.win32.WinUser.SW_SHOWMINIMIZED;
+    }
+
+    /** 窗口是否最大化（侧栏"贴边隐藏"的触发条件 ✓） */
+    public static boolean isMaximized(int hwnd) {
+        return showCmd(hwnd) == com.sun.jna.platform.win32.WinUser.SW_SHOWMAXIMIZED;
+    }
+
+    /** `GetWindowPlacement().showCmd`（取不到返回 -1） */
+    private static int showCmd(int hwnd) {
+        if (hwnd == 0) return -1;
+        try {
+            com.sun.jna.platform.win32.WinUser.WINDOWPLACEMENT wp =
+                    new com.sun.jna.platform.win32.WinUser.WINDOWPLACEMENT();
+            wp.length = wp.size();                    // 必须先填结构大小，否则 API 返回失败
+            com.sun.jna.platform.win32.WinDef.BOOL ok =
+                    com.sun.jna.platform.win32.User32.INSTANCE.GetWindowPlacement(intToHwnd(hwnd), wp);
+            if (ok == null || !ok.booleanValue()) return -1;
+            return wp.showCmd;
+        } catch (Throwable t) {
+            return -1;
+        }
+    }
+
+    /** 当前前台窗口（0 = 无） */
+    public static int getForegroundWindow() {
+        try {
+            return hwndToInt(com.sun.jna.platform.win32.User32.INSTANCE.GetForegroundWindow());
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /**
+     * **只还原、不置前**（`ShowWindow(SW_RESTORE)`）—— 把最大化/最小化的窗口变回普通态 ✓.
+     *
+     * <p>⚠️ 侧栏切窗必须用它（用户 2026-10-14："A 普通 → B 最大化"时 B 没缩回来 ✗）：
+     * 直接对**最大化**窗口调 {@code SetWindowPos} 是**无效的** ✗ —— 它只改动"还原矩形"，
+     * 窗口视觉上仍是最大化 ✓。必须**先真还原**、再摆位 ✓。
+     */
+    public static boolean restoreWindowOnly(int hwnd) {
+        return showWindowCmd(hwnd, 9 /* SW_RESTORE */);
+    }
+
+    /** 让窗口**最大化**（窗口状态在账号间流转时用 ✓） */
+    public static boolean maximizeWindow(int hwnd) {
+        return showWindowCmd(hwnd, 3 /* SW_MAXIMIZE */);
+    }
+
+    /**
+     * **窗口"正常态"的矩形**（`GetWindowPlacement().rcNormalPosition`，物理像素 {l,t,r,b}）.
+     *
+     * <p>用户 2026-10-14 的关键指正 ✓：**窗口最大化时也要记住它的正常位置与尺寸** ——
+     * 这样切窗时"上一个窗口的尺寸"才有意义 ✓（否则拿到的是最大化后的整屏尺寸 ✗，
+     * 传给下一个窗口就变成"摆到最大化的位置和尺寸"而不是**真正最大化** ✗）。
+     * <p>正好 Win32 就为这件事准备了 `rcNormalPosition` ✓：无论窗口当前是普通/最大化/最小化，
+     * 它始终保存着"**还原后**的位置与尺寸" ✓。
+     *
+     * @return {left, top, right, bottom}；取不到返回 null
+     */
+    public static int[] getNormalRect(int hwnd) {
+        if (hwnd == 0) return null;
+        try {
+            com.sun.jna.platform.win32.WinUser.WINDOWPLACEMENT wp =
+                    new com.sun.jna.platform.win32.WinUser.WINDOWPLACEMENT();
+            wp.length = wp.size();
+            com.sun.jna.platform.win32.WinDef.BOOL ok =
+                    com.sun.jna.platform.win32.User32.INSTANCE.GetWindowPlacement(intToHwnd(hwnd), wp);
+            if (ok == null || !ok.booleanValue()) return null;
+            com.sun.jna.platform.win32.WinDef.RECT r = wp.rcNormalPosition;
+            return new int[]{r.left, r.top, r.right, r.bottom};
+        } catch (Throwable t) {
+            LOG.warn("[窗口] getNormalRect 失败 hwnd={}: {}", hwnd, t.getMessage());
+            return null;
+        }
+    }
+
+    /** `ShowWindow(hwnd, cmd)` 薄封装（SW_RESTORE=9 / SW_MAXIMIZE=3 / SW_SHOWNORMAL=1 ✓） */
+    public static boolean showWindowCmd(int hwnd, int cmd) {
+        if (hwnd == 0) return false;
+        try {
+            com.sun.jna.platform.win32.User32.INSTANCE.ShowWindow(intToHwnd(hwnd), cmd);
+            LOG.info("[窗口] ShowWindow(hwnd=0x{}, cmd={})", Integer.toHexString(hwnd), cmd);
+            return true;
+        } catch (Throwable t) {
+            LOG.warn("[窗口] ShowWindow 失败 hwnd={}, cmd={}: {}", hwnd, cmd, t.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * **带尺寸**的窗口定位（{@code SetWindowPos}）—— 侧栏"切窗时把目标窗口摆到侧栏旁边"要用 ✓.
+     *
+     * @param top true = 同时抬到最前（HWND_TOP）；false = 不改 z 序
+     */
+    public static boolean setWindowRect(int hwnd, int x, int y, int w, int h, boolean top) {
+        if (hwnd == 0) return false;
+        final int SWP_NOZORDER = 0x0004, SWP_SHOWWINDOW = 0x0040;
+        try {
+            return com.sun.jna.platform.win32.User32.INSTANCE.SetWindowPos(
+                    intToHwnd(hwnd),
+                    top ? intToHwnd(0) /* HWND_TOP */ : null,
+                    x, y, Math.max(1, w), Math.max(1, h),
+                    top ? SWP_SHOWWINDOW : (SWP_NOZORDER | SWP_SHOWWINDOW));
+        } catch (Throwable t) {
+            LOG.warn("[窗口] setWindowRect 失败 hwnd={}: {}", hwnd, t.getMessage());
+            return false;
+        }
+    }
+
+    /** 去掉窗口的激活能力与任务栏存在感（侧栏用：点了不抢焦点、也不进 Alt-Tab） */
+    public static void applyNoActivateToolWindow(int hwnd) {
+        if (hwnd == 0) return;
+        final int GWL_EXSTYLE = -20;
+        final int WS_EX_NOACTIVATE = 0x08000000;
+        final int WS_EX_TOOLWINDOW = 0x00000080;
+        try {
+            com.sun.jna.platform.win32.User32 u32 = com.sun.jna.platform.win32.User32.INSTANCE;
+            int ex = u32.GetWindowLong(intToHwnd(hwnd), GWL_EXSTYLE);
+            int want = ex | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
+            if (want != ex) {
+                u32.SetWindowLong(intToHwnd(hwnd), GWL_EXSTYLE, want);
+                LOG.info("[侧栏] 已设置 WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW: hwnd=0x{}", Integer.toHexString(hwnd));
+            }
+        } catch (Throwable t) {
+            LOG.warn("[侧栏] 设置窗口样式失败 hwnd={}: {}", hwnd, t.getMessage());
+        }
+    }
+
+    /** 某进程的全部**顶层**可见窗口（侧栏用它认出"自己那个透明小窗"以便改样式 ✓） */
+    public static java.util.List<Integer> listOwnTopLevelWindows(int pid) {
+        java.util.List<Integer> out = new java.util.ArrayList<>();
+        try {
+            com.sun.jna.platform.win32.User32.INSTANCE.EnumWindows((hwnd, data) -> {
+                com.sun.jna.ptr.IntByReference pidRef = new com.sun.jna.ptr.IntByReference();
+                com.sun.jna.platform.win32.User32.INSTANCE.GetWindowThreadProcessId(hwnd, pidRef);
+                if (pidRef.getValue() == pid) {
+                    out.add(hwndToInt(hwnd));
+                }
+                return true;
+            }, null);
+        } catch (Throwable t) {
+            LOG.warn("[侧栏] 枚举自身窗口失败: {}", t.getMessage());
+        }
+        return out;
+    }
+
+    /**
+     * **窗口的"视觉边界"** `{left, top, right, bottom}`（物理像素）—— 侧栏贴边定位必须用它.
+     *
+     * <p>为什么不能直接用 {@code GetWindowRect}（用户 2026-10-13 侧栏需求的关键细节）：
+     * Win10 起窗口的 `GetWindowRect` **包含那圈看不见的调整边框/阴影**（通常比视觉大 ~7px）✗ →
+     * 直接贴边会**露出一条缝** ✗。DWM 的 {@code DWMWA_EXTENDED_FRAME_BOUNDS} 给的是**真实可见**边界 ✓；
+     * 取不到（老系统/窗口不支持）再退回 {@code GetWindowRect} ✓。
+     *
+     * @return 长度 4 的数组；窗口无效返回 null
+     */
+    public static int[] getVisualRect(int hwnd) {
+        if (hwnd == 0) return null;
+        try {
+            com.sun.jna.platform.win32.WinDef.HWND h = intToHwnd(hwnd);
+            com.sun.jna.platform.win32.WinDef.RECT rect = new com.sun.jna.platform.win32.WinDef.RECT();
+            int hr = DwmapiExt.INSTANCE.DwmGetWindowAttribute(h, DWMWA_EXTENDED_FRAME_BOUNDS, rect,
+                    rect.size());
+            if (hr != 0) {
+                rect = new com.sun.jna.platform.win32.WinDef.RECT();
+                if (!com.sun.jna.platform.win32.User32.INSTANCE.GetWindowRect(h, rect)) return null;
+            }
+            return new int[]{rect.left, rect.top, rect.right, rect.bottom};
+        } catch (Throwable t) {
+            try {
+                com.sun.jna.platform.win32.WinDef.RECT rect = new com.sun.jna.platform.win32.WinDef.RECT();
+                if (!com.sun.jna.platform.win32.User32.INSTANCE.GetWindowRect(intToHwnd(hwnd), rect)) return null;
+                return new int[]{rect.left, rect.top, rect.right, rect.bottom};
+            } catch (Throwable t2) {
+                return null;
+            }
+        }
+    }
+
     /**
      * **恢复并置前窗口**（点 HWND 打开窗口的核心动作）.
      * 对应 Python: {@code hwnd_utils.restore_window} = {@code ShowWindow(hwnd, SW_SHOWNORMAL)} + {@code SetForegroundWindow(hwnd)}.

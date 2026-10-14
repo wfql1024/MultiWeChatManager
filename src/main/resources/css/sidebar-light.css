@@ -1,0 +1,17 @@
+/* 侧栏样式 — **浅色主题**（只覆盖主题变量 ✓ 规则本体在 sidebar.css 里，两份共用 ✓）
+ *
+ * 背景/描边/文字/按钮/滚动条/角标 全部走 -jf-sb-* 变量 → 这里只改这几个值即可 ✓
+ * 与 sidebar.css 的规则一一对应；**不要**在这里重复写规则（否则两份会漂移 ✗）
+ */
+
+.sidebar {
+    -jf-sb-bg: rgba(250, 250, 250, 0.94);
+    -jf-sb-border: rgba(0, 0, 0, 0.10);
+    -jf-sb-fg: #2b2b2b;
+    -jf-sb-btn: rgba(0, 0, 0, 0.05);
+    -jf-sb-btn-hover: rgba(0, 0, 0, 0.12);
+    -jf-sb-btn-pressed: rgba(0, 0, 0, 0.08);
+    -jf-sb-thumb: rgba(0, 0, 0, 0.22);
+    -jf-sb-badge-bg: rgba(255, 255, 255, 0.85);
+    -jf-sb-badge-border: rgba(0, 0, 0, 0.18);
+}

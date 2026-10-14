@@ -339,6 +339,13 @@ public class MainWindow {
         } else {
             scene.getStylesheets().add(darkCss);
         }
+        // 侧栏是**独立的 JavaFX 窗口**，它拿不到本窗口的样式表 → 一并通知它换肤
+        //（用户 2026-10-13：侧栏颜色不跟主题变 ✗）
+        try {
+            if (app != null) app.onThemeChanged(theme);
+        } catch (Throwable t) {
+            LOG.warn("通知侧栏换肤失败: {}", t.getMessage());
+        }
     }
 
     // ==================== 标题栏 ====================

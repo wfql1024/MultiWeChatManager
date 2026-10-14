@@ -249,6 +249,46 @@
     border-radius: 2px;
 }
 
+/* ========================================
+   设置页 · 侧栏（窗口切换器）位置模型
+   ======================================== */
+.sb-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.sb-label {
+    width: 120px;
+    flex: 0 0 auto;
+    color: var(--text-level2);
+    font-size: var(--font-sm);
+}
+
+.sb-select {
+    min-width: 200px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--text-level1);
+    font-family: inherit;
+    font-size: var(--font-sm);
+}
+
+.sb-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.sb-hint {
+    margin-top: 10px;
+    color: var(--text-level3);
+    font-size: var(--font-xs);
+    line-height: 1.6;
+}
+
 /* HWND 列：**有值时**可点（手型光标 + 悬停主题色），点击把该账号窗口恢复并置前（用户 2026-10-13） */
 .manage-hwnd-cell.has-hwnd {
     cursor: pointer;

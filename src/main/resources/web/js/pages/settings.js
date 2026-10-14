@@ -41,10 +41,76 @@ JFC.pages.settings = (function() {
         if (!currentTheme || currentTheme === 'auto')
             currentTheme = document.documentElement.getAttribute('data-theme') || 'auto';
         initThemeButtons();
+        initSidebarSection();
         showSection('appearance');
     }
 
     function JM() { return JFC.bridge && JFC.bridge.isAvailable(); }
+
+    // ==================== 侧栏（窗口切换器）设置 ====================
+    // 位置模型（用户 2026-10-13 第 7 条）：四边之一 + 该边上的对齐（start/center/end）
+    //   + 长度模式（match 与窗口该边等长 / fit 按按钮数自适应）+ 主窗口按钮在首/尾。
+    // 改完立刻通过桥作用到当前侧栏（不用重启、不用重开侧栏）✓
+
+    var sidebarInited = false;
+
+    function initSidebarSection() {
+        if (sidebarInited) return;
+        sidebarInited = true;
+
+        var prefs = null;
+        if (JM()) {
+            try { prefs = JFC.bridge.getSidebarPrefs(); } catch (e) { prefs = null; }
+        }
+        prefs = prefs || {};
+        var edge = prefs.edge || 'left';
+        var align = prefs.align || 'start';
+        var sizeMode = prefs.size_mode || 'match';
+        var mainAtEnd = prefs.main_btn_at_end === true;
+
+        var elEdge = el('sb-edge');
+        var elAlign = el('sb-align');
+        var elSize = el('sb-size-mode');
+        var elMainEnd = el('sb-main-at-end');
+        if (elEdge) elEdge.value = edge;
+        if (elAlign) elAlign.value = align;
+        if (elSize) elSize.value = sizeMode;
+        if (elMainEnd) elMainEnd.checked = mainAtEnd;
+
+        function push() {
+            var payload = {
+                edge: elEdge ? elEdge.value : edge,
+                align: elAlign ? elAlign.value : align,
+                size_mode: elSize ? elSize.value : sizeMode,
+                main_btn_at_end: !!(elMainEnd && elMainEnd.checked)
+            };
+            if (JM()) {
+                try { JFC.bridge.setSidebarPrefs(payload); } catch (e) { /* 桥不可用就算了 */ }
+            }
+            updateHint(payload);
+        }
+
+        ['sb-edge', 'sb-align', 'sb-size-mode'].forEach(function(id) {
+            var node = el(id);
+            if (node) node.addEventListener('change', push);
+        });
+        if (elMainEnd) elMainEnd.addEventListener('change', push);
+        updateHint({ edge: edge, align: align, size_mode: sizeMode, main_btn_at_end: mainAtEnd });
+    }
+
+    /** 二级位置提示：贴左/右时是上中下，贴上/下时是左中右 ✓（用户第 7 条） */
+    function updateHint(p) {
+        var hint = el('sb-hint');
+        if (!hint) return;
+        var vertical = (p.edge === 'left' || p.edge === 'right');
+        var alignText = vertical
+            ? ({ start: '上', center: '中', end: '下' })[p.align] || '上'
+            : ({ start: '左', center: '中', end: '右' })[p.align] || '左';
+        var edgeText = ({ left: '左', right: '右', top: '上', bottom: '下' })[p.edge] || '左';
+        hint.textContent = '当前：贴' + edgeText + '边、靠' + alignText + '；'
+            + (p.size_mode === 'fit' ? '长度按按钮数自适应' : '长度与窗口该边等长')
+            + '（都不超过窗口该边；装不下会滚动）';
+    }
 
     // ==================== 主题 ====================
 

@@ -1561,31 +1561,7 @@ public class JsBridge {
     public void getAccAvatarAsync(String swId, String accountId, String cbId) {
         THREAD_POOL.submit(() -> {
             try {
-                // 先从截图缓存恢复本地头像文件（参考 getAvatarFromCache）
-                AccInfoFuncCore.getAvatarFromCache(swId, java.util.List.of(accountId));
-
-                // 共存账号（SwAccData 带 linked_acc）：自身本地头像 > 链接账号本地头像 > 链接账号头像地址 > 默认头像
-                java.util.Map<String, com.fasterxml.jackson.databind.node.ObjectNode> accMap =
-                        ConfigManager.getInstance().getAccountMap(swId);
-                com.fasterxml.jackson.databind.node.ObjectNode selfNode = accMap.get(accountId);
-                String linkedAcc = (selfNode != null && selfNode.hasNonNull("linked_acc"))
-                        ? selfNode.get("linked_acc").asText("") : "";
-
-                String dataUrl;
-                if (!linkedAcc.isBlank() && !linkedAcc.equals(accountId)) {
-                    AccInfoFuncCore.getAvatarFromCache(swId, java.util.List.of(linkedAcc));
-                    com.fasterxml.jackson.databind.node.ObjectNode linkedNode = accMap.get(linkedAcc);
-                    String linkedAvatarUrl = (linkedNode != null && linkedNode.hasNonNull("avatar_url"))
-                            ? linkedNode.get("avatar_url").asText("") : "";
-                    dataUrl = com.jfmultichat.utils.AvatarUtils
-                            .getCoexistAvatarDataUrl(swId, accountId, linkedAcc, linkedAvatarUrl,
-                                    // 文字兜底用的名称：链接账号的展示名（无链接则用自身展示名）
-                                    AccInfoFuncCore.getAccOriginDisplayName(swId, linkedAcc));
-                } else {
-                    // 解析头像 data URL（本地文件 → URL下载 → SVG 回退）
-                    dataUrl = AccInfoFuncCore.getAccAvatarFromFile(swId, accountId);
-                }
-                if (dataUrl == null) dataUrl = "";
+                String dataUrl = com.jfmultichat.acccore.AccInfoFuncCore.getAccAvatarDataUrl(swId, accountId);
                 String payload = MAPPER.writeValueAsString(Map.of(
                         "swId", swId, "accountId", accountId, "dataUrl", dataUrl));
                 // _handleAsync 第三参需为字符串，故将 JSON 再编码为 JS 字符串字面量（对 SVG 内单引号安全）
@@ -2111,6 +2087,55 @@ public class JsBridge {
                 LOG.error("推送窗口映射失败", e);
             }
         });
+    }
+
+    /**
+     * JS 调用：取**侧栏设置**（贴边 / 对齐 / 长度模式 / 主窗口按钮位置）—— 设置页用.
+     *
+     * @return JSON: {edge, align, size_mode, main_btn_at_end}
+     */
+    public String getSidebarPrefs() {
+        ObjectNode r = MAPPER.createObjectNode();
+        try {
+            com.jfmultichat.ui.SidebarPrefs p = com.jfmultichat.ui.SidebarPrefs.load();
+            r.put("edge", com.jfmultichat.ui.SidebarPrefs.normalizeEdge(p.edge));
+            r.put("align", com.jfmultichat.ui.SidebarPrefs.normalizeAlign(p.align));
+            r.put("size_mode", com.jfmultichat.ui.SidebarPrefs.SIZE_FIT.equals(p.sizeMode)
+                    ? com.jfmultichat.ui.SidebarPrefs.SIZE_FIT : com.jfmultichat.ui.SidebarPrefs.SIZE_MATCH);
+            r.put("main_btn_at_end", p.mainBtnAtEnd);
+        } catch (Exception e) {
+            LOG.warn("[侧栏] 取侧栏设置失败: {}", e.getMessage());
+        }
+        return r.toString();
+    }
+
+    /**
+     * JS 调用：保存**侧栏设置**并**立刻作用到当前侧栏**（用户第 7 条：位置可自定义 ✓）.
+     * 入参 JSON：{edge, align, size_mode, main_btn_at_end}
+     */
+    public String setSidebarPrefs(String prefsJson) {
+        ObjectNode r = MAPPER.createObjectNode();
+        try {
+            com.jfmultichat.ui.SidebarPrefs p = com.jfmultichat.ui.SidebarPrefs.load();
+            JsonNode in = MAPPER.readTree(prefsJson == null || prefsJson.isBlank() ? "{}" : prefsJson);
+            if (in.hasNonNull("edge")) p.edge = com.jfmultichat.ui.SidebarPrefs.normalizeEdge(in.get("edge").asText());
+            if (in.hasNonNull("align")) p.align = com.jfmultichat.ui.SidebarPrefs.normalizeAlign(in.get("align").asText());
+            if (in.hasNonNull("size_mode")) {
+                p.sizeMode = com.jfmultichat.ui.SidebarPrefs.SIZE_FIT.equals(in.get("size_mode").asText())
+                        ? com.jfmultichat.ui.SidebarPrefs.SIZE_FIT : com.jfmultichat.ui.SidebarPrefs.SIZE_MATCH;
+            }
+            if (in.hasNonNull("main_btn_at_end")) p.mainBtnAtEnd = in.get("main_btn_at_end").asBoolean();
+            p.save();
+            com.jfmultichat.ui.FloatingSidebar.applyPrefsFromBridge(p);
+            r.put("ok", true);
+            LOG.info("[侧栏] 设置已更新: edge={}, align={}, size_mode={}, main_btn_at_end={}",
+                    p.edge, p.align, p.sizeMode, p.mainBtnAtEnd);
+        } catch (Exception e) {
+            LOG.warn("[侧栏] 保存侧栏设置失败: {}", e.getMessage());
+            r.put("ok", false);
+            r.put("error", String.valueOf(e.getMessage()));
+        }
+        return r.toString();
     }
 
     /**

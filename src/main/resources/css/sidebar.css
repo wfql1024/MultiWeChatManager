@@ -1,27 +1,43 @@
-/* 侧栏样式 — 磨砂玻璃效果 */
+/* 侧栏样式 — **深色主题**（侧栏是 JavaFX 原生窗口，主题变量得自己定义 ✓）
+ *
+ * 结构：本文件 = 规则本体 + 一组**自定义查找色**（looked-up colors）的深色取值；
+ *       `sidebar-light.css` 只覆盖那组颜色 ✓ → 规则只有一份、不会出现"改了深色忘了浅色"的漂移 ✓
+ *       （与项目里 main.css / main-light.css 的分工同一个思路 ✓）
+ */
 
 .root {
     -fx-background-color: transparent;
 }
 
 .sidebar {
-    -fx-background-color: rgba(26, 26, 26, 0.88);
+    /* ---- 主题变量（浅色表覆盖这几个） ---- */
+    -jf-sb-bg: rgba(26, 26, 26, 0.90);
+    -jf-sb-border: rgba(255, 255, 255, 0.08);
+    -jf-sb-fg: #d4d4d4;
+    -jf-sb-btn: rgba(255, 255, 255, 0.06);
+    -jf-sb-btn-hover: rgba(255, 255, 255, 0.16);
+    -jf-sb-btn-pressed: rgba(255, 255, 255, 0.10);
+    -jf-sb-thumb: rgba(255, 255, 255, 0.20);
+    -jf-sb-badge-bg: rgba(0, 0, 0, 0.55);
+    -jf-sb-badge-border: rgba(255, 255, 255, 0.55);
+
+    -fx-background-color: -jf-sb-bg;
     -fx-background-radius: 12px;
     -fx-border-radius: 12px;
-    -fx-border-color: rgba(255, 255, 255, 0.08);
+    -fx-border-color: -jf-sb-border;
     -fx-border-width: 1px;
-    -fx-padding: 16px 10px;
-    -fx-spacing: 12px;
-    -fx-alignment: top-center;
-    -fx-min-width: 56px;
-    -fx-max-width: 56px;
+    /* 内边距统一 4px：竖排时 56-8=48 ≥ 按钮 44 ✓；横排时同理 ✓
+       （用户实测"放上下边按钮被裁切"✗ 就是这里竖直方向留白过多导致的 ✓） */
+    -fx-padding: 4px 4px;
+    -fx-spacing: 8px;
+    -fx-alignment: center;
 }
 
 /* 侧栏按钮 */
 .sidebar-btn {
-    -fx-background-color: rgba(255, 255, 255, 0.06);
+    -fx-background-color: -jf-sb-btn;
     -fx-background-radius: 8px;
-    -fx-text-fill: #d4d4d4;
+    -fx-text-fill: -jf-sb-fg;
     -fx-font-size: 12px;
     -fx-font-family: "Microsoft YaHei";
     -fx-min-width: 44px;
@@ -33,9 +49,76 @@
 }
 
 .sidebar-btn:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.16);
+    -fx-background-color: -jf-sb-btn-hover;
 }
 
 .sidebar-btn:pressed {
-    -fx-background-color: rgba(255, 255, 255, 0.10);
+    -fx-background-color: -jf-sb-btn-pressed;
+}
+
+/* 折叠态（贴边隐藏）：窗口是 16px 的**热带**，可见的只有最外沿那 6px 细边
+ * —— 用**背景内缩**实现（内缩量由 Java 按贴哪条边动态给）✓ */
+.sidebar.collapsed {
+    -fx-background-color: -jf-sb-bg;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-effect: null;
+    -fx-padding: 0;
+}
+
+/* 按钮里的文字/图标（主窗口 🏠、头像兜底字母）：字色走主题变量 ✓ */
+.sidebar-btn-label {
+    -fx-text-fill: -jf-sb-fg;
+    -fx-font-size: 18px;
+}
+
+/* 当前"指向/被跟随"的那个按钮：主题色描边高亮（一眼看出现在在跟谁 ✓） */
+.sidebar-btn.active {
+    -fx-background-color: rgba(74, 163, 255, 0.28);
+    -fx-border-color: #4aa3ff;
+    -fx-border-width: 1.5px;
+    -fx-border-radius: 8px;
+}
+
+/* 侧栏内部滚动：**已按用户要求去掉滚动条** ✓（按钮太多时改为等比缩小 → 始终对称、始终简约 ✓）
+   这里保留的滚动条规则只针对 ScrollPane 万一被别处复用的情况，正常不会出现 ✓ */
+.sidebar-scroll {
+    -fx-background: transparent;
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.sidebar-scroll .viewport {
+    -fx-background-color: transparent;
+}
+
+.sidebar-scroll .scroll-bar:vertical,
+.sidebar-scroll .scroll-bar:horizontal {
+    -fx-background-color: transparent;
+    -fx-opacity: 0;
+}
+
+.sidebar-scroll:hover .scroll-bar:vertical,
+.sidebar-scroll:hover .scroll-bar:horizontal {
+    -fx-opacity: 1;
+}
+
+.sidebar-scroll .scroll-bar .thumb {
+    -fx-background-color: -jf-sb-thumb;
+    -fx-background-radius: 2px;
+}
+
+.sidebar-scroll .scroll-bar .track,
+.sidebar-scroll .scroll-bar .increment-button,
+.sidebar-scroll .scroll-bar .decrement-button {
+    -fx-background-color: transparent;
+}
+
+/* 平台角标（右下角）：用主题变量，深浅色都清楚 ✓ */
+.sidebar-badge {
+    -fx-background-color: -jf-sb-badge-bg;
+    -fx-background-radius: 8px;
+    -fx-border-color: -jf-sb-badge-border;
+    -fx-border-radius: 8px;
+    -fx-border-width: 1px;
 }

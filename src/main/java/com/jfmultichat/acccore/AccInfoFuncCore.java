@@ -936,6 +936,46 @@ public final class AccInfoFuncCore {
     }
 
     /**
+     * **账号头像 data URL** —— 与前端账号表**完全同一条链**（单一来源 ✓）.
+     *
+     * <p>链路（从 {@code JsBridge.getAccAvatarAsync} 抽出来的，两处共用 ✓）：
+     * <ol>
+     *   <li>先从**截图缓存**恢复本地头像文件（{@link #getAvatarFromCache}）——
+     *       这一步就是侧栏最初"头像空白"的原因 ✗（我当时少走了这步 ✓）</li>
+     *   <li>共存账号（带 {@code linked_acc}）：自身 → 链接账号本地头像 → 链接账号头像地址 → 文字兜底 ✓</li>
+     *   <li>原生账号：本地文件 → URL 下载 → SVG 回退 ✓</li>
+     * </ol>
+     *
+     * @return data URL；没有则空串（**永不返回 null** ✓）
+     */
+    public static String getAccAvatarDataUrl(String sw, String acc) {
+        if (sw == null || acc == null) return "";
+        try {
+            getAvatarFromCache(sw, java.util.List.of(acc));
+            java.util.Map<String, com.fasterxml.jackson.databind.node.ObjectNode> accMap =
+                    com.jfmultichat.config.ConfigManager.getInstance().getAccountMap(sw);
+            com.fasterxml.jackson.databind.node.ObjectNode selfNode = accMap.get(acc);
+            String linkedAcc = (selfNode != null && selfNode.hasNonNull("linked_acc"))
+                    ? selfNode.get("linked_acc").asText("") : "";
+            String dataUrl;
+            if (!linkedAcc.isBlank() && !linkedAcc.equals(acc)) {
+                getAvatarFromCache(sw, java.util.List.of(linkedAcc));
+                com.fasterxml.jackson.databind.node.ObjectNode linkedNode = accMap.get(linkedAcc);
+                String linkedAvatarUrl = (linkedNode != null && linkedNode.hasNonNull("avatar_url"))
+                        ? linkedNode.get("avatar_url").asText("") : "";
+                dataUrl = com.jfmultichat.utils.AvatarUtils.getCoexistAvatarDataUrl(
+                        sw, acc, linkedAcc, linkedAvatarUrl, getAccOriginDisplayName(sw, linkedAcc));
+            } else {
+                dataUrl = getAccAvatarFromFile(sw, acc);
+            }
+            return dataUrl == null ? "" : dataUrl;
+        } catch (Throwable t) {
+            LOG.debug("[头像] 取 data URL 失败 {}/{}: {}", sw, acc, t.getMessage());
+            return "";
+        }
+    }
+
+    /**
      * 获取账号主窗口句柄
      * 对应 Python: get_main_hwnd_of_accounts (L1524-L1547)
      *

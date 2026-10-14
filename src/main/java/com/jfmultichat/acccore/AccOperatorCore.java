@@ -213,6 +213,20 @@ public final class AccOperatorCore {
      * @return true = 已尝试激活；false = 没有绑定 或 窗口已失效
      */
     public static boolean switchToSwAccountWnd(String sw, String acc) {
+        return switchToSwAccountWnd(sw, acc, null);
+    }
+
+    /**
+     * 切窗并**按侧栏位置摆位**（侧栏用）.
+     *
+     * <p>用户 2026-10-13 第 3/5 条：**平台窗口之间**切换时，目标窗口要**沿用上一个窗口的尺寸**、
+     * 位置由**侧栏位置反算**出来（见 {@code SidebarLayout.windowRectForSwitch}）——
+     * 这样切窗时**侧栏原地不动**，是窗口来迁就侧栏 ✓；
+     * 而**主窗口 ↔ 平台窗口**互切时**不改尺寸**（调用方传 {@code rect = null} ✓）。
+     *
+     * @param rect 目标矩形（**物理像素** {x, y, w, h}）；null = 只激活、不摆位
+     */
+    public static boolean switchToSwAccountWnd(String sw, String acc, int[] rect) {
         Long hwndVal = AccRuntimeStore.getHwnd(sw, acc);
         if (hwndVal == null) {
             LOG.info("[窗口] {} 没有绑定主窗口（可能是原生账号，或该副本程序没在运行）", acc);
@@ -224,7 +238,14 @@ public final class AccOperatorCore {
             LOG.info("[窗口] {} 的窗口已失效，清除绑定: hwnd={}", acc, hwnd);
             return false;
         }
+        // 先恢复 + 置前（含微信后台窗口的双击特例）——**必须**在摆位之前：最大化窗口要先还原才摆得动 ✓
         boolean ok = com.jfmultichat.swcore.SwNativeOps.restoreWindowAndActivate(sw, hwnd);
+        if (rect != null && rect.length == 4) {
+            boolean moved = com.jfmultichat.swcore.SwNativeOps.setWindowRect(
+                    hwnd, rect[0], rect[1], rect[2], rect[3], true);
+            LOG.info("[窗口] 切窗摆位: sw={}, acc={}, hwnd=0x{}, rect={},{},{},{} → {}",
+                    sw, acc, Integer.toHexString(hwnd), rect[0], rect[1], rect[2], rect[3], moved);
+        }
         LOG.info("[窗口] 切换至账号窗口: sw={}, acc={}, hwnd={}, 成功={}", sw, acc, hwnd, ok);
         return ok;
     }
