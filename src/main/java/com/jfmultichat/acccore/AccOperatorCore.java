@@ -228,26 +228,90 @@ public final class AccOperatorCore {
      */
     public static boolean switchToSwAccountWnd(String sw, String acc, int[] rect) {
         Long hwndVal = AccRuntimeStore.getHwnd(sw, acc);
-        if (hwndVal == null) {
-            LOG.info("[窗口] {} 没有绑定主窗口（可能是原生账号，或该副本程序没在运行）", acc);
-            return false;
+        Integer pidVal = AccRuntimeStore.getPid(sw, acc);
+        int pid = pidVal == null ? 0 : pidVal;
+        int hwnd = hwndVal == null ? 0 : hwndVal.intValue();
+        boolean alive = hwnd != 0 && com.jfmultichat.swcore.SwNativeOps.isWindow(hwnd);
+        // ⚠️ 关键修正（用户 2026-10-14：QQNT 关闭后侧栏唤不醒 ✗，但测试台能醒 ✓）：
+        //    QQNT 关闭窗口后 Electron **销毁了那个 hwnd** ✗ → 旧代码在这里就 return false 了 ✓；
+        //    但**进程还活着、托盘宿主也在** ✓ → 只要还知道 **pid**，就能托盘唤醒 ✓（测试台就是这么成功的 ✓）。
+        if (!alive) {
+            if (pid == 0) {
+                LOG.info("[窗口] {} 既没有有效窗口、也没有 pid → 无法唤起（可能是原生账号或副本没在运行）", acc);
+                if (hwnd != 0) AccRuntimeStore.setHwnd(sw, acc, null);
+                return false;
+            }
+            LOG.info("[窗口] {} 的窗口已作废(hwnd=0x{} 或为空) → 改按 pid={} 唤起 ✓",
+                    acc, Integer.toHexString(hwnd), pid);
         }
-        int hwnd = hwndVal.intValue();
-        if (!com.jfmultichat.swcore.SwNativeOps.isWindow(hwnd)) {
-            AccRuntimeStore.setHwnd(sw, acc, null);
-            LOG.info("[窗口] {} 的窗口已失效，清除绑定: hwnd={}", acc, hwnd);
-            return false;
+        com.jfmultichat.platform.PlatformAdapter ad = com.jfmultichat.platform.PlatformAdapters.of(sw);
+        boolean visibleBefore = alive && com.jfmultichat.swcore.SwNativeOps.isWindowVisible(hwnd);
+        com.jfmultichat.platform.PlatformAdapter.Ctx ctx = new com.jfmultichat.platform.PlatformAdapter.Ctx(
+                sw, acc, hwnd, pid, visibleBefore, rect, false);
+        boolean ok = ad.activate(ctx);
+        // 唤活后主窗口可能**重生**（新 hwnd ✓）→ 更新绑定 ✓ 让侧栏跟着新窗口走 ✓
+        if (ctx.resolvedHwnd != 0 && ctx.resolvedHwnd != hwnd) {
+            AccRuntimeStore.setHwnd(sw, acc, (long) ctx.resolvedHwnd);
+            LOG.info("[窗口] {} 绑定已更新为重生后的主窗口 hwnd=0x{}", acc, Integer.toHexString(ctx.resolvedHwnd));
         }
-        // 先恢复 + 置前（含微信后台窗口的双击特例）——**必须**在摆位之前：最大化窗口要先还原才摆得动 ✓
-        boolean ok = com.jfmultichat.swcore.SwNativeOps.restoreWindowAndActivate(sw, hwnd);
-        if (rect != null && rect.length == 4) {
-            boolean moved = com.jfmultichat.swcore.SwNativeOps.setWindowRect(
-                    hwnd, rect[0], rect[1], rect[2], rect[3], true);
-            LOG.info("[窗口] 切窗摆位: sw={}, acc={}, hwnd=0x{}, rect={},{},{},{} → {}",
-                    sw, acc, Integer.toHexString(hwnd), rect[0], rect[1], rect[2], rect[3], moved);
-        }
-        LOG.info("[窗口] 切换至账号窗口: sw={}, acc={}, hwnd={}, 成功={}", sw, acc, hwnd, ok);
+        LOG.info("[窗口] 唤起（适配器 {}）: sw={}, acc={}, hwnd=0x{}, pid={}, 成功={}",
+                ad.getClass().getSimpleName(), sw, acc, Integer.toHexString(hwnd), pid, ok);
         return ok;
+    }
+
+    /**
+     * **切窗时把目标窗口摆到位**（侧栏用 ✓）—— 也全部走**平台适配器** ✓.
+     *
+     * <p>顺序（每一步都由适配器决定要不要覆盖 ✓）：
+     * <ol>
+     *   <li>{@code beforePlace}：默认"该普通却正最大化 → 先真还原"✓；Electron 平台会先**托盘叫活**再还原 ✓</li>
+     *   <li>要求最大化 → `SW_MAXIMIZE` + 抬到最前 ✓；否则按 rect 摆位 ✓</li>
+     *   <li>{@code afterPlace}：默认无 ✓；Electron 平台在"仍不可见"时做**解冻连打** ✓</li>
+     * </ol>
+     *
+     * @param rect 目标矩形（**物理像素**）；null = 不改几何 ✓
+     */
+    public static void placeForSwitch(String sw, String acc, int hwnd, int[] rect, boolean wantMaximized) {
+        com.jfmultichat.platform.PlatformAdapter ad = com.jfmultichat.platform.PlatformAdapters.of(sw);
+        Integer pidVal = AccRuntimeStore.getPid(sw, acc);
+        int pid = pidVal == null ? 0 : pidVal;
+        boolean visibleBefore = hwnd != 0 && com.jfmultichat.swcore.SwNativeOps.isWindowVisible(hwnd);
+        com.jfmultichat.platform.PlatformAdapter.Ctx ctx = new com.jfmultichat.platform.PlatformAdapter.Ctx(
+                sw, acc, hwnd, pid, visibleBefore, rect, wantMaximized);
+        try {
+            boolean wasMaximized = hwnd != 0 && com.jfmultichat.swcore.SwNativeOps.isMaximized(hwnd);
+            ad.beforePlace(ctx);
+            int target = ctx.resolvedHwnd != 0 ? ctx.resolvedHwnd : hwnd;
+            if (target == 0) return;
+            // ⚠️ **适配器可以否决"外部摆位"** ✓ —— Electron 平台会返回 false ✗
+            //    依据 ✓（用户给的文章）：外部强制显示/搬运会把 Electron 窗口弄冻 ✓
+            //    → 那种平台一律"只唤出、不搬运" ✓（让它自己回到屏幕 ✓）
+            if (!ad.allowExternalPlacement(ctx)) {
+                LOG.info("[窗口] 适配器 {} 不允许外部摆位 → 跳过 SetWindowPos ✓（避免把 Electron 弄冻 ✓）",
+                        ad.getClass().getSimpleName());
+                ad.afterPlace(ctx);
+                return;
+            }
+            if (wantMaximized) {
+                com.jfmultichat.swcore.SwNativeOps.maximizeWindow(target);
+                com.jfmultichat.swcore.SwNativeOps.raiseToTop(target);
+                LOG.info("[窗口] 摆位：要求最大化 → 已 SW_MAXIMIZE + 抬升 hwnd=0x{}", Integer.toHexString(target));
+            } else if (rect != null && rect.length == 4) {
+                // ⚠️ **还原是异步的** ✗：刚 SW_RESTORE 就 SetWindowPos，会落在"仍最大化"的窗口上（无效 ✗）
+                //    → 这种情况下**只摆一次不够**，交给侧栏的"钩子事件补摆位"再摆一次 ✓（不猜时间 ✓）
+                if (wasMaximized && com.jfmultichat.swcore.SwNativeOps.isMaximized(target)) {
+                    LOG.info("[窗口] 还原还没生效 → 交给钩子事件补摆位 hwnd=0x{}", Integer.toHexString(target));
+                    com.jfmultichat.ui.FloatingSidebar.armPendingPlace(target, rect);
+                }
+                boolean moved = com.jfmultichat.swcore.SwNativeOps.setWindowRect(
+                        target, rect[0], rect[1], rect[2], rect[3], true);
+                LOG.info("[窗口] 摆位：hwnd=0x{} → {},{},{},{}（{}）", Integer.toHexString(target),
+                        rect[0], rect[1], rect[2], rect[3], moved);
+            }
+            ad.afterPlace(ctx);
+        } catch (Throwable t) {
+            LOG.warn("[窗口] 摆位失败 hwnd={}: {}", hwnd, t.getMessage());
+        }
     }
 
     // ==================== 互斥体操作 ====================

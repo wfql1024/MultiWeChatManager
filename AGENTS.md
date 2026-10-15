@@ -62,6 +62,16 @@ JDK `D:\SpaceDev\Env\Infrastructure\runtime\Java\jdk-17.0.2`｜Gradle `D:\SpaceD
 
 > 其余不变量（PID/HWND 只存内存、表格列规则、"创建实例必查杀"、登录失败不中断整批…）都在 [`MEMORY/facts.md`](MEMORY/facts.md) 对应功能块里。
 
+## 窗口唤起 / 平台适配（2026-10-14~15 定，违反必踩坑）
+
+- **窗口状态一律用几何判定**（`isEffectivelyMaximized`：可视矩形 ≥95% 监视器且四边贴合），**不用 `showCmd`**；正常态基准取 `GetWindowPlacement().rcNormalPosition`
+- **侧栏（及一切跟随逻辑）禁止定时器/轮询/JavaFX 监听** —— 用户明确："不要搞多少 ms 这种，用钩子就好好用钩子"。事件只来自 `WinEventWatcher`（`WINEVENT_SKIPOWNPROCESS` 已刻意去掉），恢复异步用 `armPendingPlace` 等下一个钩子事件
+- **Electron 平台（QQNT 等）禁止一切"外部强制"** ✗：`SetWindowPos` / `ShowWindow` / `SetForegroundWindow` / 尺寸抖动 / 二次唤醒 —— 会把窗口推进"**出来了但卡住**"；正解只有一条：发对托盘消息 `PostMessage(host, WM_APP+1, uid, WM_LBUTTONDOWN)` 之后**什么都不做**（依据 [CSDN 那篇 Electron 卡死分析](https://misuseds.blog.csdn.net/article/details/166489064)）。适配器用 `allowExternalPlacement()=false` 否决侧栏摆位
+- **托盘图标是「切换」语义** ✗ —— 绝不连发两次（连发＝又切回去/切进坏状态）；窗口已可见时不要再碰托盘
+- **多开同名托盘图标无法区分账号**（微信多开全是 `name=微信`）→ 单图标才用托盘唤出，多图标/任务栏自隐藏一律走"作用在指定 hwnd 上"的方案（微信＝标题栏双击×2）
+- 平台适配器约定：`com.jfmultichat.platform.adapt.{平台id}Adaptation`（别名仅 `QQ→QQNT`），钩子 `activate/beforePlace/afterPlace/allowExternalPlacement`
+- **验证/探针自己跑** ✗ 不让用户一轮轮点；探针源码放 `tmp/probe/`（`tmp` 已 gitignore），用 `scripts/probe-run.bat <类名> [参数]`
+
 ---
 
 ## 验证纪律（重要）

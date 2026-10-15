@@ -43,7 +43,15 @@ public final class WinEventWatcher {
     public static final int EVENT_OBJECT_LOCATIONCHANGE = 0x800B;
 
     private static final int WINEVENT_OUTOFCONTEXT = 0x0000;
-    private static final int WINEVENT_SKIPOWNPROCESS = 0x0002;
+    /**
+     * ⚠️ **刻意不加** {@code WINEVENT_SKIPOWNPROCESS}（用户 2026-10-14）.
+     *
+     * <p>先前跳过了本进程 ✓ → 于是**我们自己的主窗口**永远不会有前台事件 ✗ →
+     * 切到主窗口时侧栏只能靠 JavaFX 的焦点"监听"来补 ✗ → 而那个监听与钩子事件**两个来源打架** ✓
+     * → 表现就是用户看到的"侧栏闪着跟了一下主窗口，然后又跟回平台窗口" ✗✓。
+     * <p>现在**只留钩子这一个来源** ✓：本进程的前台事件也照收 ✓（忽略侧栏自己那个窗口即可 ✓）。
+     */
+    private static final int WINEVENT_SKIPOWNPROCESS_DISABLED = 0x0002;   // 保留常量以便需要时恢复，但不参与组合
     private static final int OBJID_WINDOW = 0;          // 只关心"窗口对象"本身
     private static final int CHILDID_SELF = 0;          // 只关心对象自身（不是它的某个子项）
     private static final int WM_QUIT = 0x0012;
@@ -170,7 +178,7 @@ public final class WinEventWatcher {
                 null,                                   // OUTOFCONTEXT → 不需要 DLL
                 callback,
                 0, 0,                                   // 所有进程、所有线程
-                WINEVENT_OUTOFCONTEXT | WINEVENT_SKIPOWNPROCESS);   // 跳过我们自己的窗口
+                WINEVENT_OUTOFCONTEXT);                 // **不跳过本进程**（要看得见我们自己的主窗口 ✓）
         if (h == null) {
             LOG.warn("[侧栏] SetWinEventHook 失败: 事件区间 0x{}-0x{}",
                     Integer.toHexString(eventMin), Integer.toHexString(eventMax));

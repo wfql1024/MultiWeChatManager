@@ -1279,6 +1279,30 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
     }
 
     /**
+     * **只把窗口抬到最前**（不改位置、不改尺寸、不改状态）—— `SetWindowPos(HWND_TOP, SWP_NOMOVE|SWP_NOSIZE|SWP_SHOWWINDOW)`.
+     *
+     * <p>为什么需要（用户 2026-10-14：A 最大化 → B 普通时 B 上不来）：
+     * `SetForegroundWindow` 常被 Windows 拒绝（后台进程不许抢焦点 ✗），
+     * 而切到"该最大化"的目标时我们又**不摆位** ✓ → 整条链路上一次 `SetWindowPos` 都没有 ✗
+     * → 目标被上面的最大化窗口压着、永远拿不到前台 ✓。
+     * 这个方法就是补上"**纯粹的抬升**" ✓（对已最大化的窗口也安全 ✓ —— 不动它的几何 ✓）。
+     */
+    public static boolean raiseToTop(int hwnd) {
+        if (hwnd == 0) return false;
+        final int SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_SHOWWINDOW = 0x0040;
+        try {
+            boolean ok = com.sun.jna.platform.win32.User32.INSTANCE.SetWindowPos(
+                    intToHwnd(hwnd), intToHwnd(0) /* HWND_TOP */, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW);
+            LOG.info("[窗口] 抬到最前 hwnd=0x{}（不动几何）= {}", Integer.toHexString(hwnd), ok);
+            return ok;
+        } catch (Throwable t) {
+            LOG.warn("[窗口] raiseToTop 失败 hwnd={}: {}", hwnd, t.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * **窗口"正常态"的矩形**（`GetWindowPlacement().rcNormalPosition`，物理像素 {l,t,r,b}）.
      *
      * <p>用户 2026-10-14 的关键指正 ✓：**窗口最大化时也要记住它的正常位置与尺寸** ——
@@ -1315,6 +1339,33 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
             return true;
         } catch (Throwable t) {
             LOG.warn("[窗口] ShowWindow 失败 hwnd={}, cmd={}: {}", hwnd, cmd, t.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * **异步**版 `ShowWindow`（`ShowWindowAsync`）—— 不等待目标线程 ✓.
+     * <p>用途（用户 2026-10-14 实测方向 ✓）：目标 UI 线程正忙/卡住时，
+     * 同步的 `ShowWindow` 会把调用方一起拖住 ✓；托盘唤起的"温和三连"用它 ✓。
+     */
+    public static boolean showWindowCmdAsync(int hwnd, int cmd) {
+        if (hwnd == 0) return false;
+        try {
+            boolean ok = User32Ext.INSTANCE.ShowWindowAsync(intToHwnd(hwnd), cmd);
+            LOG.info("[窗口] ShowWindowAsync(hwnd=0x{}, cmd={}) = {}", Integer.toHexString(hwnd), cmd, ok);
+            return ok;
+        } catch (Throwable t) {
+            LOG.warn("[窗口] ShowWindowAsync 失败 hwnd={}, cmd={}: {}", hwnd, cmd, t.getMessage());
+            return false;
+        }
+    }
+
+    /** 只**尝试**置前（失败是常态 ✓ 不抛、不记录为错误 ✓ —— 前台限制本来就常拒绝后台进程 ✓） */
+    public static boolean tryForeground(int hwnd) {
+        if (hwnd == 0) return false;
+        try {
+            return com.sun.jna.platform.win32.User32.INSTANCE.SetForegroundWindow(intToHwnd(hwnd));
+        } catch (Throwable t) {
             return false;
         }
     }
@@ -1442,7 +1493,18 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
     public static boolean restoreWindowAndActivate(String sw, int hwnd) {
         if (hwnd == 0) return false;
         boolean visibleBefore = isWindowVisible(hwnd);
-        boolean ok = restoreWindow(hwnd);
+        boolean ok;
+        // ⚠️ 修正（用户 2026-10-14 实测"从侧栏切回 A，A 却变回普通窗口"✗）：
+        //    这里原来**无条件** `ShowWindow(SW_SHOWNORMAL)` ✗ —— 对**最大化**窗口等于"**还原**" ✓
+        //    （MSDN：SW_SHOWNORMAL 会把最小化/最大化的窗口恢复为原始尺寸和位置 ✓）
+        //    → 于是"切回 A"顺手把 A 的最大化抹掉了 ✗，也让"状态在账号间流转"永远失真 ✗。
+        //    现在改为**保状态激活** ✓：只有**最小化**才还原 ✓；普通/最大化一律只**抬升 + 置前** ✓
+        //    （切到"该最大化"的目标时，最大化由侧栏的状态趟显式做 ✓）。
+        if (isMinimized(hwnd)) {
+            ok = restoreWindowOnly(hwnd);                 // 最小化 → 必须还原出来 ✓
+        } else {
+            ok = raiseToTop(hwnd);                        // 普通/最大化 → 只抬升，**绝不改状态** ✓
+        }
         boolean wechat = "WeChat".equals(sw) || "Weixin".equals(sw);
         if (wechat && !visibleBefore) {
             try {
@@ -1454,6 +1516,11 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
             clickInWindow(hwnd, 8, 8);
             clickInWindow(hwnd, 8, 8);
             LOG.info("[窗口] 微信后台窗口 → 已双击标题区激活: hwnd={}", hwnd);
+        }
+        try {
+            com.sun.jna.platform.win32.User32.INSTANCE.SetForegroundWindow(intToHwnd(hwnd));
+        } catch (Throwable ignore) {
+            // 置前失败不算失败：raiseToTop 已经把它抬到最前 ✓
         }
         return ok;
     }
@@ -1661,6 +1728,9 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
          * 用 Unicode 版；跨进程 WM_SETTEXT 由系统负责编组，传我们自己的字符串是安全的。
          */
         boolean SetWindowTextW(com.sun.jna.platform.win32.WinDef.HWND hWnd, com.sun.jna.WString lpString);
+
+        /** JNA 自带的 `User32` **没有**暴露 `ShowWindowAsync` ✗ → 这里自己声明 ✓（托盘唤起的温和三连要用 ✓） */
+        boolean ShowWindowAsync(com.sun.jna.platform.win32.WinDef.HWND hWnd, int nCmdShow);
     }
 
     /** advapi32：拿 explorer 的令牌 → 复制一份 → 用它创建进程 */

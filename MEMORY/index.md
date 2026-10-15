@@ -89,3 +89,14 @@
   - `decisions.md` 新增 D-44（记忆系统分层与素材流）；D-40 标"部分待定"
   - `lessons.md` 新增"未解决的已知问题"
 - **归宿**：`AGENTS.md`、`MEMORY/{facts,decisions,lessons,dev_logs,index}.md`、`scripts/`、`~/.dsh/AGENTS.md`
+
+### 2026-10-13 ~ 10-15（第三次整理：浮动侧栏 + 多平台窗口唤起）
+- **来源**：`tmp/2026-10-13.md`（101.7KB、38 张卡；上次整理到 2026-10-12）
+- **做了**：
+  - `AGENTS.md` 新增「**窗口唤起 / 平台适配**」一节（7 条硬约束：几何判状态、纯钩子禁定时器、**Electron 禁一切外部强制**、托盘是切换语义、多开同名图标不可区分、适配器约定、探针自己跑）
+  - `facts.md` 新增 **§5 浮动侧栏与多平台窗口唤起**（侧栏五件的职责、平台适配器与四钩子、`WindowActivationOps`/`UiaOps` 对外入口与**已校正的 vtable 下标**、探针基建与现有 6 个探针、平台结论表）
+  - `lessons.md` 新增「**Electron / UIA / 托盘**」12 条坑（外部强制→卡住、托盘切换语义、微信 UIA 无几何且 Invoke 空操作、同名图标、列控件别设上限、属性下标别瞎推、探针自己跑且快照要逐轮更新、只用编辑工具改代码、Java 字符串禁内嵌引号、`findMainWindowOfPid` 两个反面、`Shell_NotifyIconGetRect` 查不到≠代码错、D-46 新可用件）
+  - `decisions.md` 新增 **D-47**（分平台唤起策略 + 禁止外部强制铁律 + 代价与遗留）
+  - `dev_logs.md` 追加 10-13~10-15 过程段（侧栏十三轮、方案制测试台 38 方案、UIA 能力扩展、托盘唤出重大结论、多开真相、QQNT 真凶）
+- **归宿**：`AGENTS.md`、`MEMORY/{facts,decisions,lessons,dev_logs,index}.md`（`tmp/2026-10-13.md` 按规范保留原件）
+- **遗留待定**：QQNT pid 过期自动重发现；旧版 WeChat/老 QQ 未逐平台验证；D-46 登录按钮 UIA 优先尚未接线

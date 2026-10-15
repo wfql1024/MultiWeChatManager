@@ -52,10 +52,9 @@ public class FloatingSidebar {
     private static final Logger LOG = LoggerFactory.getLogger(FloatingSidebar.class);
 
     private static final long COLLAPSE_DELAY_MS = 600;      // 鼠标移开后多久收回
-    private static final long SWITCH_SETTLE_MS = 400;       // 切窗后等平台自己调整完
-    private static final long SWITCH_FREEZE_MS = 1500;      // 这段时间内**侧栏不动**（第 5 条）
-    /** 切窗纠正最多几趟（第 1 趟摆状态、后续趟摆位置 ✓ 每趟间隔 300ms ✓） */
-    private static final int SWITCH_MAX_PASS = 3;
+    // ⚠️ 切窗**不设任何定时器**（用户 2026-10-14："不要搞多少ms的这种，用钩子就好好用钩子" ✓）：
+    //    先前那套"冻结 N ms + 多趟纠正"已被删除 ✗ —— 它既卡手 ✓ 又会反过来打断用户手动最大化 ✗。
+    //    现在：状态**最先判、当场执行** ✓；需要"先还原再摆位"时，摆位由**目标自己的钩子事件**驱动 ✓。
     /**
      * 折叠态的**热区**（用户 2026-10-14：鼠标移到屏幕四角顶点唤不出）.
      *
@@ -117,39 +116,25 @@ public class FloatingSidebar {
     private boolean builtOnce;
     private double btnSize = SidebarPrefs.BTN;
 
-    // 切窗期间的"冻结 + 一次纠正"
-    private int switchingHwnd;
-    private long switchSettleAt;
-    private long switchFreezeUntil;
+    /** 我们自己的**侧栏窗口**句柄（钩子现在也收本进程事件 ✓ → 前台是它时不要跟着自己跑 ✓） */
+    private int sidebarHwnd;
     /**
-     * **切换时沿用的窗口尺寸** —— 一旦确定就**保持恒定** ✓.
-     *
-     * <p>⚠️ 用户实测（日志佐证）：平台（新版微信）会**自行把窗口改小几像素** ✗；
-     * 我原来每次切窗后都把"量到的真实尺寸"当基准 ✗ → 尺寸被逐次固化 → **窗口越切越小** ✓✓。
-     * 现在：只在**首次**确定基准（上一个平台窗口的实测尺寸 ✓，或从主窗口切来那次的实测尺寸 ✓），
-     * 之后**只读不写** ✓ → 无论平台怎么自行调整，切窗请求的尺寸始终一致 ✓ 不再累积缩小 ✓。
+     * **事件驱动的补摆位**（用户 2026-10-14："用钩子就好好用钩子，不要搞多少ms的" ✓）.
+     * <p>目标"原本最大化、该变普通"时要先 `SW_RESTORE` ✓，而还原是**异步**的 ✓ ——
+     * 不猜时间 ✗，而是记下待摆的矩形 ✓，等**这个目标自己的钩子事件**送到（说明它动完了 ✓）再摆 ✓。
      */
-    private double switchW;
-    private double switchH;
-    private boolean switchSizeValid;
-    private boolean switchBaseFromMeasure;
-    /** 上一次**我们请求**的窗口尺寸（用来区分"用户自己改的尺寸"与"平台自行微调几像素" ✓） */
+    private int pendingPlaceHwnd;
+    private int[] pendingPlaceRect;
+
+    /** 切换时沿用的**正常态尺寸**（`rcNormalPosition` ✓；20px 容差滤掉平台自行微调 ✗） */
+    private double baseW;
+    private double baseH;
+    private boolean baseValid;
+    /** 上一次**我们请求**的尺寸（用来识别"用户手动调整了窗口大小" ✓） */
     private double lastRequestedW;
     private double lastRequestedH;
-    /**
-     * 切窗要带过去的**窗口状态**（用户 2026-10-14：窗口状态应在账号之间流转 ✓）.
-     * <p>A 普通 → B（本来最大化）时，B 必须**缩回来**再摆位 ✓；
-     * A 最大化 → B 普通时，B 也要**最大化** ✓ —— 状态跟着走，视觉才一致 ✓。
-     */
-    private boolean switchWantMaximized;
-    /** 这次切窗是否要**摆动目标窗口的状态/位置**（只在不同**平台账号窗口**之间流转 ✓；
-     *  从主窗口切过去仍遵守老约定"不改尺寸" ✓，免得点一下就把它最大化/还原，反直觉 ✗） */
-    private boolean switchTouchState;
-    /** 切窗后的纠正趟数（第 1 趟先还原/最大化，后续趟才摆位 ✓ —— 还原是异步生效的 ✓） */
-    private int switchPass;
 
-    private double dragOffsetX;
-    private double dragOffsetY;
+    // 拖拽（用户第 8 条：暂缓 ✓ 已取消拖动侧栏本身，位置完全由"贴边 + 对齐"决定 ✓）
 
     private static volatile FloatingSidebar current;
 
@@ -263,6 +248,26 @@ public class FloatingSidebar {
         if (seq == lastSeq) return;
         lastSeq = seq;
 
+        // **事件驱动的补摆位**（用户 2026-10-14："用钩子就好好用钩子，不要搞多少ms的" ✓）：
+        // 需要对"原本最大化"的目标先还原再摆位 ✓，而 ShowWindow 的还原是**异步**的 ✓ →
+        // 不猜时间 ✗，而是**等这个目标自己的事件送到**（LOCATIONCHANGE 等）再摆 ✓ —— 事件到了就说明它动完了 ✓
+        if (pendingPlaceHwnd != 0) {
+            if (watcher.getLastEventHwnd() == pendingPlaceHwnd) {
+                int h = pendingPlaceHwnd;
+                int[] r = pendingPlaceRect;
+                pendingPlaceHwnd = 0;
+                pendingPlaceRect = null;
+                if (r != null && !com.jfmultichat.swcore.SwNativeOps.isMaximized(h)) {
+                    com.jfmultichat.swcore.SwNativeOps.setWindowRect(h, r[0], r[1], r[2], r[3], true);
+                    LOG.info("[侧栏] 还原到位（收到目标事件）→ 补摆位 hwnd=0x{} rect={},{},{},{}",
+                            Integer.toHexString(h), r[0], r[1], r[2], r[3]);
+                }
+            } else if (watcher.getLastEventHwnd() != 0 && followedHwnd != pendingPlaceHwnd) {
+                pendingPlaceHwnd = 0;                 // 目标已被换掉 → 放弃 ✓
+                pendingPlaceRect = null;
+            }
+        }
+
         if (mainHwnd == 0) {
             mainHwnd = resolveOwnMainWindowHwnd();
         }
@@ -272,45 +277,18 @@ public class FloatingSidebar {
             updateActiveHighlight();
         }
 
+        // ---- 跟随目标：**只认钩子送来的前台事件** ✓（不再叠加 JavaFX 焦点监听 ✗ —— 两个来源会打架 ✓）----
+        // 也因此**不需要跟随锁** ✓：点击切窗时我们自己设好目标 ✓，
+        // 而"目标还没拿到前台"并不会产生新的前台事件 ✗ → 不会被拽回去 ✓（治"摇摆"）
         int fg = watcher.getForegroundHwnd();
-        if (isFollowable(fg)) {
+        if (fg != 0 && fg != sidebarHwnd && (isFollowable(fg) || fg == mainHwnd)) {
             followedHwnd = fg;
-        } else if (fg != 0 && fg == mainHwnd) {
-            followedHwnd = mainHwnd;
         }
         if (followedHwnd != lastActiveHwnd) {
             lastActiveHwnd = followedHwnd;
             updateActiveHighlight();      // 只切样式类 ✓ 不重建 → 不打断滚动位置 ✓
         }
         if (followedHwnd == 0) return;
-
-        // ---- 切窗后的"冻结 + 量真实矩形 + 一次纠正"（用户 2026-10-13 实测的侧栏右移问题）----
-        if (switchingHwnd != 0) {
-            long now = System.currentTimeMillis();
-            int[] phys = com.jfmultichat.swcore.SwNativeOps.getVisualRect(switchingHwnd);
-            if (phys != null) {
-                lastTargetRect = toLogical(phys);
-                // 只有"从主窗口切过来"那一次才用实测尺寸定基准（此后恒定 ✓ 不被平台的自行调整污染 ✓）
-                if (switchBaseFromMeasure) {
-                    SidebarLayout.Rect base = normalRectLogical(switchingHwnd);   // 同样取**正常态** ✓
-                    if (base == null) base = lastTargetRect;
-                    switchW = base.w;
-                    switchH = base.h;
-                    switchSizeValid = true;
-                    switchBaseFromMeasure = false;
-                    LOG.info("[侧栏] 切换基准尺寸定为 {}x{}（取自正常态 ✓）", Math.round(switchW), Math.round(switchH));
-                }
-            }
-            // 纠正趟：第 1 趟先把窗口状态摆对（还原/最大化 ✓），后续趟再摆位（还原是异步生效的 ✓）
-            if (switchPass < SWITCH_MAX_PASS && now >= switchSettleAt + switchPass * 300L) {
-                switchPass++;
-                applySwitchWindowState();
-            }
-            if (now >= switchFreezeUntil) {
-                switchingHwnd = 0;
-            }
-            return;                                       // 冻结期间**不移动侧栏** ✓（第 5 条）
-        }
 
         if (!isFollowable(followedHwnd) && followedHwnd != mainHwnd) {
             if (stage.isShowing()) stage.hide();
@@ -326,8 +304,6 @@ public class FloatingSidebar {
             stage.show();
             styleApplied = false;
         }
-        // 用户**自己**调整了被跟随窗口的尺寸 → 作为新的切换基准 ✓
-        //（用户 2026-10-14：调好尺寸后切下一个平台窗口，没按我调整后的尺寸显示 ✗）
         syncBaseFromLiveSize();
         applyGeometry();
     }
@@ -335,12 +311,10 @@ public class FloatingSidebar {
     /**
      * 把"**用户手动调整过**的尺寸"接纳为新基准 ✓，同时**过滤掉平台的自行微调** ✗.
      *
-     * <p>为什么需要：上一轮为了防止"越切越小"把基准做成了**恒定** ✗ —— 结果连用户自己改的尺寸也被忽略 ✗。
-     * 两者怎么区分：**平台自行调整只发生在切窗前后**（那时在冻结期 ✓ 直接跳过 ✓），
-     * 且幅度只有几像素 ✓；而**用户手动拖出来的尺寸**变化通常远大于 20px ✓ —— 用容差区分 ✓。
+     * <p>两者区分：平台自行调整幅度只有几像素 ✓；用户手动拖出来的尺寸变化通常远大于 20px ✓ → 用容差区分 ✓。
      */
     private void syncBaseFromLiveSize() {
-        if (switchingHwnd != 0 || followedHwnd == 0) return;        // 切窗期间一律不接纳 ✓
+        if (followedHwnd == 0) return;
         // ⚠️ 基准一律取**正常态矩形**（`GetWindowPlacement.rcNormalPosition` ✓）——
         // 用户 2026-10-14 指正 ✓：窗口最大化时也要记住它的正常位置与尺寸 ✓；
         // 若用"当前可见矩形"当基准 ✗，最大化会把整屏尺寸灌进基准 ✓ → 传给下一个窗口就变成
@@ -351,12 +325,12 @@ public class FloatingSidebar {
         double dw = Math.abs(base.w - lastRequestedW);
         double dh = Math.abs(base.h - lastRequestedH);
         if (dw > 20 || dh > 20) {
-            switchW = base.w;
-            switchH = base.h;
-            switchSizeValid = true;
+            baseW = base.w;
+            baseH = base.h;
+            baseValid = true;
             lastRequestedW = base.w;
             lastRequestedH = base.h;
-            LOG.info("[侧栏] 正常态尺寸被调整（或首次确立）→ 基准 {}x{}", Math.round(switchW), Math.round(switchH));
+            LOG.info("[侧栏] 正常态尺寸被调整（或首次确立）→ 基准 {}x{}", Math.round(baseW), Math.round(baseH));
         }
     }
 
@@ -364,55 +338,6 @@ public class FloatingSidebar {
     private SidebarLayout.Rect normalRectLogical(int hwnd) {
         int[] r = com.jfmultichat.swcore.SwNativeOps.getNormalRect(hwnd);
         return r == null ? null : toLogical(r);
-    }
-
-    /**
-     * **切窗时把窗口状态一起带过去，并按侧栏位置摆位**（用户 2026-10-14）.
-     *
-     * <p>多趟执行（每趟间隔 300ms，最多 {@link #SWITCH_MAX_PASS} 趟 ✓），因为：
-     * <ul>
-     *   <li>**还原是异步生效的** ✓ —— `ShowWindow` 返回时窗口未必已经变回普通态 ✓，
-     *       所以"先还原"和"再摆位"必须分趟 ✓，否则摆位又落在一个仍最大化的窗口上（无效 ✗）</li>
-     *   <li>平台可能**自己又最大化/微调** ✓ → 后续趟会再纠一次 ✓</li>
-     * </ul>
-     * 关键认知 ✗：对**最大化**窗口直接 {@code SetWindowPos} **不会**让它缩回来 ✓（只改"还原矩形"）
-     * —— 这正是用户看到的"B 没有缩回来并调整窗口" ✓ 必须先真还原 ✓。
-     */
-    private void applySwitchWindowState() {
-        try {
-            if (!switchTouchState) return;                // 从主窗口切来 → 不动它的状态/位置 ✓
-            if (switchWantMaximized) {
-                // 上一个窗口是最大化 → 目标也最大化 ✓（状态流转）
-                if (!com.jfmultichat.swcore.SwNativeOps.isMaximized(switchingHwnd)) {
-                    com.jfmultichat.swcore.SwNativeOps.maximizeWindow(switchingHwnd);
-                    LOG.info("[侧栏] 上一个窗口是最大化 → 目标 hwnd=0x{} 也最大化（第 {} 趟）",
-                            Integer.toHexString(switchingHwnd), switchPass);
-                }
-                return;                                   // 最大化不需要摆位 ✓
-            }
-            if (com.jfmultichat.swcore.SwNativeOps.isMaximized(switchingHwnd)) {
-                // 上一个窗口是普通态 → 目标必须先**真还原** ✓（SetWindowPos 对最大化窗口无效 ✗）
-                com.jfmultichat.swcore.SwNativeOps.restoreWindowOnly(switchingHwnd);
-                LOG.info("[侧栏] 目标原来是最大化 → 已还原，等下一趟再摆位（第 {} 趟）", switchPass);
-                return;
-            }
-            if (!switchSizeValid || lastTargetRect == null) return;
-            SidebarLayout.Rect screen = monitorOf(lastTargetRect);
-            SidebarLayout.Rect here = new SidebarLayout.Rect(stage.getX(), stage.getY(),
-                    stage.getWidth(), stage.getHeight());
-            SidebarLayout.Rect want = SidebarLayout.windowRectForSwitch(prefs, here, screen, switchW, switchH);
-            if (want == null) return;
-            double s = uiScale();
-            lastRequestedW = want.w;
-            lastRequestedH = want.h;
-            boolean ok = com.jfmultichat.swcore.SwNativeOps.setWindowRect(switchingHwnd,
-                    (int) Math.round(want.x * s), (int) Math.round(want.y * s),
-                    (int) Math.round(want.w * s), (int) Math.round(want.h * s), true);
-            LOG.info("[侧栏] 切窗纠正（第 {} 趟）：hwnd=0x{} → {}（基准 {}x{}，{}）", switchPass,
-                    Integer.toHexString(switchingHwnd), want, Math.round(switchW), Math.round(switchH), ok);
-        } catch (Throwable t) {
-            LOG.warn("[侧栏] 纠正失败: {}", t.getMessage());
-        }
     }
 
     private boolean isFollowable(int hwnd) {
@@ -525,24 +450,25 @@ public class FloatingSidebar {
     }
 
     /**
-     * 是否"等价于最大化"（贴边隐藏的触发条件 ✓）.
-     * <p>除了 {@code GetWindowPlacement} 的 showCmd ✓，**再加一条几何判据**：
-     * 窗口视觉矩形**基本铺满**所在显示器（≥95% 且四边贴边 ✓）——
-     * 这样 JavaFX 主窗口（它最大化时 showCmd 未必是 SW_SHOWMAXIMIZED ✗）与
-     * "手动拖到铺满"的情况都能触发贴边隐藏 ✓（用户反馈：跟主窗口时也应能贴边隐藏 ✓）。
+     * 是否"最大化" —— **一律以实际几何为准** ✓（用户 2026-10-14 第三条：
+     * "获取的状态并不是真实的最新状态" ✗）。
+     *
+     * <p>为什么不信 {@code GetWindowPlacement} 的 showCmd ✗：平台自己改尺寸/最大化时，
+     * showCmd 与**眼睛看到的**可能不一致（滞回 ✓），于是"状态在账号之间流转"就会传错 ✓
+     * —— 用户实测"切回 A 反而把 A 变成最大化了" ✓ 就是拿到了不真实的旧状态 ✓。
+     * <p>判据：视觉矩形基本铺满所在显示器（≥95% 且四边贴边 ✓）→ 就是最大化 ✓（眼见为实 ✓）。
+     * 这条同时覆盖 JavaFX 主窗口（它最大化时 showCmd 未必报 MAXIMIZED ✗）与"手动拖到铺满" ✓。
      */
     private boolean isEffectivelyMaximized(int hwnd, SidebarLayout.Rect target, SidebarLayout.Rect screen) {
-        try {
-            if (com.jfmultichat.swcore.SwNativeOps.isMaximized(hwnd)) return true;
-        } catch (Throwable ignore) {
-            // 继续用几何判据
-        }
+        if (target == null || screen == null) return false;
         double tol = 6;
         boolean covers = target.w >= screen.w * 0.95 && target.h >= screen.h * 0.95;
         boolean flush = Math.abs(target.x - screen.x) <= tol && Math.abs(target.y - screen.y) <= tol
                 && Math.abs(target.right() - screen.right()) <= tol
                 && Math.abs(target.bottom() - screen.bottom()) <= tol;
-        return covers && flush;
+        if (covers && flush) return true;
+        // 几何没铺满 → 一定不是最大化 ✓（即使 showCmd 说是，也以看得见的为准 ✓）
+        return false;
     }
 
     private static SidebarLayout.Rect toLogical(int[] phys) {
@@ -637,6 +563,13 @@ public class FloatingSidebar {
                 rowBox.getChildren().add(node);
             }
         }
+        // 末尾追加"测试按钮"（不参与切换 ✓ 只开测试台 ✓）
+        Node test = buildTestButton();
+        if (vertical) {
+            colBox.getChildren().add(test);
+        } else {
+            rowBox.getChildren().add(test);
+        }
         builtVertical = vertical;
         builtOnce = true;
         if (v > 0 || h > 0) {
@@ -714,6 +647,46 @@ public class FloatingSidebar {
 
     private void addMainItem() {
         items.add(new Item(true, null, null, mainHwnd, "主窗口"));
+    }
+
+    /**
+     * 末尾的**测试按钮**（用户 2026-10-14：把 QQNT/Electron 唤起测试小窗放进侧栏的一个"测试按钮"里 ✓）.
+     * <p>它不参与"切换窗口" ✓，点一下只打开测试台 ✓。
+     */
+    private Node buildTestButton() {
+        double size = Math.max(SidebarPrefs.MIN_BTN, btnSize);
+        Button btn = new Button();
+        btn.getStyleClass().add("sidebar-btn");
+        btn.setPrefSize(size, size);
+        btn.setMinSize(size, size);
+        btn.setMaxSize(size, size);
+        Label icon = new Label("🧪");
+        icon.getStyleClass().add("sidebar-btn-label");
+        btn.setGraphic(icon);
+        Tooltip.install(btn, new Tooltip("窗口唤起测试台（QQNT/Electron 卡死窗口专项 ✓）"));
+        btn.setOnAction(e -> {
+            LOG.info("[侧栏] 打开窗口唤起测试台");
+            WindowActivationLab.open();
+        });
+        return btn;
+    }
+
+    /** 侧栏当前跟随的窗口（测试台「取侧栏当前窗口」用 ✓） */
+    public int getFollowedHwnd() {
+        return followedHwnd;
+    }
+
+    /**
+     * **挂一个"待补摆位"**（`AccOperatorCore.placeForSwitch` 在"还原还没生效"时调用 ✓）.
+     * <p>为什么需要：`ShowWindow(SW_RESTORE)` 是**异步**的 ✗ —— 紧接着 `SetWindowPos` 会落在
+     * 仍处于最大化的窗口上（无效 ✗）。这里记下来 ✓，等**这个窗口自己的钩子事件**送到再补摆一次 ✓
+     * （不猜时间、不加定时器 ✓ 用户 2026-10-14 的要求 ✓）。
+     */
+    public static void armPendingPlace(int hwnd, int[] rect) {
+        FloatingSidebar s = current;
+        if (s == null || hwnd == 0 || rect == null || rect.length != 4) return;
+        s.pendingPlaceHwnd = hwnd;
+        s.pendingPlaceRect = rect.clone();
     }
 
     private void addBoundItems() {
@@ -890,6 +863,17 @@ public class FloatingSidebar {
 
     // ==================== 点击切窗 ====================
 
+    /**
+     * 点按钮 → 唤起/切换窗口（用户第 3/5 条 + 2026-10-14 的"三件事"）.
+     *
+     * <p>**纯钩子、零定时器**（用户 2026-10-14："不要搞多少ms的这种，用钩子就好好用钩子" ✓）：
+     * <ol>
+     *   <li>**当场现读**上一个窗口的信息（状态以**几何**为准 ✓ 不信 showCmd 的滞回 ✗）</li>
+     *   <li>状态**最先判、短路执行** ✓：该最大化就立刻 `SW_MAXIMIZE` + 抬升 ✓（不等任何 ms ✗）</li>
+     *   <li>该普通而目标正最大化 → 先 `SW_RESTORE` ✓，摆位则**等目标的钩子事件**到了再补 ✓（还原是异步的 ✓）</li>
+     *   <li>切完**立刻** `applyGeometry()` ✓（不等事件 ✗ —— 否则从主窗口切过去时侧栏不跟 ✓ 用户实测问题①）</li>
+     * </ol>
+     */
     private void onItemClick(Item it) {
         try {
             if (it.main) {
@@ -904,58 +888,76 @@ public class FloatingSidebar {
                     ? monitorOf(new SidebarLayout.Rect(0, 0, 1, 1)) : monitorOf(lastTargetRect);
             SidebarLayout.Rect here = new SidebarLayout.Rect(stage.getX(), stage.getY(),
                     stage.getWidth(), stage.getHeight());
-            boolean prevIsPlatform = followedHwnd != 0 && followedHwnd != mainHwnd && lastTargetRect != null;
-            // 上一个窗口是否**最大化**（用户 2026-10-14：状态要流转 ✓）
-            boolean prevMaximized = prevIsPlatform
-                    && isEffectivelyMaximized(followedHwnd, lastTargetRect, monitorOf(lastTargetRect));
+            boolean prevIsPlatform = followedHwnd != 0 && followedHwnd != mainHwnd;
+
+            // ① 当场现读 A（用户建议①）：状态 + 正常态尺寸
+            SidebarLayout.Rect prevFresh = null;
+            int[] prevPhys = prevIsPlatform
+                    ? com.jfmultichat.swcore.SwNativeOps.getVisualRect(followedHwnd) : null;
+            if (prevPhys != null) prevFresh = toLogical(prevPhys);
+            boolean prevMaximized = prevFresh != null
+                    && isEffectivelyMaximized(followedHwnd, prevFresh, monitorOf(prevFresh));
             if (prevIsPlatform) {
-                if (!switchSizeValid) {
-                    // 以"上一个平台窗口"的**正常态**尺寸为基准 ✓
-                    //（最大化时也记得正常尺寸 ✓ —— 用户指正；否则会拿到整屏尺寸 ✗）
-                    SidebarLayout.Rect base = normalRectLogical(followedHwnd);
-                    if (base == null) base = lastTargetRect;
-                    switchW = base.w;
-                    switchH = base.h;
-                    switchSizeValid = true;
-                    LOG.info("[侧栏] 切换基准尺寸确立 {}x{}（取自正常态 ✓）", Math.round(switchW), Math.round(switchH));
+                SidebarLayout.Rect base = normalRectLogical(followedHwnd);
+                if (base == null) base = prevFresh;
+                // 20px 容差：滤掉"平台自行微调几像素"（否则越切越小 ✗），但接纳用户手动调整 ✓
+                if (base != null && (!baseValid
+                        || Math.abs(base.w - baseW) > 20 || Math.abs(base.h - baseH) > 20)) {
+                    baseW = base.w;
+                    baseH = base.h;
+                    baseValid = true;
+                    LOG.info("[侧栏] 切换基准尺寸当场确立 {}x{}（A 的正常态 ✓）", Math.round(baseW), Math.round(baseH));
                 }
             } else {
-                // 从主窗口切来 → **不改尺寸**（用户第 3 条 ✓）；该窗口的实测尺寸稍后定为后续基准 ✓
-                switchSizeValid = false;
-                switchBaseFromMeasure = true;
+                // 从主窗口切来：**不改尺寸**（用户第 3 条 ✓），但把该窗口的正常态尺寸记为后续基准 ✓（当场 ✓）
+                SidebarLayout.Rect base = normalRectLogical(it.hwnd);
+                if (base != null) {
+                    baseW = base.w;
+                    baseH = base.h;
+                    baseValid = true;
+                }
             }
-            // ⚠️ 上一个窗口是**最大化**时：**不要传矩形** ✗（用户 2026-10-14 实测：
-            //    传了矩形就变成"把 B 摆到最大化的位置和尺寸"，而不是"B 也最大化" ✗）
-            //    → 只激活，随后由状态趟 `ShowWindow(SW_MAXIMIZE)` 做**真正的最大化** ✓
-            SidebarLayout.Rect want = (prevIsPlatform && !prevMaximized)
-                    ? SidebarLayout.windowRectForSwitch(prefs, here, screen, switchW, switchH)
+
+            // ② 目标矩形：只在不同**平台账号窗口**之间、且 A 不是最大化时才摆位 ✓
+            //    （A 最大化 → 一律不传矩形 ✗：传了就变成"摆成整屏"而不是"真最大化" ✓ 用户指正 ✓）
+            SidebarLayout.Rect want = (prevIsPlatform && !prevMaximized && baseValid)
+                    ? SidebarLayout.windowRectForSwitch(prefs, here, screen, baseW, baseH)
                     : null;
             int[] rect = want == null ? null
                     : new int[]{(int) Math.round(want.x * uiScale()), (int) Math.round(want.y * uiScale()),
                                 (int) Math.round(want.w * uiScale()), (int) Math.round(want.h * uiScale())};
-            if (want != null) {
-                lastRequestedW = want.w;      // 记下"我们请求的尺寸"（用来识别用户手动调整 ✓）
-                lastRequestedH = want.h;
-            }
-            boolean ok = com.jfmultichat.acccore.AccOperatorCore.switchToSwAccountWnd(it.sw, it.acc, rect);
-            LOG.info("[侧栏] 切到 {}/{}（hwnd=0x{}）：{}；摆位={}", it.sw, it.acc, Integer.toHexString(it.hwnd),
-                    ok ? "成功" : "失败", want == null ? "不改尺寸" : want.toString());
 
-            // 冻结侧栏 + 到点量真实矩形 + 纠正（用户第 5 条 + 微信自行改尺寸的补偿）
-            //  **窗口状态也要带过去**（用户 2026-10-14）：上一个窗口是否最大化 → 目标照做 ✓
-            //  只在**平台账号窗口之间**流转 ✓（从主窗口切过去不动它的状态，免得反直觉 ✗）
-            switchTouchState = prevIsPlatform;
-            switchWantMaximized = prevMaximized;
-            followedHwnd = it.hwnd;
-            lastActiveHwnd = followedHwnd;
-            switchingHwnd = it.hwnd;
-            long now = System.currentTimeMillis();
-            switchSettleAt = now + SWITCH_SETTLE_MS;
-            switchFreezeUntil = now + SWITCH_FREEZE_MS;
-            switchPass = 0;
-            LOG.info("[侧栏] 继承窗口状态：上一个窗口最大化={} → 目标将{}", switchWantMaximized,
-                    switchWantMaximized ? "最大化" : "还原后摆位");
+            // ③ 激活：走**平台适配器** ✓（QQNT = 托盘唤醒 ✓ 实测唯一可用 ✓；没适配类的平台走默认保状态激活 ✓）
+            boolean ok = com.jfmultichat.acccore.AccOperatorCore.switchToSwAccountWnd(it.sw, it.acc, null);
+            // 唤活后主窗口可能**重生**（QQNT 关闭再唤起就是这种情况 ✓）→ 必须跟着**新 hwnd** 走 ✓
+            int liveHwnd = it.hwnd;
+            Long rebound = com.jfmultichat.acccore.AccRuntimeStore.getHwnd(it.sw, it.acc);
+            if (rebound != null && rebound != 0 && rebound.intValue() != it.hwnd) {
+                liveHwnd = rebound.intValue();
+                LOG.info("[侧栏] {}/{} 的窗口重生 → 跟随新 hwnd=0x{}", it.sw, it.acc, Integer.toHexString(liveHwnd));
+            }
+            LOG.info("[侧栏] 切到 {}/{}（hwnd=0x{}）：{}；A 最大化={}；摆位={}", it.sw, it.acc,
+                    Integer.toHexString(liveHwnd), ok ? "成功" : "失败", prevMaximized,
+                    want == null ? "不改尺寸" : want.toString());
+
+            // ④ **状态最先判、当场短路执行** ✓（状态与摆位也都交给适配器 ✓）
+            if (prevIsPlatform) {
+                if (prevMaximized) {
+                    com.jfmultichat.acccore.AccOperatorCore.placeForSwitch(it.sw, it.acc, liveHwnd, null, true);
+                    LOG.info("[侧栏] 短路执行：A 最大化 → 当场最大化 hwnd=0x{}", Integer.toHexString(liveHwnd));
+                } else if (rect != null) {
+                    // 适配器会决定"摆位前要不要先叫活/还原" ✓ 以及摆位后要不要解冻 ✓
+                    com.jfmultichat.acccore.AccOperatorCore.placeForSwitch(it.sw, it.acc, liveHwnd, rect, false);
+                    lastRequestedW = want.w;
+                    lastRequestedH = want.h;
+                }
+            }
+
+            // ⑤ **立刻**跟随（不等事件 ✗ —— 否则从主窗口切过去时侧栏不跟过去 ✓ 用户实测问题①）
+            followedHwnd = liveHwnd;
+            lastActiveHwnd = liveHwnd;
             updateActiveHighlight();            // 只刷新高亮 ✓ 不重建内容 → 滚动位置不被打断 ✓
+            applyGeometry();
         } catch (Throwable t) {
             LOG.warn("[侧栏] 切窗失败: {}", t.getMessage());
         }
@@ -978,6 +980,7 @@ public class FloatingSidebar {
                 if ((Math.abs(w - wantW) <= 8 && Math.abs(hh - wantH) <= 8)
                         || (Math.abs(w - wantH) <= 8 && Math.abs(hh - wantW) <= 8)) {
                     com.jfmultichat.swcore.SwNativeOps.applyNoActivateToolWindow(h);
+                    sidebarHwnd = h;                 // 记住自己那个窗口 ✓（前台事件里要忽略它 ✓）
                     styleApplied = true;
                     return;
                 }
@@ -1032,25 +1035,16 @@ public class FloatingSidebar {
 
     // ==================== 对外 ====================
 
+    /**
+     * 记住我们自己主窗口的句柄（跟随它 + 切窗判据要用 ✓）.
+     *
+     * <p>⚠️ 用户 2026-10-14："不要搞监听" ✓ —— 这里**不再挂 JavaFX 的焦点/几何监听** ✗。
+     * 先前那个 `focusedProperty` 监听与钩子事件是**两个来源** ✓ → 切到主窗口时两边的结论互相打架 ✓
+     * → 表现就是"侧栏闪着跟了一下主窗口，然后又跟回平台窗口" ✗✓。
+     * <p>现在：钩子**不再跳过本进程** ✓（见 {@code WinEventWatcher}）→ 主窗口的前台/移动事件
+     * 与平台窗口**走同一条路** ✓，单一来源、不会打架 ✓。
+     */
     public void bindToMainWindow(MainWindow mainWindow) {
-        Stage mainStage = mainWindow.getStage();
-        ChangeListener<Number> follower = (obs, old, val) -> {
-            if (followedHwnd == mainHwnd && switchingHwnd == 0) applyGeometry();
-        };
-        mainStage.xProperty().addListener(follower);
-        mainStage.yProperty().addListener(follower);
-        mainStage.widthProperty().addListener(follower);
-        mainStage.heightProperty().addListener(follower);
-        mainStage.focusedProperty().addListener((o, was, is) -> {
-            if (!is) return;
-            if (mainHwnd == 0) mainHwnd = resolveOwnMainWindowHwnd();
-            if (mainHwnd != 0) {
-                followedHwnd = mainHwnd;
-                lastActiveHwnd = mainHwnd;
-                updateActiveHighlight();
-                applyGeometry();
-            }
-        });
         if (mainHwnd == 0) mainHwnd = resolveOwnMainWindowHwnd();
         rebuildItems();
     }

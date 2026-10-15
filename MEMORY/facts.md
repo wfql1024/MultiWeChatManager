@@ -292,3 +292,59 @@ TaskRegistry.get().submit("detect", "探测 WeChat 路径", swId, () -> {   // �
 ### 4.3 打包产物
 
 `build/portable/`（便携版）、`build/exe/`（安装版，WiX 3.14）；版本号唯一来源 `AppVersion.java`（当前 `4.0.0.7000`）。
+
+---
+
+## 5. 浮动侧栏（窗口切换器）与多平台窗口唤起
+
+> 2026-10-13~15 建成；**规矩见 `AGENTS.md`「窗口唤起 / 平台适配」一节**，这里只写"现在是什么样"。
+
+### 5.1 侧栏代码结构（`com.jfmultichat.ui`）
+
+| 文件 | 职责 |
+|---|---|
+| `FloatingSidebar` | 侧栏窗口本体：跟随外部窗口、按钮列表（🏠 主窗 + 已绑定账号，含头像/平台徽标/🧪 测试台按钮）、贴边隐藏、切窗、`armPendingPlace`、`updateActiveHighlight`（只改样式类不重建 → 不丢滚动）、`revealActive`（最短步滑到当前项） |
+| `SidebarPrefs` | 贴边/对齐/尺寸模式/主窗按钮位置；`LocalGlobalConfig.json` 的 `sidebar` 节点；`buttonSize/contentLength`、`MIN_BTN=22 / BTN=44 / GAP=8 / PADDING=12 / COLLAPSED=6` |
+| `SidebarLayout` | 纯几何：`sidebarRect`、`collapsedAtScreenEdge`/`expandedAtScreenEdge`、`atScreenEdge`、`windowRectForSwitch`（由侧栏矩形反算窗口矩形）、`fitLength`、`needsScroll` |
+| `WinEventWatcher` | WinEvent 钩子（专用线程 + `GetMessage` 泵），`WINEVENT_OUTOFCONTEXT`，**刻意不带 `WINEVENT_SKIPOWNPROCESS`**（自己的主窗前台事件也要）；暴露 `getSeq/getForegroundHwnd/getLastEvent` |
+| `WindowActivationLab` | 唤起测试台（侧栏 🧪 打开，**最大化**启动）：顶行 hwnd/前台/侧栏当前/托盘 uid/尺寸/位移，下面 **38 个方案** + 「执行方案」+ 大日志区 |
+
+- 侧栏消费循环是 `AnimationTimer` 读两个 volatile（`AccRuntimeStore.version()` / `Watcher.getSeq()`），不变即早退 → 空闲零 CPU
+- 主题：`css/sidebar.css` + `sidebar-light.css`（looked-up 颜色 `-jf-sb-*`，由 `MainWindow.applyTitleBarTheme` → `MainApp.onThemeChanged` 传入）
+- 折叠态热区：JavaFX 透明窗**按像素命中** → 用 6px 可见细条 + 1% alpha 铺满 + `-fx-background-insets` 两层 + `pickOnBounds` 做 16px 热带
+
+### 5.2 平台适配器（`com.jfmultichat.platform`）
+
+- `PlatformAdapter`：`Ctx{sw,acc,hwnd,pid,visibleBefore,rect,wantMaximized,resolvedHwnd}`；
+  钩子 `activate`（默认保状态激活）/`beforePlace`/`afterPlace`/**`allowExternalPlacement`**（默认 true）
+- `PlatformAdapters`：按约定名加载 `com.jfmultichat.platform.adapt.{平台id}Adaptation`，别名只有 `QQ→QQNT`；带缓存与失败缓存，**永不返回 null**
+- `adapt/ElectronAdaptation`（QQNT 等）：`activate` = 窗口已可见→什么都不做；否则 `trayActivateByPid(pid, trayIconId())`（回退 `trayActivate(hwnd,…)`）；`afterWake` **只读**地把重生主窗 hwnd 记进 `ctx.resolvedHwnd`；**不允许外部摆位** ✗
+- `adapt/QQNTAdaptation`：只给 `trayIconId()=3`
+- `adapt/WeixinAdaptation`：已可见→什么都不做；**任务栏「微信」图标恰好 1 个 → `trayIconActivateByUia("微信", hwnd)` 托盘唤出**；≥2 个（多开）或任务栏自隐藏 → 兜底 `weixinWakeByTitleBarDoubleClick(hwnd)`（标题栏双击×2，用户三方案实测胜出）
+
+### 5.3 `swcore/WindowActivationOps` 对外入口（唤起与探针）
+
+`trayActivate(hwnd,uid)` / `trayActivateByPid(pid,uid)` / `hasElectronTray(ByPid)` / `findMainWindowOfPid(pid)`（**可见优先 + 隐藏兜底**，且排除 `*MessageWindow*`/`IME`/`SoPy*`/`Sogou*`/`MSCTF*` 辅助窗口）/ `weixinWakeByTitleBarDoubleClick(hwnd)` / **`trayIconActivateByUia(name, verifyHwnd)`**（Win11 任务栏 XAML 图标的 UIA `Invoke` ✓ 零坐标 ✓）/ **`countTrayIcons(name)`** / `findWindowByClassGlobal(class)` / `clickScreen(x,y)`，以及探针用 `probeTrayIcons` / `probeTrayClickMessages` / `probeTrayUidMapping` / `probeRectIndices` 等
+
+### 5.4 `swcore/UiaOps` 能力与**已校正的 vtable 下标**
+
+- 既有：属性读取（`getClassName` / `getProperties`）；本轮新增：`listByClassKeyword`（**不设数量上限，别再犯 60 条上限的错**）、`findByNameWithRect`、`invokeByNames`、`invokeButtonExact`（**类名+名字完全相等**）、`invokeByClassKeyword`、`invokeTitleBarButtonByIndex`、`titleBarChildren`、`buttonScreenRect`、`probeRectIndices`、`dumpDescendants`
+- 下标依据：**项目实测过** `24=AutomationId`、`30=ClassName`；**接口只有一个方法**故无歧义 `ElementArray 3=get_Length / 4=GetElement`、`InvokePattern 3=Invoke`；其余为按序推（`6=ElementFromHandle/FindAll`、`10=GetCurrentPropertyValue`、`16=GetCurrentPattern`、`21=CreateTrueCondition`、`TreeScope: None0/Element1/Children2/Descendants4`）
+- **`25`(矩形)/`26`(可点)/`28`(ControlType) 实测读出来是全 0 或垃圾** ✗ → 需要几何时改用 `probeRectIndices` 现场校准
+- 跨进程 COM 一律走 **800ms 线程池超时 + 连续 3 次熔断**
+
+### 5.5 探针基建（自己跑，别让用户点）
+
+- `scripts/probe-run.bat <探针类名> [参数]`：自动从 Gradle 缓存拼 JNA/SLF4J 类路径、编译并运行 `tmp/probe/<类名>.java`（⚠️ 在 pwsh 下 .bat 会因 UTF-8/GBK 被 cmd 读坏 → 可直接手拼类路径跑 `java -cp build\classes\java\main;tmp\probe\out;…<jars>`）
+- 现有探针：`UiaProbe`（UIA vs Win32 类名 / 矩形下标扫描）、`TrayProbe`（按 pid 列窗口 + `Shell_NotifyIconGetRect` 命中）、`TrayMsgProbe`（给托盘宿主枚举 `WM_APP/WM_USER` 消息）、`TrayUidProbe`（**托盘 uid ↔ 账号窗口 映射**）、`TrayUiaProbe`（任务栏 UIA 找图标 + Invoke）、`TrayAllIconsProbe`（任务栏全部图标名）
+
+### 5.6 已实测的平台结论（2026-10-15）
+
+| 平台/场景 | 结论 |
+|---|---|
+| QQNT | `PostMessage(Electron_NotifyIconHostWindow, 0x8001, uid=3, 0x201)` 可唤醒 ✓；**唤醒后不得再做任何外部操作** ✗（否则"出来但卡住"）；**pid 过期场景尚未处理**（`状态: 待定`） |
+| 微信 单实例 | 任务栏 UIA `Invoke("微信")` = 最自然的托盘唤出 ✓（探针实证 `visible=false→true`） |
+| 微信 多开 | 托盘图标**同名「微信」**✗ 无法指定账号 → 用标题栏双击×2（作用在指定 hwnd 上，按账号精确 ✓） |
+| 任务栏自动隐藏 | UIA 里没有图标 → 落回双击×2 ✓ |
+| 其它平台 | 走默认"保状态激活" ✓（未逐平台验证 ✗） |
+| 微信自绘标题栏 | UIA **无几何** ✗ 且 `InvokePattern.Invoke()` 是**空操作** ✗ → 只能"真实点击"（双击×2 ✓）；而 Win11 任务栏是 XAML ✓ 两样都有 ✓ |
