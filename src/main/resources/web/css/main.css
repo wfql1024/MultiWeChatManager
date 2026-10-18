@@ -430,23 +430,161 @@
     gap: 2px;
 }
 
+/* **用户 2026-10-18 第 4 条**：别再绕变量了 ✓ 直接**分批写死四组颜色** ✓
+ * （非选中/选中 × 深色/浅色 ✓ —— 一眼可核 ✓ 也不受主题变量缺失影响 ✓）
+ * 约定：**同一主题里，选中与非选中的文字都必须清晰可读** ✓ 选中靠**背景色**区分 ✓ 不靠压暗文字 ✗ */
 .theme-seg-btn {
     padding: 6px 18px;
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: var(--text-secondary);
+    color: #e6e6e6;                    /* 深色 · 非选中 ✓ */
     cursor: pointer;
     font-size: var(--font-sm);
     font-family: inherit;
     transition: all 0.15s;
 }
 .theme-seg-btn:hover {
-    color: var(--text-primary);
+    color: #ffffff;                    /* 深色 · 悬浮 ✓ */
 }
+/* 深色 · 选中 */
 .theme-seg-btn.active {
     background: var(--color-primary);
-    color: #fff;
+    color: #ffffff;
+}
+/* 浅色 · 非选中 */
+[data-theme="light"] .theme-seg-btn {
+    color: #2b2b2b;
+}
+[data-theme="light"] .theme-seg-btn:hover {
+    color: #111111;
+}
+/* 浅色 · 选中 */
+[data-theme="light"] .theme-seg-btn.active {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+/* 跟随系统：`data-theme` 只有 light/dark 两种取值（前端在 auto 时会解析成具体值 ✓）*/
+
+/* ========================================
+   Sidebar — 位置画布（用户 2026-10-17 第 3 条）
+   中间圆角正方形 = "大窗口"示意 ✓；四周 12 个贴边长条 = 12 个可选位置 ✓
+   选中 → 虚线变**实线** + **主题色填充** ✓
+   （不用 color-mix ✗：JavaFX WebView 是 WebKit ✓ 兼容性保守一点更稳 ✓）
+   ======================================== */
+.sb-canvas {
+    position: relative;
+    width: 300px;
+    height: 220px;
+    margin: 6px 0 4px;
+}
+.sb-win {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    /* **用户 2026-10-19 优化**：中间"窗口"要**大一点** ✓ ——
+     * 让它明显是"被四周长条**紧贴**着" ✓（原来 116×96 太小 ✓ 离四周太远 ✓
+     * 观感像"侧栏位置离窗口很远" ✗） */
+    width: 208px;
+    height: 156px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-sidebar);
+}
+.sb-cell {
+    position: absolute;
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.sb-cell:hover {
+    border-color: var(--text-secondary);
+}
+/* 选中：实线 + 主题色填充 ✓（半透明靠 opacity ✓ 深浅色都好看 ✓） */
+.sb-cell.active {
+    border-style: solid;
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    opacity: 0.45;
+}
+/* 上/下边：横向长条（起始/居中/末尾 = 左/中/右 ✓） */
+.sb-top, .sb-bottom { width: 64px; height: 14px; }
+.sb-top { top: 6px; }
+.sb-bottom { bottom: 6px; }
+.sb-top.sb-start, .sb-bottom.sb-start { left: 6px; }
+.sb-top.sb-center, .sb-bottom.sb-center { left: 50%; transform: translateX(-50%); }
+.sb-top.sb-end, .sb-bottom.sb-end { right: 6px; }
+/* 左/右边：纵向长条（起始/居中/末尾 = 上/中/下 ✓） */
+.sb-left, .sb-right { width: 14px; height: 56px; }
+.sb-left { left: 6px; }
+.sb-right { right: 6px; }
+.sb-left.sb-start, .sb-right.sb-start { top: 6px; }
+.sb-left.sb-center, .sb-right.sb-center { top: 50%; transform: translateY(-50%); }
+.sb-left.sb-end, .sb-right.sb-end { bottom: 6px; }
+
+.sb-hint-inline {
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+    margin-left: 6px;
+}
+
+/* ========================================
+   Sidebar settings — 用户 2026-10-18 第 2/5 条
+   ① 两个二元分段按钮**宽度相等** ✓（原来按文字长度自适应 → 两行不等宽 ✗）
+   ② 小标题与按钮**贴近** ✓（原来标签列太宽 ✓）
+   ③ 分离那行只留勾选框文字 ✓ 解释交给**圆形问号**的悬浮提示 ✓
+   ======================================== */
+#settings-section-sidebar .sb-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;                 /* 标签与按钮贴近 ✓ */
+    margin: 8px 0;
+}
+#settings-section-sidebar .sb-label {
+    min-width: 40px;           /* 不再撑开一大段留白 ✓ */
+    color: var(--text-secondary);
+    font-size: var(--font-sm);
+}
+#settings-section-sidebar .theme-segmented .theme-seg-btn {
+    min-width: 76px;           /* ★ 等宽 ✓ 两行看起来一致 ✓ */
+    text-align: center;
+}
+
+/* 圆形问号 + 纯 CSS 悬浮提示 ✓（WebView 里不依赖浏览器 title 提示 ✓） */
+.sb-help {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 15px;
+    height: 15px;
+    margin-left: 6px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 11px;
+    line-height: 1;
+    cursor: help;
+    position: relative;
+    vertical-align: middle;
+}
+.sb-help:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    left: 22px;
+    top: -6px;
+    z-index: 20;
+    width: 260px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: var(--bg-card, var(--bg-sidebar));
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: var(--font-sm);
+    line-height: 1.5;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
 }
 
 /* ========================================

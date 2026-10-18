@@ -185,6 +185,8 @@ JFC.bridge = (function() {
         // ===== 侧栏（窗口切换器）设置：贴边 / 对齐 / 长度模式 / 主窗口按钮位置 =====
         getSidebarPrefs: function() { return callJsonWithArgs('getSidebarPrefs'); },
         setSidebarPrefs: function(prefs) { return callJsonWithArgs('setSidebarPrefs', JSON.stringify(prefs || {})); },
+    /** 用户 2026-10-17 第 3 条：设置页"所见即所得"演示态（没有平台窗口时由侧栏生成虚拟图标 ✓） */
+    setSidebarDemo: function(on) { return callJsonWithArgs('setSidebarDemo', on ? 'true' : 'false'); },
         // ===== 任务中心（右上角）：长耗时流程的可见性 + 取消 =====
         // 返回 JSON 数组字符串（任务列表）；由 task-center.js 解析渲染
         getTaskList: function() { return call('getTaskList'); },

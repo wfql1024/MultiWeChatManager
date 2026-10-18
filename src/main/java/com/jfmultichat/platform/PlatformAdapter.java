@@ -63,7 +63,19 @@ public interface PlatformAdapter {
      * @return 是否至少做成了"抬升/恢复"这一步 ✓
      */
     default boolean activate(Ctx ctx) {
-        return com.jfmultichat.swcore.SwNativeOps.restoreWindowAndActivate(ctx.sw, ctx.hwnd);
+        // **统一模板（用户 2026-10-16 定）** ✓ —— 所有平台的唤起都按这个骨架走：
+        //   ①**已经在桌面上**（含"只是最小化" ✓ —— 最小化窗口 `IsWindowVisible` 仍为 true ✓）
+        //     → **直接置前** ✓（保状态激活：最小化才 `SW_RESTORE`，否则只抬升 + 置前 ✓）
+        //     用户旧版实测 ✓："已打开的窗口哪怕只是最小化，都可以直接通过 hwnd 提到顶层、
+        //     也可以直接改变位置和大小，**没有副作用**" ✓
+        //   ②**不可见**（被收进托盘 / 被隐藏 ✓）→ 返回 false ✓，由各平台适配器走**它自己的通道** ✓
+        //     （Electron：托盘消息 ✓；微信：托盘图标 UIA / 标题栏双击×2 ✓）
+        int target = ctx.resolvedHwnd != 0 ? ctx.resolvedHwnd : ctx.hwnd;
+        if (target == 0) return false;
+        if (!com.jfmultichat.swcore.SwNativeOps.isWindowVisible(target)) {
+            return false;                        // 在托盘里 → 绝不"乱动" ✗，交给适配器 ✓
+        }
+        return com.jfmultichat.swcore.SwNativeOps.restoreWindowAndActivate(ctx.sw, target);
     }
 
     /**
@@ -86,13 +98,16 @@ public interface PlatformAdapter {
     }
 
     /**
-     * **是否允许"外部强制摆位"**（默认允许 ✓；Electron 平台必须返回 false ✗）.
+     * **是否允许"外部强制摆位"**（默认允许 ✓）.
      *
-     * <p>依据 ✓（用户 2026-10-15 指的那篇 [自建任务栏 qq关闭后再打开窗口，窗口卡死解决办法](https://misuseds.blog.csdn.net/article/details/166489064)）：
-     * QQNT 这类 Electron 客户端，**窗口被系统判定为「不在屏幕上」时渲染器会停住** ✓，
-     * 而**外部强制显示/搬运正是把它弄冻的元凶之一** ✗ —— 文章明确写："避免使用松开消息或**外部强制显示操作**" ✓，
-     * 正确做法只有一条 ✓：**发对托盘那条消息，然后让它自己回到屏幕上** ✓。
-     * <p>所以 Electron 平台这里返回 {@code false} ✓ → 调用方**跳过** `SetWindowPos` 摆位 ✗（否则窗口回来但卡住 ✓ 实测 ✓）。
+     * <p>依据 ✓（用户 2026-10-15 指的那篇 [自建任务栏 qq关闭后再打开窗口，窗口卡死解决办法](https://misuseds.blog.csdn.net/article/details/166489064)
+     * + 用户 2026-10-16 的实测补充 ✓）：
+     * <ul>
+     *   <li>**刚从托盘被唤醒**的 Electron 窗口 ✗ —— 文章明确"避免…外部强制显示操作"，搬运会把它弄冻 ✓
+     *       → 这种情形不许摆位 ✗（见 {@code ElectronAdaptation}：`return ctx.visibleBefore;` ✓）</li>
+     *   <li>**本来就在桌面上**的窗口（含最小化 ✓）—— 用户旧版实测：置前/改位置/改大小**都没有副作用** ✓
+     *       → 照常摆位 ✓</li>
+     * </ul>
      */
     default boolean allowExternalPlacement(Ctx ctx) {
         return true;

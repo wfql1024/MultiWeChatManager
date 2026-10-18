@@ -348,3 +348,42 @@ TaskRegistry.get().submit("detect", "探测 WeChat 路径", swId, () -> {   // �
 | 任务栏自动隐藏 | UIA 里没有图标 → 落回双击×2 ✓ |
 | 其它平台 | 走默认"保状态激活" ✓（未逐平台验证 ✗） |
 | 微信自绘标题栏 | UIA **无几何** ✗ 且 `InvokePattern.Invoke()` 是**空操作** ✗ → 只能"真实点击"（双击×2 ✓）；而 Win11 任务栏是 XAML ✓ 两样都有 ✓ |
+
+---
+
+## 6. 侧栏设置体系（2026-10-17~19 建成）
+
+### 6.1 数据模型（`ui/SidebarPrefs`，`LocalGlobalConfig.json#sidebar`）
+
+| 字段 | 取值 | 说明 |
+|---|---|---|
+| `edge` | left/right/top/bottom | 贴哪条边 |
+| `align` | start/center/end | 该边上的位置（**合起来 = 12 个位置** ✓） |
+| `size_mode` | match(铺满)/fit(自适应) | **铺满 = 条延伸到该边整条** ✓ 但**图标仍落在所选位置** ✓ |
+| `main_btn_at_end` | bool | 方向（主窗按钮在前/在后） |
+| `separate_main_btn` | bool | **分离** ✓ **仅"铺满 + 居中"可用** ✓（`separatedEffective()` 统一判据 ✓） |
+
+### 6.2 布局与长度的**唯一口径**
+
+- 12 位置 ✓：`layoutContent` 里 `setFitToWidth(true)` **+** `setFitToHeight(true)` ✓ 后按 `prefs.align` 设 `colBox/rowBox` 对齐 ✓
+- 长度 ✓：跟随态 `length = fit ? min(content, avail) : avail` ✓；**贴边态 `edgeLength = fit ? min(content, edgeLen) : edgeLen`**
+  —— **条与折叠热带共用它** ✓（`atScreenEdgeHot` / `expandedAtScreenEdge` 都传 `edgeLength` ✓）
+- `visibleCount()` = 主窗/账号 + 测试按钮 + **`demoIconCount()`** ✓（长度必须与实际按钮数一致 ✓）
+
+### 6.3 分离（`applyPinnedMain`）
+
+- 生效时主窗按钮**不进簇** ✓，用 `StackPane.setAlignment` **钉端点** ✓（竖排 TOP/BOTTOM ✓ 横排 CENTER_LEFT/CENTER_RIGHT ✓）；
+  测试按钮与它**同组**钉住 ✓
+- ⚠️ 那组在 StackPane 里会**撑满整条** ✓ → 真正决定位置的是**组内对齐** ✓（横排漏设 → "上下两边都居中" ✗）
+
+### 6.4 示例按钮与预览态
+
+- `demoIconCount()` ✓：**唯一判据＝有没有真实平台账号** ✓（0 个 → 3 个 A/B/C ✓ 鼠标穿透**已去掉** ✓ 否则 Tooltip 不显示 ✗；
+  悬浮"请登录账号后体验功能" ✓）
+- 预览态 `demoMode`（= 正在看"侧栏设置页" ✓）：进＝`setSidebarDemo(true)` ✓（顺带 `ensureShown` 确保侧栏存在 ✓）、
+  离开该页 / 点设置容器外＝false ✓；**只有预览态会拒绝 `hide()`** ✓，其他页面可自由显示/隐藏 ✓
+
+### 6.5 窗口形态（**三开关要一起审** ✓ → 详见 `decisions.md` D-49）
+
+`TOPMOST`（`SetWindowLong` 后**必须重申** ✓）+ `NOACTIVATE|TOOLWINDOW` ✓ + **有 owner（`initOwner(主窗口)`）** ✓；
+**永不 `stage.toFront()`** ✗、**不用 `SetWindowPos` 插层级** ✗（都会破坏上面的组合 ✓）

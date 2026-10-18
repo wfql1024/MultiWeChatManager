@@ -2103,8 +2103,32 @@ public class JsBridge {
             r.put("size_mode", com.jfmultichat.ui.SidebarPrefs.SIZE_FIT.equals(p.sizeMode)
                     ? com.jfmultichat.ui.SidebarPrefs.SIZE_FIT : com.jfmultichat.ui.SidebarPrefs.SIZE_MATCH);
             r.put("main_btn_at_end", p.mainBtnAtEnd);
+            r.put("separate_main_btn", p.separateMainBtn);
+            r.put("separate_effective", p.separatedEffective());
         } catch (Exception e) {
             LOG.warn("[侧栏] 取侧栏设置失败: {}", e.getMessage());
+        }
+        return r.toString();
+    }
+
+    /**
+     * JS 调用：**设置页"所见即所得"演示态** ✓（用户 2026-10-17 第 3 条 ✓）.
+     *
+     * <p>用户明确"不画预览图"✗ —— 直接连主窗口看真实效果 ✓；没有平台窗口时
+     * 由侧栏**生成几个虚拟演示图标** ✓ 好让他看到位置/分离等设置的实际样子 ✓。
+     *
+     * @param on "true"/"1" = 打开演示 ✓；其他 = 关闭 ✓
+     */
+    public String setSidebarDemo(String on) {
+        ObjectNode r = MAPPER.createObjectNode();
+        try {
+            boolean on2 = on != null && ("true".equalsIgnoreCase(on.trim()) || "1".equals(on.trim()));
+            com.jfmultichat.ui.FloatingSidebar.setDemoMode(on2);
+            r.put("ok", true);
+            r.put("demo", on2);
+        } catch (Exception e) {
+            LOG.warn("[侧栏] 演示态切换失败: {}", e.getMessage());
+            r.put("ok", false);
         }
         return r.toString();
     }
@@ -2125,11 +2149,12 @@ public class JsBridge {
                         ? com.jfmultichat.ui.SidebarPrefs.SIZE_FIT : com.jfmultichat.ui.SidebarPrefs.SIZE_MATCH;
             }
             if (in.hasNonNull("main_btn_at_end")) p.mainBtnAtEnd = in.get("main_btn_at_end").asBoolean();
+            if (in.hasNonNull("separate_main_btn")) p.separateMainBtn = in.get("separate_main_btn").asBoolean();
             p.save();
             com.jfmultichat.ui.FloatingSidebar.applyPrefsFromBridge(p);
             r.put("ok", true);
-            LOG.info("[侧栏] 设置已更新: edge={}, align={}, size_mode={}, main_btn_at_end={}",
-                    p.edge, p.align, p.sizeMode, p.mainBtnAtEnd);
+            LOG.info("[侧栏] 设置已更新: edge={}, align={}, size_mode={}, main_btn_at_end={}, separate_main_btn={}(生效={})",
+                    p.edge, p.align, p.sizeMode, p.mainBtnAtEnd, p.separateMainBtn, p.separatedEffective());
         } catch (Exception e) {
             LOG.warn("[侧栏] 保存侧栏设置失败: {}", e.getMessage());
             r.put("ok", false);

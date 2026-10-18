@@ -308,6 +308,15 @@ public class MainWindow {
                 bridge.setThemeChangeListener(this::applyTitleBarTheme);
                 bridge.setAlignListener(this::alignLogo);
                 LOG.info("JS Bridge injected successfully");
+                // ⚠️ **用户 2026-10-18 第 1 条（启动时主题不一致）** ✓：
+                //   原来只有"用户改主题"时才会走到 `applyTitleBarTheme` ✗ →
+                //   启动后：WebView 内容按**系统**主题（深 ✓）、侧栏按**配置**（浅 ✓）、**标题栏仍是系统深色** ✗✓
+                //   → 桥就绪这一刻，**主动按配置里的 theme 应用一次** ✓（标题栏 ✓ 侧栏 ✓ 页面 ✓ 一次到位 ✓）
+                //   `auto` 时返回 null → **不主动改** ✓（两边本来就都跟随系统 ✓，避免反而改错 ✓）
+                String startupTheme = savedTheme();
+                if (startupTheme != null) {
+                    applyTitleBarTheme(startupTheme);
+                }
                 // 桥就绪后触发主侧栏平台列表加载 + 任务中心初始化（拉一次列表并装上 Java 推送监听）
                 webEngine.executeScript("if(JFC.pages.main)JFC.pages.main.init()");
                 webEngine.executeScript("if(JFC.taskCenter)JFC.taskCenter.init()");
@@ -345,6 +354,37 @@ public class MainWindow {
             if (app != null) app.onThemeChanged(theme);
         } catch (Throwable t) {
             LOG.warn("通知侧栏换肤失败: {}", t.getMessage());
+        }
+        // ⚠️ **用户 2026-10-18 第 1 条**：**WebView 里的页面**也要一起切 ✓ ——
+        //   原来只切 JavaFX 的样式表 ✗，页面的 `data-theme` 要等"打开外观页"才被设置 ✓
+        //   → 于是启动后出现"内容还是系统主题、标题栏却已按配置"这种不一致 ✓
+        //   → 这里统一下发一次 ✓（启动时、用户改主题时都会走到 ✓ 一处生效 ✓）
+        try {
+            if (webEngine != null) {
+                webEngine.executeScript(
+                        "document.documentElement.setAttribute('data-theme','" + ("light".equals(theme) ? "light" : "dark") + "')");
+            }
+        } catch (Throwable t) {
+            LOG.warn("同步页面主题失败: {}", t.getMessage());
+        }
+    }
+
+    /**
+     * 读配置里的主题 ✓（启动时主动应用一次，见 `applyTitleBarTheme` 的调用点 ✓）.
+     *
+     * @return "light" / "dark"；配置为 `auto`（跟随系统）时返回 **null** ✓
+     *         —— 那种情况**什么都不做**最稳 ✓（JavaFX 与页面本来就都按系统走 ✓，
+     *         若这里硬猜一个值反而会把"跟随系统"变成"锁定" ✗）
+     */
+    private static String savedTheme() {
+        try {
+            String t = com.jfmultichat.config.ConfigManager.getInstance()
+                    .getGlobalConfig().path("theme").asText("auto");
+            if ("light".equalsIgnoreCase(t)) return "light";
+            if ("dark".equalsIgnoreCase(t)) return "dark";
+            return null;                         // auto ✓ → 交给系统 ✓
+        } catch (Throwable ignored) {
+            return null;
         }
     }
 
@@ -384,7 +424,13 @@ public class MainWindow {
         btnRefresh = makeSvgTitleBtn(null,
                 "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8",
                 "M21 3v5h-5");
-        Button btnSidebar = makeTitleBtn("☰", null);
+        // **用户 2026-10-17 第 5 条**：图标改用**项目现成的 SVG 那套** ✓（与"刷新"同一套组件 ✓
+        //   `makeSvgTitleBtn` ✓ 描边矢量 ✓ 颜色交给 CSS `.title-bar-icon` ✓ 跟随深浅主题 ✓ 大小与其他图标一致 ✓）
+        //   形状取经典的"左侧面板"：外框圆角矩形 + 中间一条竖线 ✓（左侧即侧栏所在的一侧 ✓）
+        Button btnSidebar = makeSvgTitleBtn(null,
+                "M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+                "M9 3v18");
+        // **用户 2026-10-17 第 7 条**：点一下**唤出**侧栏 ✓ 再点一下**关掉** ✓（`toggleSidebar` 内已按 isShowing 分流 ✓）
         btnSidebar.setOnAction(e -> app.toggleSidebar());
 
         Button btnMin = makeTitleBtn("─", null);

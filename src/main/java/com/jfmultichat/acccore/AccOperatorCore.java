@@ -283,11 +283,15 @@ public final class AccOperatorCore {
             ad.beforePlace(ctx);
             int target = ctx.resolvedHwnd != 0 ? ctx.resolvedHwnd : hwnd;
             if (target == 0) return;
-            // ⚠️ **适配器可以否决"外部摆位"** ✓ —— Electron 平台会返回 false ✗
-            //    依据 ✓（用户给的文章）：外部强制显示/搬运会把 Electron 窗口弄冻 ✓
-            //    → 那种平台一律"只唤出、不搬运" ✓（让它自己回到屏幕 ✓）
+            // ① **等了再搬** ✓（用户 2026-10-16 实测 + 猜想 ✓）：窗口刚从托盘被唤醒（visibleBefore=false ✗）时
+            //    立刻 SetWindowPos 会逼出 Chromium 的**黑框占位窗口** ✗，之后我们的切换都作用在黑框上 ✓。
+            //    → 有界等待它**可见且稳定**（~1.5s 上限 ✓）再动手 ✓（不是常驻轮询 ✓ 每次唤醒只等一次 ✓）
+            if (!visibleBefore) {
+                boolean ready = com.jfmultichat.swcore.WindowActivationOps.waitWindowReady(target, 1500);
+                LOG.info("[窗口] 刚唤醒 → 等窗口就绪 = {}（先等它真画出来 ✓ 免得逼出黑框 ✗）", ready);
+            }
             if (!ad.allowExternalPlacement(ctx)) {
-                LOG.info("[窗口] 适配器 {} 不允许外部摆位 → 跳过 SetWindowPos ✓（避免把 Electron 弄冻 ✓）",
+                LOG.info("[窗口] 适配器 {} 不允许外部摆位 → 跳过 SetWindowPos ✓",
                         ad.getClass().getSimpleName());
                 ad.afterPlace(ctx);
                 return;
@@ -303,10 +307,16 @@ public final class AccOperatorCore {
                     LOG.info("[窗口] 还原还没生效 → 交给钩子事件补摆位 hwnd=0x{}", Integer.toHexString(target));
                     com.jfmultichat.ui.FloatingSidebar.armPendingPlace(target, rect);
                 }
+                // ② **按"看得见的矩形"落位** ✓（用户 2026-10-16 观察 ✓）：传进来的是**可视矩形** ✓，
+                //    而 SetWindowPos 作用于**窗口矩形**（多出 DWM 那圈不可见边框 ✗，Win11 每边约 7px ✓）
+                //    → 加上该窗口自己的差值 ✓，让**可视结果**与上一个窗口对齐 ✓（微信的内偏就没了 ✓）
+                int[] d = com.jfmultichat.swcore.WindowActivationOps.frameDelta(target);
                 boolean moved = com.jfmultichat.swcore.SwNativeOps.setWindowRect(
-                        target, rect[0], rect[1], rect[2], rect[3], true);
-                LOG.info("[窗口] 摆位：hwnd=0x{} → {},{},{},{}（{}）", Integer.toHexString(target),
-                        rect[0], rect[1], rect[2], rect[3], moved);
+                        target, rect[0] - d[0], rect[1] - d[1],
+                        rect[2] + d[0] + d[2], rect[3] + d[1] + d[3], true);
+                LOG.info("[窗口] 摆位：hwnd=0x{} → 可视 {},{},{}x{}（窗口补偿 dl={} dt={} dr={} db={}）={}",
+                        Integer.toHexString(target), rect[0], rect[1], rect[2], rect[3],
+                        d[0], d[1], d[2], d[3], moved);
             }
             ad.afterPlace(ctx);
         } catch (Throwable t) {

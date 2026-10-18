@@ -74,6 +74,18 @@ public final class SidebarPrefs {
     /** 主窗口按钮是否放在末尾（false = 开头） */
     public boolean mainBtnAtEnd = false;
 
+    /**
+     * **主窗图标与平台窗口图标"分离"** ✓（用户 2026-10-17 第 3 条 ✓）：
+     * 仅当 **长度＝铺满({@link #SIZE_MATCH})** 且 **该边对齐＝居中({@link #ALIGN_CENTER})** 时才有意义 ✓ ——
+     * 此时主窗按钮钉在**端点** ✓、平台窗口图标**居中** ✓。其他组合下**可见但禁用** ✓（UI 侧负责 ✓）。
+     */
+    public boolean separateMainBtn = false;
+
+    /** 分离是否**真正生效** ✓（把"仅铺满+居中可用"这条规则收在模型里，UI 与 Java 共用同一判据 ✓） */
+    public boolean separatedEffective() {
+        return separateMainBtn && SIZE_MATCH.equals(sizeMode) && ALIGN_CENTER.equals(align);
+    }
+
     public static SidebarPrefs load() {
         SidebarPrefs p = new SidebarPrefs();
         try {
@@ -84,6 +96,8 @@ public final class SidebarPrefs {
                 p.sizeMode = text(node, "size_mode", p.sizeMode);
                 JsonNode m = node.get("main_btn_at_end");
                 if (m != null && m.isBoolean()) p.mainBtnAtEnd = m.asBoolean();
+                JsonNode s = node.get("separate_main_btn");
+                if (s != null && s.isBoolean()) p.separateMainBtn = s.asBoolean();
             }
         } catch (Throwable t) {
             // 读不到就用默认值（不打扰用户）
@@ -98,6 +112,7 @@ public final class SidebarPrefs {
             sidebar.put("align", normalizeAlign(align));
             sidebar.put("size_mode", SIZE_FIT.equals(sizeMode) ? SIZE_FIT : SIZE_MATCH);
             sidebar.put("main_btn_at_end", mainBtnAtEnd);
+            sidebar.put("separate_main_btn", separateMainBtn);
             ConfigManager.getInstance().updateGlobalConfig(Map.of("sidebar", sidebar));
         } catch (Throwable t) {
             // 保存失败不影响使用

@@ -1,7 +1,6 @@
 package com.jfmultichat.platform.adapt;
 
 import com.jfmultichat.platform.PlatformAdapter;
-import com.jfmultichat.swcore.SwNativeOps;
 import com.jfmultichat.swcore.WindowActivationOps;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,14 +30,14 @@ public class WeixinAdaptation implements PlatformAdapter {
     @Override
     public boolean activate(Ctx ctx) {
         if (ctx.hwnd == 0) return false;
-        // ⚠️ **托盘图标是「切换」语义** ✗（与 QQNT 同 ✓）：窗口已可见时若再去点它 ✓
-        //    会把这个窗口**收起来** ✗ → 所以只在**不可见**时才走托盘 ✓
-        if (SwNativeOps.isWindowVisible(ctx.hwnd)) {
-            SwNativeOps.raiseToTop(ctx.hwnd);
-            SwNativeOps.tryForeground(ctx.hwnd);
-            LOG.info("[适配] Weixin 窗口已可见 → 只抬升+置前（不点托盘 ✗ 免得被切回去 ✓）");
+        // **统一模板（用户 2026-10-16 定）** ✓：已经开着的窗口（含只是最小化 ✓）→ 父类**直接置前** ✓
+        //   （用户旧版实测：已打开/最小化的窗口用 hwnd 提顶层、改位置大小**都没有副作用** ✓）
+        //   同时这条也顺手避开"托盘是切换语义"的坑 ✗（已可见时绝不点托盘 ✓ 免得把窗口收起来 ✓）
+        if (PlatformAdapter.super.activate(ctx)) {
+            LOG.info("[适配] Weixin 窗口已可见（含最小化 ✓）→ 直接置前 ✓（不点托盘 ✗）");
             return true;
         }
+        // 走到这里 = 窗口**不可见**（收进托盘 ✓）→ 走它自己的通道 ✓
         // ① **托盘唤出** ✓ —— 但**只在"同名托盘图标恰好 1 个"时可用** ✓
         //    为什么 ✗：探针实证微信多开时任务栏上多个图标的 name **全是「微信」** ✗
         //    → 无法指定账号 ✓（调一次弹 A、再调又弹 B ✗ 用户实测 ✓）

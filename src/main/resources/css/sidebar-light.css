@@ -5,13 +5,19 @@
  */
 
 .sidebar {
-    -jf-sb-bg: rgba(250, 250, 250, 0.94);
-    -jf-sb-border: rgba(0, 0, 0, 0.10);
-    -jf-sb-fg: #2b2b2b;
-    -jf-sb-btn: rgba(0, 0, 0, 0.05);
-    -jf-sb-btn-hover: rgba(0, 0, 0, 0.12);
-    -jf-sb-btn-pressed: rgba(0, 0, 0, 0.08);
-    -jf-sb-thumb: rgba(0, 0, 0, 0.22);
-    -jf-sb-badge-bg: rgba(255, 255, 255, 0.85);
-    -jf-sb-badge-border: rgba(0, 0, 0, 0.18);
+    -jf-sb-bg: rgba(252, 252, 253, 0.97);
+    -jf-sb-border: rgba(0, 0, 0, 0.14);
+    -jf-sb-fg: #1f1f1f;
+    -jf-sb-btn: rgba(0, 0, 0, 0.06);
+    -jf-sb-btn-hover: rgba(0, 0, 0, 0.14);
+    -jf-sb-btn-pressed: rgba(0, 0, 0, 0.10);
+    -jf-sb-thumb: rgba(0, 0, 0, 0.28);
+    -jf-sb-badge-bg: rgba(255, 255, 255, 0.92);
+    -jf-sb-badge-border: rgba(0, 0, 0, 0.22);
+    /* 用户 2026-10-17 第 9 条：浅色要**与深色同风格、只差颜色** ✓
+     * → 高亮色给同等的饱和度/对比度 ✓；投影用"浅色系"的柔和灰 ✓（而不是照抄深色那层黑 ✗） */
+    -jf-sb-active-bg: rgba(24, 144, 255, 0.20);
+    -jf-sb-active-border: #1890ff;
+    -jf-sb-shadow: dropshadow(gaussian, rgba(0, 0, 0, 0.18), 14, 0.20, 0, 3);
 }
+

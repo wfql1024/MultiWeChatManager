@@ -1369,6 +1369,47 @@ public final class WindowActivationOps {
         }
     }
 
+    /**
+     * **等窗口"真的就绪"**（可见且连续几次稳定 ✓）—— 再动手搬几何 ✓.
+     *
+     * <p>依据 ✓（用户 2026-10-16 实测 + 他的猜想 ✓）：QQNT 从**关闭状态被唤醒后立刻** `SetWindowPos` ✗，
+     * 会出现一个**黑框占位窗口** ✗，之后我们的切换都作用在那个黑框上 ✓，
+     * 只有把黑框关掉，真正的 QQNT 本体才吃到位置尺寸 ✓。
+     * → 原因就是**激活与搬运之间没有间隔** ✗（Chromium 还没把窗口画出来 ✓）。
+     * → 修法 ✓：搬运前**等它可见并稳定** ✓（有界等待 ✓ 事件驱动思路不变 ✓ 不引入常驻轮询 ✓）。
+     *
+     * @return 是否等到了"可见"（超时返回当时的可见性 ✓ 不阻塞过久 ✓）
+     */
+    public static boolean waitWindowReady(int hwnd, int timeoutMs) {
+        if (hwnd == 0) return false;
+        long deadline = System.currentTimeMillis() + Math.max(0, timeoutMs);
+        int stable = 0;
+        while (System.currentTimeMillis() < deadline) {
+            if (SwNativeOps.isWindowVisible(hwnd) && !SwNativeOps.isMinimized(hwnd)) {
+                if (++stable >= 3) return true;          // 连续 3 次（≈120ms）都可见 → 认定已画出来 ✓
+            } else {
+                stable = 0;
+            }
+            sleep(40);
+        }
+        return SwNativeOps.isWindowVisible(hwnd);
+    }
+
+    /**
+     * **DWM 可视矩形 与 窗口矩形 的差值** {左, 上, 右, 下} ✓.
+     *
+     * <p>依据 ✓（用户 2026-10-16 的观察 ✓）：`SetWindowPos` 作用的是**窗口矩形** ✓（含 DWM 那圈
+     * **不可见边框** ✗，Win11 每边约 7px ✓），而侧栏跟随与"看得见的主窗口"用的是**可视矩形** ✓
+     * → 直接按可视矩形摆位，结果就会整体**向内偏一点** ✗（微信实测：切完侧栏会往主窗内挪一点 ✓）。
+     * → 修法 ✓：摆位时把目标**加上这个差值** ✓，让**可视结果**符合预期 ✓。
+     */
+    public static int[] frameDelta(int hwnd) {
+        int[] vis = SwNativeOps.getVisualRect(hwnd);
+        WinDef.RECT wr = new WinDef.RECT();
+        if (vis == null || !Ext.INSTANCE.GetWindowRect(h(hwnd), wr)) return new int[]{0, 0, 0, 0};
+        return new int[]{vis[0] - wr.left, vis[1] - wr.top, wr.right - vis[2], wr.bottom - vis[3]};
+    }
+
     // ==================== 第三轮新增小件（微信自己的通道 ✓） ====================
 
     /** 模拟 **Ctrl+Alt+W**（微信默认「打开/隐藏微信」热键 ✓） */

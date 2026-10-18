@@ -32,16 +32,14 @@ public class ElectronAdaptation implements PlatformAdapter {
 
     @Override
     public boolean activate(Ctx ctx) {
-        // ⚠️⚠️ **托盘图标是「切换」语义** ✗（用户 2026-10-15 实测 + 我定位到根因 ✓）：
-        //   发一次＝唤出 ✓；**再发一次＝又切回去/切进坏状态** ✗ → 窗口能出来但**卡住** ✓。
-        //   所以：**窗口已经可见时，绝不能再发托盘消息** ✗ —— 只需抬升 + 置前 ✓。
-        int target = ctx.resolvedHwnd != 0 ? ctx.resolvedHwnd : ctx.hwnd;
-        if (target != 0 && SwNativeOps.isWindowVisible(target)) {
-            // ⚠️ 即使"已经可见"也**只读不碰** ✗ —— 文章结论：任何外部操作（含 SetWindowPos / SetForegroundWindow ✓）
-            //   都可能把 Electron 推进"出来但卡住" ✓（用户实测 ✓）→ 这里只记录，不做动作 ✓
-            LOG.info("[适配] {} 窗口已可见 → 什么都不做 ✓（外部操作会把它弄冻 ✗ 让它自己保持 ✓）", ctx.sw);
+        // **统一模板（用户 2026-10-16 定）** ✓：已经开着的窗口（含只是最小化 ✓）由父类**直接置前** ✓
+        //   —— 用户旧版实测：这种情形用 hwnd 提顶层/改位置大小**都没有副作用** ✓
+        //   注意 ✗：绝不能在"已可见"时去发托盘消息 ✓（托盘是**切换**语义 → 会把它又切回去/切进坏状态 ✗）
+        if (PlatformAdapter.super.activate(ctx)) {
+            LOG.info("[适配] {} 窗口已可见（含最小化 ✓）→ 直接置前 ✓（不碰托盘 ✗）", ctx.sw);
             return true;
         }
+        // 走到这里 = 窗口**不可见**（在托盘里 ✓ 或已被 Electron 销毁 ✓）→ 走它自己的通道 ✓
         // 优先按 pid 走 ✓（用户实测：QQNT 关闭后主窗口 hwnd 会被 Electron 销毁 ✗，但进程/托盘还在 ✓）
         if (ctx.pid != 0 && WindowActivationOps.hasElectronTrayByPid(ctx.pid)) {
             boolean ok = WindowActivationOps.trayActivateByPid(ctx.pid, trayIconId());
@@ -57,8 +55,8 @@ public class ElectronAdaptation implements PlatformAdapter {
                 return true;
             }
         }
-        LOG.info("[适配] {} 托盘唤醒未成功 → 退回保状态激活 ✓", ctx.sw);
-        return PlatformAdapter.super.activate(ctx);
+        LOG.info("[适配] {} 托盘唤醒未成功 ✓", ctx.sw);
+        return false;
     }
 
     /**
@@ -80,17 +78,12 @@ public class ElectronAdaptation implements PlatformAdapter {
         }
     }
 
-    @Override
-    public void beforePlace(Ctx ctx) {
-        // Electron 平台**什么都不做** ✗（连 SW_RESTORE 都不做 ✓）：一切外部搬运都可能把它弄冻 ✓
-        LOG.info("[适配] {} beforePlace：Electron 平台跳过一切外部操作 ✓", ctx.sw);
-    }
-
-    /** Electron：**不允许外部摆位** ✗（文章实证：外部强制会冻 ✓）—— 调用方会跳过 SetWindowPos ✓ */
-    @Override
-    public boolean allowExternalPlacement(Ctx ctx) {
-        return false;
-    }
+    // ⚠️ 这里**故意不再覆盖** `beforePlace` / `allowExternalPlacement` ✗（2026-10-16 用户实测纠正 ✓）：
+    //   用户定的窗口切换流程是**两步** ✓：①唤起（激活）②**调整窗口状态** ✓
+    //   —— 即使目标是"已关闭、在托盘里"的窗口 ✓，②也必须照做 ✓
+    //   （否则就会像用户实测那样：QQNT 只恢复成自己原来的最大化 ✗ 而没有变成上一个窗口的位置尺寸 ✓）
+    //   之前我按文章口径把它**整体禁掉** ✗ → 就是把②也一起禁了 ✓ 属于**扩大化** ✗。
+    //   唯一要禁的是"**再发一次托盘消息**" ✗（那才是卡住的元凶 ✓）—— 那只存在于旧 beforePlace 里，已删 ✓。
 
     @Override
     public void afterPlace(Ctx ctx) {

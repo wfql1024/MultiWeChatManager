@@ -1279,6 +1279,50 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
     }
 
     /**
+     * **把窗口插到另一个窗口的"上一层"** ✓（`SetWindowPos` 的 `hWndInsertAfter` 语义 ✓）.
+     *
+     * <p>为什么需要（用户 2026-10-17 第 4 条 ✓）：他要求"**侧栏层级 = 最前的(主窗/平台窗) + 1**" ✓ ——
+     * 而 JavaFX 的 `Stage.toFront()` 在普通（非置顶）窗口上**不可靠** ✗（实测：侧栏还是被平台窗压着 ✓）
+     * → 直接对侧栏自己的 HWND 调原生 `SetWindowPos(sidebar, after = 那个窗口)` ✓ 最稳 ✓。
+     *
+     * <p>安全 ✓：`SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE` ✓ —— 不动几何、不抢焦点 ✓（纯 Z 序 ✓）。
+     */
+    public static boolean insertAbove(int hwnd, int afterHwnd) {
+        if (hwnd == 0 || afterHwnd == 0) return false;
+        final int SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
+        try {
+            boolean ok = com.sun.jna.platform.win32.User32.INSTANCE.SetWindowPos(
+                    intToHwnd(hwnd), intToHwnd(afterHwnd), 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            LOG.debug("[窗口] 侧栏插入层级：0x{} 之上方 = 0x{} → {}",
+                    Integer.toHexString(afterHwnd), Integer.toHexString(hwnd), ok);
+            return ok;
+        } catch (Throwable t) {
+            LOG.warn("[窗口] insertAbove 失败: {}", t.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * **取当前前台窗口（原始值 ✓，不做任何过滤）** ✓.
+     *
+     * <p>为什么需要（用户 2026-10-18 第 3 条 ✓）：侧栏要判断"**最前面是不是我们自己的窗口**" ✓，
+     * 而 `WinEventWatcher.getForegroundHwnd()` 是**经过筛选**的 ✗（可能返回 0 或只报我们的窗口 ✓）
+     * → 判不出"别的程序在最前"这种情形 ✗ → 侧栏就**藏不进去** ✓（用户实测 ✓）。
+     * → 这里直接给**系统原始值** ✓，由调用方自己判 ✓。
+     */
+    public static int foregroundWindowRaw() {
+        try {
+            com.sun.jna.platform.win32.WinDef.HWND h =
+                    com.sun.jna.platform.win32.User32.INSTANCE.GetForegroundWindow();
+            // ⚠️ 必须用 `Pointer.nativeValue` ✗ 不能用 `hashCode` ✓（项目早期踩过 ✓ hashCode 不是句柄值 ✗）
+            return h == null ? 0 : (int) com.sun.jna.Pointer.nativeValue(h.getPointer());
+        } catch (Throwable t) {
+            return 0;
+        }
+    }
+
+    /**
      * **只把窗口抬到最前**（不改位置、不改尺寸、不改状态）—— `SetWindowPos(HWND_TOP, SWP_NOMOVE|SWP_NOSIZE|SWP_SHOWWINDOW)`.
      *
      * <p>为什么需要（用户 2026-10-14：A 最大化 → B 普通时 B 上不来）：
@@ -1390,7 +1434,15 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
         }
     }
 
-    /** 去掉窗口的激活能力与任务栏存在感（侧栏用：点了不抢焦点、也不进 Alt-Tab） */
+    /**
+     * 去掉窗口的激活能力与任务栏存在感（侧栏用：点了不抢焦点、也不进 Alt-Tab）.
+     *
+     * <p>⚠️⚠️ **用户 2026-10-18 第 1 条的真凶** ✓✓：Windows 的
+     * `SetWindowLong(GWL_EXSTYLE, …)` **会丢掉 `WS_EX_TOPMOST`** ✗（文档明确：不能靠它改置顶 ✓，
+     * 而且调用后会清掉置顶状态 ✓）→ 于是"侧栏明明 `setAlwaysOnTop(true)` 却总被挡住" ✓✓
+     * （我又恰好把它改成"每次定位后都调" ✗ → 每次布局都把置顶打掉一次 ✓ 现象就稳定复现 ✓）。
+     * <p>修法 ✓：设完扩展样式**立刻用 `SetWindowPos(HWND_TOPMOST, …)` 重新确立置顶** ✓（幂等 ✓ 不激活 ✓）。
+     */
     public static void applyNoActivateToolWindow(int hwnd) {
         if (hwnd == 0) return;
         final int GWL_EXSTYLE = -20;
@@ -1404,6 +1456,12 @@ public final class SwNativeOps implements SwPathDetective.NativeOps {
                 u32.SetWindowLong(intToHwnd(hwnd), GWL_EXSTYLE, want);
                 LOG.info("[侧栏] 已设置 WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW: hwnd=0x{}", Integer.toHexString(hwnd));
             }
+            // ★ **必须补这一步** ✓：`SetWindowLong` 之后置顶状态被清掉了 ✗
+            final int SWP_NOSIZE = 0x0001, SWP_NOMOVE = 0x0002, SWP_NOACTIVATE = 0x0010;
+            final com.sun.jna.platform.win32.WinDef.HWND HWND_TOPMOST =
+                    new com.sun.jna.platform.win32.WinDef.HWND(new com.sun.jna.Pointer(-1));
+            u32.SetWindowPos(intToHwnd(hwnd), HWND_TOPMOST, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
         } catch (Throwable t) {
             LOG.warn("[侧栏] 设置窗口样式失败 hwnd={}: {}", hwnd, t.getMessage());
         }

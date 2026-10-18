@@ -63,53 +63,150 @@ JFC.pages.settings = (function() {
             try { prefs = JFC.bridge.getSidebarPrefs(); } catch (e) { prefs = null; }
         }
         prefs = prefs || {};
-        var edge = prefs.edge || 'left';
-        var align = prefs.align || 'start';
-        var sizeMode = prefs.size_mode || 'match';
-        var mainAtEnd = prefs.main_btn_at_end === true;
+        var st = {
+            edge: prefs.edge || 'left',
+            align: prefs.align || 'start',
+            size_mode: prefs.size_mode || 'match',
+            main_btn_at_end: prefs.main_btn_at_end === true,
+            separate_main_btn: prefs.separate_main_btn === true
+        };
 
-        var elEdge = el('sb-edge');
-        var elAlign = el('sb-align');
-        var elSize = el('sb-size-mode');
-        var elMainEnd = el('sb-main-at-end');
-        if (elEdge) elEdge.value = edge;
-        if (elAlign) elAlign.value = align;
-        if (elSize) elSize.value = sizeMode;
-        if (elMainEnd) elMainEnd.checked = mainAtEnd;
+        var canvas = el('sb-canvas');
+        var sizeSeg = el('sb-size-seg');
+        var dirSeg = el('sb-dir-seg');
+        var elSep = el('sb-separate');
 
-        function push() {
-            var payload = {
-                edge: elEdge ? elEdge.value : edge,
-                align: elAlign ? elAlign.value : align,
-                size_mode: elSize ? elSize.value : sizeMode,
-                main_btn_at_end: !!(elMainEnd && elMainEnd.checked)
-            };
-            if (JM()) {
-                try { JFC.bridge.setSidebarPrefs(payload); } catch (e) { /* 桥不可用就算了 */ }
+        /** 把当前状态刷到画布/分段按钮/复选框上 ✓（并处理"分离"的可用性 ✓） */
+        function render() {
+            if (canvas) {
+                canvas.querySelectorAll('.sb-cell').forEach(function(c) {
+                    var on = c.getAttribute('data-edge') === st.edge && c.getAttribute('data-align') === st.align;
+                    c.classList.toggle('active', on);
+                });
             }
-            updateHint(payload);
+            if (sizeSeg) {
+                sizeSeg.querySelectorAll('.theme-seg-btn').forEach(function(b) {
+                    b.classList.toggle('active', b.getAttribute('data-size') === st.size_mode);
+                });
+            }
+            if (dirSeg) {
+                dirSeg.querySelectorAll('.theme-seg-btn').forEach(function(b) {
+                    b.classList.toggle('active', (b.getAttribute('data-end') === 'true') === st.main_btn_at_end);
+                });
+            }
+            if (elSep) elSep.checked = st.separate_main_btn;
+            // **用户第 3 条**：分离**只有"铺满 + 该边居中"时可用** ✓ 否则可见但禁用 ✓
+            var canSeparate = (st.size_mode === 'match' && st.align === 'center');
+            var label = el('sb-separate-label');
+            var why = el('sb-separate-why');
+            if (elSep) {
+                elSep.disabled = !canSeparate;
+                if (!canSeparate) {
+                    // 不可用时若还勾着 → 取消并同步到后端 ✓（避免"禁用却生效"的矛盾态 ✗）
+                    if (st.separate_main_btn) { st.separate_main_btn = false; push(); return; }
+                }
+            }
+            if (label) label.style.opacity = canSeparate ? '1' : '0.55';
+            // 用户 2026-10-18 第 5 条：解释交给**圆形问号的悬浮提示** ✓（不再用行内文字 ✗）
+            if (why) {
+                why.setAttribute('data-tip', canSeparate
+                        ? '平台窗口图标居中、主窗口按钮留在端点（仅「铺满 + 居中」时可用）。'
+                        : '需要把长度设为「铺满」、位置选「居中」才能使用分离。');
+            }
+            updateHint(st);
         }
 
-        ['sb-edge', 'sb-align', 'sb-size-mode'].forEach(function(id) {
-            var node = el(id);
-            if (node) node.addEventListener('change', push);
-        });
-        if (elMainEnd) elMainEnd.addEventListener('change', push);
-        updateHint({ edge: edge, align: align, size_mode: sizeMode, main_btn_at_end: mainAtEnd });
+        function push() {
+            if (JM()) {
+                try {
+                    JFC.bridge.setSidebarPrefs({
+                        edge: st.edge,
+                        align: st.align,
+                        size_mode: st.size_mode,
+                        main_btn_at_end: st.main_btn_at_end,
+                        separate_main_btn: st.separate_main_btn
+                    });
+                } catch (e) { /* 桥不可用就算了 */ }
+            }
+            render();
+        }
+
+        if (canvas) {
+            canvas.querySelectorAll('.sb-cell').forEach(function(c) {
+                c.addEventListener('click', function() {
+                    st.edge = this.getAttribute('data-edge');
+                    st.align = this.getAttribute('data-align');
+                    push();
+                });
+            });
+        }
+        if (sizeSeg) {
+            sizeSeg.querySelectorAll('.theme-seg-btn').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    st.size_mode = this.getAttribute('data-size');
+                    push();
+                });
+            });
+        }
+        if (dirSeg) {
+            dirSeg.querySelectorAll('.theme-seg-btn').forEach(function(b) {
+                b.addEventListener('click', function() {
+                    st.main_btn_at_end = (this.getAttribute('data-end') === 'true');
+                    push();
+                });
+            });
+        }
+        if (elSep) {
+            elSep.addEventListener('change', function() {
+                st.separate_main_btn = !!this.checked;
+                push();
+            });
+        }
+        render();
+
+        // **所见即所得** ✓（用户第 3 条）：进"侧栏"这一页就打开侧栏的**演示态** ✓
+        //   —— 而且**首次初始化时也要立刻开一次** ✓（否则用户若本来就在这一页 ✓ 点导航不会触发 ✓
+        //      就出现"还得手动点右上角才看得见侧栏" ✗ 用户实测 ✓）
+        try {
+            var nav = el('settings-nav');
+            if (nav) {
+                nav.querySelectorAll('li').forEach(function(li) {
+                    li.addEventListener('click', function() {
+                        if (JM()) {
+                            try { JFC.bridge.setSidebarDemo(li.getAttribute('data-setting') === 'sidebar'); }
+                            catch (e) { /* 忽略 */ }
+                        }
+                    });
+                });
+            }
+            // **用户 2026-10-19 原则②**：预览态（强制显示侧栏）**只由"侧栏页"驱动** ✓
+            //   ① 启动/初始化时**不要自动开** ✗（用户实测"点进设置页就出现了，太早出现" ✓）
+            //   ② 离开设置区域（点在设置容器之外）→ 关掉 ✓（否则预览态卡住 ✓ 侧栏就再也关不掉 ✗）
+            document.addEventListener('mousedown', function(ev) {
+                if (!JM()) return;
+                var content = document.getElementById('settings-content');
+                var navBox = el('settings-nav');
+                var inside = (content && content.contains(ev.target)) || (navBox && navBox.contains(ev.target));
+                if (!inside) {
+                    try { JFC.bridge.setSidebarDemo(false); } catch (e) { /* 忽略 */ }
+                }
+            }, true);
+        } catch (e) { /* 忽略 */ }
     }
 
-    /** 二级位置提示：贴左/右时是上中下，贴上/下时是左中右 ✓（用户第 7 条） */
+    /** 位置提示（用户第 3 条：12 个位置 ✓） */
     function updateHint(p) {
-        var hint = el('sb-hint');
+        var hint = el('sb-pos-hint');
         if (!hint) return;
         var vertical = (p.edge === 'left' || p.edge === 'right');
         var alignText = vertical
             ? ({ start: '上', center: '中', end: '下' })[p.align] || '上'
             : ({ start: '左', center: '中', end: '右' })[p.align] || '左';
         var edgeText = ({ left: '左', right: '右', top: '上', bottom: '下' })[p.edge] || '左';
-        hint.textContent = '当前：贴' + edgeText + '边、靠' + alignText + '；'
-            + (p.size_mode === 'fit' ? '长度按按钮数自适应' : '长度与窗口该边等长')
-            + '（都不超过窗口该边；装不下会滚动）';
+        hint.textContent = '当前：贴' + edgeText + '边 · 靠' + alignText
+            + '；长度' + (p.size_mode === 'fit' ? '自适应（按按钮数）' : '铺满（与窗口该边等长）')
+            + '；主窗图标在' + (p.main_btn_at_end ? '末尾' : '开头')
+            + (p.separate_main_btn && p.size_mode === 'match' && p.align === 'center' ? '（已分离 ✓ 平台图标居中）' : '');
     }
 
     // ==================== 主题 ====================

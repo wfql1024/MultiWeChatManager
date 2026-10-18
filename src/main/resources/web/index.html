@@ -182,42 +182,58 @@
 
                         <!-- 侧栏（窗口切换器）—— 位置模型：四边 + 该边上的对齐 + 长度模式（用户 2026-10-13 第 7 条） -->
                         <div id="settings-section-sidebar" class="settings-section-content">
-                            <h3 style="margin-bottom: 4px;">侧栏（窗口切换器）</h3>
-                            <p class="config-desc">
-                                侧栏跟随"当前指向的、已绑定的账号窗口"；贴边、对齐与长度都可自定义，改完立刻生效。
-                            </p>
+                            <h3 style="margin-bottom: 4px;">侧栏</h3>
+                            <p class="config-desc">可设置侧栏的位置、长度与方向，改完立刻生效。</p>
 
-                            <div class="sb-row">
-                                <span class="sb-label">贴哪条边</span>
-                                <select id="sb-edge" class="sb-select">
-                                    <option value="left">左侧</option>
-                                    <option value="right">右侧</option>
-                                    <option value="top">顶部</option>
-                                    <option value="bottom">底部</option>
-                                </select>
+                            <!-- **位置画布（用户 2026-10-17 第 3 条）**：
+                                 中间一个圆角正方形＝"大窗口"示意 ✓；四周 12 个贴边圆角长条虚线框＝可选位置 ✓
+                                 选中 → 变实线 + 主题色填充 ✓（12 = 四边 × 起始/居中/末尾 ✓）
+                                 所见即所得 ✓：不画预览图 ✗，改完立刻作用到**真实侧栏**（没有平台窗口时侧栏会生成虚拟演示图标 ✓） -->
+                            <div class="sb-canvas" id="sb-canvas">
+                                <div class="sb-win"></div>
+                                <!-- 上边：左/中/右 -->
+                                <div class="sb-cell sb-top sb-start" data-edge="top" data-align="start"></div>
+                                <div class="sb-cell sb-top sb-center" data-edge="top" data-align="center"></div>
+                                <div class="sb-cell sb-top sb-end" data-edge="top" data-align="end"></div>
+                                <!-- 下边：左/中/右 -->
+                                <div class="sb-cell sb-bottom sb-start" data-edge="bottom" data-align="start"></div>
+                                <div class="sb-cell sb-bottom sb-center" data-edge="bottom" data-align="center"></div>
+                                <div class="sb-cell sb-bottom sb-end" data-edge="bottom" data-align="end"></div>
+                                <!-- 左边：上/中/下 -->
+                                <div class="sb-cell sb-left sb-start" data-edge="left" data-align="start"></div>
+                                <div class="sb-cell sb-left sb-center" data-edge="left" data-align="center"></div>
+                                <div class="sb-cell sb-left sb-end" data-edge="left" data-align="end"></div>
+                                <!-- 右边：上/中/下 -->
+                                <div class="sb-cell sb-right sb-start" data-edge="right" data-align="start"></div>
+                                <div class="sb-cell sb-right sb-center" data-edge="right" data-align="center"></div>
+                                <div class="sb-cell sb-right sb-end" data-edge="right" data-align="end"></div>
                             </div>
 
-                            <div class="sb-row">
-                                <span class="sb-label">在该边上的位置</span>
-                                <select id="sb-align" class="sb-select">
-                                    <option value="start">起始（左/上）</option>
-                                    <option value="center">居中</option>
-                                    <option value="end">末尾（右/下）</option>
-                                </select>
-                            </div>
-
+                            <!-- 长度 / 方向（**用户 2026-10-17 第 3 条**：做成"浅色/深色"那种分段按钮 ✓） -->
                             <div class="sb-row">
                                 <span class="sb-label">长度</span>
-                                <select id="sb-size-mode" class="sb-select">
-                                    <option value="match">与窗口该边等长</option>
-                                    <option value="fit">按按钮数量自适应</option>
-                                </select>
+                                <div class="theme-segmented" id="sb-size-seg">
+                                    <button type="button" class="theme-seg-btn active" data-size="match">铺满</button>
+                                    <button type="button" class="theme-seg-btn" data-size="fit">自适应</button>
+                                </div>
                             </div>
-
-                            <label class="config-checkbox" style="margin-top: 12px;">
-                                <input type="checkbox" id="sb-main-at-end"> 主窗口按钮放在末尾（默认在最前，像任务栏的开始按钮可选位置）
+                            <div class="sb-row">
+                                <span class="sb-label">方向</span>
+                                <div class="theme-segmented" id="sb-dir-seg">
+                                    <button type="button" class="theme-seg-btn active" data-end="false">正向</button>
+                                    <button type="button" class="theme-seg-btn" data-end="true">反向</button>
+                                </div>
+                            </div>
+                            <!-- 分离（**仅"铺满 + 该边居中"时可用** ✓ 其他组合**可见但禁用** ✓）
+                                 用户 2026-10-18 第 5 条：**只显示勾选框文字** ✓ 括号解释去掉 ✓
+                                 怕不明白就加个**圆形问号** ✓ 悬浮显示提示 ✓（纯 CSS 的 tooltip ✓） -->
+                            <label class="config-checkbox" style="margin-top: 12px;" id="sb-separate-label">
+                                <input type="checkbox" id="sb-separate">
+                                主窗图标与平台窗口图标分离
+                                <span class="sb-help" id="sb-separate-why"
+                                      data-tip="仅当长度为「铺满」且位置选「居中」时可用：平台窗口图标居中，主窗口按钮留在端点。"
+                                >?</span>
                             </label>
-                            <div class="sb-hint" id="sb-hint">长度永不超过窗口该边；按钮太多时会滚动。</div>
                         </div>
 
                         <!-- 更新 -->

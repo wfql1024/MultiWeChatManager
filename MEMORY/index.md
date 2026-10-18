@@ -102,3 +102,14 @@
   - `dev_logs.md` 追加 10-13~10-15 过程段（侧栏十三轮、方案制测试台 38 方案、UIA 能力扩展、托盘唤出重大结论、多开真相、QQNT 真凶）
 - **归宿**：`AGENTS.md`、`MEMORY/{facts,decisions,lessons,dev_logs,index}.md`（`tmp/2026-10-13.md` 按规范保留原件）
 - **遗留待定**：QQNT pid 过期自动重发现；旧版 WeChat/老 QQ 未逐平台验证；D-46 登录按钮 UIA 优先尚未接线
+
+### 2026-10-17 ~ 10-19（第四次整理：侧栏设置体系 + 交互契约收敛）
+- **来源**：`tmp/2026-10-17.md` + `tmp/2026-10-18.md` + `tmp/2026-10-19.md`
+- **做了**：
+  - `AGENTS.md` 新增「**侧栏交互契约**」9 条（12 位置/铺满语义/长度唯一口径/示例按钮判据/只有设置页强制显示/分离规则/测试按钮/主题只改颜色/窗口形态三开关）
+  - `facts.md` 新增 **§6 侧栏设置体系**（数据模型 5 字段、布局与长度唯一口径、分离实现要点、示例按钮与预览态、窗口形态）
+  - `lessons.md` 新增「**侧栏 / JavaFX / Win32**」11 条坑（容器没撑满/同一个量多处算法/状态看数据不看模式/开关要成对/`setMouseTransparent` 屏蔽 Tooltip/覆盖表必须与规则表同载/`SetWindowLong` 丢 TOPMOST/无 owner 进 Alt+Tab/owner 连带激活/先找不对称物/别在 bug 上补）
+  - `decisions.md` 新增 **D-48**（侧栏设置模型 + 所见即所得：用真实侧栏、不画预览图）与 **D-49**（窗口形态三开关与"永不 toFront"）
+  - `dev_logs.md` 追加 10-17~10-19 过程段；`AGENTS.md` 记忆素材卡规矩（10-16 立）已含在本文件所在体系内
+- **归宿**：`AGENTS.md`、`MEMORY/{facts,decisions,lessons,dev_logs,index}.md`（三份 tmp 原件按规范保留）
+- **遗留待定**：QQNT pid 过期自动重发现；旧版 WeChat/老 QQ 未逐平台验证；D-46 登录按钮 UIA 优先尚未接线

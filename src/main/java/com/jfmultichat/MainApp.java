@@ -35,6 +35,27 @@ public class MainApp extends Application {
 
         // 只显示主窗口，侧栏由标题栏按钮触发
         mainWindow.show();
+
+        // **启动全局扫描（一次性）**：当前平台照旧优先加载 ✓，其它平台的 pid/hwnd 由后台线程补齐到内存 ✓
+        //  → 用户点侧栏时即可直接看到所有已在线账号 ✓（走任务中心 ✓ 运行中在任务中心可见 ✓）
+        com.jfmultichat.acccore.StartupAccountScan.submit();
+
+        // **用户 2026-10-18 第 4 条（a）**：注入"确保侧栏可见"回调 ✓
+        //   —— 刚开软件时侧栏对象**还没创建** ✗，而设置页一打开就要求显示侧栏 ✓
+        //   → 这里在**启动时**就装好 ✓，由它负责"没建就建、建了就显示" ✓
+        FloatingSidebar.ensureShown = () -> Platform.runLater(this::ensureSidebarVisible);
+    }
+
+    /** 确保侧栏存在且可见 ✓（设置页"侧栏"一打开就会调 ✓ 见 `FloatingSidebar.setDemoMode`） */
+    private void ensureSidebarVisible() {
+        if (sidebar == null) {
+            sidebar = new FloatingSidebar(this);
+            sidebar.bindToMainWindow(mainWindow);
+            sidebar.startFollowing();
+        }
+        if (!sidebar.isShowing()) {
+            sidebar.show();
+        }
     }
 
     private void loadAppIcon(Stage stage) {
@@ -65,6 +86,9 @@ public class MainApp extends Application {
     /** 切换侧栏可见性 */
     public void toggleSidebar() {
         Platform.runLater(() -> {
+            // **用户 2026-10-19 原则②**：只有"侧栏设置页"会**强制显示** ✓ —— 其他页面可自由隐藏 ✓
+            //   所以这里**不碰** `demoMode` ✗（上一版在这里清掉它 ✗ → 于是"设置页里也能隐藏" ✗）
+            //   `demoMode` 的生命周期交给前端 ✓（进"侧栏"页 = true ✓ 离开那一页/离开设置 = false ✓）
             if (sidebar == null || !sidebar.isShowing()) {
                 if (sidebar == null) {
                     sidebar = new FloatingSidebar(this);
@@ -72,6 +96,11 @@ public class MainApp extends Application {
                     // 开始跟随（WinEvent 钩子线程 + 每帧消费）
                     //  —— 隐藏时**不**停钩子（再显示要立刻跟上，装卸钩子反而更贵）；退出时才停（见 exit）
                     sidebar.startFollowing();
+                    // **用户 2026-10-18 第 4 条（a）**：注入"确保可见"回调 ✓
+                    //   （刚开软件时侧栏对象还不存在 ✓ 设置页要求显示时由这里创建 ✓）
+                    FloatingSidebar.ensureShown = () -> {
+                        if (sidebar != null && !sidebar.isShowing()) sidebar.show();
+                    };
                 }
                 sidebar.show();
             } else {

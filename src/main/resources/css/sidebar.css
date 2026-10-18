@@ -20,8 +20,14 @@
     -jf-sb-thumb: rgba(255, 255, 255, 0.20);
     -jf-sb-badge-bg: rgba(0, 0, 0, 0.55);
     -jf-sb-badge-border: rgba(255, 255, 255, 0.55);
+    /* 当前跟随项的高亮 + 整条侧栏的投影（用户 2026-10-17 第 9 条：
+     * **浅色要与深色风格一致、只差颜色** ✓ → 这两个也得变量化 ✓ 别在规则里硬编码 ✗） */
+    -jf-sb-active-bg: rgba(74, 163, 255, 0.28);
+    -jf-sb-active-border: #4aa3ff;
+    -jf-sb-shadow: dropshadow(gaussian, rgba(0, 0, 0, 0.45), 14, 0.25, 0, 4);
 
     -fx-background-color: -jf-sb-bg;
+    -fx-effect: -jf-sb-shadow;
     -fx-background-radius: 12px;
     -fx-border-radius: 12px;
     -fx-border-color: -jf-sb-border;
@@ -72,16 +78,33 @@
     -fx-font-size: 18px;
 }
 
-/* 当前"指向/被跟随"的那个按钮：主题色描边高亮（一眼看出现在在跟谁 ✓） */
+/* 当前"指向/被跟随"的那个按钮：主题色描边高亮（一眼看出现在在跟谁 ✓）
+ * 走变量 ✓ → 浅色表能给出同等对比度的取值 ✓（用户 2026-10-17 第 9 条 ✓） */
 .sidebar-btn.active {
-    -fx-background-color: rgba(74, 163, 255, 0.28);
-    -fx-border-color: #4aa3ff;
+    -fx-background-color: -jf-sb-active-bg;
+    -fx-border-color: -jf-sb-active-border;
     -fx-border-width: 1.5px;
     -fx-border-radius: 8px;
 }
 
-/* 侧栏内部滚动：**已按用户要求去掉滚动条** ✓（按钮太多时改为等比缩小 → 始终对称、始终简约 ✓）
-   这里保留的滚动条规则只针对 ScrollPane 万一被别处复用的情况，正常不会出现 ✓ */
+/* **演示图标**（用户 2026-10-17 第 3 条 ✓）：设置页看效果时，若一个真实平台窗口都没有 ✓
+ * 就临时显示 3 个这样的虚拟图标 ✓ —— 用虚线弱化 ✓ 一眼看出"这是演示、不是真账号" ✓ */
+.sidebar-btn-demo {
+    -fx-background-color: transparent;
+    -fx-border-color: -jf-sb-border;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-opacity: 0.6;
+}
+
+/* **分离**时钉在端点的主窗按钮 ✓（用户 2026-10-17 第 3 条 ✓）：与簇里的按钮同样式 ✓ 只是位置由 StackPane 对齐决定 ✓ */
+.sidebar-btn-pinned {
+    -fx-background-color: -jf-sb-btn;
+}
+
+/* 侧栏内部滚动：**用户 2026-10-17 第 1 条推翻了旧策略** ✓ ——
+ * 现在 fit 模式**不再等比缩小按钮** ✗，而是"直接展示全部，**装不下就滑动**" ✓
+ * → 所以滚动条是**正常会出现**的 ✓：默认隐藏、鼠标移到侧栏上才显形 ✓（保持简约 ✓） */
 .sidebar-scroll {
     -fx-background: transparent;
     -fx-background-color: transparent;

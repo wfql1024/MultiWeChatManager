@@ -4,6 +4,7 @@ import com.jfmultichat.MainApp;
 import javafx.animation.AnimationTimer;
 import javafx.animation.PauseTransition;
 import javafx.beans.value.ChangeListener;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -110,6 +111,18 @@ public class FloatingSidebar {
 
     private boolean collapsed;
     private boolean hoverExpanded;
+    /** 上一个"前台窗口"，用来只在**变化时**才抬层级 ✓（用户 2026-10-17 第 4 条 ✓） */
+    private int lastFrontFg;
+    /**
+     * **最前面是不是"无关窗口"** ✓（用户 2026-10-17 第 5 条 ✓）：
+     * true → 侧栏**贴边收起**（不挡它 ✓ 又不至于找不到侧栏 ✓）；false → 侧栏层级＝我们的最前窗口 +1 ✓
+     */
+    private boolean lastForeignOnTop;
+    /** **测试台按钮是否显示** ✓（用户 2026-10-17 第 5 条：默认隐藏 ✓ **不落盘** ✓ 每次新开侧栏都隐藏 ✓） */
+    private boolean showTestBtn;
+    /** 空白处连击计数与上次点击时刻 ✓（连续点三次 → 切换测试按钮显隐 ✓） */
+    private int blankClickCount;
+    private long lastBlankClickMs;
     private boolean styleApplied;
     private int lastActiveHwnd;
     private boolean builtVertical;
@@ -141,6 +154,24 @@ public class FloatingSidebar {
     public FloatingSidebar(MainApp app) {
         this.app = app;
         this.stage = new Stage();
+        // ⚠️⚠️ **用户 2026-10-18 第 3 条的真凶** ✓✓：侧栏原来是**独立的顶层窗口** ✗（没有 owner ✓）
+        //   → Windows 的 Alt+Tab 会把它当成一个应用窗口 ✓✓（于是"第二新的窗口"是侧栏 ✓
+        //     按 Alt+Tab 回到的是侧栏而不是上一个平台窗 ✓ 用户实测 ✓）
+        //   修法 ✓：给侧栏一个 **owner（主窗口）** ✓ —— Windows 的下场是：
+        //     · 被拥有的窗口**不进 Alt+Tab、不进任务栏** ✓✓
+        //     · 但它仍然**可以 always-on-top** ✓（置顶与 owner 不冲突 ✓）
+        //   （必须早于 `show()` ✓）
+        try {
+            for (javafx.stage.Window w : javafx.stage.Window.getWindows()) {
+                if (w instanceof Stage && w != stage && w.isShowing()) {
+                    stage.initOwner(w);
+                    LOG.info("[侧栏] 已挂到主窗口下面当附属窗口 ✓（不再进 Alt+Tab ✓）");
+                    break;
+                }
+            }
+        } catch (Throwable t) {
+            LOG.warn("[侧栏] 设置 owner 失败（不影响显示）: {}", t.getMessage());
+        }
         current = this;
         buildUI();
     }
@@ -149,6 +180,10 @@ public class FloatingSidebar {
 
     private void buildUI() {
         stage.initStyle(StageStyle.TRANSPARENT);
+        // ⚠️⚠️ **用户 2026-10-18 第 3 条（明确算法 ✓）**：
+        //   "**侧栏直接永远置顶** ✓，然后看**前置窗口（排除侧栏自身）**：
+        //     可连接窗口 → 按情况贴边/跟随 ✓；其他窗口 → 贴边 ✓"
+        //   → 所以**置顶要打开** ✓（我上一轮为修"挡住无关窗口"把它关了 ✗ —— 那是错的 ✓ 用户要的正是"置顶 + 贴边"组合 ✓）
         stage.setAlwaysOnTop(true);
 
         rootBox.getStyleClass().add("sidebar");
@@ -175,6 +210,23 @@ public class FloatingSidebar {
 
         Scene scene = new Scene(rootBox, SidebarPrefs.THICKNESS, 220);
         scene.setFill(Color.TRANSPARENT);
+
+        // **用户 2026-10-17 第 5 条**：连续点击侧栏**空白处**三次 → 显隐"测试台按钮" ✓
+        //   （按钮上的点击会被 Button 消费掉 ✓ 不会冒泡到这里 ✓ 所以这里只收"空白处"的点击 ✓）
+        //   仅内存态 ✓ **不存配置** ✓ → 每次新开侧栏都默认隐藏 ✓
+        rootBox.setOnMouseClicked(e -> {
+            long now = System.currentTimeMillis();
+            if (now - lastBlankClickMs > 1200) blankClickCount = 0;      // 间隔太久 → 重新数 ✓
+            lastBlankClickMs = now;
+            if (++blankClickCount >= 3) {
+                blankClickCount = 0;
+                showTestBtn = !showTestBtn;
+                LOG.info("[侧栏] 三击空白处 → 测试台按钮{} ✓（仅本次运行有效，不写入配置 ✓）",
+                        showTestBtn ? "显示" : "隐藏");
+                rebuildItems();
+                applyGeometry();
+            }
+        });
         stage.setScene(scene);
         syncClip();
         applyTheme(readCurrentTheme());
@@ -191,6 +243,14 @@ public class FloatingSidebar {
                 if (collapseDelay == null) {
                     collapseDelay = new PauseTransition(Duration.millis(COLLAPSE_DELAY_MS));
                     collapseDelay.setOnFinished(x -> {
+                        // ⚠️ 用户 2026-10-17 第 2 条：**鼠标还在侧栏上，就先不收回** ✓
+                        //   原来只做了"在边边就展开 / 不在就收回" ✗ —— 鼠标从细边往**条内**移动时
+                        //   会被判成"已离开" ✗ → 侧栏秒收回 ✓ 用户几乎每次都点不上 ✓
+                        //   JavaFX 的 `hover` 对**节点及其子节点**均为 true ✓ → 直接用它判断最稳 ✓
+                        if (rootBox.isHover()) {
+                            collapseDelay.playFromStart();      // 人还在侧栏上 → 继续等 ✓
+                            return;
+                        }
                         hoverExpanded = false;
                         applyGeometry();
                     });
@@ -284,6 +344,32 @@ public class FloatingSidebar {
         if (fg != 0 && fg != sidebarHwnd && (isFollowable(fg) || fg == mainHwnd)) {
             followedHwnd = fg;
         }
+        // **用户 2026-10-17 第 4 条**：层级跟着"当前最前的窗口"走 ✓
+        //   前台换成**我们的窗口**（跟随目标/主窗）→ 把侧栏抬到它前面 ✓；
+        //   前台换成**无关窗口** → **什么都不做** ✓ → 那个无关窗口自然把侧栏盖住 ✓（不再"永远置顶" ✗）
+        // **用户 2026-10-18 第 3 条（照他的算法实现 ✓ —— 不再搞"层级 +1"那套 ✗）**：
+        //   侧栏**永远置顶** ✓（见构造函数）；然后只看**前置窗口（排除侧栏自身 ✓）**：
+        //     · 是**可连接窗口**（主窗 / 已绑定的账号窗口）→ 按情况**贴边或跟随** ✓（最大化贴边 ✓ 非最大化跟随 ✓）
+        //     · 是**其他窗口** → **贴边** ✓（贴边=收起成细边 ✓ 于是它虽然置顶但**不挡**别人 ✓✓）
+        int rawFg = com.jfmultichat.swcore.SwNativeOps.foregroundWindowRaw();
+        boolean fgIsConnectable = rawFg != 0 && (rawFg == mainHwnd || isFollowable(rawFg));
+        boolean foreignOnTop = rawFg != 0 && rawFg != sidebarHwnd && !fgIsConnectable;
+        if (foreignOnTop != lastForeignOnTop) {
+            lastForeignOnTop = foreignOnTop;
+            LOG.info("[侧栏] 前置窗口=0x{}（{}）→ 侧栏{}", Integer.toHexString(rawFg),
+                    foreignOnTop ? "不是可连接窗口" : "是可连接窗口",
+                    foreignOnTop ? "贴边 ✓（置顶但不挡它 ✓）" : "恢复正常 ✓");
+            applyGeometry();
+        }
+        // ⚠️⚠️ **用户 2026-10-18 第 1/2 条（"切平台窗后又跳回主窗口"）的真凶** ✓✓：
+        //   侧栏现在**有 owner（主窗口）** ✓ —— 而 Windows 的规则是：**被拥有的窗口一旦被激活，
+        //   它的 owner 会被一起提到前台** ✗✓ → 于是"侧栏激活一次 → 主窗口被拽到最前" ✓✓
+        //   我又在这里调了 `stage.toFront()` ✗（**它会激活侧栏** ✓）→ 每次前台变化都把主窗拽一次 ✓
+        //   同理 `insertAbove`（`SetWindowPos` 用非置顶的 insertAfter ✓）**会清掉 TOPMOST** ✗ ✓
+        //   → 现在统一：**侧栏只靠 always-on-top 待在顶层 ✓ 绝不激活自己 ✗ 也不改 z-order** ✓
+        //     （不激活 ✓ 就不会带出 owner ✓ 也就不会抢走平台窗口的前台 ✓）
+        //   ⚠️ 副作用（可以接受 ✓）：别的"置顶窗口"可能压住它 ✓ —— 那种窗口本来就该在最前 ✓
+
         if (followedHwnd != lastActiveHwnd) {
             lastActiveHwnd = followedHwnd;
             updateActiveHighlight();      // 只切样式类 ✓ 不重建 → 不打断滚动位置 ✓
@@ -296,11 +382,23 @@ public class FloatingSidebar {
             return;
         }
         if (followedHwnd == mainHwnd && !isWindowUsable(mainHwnd)) {
+            // **用户 2026-10-17 第 6 条**：主窗口**真的没了**（被关闭 / 进程已退 ✓ 此时 hwnd 已销毁 ✓）
+            //   → 侧栏**关掉** ✓（否则它就留在桌面上，而"侧栏入口"随主窗一起没了 ✓ = 再也唤不回的僵尸 ✓）
+            if (!com.jfmultichat.swcore.SwNativeOps.isWindow(mainHwnd)) {
+                LOG.info("[侧栏] 主窗口已关闭（hwnd=0x{} 已销毁）→ 关闭侧栏 ✓",
+                        Integer.toHexString(mainHwnd));
+                close();
+                return;
+            }
             if (stage.isShowing()) stage.hide();
             followedHwnd = 0;
             return;
         }
-        if (!stage.isShowing()) {
+        // ⚠️ **用户 2026-10-17 第 7 条的真凶** ✓✓：这里原来是"只要没在显示就 `show()` 回来" ✗ ——
+        //   于是点侧栏入口图标 → `hide()` → **下一帧就被这行 show() 拉回来** ✗ → 表现为"怎么都关不掉" ✓
+        //   → 加 `userHidden`（**用户手动关掉的标记** ✓）：手动关掉后不再自动回显 ✓，
+        //     只有再点一次入口图标（`show()`）才恢复 ✓
+        if (!stage.isShowing() && !userHidden) {
             stage.show();
             styleApplied = false;
         }
@@ -371,32 +469,36 @@ public class FloatingSidebar {
 
         SidebarLayout.Rect screen = monitorOf(target);
         boolean maximized = isEffectivelyMaximized(followedHwnd, target, screen);
-        collapsed = maximized;
+        // 收起条件 ✓：①跟随的窗口最大化（默认收起、悬停展开 ✓，用户契约 ✓）
+        //            ②**最前面是无关窗口**（用户 2026-10-17 第 5 条 ✓）→ 一律贴边 ✓
+        collapsed = maximized || lastForeignOnTop;
 
         double avail = prefs.vertical() ? target.h : target.w;
         layoutContent(target, avail);
 
-        double content = SidebarPrefs.contentLength(items.size(), btnSize);
+        double content = SidebarPrefs.contentLength(visibleCount(), btnSize);
         // match = 与窗口该边**等长**；fit = 内容长度（按钮已按可用长度缩过 → 必然 ≤ avail ✓）；
         // 两者都**不超过**窗口该边 ✓（用户第 4 条 ✓）
         double length = SidebarPrefs.SIZE_FIT.equals(prefs.sizeMode) ? Math.min(content, avail) : avail;
 
-        // ⚠️⚠️ 临时压测开关（用户 2026-10-14 要求）：fit 模式下把**侧栏长度**缩短一个按钮
-        //      （= 内容里仍显示"主窗口按钮 + 全部账号按钮"，但条长只够账号按钮 ✓）
-        //      —— 按钮尺寸**不缩** ✓（用户明确："里面按钮等内容当然不变" ✓）。测完删掉这两行即可 ✓
-        if (SidebarPrefs.SIZE_FIT.equals(prefs.sizeMode)) {
-            length = Math.min(SidebarPrefs.contentLength(Math.max(0, items.size() - 1), btnSize), avail);
-        }
-
         SidebarLayout.Rect r;
-        boolean hidden = maximized && !hoverExpanded;
-        if (maximized) {
+        // 收起 = ①跟随窗口最大化且未悬停 ✓ ②**最前是无关窗口**且未悬停 ✓（用户 2026-10-17 第 5 条 ✓）
+        boolean collapsedNow = maximized || lastForeignOnTop;
+        boolean hidden = collapsedNow && !hoverExpanded;
+        if (collapsedNow) {
             double edgeLen = prefs.vertical() ? screen.h : screen.w;
+            // **用户 2026-10-19 第 1/2 条**：贴边时"**长度**"与"**感应区**"必须是**同一个口径** ✓ ——
+            //   · 铺满 → 屏幕该边**整条** ✓（条 + 热带都铺满 ✓）
+            //   · 自适应 → **内容长度** ✓（条只有内容那么长 ✓ **感应区也只到那么长** ✓
+            //     用户实测"自适应时整条边都能感应" ✗ 不对 ✓）
+            double edgeLength = SidebarPrefs.SIZE_FIT.equals(prefs.sizeMode)
+                    ? Math.min(SidebarPrefs.contentLength(visibleCount(), btnSize), edgeLen)
+                    : edgeLen;
             if (hidden) {
                 // 折叠：**热带 16px**（透明）+ 可见细边只画在最外沿 ✓ → 屏幕四角也在热区内 ✓
-                r = SidebarLayout.atScreenEdgeHot(prefs, screen, edgeLen, HOT);
+                r = SidebarLayout.atScreenEdgeHot(prefs, screen, edgeLength, HOT);
             } else {
-                r = SidebarLayout.expandedAtScreenEdge(prefs, screen, length);
+                r = SidebarLayout.expandedAtScreenEdge(prefs, screen, edgeLength);
             }
         } else {
             r = SidebarLayout.sidebarRect(prefs, target, screen, length, false);
@@ -408,10 +510,27 @@ public class FloatingSidebar {
         applyCollapsedVisual(hidden, r);
         syncClip();
         ensureWindowStyle();
+        // **用户 2026-10-18 第 6 条**（侧栏被当成系统窗口 ✓ 导致 Alt+Tab 回不到上一个窗口 ✓）：
+        //   `applyNoActivateToolWindow` = `WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW` ✓
+        //   —— 前者**不抢焦点** ✓、后者**不进 Alt+Tab / 任务栏** ✓
+        //   原来它只在"尺寸启发式命中"时应用一次 ✗（几何一变就可能漏 ✓）→ 这里**每次定位后重申** ✓（幂等 ✓ 便宜 ✓）
+        if (sidebarHwnd != 0) {
+            com.jfmultichat.swcore.SwNativeOps.applyNoActivateToolWindow(sidebarHwnd);
+        }
     }
 
     /** 折叠态视觉切换：内容隐藏、只留**最外沿那条细边** ✓ */
     private void applyCollapsedVisual(boolean hidden, SidebarLayout.Rect r) {
+        // ⚠️ **用户 2026-10-17 第 4 条**（"最大化时贴边也唤不出来了" ✓）：
+        //   收起态**不能让内容撑满** ✗ —— 我把 fitTo 改成两向 true 之后 ✓，
+        //   即便内容 `setVisible(false)` ✓，ScrollPane 仍占满整个热带 ✗ 并可能吞掉 hover ✓ →
+        //   热带"看不见也点不到" ✓ 于是再也唤不出 ✓
+        //   → 收起时**关掉两个 fit** ✓（内容本来就隐藏 ✓），展开时再恢复 ✓
+        if (scroll != null) {
+            scroll.setFitToWidth(!hidden);
+            scroll.setFitToHeight(!hidden);
+            scroll.setMouseTransparent(hidden);
+        }
         if (hidden) {
             if (!rootBox.getStyleClass().contains("collapsed")) rootBox.getStyleClass().add("collapsed");
         } else {
@@ -479,7 +598,11 @@ public class FloatingSidebar {
     /** 内容方向/按钮尺寸变了就重建（Node 不能有两个父容器 ✓ 尺寸也要跟着可用长度走 ✓） */
     private void layoutContent(SidebarLayout.Rect target, double avail) {
         boolean vertical = prefs.vertical();
-        double want = SidebarPrefs.buttonSize(items.size(), avail);
+        // ⚠️ 用户 2026-10-17 第 1 条（**推翻** 2026-10-13 的"缩小而不是滚动" ✗）：
+        //    fit 模式要"**直接展示全部** ✓，只有**不够长了才滑动**放内容 ✓"
+        //    → 按钮尺寸**恒为标准 44px** ✓（不再按 avail 等比缩小 ✗；
+        //      `SidebarPrefs.buttonSize` 保留但这里不用 ✓）；装不下由 ScrollPane 负责滑动 ✓
+        double want = SidebarPrefs.BTN;
         if (!builtOnce || builtVertical != vertical || Math.abs(want - btnSize) > 0.5) {
             btnSize = want;
             rebuildItems();
@@ -489,12 +612,57 @@ public class FloatingSidebar {
             scroll.setContent(content);            // 一次只挂一个容器 ✓（早先两个都挂 → 空长条 ✗）
             contentNode = content;
         }
-        scroll.setFitToWidth(vertical);
-        scroll.setFitToHeight(!vertical);
-        colBox.setAlignment(Pos.TOP_CENTER);
-        rowBox.setAlignment(Pos.CENTER_LEFT);
+        // ⚠️⚠️ **用户 2026-10-17 第 1/2 条的真凶** ✓✓：
+        //   竖排时 VBox 的**高度**必须撑满视口 ✓，否则"容器对齐"没有意义 ✗
+        //   —— 原来只 `setFitToWidth(vertical)` / `setFitToHeight(!vertical)` ✗
+        //     → 竖排的 VBox 高度 = 内容高度 ✗ → 三个位置**看起来都挤在顶端** ✓✓（正是用户反馈 ✓）
+        //   修法：**两个方向都撑满视口** ✓（装不下时 ScrollPane 照旧可滚 ✓），
+        //        于是 `colBox/rowBox` 的 alignment 就能把图标放到"起始/居中/末尾" ✓
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(true);
+        // ⚠️ **用户 2026-10-17 第 1 条**（我的模型理解错了 ✗ 已纠正 ✓）：
+        //   "铺满"= **长条延伸到与窗口该边等长** ✓ —— 而**图标仍应落在所选位置**（起始/居中/末尾 ✓）
+        //   原来把簇**固定**在起始端 ✗（所以选"右端 + 铺满"时图标没跟过去 ✓ 分离时平台图标也不在中间 ✓）
+        //   → 用**容器对齐**表达"所选位置" ✓（竖排看上下 ✓ 横排看左右 ✓）
+        String al = SidebarPrefs.normalizeAlign(prefs.align);
+        Pos pos = vertical
+                ? (SidebarPrefs.ALIGN_START.equals(al) ? Pos.TOP_CENTER
+                   : SidebarPrefs.ALIGN_END.equals(al) ? Pos.BOTTOM_CENTER : Pos.CENTER)
+                : (SidebarPrefs.ALIGN_START.equals(al) ? Pos.CENTER_LEFT
+                   : SidebarPrefs.ALIGN_END.equals(al) ? Pos.CENTER_RIGHT : Pos.CENTER);
+        colBox.setAlignment(pos);
+        rowBox.setAlignment(pos);
         colBox.setSpacing(SidebarPrefs.BTN_GAP);
         rowBox.setSpacing(SidebarPrefs.BTN_GAP);
+    }
+
+    /**
+     * **实际会显示的按钮数** ✓（账号/主窗 + 测试按钮 + 演示图标 ✓）—— 侧栏长度必须按它算 ✓.
+     *
+     * <p>用户 2026-10-17 第 3 条实测 ✗：三击唤出测试按钮时**侧栏没有加长** ✓ ——
+     * 根因就是这个长度原先只按 {@code items.size()} 算 ✓，把测试按钮/演示图标漏掉了 ✓。
+     */
+    /**
+     * **示例图标个数** ✓（用户 2026-10-18 原则①：**没有真实平台账号就显示 3 个** ✓）.
+     *
+     * <p>**唯一判据 = 有没有真实平台账号** ✓ —— 与"当前在哪个页面 / 演示态开关"**全都无关** ✗
+     * （之前绑在 `demoMode` 上 ✗ → 才会"有时有、有时没有" ✓）。
+     * <p>唯一一处定义 ✓：`rebuildItems`（要不要摆）与 `visibleCount`（长度算几个）**都调它** ✓ ——
+     * 两处共用同一判据 ✓ 就不会再出现"图标有了但条没变长"或反之 ✓。
+     */
+    private int demoIconCount() {
+        int real = 0;
+        for (Item it : items) {
+            if (!it.main) real++;
+        }
+        return real == 0 ? 3 : 0;
+    }
+
+    private int visibleCount() {
+        int n = items.size();
+        if (showTestBtn) n++;
+        n += demoIconCount();                   // 示例图标也占位 ✓（长度要跟着算 ✓）
+        return n;
     }
 
     private SidebarLayout.Rect monitorOf(SidebarLayout.Rect r) {
@@ -507,6 +675,125 @@ public class FloatingSidebar {
             javafx.geometry.Rectangle2D b = Screen.getPrimary().getVisualBounds();
             return new SidebarLayout.Rect(b.getMinX(), b.getMinY(), b.getWidth(), b.getHeight());
         }
+    }
+
+    /** **演示态**（用户 2026-10-17 第 3 条 ✓）：设置页打开"侧栏"这一页时打开 ✓，离开就关 ✓ */
+    private static boolean demoMode;
+    /**
+     * **由主程序注入的"确保侧栏可见"回调** ✓（用户 2026-10-18 第 4 条 a ✓）：
+     * 刚打开软件时侧栏对象**还没被创建** ✗（`current == null` ✓）→ 光改字段没用 ✗
+     * → 演示态打开时调这个回调 ✓，由 `MainApp` 负责**创建并显示** ✓。
+     */
+    public static Runnable ensureShown;
+    /** 分离态下**钉在端点**的主窗按钮 ✓（切回不分离时要撤掉 ✓） */
+    private Node pinnedMain;
+
+    /** 供 JS 桥调用 ✓（设置页"所见即所得"✓）：**没有平台窗口时生成虚拟图标** ✓ */
+    public static void setDemoMode(boolean on) {
+        boolean changed = demoMode != on;
+        demoMode = on;
+        if (on && current == null && ensureShown != null) {
+            // **刚开软件、侧栏对象还没创建** ✓ → 让主程序去创建并显示 ✓（用户 2026-10-18 第 4 条 a ✓）
+            try {
+                ensureShown.run();
+            } catch (Throwable t) {
+                LOG.warn("[侧栏] 创建侧栏失败: {}", t.getMessage());
+            }
+        }
+        if (current != null) {
+            if (on) {
+                // **用户 2026-10-18 第 2 条**：一进"侧栏"设置页 → **无论如何都要显示侧栏** ✓
+                //   （哪怕用户刚点过侧栏入口把它隐藏了 ✗、或它正贴着边 ✓ → 一律显示并展开 ✓）
+                current.userHidden = false;
+                current.hoverExpanded = true;
+                if (!current.stage.isShowing()) {
+                    current.show();
+                }
+            }
+            if (changed) current.rebuildItems();
+            if (current.followedHwnd != 0) current.applyGeometry();
+        }
+        LOG.info("[侧栏] 演示态 = {}（一个真实平台窗口都没有时会生成虚拟图标 ✓）", on);
+    }
+
+    /**
+     * **分离**（用户 2026-10-17 第 3 条 ✓）：主窗按钮**钉在端点** ✓、平台窗口图标**居中** ✓.
+     *
+     * <p>只在"**铺满 + 该边居中**"时生效 ✓（判据收在 {@link SidebarPrefs#separatedEffective()} ✓）。
+     * <p>`rootBox` 是 {@link StackPane} ✓ → 用 {@link StackPane#setAlignment} 直接钉住即可 ✓；
+     * 竖排（贴左/右）时端点是上/下 ✓，横排（贴上/下）时端点是左/右 ✓，由 `主窗口按钮放在末尾` 决定哪一端 ✓。
+     */
+    private void applyPinnedMain(boolean vertical, boolean separated) {
+        if (pinnedMain != null) {
+            rootBox.getChildren().remove(pinnedMain);
+            pinnedMain = null;
+        }
+        if (!separated) return;
+        Item mainItem = null;
+        for (Item it : items) {
+            if (it.main) {
+                mainItem = it;
+                break;
+            }
+        }
+        if (mainItem == null) return;
+        // 主窗按钮 + （若显示）测试按钮 **同组钉住** ✓（用户第 6 条："隐藏按钮应当和主窗按钮凑一块" ✓ ✓）
+        // ⚠️ **用户 2026-10-17 第 2 条**（"没有分离，都是居中" ✓）：
+        //   `rootBox` 的样式表里有 `-fx-alignment: center` ✗ —— 它会把**所有子节点**往中间摆 ✓
+        //   → 这里在 Java 侧**显式**把容器的默认对齐设为 CENTER ✓，再对"钉住的主窗按钮"用
+        //     **单子节点约束**（`StackPane.setAlignment`）把它放到端点 ✓ —— 两者都明确设置 ✓ 才不会被样式压掉 ✓
+        rootBox.setAlignment(Pos.CENTER);
+        javafx.scene.layout.Pane group = vertical
+                ? new VBox(SidebarPrefs.BTN_GAP)
+                : new HBox(SidebarPrefs.BTN_GAP);
+        Node node = buildButton(mainItem);
+        if (node instanceof Button b) {
+            hwndButtons.put(MAIN_KEY, b);
+        }
+        node.getStyleClass().add("sidebar-btn-pinned");
+        group.getChildren().add(node);
+        if (showTestBtn) {
+            group.getChildren().add(buildTestButton());
+        }
+        group.setPickOnBounds(false);
+        boolean atEnd = prefs.mainBtnAtEnd;
+        Pos pos = vertical
+                ? (atEnd ? Pos.BOTTOM_CENTER : Pos.TOP_CENTER)
+                : (atEnd ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT);
+        if (group instanceof VBox vb) {
+            vb.setAlignment(vertical ? (atEnd ? Pos.BOTTOM_CENTER : Pos.TOP_CENTER) : Pos.CENTER);
+        } else if (group instanceof HBox hb) {
+            // ⚠️ **用户 2026-10-18 第 4 条的真凶** ✓✓：这组在 StackPane 里会**撑满整条** ✓
+            //   → 真正决定按钮位置的是**它自己的对齐** ✗（外层 `setAlignment` 只能把它放到"整条"那一端 ✓）
+            //   竖排我按端点设了 ✓；**横排却写死成 CENTER** ✗ → 于是上下两边的侧栏"都在居中、没分离" ✓✓
+            //   → 这里按"起点/终点"设 ✓（与竖排对称 ✓）
+            hb.setAlignment(!vertical ? (atEnd ? Pos.CENTER_RIGHT : Pos.CENTER_LEFT) : Pos.CENTER);
+        }
+        StackPane.setAlignment(group, pos);
+        double pad = 6;
+        StackPane.setMargin(group, vertical
+                ? new Insets(atEnd ? 0 : pad, 0, atEnd ? pad : 0, 0)
+                : new Insets(0, atEnd ? pad : 0, 0, atEnd ? 0 : pad));
+        rootBox.getChildren().add(group);
+        pinnedMain = group;
+    }
+
+    /** 演示用的虚拟图标 ✓（不可点击 ✓ 只让用户看到位置/分离的实际效果 ✓） */
+    private Node buildDemoButton(int i) {
+        Button b = new Button(String.valueOf((char) ('A' + i - 1)));
+        b.getStyleClass().addAll("sidebar-btn", "sidebar-btn-demo");
+        b.setFocusTraversable(false);
+        // **用户 2026-10-18 第 3 条**（"没有看到悬浮提示" ✗）：
+        //   原来这里 `setMouseTransparent(true)` ✗ → 鼠标事件根本不进来 ✓ **Tooltip 也就永远不显示** ✗✓
+        //   → 改回可接收鼠标 ✓，只是**没有点击行为** ✓（那才是"演示图标"应有的语义 ✓）
+        b.setPrefSize(SidebarPrefs.BTN, SidebarPrefs.BTN);
+        b.setMinSize(SidebarPrefs.BTN, SidebarPrefs.BTN);
+        b.setMaxSize(SidebarPrefs.BTN, SidebarPrefs.BTN);
+        // **用户 2026-10-18 第 2 条**：悬浮提示「请登录账号后体验功能」✓
+        javafx.scene.control.Tooltip tip = new javafx.scene.control.Tooltip("请登录账号后体验功能");
+        tip.setShowDelay(javafx.util.Duration.millis(250));
+        javafx.scene.control.Tooltip.install(b, tip);
+        return b;
     }
 
     private static double uiScale() {
@@ -552,7 +839,13 @@ public class FloatingSidebar {
         final double h = scroll.getHvalue();
         colBox.getChildren().clear();
         rowBox.getChildren().clear();
+        // **用户 2026-10-17 第 3 条（分离）** ✓：分离生效时，主窗按钮**不放在簇里** ✓
+        //   （簇是居中的 ✓ 主窗按钮要钉在**端点** ✓ → 交给 `applyPinnedMain` 用 StackPane 对齐钉住 ✓）
+        boolean separated = prefs.separatedEffective();
+        LOG.info("[侧栏] 重建：分离={}（size_mode={}, align={}, separate_main_btn={}），簇内按钮 {} 个",
+                separated, prefs.sizeMode, prefs.align, prefs.separateMainBtn, items.size());
         for (Item it : items) {
+            if (separated && it.main) continue;
             Node node = buildButton(it);
             if (node instanceof Button b) {
                 hwndButtons.put(it.main ? MAIN_KEY : it.hwnd, b);
@@ -563,12 +856,46 @@ public class FloatingSidebar {
                 rowBox.getChildren().add(node);
             }
         }
-        // 末尾追加"测试按钮"（不参与切换 ✓ 只开测试台 ✓）
-        Node test = buildTestButton();
-        if (vertical) {
-            colBox.getChildren().add(test);
-        } else {
-            rowBox.getChildren().add(test);
+        applyPinnedMain(vertical, separated);
+
+        // **用户 2026-10-17 第 3 条（所见即所得）** ✓：设置页打开"侧栏"这一页时会打开演示态 ✓
+        //   若此刻**一个真实平台窗口都没有** ✓ → 生成 3 个虚拟图标 ✓ 好让用户直接看到位置/分离的效果 ✓
+        //   （虚拟图标**不可点击** ✓ 只作视觉参照 ✓）
+        // **用户 2026-10-18 原则①**：示例按钮的唯一判据 = "**有没有真实平台账号**" ✓
+        //   （与"哪个页面 / 演示态 / 开关"**全都无关** ✗ —— 之前我把它绑在 demoMode 上 ✗ 才会时有时无 ✓）
+        int demos = demoIconCount();
+        for (int i = 1; i <= demos; i++) {
+            Node demo = buildDemoButton(i);
+            if (vertical) {
+                colBox.getChildren().add(demo);
+            } else {
+                rowBox.getChildren().add(demo);
+            }
+        }
+
+        // 追加"测试按钮"（不参与切换 ✓ 只开测试台 ✓）
+        // **用户 2026-10-17 第 5 条**：**默认隐藏** ✓（连击空白处三次才显示 ✓ 不落盘 ✓）
+        // **用户 2026-10-17 第 6 条**：要**与主窗按钮凑一块** ✓（不再甩到最末尾 ✗）
+        if (showTestBtn) {
+            Node test = buildTestButton();
+            if (separated) {
+                // 分离时主窗按钮钉在端点 ✓ → 测试按钮跟着它一起钉 ✓（见 applyPinnedMain ✓）
+            } else {
+                int mainIdx = 0;
+                for (int i = 0; i < items.size(); i++) {
+                    if (items.get(i).main) {
+                        mainIdx = i;
+                        break;
+                    }
+                }
+                // **用户 2026-10-17 第 3 条**（精妙比喻 ✓）：主窗按钮 = 开始菜单 ✓、平台按钮 = 任务栏图标 ✓、
+                //   隐藏(测试)按钮 = **紧贴开始菜单的搜索框** ✓ → 它必须落在"主窗按钮"与"平台按钮"**之间** ✓
+                //   主窗在开头 → 插到它**后面**（mainIdx+1 ✓）；主窗在末尾 → 插到它**前面**（mainIdx ✓）
+                //   ⚠️ 上一版我把这两个分支写反了 ✗ → 变成了贴着"外侧" ✓ 用户实测不对 ✓ 已纠正 ✓
+                int at = prefs.mainBtnAtEnd ? mainIdx : mainIdx + 1;
+                var kids = vertical ? colBox.getChildren() : rowBox.getChildren();
+                kids.add(Math.max(0, Math.min(at, kids.size())), test);
+            }
         }
         builtVertical = vertical;
         builtOnce = true;
@@ -918,11 +1245,32 @@ public class FloatingSidebar {
                 }
             }
 
-            // ② 目标矩形：只在不同**平台账号窗口**之间、且 A 不是最大化时才摆位 ✓
-            //    （A 最大化 → 一律不传矩形 ✗：传了就变成"摆成整屏"而不是"真最大化" ✓ 用户指正 ✓）
-            SidebarLayout.Rect want = (prevIsPlatform && !prevMaximized && baseValid)
-                    ? SidebarLayout.windowRectForSwitch(prefs, here, screen, baseW, baseH)
-                    : null;
+            // ② 目标矩形：**实时读取「上一个窗口」的位置尺寸** ✓（用户 2026-10-16 指正 ✓）
+            //    ⚠️ 原来这里是 `SidebarLayout.windowRectForSwitch(prefs, here, …)` —— 由**侧栏矩形反算** ✗，
+            //       于是侧栏若选了「居中」✓，反算出来的"目标位置"就**不等于上一个窗口的位置** ✗
+            //       （用户实测：切过去的窗口位置以侧栏为准 ✗ 而不是与上一个窗口一致 ✓）
+            //    正确做法（用户流程第②步 ✓）：**切换前实时读上一个窗口的矩形** ✓ → 原样应用给下一个 ✓
+            //    读不到时才退回旧的"反算"兜底 ✓（保底不空转 ✓）
+            // ⚠️ 取的是**可视矩形**（DWM 那圈看得见的边 ✓）而不是窗口矩形 ✗ ——
+            //   原因是 §② 摆位时按"可视矩形"换算窗口矩形（`WindowActivationOps.frameDelta` ✓），
+            //   两边都讲**可视** ✓ → 微信与其他平台那点内偏就消除了 ✓（用户 2026-10-16 观察 ✓）
+            SidebarLayout.Rect prevLive = null;
+            if (prevIsPlatform && !prevMaximized && followedHwnd != 0) {
+                int[] vr = com.jfmultichat.swcore.SwNativeOps.getVisualRect(followedHwnd);
+                if (vr != null && vr[2] > vr[0] && vr[3] > vr[1]) {
+                    double s = uiScale();
+                    prevLive = new SidebarLayout.Rect(vr[0] / s, vr[1] / s, (vr[2] - vr[0]) / s, (vr[3] - vr[1]) / s);
+                }
+            }
+            SidebarLayout.Rect want = null;
+            if (prevIsPlatform && !prevMaximized) {
+                if (prevLive != null) {
+                    want = prevLive;
+                } else if (baseValid) {
+                    want = SidebarLayout.windowRectForSwitch(prefs, here, screen, baseW, baseH);
+                    LOG.info("[侧栏] 读不到上一个窗口的矩形 → 退回按侧栏反算 ✓");
+                }
+            }
             int[] rect = want == null ? null
                     : new int[]{(int) Math.round(want.x * uiScale()), (int) Math.round(want.y * uiScale()),
                                 (int) Math.round(want.w * uiScale()), (int) Math.round(want.h * uiScale())};
@@ -1000,7 +1348,16 @@ public class FloatingSidebar {
             String dark = getClass().getResource(CSS_DARK).toExternalForm();
             String light = getClass().getResource(CSS_LIGHT).toExternalForm();
             scene.getStylesheets().removeAll(dark, light);
-            scene.getStylesheets().add("light".equals(want) ? light : dark);
+            // ⚠️⚠️ **用户 2026-10-17 第 6 条的真凶** ✓✓：
+            //   规则本体在 `sidebar.css` ✓、`sidebar-light.css` **只有颜色变量** ✓ ——
+            //   原来浅色时**只加载了 light 那一张** ✗ → 浅色侧栏**一条规则都没有** ✗
+            //   （圆角、内边距、按钮尺寸全丢 ✓ 于是"圆角不一样、位置也不一样" ✓）
+            //   → 正确做法：**永远加载规则本体** ✓，浅色再**追加**颜色覆盖 ✓
+            //     （这样就是"**同一套组件，只改颜色**" ✓ 正是用户要的 ✓）
+            scene.getStylesheets().add(dark);
+            if ("light".equals(want)) {
+                scene.getStylesheets().add(light);
+            }
             LOG.info("[侧栏] 主题切换为 {}", want);
         } catch (Throwable e) {
             LOG.warn("[侧栏] 切换主题失败: {}", e.getMessage());
@@ -1083,7 +1440,14 @@ public class FloatingSidebar {
         return prefs;
     }
 
+    /**
+     * **用户手动关掉了侧栏** ✓（用户 2026-10-17 第 7 条 ✓）：
+     * 置上它之后 `onFrame` 不再"看见没显示就 show 回来" ✗ —— 这正是"点入口图标关不掉"的真凶 ✓。
+     */
+    private boolean userHidden;
+
     public void show() {
+        userHidden = false;                  // 入口图标唤出 ✓（用户意图 = 要它显示 ✓）
         stage.show();
         styleApplied = false;
         syncClip();
@@ -1097,6 +1461,15 @@ public class FloatingSidebar {
     }
 
     public void hide() {
+        // **用户 2026-10-18 第 3 条**：**在设置页编辑侧栏时，侧栏必须一直显示** ✓
+        //   （哪怕用户点右上角入口图标 ✓ 也不能把它藏起来 ✗ —— 否则"所见即所得"就断了一半 ✓）
+        if (demoMode) {
+            LOG.info("[侧栏] 正在设置页预览 → 拒绝隐藏 ✓（保持可见 ✓）");
+            userHidden = false;
+            if (!stage.isShowing()) stage.show();
+            return;
+        }
+        userHidden = true;                   // 用户手动关闭 ✓ → 不再自动回显 ✓（第 7 条 ✓）
         stage.hide();
     }
 
