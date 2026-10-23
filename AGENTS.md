@@ -59,6 +59,12 @@ JDK `D:\SpaceDev\Env\Infrastructure\runtime\Java\jdk-17.0.2`｜Gradle `D:\SpaceD
 - **配置**：写嵌套对象必须"先读出来再合并"；JSON `null` = 删除该字段；热路径不要反复直接读配置（远程配置已有配置层缓存）
 - **日志**：文件与控制台 UTF-8；日志目录跟随 `user_data_path`，且必须在**任何 logger 之前**解析；级别原则 = 研究期用 `DEBUG`、成熟功能 `INFO` 并尽量合并条数
 - **WebView 右键**：Java 侧关掉了自带菜单 → DOM 的 `contextmenu` 由 `mousedown(button===2)` **合成**（这是有意为之，勿"修回去"）
+- **补丁扫描只在显式动作时发生**：`allowScan` 参数决定，**不许**用任何跨任务/跨会话的静态标记；
+  每个界面动作**每个模式恰好一次扫描**（对照表见 `MEMORY/facts.md` §7.3），纯查询路径不得进扫描流程
+- **`SwCache.json` 结构以旧版真实文件为准**（平台 → 模式 → channels → precise_ver_adaptations → 版本）；
+  **不许自造字段**，失败结果不落盘
+- **表格加列只加定义**：列头/数据行/空表 colspan 全部走 `_renderCols()`（可排列顺序 ∩ 当前可见），
+  隐藏列不进 DOM；`setMode` 必须重建列头；表刷新走组件契约 `opts.reload`
 
 > 其余不变量（PID/HWND 只存内存、表格列规则、"创建实例必查杀"、登录失败不中断整批…）都在 [`MEMORY/facts.md`](MEMORY/facts.md) 对应功能块里。
 

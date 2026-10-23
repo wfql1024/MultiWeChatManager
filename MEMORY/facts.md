@@ -282,6 +282,10 @@ TaskRegistry.get().submit("detect", "探测 WeChat 路径", swId, () -> {   // �
 | 依赖分析 | `scripts\analyze.bat` |
 | 前端语法检查 | `node --check <js 文件>` |
 
+**Gradle wrapper**（2026-10-22 加）：`gradle/wrapper/gradle-wrapper.properties` 的 `distributionUrl` 指向
+`file:///D:/SpaceDev/Env/Infrastructure/runtime/gradle-9.8.0-bin.zip`（本机安装用 `tar.exe -a -c -f` 打的 144.6MB zip），
+让 VS Code 的 Gradle 扩展不再联网下载 9.8.1。
+
 ### 4.2 环境与编码
 
 - JDK 17（`D:\SpaceDev\Env\Infrastructure\runtime\Java\jdk-17.0.2`）、Gradle 9.8、Git 2.56
@@ -383,7 +387,99 @@ TaskRegistry.get().submit("detect", "探测 WeChat 路径", swId, () -> {   // �
 - 预览态 `demoMode`（= 正在看"侧栏设置页" ✓）：进＝`setSidebarDemo(true)` ✓（顺带 `ensureShown` 确保侧栏存在 ✓）、
   离开该页 / 点设置容器外＝false ✓；**只有预览态会拒绝 `hide()`** ✓，其他页面可自由显示/隐藏 ✓
 
-### 6.5 窗口形态（**三开关要一起审** ✓ → 详见 `decisions.md` D-49）
+### 6.5 窗口形态（**三开关要一起审** → 详见 `decisions.md` D-49）
 
-`TOPMOST`（`SetWindowLong` 后**必须重申** ✓）+ `NOACTIVATE|TOOLWINDOW` ✓ + **有 owner（`initOwner(主窗口)`）** ✓；
-**永不 `stage.toFront()`** ✗、**不用 `SetWindowPos` 插层级** ✗（都会破坏上面的组合 ✓）
+`TOPMOST`（`SetWindowLong` 后**必须重申**）+ `NOACTIVATE|TOOLWINDOW` + **有 owner（`initOwner(主窗口)`）**；
+**永不 `stage.toFront()`**、**不用 `SetWindowPos` 插层级**（都会破坏上面的组合）。
+
+### 6.6 两种"矩形"口径与摆位换算（2026-10-18 实证，**摆位必须按它来**）
+
+代码里同时存在两种矩形，混用就会产生"恒定小偏移"：
+
+| 口径 | 来源 | 用在哪 |
+|---|---|---|
+| **可视矩形**（看得见的区域） | `SwNativeOps.getVisualRect` → DWM `DWMWA_EXTENDED_FRAME_BOUNDS` | 侧栏跟随 / 判最大化 / **取"上一个窗口"的目标矩形** |
+| **窗口矩形**（含隐形边框） | `GetWindowRect`、`SetWindowPos` | 真正落位时（`setWindowRect`） |
+
+- 两者差值＝**DWM 那圈看不见的边框**（Win11 每边约 7px）→ 新增 **`WindowActivationOps.frameDelta(hwnd)`** 返回 {左,上,右,下}
+- **摆位统一做法**：目标矩形按**可视**取 → `WindowActivationOps.frameDelta(目标)` → 换算成窗口矩形 → `setWindowRect(x-dl, y-dt, w+dl+dr, h+dt+db, true)`
+  （`AccOperatorCore.placeForSwitch` 已按此实现；日志会打 `窗口补偿 dl/dt/dr/db=…`）
+- **`WindowActivationOps.waitWindowReady(hwnd, timeoutMs)`**：Electron 从托盘唤醒后**立刻**搬几何会逼出 Chromium 的**黑框占位窗口**，
+  之后所有操作都落在黑框上 → 搬位前先等"可见且连续稳定（约 3×40ms）"。`placeForSwitch` 里 `if (!visibleBefore) waitWindowReady(target, 1500)`。
+
+## 7. 补丁系统（防撤 / 多开 / 共存，2026-10-21~23 建成）
+
+> 迁移自 `legacy_python/func_core/sw_func_core.py`；**缓存结构以旧版 `sw_cache.json` 为准**（不要自造字段，见 D-51）。
+
+### 7.1 模块结构（`swcore/`）
+
+| 类 | 职责 |
+|---|---|
+| `SwPatchCacheBuilder` | **扫描 → 缓存**。入口 `build(sw, mode, channels, skipCache[, allowScan], accessor[, cache])`；`platformRoot/platformNodeIfPresent`（平台层）、`setForceRescan/isForceRescan`、`MERGE_LOCK`（只保护 JSON 树合并） |
+| `SwRuleResolver` | 5 类规则：`simple` / `custom`（可自定义）/ `jmp_offset`（目标特征码 + 4×`!!` 填相对偏移）/ `relation`（parents/children/friends）+ 版本兼容选择 |
+| `SwHexUtils` | 特征码分词（`??` 任意字节、尾部 `...` 省略、`!!` 占位、wildcard 里 `?` = 序号）、对齐、预编译匹配、`bytesOf(ByteBuffer)` 同步缓存 |
+| `SwPeImage` | 极简 PE 解析、`foaToRva`、`jumpOffset` |
+| `SwAdapterChecker` | 逐渠道识别状态；`DetectionResult.status` 是**三态** `Boolean`（true/false/null=未知）；`identifyChannels(...)` → `ChannelsResult` |
+| `SwOperatorCore` | 开关补丁（`switchDllCore`：`.bak` 备份 + 同进程先 `unmap`）、建/删/重建共存程序 |
+| `SwPatchService` | 门面：`getSwPatchPlan`（多开+防撤）、`getCoexistPlan`（共存渠道+选中方案）、`getInstancePatchPlan`（某共存实例）、`ensureRevokeCache`、`toggle/createCoexist/deleteCoexist/rebuildCoexist`、`selectedCoexistMode`、`deriveOrdinal`、`resolveCoexistIndex` |
+
+**JS 桥**（`JsBridge` + `js/bridge.js` 两处都要加）：`getSwPatchPlan / getCoexistPlan / getAccPatchPlan / scanPatches /
+rescanPatches / scanCoexist / scanAccPatch / switchPatch / createCoexistAccount / deleteCoexistAccount / rebuildCoexistAccount / setCoexistMode`。
+
+### 7.2 缓存结构（`SwCache.json`，与旧版同构）
+
+```
+{ "Weixin": { "anti-revoke": { "channels": { "<渠道>": { "precise_ver_adaptations": { "<版本>": [
+      { "addr": "%dll_dir%/Weixin.dll", "wildcard": "Weixi?.dll",
+        "patches": [ { "offset": 123, "original": "..", "modified": "..", "descript"?, "customizable"? } ] } ] } } } },
+  "multirun": {...}, "coexist": {...} } }
+```
+
+- **平台节点是必需的**（旧版就有）。缺这一层会**跨平台串数据** → 症状是"莫名其妙的缓存命中"。
+- `addr` 存**配置模板**（保留 `%dll_dir%` 之类），不是解析后的绝对路径。
+- 三条闸门：全部规则弃用 → 删该版本缓存；任一失败 → **不写**（保留旧缓存）；全部成功 → 写入。
+- 读取旧的扁平结构（mode 直接挂顶层）做兼容，写入时顺手清掉。
+- `SwAccData` 里共存账号只记 `channel`；**序号 `ordinal` 不落库**，由 `exe_wildcard` 从账号名反推
+  （`Weixi3.exe` + `Weixi?.exe` → `3`），解析不出时遍历所有渠道反查。
+
+### 7.3 扫描与计划（**每个模式每步恰好一次扫描**）
+
+- **只有显式动作才扫描**：`allowScan=true` 用于计划/扫描任务；`allowScan=false` 表示**纯读缓存**（连 `build` 都不调）。
+- 触发点与对应模式：
+
+| 动作 | 扫描的模式 |
+|---|---|
+| 进平台（页面加载） | 程序计划 = multirun + anti-revoke；共存表头 = coexist（两条任务并行，互不阻塞） |
+| 刷新原生程序表 / 原生单行扫描 / 重新扫描 | multirun + anti-revoke |
+| 刷新共存账号表 | anti-revoke + coexist（**不碰 multirun**） |
+| 共存账号单行扫描 / 重新扫描 | 仅 anti-revoke |
+| 共存账号行**查询** | 不扫描；扫描阶段用**原生文件**建缓存，查询阶段用 `patch_wildcard` 映射到 `Weixi1.dll` 等克隆文件 |
+
+- `forceRescan` 语义：重新扫描必须"force + 取计划"在**同一轮**完成（分两次 = 两轮全量扫描）。
+- 平台层不再有整平台串行锁；并发安全靠 `MERGE_LOCK` 只锁 JSON 合并。
+
+### 7.4 界面（账号管理页三张表）
+
+- **程序行补丁列**：`扫描 / 重新扫描`（最左）+ `多开` 组 + `防撤` 组；**不再有"共存"组**（归共存账号表头）。
+- **共存账号行补丁列**：`扫描 / 重新扫描`（只作用于该行）+ `防撤` 组。
+- **共存表头**：`+`（新建，无可用方案时禁用）+ `···`（悬停**自身宽度延伸**成方案分段按钮，单选；移开缩回；
+  无方案时显示"无方案"）。
+- **表常显**：空表也保留表头，正文一行"没有数据"；管理态表名左侧"眼睛"只切换**登录模式下是否显示这张表**
+  （管理态永远显示）；表头右键同一开关。
+- 每张表标题栏有**刷新按钮**，走组件契约 `opts.reload`（每张表自己提供重载方式，无表名分支）。
+- 表格渲染**单一来源** `_renderCols()`（列顺序 ∩ 当前可见）：列头 / 数据行 / 空表占位 colspan 都用它；
+  隐藏列不进 DOM；`setMode` 必须 `_rebuildHead()`。
+- 补丁按钮点击用**捕获阶段**委托，避免连带选中整行；未适配（虚框）不可点、无 hover 变化。
+- **所有补丁操作都走任务中心**：`扫描补丁适配 / 扫描共存方案 / 扫描共存账号 / 强制重扫` 都是 `TaskRegistry.submit(...)` 任务，
+  前端点扫描时把目标表置为"扫描中…"并用 `patchBusy` 防重复点击。
+- 日志：每个模式一行汇总（`[缓存] {平台} {模式} 本轮扫描：新扫描 N / 缓存命中 N / 弃用 N / 失败 N`，
+  有失败用 WARN）；每个渠道的失败明细、每行"实例计划"都在 DEBUG。
+- 补丁列"自适应宽度"：把 `.patch-groups` 临时 `nowrap` 读 `scrollWidth`，量完仍折行就每次 +24px 继续加宽。
+
+### 7.5 并行度与耗时实测（192MB `Weixin.dll`，2026-10-23）
+
+- **三级并行**：模式串行 → 渠道并行（池 3）→ 规则并行（池 4）。
+- 实测：1 条规则 807ms；7 条规则串行 2483ms / 4 线程 953ms；缓存预热后整表刷新约 1s。
+- **内存带宽瓶颈**：把模式也并行、渠道池开 6 之后整体变慢（4.7s → 5.1s）→ 已回退。加线程救不了全文件扫描。
+- 共存表头曾因"整平台串行锁"白等 4.8s；去锁后 0.2s；每步"每模式恰好一次扫描"已用真机日志逐一核对。
+
