@@ -208,11 +208,17 @@ public final class SwOperatorCore {
             // answer = cls.ask_for_manual_terminate_or_force(sw_exe_path)
             LOG.info("[DLL] 目标 exe: {}", swExePath);
 
-            // 4. 如果 target 未指定，先检测当前状态
+            // 4. target 未指定 → 先识别当前状态，再取反
             if (target == null) {
-                // TODO: 调用 SwAdapterChecker.identifyDllCore 检测
-                LOG.info("[DLL] 未指定 target，需要检测当前状态 (Stub)");
-                return new String[]{null, "需要检测当前状态 (Stub)"};
+                SwAdapterChecker.ChannelsResult res = SwAdapterChecker.identifyChannels(
+                        sw, mode, java.util.Collections.singletonList(channel),
+                        coexistChannel, ordinal, false, accessor, cache);
+                SwAdapterChecker.DetectionResult chRes = res.channels.get(channel);
+                if (chRes == null || chRes.status == null) {
+                    return new String[]{null, "无法识别当前" + modeText + "状态，补丁未应用"};
+                }
+                target = !chRes.status;
+                LOG.info("[DLL] 自动判定目标状态: {}", target);
             }
 
             // 5. 获取当前版本
@@ -258,6 +264,15 @@ public final class SwOperatorCore {
                         LOG.warn("[DLL] 文件不存在: {}", realDllPath);
                         continue;
                     }
+                    // 首次修改前备份（不覆盖已有备份）
+                    Path bakPath = Path.of(realDllPath + ".bak");
+                    if (!Files.exists(bakPath)) {
+                        try {
+                            Files.copy(dllPath, bakPath);
+                        } catch (Exception e) {
+                            LOG.warn("[DLL] 备份失败: {}", e.getMessage());
+                        }
+                    }
 
                     FileChannel fc = FileChannel.open(dllPath,
                             java.nio.file.StandardOpenOption.READ, java.nio.file.StandardOpenOption.WRITE);
@@ -270,10 +285,10 @@ public final class SwOperatorCore {
                         if (offsetObj == null) continue;
 
                         int fileOffset = ((Number) offsetObj).intValue();
-                        String hexStr = patch.get("modified") != null
-                                ? patch.get("modified").toString()
-                                : patch.get("original") != null
-                                        ? patch.get("original").toString() : "";
+                        String hexStr = target
+                                ? (patch.get("modified") != null ? patch.get("modified").toString() : "")
+                                : (patch.get("original") != null ? patch.get("original").toString() : "");
+                        if (hexStr.isEmpty()) continue;
 
                         // 如果是共存模式，替换 !! 为 ordinal
                         if (coexistChannel != null && ordinal != null) {
@@ -289,9 +304,10 @@ public final class SwOperatorCore {
                     }
                 }
 
-                // 9. 统一 flush
+                // 9. 统一 flush，并立刻解除映射（否则同进程内紧接着的识别会读到旧页/被占用）
                 for (MappedByteBuffer mm : mmaps) {
                     mm.force();
+                    SwPatchCacheBuilder.unmap(mm);
                 }
 
                 String action = target ? "开启" : "关闭";
@@ -302,9 +318,6 @@ public final class SwOperatorCore {
                 // 出错时不 flush，直接 close（放弃所有改动）
                 return new String[]{null, "切换" + modeText + "失败！请稍后重试！"};
             } finally {
-                for (MappedByteBuffer mm : mmaps) {
-                    try { mm.force(); } catch (Exception ignored) {}
-                }
                 for (FileChannel fc : files) {
                     try { fc.close(); } catch (Exception ignored) {}
                 }
@@ -494,14 +507,12 @@ public final class SwOperatorCore {
                 fc.close();
             }
 
-            // 6. 更新配置
+            // 6. 更新配置（updateSwAccData 只取 frontAddr 的第一个 value 作为账号 id）
+            //    只记渠道；序号可从克隆 exe 名（exe_wildcard）反推，不再落库
             String newCoexistExeName = exeWildcard.replace("?", ordinal);
             SwAccountOps.ensureCoexistAccFormatted(sw, newCoexistExeName, accountOps);
-            accountOps.updateSwAccData(sw, Map.of(newCoexistExeName, ""),
-                    Map.of(
-                            "channel", coexistChannel,
-                            SwCoreConstants.AccKeys.ORDINAL, ordinal
-                    ));
+            accountOps.updateSwAccData(sw, Map.of("acc", newCoexistExeName),
+                    Map.of("channel", coexistChannel));
 
             return new String[]{newCoexistExeName, ""};
 
@@ -536,16 +547,26 @@ public final class SwOperatorCore {
 
         for (String acc : accounts) {
             try {
-                JsonNode coexistChannelNode = accessor.getSwAccData(sw, acc, "coexist_channel");
-                JsonNode ordinalNode = accessor.getSwAccData(sw, acc, "ordinal");
+                JsonNode coexistChannelNode = accessor.getSwAccData(sw, acc,
+                        SwCoreConstants.AccKeys.COEXIST_CHANNEL);
+                JsonNode ordinalNode = accessor.getSwAccData(sw, acc, SwCoreConstants.AccKeys.ORDINAL);
 
-                if (coexistChannelNode == null || ordinalNode == null) {
+                // 渠道/序号优先取账号数据；缺了就推导（序号可从克隆 exe 名反推）
+                String coexistChannel = (coexistChannelNode != null && coexistChannelNode.isTextual())
+                        ? coexistChannelNode.asText() : null;
+                if (coexistChannel == null || coexistChannel.isEmpty()) {
+                    coexistChannel = SwPatchService.selectedCoexistMode(sw, accessor);
+                }
+                String ordinal = (ordinalNode != null && ordinalNode.isTextual())
+                        ? ordinalNode.asText() : null;
+                if (ordinal == null || ordinal.isEmpty()) {
+                    ordinal = SwPatchService.deriveOrdinal(sw, acc, coexistChannel, accessor);
+                }
+
+                if (coexistChannel == null || ordinal == null) {
                     failedMsgDict.put(acc, "未适配");
                     continue;
                 }
-
-                String coexistChannel = coexistChannelNode.asText();
-                String ordinal = ordinalNode.asText();
 
                 // 获取适配表
                 List<Map<String, Object>> channelAddrDicts = getCachePreciseEntry(
@@ -951,14 +972,17 @@ public final class SwOperatorCore {
     @SuppressWarnings("unchecked")
     private static List<Map<String, Object>> getCachePreciseEntry(
             ObjectNode cache, String sw, String mode, String channel, String curVer) {
-        if (cache == null || !cache.has(mode)) return Collections.emptyList();
-        JsonNode modeDict = cache.get(mode);
-        if (!modeDict.isObject() || !modeDict.has("channels")) return Collections.emptyList();
+        if (cache == null) return Collections.emptyList();
+        ObjectNode plat = SwPatchCacheBuilder.platformNodeIfPresent(cache, sw);
+        JsonNode modeDict = plat != null ? plat.get(mode) : null;
+        if (modeDict == null) modeDict = cache.get(mode);   // 兼容老扁平结构
+        if (modeDict == null || !modeDict.isObject() || !modeDict.has("channels")) return Collections.emptyList();
         JsonNode channels = modeDict.get("channels");
         if (!channels.isObject() || !channels.has(channel)) return Collections.emptyList();
         JsonNode chDict = channels.get(channel);
-        if (!chDict.isObject() || !chDict.has("precises")) return Collections.emptyList();
-        JsonNode precises = chDict.get("precises");
+        if (!chDict.isObject()) return Collections.emptyList();
+        JsonNode precises = chDict.get(SwCoreConstants.RemoteSwKey.PRECISES);
+        if (precises == null) precises = chDict.get(SwCoreConstants.RemoteSwKey.PRECISES_LEGACY);
         if (!precises.isObject() || !precises.has(curVer)) return Collections.emptyList();
 
         return SwAdapterChecker.jsonToList(precises.get(curVer));

@@ -101,7 +101,7 @@ public final class AppCoreConstants {
         public static final String ORDINALS = "ordinals";
         public static final String MUTEX_WC = "mutex_wc";
         public static final String FEATURES = "features";
-        public static final String PRECISES = "precises";
+        public static final String PRECISES = "precise_ver_adaptations";
         public static final String ADDR = "addr";
         public static final String PATCH_RULES = "patch_rules";
         public static final String MULTI_STATE = "multi_state";

@@ -114,9 +114,9 @@ public final class SwRuleResolver {
         // 按版本号降序排列
         versions.sort(SwVersionHelper::compareVersionDesc);
 
-        // 找第一个 <= target 的版本
+        // 找第一个 <= target 的版本（降序排列 → 命中的是"不高于目标的最新版本"）
         for (String v : versions) {
-            if (SwVersionHelper.compareVersionDesc(v, targetVer) <= 0) {
+            if (SwVersionHelper.compareVersionDesc(v, targetVer) >= 0) {
                 return v;
             }
         }
@@ -223,6 +223,7 @@ public final class SwRuleResolver {
      */
     public static List<Map<String, Object>> resolveJmpOffsetRule(ByteBuffer mm, JsonNode ruleDict) {
         List<Map<String, Object>> resDicts = new ArrayList<>();
+        SwPeImage pe = SwPeImage.parse(mm);
 
         // 1. 预处理 targets -> targetAddrs
         JsonNode targetsNode = ruleDict.get("targets");
@@ -298,10 +299,14 @@ public final class SwRuleResolver {
                     return Collections.emptyList();
                 }
 
-                // 计算跳转偏移: targetAddr - (startAddr + relativePos + 4)
-                // 简化版：直接用地址差（暂不实现 PE FOA->VOA 转换）
-                int nextInstrAddr = startAddr + relativePos + length;
-                int offset = targetAddr - nextInstrAddr;
+                // 计算跳转偏移：真实 FOA→RVA 换算后求相对偏移
+                // 对应 Python MMap2PeFile.calculate_jump_offset（pefile 版）
+                Integer offset = pe == null ? null
+                        : pe.jumpOffset(targetAddr, startAddr, relativePos + length);
+                if (offset == null) {
+                    LOG.warn("[规则jmp_offset] FOA→RVA 换算失败: target={}, patch={}", targetAddr, startAddr);
+                    return Collections.emptyList();
+                }
                 String offsetHex = SwHexUtils.intToLittleEndianHex(offset);
 
                 // 替换连续 !!

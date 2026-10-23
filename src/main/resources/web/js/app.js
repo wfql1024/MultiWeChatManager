@@ -139,16 +139,10 @@ JFC.router = (function() {
         lastRefreshAt = now;
 
         if (!currentPage) currentPage = detectActivePage() || 'main';
-        if (currentPage === 'main' && JFC.pages.main && JFC.pages.main.refresh) {
-            JFC.pages.main.refresh();
-            return true;
-        }
-        if (currentPage === 'settings' && JFC.pages.settings && JFC.pages.settings.refresh) {
-            JFC.pages.settings.refresh();
-            return true;
-        }
-        if (currentPage === 'statistics' && JFC.pages.tasks && JFC.pages.tasks.refresh) {
-            JFC.pages.tasks.refresh();
+        // 统一约定：每个页面模块自己暴露 refresh()，路由只负责调用，不做页面分支
+        var page = JFC.pages && JFC.pages[currentPage];
+        if (page && typeof page.refresh === 'function') {
+            page.refresh();
             return true;
         }
         navigate(currentPage);

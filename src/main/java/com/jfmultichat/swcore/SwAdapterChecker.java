@@ -34,22 +34,35 @@ public final class SwAdapterChecker {
      * 检测状态结果
      */
     public static class DetectionResult {
-        public final boolean status;   // true=已打补丁, false=未打, null=未知
+        public final Boolean status;   // true=已打补丁, false=未打, null=未知
         public final String message;
         public final Map<String, String> addressesMsg; // addr -> message
 
-        public DetectionResult(boolean status, String message) {
+        public DetectionResult(Boolean status, String message) {
             this(status, message, Collections.emptyMap());
         }
 
-        public DetectionResult(boolean status, String message, Map<String, String> addressesMsg) {
+        public DetectionResult(Boolean status, String message, Map<String, String> addressesMsg) {
             this.status = status;
             this.message = message;
             this.addressesMsg = addressesMsg;
         }
 
         public DetectionResult(String message) {
-            this(false, message);
+            this(null, message);
+        }
+    }
+
+    /** identifyChannels 的返回：逐渠道结果 + 整体是否找到适配 */
+    public static final class ChannelsResult {
+        public final Map<String, DetectionResult> channels;
+        public final String message;
+        public final boolean adapted;
+
+        public ChannelsResult(Map<String, DetectionResult> channels, String message, boolean adapted) {
+            this.channels = channels == null ? Collections.emptyMap() : channels;
+            this.message = message;
+            this.adapted = adapted;
         }
     }
 
@@ -71,11 +84,35 @@ public final class SwAdapterChecker {
             String sw, String mode, List<String> channels,
             String coexistChannel, String ordinal, boolean skipCache,
             SwConfigAccessor accessor, ObjectNode cache) {
+        ChannelsResult r = identifyChannels(sw, mode, channels, coexistChannel, ordinal, skipCache, accessor, cache);
+        boolean anyOn = r.channels.values().stream().anyMatch(d -> Boolean.TRUE.equals(d.status));
+        return new DetectionResult(anyOn, r.message);
+    }
+
+    /**
+     * 逐渠道识别补丁状态。
+     * 对应 Python: identify_dll_core —— 返回 {channel: {status, msg}} + 消息。
+     */
+    public static ChannelsResult identifyChannels(
+            String sw, String mode, List<String> channels,
+            String coexistChannel, String ordinal, boolean skipCache,
+            SwConfigAccessor accessor, ObjectNode cache) {
+        return identifyChannels(sw, mode, channels, coexistChannel, ordinal,
+                skipCache, true, accessor, cache);
+    }
+
+    /**
+     * @param allowScan false = **只查缓存**（共存账号行的查询走这条；扫描由显式动作触发）
+     */
+    public static ChannelsResult identifyChannels(
+            String sw, String mode, List<String> channels,
+            String coexistChannel, String ordinal, boolean skipCache, boolean allowScan,
+            SwConfigAccessor accessor, ObjectNode cache) {
 
         // 1. 获取 DLL 目录
         String dllDir = accessor.tryGetPathOf(sw, SwCoreConstants.LocalSettingKey.DLL_DIR);
         if (dllDir == null) {
-            return new DetectionResult("错误：没有找到版本资源目录");
+            return new ChannelsResult(null, "错误：没有找到版本资源目录", false);
         }
 
         // 2. 获取 multi_state 标志
@@ -85,7 +122,7 @@ public final class SwAdapterChecker {
         // 3. 获取所有通道字典
         JsonNode allChannelsDict = accessor.getRemoteSw(sw, mode, "channels");
         if (allChannelsDict == null || !allChannelsDict.isObject()) {
-            return new DetectionResult("该模式没有方案");
+            return new ChannelsResult(null, "该模式没有方案", false);
         }
 
         List<String> channelsToScan = (channels != null) ? channels : new ArrayList<>();
@@ -93,19 +130,26 @@ public final class SwAdapterChecker {
             allChannelsDict.fieldNames().forEachRemaining(channelsToScan::add);
         }
 
-        // 4. 如果不是共存模式，根据 force_rescan 决定是否跳过缓存
-        if (coexistChannel == null || ordinal == null) {
-            // TODO: cls.get_sw_cls(sw).force_rescan
-            skipCache = true;
-            // cls._update_adaptation_from_remote_to_cache(sw, mode, channelsToScan, skipCache)
-        } else {
-            // cls._update_adaptation_from_remote_to_cache(sw, mode, channelsToScan)
+        // 4. 刷新适配缓存：主程序按 force_rescan 决定是否跳过；allowScan=false 时只查缓存
+        boolean skip = (coexistChannel == null || ordinal == null)
+                ? !SwPatchCacheBuilder.isForceRescan(sw)
+                : true;
+        if (allowScan) {
+            try {
+                SwPatchCacheBuilder.build(sw, mode, channelsToScan, skip, true, accessor, cache);
+            } catch (Exception e) {
+                LOG.warn("[检测] 刷新适配缓存失败: {}", e.getMessage());
+            }
         }
+        // allowScan=false → 纯查缓存：**不调用 build**（否则会打印"缓存命中"噪音，看起来像又扫了一次）
 
-        // 5. 获取缓存配置
-        JsonNode modeDict = cache.get(mode);
+        // 5. 获取缓存配置（平台节点优先；老扁平结构兼容）
+        JsonNode modeDict = null;
+        ObjectNode plat = SwPatchCacheBuilder.platformNodeIfPresent(cache, sw);
+        if (plat != null) modeDict = plat.get(mode);
+        if (modeDict == null) modeDict = cache.get(mode);
         if (modeDict == null) {
-            return new DetectionResult("错误：没有" + mode + "的缓存");
+            return new ChannelsResult(null, "错误：没有" + mode + "的缓存", false);
         }
 
         JsonNode channelsCache = null;
@@ -115,13 +159,13 @@ public final class SwAdapterChecker {
         }
 
         if (channelsCache == null) {
-            return new DetectionResult("错误：该模式没有适配频道列表或适配频道列表格式错误");
+            return new ChannelsResult(null, "错误：该模式没有适配频道列表或适配频道列表格式错误", false);
         }
 
         // 6. 获取当前版本
         String curSwVer = SwVersionHelper.calcSwVer(sw, accessor);
         if (curSwVer == null) {
-            return new DetectionResult("错误：未知当前版本");
+            return new ChannelsResult(null, "错误：未知当前版本", false);
         }
 
         // 7. 只检测指定通道
@@ -136,7 +180,10 @@ public final class SwAdapterChecker {
             try {
                 JsonNode preciseNode = channelsCache.get(ch);
                 if (preciseNode == null || !preciseNode.isObject()) continue;
-                JsonNode versNode = preciseNode.get("precises");
+                JsonNode versNode = preciseNode.get(SwCoreConstants.RemoteSwKey.PRECISES);
+                if (versNode == null) {
+                    versNode = preciseNode.get(SwCoreConstants.RemoteSwKey.PRECISES_LEGACY);
+                }
                 if (versNode == null || !versNode.isObject()) continue;
                 JsonNode verPrecise = versNode.get(curSwVer);
                 if (verPrecise == null) continue;
@@ -153,10 +200,10 @@ public final class SwAdapterChecker {
         }
 
         if (channelsResDict.isEmpty()) {
-            return new DetectionResult("错误：该版本 " + curSwVer + " 的适配在本地平台中未找到");
+            return new ChannelsResult(null, "错误：该版本 " + curSwVer + " 的适配在本地平台中未找到", false);
         }
 
-        return new DetectionResult(true, "成功：找到版本 " + curSwVer + " 的适配");
+        return new ChannelsResult(channelsResDict, "成功：找到版本 " + curSwVer + " 的适配", true);
     }
 
     /**
@@ -209,8 +256,9 @@ public final class SwAdapterChecker {
             channelStatus = false;
         }
 
-        String msgStr = "问题文件: " + addressesMsgDict;
-        return new DetectionResult(channelStatus != null && channelStatus, msgStr, addressesMsgDict);
+        // 成功/未开启都是正常状态，不需要给用户抛"问题文件"（用户也不关心怎么重新适配）
+        String msgStr = (channelStatus != null) ? "" : ("问题文件: " + addressesMsgDict);
+        return new DetectionResult(channelStatus, msgStr, addressesMsgDict);
     }
 
     // ==================== 多状态检测 ====================
@@ -374,10 +422,12 @@ public final class SwAdapterChecker {
 
         channels.fieldNames().forEachRemaining(channel -> {
             JsonNode chDict = channels.get(channel);
-            if (chDict != null && chDict.isObject() && chDict.has("precises")) {
-                JsonNode precises = chDict.get("precises");
-                if (precises != null && precises.isObject() && precises.has(curVer)) {
-                    ((ObjectNode) precises).remove(curVer);
+            if (chDict == null || !chDict.isObject()) return;
+            for (String key : new String[]{SwCoreConstants.RemoteSwKey.PRECISES,
+                    SwCoreConstants.RemoteSwKey.PRECISES_LEGACY}) {
+                JsonNode precises = chDict.get(key);
+                if (precises instanceof ObjectNode obj && obj.has(curVer)) {
+                    obj.remove(curVer);
                 }
             }
         });

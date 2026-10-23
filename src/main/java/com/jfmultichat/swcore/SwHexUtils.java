@@ -93,20 +93,62 @@ public final class SwHexUtils {
      * @param hexStr 十六进制字符串
      * @return token 列表，如 ["48", "8B", "??", "...", "48", "8B"]
      */
+    /**
+     * 纯分词：按空白切分，<b>原样保留</b> token（`??` / `!!` / `!05` / `...` 都不做处理）。
+     * 用于"目标特征码"（带 {@code !} 锚点）和普通特征匹配。
+     */
     public static List<String> tokenizeHex(String hexStr) {
-        String[] tokens = hexStr.trim().split("\\s+");
-        List<String> result = new ArrayList<>(tokens.length);
-        for (String t : tokens) {
-            if (t.equals(WILDCARD_BYTE) || t.equals(WILDCARD_TRUNCATE)) {
-                result.add(t);
-            } else if (t.startsWith("!")) {
-                // 带标记的通配符 !05 ?? -> 去掉 ! 前缀
-                result.add(t.startsWith("!") ? t.substring(1) : t);
+        String s = hexStr == null ? "" : hexStr.trim();
+        if (s.isEmpty()) return new ArrayList<>();
+        return new ArrayList<>(java.util.Arrays.asList(s.split("\\s+")));
+    }
+
+    /**
+     * 通配分词：对应 Python 的 {@code custom_wildcard_tokenize}。
+     * <ul>
+     *   <li>去掉所有空白并转大写</li>
+     *   <li>开头的 {@code ...} → 产出 {@code ...} 占位（向前补齐）；结尾的 {@code ...} → 直接丢掉（向后补齐 = 其余不变）</li>
+     *   <li>其余按 2 字符切分，允许 {@code ??} 与 {@code !!}</li>
+     * </ul>
+     *
+     * @return token 列表；格式非法返回 null
+     */
+    public static List<String> tokenizeWildcard(String hexStr) {
+        if (hexStr == null) return null;
+        String s = hexStr.replaceAll("\\s+", "").toUpperCase();
+        List<String> tokens = new ArrayList<>();
+        if (s.startsWith(WILDCARD_TRUNCATE)) {
+            tokens.add(WILDCARD_TRUNCATE);
+            s = s.substring(3);
+        } else if (s.endsWith(WILDCARD_TRUNCATE)) {
+            s = s.substring(0, s.length() - 3);
+        }
+        if (s.length() % 2 != 0) {
+            LOG.error("[特征码] 通配串长度非法: {}", hexStr);
+            return null;
+        }
+        for (int i = 0; i < s.length(); i += 2) {
+            char a = s.charAt(i);
+            char b = s.charAt(i + 1);
+            if (!isHexOrWild(a) || !isHexOrWild(b)) {
+                LOG.error("[特征码] 通配串含非法字节: {}{}", a, b);
+                return null;
+            }
+            String pair = "" + a + b;
+            if (pair.equals(WILDCARD_BYTE) || pair.equals("!!")) {
+                tokens.add(pair);
+            } else if (a == '?' || b == '?' || a == '!' || b == '!') {
+                LOG.error("[特征码] 通配串含半通配字节: {}{}", a, b);
+                return null;
             } else {
-                result.add(t);
+                tokens.add(pair);
             }
         }
-        return result;
+        return tokens;
+    }
+
+    private static boolean isHexOrWild(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || c == '?' || c == '!';
     }
 
     // ==================== 特征码对齐 ====================
@@ -124,22 +166,23 @@ public final class SwHexUtils {
      */
     public static Optional<List<String>> convertAndAlign(String originalHex, String modifiedHex,
                                                           int leftCut, int rightCut) {
-        List<String> listedOriginal = tokenizeHex(originalHex);
-        if (listedOriginal.isEmpty() || listedOriginal.size() <= leftCut + rightCut
+        List<String> listedOriginal = tokenizeWildcard(originalHex);
+        if (listedOriginal == null || listedOriginal.isEmpty()
+                || listedOriginal.size() <= leftCut + rightCut
                 || listedOriginal.contains(WILDCARD_TRUNCATE)) {
             LOG.error("[特征码] 原始特征码格式错误: {}", originalHex);
             return Optional.empty();
         }
 
-        List<String> listedModified = tokenizeHex(modifiedHex);
-        if (listedModified.isEmpty()) {
+        List<String> listedModified = tokenizeWildcard(modifiedHex);
+        if (listedModified == null || listedModified.isEmpty()) {
             LOG.error("[特征码] 修改特征码格式错误: {}", modifiedHex);
             return Optional.empty();
         }
 
         int truncatedLen = listedOriginal.size() - leftCut - rightCut;
 
-        // 处理 ... 在前面的情况（向前补齐）
+        // ... 只可能出现在开头（尾部的 ... 已被分词器消掉 = "其余不变"）
         if (listedModified.get(0).equals(WILDCARD_TRUNCATE)) {
             if (listedModified.size() - 1 > truncatedLen) {
                 LOG.error("[特征码] 修改特征码太长: {}", modifiedHex);
@@ -153,9 +196,8 @@ public final class SwHexUtils {
                 padded.add(listedModified.get(i));
             }
             listedModified = padded;
-        }
-        // 没有 ... 的情况（向后补齐）
-        else if (!listedModified.contains(WILDCARD_TRUNCATE)) {
+        } else {
+            // 向后补齐到截断后的长度（"其余不变"）
             if (listedModified.size() > truncatedLen) {
                 LOG.error("[特征码] 修改特征码太长: {}", modifiedHex);
                 return Optional.empty();
@@ -163,11 +205,6 @@ public final class SwHexUtils {
             for (int i = listedModified.size(); i < truncatedLen; i++) {
                 listedModified.add(WILDCARD_BYTE);
             }
-        }
-        // ... 在中间位置 → 错误
-        else {
-            LOG.error("[特征码] 修改特征码中 ... 位置无效: {}", modifiedHex);
-            return Optional.empty();
         }
 
         // 补齐左右 cut
@@ -262,30 +299,29 @@ public final class SwHexUtils {
      */
     public static List<ScanResult> searchPatternDicts(ByteBuffer data, String originalHex,
                                                        String modifiedHex, int leftCut, int rightCut) {
-        List<String> aligned = convertAndAlign(originalHex, modifiedHex, leftCut, rightCut).orElse(null);
-        if (aligned == null || aligned.size() != 2) {
+        // 只做一次对齐校验：失败（格式错误/长度不匹配）直接返回 null
+        if (convertAndAlign(originalHex, modifiedHex, leftCut, rightCut).isEmpty()) {
             LOG.error("[特征码] 特征码对齐失败");
             return null;
         }
-
-        // aligned[0] = original tokens, aligned[1] = modified tokens — 但我们返回的是 List<String>
-        // 需要重新解析
         return searchPatternDictsInternal(data, originalHex, modifiedHex, leftCut, rightCut);
     }
 
     private static List<ScanResult> searchPatternDictsInternal(ByteBuffer data, String originalHex,
                                                                 String modifiedHex, int leftCut, int rightCut) {
-        List<String> listedOrig = tokenizeHex(originalHex);
-        List<String> listedMod = tokenizeHex(modifiedHex);
+        List<String> listedOrig = tokenizeWildcard(originalHex);
+        List<String> listedMod = tokenizeWildcard(modifiedHex);
 
         // 验证 original
-        if (listedOrig.isEmpty() || listedOrig.size() <= leftCut + rightCut || listedOrig.contains(WILDCARD_TRUNCATE)) {
+        if (listedOrig == null || listedOrig.isEmpty()
+                || listedOrig.size() <= leftCut + rightCut
+                || listedOrig.contains(WILDCARD_TRUNCATE)) {
             LOG.error("[特征码] 原始特征码格式错误: {}", originalHex);
             return Collections.emptyList();
         }
 
         // 验证 modified
-        if (listedMod.isEmpty()) {
+        if (listedMod == null || listedMod.isEmpty()) {
             LOG.error("[特征码] 修改特征码格式错误: {}", modifiedHex);
             return Collections.emptyList();
         }
@@ -365,20 +401,31 @@ public final class SwHexUtils {
             curPos++;
         }
 
-        LOG.info("[特征码] 原始: {}", originalHex);
-        LOG.info("[特征码] 补丁: {}", modifiedHex);
-        LOG.info("[特征码] 正则构建完成, groupCount={}", groupCount - 1);
+        LOG.debug("[特征码] 原始: {}", originalHex);
+        LOG.debug("[特征码] 补丁: {}", modifiedHex);
+        LOG.debug("[特征码] 正则构建完成, groupCount={}", groupCount - 1);
 
         if (originalRegexBytes.length() == 0) return Collections.emptyList();
 
-        // 在 ByteBuffer 中搜索
+        // 在 ByteBuffer 中搜索（同一缓冲区多条规则时复用同一份 byte[]，避免反复整块复制）
         List<ScanResult> results = new ArrayList<>();
-        byte[] buffer = new byte[data.remaining()];
-        data.get(buffer);
-        data.position(data.position() - buffer.length); // 恢复 position
+        byte[] buffer = bytesOf(data);
 
         // 使用字节级匹配（不是 String regex，而是自定义字节匹配器）
-        List<int[]> matches = findByteMatches(buffer, listedOrig, listedMod);
+        // 预编译成"期望字节"数组：-1 = 任意（?? / !!），否则必须相等
+        int[] expect = new int[listedOrig.size()];
+        for (int i = 0; i < expect.length; i++) {
+            String o = listedOrig.get(i);
+            String m = listedMod.get(i);
+            if (!WILDCARD_BYTE.equals(o)) {
+                expect[i] = Integer.parseInt(o, 16);
+            } else if (!WILDCARD_BYTE.equals(m) && !"!!".equals(m)) {
+                expect[i] = Integer.parseInt(m, 16);
+            } else {
+                expect[i] = -1;
+            }
+        }
+        List<int[]> matches = findByteMatches(buffer, expect);
 
         for (int[] match : matches) {
             int startAddr = match[0];
@@ -395,14 +442,18 @@ public final class SwHexUtils {
                 }
             }
 
-            // 应用 repl_pos 替换
-            for (int pos : replPosList) {
-                int hexPos = pos * 3;
-                // 在 hex 字符串中标记 !!
-            }
-
             String origHexStr = bytesToHexStr(origBytes);
             String modHexStr = bytesToHexStr(modBytes);
+
+            // 把"待填序号"的字节标回 "!!"（截断前按原串位置算，截断后位置会变）
+            if (!replPosList.isEmpty()) {
+                StringBuilder sb = new StringBuilder(modHexStr);
+                for (int pos : replPosList) {
+                    int hexPos = pos * 3;   // 每个字节 = 2 字符 + 1 空格
+                    if (hexPos + 2 <= sb.length()) sb.replace(hexPos, hexPos + 2, "!!");
+                }
+                modHexStr = sb.toString();
+            }
 
             // 截断
             if (leftCut > 0 || rightCut > 0) {
@@ -417,7 +468,7 @@ public final class SwHexUtils {
                 startAddr = newStart;
             }
 
-            LOG.info("[特征码] 识别到: offset={}, original={}, modified={}",
+            LOG.debug("[特征码] 识别到: offset={}, original={}, modified={}",
                     startAddr, origHexStr, modHexStr);
 
             ScanResult result = new ScanResult(startAddr, origHexStr, modHexStr);
@@ -425,53 +476,57 @@ public final class SwHexUtils {
         }
 
         if (results.isEmpty()) {
-            LOG.info("[特征码] 未识别到特征码");
+            LOG.debug("[特征码] 未识别到特征码");
         }
 
         return results;
     }
 
-    private static List<int[]> findByteMatches(byte[] data, List<String> origTokens, List<String> modTokens) {
+    /**
+     * 字节匹配（热路径）：把原始/补丁 token 预编译成"期望字节"数组后逐 byte 比较。
+     * <p>
+     * {@code expect[j] = -1} 表示该位任意（{@code ??} / {@code !!}）；
+     * 否则必须等于该值。之前每比较一个字节都 {@code Integer.parseInt} + {@code String.equals}，
+     * 大 dll（几百 MB × 多条规则）会慢到十几秒 —— 现在只有整数比较。
+     */
+    private static List<int[]> findByteMatches(byte[] data, int[] expect) {
         List<int[]> matches = new ArrayList<>();
-        int patternLen = origTokens.size();
-        if (patternLen > data.length) return matches;
+        int patternLen = expect.length;
+        if (patternLen == 0 || patternLen > data.length) return matches;
 
-        for (int i = 0; i <= data.length - patternLen; i++) {
-            boolean match = true;
+        // 以"连续确定字节"为锚点，绝大多数位置一次比较就被排除
+        int last = data.length - patternLen;
+        int[] anchor = anchorOf(expect);
+        int aIdx = anchor[0], aLen = anchor[1];
+        for (int i = 0; i <= last; i++) {
+            boolean pre = true;
+            for (int k = 0; k < aLen; k++) {
+                if ((data[i + aIdx + k] & 0xFF) != expect[aIdx + k]) { pre = false; break; }
+            }
+            if (!pre) continue;
+            boolean ok = true;
             for (int j = 0; j < patternLen; j++) {
-                String o = origTokens.get(j);
-                String m = modTokens.get(j);
-                byte dataByte = data[i + j];
-
-                if (o.equals(WILDCARD_BYTE)) {
-                    // original 是 ??，modified 也必须是 ?? 或具体值
-                    if (m.equals(WILDCARD_BYTE)) {
-                        // 两者都是通配符，跳过
-                        continue;
-                    } else if (m.equals("!!")) {
-                        // !! 在 modified 中，original 也是 ??，跳过
-                        continue;
-                    } else {
-                        // modified 是具体值，需要匹配
-                        if ((dataByte & 0xff) != Integer.parseInt(m, 16)) {
-                            match = false;
-                            break;
-                        }
-                    }
-                } else {
-                    // original 是具体值
-                    byte expected = (byte) Integer.parseInt(o, 16);
-                    if (dataByte != expected) {
-                        match = false;
-                        break;
-                    }
-                }
+                int e = expect[j];
+                if (e >= 0 && (data[i + j] & 0xFF) != e) { ok = false; break; }
             }
-            if (match) {
-                matches.add(new int[]{i});
-            }
+            if (ok) matches.add(new int[]{i});
         }
         return matches;
+    }
+
+    /** 同一 ByteBuffer（同一目标文件）的多条规则共用一份 byte[]，避免每条规则都复制几百 MB */
+    private static final java.util.Map<ByteBuffer, byte[]> BUFFER_BYTES =
+            java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
+
+    private static synchronized byte[] bytesOf(ByteBuffer data) {
+        byte[] cached = BUFFER_BYTES.get(data);
+        if (cached != null) return cached;
+        byte[] buf = new byte[data.remaining()];
+        ByteBuffer dup = data.duplicate();
+        dup.get(buf);
+        if (BUFFER_BYTES.size() > 8) BUFFER_BYTES.clear();   // 防堆积（同时最多几个文件）
+        BUFFER_BYTES.put(data, buf);
+        return buf;
     }
 
     private static String joinHexTokens(String[] tokens) {
@@ -499,7 +554,7 @@ public final class SwHexUtils {
             FileChannel ch = fis.getChannel();
             ByteBuffer data = ch.map(FileChannel.MapMode.READ_ONLY, 0, ch.size());
             for (String feature : features) {
-                LOG.info("[特征码] 目标特征码: {}", feature);
+                LOG.debug("[特征码] 目标特征码: {}", feature);
                 Pattern regex = calcFeatureToRegex(feature);
                 if (regex == null) continue;
 
@@ -513,7 +568,7 @@ public final class SwHexUtils {
                 for (int[] match : byteMatches) {
                     int addr = match[0];
                     String origHex = bytesToHexStr(Arrays.copyOfRange(buf, addr, addr + match[1]));
-                    LOG.info("[特征码] 识别到: original={}, addr=0x{}", origHex, Integer.toHexString(addr));
+                    LOG.debug("[特征码] 识别到: original={}, addr=0x{}", origHex, Integer.toHexString(addr));
                     Map<String, Object> entry = new HashMap<>();
                     entry.put("original", origHex);
                     entry.put("addr", addr);
@@ -526,26 +581,80 @@ public final class SwHexUtils {
         return results;
     }
 
-    /**
-     * 在字节数据中查找模式匹配（简化版）
-     */
-    private static List<int[]> findBytePatternMatches(byte[] data, String feature) {
-        List<int[]> matches = new ArrayList<>();
-        List<String> tokens = tokenizeHex(feature);
-        int patternLen = tokens.size();
-        if (patternLen > data.length) return matches;
+    /** 把 token 编译成"期望字节"数组：-1 = 任意（?? / ...） */
+    private static int[] compileExpect(List<String> tokens) {
+        int[] expect = new int[tokens.size()];
+        for (int i = 0; i < expect.length; i++) {
+            String t = tokens.get(i);
+            expect[i] = (t.equals(WILDCARD_BYTE) || t.equals(WILDCARD_TRUNCATE))
+                    ? -1 : Integer.parseInt(t, 16);
+        }
+        return expect;
+    }
 
-        for (int i = 0; i <= data.length - patternLen; i++) {
-            boolean match = true;
-            for (int j = 0; j < patternLen; j++) {
-                String t = tokens.get(j);
-                if (t.equals(WILDCARD_BYTE)) continue;
-                if (t.equals(WILDCARD_TRUNCATE)) { match = false; break; }
-                byte expected = (byte) Integer.parseInt(t, 16);
-                if (data[i + j] != expected) { match = false; break; }
+    /** 选锚点：找一段"连续确定字节"（最多 4 个），用它先排除绝大多数位置 */
+    private static int[] anchorOf(int[] expect) {
+        int best = -1, bestLen = 0;
+        int i = 0;
+        while (i < expect.length) {
+            if (expect[i] >= 0) {
+                int j = i;
+                while (j < expect.length && expect[j] >= 0 && j - i < 4) j++;
+                int len = j - i;
+                if (len > bestLen) {
+                    best = i;
+                    bestLen = len;
+                    if (len >= 3) break;
+                }
+                i = j;
+            } else {
+                i++;
             }
-            if (match) {
+        }
+        return new int[]{best < 0 ? 0 : best, Math.max(1, bestLen)};
+    }
+
+    /** 在字节数据中查找模式匹配（全量） */
+    private static List<int[]> findBytePatternMatches(byte[] data, String feature) {
+        return findBytePatternMatches(data, compileExpect(tokenizeHex(feature)), false);
+    }
+
+    /**
+     * 预编译后的匹配（热路径）：整数比较 + 锚点跳跃。
+     *
+     * @param firstOnly true = 找到第一个就返回（目标地址只需要第一个匹配）
+     */
+    private static List<int[]> findBytePatternMatches(byte[] data, int[] expect, boolean firstOnly) {
+        List<int[]> matches = new ArrayList<>();
+        int patternLen = expect.length;
+        if (patternLen == 0 || patternLen > data.length) return matches;
+
+        int anchor = -1;
+        for (int j = 0; j < patternLen; j++) {
+            if (expect[j] >= 0) { anchor = j; break; }
+        }
+        if (anchor < 0) {
+            matches.add(new int[]{0, patternLen});
+            return matches;
+        }
+
+        int last = data.length - patternLen;
+        int[] anchor2 = anchorOf(expect);
+        int aIdx = anchor2[0], aLen = anchor2[1];
+        for (int i = 0; i <= last; i++) {
+            boolean pre = true;
+            for (int k = 0; k < aLen; k++) {
+                if ((data[i + aIdx + k] & 0xFF) != expect[aIdx + k]) { pre = false; break; }
+            }
+            if (!pre) continue;
+            boolean ok = true;
+            for (int j = 0; j < patternLen; j++) {
+                int e = expect[j];
+                if (e >= 0 && (data[i + j] & 0xFF) != e) { ok = false; break; }
+            }
+            if (ok) {
                 matches.add(new int[]{i, patternLen});
+                if (firstOnly) return matches;
             }
         }
         return matches;
@@ -563,9 +672,7 @@ public final class SwHexUtils {
      */
     public static List<Map<String, Object>> searchFirstPatternWithMarked(ByteBuffer data, List<String> targetFeatures) {
         List<Map<String, Object>> results = new ArrayList<>();
-        byte[] buf = new byte[data.remaining()];
-        data.get(buf);
-        data.position(0);
+        byte[] buf = bytesOf(data);   // 只读，不改 position（可被多线程共享）
 
         for (String feature : targetFeatures) {
             List<String> tokens = tokenizeHex(feature);
@@ -584,8 +691,8 @@ public final class SwHexUtils {
                 }
             }
 
-            String cleanFeature = joinHexTokens(tokens.toArray(new String[0]));
-            List<int[]> matches = findBytePatternMatches(buf, cleanFeature);
+            // 目标地址只需要第一个匹配 → firstOnly，避免整文件全量收集
+            List<int[]> matches = findBytePatternMatches(buf, compileExpect(tokens), true);
             if (!matches.isEmpty()) {
                 int startAddr = matches.get(0)[0];
                 String origHex = bytesToHexStr(Arrays.copyOfRange(buf, startAddr,

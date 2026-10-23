@@ -2627,3 +2627,304 @@ body.resizing-cols {
     left: 0;
     background: var(--bg-row-selected);
 }
+
+/* ==================== 补丁列（增强功能） ==================== */
+.manage-patch-cell {
+    /* 方案多时允许换行，不能裁掉后面的按钮 */
+    white-space: normal;
+    overflow: visible;
+    vertical-align: middle;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+.patch-groups {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.patch-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+.patch-group-label {
+    font-size: 11px;
+    color: var(--text-secondary, #8a8a8a);
+    margin-right: 2px;
+    user-select: none;
+}
+.patch-btn {
+    /* JavaFX WebView：默认 appearance 会画一层原生按钮底，叠上背景就会出现"内圈镂空" */
+    appearance: none;
+    -webkit-appearance: none;
+    height: 22px;
+    padding: 0 8px;
+    border: 1px solid var(--border-color, #d0d0d0);
+    border-radius: 6px;
+    background: var(--bg-control, rgba(127,127,127,0.10));
+    background-clip: border-box;
+    color: var(--text-primary, #333);
+    font-size: 12px;
+    line-height: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.patch-btn:hover {
+    border-color: var(--accent, #2f80ed);
+}
+/* 已开启（或共存方案被选中）：一整块填充 —— border 必须透明，绝不能用同色 border 凑形状 */
+.patch-btn.on {
+    background: var(--accent, #2f80ed);
+    border-color: transparent;
+    color: #fff;
+}
+.patch-btn.on:hover {
+    border-color: transparent;
+}
+/* 无法识别（文件不存在/无适配）：灰掉、虚线框；只看提示，不可点、无悬浮变化 */
+.patch-btn.unknown {
+    opacity: 0.55;
+    border-style: dashed;
+    cursor: default;
+}
+.patch-btn.unknown:hover {
+    border-color: var(--border-color, #d0d0d0);
+}
+.patch-create-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px dashed var(--accent, #2f80ed);
+    background: transparent;
+    color: var(--accent, #2f80ed);
+    font-size: 12px;
+    line-height: 20px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.patch-create-btn:hover {
+    background: var(--accent, #2f80ed);
+    border-color: transparent;
+    color: #fff;
+}
+.patch-hint {
+    color: var(--text-secondary, #8a8a8a);
+    font-size: 12px;
+    user-select: none;
+}
+/* 表标题栏的刷新按钮 */
+.acc-table-refresh {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary, #8a8a8a);
+    cursor: pointer;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+}
+.acc-table-refresh:hover { color: var(--accent, #2f80ed); }
+/* 补丁列里的两个小图标（扫描 / 重新扫描） */.patch-icon-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 22px;
+    width: 24px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-secondary, #8a8a8a);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.patch-icon-btn:hover {
+    color: var(--accent, #2f80ed);
+    background: var(--bg-control, rgba(127,127,127,0.10));
+}
+
+/* 共存表头按钮（+ / ···）与展开的方案选择栏 */
+.table-hd-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 20px;
+    width: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-secondary, #8a8a8a);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}
+.table-hd-btn:hover { color: var(--accent, #2f80ed); }
+.table-hd-btn[disabled] { opacity: 0.4; cursor: default; }
+.table-hd-btn[disabled]:hover { color: var(--text-secondary, #8a8a8a); }
+.coexist-chooser {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-color, #d0d0d0);
+    background: var(--bg-control, rgba(127,127,127,0.06));
+}
+
+/* 表头"眼睛"（管理态显示/隐藏此表） */
+.acc-table-eye {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary, #8a8a8a);
+    cursor: pointer;
+    padding: 0 4px;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+.acc-table-eye:hover { color: var(--accent, #2f80ed); }
+/* 表头右键菜单（登录模式下隐藏此表） */
+.table-hd-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 160px;
+    padding: 4px;
+    border-radius: 8px;
+    background: var(--bg-panel, #2b2b2b);
+    border: 1px solid var(--border-color, #3a3a3a);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.table-hd-menu-item {
+    padding: 6px 10px;
+    border-radius: 5px;
+    font-size: 12px;
+    color: var(--text-primary, #e6e6e6);
+    cursor: pointer;
+    white-space: nowrap;
+}
+.table-hd-menu-item:hover { background: var(--bg-control, rgba(127,127,127,0.18)); }
+
+/* 空表占位行 */
+.acc-empty-row td {
+    padding: 18px 0;
+    text-align: center;
+    color: var(--text-secondary, #8a8a8a);
+    font-size: 12px;
+    user-select: none;
+}
+/* 共存表头展开后的"无方案" */
+.coexist-empty {
+    font-size: 12px;
+    color: var(--text-secondary, #8a8a8a);
+    padding: 0 6px;
+}
+/* "···" 悬浮向右延展（不弹浮层，CSS 过渡自然伸缩） */
+/* 「···」= 一个按钮：平时是 22px 圆角方块，悬停时**自身宽度延伸**到容纳所有方案，移开缩回 */
+.coexist-morph {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    width: 22px;
+    overflow: hidden;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    transition: width 0.24s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.coexist-morph:hover {
+    width: var(--morph-w, 320px);
+    border-color: var(--border-color, #d0d0d0);
+}
+.morph-dots {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary, #8a8a8a);
+    transition: opacity 0.14s ease;
+}
+.coexist-morph:hover .morph-dots { opacity: 0; }
+.morph-opts {
+    display: inline-flex;
+    align-items: center;
+    height: 20px;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(-10px);
+    transition: opacity 0.18s ease 0.04s, transform 0.22s ease;
+}
+.coexist-morph:hover .morph-opts {
+    opacity: 1;
+    transform: translateX(0);
+}
+/* 分段按钮（深色/浅色/跟随系统 那种） */
+.coexist-seg-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--text-primary, #333);
+    font-size: 12px;
+    line-height: 20px;
+    height: 20px;
+    padding: 0 10px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+}
+.coexist-seg-btn:hover { background: var(--bg-control, rgba(127,127,127,0.12)); }
+.coexist-seg-btn.on { background: var(--accent, #2f80ed); color: #fff; }
+/* 表头不换行、动作区高度固定（否则悬浮延展会让表头高度抖动） */
+.acc-table-titlebar { flex-wrap: nowrap; }
+.acc-table-actions {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    gap: 2px;
+    flex: 0 0 auto;
+}
+/* "···" 右侧弹出菜单 */
+.table-hd-pop {
+    position: fixed;
+    z-index: 10001;
+    min-width: 110px;
+    padding: 4px;
+    border-radius: 8px;
+    background: var(--bg-panel, #2b2b2b);
+    border: 1px solid var(--border-color, #3a3a3a);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.table-hd-pop-item {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text-primary, #e6e6e6);
+    font-size: 12px;
+    text-align: left;
+    padding: 6px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.table-hd-pop-item:hover { background: var(--bg-control, rgba(127,127,127,0.18)); }
+.table-hd-pop-item.on { background: var(--accent, #2f80ed); color: #fff; }
+.table-hd-pop-empty {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--text-secondary, #8a8a8a);
+}

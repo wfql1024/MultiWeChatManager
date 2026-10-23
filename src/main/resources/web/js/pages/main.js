@@ -52,12 +52,16 @@ JFC.pages.main = (function() {
             { key: 'display_name', label: '名称',   mandatory: true,  pinned: true, sortable: true, defVisible: true,  defWidth: 220 },
             { key: 'version',      label: '版本',   mandatory: false, sortable: true, defVisible: true,  defWidth: 120 },
             { key: 'hotkey',       label: '快捷键', mandatory: false, sortable: true, defVisible: true,  defWidth: 110 },
+            // 补丁列（程序行）：共存 / 多开 / 防撤 三组方案按钮
+            { key: 'patch',        label: '补丁',   mandatory: false, sortable: false, defVisible: true, defWidth: 760 },
             { key: 'path',         label: '路径',   mandatory: false, sortable: true, defVisible: false, defWidth: 360 }
         ]
     };
     // 共存账号 = 账号列 + 「最后登录账号」（linked_acc：该共存 exe 当前关联/最后登录的原生账号）；非必选、默认显示
     TABLE_COLUMNS.coexist = TABLE_COLUMNS.account.concat([
-        { key: 'linked_acc', label: '最后登录账号', mandatory: false, sortable: true, defVisible: true, defWidth: 170, cellClass: 'manage-linked-acc-cell' }
+        { key: 'linked_acc', label: '最后登录账号', mandatory: false, sortable: true, defVisible: true, defWidth: 170, cellClass: 'manage-linked-acc-cell' },
+        // 补丁列（共存账号行）：只有防撤（作用在该实例的克隆 dll 上）
+        { key: 'patch', label: '补丁', mandatory: false, sortable: false, defVisible: true, defWidth: 320 }
     ]);
     var accountTables = {};
     /**
@@ -323,6 +327,30 @@ JFC.pages.main = (function() {
                 // （名称列本身仍与账号表统一：可编辑 / 1 级色 / 字号+1 / 加粗 / 中英分段）
                 // 行种类：'prog' = 原生程序行（管理态没有账号语义的行操作；登录态同样有"登录"）
                 rowKind: isProgram ? 'prog' : 'acc',
+                // 补丁按钮点击 → 统一切换/选择/新建/扫描
+                onPatchAction: function(info) { handlePatchAction(def.key, info); },
+                // 表标题栏的刷新按钮：由每张表自己提供"怎么重载"（表的共性，不做表名分支）
+                reload: (function(key) {
+                    return function() {
+                        var swId = currentSwId;
+                        if (!swId) return;
+                        if (key === 'origin_prog') { loadPatchPlan(swId, true); return; }
+                        if (key === 'origin_acc') { loadAccountData(swId, 'origin'); return; }
+                        loadAccountData(swId, 'coexist');
+                        // 表刷新也是"扫描"：先让各行显示"扫描中…"，扫完再读缓存
+                        beginPatchScan('coexist_acc');
+                        JFC.bridge.scanCoexist(swId, false, function(type, data) {
+                            if (currentSwId !== swId) { endPatchScan(); return; }
+                            coexistPlan = data || null;
+                            if (accountTables.coexist_acc) accountTables.coexist_acc.refreshHeaderActions();
+                            loadCoexistPatchPlans(swId);
+                            endPatchScan();
+                        });
+                    };
+                })(def.key),
+                // 共存表头："+""（新建）与 "···"（右侧弹出单选方案）
+                headerActions: def.key === 'coexist_acc' ? coexistHeaderActions : null,
+                onHeaderAction: def.key === 'coexist_acc' ? handleCoexistHeaderAction : null,
                 // 账号种类：'coexist' = 共存账号（登录**不替换配置**、按 id 当 exe 名启动）；
                 // 其余按原生账号处理。共存登录走 JFC.pages.main.loginCoexistAccounts（见 account-table._loginAccounts）
                 accType: def.key === 'coexist_acc' ? 'coexist' : 'origin'
@@ -1147,6 +1175,10 @@ JFC.pages.main = (function() {
         // 加载数据
         loadSwConfig(swId);
         loadAccountData(swId);
+        // 先扫共存方案（通常几十毫秒，表头立刻可用），再扫程序行（较慢）；
+        // 各行状态依赖程序行那次扫描构建的 anti-revoke 缓存 → 排在它之后
+        loadCoexistPlan(swId);
+        loadPatchPlan(swId, true, function() { loadCoexistPatchPlans(swId); });
         // 进入平台页即刷新设置区域滚动条（覆盖内容填充与展开动画时序，不依赖用户调整高度才显示）
         if (settingsScrollbar) {
             settingsScrollbar.update();
@@ -2001,8 +2033,241 @@ JFC.pages.main = (function() {
         setCurtainExpanded(expand);
     }
 
+    // ---- 补丁管理（增强功能）----
+
+    /** 当前平台的程序行补丁计划（共存/多开/防撤） */
+    var swPatchPlan = null;
+
+    /** 扫描中：清空两处计划 → 显示"扫描中…"，并防止重复点击 */
+    var patchBusy = false;
+
+    function beginPatchScan(tableKey, accId) {
+        patchBusy = true;
+        if (tableKey === 'coexist_acc') {
+            if (accountTables.coexist_acc) {
+                if (accId) {
+                    // 单行扫描：只让这一行显示"扫描中…"
+                    accountTables.coexist_acc.patchPlans[accId] = 'SCANNING';
+                } else {
+                    var t = accountTables.coexist_acc;
+                    (t.accountData || []).forEach(function(a) {
+                        if (a && a.id) t.patchPlans[a.id] = 'SCANNING';
+                    });
+                }
+                accountTables.coexist_acc.render();
+            }
+        } else {
+            swPatchPlan = null;
+            if (accountTables.origin_prog) accountTables.origin_prog.setPatchPlan('SCANNING');
+        }
+    }
+
+    function endPatchScan() { patchBusy = false; }
+
+    /** 拉取程序行补丁计划（异步）；clear=true 时先清空旧平台的结果并显示"扫描中…" */
+    function loadPatchPlan(swId, clear, done) {
+        if (!swId || !JFC.bridge || !JFC.bridge.getSwPatchPlan) return;
+        if (patchBusy) return;
+        if (clear) {
+            swPatchPlan = null;
+            if (accountTables.origin_prog) accountTables.origin_prog.setPatchPlan(null);
+            // 共存表不动：它是独立的一份计划，由它自己的刷新/扫描负责
+        }
+        JFC.bridge.getSwPatchPlan(swId, function(type, data) {
+            if (currentSwId !== swId) return;
+            swPatchPlan = data || null;
+            if (accountTables.origin_prog) accountTables.origin_prog.setPatchPlan(swPatchPlan);
+            if (done) done();
+        });
+    }
+
+    /** 拉取共存账号行的防撤计划（逐账号异步） */
+    function loadCoexistPatchPlans(swId) {
+        var t = accountTables.coexist_acc;
+        if (!t || !t.accountData || !JFC.bridge || !JFC.bridge.getAccPatchPlan) return;
+        t.accountData.forEach(function(a) {
+            if (!a || !a.id) return;
+            JFC.bridge.getAccPatchPlan(swId, a.id, function(type, data) {
+                if (currentSwId !== swId) return;
+                t.setAccPatchPlan(a.id, data || null);
+            });
+        });
+    }
+
+    // ---- 共存表头："+" 新建 / "···" 展开选择方案 ----
+
+    var SVG_PLUS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>';
+    var SVG_DOTS = '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">' +
+        '<circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+
+    /** 当前可用的共存方案（来自独立的 coexistPlan） */
+    function availableCoexistChannels() {
+        var list = (coexistPlan && coexistPlan.channels) || [];
+        return list.filter(function(c) { return c.state !== 'unknown'; });
+    }
+
+    function currentCoexistChannel() {
+        var chans = availableCoexistChannels();
+        if (!chans.length) return '';
+        var sel = (coexistPlan && coexistPlan.coexist_mode) || '';
+        for (var i = 0; i < chans.length; i++) if (chans[i].id === sel) return sel;
+        return chans[0].id;
+    }
+
+    /**
+     * 表头按钮：「+」新建；「···」**悬浮向右延展**出方案按钮（单选），移开自动缩回。
+     * 延展是 CSS 过渡（max-width/opacity），不弹浮层、不遮挡任何按钮。
+     */
+    function coexistHeaderActions() {
+        var chans = availableCoexistChannels();
+        var canCreate = chans.length > 0;
+        var cur = currentCoexistChannel();
+        var seg = chans.map(function(c) {
+            return '<button class="coexist-seg-btn' + (c.id === cur ? ' on' : '') + '"' +
+                ' data-header-action="pick:' + c.id + '" title="' + (c.introduce || '') + '">' +
+                (c.alias || c.id) + '</button>';
+        }).join('');
+        return '<button class="table-hd-btn" data-header-action="create"' +
+            (canCreate ? '' : ' disabled') + ' title="新建共存程序">' + SVG_PLUS + '</button>' +
+            '<div class="coexist-morph" style="--morph-w:' + (24 + chans.length * 70) + 'px" title="选择共存方案">' +
+                '<span class="morph-dots">' + SVG_DOTS + '</span>' +
+                '<span class="morph-opts">' + seg + '</span>' +
+            '</div>';
+    }
+
+    function handleCoexistHeaderAction(act) {
+        var swId = currentSwId;
+        if (!swId || !JFC.bridge) return;
+        if (act === 'create') {
+            var ch = currentCoexistChannel();
+            if (!ch) { JFC.toastSuccess('没有可用的共存方案', 1800); return; }
+            JFC.bridge.createCoexistAccount(swId, ch, function(t, d) { afterPatchAction(swId, d); });
+            return;
+        }
+        if (act.indexOf('pick:') === 0) {
+            var id = act.substring(5);
+            // 只接受真实存在的方案（防止向配置里写入不存在的渠道）
+            var ok = availableCoexistChannels().some(function(c) { return c.id === id; });
+            if (!ok) return;
+            JFC.bridge.setCoexistMode(swId, id);
+            if (coexistPlan) coexistPlan.coexist_mode = id;
+            // 就地切换选中态：不重绘表头（重绘会丢掉 :hover，鼠标还在上面却被收回）
+            var host = accountTables.coexist_acc && accountTables.coexist_acc.el;
+            if (host) {
+                var btns = host.querySelectorAll('.coexist-seg-btn');
+                for (var i = 0; i < btns.length; i++) {
+                    btns[i].classList.toggle('on',
+                        btns[i].getAttribute('data-header-action') === 'pick:' + id);
+                }
+            }
+        }
+    }
+
+    /** 共存表计划（独立于程序行；页面刷新/共存表刷新时才加载） */
+    var coexistPlan = null;
+
+    function loadCoexistPlan(swId) {
+        if (!swId || !JFC.bridge || !JFC.bridge.getCoexistPlan) return;
+        JFC.bridge.getCoexistPlan(swId, function(type, data) {
+            if (currentSwId !== swId) return;
+            coexistPlan = data || null;
+            if (coexistPlan) {
+                var list = availableCoexistChannels();
+                var cur = coexistPlan.coexist_mode || '';
+                var found = list.some(function(c) { return c.id === cur; });
+                if (!found && list.length) {
+                    // 旧配置里可能是失效/不存在的渠道（例如测试用的假方案）→ 回落到第一个可用方案
+                    coexistPlan.coexist_mode = list[0].id;
+                    JFC.bridge.setCoexistMode(swId, list[0].id);
+                }
+            }
+            if (accountTables.coexist_acc) accountTables.coexist_acc.refreshHeaderActions();
+        });
+    }
+
+    /** 点补丁按钮：toggle = 切换/选择；create = 新建共存程序；scan = 扫描（跳过缓存）；rescan = 重新扫描 */
+    function handlePatchAction(tableKey, info) {
+        var swId = currentSwId;
+        if (!swId || !JFC.bridge) return;
+
+        if (info.action === 'scan' || info.action === 'rescan') {
+            if (patchBusy) return;                 // 防重复点击
+            var isCoexistTable = tableKey === 'coexist_acc';
+            var force = info.action === 'rescan';
+
+            // 共存账号表只有"单行"扫描：没有行信息就什么都不做（绝不整表扫描）
+            if (isCoexistTable) {
+                if (!info.accId) return;
+                beginPatchScan(tableKey, info.accId);
+                JFC.bridge.scanAccPatch(swId, info.accId, force, function(type, data) {
+                    if (accountTables.coexist_acc) {
+                        accountTables.coexist_acc.setAccPatchPlan(info.accId, data || null);
+                    }
+                    patchBusy = false;
+                    JFC.toastSuccess(force ? '重新扫描完成' : '扫描完成', 1800);
+                });
+                return;
+            }
+
+            beginPatchScan(tableKey);
+            var done = function(type, data) {
+                if (isCoexistTable) {
+                    coexistPlan = data || coexistPlan;
+                    if (accountTables.coexist_acc) accountTables.coexist_acc.refreshHeaderActions();
+                    loadCoexistPatchPlans(swId);
+                } else {
+                    swPatchPlan = data || null;
+                    if (accountTables.origin_prog) accountTables.origin_prog.setPatchPlan(swPatchPlan);
+                }
+                endPatchScan();
+                JFC.toastSuccess(force ? '重新扫描完成' : '扫描完成', 1800);
+            };
+            if (isCoexistTable) JFC.bridge.scanCoexist(swId, force, done);
+            else if (!force) JFC.bridge.scanPatches(swId, done);
+            else JFC.bridge.rescanPatches(swId, done);
+            return;
+        }
+
+        if (info.action === 'create') {
+            var ch = (swPatchPlan && swPatchPlan.coexist_mode) || '';
+            if (!ch) {
+                JFC.toastSuccess('没有可用的共存方案', 1800);
+                return;
+            }
+            JFC.bridge.createCoexistAccount(swId, ch, function(type, data) {
+                afterPatchAction(swId, data);
+            });
+            return;
+        }
+
+        if (info.action === 'toggle') {
+            // 共存按钮 = 选择共存方案（不是切换补丁）
+            if (info.mode === 'coexist') {
+                JFC.bridge.setCoexistMode(swId, info.channel);
+                if (swPatchPlan) {
+                    swPatchPlan.coexist_mode = info.channel;
+                    if (accountTables.origin_prog) accountTables.origin_prog.setPatchPlan(swPatchPlan);
+                }
+                return;
+            }
+            var accId = (tableKey === 'coexist_acc') ? (info.accId || '') : '';
+            JFC.bridge.switchPatch(swId, info.mode, info.channel, accId, function(type, data) {
+                afterPatchAction(swId, data);
+            });
+        }
+    }
+
+    /** 补丁动作完成：提示 + 重拉计划（新建/删除会变账号行） */
+    function afterPatchAction(swId, data) {
+        if (data && data.msg) JFC.toastSuccess(data.msg, 1800);
+        loadPatchPlan(swId, false);   // 刷新不清空，避免闪一下"扫描中…"
+        loadAccountData(swId);
+    }
+
     // ---- 加载账号/程序数据 ----
-    function loadAccountData(swId) {
+    function loadAccountData(swId, only) {
+        // only: 'origin' | 'coexist' | 'prog' | 空(=全部) —— 表级刷新时只更新指定表
         // 详情来源：SwAccData（两个账号表共用）
         var detailMap = {};
         var data = JFC.bridge.getSwDetailData(swId);
@@ -2030,14 +2295,15 @@ JFC.pages.main = (function() {
             (isCoexist ? coexistRows : originRows).push(rows[0]);
         });
 
-        accountTables.origin_acc.setData(originRows);
-        accountTables.coexist_acc.setData(coexistRows);
+        if (!only || only === 'origin') accountTables.origin_acc.setData(originRows);
+        if (!only || only === 'coexist') accountTables.coexist_acc.setData(coexistRows);
 
         // 原生程序表：软件路径对应的那个程序（图标/名称/版本/路径/快捷键）
         // 名称链（用户 2026-10-05 定）：**原生账号(origin_exe)的 remark > 平台名称**
         //   平台名称自身 = 本地 remark > 远程 alias > 平台 id（getPlatformDisplayName）
         //   origin_exe 不是磁盘上的账号，只是 SwAccData 里一条"程序自己的备注"记录 → 不会出现在账号表（Java 侧已过滤）
-        var prog = JFC.bridge.getSwProgramData(swId);
+        if (!only || only === 'prog') {
+            var prog = JFC.bridge.getSwProgramData(swId);
         var progRows = [];
         if (prog && (prog.name || prog.path)) {
             var remoteInfo = getRemotePlatformInfo(swId) || {};
@@ -2058,10 +2324,11 @@ JFC.pages.main = (function() {
             });
         }
         accountTables.origin_prog.setData(progRows);
+        }
 
         // 异步加载头像（本地文件 → URL下载 → SVG 回退）
-        originRows.forEach(function(acc) { requestAccountAvatar(swId, acc, accountTables.origin_acc); });
-        coexistRows.forEach(function(acc) { requestAccountAvatar(swId, acc, accountTables.coexist_acc); });
+        if (!only || only === 'origin') originRows.forEach(function(acc) { requestAccountAvatar(swId, acc, accountTables.origin_acc); });
+        if (!only || only === 'coexist') coexistRows.forEach(function(acc) { requestAccountAvatar(swId, acc, accountTables.coexist_acc); });
 
         // 刷新账号区域纵向滚动条（内容高度变化后）
         if (sectionScrollbar) {

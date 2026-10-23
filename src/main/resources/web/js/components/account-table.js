@@ -35,6 +35,29 @@ JFC.AccountTable = (function() {
     // 且行悬浮/选中的感应区天然覆盖整行（占位单元格属于该行）。
     var FILLER_COL = '_filler';
 
+    // 补丁列的两个小图标：刷新（扫描，跳过缓存）/ 带感叹号的刷新（重新扫描，全部渠道）
+    var PATCH_ICON_REFRESH =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>';
+    var PATCH_ICON_RESCAN =
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/>' +
+        '<path d="M12 8v5"/><path d="M12 16.2v.01"/></svg>';
+
+    // 表头"眼睛"：显示 / 隐藏
+    var EYE_SVG =
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+    var EYE_OFF_SVG =
+        '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+        '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 19c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94"/>' +
+        '<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19"/>' +
+        '<path d="M1 1l22 22"/></svg>';
+
     /** 状态标签（名称前缀）：失效 → 禁用 → 隐藏；只作视觉前缀，不参与排序 */
     function renderNameTags(acc) {
         var html = '';
@@ -198,6 +221,22 @@ JFC.AccountTable = (function() {
         this.avatarFallbackTail = !!opts.avatarFallbackTail;
         // 行种类（'acc' 账号行 / 'prog' 原生程序行）—— 三表差异的唯一开关（见 rowActionsOf）
         this.rowKind = opts.rowKind === 'prog' ? 'prog' : 'acc';
+        // 补丁列：程序行用 patchPlan（共存/多开/防撤三组），账号行用 patchPlans[accId]（只有防撤）
+        this.patchPlan = null;
+        this.patchPlans = {};
+        this.onPatchAction = opts.onPatchAction || null;
+        this.onRefresh = opts.onRefresh || null;
+        // 表头附加按钮（如共存表的 "+" / "···"）：返回 HTML 的函数 + 点击回调
+        this.headerActions = opts.headerActions || null;
+        this.onHeaderAction = opts.onHeaderAction || null;
+        // "···" 弹出菜单：返回 [{id,label,selected,disabled,title}]，选中回调 onHeaderMenuPick(id)
+        this.headerMenu = opts.headerMenu || null;
+        this.onHeaderMenuPick = opts.onHeaderMenuPick || null;
+        // 本表的数据重载（刷新按钮的共性实现：每张表自己提供）
+        this.reload = opts.reload || null;
+        // 表可见性（会话内）：管理态用"眼睛"开关；登录态用右键菜单"登录模式下隐藏此表"
+        this.visible = true;
+        this.loginHidden = false;
         /**
          * 账号种类（'origin' 原生 / 'coexist' 共存）—— **只影响"登录"走哪条链路**：
          * 共存账号不替换登录配置、账号 id 本身就是程序目录下的副本 exe 名
@@ -258,7 +297,7 @@ JFC.AccountTable = (function() {
     AccountTable.prototype._headHtml = function() {
         var self = this;
         var colgroup = '', thead = '';
-        this._orderedColumns().forEach(function(col) {
+        this._renderCols().forEach(function(col) {
             colgroup += '<col data-col="' + col.key + '">';
             var cls = 'manage-col-' + col.key;
             var inner;
@@ -305,7 +344,13 @@ JFC.AccountTable = (function() {
                 // 全选框统一放在**表名左侧**（登录态可整行隐藏列头，复选框不能跟着消失，用户 2026-10-06 定）
                 '<label class="acc-check acc-check-all"><input type="checkbox" class="acc-select-all">' +
                 '<span class="acc-check-box"></span></label>' +
+                '<button class="acc-table-eye" type="button" title="隐藏此表"></button>' +
                 '<span class="acc-table-title"></span>' +
+                '<span class="acc-table-actions"></span>' +
+                '<button class="acc-table-refresh" type="button" title="刷新本表">' +
+                    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                        '<path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>' +
+                '</button>' +
                 '<span class="acc-table-meta">' +
                     '<span class="acc-table-count" style="display:none;">已选 0 项</span>' +
                     // 取消多选：夹在"已选 x 项"与批量按钮之间（用户要求）
@@ -330,6 +375,12 @@ JFC.AccountTable = (function() {
         this.tbody = el.querySelector('tbody');
         this.tableEl = el.querySelector('table');
         this.titleEl.textContent = this.title;
+        this.eyeEl = el.querySelector('.acc-table-eye');
+        this.actionsEl = el.querySelector('.acc-table-actions');
+        this._updateEye();
+        // 眼睛只在管理态出现（登录态用右键菜单"登录模式下隐藏此表"）
+        if (this.eyeEl) this.eyeEl.style.display = (this.mode === 'manage') ? '' : 'none';
+        this.refreshHeaderActions();
         // 表内横向 overlay 滚动条（列宽总和 > 表宽时显示，不占位不撑高）
         this._hScrollbar = attachCustomScrollbar(el.querySelector('.acc-table-scroll'), 'x');
         // 整行背景层（悬浮 + 选中）：tr 背景只能覆盖列区域，覆盖不到表格右侧空白
@@ -394,6 +445,15 @@ JFC.AccountTable = (function() {
     /** 当前**渲染顺序**下的列（已应用个性化顺序与固定列约束） */
     AccountTable.prototype._orderedColumns = function() {
         return (this.colOrder && this.colOrder.length) ? this.colOrder : this.columns;
+    };
+
+    /**
+     * **实际渲染的列**（唯一来源）：列头、数据行、空表占位的 colspan 都只认这一个函数。
+     * 隐藏列不进 DOM（而不是先渲染再用 CSS 藏起来）—— 否则"表头按可见列、行按全部列"就会错位。
+     */
+    AccountTable.prototype._renderCols = function() {
+        var self = this;
+        return this._orderedColumns().filter(function(c) { return self._isColVisible(c); });
     };
 
     /** 固定列（pinned：勾选框/头像/名称）恒在最左，且不可移动、不可被插入到其前面 */
@@ -553,6 +613,12 @@ JFC.AccountTable = (function() {
         // 列名隐藏只作用于登录态：切模式时同步类名
         if (this.el) this.el.classList.toggle('hide-col-names', next === 'login' && !!this.hideColNamesInLogin);
         this.selectedIds.clear();       // 模式切换后旧选中项可能已不可见
+        // 眼睛只在管理态出现；可见性按当前模式重新判定
+        if (this.eyeEl) this.eyeEl.style.display = (next === 'manage') ? '' : 'none';
+        this.applyVisibility();
+        // 列头必须跟着模式重建：pid/hwnd（仅登录态）等列是"按当前模式决定是否进 DOM"的，
+        // 只重渲染 tbody 会造成"列头少一列、内容多一列"的错位
+        this._rebuildHead();
         this.render();
         this._applyColumnLayout();
         this._updateSelectionUI();
@@ -566,10 +632,14 @@ JFC.AccountTable = (function() {
             : this.accountData;
         var accounts = this._sortAccounts(source);
 
-        // 空表不显示整张表（用户 2026-10-06 定）：登录态过滤后为空、或平台本来就没有账号，都不占位
-        if (this.el) this.el.style.display = accounts.length ? '' : 'none';
+        // 表**常显**（用户 2026-10-23 定）：空表也保留表头与创建入口；
+        // 是否显示改由表头"眼睛"（管理态）或右键菜单"登录模式下隐藏此表"控制
+        this.applyVisibility();
         if (accounts.length === 0) {
-            tbody.innerHTML = '';
+            // 空表也保留表头；正文给一行"没有数据"占位（colspan 必须等于**实际渲染的列数**，
+            // 不是可见列数 —— 隐藏列在 DOM 里仍然存在，用可见数会算少 → 列错位）
+            var colCount = this._renderCols().length + 1;   // +1 = 末尾占位列
+            tbody.innerHTML = '<tr class="acc-empty-row"><td colspan="' + colCount + '">没有数据</td></tr>';
             this._updateRowHighlight();
             this._updateSelectionLayer();
             return;
@@ -623,7 +693,7 @@ JFC.AccountTable = (function() {
         var html = '';
 
         // 单元格顺序必须与表头/colgroup 一致（同用个性化顺序）
-        this._orderedColumns().forEach(function(col) {
+        this._renderCols().forEach(function(col) {
             html += this._cellHtml(acc, col, {
                 id: id, displayName: displayName, avatarUrl: avatarUrl,
                 hidden: hidden, isSelected: isSelected, invalid: !!acc.invalid
@@ -688,8 +758,10 @@ JFC.AccountTable = (function() {
                     this.loginCount) +
                 '</td>';
         }
-        if (key === 'hotkey' && this.enableHotkey) {
-            var hotkeyHtml = acc.hotkey
+        if (key === 'patch') {
+            return '<td data-col="patch" class="manage-patch-cell">' + this._patchCellHtml(acc, id) + '</td>';
+        }
+        if (key === 'hotkey' && this.enableHotkey) {            var hotkeyHtml = acc.hotkey
                 ? '<span class="hotkey-text">' + escapeHtml(acc.hotkey) + '</span>'
                 : '<span class="hotkey-text"><span class="hotkey-placeholder">—</span></span>';
             return '<td data-col="hotkey" class="manage-hotkey-cell" title="点击设置快捷键">' + hotkeyHtml + '</td>';
@@ -721,6 +793,123 @@ JFC.AccountTable = (function() {
         var cellInner = (key === 'name') ? scriptSplitHtml(val) : escapeHtml(val);
         return '<td data-col="' + key + '" class="' + textClass + '" title="' + escapeAttr(val) + '">' +
             cellInner + '</td>';
+    };
+
+    // ---- 补丁列 ----
+
+    /** 表可见性：管理态**永远显示**；"眼睛"只决定登录模式下是否出现这张表 */
+    AccountTable.prototype.applyVisibility = function() {
+        if (!this.el) return;
+        this.el.style.display = (this.mode === 'login' && this.loginHidden) ? 'none' : '';
+    };
+
+    AccountTable.prototype._updateEye = function() {
+        if (!this.eyeEl) return;
+        // 眼睛表示"登录模式下是否显示"，管理态本身始终显示
+        this.eyeEl.innerHTML = this.loginHidden ? EYE_OFF_SVG : EYE_SVG;
+        this.eyeEl.title = this.loginHidden ? '登录模式下隐藏（点击改为显示）' : '登录模式下显示（点击改为隐藏）';
+    };
+
+    /** "···" 弹出菜单：贴在按钮**右侧**展开（overlay，不挤占/遮挡表头按钮） */
+    AccountTable.prototype._showHeaderMenu = function(anchor, items, onPick) {
+        var old = document.querySelector('.table-hd-pop');
+        if (old) old.remove();
+        var pop = document.createElement('div');
+        pop.className = 'table-hd-pop';
+        if (!items || !items.length) {
+            pop.innerHTML = '<div class="table-hd-pop-empty">无方案</div>';
+        } else {
+            items.forEach(function(it) {
+                var b = document.createElement('button');
+                b.className = 'table-hd-pop-item' + (it.selected ? ' on' : '');
+                b.textContent = it.label || it.id;
+                b.title = it.title || '';
+                b.disabled = !!it.disabled;
+                b.addEventListener('click', function() {
+                    pop.remove();
+                    if (onPick) onPick(it.id);
+                });
+                pop.appendChild(b);
+            });
+        }
+        document.body.appendChild(pop);
+        var r = anchor.getBoundingClientRect();
+        var w = pop.offsetWidth || 120;
+        var left = r.right + 6;
+        if (left + w > window.innerWidth - 8) left = Math.max(8, r.left - w - 6);
+        pop.style.left = left + 'px';
+        pop.style.top = Math.max(8, r.top - 4) + 'px';
+        var outside = function(ev) {
+            if (!pop.contains(ev.target)) { pop.remove(); document.removeEventListener('mousedown', outside, true); }
+        };
+        setTimeout(function() { document.addEventListener('mousedown', outside, true); }, 0);
+    };
+
+    /** 重绘表头附加按钮（共存表的 "+" / "···"） */
+    AccountTable.prototype.refreshHeaderActions = function() {        if (!this.actionsEl) return;
+        this.actionsEl.innerHTML = this.headerActions ? (this.headerActions() || '') : '';
+    };
+
+    /** 设置程序行的补丁计划（共存/多开/防撤）并重绘 */
+    AccountTable.prototype.setPatchPlan = function(plan) {
+        this.patchPlan = plan || null;
+        this.render();
+    };
+
+    /** 设置某个共存账号的补丁计划（防撤）并重绘 */
+    AccountTable.prototype.setAccPatchPlan = function(accId, plan) {
+        if (!this.patchPlans) this.patchPlans = {};
+        this.patchPlans[accId] = plan || null;
+        this.render();
+    };
+
+    /**
+     * 补丁单元格：一组按钮，点按 = 切换/选择，颜色 = 状态。
+     * 程序行 = 共存（选中态）+ 新建 + 多开（开/关）+ 防撤（开/关）；
+     * 共存账号行 = 只有防撤（作用在该实例的克隆 dll 上）。
+     */
+    AccountTable.prototype._patchCellHtml = function(acc, id) {
+        var plan = (this.rowKind === 'prog') ? this.patchPlan
+            : ((this.patchPlans || {})[id] || null);
+        if (plan === 'SCANNING') return '<span class="patch-hint">扫描中…</span>';
+        if (!plan) return '<span class="patch-hint">—</span>';
+
+        function group(label, items, mode, selectedId) {
+            if (!items || !items.length) return '';
+            var s = '<span class="patch-group"><span class="patch-group-label">' + label + '</span>';
+            items.forEach(function(it) {
+                var cls = 'patch-btn';
+                if (mode === 'coexist') {
+                    if (it.id === selectedId) cls += ' on';
+                } else if (it.state === 'on') {
+                    cls += ' on';
+                }
+                if (it.state === 'unknown') cls += ' unknown';
+                var tip = (it.introduce || '')
+                    + (it.authors && it.authors.length ? '  作者: ' + it.authors.join(',') : '')
+                    + (it.msg ? '  ' + it.msg : '');
+                s += '<button class="' + cls + '"'
+                    + ' data-patch-mode="' + escapeAttr(mode) + '"'
+                    + ' data-patch-channel="' + escapeAttr(it.id) + '"'
+                    + ' data-patch-acc="' + escapeAttr(id) + '"'
+                    + ' title="' + escapeAttr(tip) + '">'
+                    + escapeHtml(it.alias || it.id) + '</button>';
+            });
+            return s + '</span>';
+        }
+
+        var html = '<span class="patch-groups">';
+        // 扫描 / 重新扫描（放在最左边，两张表都有）
+        html += '<button class="patch-icon-btn" data-patch-action="scan" data-patch-acc="' + escapeAttr(id) + '" title="扫描（跳过已有缓存）">' + PATCH_ICON_REFRESH + '</button>';
+        html += '<button class="patch-icon-btn" data-patch-action="rescan" data-patch-acc="' + escapeAttr(id) + '" title="重新扫描（全部渠道；失败保留旧缓存）">' + PATCH_ICON_RESCAN + '</button>';
+        if (this.rowKind === 'prog') {
+            // 「共存」已移交共存账号表头，程序行只保留 多开 / 防撤
+            html += group('多开', plan.multirun, 'multirun');
+            html += group('防撤', plan.revoke, 'anti-revoke');
+        } else {
+            html += group('防撤', plan.revoke, 'anti-revoke');
+        }
+        return html + '</span>';
     };
 
     // ---- 排序 ----
@@ -1093,9 +1282,62 @@ JFC.AccountTable = (function() {
 
         // 批量操作
         this.el.querySelector('.acc-table-titlebar').addEventListener('click', function(e) {
+            var eye = e.target.closest ? e.target.closest('.acc-table-eye') : null;
+            if (eye) {
+                e.stopPropagation();
+                // 只改"登录模式下是否显示"这一状态；管理态不隐藏
+                self.loginHidden = !self.loginHidden;
+                self._updateEye();
+                self.applyVisibility();
+                return;
+            }
+            var act = e.target.closest ? e.target.closest('[data-header-action]') : null;
+            if (act) {
+                e.stopPropagation();
+                if (act.disabled) return;
+                var action = act.getAttribute('data-header-action');
+                if (action === 'choose' && self.headerMenu) {
+                    self._showHeaderMenu(act, self.headerMenu(), function(id) {
+                        if (self.onHeaderMenuPick) self.onHeaderMenuPick(id);
+                    });
+                    return;
+                }
+                if (self.onHeaderAction) self.onHeaderAction(action);
+                return;
+            }
+            var refresh = e.target.closest ? e.target.closest('.acc-table-refresh') : null;
+            if (refresh) {
+                e.stopPropagation();
+                if (self.reload) self.reload();
+                else if (self.onRefresh) self.onRefresh();
+                return;
+            }
             var btn = e.target.closest('[data-batch]');
             if (!btn) return;
             self.batchAction(btn.getAttribute('data-batch'));
+        });
+
+        // 表头右键：登录模式下隐藏/显示此表（会话内，不落配置）
+        this.el.querySelector('.acc-table-titlebar').addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var menu = document.createElement('div');
+            menu.className = 'table-hd-menu';
+            menu.innerHTML = '<div class="table-hd-menu-item">' +
+                (self.loginHidden ? '登录模式下显示此表' : '登录模式下隐藏此表') + '</div>';
+            document.body.appendChild(menu);
+            var rect = e.currentTarget.getBoundingClientRect();
+            menu.style.left = (e.clientX) + 'px';
+            menu.style.top = (e.clientY) + 'px';
+            var close = function() { menu.remove(); document.removeEventListener('mousedown', outside, true); };
+            var outside = function(ev) { if (!menu.contains(ev.target)) close(); };
+            setTimeout(function() { document.addEventListener('mousedown', outside, true); }, 0);
+            menu.querySelector('.table-hd-menu-item').addEventListener('click', function() {
+                self.loginHidden = !self.loginHidden;
+                self.applyVisibility();
+                close();
+            });
+            void rect;
         });
 
         // 右键菜单（统一绑在滚动容器，覆盖列头/最右列右侧空白区域 → 列菜单；数据行 → 行菜单）
@@ -1175,6 +1417,39 @@ JFC.AccountTable = (function() {
                 }
             }
         });
+
+        // 补丁按钮（捕获阶段）：必须在行点击之前拦下，否则会连带选中整行
+        this.tbody.addEventListener('click', function(e) {
+            var btn = e.target.closest ? e.target.closest('.patch-btn, .patch-create-btn, .patch-icon-btn') : null;
+            if (!btn) return;
+            e.stopPropagation();
+            e.preventDefault();
+            // 未适配（虚框）：只允许看提示，不可点
+            if (btn.classList.contains('unknown')) return;
+            if (!self.onPatchAction) return;
+            var act = btn.getAttribute('data-patch-action');
+            if (act) {
+                // 扫描/重新扫描：把行信息一起带上（共存表只做单行）
+                self.onPatchAction({
+                    action: act,
+                    mode: btn.getAttribute('data-patch-mode'),
+                    channel: btn.getAttribute('data-patch-channel'),
+                    accId: btn.getAttribute('data-patch-acc') || ''
+                });
+                return;
+            }
+            e.stopPropagation();
+            if (btn.classList.contains('patch-create-btn')) {
+                self.onPatchAction({ action: 'create', mode: 'coexist' });
+                return;
+            }
+            self.onPatchAction({
+                action: 'toggle',
+                mode: btn.getAttribute('data-patch-mode'),
+                channel: btn.getAttribute('data-patch-channel'),
+                accId: btn.getAttribute('data-patch-acc') || ''
+            });
+        }, true);
 
         // 行内悬浮操作按钮（容器委托）：名称单元格编辑结束会就地重建按钮，
         // 逐行绑定的话重建后的按钮就没有监听了 —— 所以统一委托到 tbody
@@ -1750,14 +2025,16 @@ JFC.AccountTable = (function() {
             cb.addEventListener('change', function() {
                 this.colVisible[key] = cb.checked;
                 this._saveColumnPrefs();
-                this._applyColumnLayout();
+                this._rebuildHead();
+                this.render();
             }.bind(this));
             item.addEventListener('click', function(e) {
                 if (e.target !== cb) {
                     cb.checked = !cb.checked;
                     this.colVisible[key] = cb.checked;
                     this._saveColumnPrefs();
-                    this._applyColumnLayout();
+                    this._rebuildHead();
+                    this.render();
                 }
             }.bind(this));
         }, this);
@@ -1858,6 +2135,19 @@ JFC.AccountTable = (function() {
             var cs = window.getComputedStyle(cell);
             var pad = (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
             // 名称列：只量名称（.dn-text）+"禁用/失效/隐藏"前缀标签，不量悬浮操作按钮的按钮文字
+            // 补丁列：内容是**按钮组**，按文字测宽会漏掉按钮内边距/边框/间距 → 必然少算一行。
+            // 这里直接把按钮组临时改成不换行，量它的真实内容宽度（scrollWidth）。
+            if (key === 'patch') {
+                var groups = cell.querySelector('.patch-groups');
+                if (groups) {
+                    var prevWrap = groups.style.flexWrap;
+                    groups.style.flexWrap = 'nowrap';
+                    var gw = groups.scrollWidth;
+                    groups.style.flexWrap = prevWrap;
+                    if (gw + pad > maxW) maxW = gw + pad;
+                    return;
+                }
+            }
             var text = '';
             cell.querySelectorAll('.dn-text, .manage-name-tag').forEach(function(sp) { text += sp.textContent; });
             if (!text) text = cell.innerText || cell.textContent || '';
@@ -1895,6 +2185,23 @@ JFC.AccountTable = (function() {
         var w = Math.max(Math.round(maxW) + 10, Math.round(minW));
         this.colWidth[key] = w;
         this._applyColumnWidth(key, w);
+
+        // 补丁列的兜底：测量再准也可能差几像素 → 直接看"是不是还是一行"，
+        // 不是就按 24px 逐次加宽，直到单行（或到 8 次上限）
+        if (key === 'patch') {
+            var td = table.querySelector('tbody td[data-col="patch"]');
+            var groups = td ? td.querySelector('.patch-groups') : null;
+            if (groups) {
+                for (var i = 0; i < 8; i++) {
+                    var cs2 = window.getComputedStyle(groups);
+                    var lineH = parseFloat(cs2.lineHeight) || 18;
+                    if (groups.scrollHeight <= lineH * 1.6) break;
+                    w += 24;
+                    this.colWidth[key] = w;
+                    this._applyColumnWidth(key, w);
+                }
+            }
+        }
         if (!skipSave) this._saveColumnPrefs();
     };
 

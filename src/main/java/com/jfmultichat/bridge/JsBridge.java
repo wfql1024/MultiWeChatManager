@@ -11,10 +11,14 @@ import com.jfmultichat.config.ConfigManager;
 import com.jfmultichat.config.RootConfig;
 import com.jfmultichat.config.SwConfigProvider;
 import com.jfmultichat.core.EventBus;
+import com.jfmultichat.core.task.TaskRegistry;
 import com.jfmultichat.core.event.AccountDataChangedEvent;
 import com.jfmultichat.core.event.PlatformEnteredEvent;
 import com.jfmultichat.swcore.SwAdapterChecker;
 import com.jfmultichat.swcore.SwConfigAccessor;
+import com.jfmultichat.swcore.SwCoreConstants;
+import com.jfmultichat.swcore.SwPatchCacheBuilder;
+import com.jfmultichat.swcore.SwPatchService;
 import com.jfmultichat.swcore.SwInfoFuncCore;
 import com.jfmultichat.swcore.SwNativeOps;
 import com.jfmultichat.swcore.SwPathDetective;
@@ -525,14 +529,269 @@ public class JsBridge {
         }
     }
 
+    // ==================== 补丁管理（增强功能） ====================
+
+    /** 程序行的补丁计划（共存/多开/防撤 三组渠道 + 状态） */
+    public void getSwPatchPlanAsync(String swId, String cbId) {
+        TaskRegistry.get().submit("patch-scan", "扫描补丁适配：" + swId, swId, () -> {
+            String json = "{}";
+            try {
+                json = MAPPER.writeValueAsString(
+                        SwPatchService.getSwPatchPlan(swId, SwConfigProvider.newAccessor()));
+            } catch (com.jfmultichat.core.task.TaskCancelledException e) {
+                pushAsync("patchPlan", cbId, "{}");   // 取消：让界面的"…"先收掉
+                throw e;
+            } catch (Exception e) {
+                LOG.error("[补丁] 获取计划失败: sw={}", swId, e);
+            }
+            pushAsync("patchPlan", cbId, json);
+        });
+    }
+
+    /** 共存账号行的补丁计划（防撤）—— 轻量读缓存，不进任务中心（避免每行一条任务） */
+    public void getAccPatchPlanAsync(String swId, String accId, String cbId) {
+        THREAD_POOL.submit(() -> {
+            String json = "{}";
+            try {
+                json = accPatchPlanJson(swId, accId, SwConfigProvider.newAccessor());
+            } catch (Exception e) {
+                LOG.error("[补丁] 获取实例计划失败: sw={}, acc={}", swId, accId, e);
+            }
+            pushAsync("patchPlan", cbId, json);
+        });
+    }
+
+    /**
+     * 共存账号行的「扫描 / 重新扫描」：**扫描阶段用原生程序文件**（与程序行同一份缓存），
+     * 只回填这一行的状态，不动其他行。
+     */
+    public void scanAccPatchAsync(String swId, String accId, String forceStr, String cbId) {
+        boolean force = "true".equalsIgnoreCase(forceStr);
+        TaskRegistry.get().submit("patch-scan", "扫描共存账号：" + accId, swId, () -> {
+            String json = "{}";
+            try {
+                SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+                if (force) SwPatchCacheBuilder.setForceRescan(swId, true);
+                try {
+                    // 扫描阶段：用原生程序文件构建 **anti-revoke** 缓存（多开那一组与共存行无关）
+                    SwPatchService.ensureRevokeCache(swId, accessor);
+                    // 查询阶段：用本行的序号化克隆文件判定状态
+                    json = accPatchPlanJson(swId, accId, accessor);
+                } finally {
+                    if (force) SwPatchCacheBuilder.setForceRescan(swId, false);
+                }
+            } catch (Exception e) {
+                LOG.error("[补丁] 扫描共存账号失败: sw={}, acc={}", swId, accId, e);
+            }
+            pushAsync("patchPlan", cbId, json);
+        });
+    }
+
+    private String accPatchPlanJson(String swId, String accId, SwConfigAccessor accessor) throws Exception {
+        JsonNode ch = accessor.getSwAccData(swId, accId, SwCoreConstants.AccKeys.COEXIST_CHANNEL);
+        JsonNode ord = accessor.getSwAccData(swId, accId, SwCoreConstants.AccKeys.ORDINAL);
+        String coexistChannel = (ch != null && ch.isTextual()) ? ch.asText() : null;
+        String ordinal = (ord != null && ord.isTextual()) ? ord.asText() : null;
+        if (coexistChannel == null || coexistChannel.isEmpty()) {
+            coexistChannel = SwPatchService.selectedCoexistMode(swId, accessor);
+        }
+        if (ordinal == null || ordinal.isEmpty()) {
+            ordinal = SwPatchService.deriveOrdinal(swId, accId, coexistChannel, accessor);
+        }
+        if (coexistChannel == null || ordinal == null) {
+            // 保存的渠道可能已失效（例如旧配置里的假渠道）→ 遍历所有渠道按 exe_wildcard 反查
+            String[] idx = SwPatchService.resolveCoexistIndex(swId, accId, coexistChannel, accessor);
+            if (idx != null) { coexistChannel = idx[0]; ordinal = idx[1]; }
+        }
+        if (coexistChannel == null || ordinal == null) {
+            LOG.info("[补丁] 实例计划缺索引: sw={}, acc={}, channel={}, ordinal={}（返回未知状态列表）",
+                    swId, accId, coexistChannel, ordinal);
+            return MAPPER.writeValueAsString(
+                    SwPatchService.getRevokeChannelsUnknown(swId, accessor));
+        }
+        String json = MAPPER.writeValueAsString(
+                SwPatchService.getInstancePatchPlan(swId, coexistChannel, ordinal, accessor));
+        LOG.debug("[补丁] 实例计划: sw={}, acc={}, channel={}, ordinal={}, bytes={}",
+                swId, accId, coexistChannel, ordinal, json.length());
+        return json;
+    }
+
+    /** 切换补丁（accId 为空 = 作用于原生程序）—— 后台执行 */
+    public void switchPatchAsync(String swId, String mode, String channel, String accId, String cbId) {
+        TaskRegistry.get().submit("patch-toggle", "切换补丁：" + channel, swId, () -> {
+            boolean ok = false;
+            String msg;
+            try {
+                SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+                String coexistChannel = null;
+                String ordinal = null;
+                if (accId != null && !accId.isEmpty()) {
+                    JsonNode ch = accessor.getSwAccData(swId, accId, SwCoreConstants.AccKeys.COEXIST_CHANNEL);
+                    JsonNode ord = accessor.getSwAccData(swId, accId, SwCoreConstants.AccKeys.ORDINAL);
+                    coexistChannel = (ch != null && ch.isTextual()) ? ch.asText() : null;
+                    ordinal = (ord != null && ord.isTextual()) ? ord.asText() : null;
+                    if (coexistChannel == null || coexistChannel.isEmpty()) {
+                        coexistChannel = SwPatchService.selectedCoexistMode(swId, accessor);
+                    }
+                    if (ordinal == null || ordinal.isEmpty()) {
+                        ordinal = SwPatchService.deriveOrdinal(swId, accId, coexistChannel, accessor);
+                    }
+                }
+                msg = SwPatchService.toggle(swId, mode, channel, coexistChannel, ordinal, accessor);
+                ok = msg != null && (msg.startsWith("成功") || msg.startsWith("已"));
+            } catch (Exception e) {
+                msg = "操作失败: " + e.getMessage();
+            }
+            ObjectNode out = MAPPER.createObjectNode();
+            out.put("ok", ok);
+            out.put("msg", msg);
+            pushAsync("patchAction", cbId, out.toString());
+        });
+    }
+
+    /** 新建共存程序（后台执行） */
+    public void createCoexistAccountAsync(String swId, String channel, String cbId) {
+        TaskRegistry.get().submit("patch-coexist", "新建共存程序：" + channel, swId, () -> {
+            String msg;
+            boolean ok = false;
+            try {
+                msg = SwPatchService.createCoexist(swId, channel, SwConfigProvider.newAccessor());
+                ok = msg != null && msg.startsWith("已创建");
+            } catch (Exception e) {
+                msg = "创建失败: " + e.getMessage();
+            }
+            pushPatchResult(cbId, ok, msg);
+        });
+    }
+
+    /** 删除共存程序（后台执行） */
+    public void deleteCoexistAccountAsync(String swId, String accId, String cbId) {
+        TaskRegistry.get().submit("patch-coexist", "删除共存程序：" + accId, swId, () -> {
+            String msg;
+            boolean ok = false;
+            try {
+                msg = SwPatchService.deleteCoexist(swId, accId, SwConfigProvider.newAccessor());
+                ok = msg != null && msg.startsWith("已删除");
+            } catch (Exception e) {
+                msg = "删除失败: " + e.getMessage();
+            }
+            pushPatchResult(cbId, ok, msg);
+        });
+    }
+
+    /** 重建共存程序（后台执行） */
+    public void rebuildCoexistAccountAsync(String swId, String accId, String cbId) {
+        TaskRegistry.get().submit("patch-coexist", "重建共存程序：" + accId, swId, () -> {
+            String msg;
+            boolean ok = false;
+            try {
+                msg = SwPatchService.rebuildCoexist(swId, accId, SwConfigProvider.newAccessor());
+                ok = msg != null && msg.startsWith("已重建");
+            } catch (Exception e) {
+                msg = "重建失败: " + e.getMessage();
+            }
+            pushPatchResult(cbId, ok, msg);
+        });
+    }
+
+    /** 强制重扫（关进程 → 恢复备份 → 重扫由调用方提示用户先退出程序） */
+    public void rescanPatchesAsync(String swId, String cbId) {
+        TaskRegistry.get().submit("patch-scan", "强制重扫：" + swId, swId, () -> {
+            String json = "{}";
+            try {
+                SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+                SwPatchCacheBuilder.setForceRescan(swId, true);
+                try {
+                    // 强制重扫 + 取计划在**同一轮**完成（原来先 force 跑一轮、再普通跑一轮 = 两轮全量扫描）
+                    json = MAPPER.writeValueAsString(SwPatchService.getSwPatchPlan(swId, accessor));
+                } finally {
+                    SwPatchCacheBuilder.setForceRescan(swId, false);
+                }
+            } catch (Exception e) {
+                LOG.error("[补丁] 重新扫描失败: sw={}", swId, e);
+            }
+            pushAsync("patchPlan", cbId, json);
+        });
+    }
+
+    /** 共存表计划（表头 "+"/"···" 用）—— 与程序行独立 */
+    public void getCoexistPlanAsync(String swId, String cbId) {
+        TaskRegistry.get().submit("patch-scan", "扫描共存方案：" + swId, swId, () -> {
+            String json = "{}";
+            try {
+                json = MAPPER.writeValueAsString(
+                        SwPatchService.getCoexistPlan(swId, SwConfigProvider.newAccessor()));
+            } catch (Exception e) {
+                LOG.error("[补丁] 获取共存计划失败: sw={}", swId, e);
+            }
+            pushAsync("coexistPlan", cbId, json);
+        });
+    }
+
+    /** 共存表扫描（force=true 时全部渠道重扫） */
+    public void scanCoexistAsync(String swId, String forceStr, String cbId) {
+        boolean force = "true".equalsIgnoreCase(forceStr);
+        TaskRegistry.get().submit("patch-scan", (force ? "重新扫描共存方案：" : "扫描共存方案：") + swId, swId, () -> {
+            String json = "{}";
+            try {
+                SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+                if (force) SwPatchCacheBuilder.setForceRescan(swId, true);
+                try {
+                    // 共存表刷新：先扫防撤（用原生文件，供各行查询用），再扫共存方案；不碰多开
+                    SwPatchService.ensureRevokeCache(swId, accessor);
+                    json = MAPPER.writeValueAsString(SwPatchService.getCoexistPlan(swId, accessor));
+                } finally {
+                    if (force) SwPatchCacheBuilder.setForceRescan(swId, false);
+                }
+            } catch (Exception e) {
+                LOG.error("[补丁] 共存扫描失败: sw={}", swId, e);
+            }
+            pushAsync("coexistPlan", cbId, json);
+        });
+    }
+
+    /** 扫描（跳过已有缓存；先清"本轮已扫描"标记，从而重试上次失败的渠道） */
+    public void scanPatchesAsync(String swId, String cbId) {
+        TaskRegistry.get().submit("patch-scan", "扫描补丁适配：" + swId, swId, () -> {
+            String json = "{}";
+            try {
+                SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+                json = MAPPER.writeValueAsString(SwPatchService.getSwPatchPlan(swId, accessor));
+            } catch (Exception e) {
+                LOG.error("[补丁] 扫描失败: sw={}", swId, e);
+            }
+            pushAsync("patchPlan", cbId, json);
+        });
+    }
+
+    /** 选择共存渠道（用于"新建"） */
+    public void setCoexistMode(String swId, String channel) {
+        try {
+            SwPatchService.setSelectedCoexistMode(swId, channel, SwConfigProvider.newAccessor());
+        } catch (Exception e) {
+            LOG.error("[补丁] 保存共存渠道失败: sw={}, ch={}", swId, channel, e);
+        }
+    }
+
+    private void pushPatchResult(String cbId, boolean ok, String msg) {
+        ObjectNode out = MAPPER.createObjectNode();
+        out.put("ok", ok);
+        out.put("msg", msg == null ? "" : msg);
+        pushAsync("patchAction", cbId, out.toString());
+    }
+
+    private void pushAsync(String type, String cbId, String json) {
+        String escaped = json == null ? "{}" : json.replace("\\", "\\\\").replace("'", "\\'");
+        pushToJs("JFC.bridge._handleAsync('" + type + "'," + cbId + ",'" + escaped + "')");
+    }
+
     /**
      * 获取当前主题设置（从 LocalGlobalConfig.json 读取 theme）.
      * 供前端初始化时读取.
      *
      * @return 主题字符串: "dark" | "light" | "auto"
      */
-    public String getTheme() {
-        try {
+    public String getTheme() {        try {
             ObjectNode globalConfig = ConfigManager.getInstance().getGlobalConfig();
             if (globalConfig.has("theme")) {
                 return globalConfig.get("theme").asText();

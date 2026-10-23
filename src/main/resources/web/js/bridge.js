@@ -182,6 +182,50 @@ JFC.bridge = (function() {
         switchToAccWindow: function(swId, accId) {
             return callJsonWithArgs('switchToAccWindow', swId, String(accId == null ? '' : accId));
         },
+        // ===== 补丁管理（增强功能）=====
+        // 程序行计划：{version, coexist_mode, coexist:[...], multirun:[...], revoke:[...]}
+        getSwPatchPlan: function(swId, fn) {
+            callWithArgs('getSwPatchPlanAsync', swId, String(registerAsync(fn)));
+        },
+        // 共存账号行计划：{revoke:[...]}（作用在该实例的克隆 dll 上）
+        getAccPatchPlan: function(swId, accId, fn) {
+            callWithArgs('getAccPatchPlanAsync', swId, accId, String(registerAsync(fn)));
+        },
+        // 切换补丁：accId 传空串 = 原生程序
+        switchPatch: function(swId, mode, channel, accId, fn) {
+            callWithArgs('switchPatchAsync', swId, mode, channel, accId || '', String(registerAsync(fn)));
+        },
+        createCoexistAccount: function(swId, channel, fn) {
+            callWithArgs('createCoexistAccountAsync', swId, channel, String(registerAsync(fn)));
+        },
+        deleteCoexistAccount: function(swId, accId, fn) {
+            callWithArgs('deleteCoexistAccountAsync', swId, accId, String(registerAsync(fn)));
+        },
+        rebuildCoexistAccount: function(swId, accId, fn) {
+            callWithArgs('rebuildCoexistAccountAsync', swId, accId, String(registerAsync(fn)));
+        },
+        rescanPatches: function(swId, fn) {
+            callWithArgs('rescanPatchesAsync', swId, String(registerAsync(fn)));
+        },
+        // 共存表头计划（渠道 + 当前选中方案）
+        getCoexistPlan: function(swId, fn) {
+            callWithArgs('getCoexistPlanAsync', swId, String(registerAsync(fn)));
+        },
+        // 共存表扫描（force=true 全部渠道重扫）
+        scanCoexist: function(swId, force, fn) {
+            callWithArgs('scanCoexistAsync', swId, force ? 'true' : 'false', String(registerAsync(fn)));
+        },
+        // 共存账号行：扫描（force=true 强制重扫该模式；扫描用原生文件，查询用本行克隆文件）
+        scanAccPatch: function(swId, accId, force, fn) {
+            callWithArgs('scanAccPatchAsync', swId, accId, force ? 'true' : 'false', String(registerAsync(fn)));
+        },
+        // 扫描（跳过已有缓存；会重试上次失败的渠道）
+        scanPatches: function(swId, fn) {
+            callWithArgs('scanPatchesAsync', swId, String(registerAsync(fn)));
+        },
+        setCoexistMode: function(swId, channel) {
+            callWithArgs('setCoexistMode', swId, channel);
+        },
         // ===== 侧栏（窗口切换器）设置：贴边 / 对齐 / 长度模式 / 主窗口按钮位置 =====
         getSidebarPrefs: function() { return callJsonWithArgs('getSidebarPrefs'); },
         setSidebarPrefs: function(prefs) { return callJsonWithArgs('setSidebarPrefs', JSON.stringify(prefs || {})); },

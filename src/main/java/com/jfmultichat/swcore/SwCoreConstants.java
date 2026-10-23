@@ -45,6 +45,10 @@ public final class SwCoreConstants {
         public static final String FEATURES = "features";
         public static final String ADDR = "addr";
         public static final String WILDCARD = "wildcard";
+        /** 刷入后是否删除源（默认 false） */
+        public static final String DEL = "del";
+        /** 目录复制时跳过的相对模式 */
+        public static final String EXCLUDE = "exclude";
         public static final String PATCH_RULES = "patch_rules";
         public static final String TYPE = "type";
         public static final String VER_ADAPTATIONS = "ver_adaptations";
@@ -63,8 +67,10 @@ public final class SwCoreConstants {
         public static final String MULTI_STATE = "multi_state";
         public static final String NATIVE = "native";
 
-        // 缓存字段
-        public static final String PRECISES = "precises";
+        // 缓存字段（与远程配置键名保持一致）
+        public static final String PRECISES = "precise_ver_adaptations";
+        /** 旧 Java 端口用过的缓存键名，仅用于读取兼容 */
+        public static final String PRECISES_LEGACY = "precises";
 
         // 窗口类名字段
         public static final String MATCHING = "matching";
@@ -120,7 +126,7 @@ public final class SwCoreConstants {
         public static final String RELAY = "relay";
         public static final String PID = "pid";
         public static final String PID_MUTEX = "pid_mutex";
-        public static final String COEXIST_CHANNEL = "coexist_channel";
+        public static final String COEXIST_CHANNEL = "channel";
         public static final String ORDINAL = "ordinal";
     }
 
