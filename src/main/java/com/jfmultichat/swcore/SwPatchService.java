@@ -9,6 +9,7 @@ import com.jfmultichat.core.task.TaskContext;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +51,74 @@ public final class SwPatchService {
         root.set("revoke",
                 buildChannels(sw, SwCoreConstants.RemoteSwKey.REVOKE, null, null, true, acc));
         return root;
+    }
+
+    // ==================== 渠道启用/禁用（用户自选） ====================
+
+    /** 某模式下被用户禁用的渠道 id 集合 */
+    public static java.util.Set<String> disabledChannels(String sw, String mode, SwConfigAccessor acc) {
+        java.util.Set<String> out = new java.util.LinkedHashSet<>();
+        JsonNode n = acc.getSwSetting(sw, SwCoreConstants.LocalSettingKey.DISABLED_CHANNELS);
+        if (n != null && n.isObject()) {
+            JsonNode arr = n.get(mode);
+            if (arr != null && arr.isArray()) arr.forEach(x -> out.add(x.asText()));
+        }
+        return out;
+    }
+
+    /** 启用/禁用某渠道（写本地配置，只改动该模式，不动其他模式） */
+    public static void setChannelEnabled(String sw, String mode, String channel, boolean enabled,
+                                         SwConfigAccessor acc) {
+        java.util.Set<String> dis = disabledChannels(sw, mode, acc);
+        // 关系传播（用户 2026-10-23 定）：
+        //   启用子渠道 → 必然也启用它的 parents；禁用父渠道 → 连带禁用它的 children
+        Map<String, List<String>> rel = SwOperatorCore.getRelationsOfChannel(sw, mode, channel,
+                acc.getSwCache(), acc);
+        if (enabled) {
+            dis.remove(channel);
+            for (String p : rel.getOrDefault("parents", List.of())) dis.remove(p);
+        } else {
+            dis.add(channel);
+            for (String c : rel.getOrDefault("children", List.of())) dis.add(c);
+        }
+
+        java.util.Map<String, Object> all = new java.util.LinkedHashMap<>();
+        JsonNode n = acc.getSwSetting(sw, SwCoreConstants.LocalSettingKey.DISABLED_CHANNELS);
+        if (n != null && n.isObject()) {
+            var it = n.fields();
+            while (it.hasNext()) {
+                var e = it.next();
+                all.put(e.getKey(), MAPPER.convertValue(e.getValue(), Object.class));
+            }
+        }
+        all.put(mode, new ArrayList<>(dis));
+        // 必须走 updateSwSettings（putPOJO → 真正的 JSON 对象）；
+        // saveAndCheckChanged 会 value.toString()，把 Map 写成字符串 → 读回来不是对象 → 禁用列表"丢失"
+        Map<String, Object> kwargs = new java.util.HashMap<>();
+        kwargs.put(SwCoreConstants.LocalSettingKey.DISABLED_CHANNELS, all);
+        acc.updateSwSettings(sw, Map.of(), kwargs);
+    }
+
+    /**
+     * 只返回某个模式的渠道计划（启用/禁用渠道后局部刷新用）。
+     *
+     * @param onlyChannel 启用后需要补扫的那个渠道；null = 不额外扫描，只读缓存
+     */
+    public static ObjectNode getModePlan(String sw, String mode, List<String> onlyChannels, SwConfigAccessor acc) {
+        ObjectNode root = MAPPER.createObjectNode();
+        root.put("mode", mode);
+        boolean scan = onlyChannels != null && !onlyChannels.isEmpty();
+        root.set("channels", buildChannels(sw, mode, null, null, scan, onlyChannels, acc));
+        return root;
+    }
+
+    /** 启用某渠道时需要一并补扫的渠道：它自己 + 它的前置（用户定：启用子必然启用父） */
+    public static List<String> channelsToScanOnEnable(String sw, String mode, String channel, SwConfigAccessor acc) {
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
+        out.add(channel);
+        out.addAll(SwOperatorCore.getRelationsOfChannel(sw, mode, channel, acc.getSwCache(), acc)
+                .getOrDefault("parents", List.of()));
+        return new ArrayList<>(out);
     }
 
     /** 只构建 anti-revoke 缓存（共存表刷新 / 共存账号行扫描用；不碰多开） */
@@ -106,14 +175,34 @@ public final class SwPatchService {
     private static ArrayNode buildChannels(String sw, String mode,
                                            String coexistChannel, String ordinal, boolean allowScan,
                                            SwConfigAccessor acc) {
+        return buildChannels(sw, mode, coexistChannel, ordinal, allowScan, null, acc);
+    }
+
+    /**
+     * @param onlyChannels 只扫这些渠道（启用某渠道后按需补扫自己+前置）；null = 全部已启用渠道
+     */
+    private static ArrayNode buildChannels(String sw, String mode, String coexistChannel, String ordinal,
+                                           boolean allowScan, List<String> onlyChannels, SwConfigAccessor acc) {
         ArrayNode arr = MAPPER.createArrayNode();
         JsonNode channels = acc.getRemoteSw(sw, mode, SwCoreConstants.RemoteSwKey.CHANNELS);
         if (channels == null || !channels.isObject()) return arr;
 
+        // 禁用的渠道**不扫描**（列表仍然全部输出，前端按 enabled 区分）
+        java.util.Set<String> disabled = disabledChannels(sw, mode, acc);
+        List<String> scanList = new ArrayList<>();
+        var ids = channels.fieldNames();
+        while (ids.hasNext()) {
+            String id = ids.next();
+            if (disabled.contains(id)) continue;
+            if (onlyChannels != null && !onlyChannels.contains(id)) continue;
+            scanList.add(id);
+        }
+
         SwAdapterChecker.ChannelsResult res;
         try {
-            res = SwAdapterChecker.identifyChannels(sw, mode, null, coexistChannel, ordinal, false, allowScan,
-                    acc, acc.getSwCache());
+            // 扫描只针对 scanList；**识别覆盖全部缓存渠道**（否则"启用某渠道"会让其它渠道显示成未知）
+            res = SwAdapterChecker.identifyChannels(sw, mode, scanList, null, coexistChannel, ordinal,
+                    false, allowScan, acc, acc.getSwCache());
         } catch (Exception e) {
             res = new SwAdapterChecker.ChannelsResult(null, "识别失败: " + e.getMessage(), false);
         }
@@ -131,6 +220,15 @@ public final class SwPatchService {
             JsonNode au = ch.get(SwCoreConstants.RemoteSwKey.AUTHORS);
             if (au != null && au.isArray()) au.forEach(a -> authors.add(a.asText()));
 
+            boolean enabled = !disabled.contains(id);
+            item.put("enabled", enabled);
+            // 关系（前端 tooltip 显示"前置 / 后置 / 可共存"；互斥是默认行为，不强调）
+            Map<String, List<String>> rel = SwOperatorCore.getRelationsOfChannel(sw, mode, id,
+                    acc.getSwCache(), acc);
+            for (String k : List.of("parents", "children", "friends")) {
+                List<String> v = rel.getOrDefault(k, List.of());
+                if (!v.isEmpty()) { ArrayNode arrRel = item.putArray(k); v.forEach(arrRel::add); }
+            }
             SwAdapterChecker.DetectionResult r = res.channels.get(id);
             String state = (r == null || r.status == null) ? "unknown" : (r.status ? "on" : "off");
             item.put("state", state);
@@ -147,12 +245,85 @@ public final class SwPatchService {
                                 String coexistChannel, String ordinal, SwConfigAccessor acc) {
         TaskContext.checkpoint();   // 取消 = 一个字节都不写（写在 checkpoint 之后才开始）
         try {
+            ObjectNode cache = acc.getSwCache();
+            Boolean cur = channelStatus(sw, mode, channel, coexistChannel, ordinal, acc, cache);
+            // 前置没适配没扫描 == 这个渠道没适配（用户 2026-10-23 定：照旧版）
+            if (cur == null) return "无法识别当前状态（该渠道未适配），补丁未应用";
+            boolean target = !cur;
+
+            Map<String, List<String>> rel = SwOperatorCore.getRelationsOfChannel(sw, mode, channel, cache, acc);
+            List<String> parents = rel.getOrDefault("parents", List.of());
+            List<String> children = rel.getOrDefault("children", List.of());
+            java.util.Set<String> friends = new java.util.HashSet<>(rel.getOrDefault("friends", List.of()));
+
+            if (target) {
+                // 前置必须可用（"前置没适配没扫描"= 本渠道没适配）
+                for (String p : parents) {
+                    if (channelStatus(sw, mode, p, coexistChannel, ordinal, acc, cache) == null) {
+                        return "前置方案「" + p + "」未适配或未启用，补丁未应用";
+                    }
+                }
+                // 同组其余渠道：跳过自己 / 可共存(friends) / 前置(parents)，其余全部关闭
+                for (String other : enabledChannelIds(sw, mode, acc)) {
+                    if (other.equals(channel) || friends.contains(other) || parents.contains(other)) continue;
+                    if (!Boolean.TRUE.equals(channelStatus(sw, mode, other, coexistChannel, ordinal, acc, cache))) continue;
+                    String[] r = SwOperatorCore.switchDllCore(sw, mode, other, coexistChannel, ordinal,
+                            false, acc, cache, null);
+                    if (r[0] == null) return "冲突方案「" + other + "」关闭失败: " + r[1];
+                    TaskContext.checkpoint();
+                }
+                // 再依次开启前置
+                for (String p : parents) {
+                    String[] r = SwOperatorCore.switchDllCore(sw, mode, p, coexistChannel, ordinal,
+                            true, acc, cache, null);
+                    if (r[0] == null) return "前置方案「" + p + "」开启失败: " + r[1];
+                    TaskContext.checkpoint();
+                }
+                String[] r = SwOperatorCore.switchDllCore(sw, mode, channel, coexistChannel, ordinal,
+                        true, acc, cache, null);
+                return r[1] == null ? "成功" : r[1];
+            }
+
+            // 关闭：先关后置（失败只忽略），再关自己
+            for (String c : children) {
+                try {
+                    SwOperatorCore.switchDllCore(sw, mode, c, coexistChannel, ordinal, false, acc, cache, null);
+                } catch (Exception ignored) { }
+                TaskContext.checkpoint();
+            }
             String[] r = SwOperatorCore.switchDllCore(sw, mode, channel, coexistChannel, ordinal,
-                    null, acc, acc.getSwCache(), null);
+                    false, acc, cache, null);
             return r[1] == null ? "成功" : r[1];
         } catch (Exception e) {
             return "操作失败: " + e.getMessage();
         }
+    }
+
+    /** 某渠道当前的三态状态（true=已打 / false=未打 / null=未知，如未适配） */
+    private static Boolean channelStatus(String sw, String mode, String channel, String coexistChannel,
+                                         String ordinal, SwConfigAccessor acc, ObjectNode cache) {
+        try {
+            SwAdapterChecker.ChannelsResult res = SwAdapterChecker.identifyChannels(
+                    sw, mode, List.of(channel), coexistChannel, ordinal, false, false, acc, cache);
+            SwAdapterChecker.DetectionResult r = res.channels == null ? null : res.channels.get(channel);
+            return r == null ? null : r.status;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** 已启用（未被用户禁用）的渠道 id 列表 */
+    public static List<String> enabledChannelIds(String sw, String mode, SwConfigAccessor acc) {
+        JsonNode channels = acc.getRemoteSw(sw, mode, SwCoreConstants.RemoteSwKey.CHANNELS);
+        List<String> out = new ArrayList<>();
+        if (channels == null || !channels.isObject()) return out;
+        java.util.Set<String> dis = disabledChannels(sw, mode, acc);
+        var it = channels.fieldNames();
+        while (it.hasNext()) {
+            String id = it.next();
+            if (!dis.contains(id)) out.add(id);
+        }
+        return out;
     }
 
     /** 当前选中的共存渠道（未设置时取第一个渠道） */

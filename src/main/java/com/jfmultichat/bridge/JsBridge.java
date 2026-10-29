@@ -469,6 +469,17 @@ public class JsBridge {
         }
     }
 
+    /** JS 调用：打开当前数据目录（Explorer）。目录不存在则先创建 */
+    public void openUserDataDir() {
+        try {
+            java.nio.file.Path dir = ConfigManager.getInstance().getUserDataPath();
+            java.nio.file.Files.createDirectories(dir);
+            Desktop.getDesktop().open(dir.toFile());
+        } catch (Exception e) {
+            LOG.warn("打开数据目录失败", e);
+        }
+    }
+
     /** JS 调用：获取日志目录路径（按当前模式 Dev/Prod 解析） */
     public String getLogDir() {
         try {
@@ -714,6 +725,41 @@ public class JsBridge {
         });
     }
 
+    /**
+     * 启用/禁用某个渠道（管理态点渠道按钮）。只影响该模式；**启用时补扫这一个渠道**，禁用不扫描。
+     */
+    public void setChannelEnabledAsync(String swId, String mode, String channel, String enabledStr, String cbId) {
+        boolean enabled = "true".equalsIgnoreCase(enabledStr);
+        TaskRegistry.get().submit("patch-toggle", (enabled ? "启用" : "禁用") + "渠道：" + channel, swId, () -> {
+            String json = "{}";
+            try {
+                SwConfigAccessor accessor = SwConfigProvider.newAccessor();
+                SwPatchService.setChannelEnabled(swId, mode, channel, enabled, accessor);
+                // **启用/禁用都不扫描**（扫描是登录态的事）：管理态只改"看不看/扫不扫"的开关，
+                // 适配状态沿用缓存；下次登录态扫描/刷新时自然按新列表来
+                json = MAPPER.writeValueAsString(
+                        SwPatchService.getModePlan(swId, mode, null, accessor));
+            } catch (Exception e) {
+                LOG.error("[补丁] 启用/禁用渠道失败: sw={}, mode={}, ch={}", swId, mode, channel, e);
+            }
+            pushAsync("modePlan", cbId, json);
+        });
+    }
+
+    /** 只读缓存地取某模式计划（切换补丁后局部刷新用，**不触发任何扫描**） */
+    public void getModePlanAsync(String swId, String mode, String cbId) {
+        THREAD_POOL.submit(() -> {
+            String json = "{}";
+            try {
+                json = MAPPER.writeValueAsString(
+                        SwPatchService.getModePlan(swId, mode, null, SwConfigProvider.newAccessor()));
+            } catch (Exception e) {
+                LOG.error("[补丁] 取模式计划失败: sw={}, mode={}", swId, mode, e);
+            }
+            pushAsync("modePlan", cbId, json);
+        });
+    }
+
     /** 共存表计划（表头 "+"/"···" 用）—— 与程序行独立 */
     public void getCoexistPlanAsync(String swId, String cbId) {
         TaskRegistry.get().submit("patch-scan", "扫描共存方案：" + swId, swId, () -> {
@@ -840,6 +886,7 @@ public class JsBridge {
             result.put("proxyIp", rc.getProxyIp());
             result.put("proxyPort", rc.getProxyPort());
             result.put("userDataPath", rc.getUserDataPath());
+            result.put("userDataWritable", cm.isDataDirWritable());
 
             // 远程 URL 列表
             var globalArr = result.putArray("remoteGlobalUrls");
@@ -954,12 +1001,12 @@ public class JsBridge {
                 String oldPath = rc.getUserDataPath().replace('\\', '/');
                 if (!newPath.isEmpty() && !newPath.equals(oldPath)) {
                     boolean useTarget = data.has("useTarget") && data.get("useTarget").asBoolean(false);
-                    if (!useTarget) {
-                        // 使用当前数据：迁移 + 如有冲突备份目标
-                        cm.migrateAndBackup(newPath, false);
-                    } else {
-                        // 使用目标数据：备份来源，然后切换到目标
-                        cm.migrateAndBackup(newPath, true);
+                    // 迁移失败必须如实报错：以前静默 return，前端照样提示"保存成功"但数据没动
+                    if (!cm.migrateAndBackup(newPath, useTarget)) {
+                        result.put("success", false);
+                        result.put("error", "数据目录切换失败：目标目录不可写或复制失败 -> " + newPath);
+                        result.put("newPath", cm.getUserDataPath().toString().replace('\\', '/'));
+                        return MAPPER.writeValueAsString(result);
                     }
                     pathChanged = true;
                     result.put("newPath", cm.getUserDataPath().toString().replace('\\', '/'));
@@ -1661,7 +1708,10 @@ public class JsBridge {
                     else if (node.isBoolean()) updates.put(key, node.asBoolean());
                     else if (node.isInt() || node.isLong()) updates.put(key, node.asLong());
                     else if (node.isDouble()) updates.put(key, node.asDouble());
-                    else updates.put(key, node.asText());
+                    // 结构化字段（如 disabled_channels 是对象）：**原样保留**。
+                    // 以前一律 asText()，对象会被拍成空字符串 "" → 用户禁用的渠道列表在每次"保存设置/刷新"后丢失
+                    else if (node.isObject() || node.isArray()) updates.put(key, MAPPER.convertValue(node, Object.class));
+                    else if (!node.isNull()) updates.put(key, node.asText());
                 }
             });
             ConfigManager.getInstance().updateSwConfig(swId, updates);
@@ -1688,6 +1738,8 @@ public class JsBridge {
             else if (parsed.isBoolean()) updateVal = parsed.asBoolean();
             else if (parsed.isInt() || parsed.isLong()) updateVal = parsed.asLong();
             else if (parsed.isDouble()) updateVal = parsed.asDouble();
+            // 结构化字段原样保留（同 saveSwConfig：asText() 会把对象拍成 ""）
+            else if (parsed.isObject() || parsed.isArray()) updateVal = MAPPER.convertValue(parsed, Object.class);
             else updateVal = parsed.asText();
 
             Map<String, Object> updates = new java.util.LinkedHashMap<>();

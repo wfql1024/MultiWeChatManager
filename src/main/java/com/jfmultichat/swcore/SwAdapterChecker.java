@@ -108,6 +108,19 @@ public final class SwAdapterChecker {
             String sw, String mode, List<String> channels,
             String coexistChannel, String ordinal, boolean skipCache, boolean allowScan,
             SwConfigAccessor accessor, ObjectNode cache) {
+        return identifyChannels(sw, mode, channels, null, coexistChannel, ordinal,
+                skipCache, allowScan, accessor, cache);
+    }
+
+    /**
+     * @param scanChannels  只刷新这些渠道的**缓存**（null = 全部）
+     * @param checkChannels 只**识别**这些渠道的状态（null = 缓存里所有渠道）
+     *                      —— 两者分开是为了"启用某个渠道时只补扫它，但其它渠道的状态照常显示"
+     */
+    public static ChannelsResult identifyChannels(
+            String sw, String mode, List<String> scanChannels, List<String> checkChannels,
+            String coexistChannel, String ordinal, boolean skipCache, boolean allowScan,
+            SwConfigAccessor accessor, ObjectNode cache) {
 
         // 1. 获取 DLL 目录
         String dllDir = accessor.tryGetPathOf(sw, SwCoreConstants.LocalSettingKey.DLL_DIR);
@@ -125,8 +138,9 @@ public final class SwAdapterChecker {
             return new ChannelsResult(null, "该模式没有方案", false);
         }
 
-        List<String> channelsToScan = (channels != null) ? channels : new ArrayList<>();
-        if (channelsToScan.isEmpty()) {
+        // null = 全部渠道；**空列表 = 一个都不扫**（用户把该模式所有渠道都禁用了）
+        List<String> channelsToScan = (scanChannels != null) ? new ArrayList<>(scanChannels) : new ArrayList<>();
+        if (scanChannels == null) {
             allChannelsDict.fieldNames().forEachRemaining(channelsToScan::add);
         }
 
@@ -168,8 +182,8 @@ public final class SwAdapterChecker {
             return new ChannelsResult(null, "错误：未知当前版本", false);
         }
 
-        // 7. 只检测指定通道
-        List<String> channelsToCheck = (channels != null) ? channels : new ArrayList<>();
+        // 7. 检测哪些通道（与"扫描哪些"分开：启用单渠道时只补扫它，但所有渠道状态都要照常给出）
+        List<String> channelsToCheck = (checkChannels != null) ? new ArrayList<>(checkChannels) : new ArrayList<>();
         if (channelsToCheck.isEmpty()) {
             channelsCache.fieldNames().forEachRemaining(channelsToCheck::add);
         }

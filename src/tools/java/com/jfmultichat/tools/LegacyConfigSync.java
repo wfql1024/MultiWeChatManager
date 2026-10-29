@@ -26,6 +26,25 @@ import java.util.List;
  */
 public final class LegacyConfigSync {
 
+    private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+
+    /** 与仓库里既有 JSON 的排版保持一致：4 空格缩进、冒号后的单空格分隔 */
+    private static final com.fasterxml.jackson.databind.ObjectWriter PRETTY = buildPrettyWriter();
+
+    private static com.fasterxml.jackson.databind.ObjectWriter buildPrettyWriter() {
+        com.fasterxml.jackson.core.util.DefaultIndenter indenter =
+                new com.fasterxml.jackson.core.util.DefaultIndenter("    ", "\n");
+        com.fasterxml.jackson.core.util.DefaultPrettyPrinter printer =
+                new com.fasterxml.jackson.core.util.DefaultPrettyPrinter()
+                        .withSeparators(new com.fasterxml.jackson.core.util.Separators()
+                                .withObjectFieldValueSpacing(
+                                        com.fasterxml.jackson.core.util.Separators.Spacing.AFTER));
+        printer.indentObjectsWith(indenter);
+        printer.indentArraysWith(indenter);
+        return MAPPER.writer(printer);
+    }
+
     /**
      * 一条版本映射：现代版（Java/main 分支）→ 旧版（Python/python 分支）。
      *
@@ -44,7 +63,27 @@ public final class LegacyConfigSync {
         }
     }
 
-    /** 版本映射表 —— 新增或调整版本时**只改这里**。 */
+    /**
+     * 版本映射表 —— 新增或调整版本时**只改这里**。
+     *
+     * <p>原则（用户 2026-10-23 明确）：
+     * <ol>
+     *   <li>每个已发布的旧版 JSON **结构不可改动** —— 旧客户端写死了版本号和解析方式；</li>
+     *   <li>同步 = **按旧版已有结构去填充内容**；旧版结构表达不了的内容**直接丢弃**；</li>
+     *   <li>多条映射按版本**级联**：v10→v9→v8…，每一步都以前一步的产物为输入。</li>
+     * </ol>
+     *
+     * <p>已确认的结构差异（2026-10-23 实测对比 key 路径）：
+     * <ul>
+     *   <li><b>sw v10 → v9</b>：仅 {@code channels.<ch>.relation}（渠道级关系）是 v10 新增；
+     *       v9 只有 {@code features[].patch_rules[]} 里 {@code type=relation} 的写法 → 搬进去即可</li>
+     *   <li><b>global v2 → v1</b>：结构完全一致 → 原样直通</li>
+     *   <li><b>setting v8 → v7</b>（尚未实现，无 main 侧源）：v8 用 {@code channels.<ch>.features[]}，
+     *       v7 用 {@code channels.<ch>.feature_ver_adaptations.<ver>[]}（按版本分组）</li>
+     *   <li><b>setting v7 → v4</b>（尚未实现）：v4 更老 —— {@code mode.channel.<ch>} + {@code mode.feature.<ver>.<ch>}
+     *       + {@code mode.precise.<ver>} 的平面结构，信息量明显更少，只能填它支持的部分</li>
+     * </ul>
+     */
     private static final List<Mapping> MAPPINGS = List.of(
             new Mapping("global", "v2", "v1"),
             new Mapping("sw", "v10", "v9"));
@@ -119,7 +158,46 @@ public final class LegacyConfigSync {
      * @return 旧版 JSON 原文
      */
     private static String adapt(Mapping mapping, String modernJson) {
-        return modernJson;
+        if (!"sw".equals(mapping.kind())) return modernJson;
+        try {
+            com.fasterxml.jackson.databind.JsonNode root = MAPPER.readTree(modernJson);
+            boolean changed = false;
+            // 结构：{平台: {模式: {channels: {渠道: {...}}}}}
+            for (com.fasterxml.jackson.databind.JsonNode swNode : root) {
+                if (!swNode.isObject()) continue;
+                for (com.fasterxml.jackson.databind.JsonNode modeNode : swNode) {
+                    com.fasterxml.jackson.databind.JsonNode channels = modeNode.get("channels");
+                    if (channels == null || !channels.isObject()) continue;
+                    java.util.Iterator<java.util.Map.Entry<String, com.fasterxml.jackson.databind.JsonNode>> it =
+                            channels.fields();
+                    while (it.hasNext()) {
+                        com.fasterxml.jackson.databind.JsonNode chNode = it.next().getValue();
+                        if (!(chNode instanceof com.fasterxml.jackson.databind.node.ObjectNode ch)) continue;
+                        // 新版把 relation 提到渠道级；旧版( python )只认 patch_rules 里的 relation 规则
+                        com.fasterxml.jackson.databind.JsonNode rel = ch.remove("relation");
+                        if (rel == null || !rel.isObject()) continue;
+                        com.fasterxml.jackson.databind.JsonNode features = ch.get("features");
+                        if (features == null || !features.isArray() || features.isEmpty()) continue;
+                        com.fasterxml.jackson.databind.node.ObjectNode feature =
+                                (com.fasterxml.jackson.databind.node.ObjectNode) features.get(0);
+                        com.fasterxml.jackson.databind.node.ArrayNode rules =
+                                feature.withArray("patch_rules");
+                        com.fasterxml.jackson.databind.node.ObjectNode rule = MAPPER.createObjectNode();
+                        rule.put("type", "relation");
+                        if (rel.has("ver_adaptations")) rule.set("ver_adaptations", rel.get("ver_adaptations"));
+                        rules.add(rule);
+                        changed = true;
+                    }
+                }
+            }
+            if (!changed) return modernJson;
+            // Jackson 把空对象/空数组写成 " { } " / " [ ] "，仓库里的排版是 "{}" / "[]" → 归一化，避免无意义 diff
+            return PRETTY.writeValueAsString(root)
+                    .replace("{ }", "{}")
+                    .replace("[ ]", "[]");
+        } catch (Exception e) {
+            throw new IllegalStateException("同步失败：无法解析 " + mapping.sourceName() + " -> " + e.getMessage(), e);
+        }
     }
 
     /**

@@ -131,6 +131,7 @@ JFC.bridge = (function() {
         browseFolder: function(p) { return callWithArgs('browseFolder', p); },
         getCommitInfo: function() { return callJson('getCommitInfo'); },
         openLogDir: function() { call('openLogDir'); },
+        openUserDataDir: function() { call('openUserDataDir'); },
         getLogDir: function() { return call('getLogDir'); },
 
         // ---- 管理页 ----
@@ -214,6 +215,15 @@ JFC.bridge = (function() {
         // 共存表扫描（force=true 全部渠道重扫）
         scanCoexist: function(swId, force, fn) {
             callWithArgs('scanCoexistAsync', swId, force ? 'true' : 'false', String(registerAsync(fn)));
+        },
+        // 只读缓存地取某模式计划（切换补丁后局部刷新，不触发扫描）
+        getModePlan: function(swId, mode, fn) {
+            callWithArgs('getModePlanAsync', swId, mode, String(registerAsync(fn)));
+        },
+        // 启用/禁用渠道（管理态）：只影响该模式，启用时补扫该渠道
+        setChannelEnabled: function(swId, mode, channel, enabled, fn) {
+            callWithArgs('setChannelEnabledAsync', swId, mode, channel,
+                enabled ? 'true' : 'false', String(registerAsync(fn)));
         },
         // 共存账号行：扫描（force=true 强制重扫该模式；扫描用原生文件，查询用本行克隆文件）
         scanAccPatch: function(swId, accId, force, fn) {

@@ -2692,6 +2692,22 @@ body.resizing-cols {
 .patch-btn.unknown:hover {
     border-color: var(--border-color, #d0d0d0);
 }
+/* 管理态：用户禁用的渠道（排在右边 + 删除线）；登录态直接不渲染 */
+.patch-btn.off {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+/* 管理态：悬浮时文字换成 -（点击禁用）/ +（点击启用）；**只在管理态**生效，且宽度保持不变 */
+.patch-btn-glyph { display: none; }
+.table-manage .patch-btn-toggle { position: relative; }
+.table-manage .patch-btn-toggle:hover .patch-btn-label { visibility: hidden; }   /* 保留占位 → 宽度不缩 */
+.table-manage .patch-btn-toggle:hover .patch-btn-glyph {
+    display: inline-flex;
+    position: absolute;
+    inset: 0;
+    align-items: center;
+    justify-content: center;
+}
 .patch-create-btn {
     appearance: none;
     -webkit-appearance: none;
@@ -2833,6 +2849,7 @@ body.resizing-cols {
 .coexist-morph {
     display: inline-flex;
     align-items: center;
+    box-sizing: border-box;   /* 宽度含边框，量出来的内容宽才等于展开宽度 */
     height: 22px;
     width: 22px;
     overflow: hidden;
@@ -2841,7 +2858,8 @@ body.resizing-cols {
     transition: width 0.24s ease, border-color 0.2s ease, background 0.2s ease;
 }
 .coexist-morph:hover {
-    width: var(--morph-w, 320px);
+    /* 兜底值就是收起宽度：量不到时宁可不展开，也不要炸出一大片空白 */
+    width: var(--morph-w, 22px);
     border-color: var(--border-color, #d0d0d0);
 }
 .morph-dots {
@@ -2852,12 +2870,18 @@ body.resizing-cols {
     align-items: center;
     justify-content: center;
     color: var(--text-secondary, #8a8a8a);
-    transition: opacity 0.14s ease;
+    transition: width 0.2s ease, flex-basis 0.2s ease, opacity 0.14s ease;
 }
-.coexist-morph:hover .morph-dots { opacity: 0; }
+/* 圆点**让位**给多元按钮：宽度收到 0，多元按钮从最左边开始，不留白 */
+.coexist-morph:hover .morph-dots {
+    width: 0;
+    flex-basis: 0;
+    opacity: 0;
+}
 .morph-opts {
     display: inline-flex;
     align-items: center;
+    flex: 0 0 auto;      /* 不许被容器压扁，否则量不到真实内容宽 */
     height: 20px;
     white-space: nowrap;
     opacity: 0;
@@ -2878,7 +2902,7 @@ body.resizing-cols {
     font-size: 12px;
     line-height: 20px;
     height: 20px;
-    padding: 0 10px;
+    padding: 0 8px;
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.15s, color 0.15s;

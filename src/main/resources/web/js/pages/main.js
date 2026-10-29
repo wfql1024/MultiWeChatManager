@@ -1210,6 +1210,8 @@ JFC.pages.main = (function() {
         // 之后的 saveSwConfig 就会把本地文件里那条 _alias 一并清掉。
         if (Object.prototype.hasOwnProperty.call(config, '_alias')) delete config._alias;
         delete swConfigData[swId]._alias;
+        // 渠道禁用列表不是"设置项"，由补丁流程自己维护；放进 swConfigData 会在保存设置时被一起回写
+        delete swConfigData[swId].disabled_channels;
 
         // 更新标题（灰字提示 = 不填备注时会显示的名称）
         setTitleDisplay(displayName, fallbackName);
@@ -2070,7 +2072,8 @@ JFC.pages.main = (function() {
         if (patchBusy) return;
         if (clear) {
             swPatchPlan = null;
-            if (accountTables.origin_prog) accountTables.origin_prog.setPatchPlan(null);
+            // 加载中要显示"扫描中…"（哨兵 'SCANNING'），不能用 null —— null 的语义是"没有计划"
+            if (accountTables.origin_prog) accountTables.origin_prog.setPatchPlan('SCANNING');
             // 共存表不动：它是独立的一份计划，由它自己的刷新/扫描负责
         }
         JFC.bridge.getSwPatchPlan(swId, function(type, data) {
@@ -2085,6 +2088,11 @@ JFC.pages.main = (function() {
     function loadCoexistPatchPlans(swId) {
         var t = accountTables.coexist_acc;
         if (!t || !t.accountData || !JFC.bridge || !JFC.bridge.getAccPatchPlan) return;
+        // 查之前先标"扫描中…"（行状态要等缓存扫描完成才准）
+        t.accountData.forEach(function(a) {
+            if (a && a.id) t.patchPlans[a.id] = 'SCANNING';
+        });
+        t.render();
         t.accountData.forEach(function(a) {
             if (!a || !a.id) return;
             JFC.bridge.getAccPatchPlan(swId, a.id, function(type, data) {
@@ -2130,7 +2138,7 @@ JFC.pages.main = (function() {
         }).join('');
         return '<button class="table-hd-btn" data-header-action="create"' +
             (canCreate ? '' : ' disabled') + ' title="新建共存程序">' + SVG_PLUS + '</button>' +
-            '<div class="coexist-morph" style="--morph-w:' + (24 + chans.length * 70) + 'px" title="选择共存方案">' +
+            '<div class="coexist-morph" title="选择共存方案">' +
                 '<span class="morph-dots">' + SVG_DOTS + '</span>' +
                 '<span class="morph-opts">' + seg + '</span>' +
             '</div>';
@@ -2142,7 +2150,7 @@ JFC.pages.main = (function() {
         if (act === 'create') {
             var ch = currentCoexistChannel();
             if (!ch) { JFC.toastSuccess('没有可用的共存方案', 1800); return; }
-            JFC.bridge.createCoexistAccount(swId, ch, function(t, d) { afterPatchAction(swId, d); });
+            JFC.bridge.createCoexistAccount(swId, ch, function(t, d) { afterCoexistChange(swId, d); });
             return;
         }
         if (act.indexOf('pick:') === 0) {
@@ -2229,14 +2237,13 @@ JFC.pages.main = (function() {
             return;
         }
 
-        if (info.action === 'create') {
-            var ch = (swPatchPlan && swPatchPlan.coexist_mode) || '';
-            if (!ch) {
-                JFC.toastSuccess('没有可用的共存方案', 1800);
-                return;
-            }
-            JFC.bridge.createCoexistAccount(swId, ch, function(type, data) {
-                afterPatchAction(swId, data);
+        // 管理态点渠道按钮 = 启用/禁用该渠道（不是切换补丁）
+        if (info.action === 'toggle-channel') {
+            var mode = info.mode;                    // 'multirun' | 'anti-revoke'
+            var enable = (info.enabled === 'false'); // 当前禁用 → 点击后启用
+            JFC.bridge.setChannelEnabled(swId, mode, info.channel, enable, function(type, data) {
+                applyModePlan(swId, data);
+                JFC.toastSuccess(enable ? '已启用' : '已禁用', 1200);
             });
             return;
         }
@@ -2253,7 +2260,10 @@ JFC.pages.main = (function() {
             }
             var accId = (tableKey === 'coexist_acc') ? (info.accId || '') : '';
             JFC.bridge.switchPatch(swId, info.mode, info.channel, accId, function(type, data) {
-                afterPatchAction(swId, data);
+                if (data && data.msg) JFC.toastSuccess(data.msg, 1800);
+                // 关系联动可能改动同组多个渠道 → 只重拉这一组（纯读缓存，不扫描）
+                JFC.bridge.getModePlan(swId, info.mode, function(t, plan) { applyModePlan(swId, plan); });
+                if (tableKey === 'coexist_acc') loadCoexistPatchPlans(swId);
             });
         }
     }
@@ -2263,6 +2273,37 @@ JFC.pages.main = (function() {
         if (data && data.msg) JFC.toastSuccess(data.msg, 1800);
         loadPatchPlan(swId, false);   // 刷新不清空，避免闪一下"扫描中…"
         loadAccountData(swId);
+    }
+
+    /** 启用/禁用渠道后：只更新该模式那一组（程序行 + 共存行都同步 enabled 标记），不重扫其他模式 */
+    function applyModePlan(swId, data) {
+        if (!data || !data.channels) return;
+        var key = (data.mode === 'multirun') ? 'multirun' : 'revoke';
+        if (swPatchPlan) {
+            swPatchPlan[key] = data.channels;
+            if (accountTables.origin_prog) accountTables.origin_prog.setPatchPlan(swPatchPlan);
+        }
+        var t = accountTables.coexist_acc;
+        if (t && t.patchPlans) {
+            var byId = {};
+            data.channels.forEach(function(c) { byId[c.id] = c; });
+            Object.keys(t.patchPlans).forEach(function(id) {
+                var p = t.patchPlans[id];
+                if (!p || !p.revoke) return;
+                p.revoke.forEach(function(c) { if (byId[c.id]) c.enabled = byId[c.id].enabled; });
+            });
+            t.render();
+        }
+    }
+
+    /**
+     * 共存账号的增/删/重建：**只影响共存账号表**，不扫描、不碰程序行。
+     * 行状态走缓存查询（毫秒级），不触发任何扫描任务。
+     */
+    function afterCoexistChange(swId, data) {
+        if (data && data.msg) JFC.toastSuccess(data.msg, 1800);
+        loadAccountData(swId, 'coexist');
+        loadCoexistPatchPlans(swId);
     }
 
     // ---- 加载账号/程序数据 ----

@@ -183,6 +183,13 @@ public final class SwPatchCacheBuilder {
                     ? ((ObjectNode) existing).deepCopy() : MAPPER.createObjectNode());
         }
 
+        // 关系（parents/children/friends）与"扫描是否成功"无关 → 每轮都写进渠道节点的 relations 字段。
+        // 之前关系藏在 patch_rules 里，只有扫到适配才会进缓存；无适配的渠道就丢了关系（用户 2026-10-23 指出）
+        for (String ch : toUpdate) {
+            ObjectNode relNode = relationsOfChannel(channelsDict.get(ch), curVer);
+            if (relNode != null) perChannel.get(ch).set("relations", relNode);
+        }
+
         List<java.util.concurrent.Future<?>> futures = new ArrayList<>();
         for (String channel : toUpdate) {
             futures.add(CHANNEL_POOL.submit(() -> {
@@ -232,6 +239,74 @@ public final class SwPatchCacheBuilder {
         else LOG.info(summary, sw, mode, nOk, nSkip, nDis, nFail);
         boolean ok = results.values().stream().noneMatch(r -> r.status == Status.FAILED);
         return new BuildResult(ok, results, ok ? "成功" : "存在失败的渠道");
+    }
+
+    /**
+     * 取某渠道在指定版本下的关系集合（parents/children/friends）。
+     *
+     * <p>支持两种配置写法（新写法优先）：
+     * <ol>
+     *   <li>渠道级：{@code channels.<ch>.relation.ver_adaptations.<ver> = {parents|children|friends}}</li>
+     *   <li>规则级（旧）：{@code features[].patch_rules[]} 里 {@code type=relation} 且带同名 ver_adaptations</li>
+     * </ol>
+     * 关系本身与"能不能扫到补丁"无关，所以必须在扫描之外单独取。
+     *
+     * @return 三个键的 ObjectNode（只放非空项）；全空返回 null
+     */
+    static ObjectNode relationsOfChannel(JsonNode chDict, String curVer) {
+        if (chDict == null || !chDict.isObject()) return null;
+        java.util.LinkedHashSet<String> parents = new java.util.LinkedHashSet<>();
+        java.util.LinkedHashSet<String> children = new java.util.LinkedHashSet<>();
+        java.util.LinkedHashSet<String> friends = new java.util.LinkedHashSet<>();
+
+        // 1) 渠道级 relation
+        JsonNode rel = chDict.get("relation");
+        if (rel != null && rel.isObject()) {
+            collectRelations(rel.get("ver_adaptations"), curVer, parents, children, friends);
+        }
+
+        // 2) 规则级（旧写法，向后兼容）
+        JsonNode features = chDict.get("features");
+        if (features != null && features.isArray()) {
+            for (JsonNode feature : features) {
+                JsonNode rules = feature.get("patch_rules");
+                if (rules == null || !rules.isArray()) continue;
+                for (JsonNode rule : rules) {
+                    if (!"relation".equals(rule.path("type").asText())) continue;
+                    collectRelations(rule.get("ver_adaptations"), curVer, parents, children, friends);
+                }
+            }
+        }
+
+        if (parents.isEmpty() && children.isEmpty() && friends.isEmpty()) return null;
+        ObjectNode out = MAPPER.createObjectNode();
+        if (!parents.isEmpty()) { ArrayNode a = out.putArray("parents"); parents.forEach(a::add); }
+        if (!children.isEmpty()) { ArrayNode a = out.putArray("children"); children.forEach(a::add); }
+        if (!friends.isEmpty()) { ArrayNode a = out.putArray("friends"); friends.forEach(a::add); }
+        return out;
+    }
+
+    private static void collectRelations(JsonNode versDict, String curVer,
+                                         java.util.Set<String> parents,
+                                         java.util.Set<String> children,
+                                         java.util.Set<String> friends) {
+        if (versDict == null || !versDict.isObject()) return;
+        String ver = SwRuleResolver.findCompatibleVersion(curVer, versDict);
+        if (ver == null) return;
+        JsonNode body = versDict.get(ver);
+        if (body == null || !body.isObject()) return;
+        for (String key : List.of("parents", "children", "friends")) {
+            JsonNode arr = body.get(key);
+            if (arr == null || !arr.isArray()) continue;
+            for (JsonNode n : arr) {
+                String v = n.asText();
+                switch (key) {
+                    case "parents" -> parents.add(v);
+                    case "children" -> children.add(v);
+                    default -> friends.add(v);
+                }
+            }
+        }
     }
 
     // ==================== 单渠道 ====================

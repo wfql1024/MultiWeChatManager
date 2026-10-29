@@ -900,6 +900,15 @@
                         "EEEEhex",
                         "afaa1991"
                     ],
+                    "relation": {
+                        "ver_adaptations": {
+                            "4.1.0": {
+                                "children": [
+                                    "custom_alert"
+                                ]
+                            }
+                        }
+                    },
                     "features": [
                         {
                             "addr": "%dll_dir%/Weixin.dll",
@@ -960,16 +969,6 @@
                                             "modified": "01 ..."
                                         }
                                     }
-                                },
-                                {
-                                    "type": "relation",
-                                    "ver_adaptations": {
-                                        "4.1.0": {
-                                            "children": [
-                                                "custom_alert"
-                                            ]
-                                        }
-                                    }
                                 }
                             ]
                         }
@@ -981,6 +980,15 @@
                     "authors": [
                         "afaa1991"
                     ],
+                    "relation": {
+                        "ver_adaptations": {
+                            "4.1.0": {
+                                "parents": [
+                                    "alert"
+                                ]
+                            }
+                        }
+                    },
                     "features": [
                         {
                             "addr": "%dll_dir%/Weixin.dll",
@@ -994,16 +1002,6 @@
                                             "targets": [
                                                 "2D 20 E7 82 BA E7 A2 BA E4 BF 9D 20 57 65 43 68 61 74 20 E6 AD A3 E5 B8 B8 E4 BD BF E7 94 A8 EF BC 8C E5 BB BA E8 AD B0 E9 80 80 E5 87 BA 20 57 65 43 68 61 74 20 E4 B8 A6 E9 87 8D E6 96 B0 E5 95 9F E5 8B 95 E9 9B BB E8 85 A6 E5 BE 8C E5 86 8D E4 BD BF E7 94 A8 20 57 65 43 68 61 74 E3 80 82 00",
                                                 "2D 20 E5 A6 82 E6 9E 9C E7 95 B0 E5 B8 B8 E4 BB 8D E7 84 B6 E5 87 BA E7 8F BE EF BC 8C E5 8F AF E5 9F B7 E8 A1 8C E7 B3 BB E7 B5 B1 E7 A3 81 E7 A2 9F E5 B7 A5 E5 85 B7 E6 88 96 E7 AC AC E4 B8 89 E6 96 B9 E5 B7 A5 E5 85 B7 E5 B0 8D E7 A3 81 E7 A2 9F E9 80 B2 E8 A1 8C E6 AA A2 E6 9F A5 E3 80 82 00"
-                                            ]
-                                        }
-                                    }
-                                },
-                                {
-                                    "type": "relation",
-                                    "ver_adaptations": {
-                                        "4.1.0": {
-                                            "parents": [
-                                                "alert"
                                             ]
                                         }
                                     }

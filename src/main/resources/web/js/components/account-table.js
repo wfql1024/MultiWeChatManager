@@ -334,7 +334,8 @@ JFC.AccountTable = (function() {
 
         var head = this._headHtml();
         el.className = 'acc-table' +
-            ((this.mode === 'login' && this.hideColNamesInLogin) ? ' hide-col-names' : '');
+            ((this.mode === 'login' && this.hideColNamesInLogin) ? ' hide-col-names' : '') +
+            (this.mode === 'manage' ? ' table-manage' : '');
         el.setAttribute('data-table', this.id);
         var colgroupHtml = head.colgroup;
         var theadHtml = head.thead;
@@ -612,6 +613,7 @@ JFC.AccountTable = (function() {
         if (batch) batch.innerHTML = this._batchButtonsHtml();
         // 列名隐藏只作用于登录态：切模式时同步类名
         if (this.el) this.el.classList.toggle('hide-col-names', next === 'login' && !!this.hideColNamesInLogin);
+        if (this.el) this.el.classList.toggle('table-manage', next === 'manage');
         this.selectedIds.clear();       // 模式切换后旧选中项可能已不可见
         // 眼睛只在管理态出现；可见性按当前模式重新判定
         if (this.eyeEl) this.eyeEl.style.display = (next === 'manage') ? '' : 'none';
@@ -846,8 +848,25 @@ JFC.AccountTable = (function() {
     };
 
     /** 重绘表头附加按钮（共存表的 "+" / "···"） */
-    AccountTable.prototype.refreshHeaderActions = function() {        if (!this.actionsEl) return;
+    AccountTable.prototype.refreshHeaderActions = function() {
+        if (!this.actionsEl) return;
         this.actionsEl.innerHTML = this.headerActions ? (this.headerActions() || '') : '';
+        // 「···」延伸后的宽度按**实测内容宽**算（估算常量在方案数/文字不同时必然偏大或偏小）
+        this._fitMorphWidth();
+    };
+
+    /**
+     * 「···」展开宽度 = 各方案按钮实测宽之和 + 收起态的 22（dots）。
+     * 表被隐藏时量不到（宽 0）→ 悬浮时再量一次。
+     */
+    AccountTable.prototype._fitMorphWidth = function() {
+        if (!this.actionsEl) return;
+        var morph = this.actionsEl.querySelector('.coexist-morph');
+        if (!morph) return;
+        var sum = 0;
+        morph.querySelectorAll('.coexist-seg-btn').forEach(function(b) { sum += b.offsetWidth; });
+        // 展开宽度 = 方案按钮宽之和（圆点在悬停时让位，不计入）
+        if (sum > 0) morph.style.setProperty('--morph-w', Math.ceil(sum) + 'px');
     };
 
     /** 设置程序行的补丁计划（共存/多开/防撤）并重绘 */
@@ -874,10 +893,23 @@ JFC.AccountTable = (function() {
         if (plan === 'SCANNING') return '<span class="patch-hint">扫描中…</span>';
         if (!plan) return '<span class="patch-hint">—</span>';
 
+        var manage = this.mode === 'manage';
+
         function group(label, items, mode, selectedId) {
             if (!items || !items.length) return '';
+            // 登录态：被禁用的渠道**不显示**（管理态才显示，且排在右边加删除线）
+            var list = manage ? items.slice() : items.filter(function(it) { return it.enabled !== false; });
+            if (!list.length) return '';   // 该组渠道全被禁用 → 连组名一起不显示
+            if (manage) {
+                // 已启用靠左、已禁用靠右（各自保持配置顺序）
+                list.sort(function(a, b) {
+                    var ea = a.enabled === false ? 1 : 0, eb = b.enabled === false ? 1 : 0;
+                    return ea - eb;
+                });
+            }
             var s = '<span class="patch-group"><span class="patch-group-label">' + label + '</span>';
-            items.forEach(function(it) {
+            list.forEach(function(it) {
+                var off = (it.enabled === false);
                 var cls = 'patch-btn';
                 if (mode === 'coexist') {
                     if (it.id === selectedId) cls += ' on';
@@ -885,15 +917,33 @@ JFC.AccountTable = (function() {
                     cls += ' on';
                 }
                 if (it.state === 'unknown') cls += ' unknown';
+                if (off) cls += ' off';
+                // 关系写进 tooltip（互斥是默认行为，不强调；只写前置/后置/可共存）
+                var relTip = '';
+                if (it.parents && it.parents.length) relTip += '  前置: ' + it.parents.join(',');
+                if (it.children && it.children.length) relTip += '  后置: ' + it.children.join(',');
+                if (it.friends && it.friends.length) relTip += '  可共存: ' + it.friends.join(',');
                 var tip = (it.introduce || '')
                     + (it.authors && it.authors.length ? '  作者: ' + it.authors.join(',') : '')
+                    + relTip
                     + (it.msg ? '  ' + it.msg : '');
+                if (manage && mode !== 'coexist') {
+                    tip += off ? '  （点击启用）' : '  （点击禁用）';
+                }
+                // 管理态：悬浮时文字换成 -（启用中→禁用它）/ +（已禁用→启用它），纯 CSS 切换
+                var toggleable = manage && mode !== 'coexist';
+                if (toggleable) cls += ' patch-btn-toggle';
+                var labelHtml = '<span class="patch-btn-label">' + escapeHtml(it.alias || it.id) + '</span>';
+                if (toggleable) {
+                    labelHtml += '<span class="patch-btn-glyph">' + (off ? '+' : '-') + '</span>';
+                }
                 s += '<button class="' + cls + '"'
                     + ' data-patch-mode="' + escapeAttr(mode) + '"'
                     + ' data-patch-channel="' + escapeAttr(it.id) + '"'
                     + ' data-patch-acc="' + escapeAttr(id) + '"'
-                    + ' title="' + escapeAttr(tip) + '">'
-                    + escapeHtml(it.alias || it.id) + '</button>';
+                    + (manage && mode !== 'coexist' ? ' data-patch-action="toggle-channel"' : '')
+                    + ' data-patch-enabled="' + (off ? 'false' : 'true') + '"'
+                    + ' title="' + escapeAttr(tip) + '">' + labelHtml + '</button>';
             });
             return s + '</span>';
         }
@@ -1176,7 +1226,9 @@ JFC.AccountTable = (function() {
         var d = t.colDrag;
         // 被拖列跟手：纯客户端位移，不做任何测量
         var pointerLeft = d.startLeft + (e.clientX - d.startClientX);
-        var center = pointerLeft + d.width / 2;
+        // 落点按**鼠标位置**判定（不是被拖列的中心）—— 列很宽时，中心可能还在原槽位里，
+        // 手指已经越过邻居了，用户会觉得"拖了没反应"
+        var center = e.clientX;
 
         // 落点 = 指针中心落在**哪一个初始槽位**里（初始坐标不随拖动变化 → 不会反复横跳）
         // 宽度悬殊时也不会抽搐：A(10) 拖过 B(90) 后，指针只要还在 B 的初始区间内，落点就恒为 1
@@ -1279,6 +1331,11 @@ JFC.AccountTable = (function() {
                 self._updateSelectionUI();
             });
         }
+
+        // 悬停「···」时再量一次宽度（表曾被隐藏时首次量不到）
+        this.el.querySelector('.acc-table-titlebar').addEventListener('mouseover', function(e) {
+            if (e.target.closest && e.target.closest('.coexist-morph')) self._fitMorphWidth();
+        });
 
         // 批量操作
         this.el.querySelector('.acc-table-titlebar').addEventListener('click', function(e) {
@@ -1424,8 +1481,9 @@ JFC.AccountTable = (function() {
             if (!btn) return;
             e.stopPropagation();
             e.preventDefault();
-            // 未适配（虚框）：只允许看提示，不可点
-            if (btn.classList.contains('unknown')) return;
+            // 未适配（虚框）：切补丁不可点；但管理态的"启用/禁用渠道"必须可点（禁用是用户选择，与适配无关）
+            if (btn.classList.contains('unknown')
+                && btn.getAttribute('data-patch-action') !== 'toggle-channel') return;
             if (!self.onPatchAction) return;
             var act = btn.getAttribute('data-patch-action');
             if (act) {
@@ -1434,6 +1492,7 @@ JFC.AccountTable = (function() {
                     action: act,
                     mode: btn.getAttribute('data-patch-mode'),
                     channel: btn.getAttribute('data-patch-channel'),
+                    enabled: btn.getAttribute('data-patch-enabled'),
                     accId: btn.getAttribute('data-patch-acc') || ''
                 });
                 return;

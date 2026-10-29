@@ -356,6 +356,21 @@ public final class SwOperatorCore {
                     "friends", Collections.emptyList());
         }
 
+        // 缓存里渠道级 relations 优先（扫描成功与否都会写，见 SwPatchCacheBuilder.relationsOfChannel）
+        JsonNode relNode = cache == null ? null
+                : cache.path(sw).path(mode).path(SwCoreConstants.RemoteSwKey.CHANNELS)
+                        .path(channel).get("relations");
+        if (relNode != null && relNode.isObject()) {
+            Map<String, List<String>> out = new LinkedHashMap<>();
+            for (String key : List.of("parents", "children", "friends")) {
+                List<String> list = new ArrayList<>();
+                JsonNode arr = relNode.get(key);
+                if (arr != null && arr.isArray()) arr.forEach(n -> list.add(n.asText()));
+                out.put(key, list);
+            }
+            return out;
+        }
+
         List<Map<String, Object>> addrPatchesDicts = getCachePreciseEntry(
                 cache, sw, mode, channel, currVer);
         if (addrPatchesDicts == null) {

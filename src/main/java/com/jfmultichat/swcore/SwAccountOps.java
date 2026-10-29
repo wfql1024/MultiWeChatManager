@@ -44,11 +44,9 @@ public final class SwAccountOps {
             String sw, String coexistExe, AccountOpsProvider accountOps) {
 
         JsonNode coexistExeDict = accountOps.getSwAccData(sw, coexistExe);
-        if (coexistExeDict == null || !coexistExeDict.isObject()) {
-            // 创建空节点
-            accountOps.updateSwAccData(sw, Map.of(coexistExe, ""), Map.of());
-            coexistExeDict = accountOps.getSwAccData(sw, coexistExe);
-        }
+        // 节点还不存在时**什么都不做**：空字典不会让配置层建节点（旧实现因此拿到 null → 强转 NPE），
+        // 调用方随后写入 channel 时会把它建出来。
+        if (coexistExeDict == null || !coexistExeDict.isObject()) return;
 
         ObjectNode dictNode = (ObjectNode) coexistExeDict;
 

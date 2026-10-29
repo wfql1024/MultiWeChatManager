@@ -168,6 +168,90 @@ class SwPatchCacheBuilderTest {
     }
 
     @Test
+    void relation_survivesWhenChannelHasNoAdaptation() throws Exception {
+        // 关系与"扫不扫得到补丁"无关：特征码完全不匹配时，relations 仍然要进缓存、仍然能读回
+        // （用户 2026-10-23：Weixin 的"通知/通知*"在 4.1.15 上都没适配，但关系必须还在）
+        TestEnv env = new TestEnv(tmp);
+        env.setVersionedExe();
+        ObjectNode relation = MAPPER.createObjectNode();
+        relation.put("type", "relation");
+        relation.putObject("ver_adaptations").putObject(env.version())
+                .putArray("children").add("kid_ch");
+
+        ObjectNode feature = MAPPER.createObjectNode();
+        feature.put("addr", "%inst_dir%/fake.exe");
+        feature.putArray("patch_rules").add(env.simpleRule(fill(0xC3, 24), fill(0x90, 24))).add(relation);
+        ObjectNode channel = MAPPER.createObjectNode();
+        channel.put("alias", "父渠道");
+        channel.putArray("features").add(feature);
+
+        ObjectNode remote = MAPPER.createObjectNode();
+        ObjectNode mode = remote.putObject(SW).putObject("multirun");
+        mode.putObject("channels").set("mom_ch", channel);
+        env.remote = remote;
+
+        SwPatchCacheBuilder.build(SW, "multirun", null, false, env.accessor(), env.cache());
+
+        assertNull(env.cacheEntry("multirun", "mom_ch"), "特征码不该命中（没有版本缓存）");
+        Map<String, List<String>> rel = SwOperatorCore.getRelationsOfChannel(
+                SW, "multirun", "mom_ch", env.cache(), env.accessor());
+        assertEquals(List.of("kid_ch"), rel.get("children"), "无适配时关系也必须能从缓存读回");
+    }
+
+    @Test
+    void relation_rule_landsInCache_andIsReadable() throws Exception {
+        // relation 规则不扫描文件，只把 parents/children/friends 带进缓存 patch 条目；
+        // getRelationsOfChannel 再从缓存里把它们读回来（切换补丁时的互斥/前置/后置判断依赖它）
+        TestEnv env = new TestEnv(tmp);
+        env.setVersionedExe();
+        byte[] pattern = env.pickPattern(0x300, 8);
+
+        ObjectNode relation = MAPPER.createObjectNode();
+        relation.put("type", "relation");
+        relation.putObject("ver_adaptations").putObject(env.version())
+                .putArray("parents").add("parent_ch");
+
+        ObjectNode feature = MAPPER.createObjectNode();
+        feature.put("addr", "%inst_dir%/fake.exe");
+        feature.putArray("patch_rules").add(env.simpleRule(pattern, fill(0x90, 8))).add(relation);
+
+        ObjectNode channel = MAPPER.createObjectNode();
+        channel.put("alias", "子渠道");
+        channel.putArray("features").add(feature);
+
+        ObjectNode remote = MAPPER.createObjectNode();
+        ObjectNode mode = remote.putObject(SW).putObject("multirun");
+        mode.put("alias", "多开");
+        mode.putObject("channels").set("child_ch", channel);
+        env.remote = remote;
+
+        SwPatchCacheBuilder.build(SW, "multirun", null, false, env.accessor(), env.cache());
+
+        JsonNode entries = env.cacheEntry("multirun", "child_ch");
+        assertNotNull(entries, "应该写入了缓存");
+        boolean foundParents = false;
+        for (JsonNode entry : entries) {
+            JsonNode patches = entry.get("patches");
+            if (patches == null) continue;
+            for (JsonNode p : patches) {
+                if (p.has("parents") && p.get("parents").toString().contains("parent_ch")) foundParents = true;
+            }
+        }
+        assertTrue(foundParents, "relation 规则的 parents 必须进入缓存的 patches 条目: " + entries);
+
+        Map<String, List<String>> rel = SwOperatorCore.getRelationsOfChannel(
+                SW, "multirun", "child_ch", env.cache(), env.accessor());
+        assertEquals(List.of("parent_ch"), rel.get("parents"), "getRelationsOfChannel 要能读回前置渠道");
+        assertTrue(rel.get("children").isEmpty());
+        assertTrue(rel.get("friends").isEmpty());
+
+        // 启用子渠道时要连带补扫它的前置（用户 2026-10-23 定：启用子必然启用父）
+        List<String> toScan = SwPatchService.channelsToScanOnEnable(
+                SW, "multirun", "child_ch", env.accessor());
+        assertEquals(List.of("child_ch", "parent_ch"), toScan);
+    }
+
+    @Test
     void build_keepsAddrTemplate() throws Exception {
         // 缓存里必须保留配置模板（%变量%），不能替成解析后的绝对路径
         TestEnv env = new TestEnv(tmp);

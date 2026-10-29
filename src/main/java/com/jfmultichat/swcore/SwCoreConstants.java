@@ -109,6 +109,8 @@ public final class SwCoreConstants {
          */
         public static final String HOTKEY = "hotkey";
         public static final String COEXIST_MODE = "coexist_mode";
+        /** 用户禁用的渠道：`{模式: [渠道 id, ...]}`（模式键用 remote 的 anti-revoke / multirun / coexist） */
+        public static final String DISABLED_CHANNELS = "disabled_channels";
         public static final String REST_MULTIRUN_MODE = "rest_multirun_mode";
         public static final String GLOBAL_SECTION = "global";
         public static final String ALL_HAS_MUTEX = "all_has_mutex";
