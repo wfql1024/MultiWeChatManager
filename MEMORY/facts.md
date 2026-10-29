@@ -250,6 +250,28 @@ TaskRegistry.get().submit("detect", "探测 WeChat 路径", swId, () -> {   // �
 - **长期缓存**：`ConfigManager` 缓存 `remoteSw` / `remoteGlobal`（volatile）；写入口 `setRemoteSw`/`setRemoteGlobal` 顺手刷新；切用户数据目录 `invalidateRemoteCache()`
 - **发布流程**：改 `scripts/original_remote_sw_<vN>.json` → 跑 `scripts/publish-configs.bat`（或 `gradle encryptRemoteConfigs`）→ 版本号变了就同步 `RemoteConfigFetcher.BUILTIN_REMOTE_*_VERSION` → 提交推送
 
+#### 版本化配置与"同步填充"（2026-10-23 用户重申）
+
+- **三族**：`global`（main v2 → python v1）、`sw`（main v10 → python v9）、`setting`（**只在 python 侧**：v4 / v7 / v8）
+- **维护线**（用户 2026-10-23 定）：Python 侧**冻结在 sw_v9 / global_v1**（旧版程序不再加功能）；
+  Java 侧现役 sw_v10 / global_v2，**今后会出 v11、v12…且各版本可能都有用户在用 → 每个都要维护**，
+  直到用户明确交代某版本退役。详见 `decisions.md` D-55。
+- **铁律**：旧版发布的 JSON **结构绝对不可改** —— 旧客户端把版本号与解析方式写死了；
+  同步 = **按旧版已有结构填充内容**，旧版结构表达不了的内容**直接丢弃**；多条映射按版本**级联**（v10→v9→v8…）。
+- **已实测的结构差异**（工具：`LegacyConfigSync.adapt`，位于 `src/tools`）：
+
+| 步骤 | 差异 | 状态 |
+|---|---|---|
+| sw v10 → v9 | 仅 `channels.<ch>.relation`（渠道级关系，v10 新增）；v9 只有 `features[].patch_rules[]` 里 `type=relation` → 搬进去 | **已实现** |
+| global v2 → v1 | 结构完全一致 | 原样直通 |
+| setting v8 → v7 | v8 用 `channels.<ch>.features[]`；v7 用 `channels.<ch>.feature_ver_adaptations.<ver>[]`（按版本分组） | 待实现（main 侧暂无 setting 源） |
+| setting v7 → v4 | v4 更老：`mode.channel.<ch>` + `mode.feature.<ver>.<ch>` + `mode.precise.<ver>` 平面结构，信息量更少，只能填它支持的部分 | 待实现 |
+
+- **同步产物的排版**：4 空格缩进、`": "` 分隔、空容器写 `{}`/`[]`（Jackson 默认是 `{ }`/`[ ]`，工具里做归一化），
+  目的是让 python 侧 diff 只剩"真正移动的内容"。
+- **发布命令**：`gradle publishRemoteConfigs`（加密 main 侧 → 同步 python 侧 → 再加密 python 侧）；
+  `CryptoUtilsTest.publishedConfigsMatchTheirSources` 会校验源与加密产物一致 → **改了源必须重跑发布**。
+
 ### 3.3 路径探测（自动填充优先级）
 
 **存在**（已保存的路径）> 进程 > 内存映射 > DLL 遍历 > 注册表 > 猜测/其他 SW > 来源数量。
@@ -476,10 +498,50 @@ rescanPatches / scanCoexist / scanAccPatch / switchPatch / createCoexistAccount 
   有失败用 WARN）；每个渠道的失败明细、每行"实例计划"都在 DEBUG。
 - 补丁列"自适应宽度"：把 `.patch-groups` 临时 `nowrap` 读 `scrollWidth`，量完仍折行就每次 +24px 继续加宽。
 
+
+#### 7.4.1 渠道启用/禁用（用户自选，2026-10-23~30 建成）
+
+- **只在管理态可操作**：点渠道按钮 = 启用/禁用（悬浮时文字变 `-`/启用中、`+`/已禁用；宽度不变）。
+  已启用**靠左**、已禁用**靠右 + 删除线**；组内渠道全禁用时**连组名一起隐藏**。
+- **登录态**：被禁用的渠道**不渲染**，也不参与扫描；选中的是启用的才显示。
+- **不扫描**：管理态的启用/禁用**只改开关 + 从缓存重读该模式**（毫秒级）。扫描是登录态/显式刷新的事。
+- **存储**：`LocalSwConfig.<平台>.disabled_channels = { "anti-revoke": [...], "multirun": [...] }`（按模式隔离）。
+  写入必须走 `updateSwSettings`（`putPOJO`）—— `saveAndCheckChanged` 会 `value.toString()` 把 Map 写成字符串。
+- **关系传播**：启用子渠道 → 同时启用它的 `parents`；禁用父渠道 → 同时禁用它的 `children`。
+- **扫描/识别分离**：`SwAdapterChecker.identifyChannels(scanChannels, checkChannels, …)` ——
+  补扫某个渠道时**识别仍覆盖全部缓存渠道**，否则其它渠道会显示成"未知"。
+- **关系独立缓存**：`channels.<ch>.relations = {parents|children|friends}`，由 `SwPatchCacheBuilder` 在扫描之外单独写入，
+  **与有没有适配无关**；`getRelationsOfChannel` 优先读它，回退到 `patches` 里的旧写法。
+- **登录态切换补丁时按关系联动**（照旧版）：启用 A → 关闭同组非 friend 非 parent、依次开启 parents、再开自己；
+  关闭 A → 先关 children（失败忽略）、再关自己；**前置不可用 = 本渠道不可用**（拒绝并说明）。
+- **tooltip** 显示 `前置 / 后置 / 可共存`；互斥是默认行为，不额外标注。
+
 ### 7.5 并行度与耗时实测（192MB `Weixin.dll`，2026-10-23）
 
 - **三级并行**：模式串行 → 渠道并行（池 3）→ 规则并行（池 4）。
 - 实测：1 条规则 807ms；7 条规则串行 2483ms / 4 线程 953ms；缓存预热后整表刷新约 1s。
 - **内存带宽瓶颈**：把模式也并行、渠道池开 6 之后整体变慢（4.7s → 5.1s）→ 已回退。加线程救不了全文件扫描。
 - 共存表头曾因"整平台串行锁"白等 4.8s；去锁后 0.2s；每步"每模式恰好一次扫描"已用真机日志逐一核对。
+
+## 8. 启动期提权与工具链（2026-10-24 / 10-27）
+
+### 8.1 打包版默认管理员运行（`boot/AdminBoot`，2026-10-24）
+
+- 入口：`Launcher.main` 最前面调用 `AdminBoot.ensureElevated(args)`；**刻意不用 JNA**（全走 `whoami` / `reg` / `powershell` / `mshta` 系统命令）。
+- 流程：已提权 → 顺手写 `HKCU…\AppCompatFlags\Layers` 的 `~ RUNASADMIN`（以后双击直接提权）；
+  未提权且是打包启动器 → `powershell Start-Process -Verb RunAs` 重启自身并退出；用户取消 UAC → `mshta` 提示后退出。
+- **`--dev` / 非 jar 运行不提权**（`gradle run` 不受影响）。
+- 已知副作用：每次启动一次 UAC；提权后**从非提权资源管理器拖文件进窗口会被 UIPI 拦**（改用"浏览"按钮）；
+  jpackage 17 不支持自定义 manifest（实测 `--resource-dir` 传 manifest 无效）。
+- 背景：本机「联想电脑管家 / Huorong（`wsctrl11.exe`）」的文档保护**按进程映像拦截** —— 同一令牌下 `cmd`/`node` 能写 `%APPDATA%`，
+  只有 **JVM** 报 `AccessDeniedException`。详见 `decisions.md` D-56 与 `lessons.md`「安全软件 / 提权」。
+
+### 8.2 特征码维护 skill（`.dsh/skills/signature-maintenance/`，2026-10-27）
+
+- 内容：`SKILL.md` + `scripts/diffsig.py`，子命令 `diff / extract / match / check / merge / locate`。
+- 用途：从"原版 vs 已打补丁"的 dll 差异提炼**不含通配符**的 original/modified；判定已存特征能否覆盖新版本；
+  产出可直接粘进 `scripts/original_remote_sw_v10.json` 的草稿。
+- 4.1.15.13 基线：silence PASS；**multirun/default 失效**（4.1.9 键把 `FF 15 F9 CE 08` 的 RIP 相对 disp32 写死成具体字节，
+  新版只差这 3 字节）；alert 多重命中；custom_alert 的 jmp_offset FAIL；bubble 7 条规则全被作者弃用。
+
 

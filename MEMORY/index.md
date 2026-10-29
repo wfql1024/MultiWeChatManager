@@ -152,4 +152,36 @@
 - **归宿**：`AGENTS.md`、`MEMORY/{facts,decisions,lessons,dev_logs,index}.md`
 - **遗留待定**：渠道自选（用户规划）；`multi_state` 是否删除（D-50）；Weixin 4.1.15 上 default/bubble/alert/custom_alert 无适配（与旧版一致）
 
+### 2026-10-24（第六次整理·第一天：安全软件拦截 → 打包版一刀切管理员）
+- **来源**：`tmp/2026-10-24.md` 3 张卡片（00:10:36 火绒文档保护拦 JVM 写用户目录 / 02:05:33 E:\Now 也不可写 + 按映像过滤 /
+  02:31:42 AdminBoot 落地）
+- **做了**：
+  - `facts.md` 新增 **§8.1 打包版默认管理员运行**（AdminBoot 流程、不用 JNA 的原因、副作用）
+  - `decisions.md` 新增 **D-56**（一刀切管理员：背景 / 决策 / 实现约束 / 代价）
+  - `lessons.md` 新增「安全软件 / 提权 / 特征码工具链」前 5 条（ACL 不能按映像区分、必须用 schtasks LIMITED 验证、
+    DSH 沙箱改过 ACL、普通令牌下 JNA/注册表都被拦、jpackage 17 改不了 launcher 资源）
+  - `dev_logs.md` 新增「启动期提权 + 安全软件拦截（2026-10-24）」
+- **归宿**：`MEMORY/{facts,decisions,lessons,dev_logs}.md`（`tmp/2026-10-24.md` 保留原件）
+
+### 2026-10-27（第六次整理·第二天：特征码维护 skill 落地）
+- **来源**：`tmp/2026-10-27.md` 1 张卡片（01:05:16 skill 落地 + 4.1.15.13 基线 check 结论）
+- **做了**：
+  - `facts.md` 新增 **§8.2 特征码维护 skill**（位置、六个子命令、4.1.15.13 基线结论）
+  - `lessons.md` 补一条（"特征码别把 RIP 相对偏移写成死字节"）
+  - `dev_logs.md` 新增「特征码维护 skill（2026-10-27）」
+- **归宿**：`MEMORY/{facts,lessons,dev_logs}.md`（`tmp/2026-10-27.md` 保留原件）
+
+### 2026-10-30（第六次整理·第三天：渠道自选 + 关系联动 + 版本化配置策略）
+- **来源**：`tmp/2026-10-30.md` 4 张卡片（01:33:18 补记：渠道启用禁用/关系/版本化配置；01:36:27 与 01:38:12 与 01:39:54
+  三张关于"漏写素材卡"的机制化）
+- **做了**：
+  - `facts.md` 新增 **§7.4.1 渠道启用/禁用**（管理态交互、登录态隐藏、不扫描、`disabled_channels` 存储、关系传播、
+    扫描/识别分离、关系独立缓存、登录态关系联动、tooltip 规则）；`§3.2` 补"版本化配置与同步填充"
+  - `decisions.md` 新增 **D-55**（版本维护策略：Python 冻结 sw_v9/global_v1，Java 侧每版都要维护）
+  - `lessons.md` 补 4 条（对象被 `toString/asText` 拍扁、扫描列表≠识别列表、关系别跟着扫描走、规矩放错层）
+  - `dev_logs.md` 新增「渠道启用/禁用 + 关系联动 + 版本化配置（2026-10-23 ~ 10-30）」
+  - `AGENTS.md` 顶部加"每轮收尾必写素材卡"红线（指向全局 `~/.dsh/AGENTS.md` 的素材流条目）
+- **归宿**：`AGENTS.md`、`MEMORY/{facts,decisions,lessons,dev_logs,index}.md`（`tmp/2026-10-30.md` 保留原件）
+
+
 - **遗留待定**：QQNT pid 过期自动重发现；旧版 WeChat/老 QQ 未逐平台验证；D-46 登录按钮 UIA 优先尚未接线

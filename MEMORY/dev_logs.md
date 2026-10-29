@@ -912,6 +912,38 @@ JavaFX WebView 与 Chromium 的布局细节不同，**要确认 WebView 里的�
   - 31 处中文数字二级标题 + 35 处三级标题 → "主题 + 日期"式；删掉"自 AGENTS.md 迁入"式标题
   - **逐对核对后删掉 19 条无编号重复条目**（18 对全部确认"详版为严格超集"，仅 2 处独有→先回填）
   - 删掉 `
+## 启动期提权 + 安全软件拦截（2026-10-24）
+
+**问题**：便携版启动后数据目录不可写（`AccessDeniedException`），但同令牌下 `cmd`/`node` 写同一路径正常。
+
+**定位**：`schtasks` 建 LIMITED 任务（真 Medium 令牌）复现 → `icacls` 显示 ACL 完全允许 → Defender CFA/ASR/SAC 均未开启 →
+纯 Java 探针逐路径试写（`%APPDATA%`/`Documents`/`Desktop`/`E:\Now` 全失败，`E:\` 正常）→ 同会话 `cmd`/`node` 可写
+→ 结论：**联想电脑管家 / Huorong（`wsctrl11.exe`）按进程映像拦 JVM**；顺带发现它也会拦 jpackage 改 launcher 资源（error 5）。
+
+**落地**（用户拍板一刀切管理员）：`boot/AdminBoot` 全走系统命令（不用 JNA）；已提权 → 登记 `~ RUNASADMIN`；
+未提权 → `Start-Process -Verb RunAs` 重启；取消 → 提示退出；`--dev` 不提权。
+**验证**：管理员下 `isElevated=true`/`markRunAsAdmin=true`/`readFlag=~ RUNASADMIN`；LIMITED 下 `isElevated=false` 且 `reg add` 被拒；
+重打包冒烟 `数据目录可写 -> true`。
+
+## 特征码维护 skill（2026-10-27）
+
+建 `.dsh/skills/signature-maintenance/`（`SKILL.md` + `scripts/diffsig.py`，六个子命令），用 4.1.15.13 真机 dll 跑通
+`check → locate → merge → 唯一性校验` 闭环：silence PASS；multirun/default 因 4.1.9 键把 RIP 相对 disp32 写死而失效（差 3 字节）；
+alert 多重命中；custom_alert jmp_offset FAIL；bubble 7 条规则全被作者弃用。另查实 `Weixin.dll.bak` 与当前 dll 同哈希（不是干净原版）。
+
+## 渠道启用/禁用 + 关系联动 + 版本化配置（2026-10-23 ~ 10-30）
+
+1. 管理态渠道按钮 = 启用/禁用（悬浮 `-`/`+`、已启用靠左、已禁用靠右 + 删除线；组内全禁用则连组名隐藏）；
+   登录态不渲染禁用渠道；**启用/禁用不扫描**（扫描是登录态的事），存储 `disabled_channels`（按模式隔离）。
+2. 两个"配置丢失"坑：`saveAndCheckChanged` 的 `value.toString()`、`saveSwConfig` 的 `asText()` 兜底 → 对象被写成 `""`；
+   改为 `updateSwSettings` / `convertValue`，并把该键从前端设置载荷里剔除。
+3. relation 自检：解析/缓存/读取本来就对，但**切换补丁完全没用关系** → 按旧版实现（启用关闭同组非 friend 非 parent、
+   开启 parents、开自己；关闭先关 children 再关自己；前置不可用 = 本渠道不可用）；关系改为**扫描之外单独缓存**
+   （`channels.<ch>.relations`），无适配也能读回。
+4. 扫描与识别分离（`scanChannels` / `checkChannels`），修掉"启用一个渠道把其它渠道状态弄成未知"。
+5. 版本化远程配置：v10 可改结构；旧版结构冻结，`LegacyConfigSync` 按版本级联填充（sw v10→v9 关系降级、global v2→v1 直通）。
+**证据**：`gradle test` 75 例 0 失败；多轮真机日志与配置文件逐项核对。
+
 ## 补丁系统（防撤 / 多开 / 共存）迁移与打磨（2026-10-21 ~ 10-23）
 
 **目标**：把旧版 `func_core/sw_func_core.py` 的补丁能力做成成品，并**并入账号管理页**（不另开窗口）。

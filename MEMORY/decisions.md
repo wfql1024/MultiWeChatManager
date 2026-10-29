@@ -584,6 +584,7 @@
   5. 所有表格交互（悬浮切换、右键菜单、列宽/换序/显隐、字体分段）都在组件内，新加列只加定义。
 - **状态**：已定、已落地
 
+
 ## D-54 不用联网下载 Gradle 9.8.1，改用本地 zip + wrapper（2026-10-22 定，**已落地**）
 
 - **背景**：VS Code Gradle 扩展报 "Build Error" —— 它找不到 wrapper、回退自带 tooling-api 想下 9.8.1，
@@ -592,4 +593,30 @@
   不下载 9.8.1，也不去改扩展配置（它根本没有 gradle home 项）。
 - **代价**：换机器/换路径要改 `distributionUrl`；zip 必须用 `tar.exe -a -c -f` 打（`Compress-Archive` 缺目录项）。
 - **状态**：已定、已落地
+
+## D-55 版本化远程配置的维护策略：旧版结构冻结，按版本级联填充（2026-10-23 用户定）
+
+- **背景**：我给 `relation` 换了结构后，一度想连 Python 侧一起改；用户纠正：**旧版 JSON 结构绝对不可改**。
+- **事实**：配置用版本号区分（`original_remote_sw_vN` / `global_vN` / `setting_vN`），旧客户端把版本号与解析方式**写死**，
+  所以对旧版只能"按它已有的结构填内容"，结构表达不了的内容**直接丢弃**。
+- **当前版本线**：
+  - Python（旧版程序）：**冻结在 `sw_v9` / `global_v1`** —— 用户已让用户升级到最新版，今后只做稳定性维护、不加功能，
+    所以这两份会一直用下去；
+  - Java（本工程）：现役 `sw_v10` / `global_v2`，**将来会继续迭代 v11、v12…**，且各版本可能都还有用户在用 → **每个都要维护**。
+- **维护动作**（每发一个新版本都做）：新增源文件 → 在 `LegacyConfigSync.MAPPINGS` 里加一条 `v(N)→v(N-1)`，
+  并在 `adapt` 里实现"旧结构能装下的部分"，级联到所有仍需维护的旧版 → 跑 `gradle publishRemoteConfigs` →
+  版本号变了就同步 `RemoteConfigFetcher.BUILTIN_REMOTE_*_VERSION`。
+- **退役**：某个版本不再需要维护时**由用户明确交代**，我再把它从链上摘掉；不自行删减。
+- **状态**：已定（当前实现 sw v10→v9 的关系降级 + global v2→v1 直通；setting 族暂无 main 侧源）
+
+## D-56 打包版默认以管理员身份运行（2026-10-24 用户拍板，**已实现**）
+
+- **背景**：本机安全软件（联想电脑管家 / Huorong 文档保护）**按进程映像**拦截 —— 普通令牌下只有 JVM 写用户目录被拒
+  （`%APPDATA%`/`Documents`/`Desktop` 全失败，`cmd`/`node` 正常）；连 `reg add HKCU` 都被拒。
+- **决策**：**一刀切管理员**。`Launcher` 最前面调 `AdminBoot.ensureElevated`：已提权则登记 `~ RUNASADMIN` 兼容层；
+  未提权则 `powershell Start-Process -Verb RunAs` 重启自身；取消 UAC → 提示并退出。`--dev` 不提权。
+- **实现约束**：全程不用 JNA（普通令牌下 JNA 连解压 `jnidispatch.dll` 都会失败）；登记必须放提权之后。
+- **代价**：每次启动一次 UAC；提权后从非提权资源管理器拖文件进窗口会被 UIPI 拦（改走"浏览"按钮）；
+  jpackage 17 无法自定义 manifest，只能靠注册表兼容层。
+- **状态**：已定、已实现（冒烟通过：`数据目录可写 -> true`），待用户双击验证 UAC
 
