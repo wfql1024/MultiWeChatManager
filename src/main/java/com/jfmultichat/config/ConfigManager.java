@@ -43,6 +43,8 @@ public class ConfigManager {
 
     private Path userDataPath;
     private volatile boolean initialized;
+    /** 数据目录是否可写（启动/迁移时用探针文件实测；打包版排查"看不到数据文件"用） */
+    private volatile boolean dataDirWritable = true;
 
     // ==================== 单例 ====================
 
@@ -91,6 +93,8 @@ public class ConfigManager {
         // 2. 确定 user_data_path
         userDataPath = resolveUserDataPath(rootConfig.getUserDataPath());
         AppPaths.ensureDir(userDataPath);
+        dataDirWritable = probeWritable(userDataPath);
+        LOG.info("数据目录可写: {} -> {}", userDataPath, dataDirWritable);
         rootConfig.setUserDataPath(userDataPath.toString());
         saveRootConfig();
 
@@ -185,6 +189,29 @@ public class ConfigManager {
     public Path getUserDataPath() { return userDataPath; }
     public Path getLogsDir() { return userDataPath.resolve("logs"); }
 
+    /** 当前数据目录是否可写（启动/迁移时探针实测） */
+    public boolean isDataDirWritable() { return dataDirWritable; }
+
+    /**
+     * 用探针文件实测目录可写性.
+     * <p>不能只靠 {@code mkdirs()} 的返回值判断 —— 目录存在但不可写时它照样返回 true，
+     * 于是后面每次写盘都失败却没人知道（打包版"看着没功能"就是这么来的）.
+     *
+     * @return true = 能创建目录且能写入并删除探针文件
+     */
+    public static boolean probeWritable(Path dir) {
+        try {
+            Files.createDirectories(dir);
+            Path probe = dir.resolve(".write-probe");
+            Files.writeString(probe, Long.toString(System.currentTimeMillis()));
+            Files.deleteIfExists(probe);
+            return true;
+        } catch (Exception e) {
+            LOG.error("数据目录不可写: {} ({})", dir, e.toString());
+            return false;
+        }
+    }
+
     // ==================== RootConfig ====================
 
     public RootConfig getRootConfig() { return rootConfig; }
@@ -194,14 +221,18 @@ public class ConfigManager {
      *
      * @param newPath   目标路径
      * @param useTarget true=使用目标已有数据（来源备份到桌面），false=覆盖目标（目标备份到桌面）
+     * @return true=已切换（或本来就是该目录）；false=目标不可写/复制失败 —— 调用方必须如实报错
      */
-    public void migrateAndBackup(String newPath, boolean useTarget) {
+    public boolean migrateAndBackup(String newPath, boolean useTarget) {
         Path resolved = resolveUserDataPath(newPath);
-        if (resolved.equals(userDataPath)) return;
+        if (resolved.equals(userDataPath)) return true;
 
         Path oldPath = userDataPath;
         Path newResolved = resolved;
-        AppPaths.ensureDir(newResolved);
+        if (!probeWritable(newResolved)) {
+            LOG.error("目标数据目录不可写，放弃迁移: {}", newResolved);
+            return false;
+        }
 
         // 备份目标或来源到桌面
         Path desktop = java.nio.file.Path.of(System.getProperty("user.home"), "Desktop");
@@ -237,7 +268,7 @@ public class ConfigManager {
                 LOG.info("数据已从 {} 迁移到 {}", oldPath, newResolved);
             } catch (java.io.IOException e) {
                 LOG.error("迁移失败: {}", e.getMessage());
-                return;
+                return false;
             }
         }
 
@@ -247,6 +278,8 @@ public class ConfigManager {
         saveRootConfig();
         reloadStores(newResolved);
         System.setProperty("jfmultichat.logdir", newResolved.resolve("logs").toString());
+        dataDirWritable = probeWritable(newResolved);
+        return true;
     }
 
     private boolean hasFiles(Path dir) {
@@ -269,22 +302,30 @@ public class ConfigManager {
         invalidateRemoteCache();
     }
 
-    public void setUserDataPath(String newPath) {
-        migrateAndBackup(newPath, false);
+    public boolean setUserDataPath(String newPath) {
+        return migrateAndBackup(newPath, false);
     }
 
     private void copyDir(Path src, Path dst) throws IOException {
         if (!Files.exists(src)) return;
-        Files.walk(src).forEach(s -> {
-            try {
-                Path d = dst.resolve(src.relativize(s));
-                if (Files.isDirectory(s)) {
-                    Files.createDirectories(d);
-                } else {
-                    Files.copy(s, d, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        List<String> failures = new ArrayList<>();
+        try (var stream = Files.walk(src)) {
+            stream.forEach(s -> {
+                try {
+                    Path d = dst.resolve(src.relativize(s));
+                    if (Files.isDirectory(s)) {
+                        Files.createDirectories(d);
+                    } else {
+                        Files.copy(s, d, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    }
+                } catch (IOException e) {
+                    failures.add(s + " -> " + e.getMessage());
                 }
-            } catch (IOException ignored) {}
-        });
+            });
+        }
+        if (!failures.isEmpty()) {
+            throw new IOException("复制失败 " + failures.size() + " 项，首个: " + failures.get(0));
+        }
     }
 
     // ==================== Sw 列表 ====================

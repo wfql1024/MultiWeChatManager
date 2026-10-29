@@ -1,6 +1,7 @@
 package com.jfmultichat;
 
 import com.jfmultichat.appcore.AppCore;
+import com.jfmultichat.boot.AdminBoot;
 import com.jfmultichat.config.AppEnv;
 import com.jfmultichat.config.AppPaths;
 import com.jfmultichat.config.ConfigManager;
@@ -41,6 +42,13 @@ public class Launcher {
                 System.setProperty("run.mode", "DEV");
                 break;
             }
+        }
+
+        // -0.5 打包版默认以管理员身份运行（用户 2026-10-24）：普通令牌下本机安全软件会
+        //      拦 java.exe 写用户目录（%APPDATA%/桌面/文档全 AccessDenied），提权后正常；
+        //      开发模式（--dev / 非 jar）不提权，避免打断 gradle run。
+        if (AdminBoot.ensureElevated(args)) {
+            return;   // 已发起提权重启，本进程退出
         }
 
         // 0. 预设置日志目录 — 必须在任何 LoggerFactory.getLogger() 之前，

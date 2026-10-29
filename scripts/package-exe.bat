@@ -1,49 +1,53 @@
 @echo off
+setlocal EnableDelayedExpansion
 set JAVA_HOME=D:\SpaceDev\Env\Infrastructure\runtime\Java\jdk-17.0.2
 set GRADLE_HOME=D:\SpaceDev\Env\Infrastructure\runtime\gradle-9.8.0
 set PATH=%JAVA_HOME%\bin;%GRADLE_HOME%\bin;%PATH%
 set "WIXPATH=C:\Program Files (x86)\WiX Toolset v3.14\bin"
 if exist "%WIXPATH%" set "PATH=%PATH%;%WIXPATH%"
 
-set FX=C:\Users\25359\.gradle\caches\modules-2\files-2.1\org.openjfx
-set FXV=17.0.2
-
-set FX_BASE=%FX%\javafx-base\%FXV%\1bd6dc88b180a6239a5067320c2f0d7f3526e1d2\javafx-base-%FXV%-win.jar
-set FX_CTRL=%FX%\javafx-controls\%FXV%\707f290bacde2738c0a7e1d0b4a8193002c29cf7\javafx-controls-%FXV%-win.jar
-set FX_GFX=%FX%\javafx-graphics\%FXV%\6f95886c8fed3e1b21370a199c3937846ef6b3cc\javafx-graphics-%FXV%-win.jar
-set FX_WEB=%FX%\javafx-web\%FXV%\9e60c27f0bdc39837bb128b223128fc385e443ee\javafx-web-%FXV%-win.jar
-set FX_MEDIA=%FX%\javafx-media\%FXV%\5c6c84557bcd0016b5784d2b0cd8ae769e63d4ed\javafx-media-%FXV%-win.jar
-
-set FX_PATH=%FX_BASE%;%FX_CTRL%;%FX_GFX%;%FX_WEB%;%FX_MEDIA%
 
 echo === Build self-contained EXE ===
 
-echo [0] Check deps report...
-if not exist build\deps-jlink.txt (
-    echo Run analyze.bat first to generate dependency report.
-    pause & exit /b 1
-)
-set /p JLINKMODS=<build\deps-jlink.txt
-
-echo [1/3] installDist...
+echo [1/4] installDist...
 call gradle installDist --no-daemon
 if %ERRORLEVEL% neq 0 ( pause & exit /b 1 )
 
-echo [2/3] jlink...
+set LIB=build\install\JhiFengMultiChat\lib
+
+echo [2/4] jlink inputs (JavaFX jars come from installDist, no Gradle cache paths)...
+if not exist build\jlink-inputs mkdir build\jlink-inputs
+set FX_PATH=
+for %%f in ("%LIB%\javafx-*-win.jar") do set "FX_PATH=!FX_PATH!;%%~ff"
+if "!FX_PATH!"=="" (
+    echo JavaFX platform jars missing in %LIB% ^(installDist should produce javafx-*-win.jar^)
+    pause & exit /b 1
+)
+set "FX_PATH=!FX_PATH:~1!"
+set JDEPOUT=build\jlink-inputs\modules.txt
+"%JAVA_HOME%\bin\jdeps" --multi-release 17 --print-module-deps --ignore-missing-deps %LIB%\*.jar > "%JDEPOUT%" 2>nul
+if %ERRORLEVEL% neq 0 (
+    echo jdeps failed
+    pause & exit /b 1
+)
+set /p DEPS=<"%JDEPOUT%"
+set JLINKMODS=%DEPS%,javafx.base,javafx.controls,javafx.graphics,javafx.web,javafx.media,jdk.crypto.ec
+echo jdeps modules: %DEPS%
+echo jlink roots : %JLINKMODS%
+
+echo [3/4] jlink...
 set RUNTIME=build\runtime
 rmdir /s /q "%RUNTIME%" 2>nul
-
 jlink --no-header-files --no-man-pages --strip-debug --compress 2 ^
-    --module-path "%FX_PATH%" ^
+    --module-path "!FX_PATH!" ^
     --add-modules %JLINKMODS% ^
     --output "%RUNTIME%"
-
 if %ERRORLEVEL% neq 0 (
     echo jlink failed
     pause & exit /b 1
 )
 
-echo [3/3] jpackage...
+echo [4/4] jpackage...
 set INPUT=build\install\JhiFengMultiChat\lib
 set APPDIR=build\app-input
 rmdir /s /q "%APPDIR%" 2>nul

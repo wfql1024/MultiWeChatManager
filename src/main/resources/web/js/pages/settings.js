@@ -247,6 +247,11 @@ JFC.pages.settings = (function() {
             if (sel) { setVal('cfg-user-dir', sel.replace(/\\/g, '/')); el('cfg-user-dir').classList.remove('cfg-placeholder'); validateUserDir(); }
         });
 
+        bind('cfg-user-dir-open', 'click', function() {
+            if (!JM()) return;
+            JFC.bridge.openUserDataDir();
+        });
+
         bind('cfg-user-dir', 'blur', validateUserDir);
         bind('cfg-user-dir', 'focus', onUserDirFocus);
         bind('cfg-dir-save', 'click', saveDirConfig);
@@ -277,10 +282,17 @@ JFC.pages.settings = (function() {
 
     // ==================== 用户目录 ====================
 
+    /** 默认态：输入框里放**真实路径**（可直接复制到资源管理器），只靠 class 表示"这是默认" */
+    function applyDefaultDirState() {
+        var input = el('cfg-user-dir');
+        if (!input) return;
+        input.value = defaultUserDir || '';
+        input.classList.add('cfg-placeholder');
+    }
+
     function onUserDirFocus() {
         var input = el('cfg-user-dir');
-        if (!input || !input.classList.contains('cfg-placeholder')) return;
-        input.value = defaultUserDir || '';
+        if (!input) return;
         input.classList.remove('cfg-placeholder');
     }
 
@@ -290,8 +302,7 @@ JFC.pages.settings = (function() {
         var val = getActualDirVal();
 
         if (!val || val === defaultUserDir) {
-            input.value = defaultUserDir ? '（默认）' + defaultUserDir : '';
-            input.classList.add('cfg-placeholder');
+            applyDefaultDirState();
             input.classList.remove('input-error', 'input-warn');
             input.classList.add('input-ok');
             hideEl('cfg-user-dir-hint');
@@ -534,9 +545,14 @@ JFC.pages.settings = (function() {
             if (dirVal && dirVal !== defaultUserDir.replace(/\\/g, '/')) {
                 setVal('cfg-user-dir', dirVal); dirEl.classList.remove('cfg-placeholder');
             } else {
-                dirEl.value = defaultUserDir ? '（默认）' + defaultUserDir : '';
-                dirEl.classList.add('cfg-placeholder');
+                applyDefaultDirState();
             }
+        }
+        if (data.userDataWritable === false) {
+            // 用户 2026-10-24：本机被「联想电脑管家/Huorong 文档保护」拦住了 java.exe 写用户目录，
+            // 表现就是"换哪个目录都不可写"，所以提示里必须点名安全软件这个可能
+            showMsg('cfg-dir-msg', '当前数据目录不可写（可能是安全软件拦截了本程序写入用户目录）: ' + dirVal
+                + '。请把本程序加入安全软件信任，或换到非受保护目录后重启', true);
         }
 
         urlListData.global.userUrls = [];
@@ -641,7 +657,13 @@ JFC.pages.settings = (function() {
         }
 
         saveBlock(payload, 'cfg-dir-msg', function(res) {
-            if (res.pathChanged) setVal('cfg-user-dir', res.newPath || payload.userDataPath);
+            if (res.pathChanged) {
+                // 回显后端解析后的**最终**路径（会自动补 <版本号>/UserFiles，免得去错的层级找文件）
+                var finalPath = (res.newPath || payload.userDataPath || '').replace(/\\/g, '/');
+                setVal('cfg-user-dir', finalPath);
+                if (dirEl) dirEl.classList.remove('cfg-placeholder');
+                showMsg('cfg-dir-msg', '已保存，实际数据目录: ' + finalPath);
+            }
             if (dirEl) dirEl.classList.remove('input-error', 'input-warn');
             updateBlockButtons();
         });
